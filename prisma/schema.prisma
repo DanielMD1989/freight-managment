@@ -1,0 +1,556 @@
+// This is your Prisma schema file for Freight Management Platform MVP
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum UserRole {
+  SHIPPER
+  CARRIER
+  LOGISTICS_AGENT // 3PL
+  DRIVER
+  PLATFORM_OPS
+  ADMIN
+}
+
+enum OrganizationType {
+  SHIPPER
+  CARRIER_COMPANY
+  CARRIER_INDIVIDUAL
+  LOGISTICS_AGENT
+}
+
+enum LoadStatus {
+  DRAFT
+  POSTED
+  UNPOSTED
+  ASSIGNED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+  EXPIRED
+}
+
+enum TruckType {
+  FLATBED
+  REFRIGERATED
+  TANKER
+  CONTAINER
+  DRY_VAN
+  LOWBOY
+  DUMP_TRUCK
+  BOX_TRUCK
+}
+
+enum LoadType {
+  FULL
+  PARTIAL
+}
+
+enum BookMode {
+  REQUEST
+  INSTANT
+}
+
+enum AccountType {
+  SHIPPER_WALLET
+  CARRIER_WALLET
+  ESCROW
+  PLATFORM_REVENUE
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  COMMISSION
+  SETTLEMENT
+  ESCROW_FUND
+  ESCROW_RELEASE
+  REFUND
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  CLOSED
+}
+
+enum DisputeType {
+  PAYMENT_ISSUE
+  DAMAGE
+  LATE_DELIVERY
+  QUALITY_ISSUE
+  OTHER
+}
+
+enum ReportStatus {
+  NEW
+  REVIEWED
+  ACTIONED
+  DISMISSED
+}
+
+enum ReportType {
+  FRAUD
+  HARASSMENT
+  SPAM
+  SAFETY_VIOLATION
+  OTHER
+}
+
+enum DocumentType {
+  BOL // Bill of Lading
+  POD // Proof of Delivery
+  INVOICE
+  RECEIPT
+  INSURANCE
+  PERMIT
+  OTHER
+}
+
+enum GpsDeviceStatus {
+  ACTIVE
+  INACTIVE
+  SIGNAL_LOST
+  MAINTENANCE
+}
+
+// ============================================================================
+// CORE MODELS
+// ============================================================================
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  phone             String?  @unique
+  passwordHash      String
+  firstName         String?
+  lastName          String?
+  role              UserRole @default(SHIPPER)
+  isEmailVerified   Boolean  @default(false)
+  isPhoneVerified   Boolean  @default(false)
+  isActive          Boolean  @default(true)
+  lastLoginAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  organizationId    String?
+  organization      Organization? @relation(fields: [organizationId], references: [id])
+
+  loadsCreated      Load[]    @relation("LoadCreator")
+  disputes          Dispute[]
+  reports           Report[]
+
+  @@index([email])
+  @@index([organizationId])
+  @@map("users")
+}
+
+model Organization {
+  id                String           @id @default(cuid())
+  name              String
+  type              OrganizationType
+  description       String?
+  contactEmail      String
+  contactPhone      String
+  address           String?
+  city              String?
+  isVerified        Boolean          @default(false)
+  verifiedAt        DateTime?
+  licenseNumber     String?
+  taxId             String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  // Relations
+  users             User[]
+  loads             Load[]
+  trucks            Truck[]
+  financialAccounts FinancialAccount[]
+  disputesAgainst   Dispute[]         @relation("DisputedOrganization")
+
+  @@index([type])
+  @@index([isVerified])
+  @@map("organizations")
+}
+
+// ============================================================================
+// MARKETPLACE MODELS
+// ============================================================================
+
+model Load {
+  id                    String      @id @default(cuid())
+  status                LoadStatus  @default(DRAFT)
+  postedAt              DateTime?
+
+  // Location & Schedule
+  pickupCity            String
+  pickupAddress         String?
+  pickupDockHours       String?     // Changed from DateTime to String for "8:00 AM - 5:00 PM" format
+  pickupDate            DateTime
+  appointmentRequired   Boolean     @default(false)
+
+  deliveryCity          String
+  deliveryAddress       String?
+  deliveryDockHours     String?     // Changed from DateTime to String for "8:00 AM - 5:00 PM" format
+  deliveryDate          DateTime
+
+  // [NEW] Logistics & Distance
+  tripKm                Decimal?    // Required when status = POSTED
+  dhToOriginKm          Decimal?    // Deadhead to origin
+  dhAfterDeliveryKm     Decimal?    // Deadhead after delivery
+  originLat             Decimal?
+  originLon             Decimal?
+  destinationLat        Decimal?
+  destinationLon        Decimal?
+
+  // Load Details
+  truckType             TruckType
+  weight                Decimal     // in kg
+  volume                Decimal?    // in cubic meters
+  cargoDescription      String
+  isFullLoad            Boolean     @default(true)  // Keep for backward compatibility
+  fullPartial           LoadType?   @default(FULL)  // [NEW] FULL | PARTIAL
+  isFragile             Boolean     @default(false)
+  requiresRefrigeration Boolean     @default(false)
+
+  // [NEW] Cargo Details
+  lengthM               Decimal?    // Cargo length in meters
+  casesCount            Int?        // Number of cases/pallets
+
+  // Pricing
+  rate                  Decimal     // in ETB
+  currency              String      @default("ETB")
+  bookMode              BookMode?   @default(REQUEST)  // [NEW] REQUEST | INSTANT
+
+  // [NEW] Market Pricing
+  dtpReference          String?     // DTP reference code
+  factorRating          String?     // Factor rating
+
+  // Privacy & Safety
+  isAnonymous           Boolean     @default(false)
+  shipperContactName    String?     // [NEW] Hidden until assignment
+  shipperContactPhone   String?     // [NEW] Hidden until assignment
+  safetyNotes           String?
+  specialInstructions   String?
+
+  // Escrow & Finance
+  escrowFunded          Boolean     @default(false)
+  escrowAmount          Decimal?
+  shipperCommission     Decimal?
+  carrierCommission     Decimal?
+  platformCommission    Decimal?
+
+  // Assignment
+  assignedTruckId       String?     @unique
+  assignedAt            DateTime?
+
+  // Tracking
+  expiresAt             DateTime?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  // Relations
+  shipperId             String
+  shipper               Organization @relation(fields: [shipperId], references: [id])
+
+  createdById           String
+  createdBy             User         @relation("LoadCreator", fields: [createdById], references: [id])
+
+  assignedTruck         Truck?       @relation(fields: [assignedTruckId], references: [id])
+
+  documents             Document[]
+  events                LoadEvent[]
+  disputes              Dispute[]
+  journalEntries        JournalEntry[]
+
+  @@index([status])
+  @@index([pickupCity])
+  @@index([deliveryCity])
+  @@index([pickupDate])
+  @@index([shipperId])
+  @@index([truckType])
+  @@index([tripKm])        // [NEW] For filtering by trip distance
+  @@index([fullPartial])   // [NEW] For filtering by full/partial
+  @@index([bookMode])      // [NEW] For filtering by booking mode
+  @@index([postedAt])      // [NEW] For age calculation and sorting
+  @@map("loads")
+}
+
+model LoadEvent {
+  id          String   @id @default(cuid())
+  eventType   String   // CREATED, POSTED, UNPOSTED, EDITED, DELETED, ASSIGNED, etc.
+  description String?
+  metadata    Json?    // Store additional event data
+  userId      String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  loadId      String
+  load        Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
+
+  @@index([loadId])
+  @@index([eventType])
+  @@map("load_events")
+}
+
+model Document {
+  id          String       @id @default(cuid())
+  type        DocumentType
+  fileName    String
+  fileUrl     String
+  fileSize    Int          // in bytes
+  mimeType    String
+  description String?
+  uploadedAt  DateTime     @default(now())
+
+  // Relations
+  loadId      String
+  load        Load         @relation(fields: [loadId], references: [id], onDelete: Cascade)
+
+  @@index([loadId])
+  @@map("documents")
+}
+
+// ============================================================================
+// TRUCK & GPS MODELS
+// ============================================================================
+
+model Truck {
+  id              String      @id @default(cuid())
+  truckType       TruckType
+  licensePlate    String      @unique
+  capacity        Decimal     // in kg
+  volume          Decimal?    // in cubic meters
+  isAvailable     Boolean     @default(true)
+  currentCity     String?
+  currentRegion   String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  carrierId       String
+  carrier         Organization @relation(fields: [carrierId], references: [id])
+
+  gpsDeviceId     String?      @unique
+  gpsDevice       GpsDevice?   @relation(fields: [gpsDeviceId], references: [id])
+
+  assignedLoad    Load?
+  gpsPositions    GpsPosition[]
+
+  @@index([carrierId])
+  @@index([truckType])
+  @@index([isAvailable])
+  @@map("trucks")
+}
+
+model GpsDevice {
+  id          String          @id @default(cuid())
+  imei        String          @unique
+  status      GpsDeviceStatus @default(ACTIVE)
+  lastSeenAt  DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  // Relations
+  truck       Truck?
+  positions   GpsPosition[]
+
+  @@index([imei])
+  @@map("gps_devices")
+}
+
+model GpsPosition {
+  id          String    @id @default(cuid())
+  latitude    Decimal   @db.Decimal(10, 7)
+  longitude   Decimal   @db.Decimal(10, 7)
+  speed       Decimal?  // in km/h
+  heading     Decimal?  // in degrees
+  altitude    Decimal?  // in meters
+  accuracy    Decimal?  // in meters
+  timestamp   DateTime  @default(now())
+
+  // Relations
+  truckId     String
+  truck       Truck     @relation(fields: [truckId], references: [id], onDelete: Cascade)
+
+  deviceId    String
+  device      GpsDevice @relation(fields: [deviceId], references: [id])
+
+  @@index([truckId, timestamp])
+  @@index([deviceId])
+  @@map("gps_positions")
+}
+
+// ============================================================================
+// FINANCIAL MODELS
+// ============================================================================
+
+model FinancialAccount {
+  id              String      @id @default(cuid())
+  accountType     AccountType
+  balance         Decimal     @default(0) @db.Decimal(12, 2)
+  currency        String      @default("ETB")
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  organizationId  String?
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+
+  debitLines      JournalLine[] @relation("DebitAccount")
+  creditLines     JournalLine[] @relation("CreditAccount")
+
+  @@index([accountType])
+  @@index([organizationId])
+  @@map("financial_accounts")
+}
+
+model JournalEntry {
+  id              String          @id @default(cuid())
+  transactionType TransactionType
+  description     String
+  reference       String?         // External reference (payment ID, load ID, etc.)
+  metadata        Json?
+  createdAt       DateTime        @default(now())
+
+  // Relations
+  loadId          String?
+  load            Load?           @relation(fields: [loadId], references: [id])
+
+  lines           JournalLine[]
+
+  @@index([transactionType])
+  @@index([loadId])
+  @@map("journal_entries")
+}
+
+model JournalLine {
+  id              String           @id @default(cuid())
+  amount          Decimal          @db.Decimal(12, 2)
+  isDebit         Boolean          // true = debit, false = credit
+  createdAt       DateTime         @default(now())
+
+  // Relations
+  journalEntryId  String
+  journalEntry    JournalEntry     @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+
+  accountId       String
+  account         FinancialAccount @relation(fields: [accountId], references: [id], name: "DebitAccount")
+  creditAccountId String?
+  creditAccount   FinancialAccount? @relation(fields: [creditAccountId], references: [id], name: "CreditAccount")
+
+  @@index([journalEntryId])
+  @@index([accountId])
+  @@map("journal_lines")
+}
+
+model PaymentExternal {
+  id              String   @id @default(cuid())
+  provider        String   // CHAPA, STRIPE, etc.
+  providerTxId    String   @unique
+  amount          Decimal  @db.Decimal(12, 2)
+  currency        String   @default("ETB")
+  status          String   // PENDING, COMPLETED, FAILED
+  metadata        Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([providerTxId])
+  @@map("payments_external")
+}
+
+model WithdrawalRequest {
+  id              String   @id @default(cuid())
+  amount          Decimal  @db.Decimal(12, 2)
+  currency        String   @default("ETB")
+  status          String   @default("PENDING") // PENDING, APPROVED, REJECTED, COMPLETED
+  bankAccount     String
+  bankName        String
+  accountHolder   String
+  requestedById   String
+  approvedById    String?
+  approvedAt      DateTime?
+  completedAt     DateTime?
+  rejectionReason String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+  @@index([requestedById])
+  @@map("withdrawal_requests")
+}
+
+// ============================================================================
+// DISPUTE & REPORTING MODELS
+// ============================================================================
+
+model Dispute {
+  id              String        @id @default(cuid())
+  type            DisputeType
+  status          DisputeStatus @default(OPEN)
+  description     String
+  evidenceUrls    String[]      // Array of file URLs
+  resolution      String?
+  resolvedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  loadId          String
+  load            Load          @relation(fields: [loadId], references: [id])
+
+  createdById     String
+  createdBy       User          @relation(fields: [createdById], references: [id])
+
+  disputedOrgId   String
+  disputedOrg     Organization  @relation("DisputedOrganization", fields: [disputedOrgId], references: [id])
+
+  @@index([status])
+  @@index([loadId])
+  @@map("disputes")
+}
+
+model Report {
+  id          String       @id @default(cuid())
+  type        ReportType
+  status      ReportStatus @default(NEW)
+  description String
+  evidence    String?      // File URL or additional details
+  actionTaken String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  reportedById String
+  reportedBy   User   @relation(fields: [reportedById], references: [id])
+
+  @@index([status])
+  @@map("reports")
+}
+
+// ============================================================================
+// SYSTEM MODELS
+// ============================================================================
+
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_config")
+}
