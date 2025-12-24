@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import LocationSelect from "@/components/LocationSelect";
 
 export default function CreateLoadPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [calculatingDistance, setCalculatingDistance] = useState(false);
   const [formData, setFormData] = useState({
     // Location & Schedule
     origin: "",
@@ -54,6 +55,34 @@ export default function CreateLoadPage() {
     "LOWBOY",
     "DUMP_TRUCK",
   ];
+
+  // Auto-calculate distance when both locations are selected
+  useEffect(() => {
+    const calculateDistance = async () => {
+      if (formData.pickupCityId && formData.deliveryCityId) {
+        setCalculatingDistance(true);
+        try {
+          const response = await fetch(
+            `/api/distance?originId=${formData.pickupCityId}&destinationId=${formData.deliveryCityId}`
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            setFormData((prev) => ({
+              ...prev,
+              tripKm: data.distance.toString(),
+            }));
+          }
+        } catch (error) {
+          console.error("Error calculating distance:", error);
+        } finally {
+          setCalculatingDistance(false);
+        }
+      }
+    };
+
+    calculateDistance();
+  }, [formData.pickupCityId, formData.deliveryCityId]);
 
   const handleSubmit = async (e: React.FormEvent, postImmediately = false) => {
     e.preventDefault();
@@ -248,6 +277,11 @@ export default function CreateLoadPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Trip Distance (km) *
+                {calculatingDistance && (
+                  <span className="ml-2 text-xs text-blue-600">
+                    Calculating...
+                  </span>
+                )}
               </label>
               <input
                 type="number"
@@ -258,10 +292,13 @@ export default function CreateLoadPage() {
                   setFormData({ ...formData, tripKm: e.target.value })
                 }
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                placeholder="e.g., 450"
+                placeholder="Auto-calculated from locations"
+                disabled={calculatingDistance}
               />
               <p className="mt-1 text-xs text-gray-500">
-                Required for posting loads
+                {formData.pickupCityId && formData.deliveryCityId
+                  ? "✓ Auto-calculated. Straight-line distance (road distance may vary by 10-30%)"
+                  : "Select origin and destination to auto-calculate"}
               </p>
             </div>
             <div>
