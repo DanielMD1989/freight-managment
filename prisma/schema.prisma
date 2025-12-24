@@ -126,6 +126,49 @@ enum GpsDeviceStatus {
 }
 
 // ============================================================================
+// SPRINT 8: NEW ENUMS FOR TRUCK POSTING & MATCHING
+// ============================================================================
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum PostingStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  MATCHED
+}
+
+enum LocationType {
+  CITY
+  TOWN
+  VILLAGE
+  LANDMARK
+}
+
+enum CompanyDocumentType {
+  COMPANY_LICENSE
+  TIN_CERTIFICATE
+  BUSINESS_REGISTRATION
+  TRADE_LICENSE
+  VAT_CERTIFICATE
+  OTHER
+}
+
+enum TruckDocumentType {
+  TITLE_DEED
+  REGISTRATION
+  INSURANCE
+  ROAD_WORTHINESS
+  DRIVER_LICENSE
+  OTHER
+}
+
+// ============================================================================
 // CORE MODELS
 // ============================================================================
 
@@ -180,6 +223,10 @@ model Organization {
   financialAccounts FinancialAccount[]
   disputesAgainst   Dispute[]         @relation("DisputedOrganization")
 
+  // SPRINT 8: New relations
+  documents         CompanyDocument[]
+  truckPostings     TruckPosting[]
+
   @@index([type])
   @@index([isVerified])
   @@map("organizations")
@@ -195,13 +242,15 @@ model Load {
   postedAt              DateTime?
 
   // Location & Schedule
-  pickupCity            String
+  pickupCity            String?     // SPRINT 8: Made nullable, use pickupCityId
+  pickupCityId          String?     // SPRINT 8: FK to EthiopianLocation
   pickupAddress         String?
   pickupDockHours       String?     // Changed from DateTime to String for "8:00 AM - 5:00 PM" format
   pickupDate            DateTime
   appointmentRequired   Boolean     @default(false)
 
-  deliveryCity          String
+  deliveryCity          String?     // SPRINT 8: Made nullable, use deliveryCityId
+  deliveryCityId        String?     // SPRINT 8: FK to EthiopianLocation
   deliveryAddress       String?
   deliveryDockHours     String?     // Changed from DateTime to String for "8:00 AM - 5:00 PM" format
   deliveryDate          DateTime
@@ -234,9 +283,8 @@ model Load {
   currency              String      @default("ETB")
   bookMode              BookMode?   @default(REQUEST)  // [NEW] REQUEST | INSTANT
 
-  // [NEW] Market Pricing
-  dtpReference          String?     // DTP reference code
-  factorRating          String?     // Factor rating
+  // SPRINT 8: Market pricing removed per TRD requirements
+  // dtpReference and factorRating removed - use per-km pricing instead
 
   // Privacy & Safety
   isAnonymous           Boolean     @default(false)
@@ -270,6 +318,10 @@ model Load {
 
   assignedTruck         Truck?       @relation(fields: [assignedTruckId], references: [id])
 
+  // SPRINT 8: Location relations
+  pickupLocation        EthiopianLocation? @relation("PickupLocation", fields: [pickupCityId], references: [id])
+  deliveryLocation      EthiopianLocation? @relation("DeliveryLocation", fields: [deliveryCityId], references: [id])
+
   documents             Document[]
   events                LoadEvent[]
   disputes              Dispute[]
@@ -278,6 +330,8 @@ model Load {
   @@index([status])
   @@index([pickupCity])
   @@index([deliveryCity])
+  @@index([pickupCityId])   // SPRINT 8: Index for location-based filtering
+  @@index([deliveryCityId]) // SPRINT 8: Index for location-based filtering
   @@index([pickupDate])
   @@index([shipperId])
   @@index([truckType])
@@ -336,6 +390,13 @@ model Truck {
   isAvailable     Boolean     @default(true)
   currentCity     String?
   currentRegion   String?
+
+  // SPRINT 8: New fields for truck posting
+  lengthM         Decimal?    // Truck bed length in meters
+  ownerName       String?     // Explicit owner name
+  contactName     String?     // Primary contact
+  contactPhone    String?     // Primary contact phone
+
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -348,6 +409,10 @@ model Truck {
 
   assignedLoad    Load?
   gpsPositions    GpsPosition[]
+
+  // SPRINT 8: New relations
+  postings        TruckPosting[]
+  documents       TruckDocument[]
 
   @@index([carrierId])
   @@index([truckType])
@@ -553,4 +618,145 @@ model SystemConfig {
   updatedAt   DateTime @updatedAt
 
   @@map("system_config")
+}
+
+// ============================================================================
+// SPRINT 8: NEW MODELS - TRUCK POSTING & MATCHING
+// ============================================================================
+
+model EthiopianLocation {
+  id            String       @id @default(cuid())
+  name          String       // City/town name in English
+  nameEthiopic  String?      // Amharic name
+  region        String       // Administrative region
+  zone          String?      // Sub-region
+  latitude      Decimal      @db.Decimal(10, 7)
+  longitude     Decimal      @db.Decimal(10, 7)
+  type          LocationType @default(CITY)
+  population    Int?
+  aliases       String[]     // Alternative spellings for search
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relations
+  loadsPickup         Load[]         @relation("PickupLocation")
+  loadsDelivery       Load[]         @relation("DeliveryLocation")
+  truckPostingsOrigin TruckPosting[] @relation("OriginCity")
+  truckPostingsDest   TruckPosting[] @relation("DestinationCity")
+
+  @@unique([name, region])
+  @@index([name])
+  @@index([region])
+  @@map("ethiopian_locations")
+}
+
+model TruckPosting {
+  id                          String            @id @default(cuid())
+  status                      PostingStatus     @default(ACTIVE)
+  
+  // Availability
+  availableFrom               DateTime
+  availableTo                 DateTime?
+  
+  // Location
+  originCityId                String
+  originCity                  EthiopianLocation @relation("OriginCity", fields: [originCityId], references: [id])
+  destinationCityId           String?
+  destinationCity             EthiopianLocation? @relation("DestinationCity", fields: [destinationCityId], references: [id])
+  
+  // Truck Details
+  truckId                     String
+  truck                       Truck             @relation(fields: [truckId], references: [id], onDelete: Cascade)
+  fullPartial                 LoadType          @default(FULL)
+  
+  // Capacity
+  availableLength             Decimal?
+  availableWeight             Decimal?
+  
+  // Deadhead Preferences (OPTIONAL - for filtering only)
+  preferredDhToOriginKm       Decimal?
+  preferredDhAfterDeliveryKm  Decimal?
+  
+  // Contact
+  contactName                 String
+  contactPhone                String
+  
+  // Owner
+  ownerName                   String?
+  
+  // Metadata
+  notes                       String?
+  postedAt                    DateTime          @default(now())
+  expiresAt                   DateTime?
+  createdAt                   DateTime          @default(now())
+  updatedAt                   DateTime          @updatedAt
+  
+  // Relations
+  carrierId                   String
+  carrier                     Organization      @relation(fields: [carrierId], references: [id])
+  createdById                 String
+  
+  @@index([status])
+  @@index([originCityId])
+  @@index([destinationCityId])
+  @@index([availableFrom])
+  @@index([carrierId])
+  @@map("truck_postings")
+}
+
+model CompanyDocument {
+  id                 String                @id @default(cuid())
+  type               CompanyDocumentType
+  fileName           String
+  fileUrl            String
+  fileSize           Int                   // bytes
+  mimeType           String
+  
+  // Verification
+  verificationStatus VerificationStatus    @default(PENDING)
+  verifiedById       String?
+  verifiedAt         DateTime?
+  rejectionReason    String?
+  
+  // Metadata
+  uploadedAt         DateTime              @default(now())
+  expiresAt          DateTime?             // License expiration
+  
+  // Relations
+  organizationId     String
+  organization       Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedById       String
+  
+  @@index([organizationId])
+  @@index([verificationStatus])
+  @@map("company_documents")
+}
+
+model TruckDocument {
+  id                 String              @id @default(cuid())
+  type               TruckDocumentType
+  fileName           String
+  fileUrl            String
+  fileSize           Int
+  mimeType           String
+  
+  // Verification
+  verificationStatus VerificationStatus  @default(PENDING)
+  verifiedById       String?
+  verifiedAt         DateTime?
+  rejectionReason    String?
+  
+  // Metadata
+  uploadedAt         DateTime            @default(now())
+  expiresAt          DateTime?
+  
+  // Relations
+  truckId            String
+  truck              Truck               @relation(fields: [truckId], references: [id], onDelete: Cascade)
+  uploadedById       String
+  
+  @@index([truckId])
+  @@index([verificationStatus])
+  @@map("truck_documents")
 }
