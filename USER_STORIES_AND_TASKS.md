@@ -14,8 +14,8 @@
 ## 📊 PROGRESS TRACKING DASHBOARD
 
 **Last Updated:** 2025-12-24
-**Current Sprint:** Sprint 7 - Load Board Grid MVP (Automated Testing Complete)
-**Overall Progress:** 84% (All Implementation + Automated Tests Complete)
+**Current Sprint:** Sprint 8 - TRD Amendments (Truck Posting & Matching)
+**Overall Progress:** 44% (Sprint 7 Complete, Sprint 8 Starting)
 
 ### Sprint Status Overview
 ```
@@ -25,9 +25,10 @@ Sprint 3: Search & Profiles             [x] 9/13 tasks (69%) - APIs complete
 Sprint 4: GPS Engine                    [x] 11/14 tasks (79%) - APIs complete
 Sprint 5: Finance Core                  [x] 13/16 tasks (81%) - APIs complete
 Sprint 6: Admin & Stabilization         [x] 8/12 tasks (67%) - Core APIs complete
-Sprint 7: Load Board Grid MVP           [x] 119/123 tasks (97%) - Automated tests complete
+Sprint 7: Load Board Grid MVP           [x] 119/123 tasks (97%) - Automated tests complete ✓
+Sprint 8: TRD Amendments                [ ] 0/216 tasks (0%) - Planning complete, ready to start
 ─────────────────────────────────────────────────────────────
-TOTAL MVP TASKS:                        [x] 197/232 tasks (84%) - MANUAL TESTING REMAINING
+TOTAL MVP TASKS:                        [x] 197/448 tasks (44%) - SPRINT 8 READY
 ```
 
 ### Quick Resume Guide
@@ -1370,3 +1371,592 @@ Details Pages UI:                          [ ] 0% (Remaining - Optional)
 **END OF UPDATED USER STORIES**
 
 _All new content above is marked with [NEW] and appended without modifying existing stories._
+
+---
+
+## **SPRINT 8: TRD AMENDMENTS - TRUCK POSTING & MATCHING SYSTEM** (Week 7-9)
+**Goal:** Enable bidirectional truck/load posting with auto-matching, Ethiopian locations, map integration, and document verification
+**Added:** 2025-12-24
+**Priority:** P0 (Critical - Major Feature Addition)
+**Estimated Effort:** 11-15 days
+
+---
+
+### **Story 8.1: US-TRUCK-POST-01 - Truck Posting Infrastructure**
+**Priority:** P0 (Blocker)
+**Effort:** 3 days
+
+**Description:**
+As a carrier/truck owner, I need to post available trucks with origin, destination, availability window, and preferences so I can find matching loads automatically.
+
+#### Database Tasks:
+- [ ] **[SECURITY]** Create VerificationStatus enum (PENDING, APPROVED, REJECTED, EXPIRED)
+- [ ] **[SECURITY]** Create PostingStatus enum (ACTIVE, EXPIRED, CANCELLED, MATCHED)
+- [ ] Create LocationType enum (CITY, TOWN, VILLAGE, LANDMARK)
+- [ ] Create CompanyDocumentType enum (COMPANY_LICENSE, TIN_CERTIFICATE, BUSINESS_REGISTRATION, etc.)
+- [ ] Create TruckDocumentType enum (TITLE_DEED, REGISTRATION, INSURANCE, DRIVER_LICENSE, etc.)
+- [ ] **[SECURITY]** Create TruckPosting model with proper authorization fields
+- [ ] **[SECURITY]** Add carrierId FK with ON DELETE CASCADE
+- [ ] **[SECURITY]** Add createdById FK for audit trail
+- [ ] Add availableFrom, availableTo (DateTime) - for time window
+- [ ] Add originCityId FK to EthiopianLocation
+- [ ] Add destinationCityId FK to EthiopianLocation (nullable - flexible routing)
+- [ ] Add fullPartial (LoadType) - FULL or PARTIAL
+- [ ] Add availableLength, availableWeight (Decimal)
+- [ ] Add preferredDhToOriginKm, preferredDhAfterDeliveryKm (Decimal, nullable) - filter preferences
+- [ ] Add contactName, contactPhone (String) - posting contact
+- [ ] Add ownerName (String, nullable) - if different from carrier
+- [ ] Add status (PostingStatus), postedAt, expiresAt
+- [ ] **[SECURITY]** Add indexes: status, originCityId, destinationCityId, availableFrom, carrierId
+- [ ] Generate Prisma migration for TruckPosting
+- [ ] Run migration
+- [ ] Generate Prisma client
+
+#### API Backend Tasks:
+- [ ] **[SECURITY]** POST /api/truck-postings - Validate carrier role authorization
+- [ ] **[SECURITY]** POST /api/truck-postings - Validate carrierId matches session user's organization
+- [ ] **[SECURITY]** POST /api/truck-postings - Rate limit: 100 postings per day per carrier
+- [ ] POST /api/truck-postings - Validate required fields (Zod schema)
+- [ ] POST /api/truck-postings - Validate availableFrom < availableTo
+- [ ] POST /api/truck-postings - Validate location IDs exist
+- [ ] POST /api/truck-postings - Auto-set postedAt timestamp
+- [ ] **[SECURITY]** GET /api/truck-postings - Only return ACTIVE postings to non-owners
+- [ ] **[SECURITY]** GET /api/truck-postings - Filter by organizationId for "my postings"
+- [ ] GET /api/truck-postings - Support filtering: originCityId, destinationCityId, truckType, fullPartial, availableFrom/To
+- [ ] GET /api/truck-postings - Support sorting: postedAt, availableFrom
+- [ ] GET /api/truck-postings - Support pagination
+- [ ] **[SECURITY]** GET /api/truck-postings/[id] - Verify posting exists and not expired
+- [ ] **[SECURITY]** PATCH /api/truck-postings/[id] - Verify owner authorization
+- [ ] **[SECURITY]** PATCH /api/truck-postings/[id] - Prevent editing MATCHED or CANCELLED postings
+- [ ] **[SECURITY]** DELETE /api/truck-postings/[id] - Verify owner authorization (soft delete)
+- [ ] DELETE /api/truck-postings/[id] - Set status to CANCELLED instead of hard delete
+
+#### Acceptance Criteria:
+- ✓ Carriers can create truck postings with all required fields
+- ✓ Only carrier role users can post trucks
+- ✓ Carrier can only post for their own organization
+- ✓ Postings include time window (from/to)
+- ✓ Postings include DH preferences (optional)
+- ✓ API validates all inputs and authorizations
+- ✓ Rate limiting prevents abuse
+- ✓ Soft deletes maintain audit trail
+
+#### Security Notes:
+- **Authorization:** Carrier role required, organization ownership verified
+- **Rate Limiting:** Prevent spam/abuse (100 posts/day)
+- **Input Validation:** Zod schema validates all fields, prevents injection
+- **Audit Trail:** createdById tracks who posted, soft deletes preserve history
+- **Data Access:** Only ACTIVE postings visible to non-owners
+
+---
+
+### **Story 8.2: US-LOCATION-01 - Ethiopian Location Management**
+**Priority:** P0 (Blocker)
+**Effort:** 2 days
+
+**Description:**
+As a user, I need to select Ethiopian cities/towns from searchable dropdowns with lat/lon coordinates so trip distances can be calculated accurately from maps.
+
+#### Database Tasks:
+- [ ] **[SECURITY]** Create EthiopianLocation model with sanitized inputs
+- [ ] Add name (String) - City/town name in English
+- [ ] Add nameEthiopic (String, nullable) - Amharic name
+- [ ] Add region (String) - Administrative region
+- [ ] Add zone (String, nullable) - Sub-region
+- [ ] Add latitude, longitude (Decimal) - Geographic coordinates
+- [ ] Add type (LocationType) - CITY, TOWN, VILLAGE, LANDMARK
+- [ ] Add population (Int, nullable)
+- [ ] Add aliases (String[]) - Alternative spellings for search
+- [ ] Add isActive (Boolean) - Allow disabling locations
+- [ ] **[SECURITY]** Add unique constraint on (name, region)
+- [ ] **[SECURITY]** Add indexes: name, region
+- [ ] Generate migration for EthiopianLocation
+- [ ] Run migration
+
+#### Data Seeding Tasks:
+- [ ] **[SECURITY]** Compile verified Ethiopian cities data (50-100 locations)
+- [ ] **[SECURITY]** Validate lat/lon coordinates from trusted sources (OpenStreetMap, GeoNames)
+- [ ] Add major cities: Addis Ababa, Dire Dawa, Mekelle, Gondar, Bahir Dar, Hawassa, etc.
+- [ ] Add regional capitals and major towns
+- [ ] Add alternative spellings in aliases array
+- [ ] **[SECURITY]** Create seed script with data validation
+- [ ] Run seed script
+- [ ] Verify location data in database
+
+#### API Backend Tasks:
+- [ ] **[SECURITY]** GET /api/locations - Public read-only endpoint (no auth required)
+- [ ] **[SECURITY]** GET /api/locations - Sanitize search queries to prevent injection
+- [ ] GET /api/locations - Support search by name (case-insensitive)
+- [ ] GET /api/locations - Support search by aliases
+- [ ] GET /api/locations - Support filtering by region, type
+- [ ] GET /api/locations - Return: id, name, nameEthiopic, region, latitude, longitude
+- [ ] GET /api/locations - Pagination (limit 100 per request)
+- [ ] **[SECURITY]** GET /api/locations/[id] - Validate location ID format
+- [ ] **[SECURITY]** GET /api/locations/[id] - Return 404 if not found or inactive
+- [ ] Create lib/locationService.ts utility
+- [ ] Implement searchLocations(query) with fuzzy matching
+- [ ] Implement getNearbyLocations(locationId, radiusKm)
+- [ ] **[SECURITY]** Implement validateLocation(locationId) - verify exists and active
+
+#### Acceptance Criteria:
+- ✓ 50-100 Ethiopian locations seeded with verified coordinates
+- ✓ Search API supports autocomplete
+- ✓ Search handles alternative spellings
+- ✓ Locations include both English and Amharic names
+- ✓ All coordinates validated from trusted sources
+- ✓ API is public but rate-limited
+- ✓ Input sanitization prevents injection attacks
+
+#### Security Notes:
+- **Data Integrity:** Coordinates from verified sources only (OpenStreetMap, GeoNames)
+- **Input Sanitization:** Search queries sanitized to prevent SQL/NoSQL injection
+- **Rate Limiting:** Public API rate-limited to prevent abuse (1000 req/hour)
+- **Read-Only:** No public write access; locations managed by admins only
+- **Validation:** Location IDs validated before use in FK relationships
+
+---
+
+### **Story 8.3: US-MAP-INTEGRATION-01 - Map-Based Distance Calculation**
+**Priority:** P0 (Blocker)
+**Effort:** 2 days
+
+**Description:**
+As a shipper, I want trip distance calculated automatically from map when I select origin/destination so I don't have to enter it manually and distances are accurate.
+
+#### API Backend Tasks:
+- [ ] **[SECURITY]** Choose map provider (Google Maps, Mapbox, OpenRouteService)
+- [ ] **[SECURITY]** Secure API key storage (environment variables, secrets manager)
+- [ ] **[SECURITY]** POST /api/locations/distance - Require authentication
+- [ ] **[SECURITY]** POST /api/locations/distance - Rate limit: 500 requests/hour per user
+- [ ] POST /api/locations/distance - Validate origin and destination location IDs
+- [ ] POST /api/locations/distance - Fetch coordinates from database
+- [ ] POST /api/locations/distance - Call map routing API
+- [ ] POST /api/locations/distance - Return distance in km
+- [ ] POST /api/locations/distance - Cache results (origin-destination pairs)
+- [ ] POST /api/locations/distance - Fallback to straight-line distance if routing fails
+- [ ] POST /api/locations/distance - Mark fallback clearly in response
+- [ ] **[SECURITY]** GET /api/locations/route - Require authentication
+- [ ] GET /api/locations/route - Return full route geometry (optional)
+- [ ] Create lib/mapService.ts
+- [ ] **[SECURITY]** Implement getRoutingDistance(originLat, originLon, destLat, destLon)
+- [ ] **[SECURITY]** Implement calculateStraightLineDistance(lat1, lon1, lat2, lon2) - fallback
+- [ ] **[SECURITY]** Implement cacheDistance(originId, destId, distance) - prevent abuse
+- [ ] Handle map API errors gracefully
+- [ ] Log map API usage for cost monitoring
+
+#### UI Integration Tasks:
+- [ ] Modify POST /api/loads to accept location IDs instead of city strings
+- [ ] POST /api/loads - Auto-call distance API when originCityId + destinationCityId provided
+- [ ] POST /api/loads - Store calculated tripKm
+- [ ] POST /api/loads - Validate tripKm > 0
+- [ ] **[SECURITY]** POST /api/loads - Prevent manual tripKm override (only map calculation)
+- [ ] Update load posting form to call distance API on location selection
+- [ ] Display calculated distance in form before submission
+- [ ] Show loading state during distance calculation
+- [ ] Handle map API errors in UI (retry, fallback message)
+
+#### Acceptance Criteria:
+- ✓ Trip distance auto-calculated from map API
+- ✓ Fallback to straight-line distance if routing fails
+- ✓ Distance cached to reduce API costs
+- ✓ Map API key stored securely
+- ✓ Rate limiting prevents abuse
+- ✓ UI shows distance before form submission
+- ✓ Manual tripKm entry disabled (map only)
+
+#### Security Notes:
+- **API Key Security:** Map API keys stored in environment variables, not code
+- **Rate Limiting:** 500 distance calculations/hour per user to prevent abuse
+- **Caching:** Results cached by (origin, destination) pair to reduce costs
+- **Input Validation:** Location IDs validated before calling external API
+- **Cost Monitoring:** Log all map API calls for budget tracking
+- **Fallback Security:** Straight-line distance clearly marked to prevent misuse
+
+---
+
+### **Story 8.4: US-MATCHING-ENGINE-01 - Truck/Load Matching Algorithm**
+**Priority:** P0 (Blocker)
+**Effort:** 3 days
+
+**Description:**
+As a carrier posting a truck, I want to immediately see matching loads based on route, time, capacity, and preferences so I can find relevant opportunities quickly.
+
+#### Backend Tasks:
+- [ ] Create lib/matchingEngine.ts
+- [ ] **[SECURITY]** Implement findMatchingLoadsForTruck(truckPostingId, userId) - verify authorization
+- [ ] **[SECURITY]** Implement findMatchingTrucksForLoad(loadId, userId) - verify authorization
+- [ ] Implement calculateMatchScore(truck, load) - scoring algorithm
+- [ ] Implement filterByRoute(loads, originCityId, destinationCityId) - exact or flexible match
+- [ ] Implement filterByTimeWindow(loads, availableFrom, availableTo) - overlap detection
+- [ ] Implement filterByCapacity(loads, availableWeight, availableLength) - constraints
+- [ ] Implement filterByTruckType(loads, truckType) - exact match
+- [ ] Implement filterByFullPartial(loads, fullPartial) - FULL/PARTIAL match
+- [ ] Implement filterByDeadheadPreference(loads, dhToOriginKm, dhAfterDeliveryKm) - optional filter
+- [ ] Calculate deadhead distances for each match
+- [ ] Sort matches by score (best matches first)
+- [ ] **[SECURITY]** GET /api/truck-postings/[id]/matching-loads - Verify posting ownership or public
+- [ ] **[SECURITY]** GET /api/truck-postings/[id]/matching-loads - Only show POSTED loads
+- [ ] **[SECURITY]** GET /api/truck-postings/[id]/matching-loads - Apply privacy masking (anonymous shippers)
+- [ ] GET /api/truck-postings/[id]/matching-loads - Return all DAT columns
+- [ ] GET /api/truck-postings/[id]/matching-loads - Include computed fields (DH-O, DH-D, RPM, tRPM)
+- [ ] GET /api/truck-postings/[id]/matching-loads - Include match score
+- [ ] GET /api/truck-postings/[id]/matching-loads - Support pagination
+- [ ] **[SECURITY]** GET /api/loads/[id]/matching-trucks - Verify load ownership or public
+- [ ] **[SECURITY]** GET /api/loads/[id]/matching-trucks - Only show ACTIVE truck postings
+- [ ] GET /api/loads/[id]/matching-trucks - Calculate DH for each truck
+- [ ] GET /api/loads/[id]/matching-trucks - Return truck details + match score
+- [ ] GET /api/loads/[id]/matching-trucks - Support pagination
+
+#### Matching Algorithm Logic:
+```typescript
+// Scoring weights (configurable)
+routeMatch: 40%      // Exact origin/dest match
+timeOverlap: 30%     // Time window overlap %
+capacityFit: 20%     // Weight/length fit
+deadhead: 10%        // Lower DH = higher score
+
+// Route matching:
+- Exact match (origin === load.pickup && dest === load.delivery): 100%
+- Origin match only (flexible destination): 70%
+- Nearby origins (< 100km): 50%
+- Corridor match (same direction): 30%
+
+// Time matching:
+- Full overlap: 100%
+- Partial overlap: overlap_hours / total_hours * 100%
+- Adjacent windows (< 24h gap): 50%
+
+// Capacity matching:
+- Load weight <= truck capacity: 100%
+- Load length <= truck length: 100%
+- Oversize: 0%
+
+// DH filtering (if preferences set):
+- DH-O > preferredDhToOriginKm: Exclude
+- DH-D > preferredDhAfterDeliveryKm: Exclude
+```
+
+#### Acceptance Criteria:
+- ✓ Matching algorithm finds relevant loads for trucks
+- ✓ Matching algorithm finds relevant trucks for loads
+- ✓ Results sorted by match score (best first)
+- ✓ DH preferences filter results correctly
+- ✓ Time window overlap calculated accurately
+- ✓ Capacity constraints enforced
+- ✓ Privacy masking applied
+- ✓ Only authorized users can see matches
+
+#### Security Notes:
+- **Authorization:** Only posting owner or public can see matches
+- **Privacy:** Anonymous shippers masked in results
+- **Data Access:** Only POSTED loads and ACTIVE trucks matched
+- **Rate Limiting:** Matching endpoint rate-limited (100 req/hour)
+- **Score Manipulation:** Scoring algorithm server-side only, not client-configurable
+- **Contact Hiding:** Contact info hidden until load assigned
+
+---
+
+### **Story 8.5: US-DOCUMENT-VERIFICATION-01 - Company & Truck Document Upload**
+**Priority:** P1 (High)
+**Effort:** 2 days
+
+**Description:**
+As a company or truck owner, I need to upload verification documents during registration so the platform can verify my legitimacy and allow me to participate in the marketplace.
+
+#### Database Tasks:
+- [ ] **[SECURITY]** Create CompanyDocument model with proper access controls
+- [ ] Add type (CompanyDocumentType) - COMPANY_LICENSE, TIN_CERTIFICATE, etc.
+- [ ] Add fileName, fileUrl, fileSize, mimeType
+- [ ] Add verificationStatus (VerificationStatus) - PENDING, APPROVED, REJECTED
+- [ ] **[SECURITY]** Add verifiedById FK - track who verified
+- [ ] Add verifiedAt, rejectionReason
+- [ ] Add uploadedAt, expiresAt (for licenses with expiration)
+- [ ] **[SECURITY]** Add organizationId FK with ON DELETE CASCADE
+- [ ] **[SECURITY]** Add uploadedById FK - audit trail
+- [ ] **[SECURITY]** Add indexes: organizationId, verificationStatus
+- [ ] **[SECURITY]** Create TruckDocument model (similar structure)
+- [ ] **[SECURITY]** Add truckId FK with ON DELETE CASCADE
+- [ ] Generate migrations
+- [ ] Run migrations
+
+#### File Storage Tasks:
+- [ ] **[SECURITY]** Choose file storage solution (AWS S3, Azure Blob, local)
+- [ ] **[SECURITY]** Configure secure file upload (signed URLs, pre-signed uploads)
+- [ ] **[SECURITY]** Set file size limits (max 10MB per file)
+- [ ] **[SECURITY]** Whitelist allowed MIME types (PDF, JPG, PNG only)
+- [ ] **[SECURITY]** Generate unique file names (UUID) to prevent path traversal
+- [ ] **[SECURITY]** Store files in organization-specific folders
+- [ ] **[SECURITY]** Implement virus scanning (ClamAV or cloud service)
+- [ ] Set up file expiration/cleanup for rejected documents
+
+#### API Backend Tasks:
+- [ ] **[SECURITY]** POST /api/documents/upload - Require authentication
+- [ ] **[SECURITY]** POST /api/documents/upload - Validate file type (PDF, JPG, PNG)
+- [ ] **[SECURITY]** POST /api/documents/upload - Validate file size (<= 10MB)
+- [ ] **[SECURITY]** POST /api/documents/upload - Scan for viruses before storage
+- [ ] **[SECURITY]** POST /api/documents/upload - Verify organizationId matches user's organization
+- [ ] POST /api/documents/upload - Generate unique file name
+- [ ] POST /api/documents/upload - Upload to storage
+- [ ] POST /api/documents/upload - Create database record
+- [ ] POST /api/documents/upload - Return document ID and URL
+- [ ] **[SECURITY]** GET /api/documents - Filter by organizationId (owner only)
+- [ ] **[SECURITY]** GET /api/documents - Admin can see all documents
+- [ ] GET /api/documents - Support filtering by type, status
+- [ ] **[SECURITY]** GET /api/documents/[id] - Verify ownership or admin role
+- [ ] **[SECURITY]** GET /api/documents/[id] - Return signed URL for file access
+- [ ] **[SECURITY]** PATCH /api/documents/[id]/verify - Admin/Ops only
+- [ ] PATCH /api/documents/[id]/verify - Update status (APPROVED/REJECTED)
+- [ ] PATCH /api/documents/[id]/verify - Record verifiedById and verifiedAt
+- [ ] PATCH /api/documents/[id]/verify - Optionally add rejection reason
+- [ ] **[SECURITY]** DELETE /api/documents/[id] - Owner can delete if PENDING only
+- [ ] **[SECURITY]** DELETE /api/documents/[id] - Soft delete, maintain audit trail
+
+#### Acceptance Criteria:
+- ✓ Users can upload company documents during registration
+- ✓ File types restricted to PDF, JPG, PNG
+- ✓ File size limited to 10MB
+- ✓ Virus scanning performed before storage
+- ✓ Files stored securely with unique names
+- ✓ Verification status tracked for each document
+- ✓ Only admins can approve/reject documents
+- ✓ Users can only access their own documents
+- ✓ Audit trail maintained (who uploaded, who verified)
+
+#### Security Notes:
+- **File Validation:** MIME type and extension checked, magic bytes verified
+- **Size Limits:** 10MB max to prevent DoS attacks
+- **Virus Scanning:** ClamAV or cloud service scans all uploads
+- **Path Traversal:** UUID file names prevent directory traversal
+- **Access Control:** Signed URLs with expiration for file downloads
+- **Authorization:** Users can only upload for their organization
+- **Audit Trail:** uploadedById, verifiedById tracked
+- **Soft Delete:** Documents retained for audit even after deletion
+
+---
+
+### **Story 8.6: US-LOAD-POSTING-ENHANCEMENTS-01 - Remove Market Pricing & Hide DH Fields**
+**Priority:** P0 (Blocker)
+**Effort:** 1 day
+
+**Description:**
+As a shipper posting loads, I should not see DH fields (confusing) or market pricing fields (removed) so the posting experience is simplified and focused on essential data.
+
+#### Database Tasks:
+- [ ] Create migration to remove dtpReference from Load model
+- [ ] Create migration to remove factorRating from Load model
+- [ ] Run migrations
+- [ ] **[SECURITY]** Verify no API endpoints return removed fields
+
+#### API Backend Tasks:
+- [ ] **[SECURITY]** POST /api/loads - Remove dtpReference from validation schema
+- [ ] **[SECURITY]** POST /api/loads - Remove factorRating from validation schema
+- [ ] **[SECURITY]** POST /api/loads - Reject requests with dhToOriginKm in body (should be null)
+- [ ] **[SECURITY]** POST /api/loads - Reject requests with dhAfterDeliveryKm in body (should be null)
+- [ ] POST /api/loads - DH fields calculated by matching engine only
+- [ ] **[SECURITY]** GET /api/loads - Exclude dtpReference from responses
+- [ ] **[SECURITY]** GET /api/loads - Exclude factorRating from responses
+- [ ] GET /api/loads - Include dhToOriginKm, dhAfterDeliveryKm for search results
+- [ ] **[SECURITY]** Update all API tests to remove market pricing fields
+
+#### UI Tasks:
+- [ ] Update load posting form - Remove DTP Reference input field
+- [ ] Update load posting form - Remove Factor Rating input field
+- [ ] Update load posting form - Hide DH-O input field
+- [ ] Update load posting form - Hide DH-D input field
+- [ ] Update load search/results - Keep DH-O visible in grid
+- [ ] Update load search/results - Keep DH-D visible in grid
+- [ ] Update load details page - Remove DTP section
+- [ ] Update load details page - Remove Factor Rating display
+- [ ] Update all TypeScript types to remove dtpReference, factorRating
+
+#### Acceptance Criteria:
+- ✓ DTP Reference and Factor Rating removed from database
+- ✓ Market pricing fields not in API responses
+- ✓ Load posting form does not show DH or market pricing fields
+- ✓ DH fields visible in search results only
+- ✓ No references to removed fields in code
+
+#### Security Notes:
+- **API Validation:** Reject requests with removed fields to prevent old clients
+- **Data Migration:** Clean migration removes data safely
+- **Backward Compatibility:** Graceful handling of old data (if any)
+
+---
+
+### **Story 8.7: US-SINGLE-PAGE-EXPERIENCE-01 - Unified Marketplace Page**
+**Priority:** P1 (High)
+**Effort:** 2 days
+
+**Description:**
+As a user, I want to post trucks/loads and see matching results on the same page without navigation so I can quickly evaluate opportunities.
+
+#### UI Tasks:
+- [ ] Create /dashboard/marketplace page with tabbed interface
+- [ ] Tab 1: "Post Truck" - Truck posting form + matching loads grid
+- [ ] Tab 2: "Post Load" - Load posting form + matching trucks grid
+- [ ] Tab 3: "Find Loads" - Load marketplace (carrier view)
+- [ ] Tab 4: "Find Trucks" - Truck postings (shipper view)
+- [ ] Implement split view layout for tabs 1 & 2 (form left, results right)
+- [ ] Implement responsive layout (stack on mobile)
+- [ ] Add live filtering in tabs 3 & 4
+- [ ] Implement tab state persistence (URL params)
+- [ ] Add loading states for form submissions
+- [ ] Add loading states for matching results
+- [ ] Implement auto-refresh of matching results when form changes
+- [ ] Add "Why matched?" tooltip showing match score breakdown
+
+#### Acceptance Criteria:
+- ✓ Single page contains all marketplace functions
+- ✓ Posting and finding possible without navigation
+- ✓ Matching results update live after posting
+- ✓ Responsive design works on mobile
+- ✓ Tab state preserved in URL
+
+#### Security Notes:
+- **Client-Side State:** URL params validated before use
+- **Authorization:** Each tab checks user role (carrier/shipper)
+- **Data Validation:** All form inputs validated before submission
+
+---
+
+### **Story 8.8: US-UI-READABILITY-01 - Text Contrast & Accessibility**
+**Priority:** P2 (Nice to have)
+**Effort:** 1 day
+
+**Description:**
+As a user, I need readable text with proper contrast so I can use the platform comfortably.
+
+#### UI Tasks:
+- [ ] Audit all input text colors for contrast ratio
+- [ ] Update input text to bold or high-contrast color
+- [ ] Ensure WCAG 2.1 AA compliance (4.5:1 contrast ratio)
+- [ ] Update label text for readability
+- [ ] Fix any low-contrast button text
+- [ ] Add focus indicators for keyboard navigation
+- [ ] Test with screen readers (optional)
+- [ ] Add aria-labels where needed
+
+#### Acceptance Criteria:
+- ✓ All text meets WCAG 2.1 AA standards
+- ✓ Input text is bold or high-contrast
+- ✓ Keyboard navigation works properly
+
+#### Security Notes:
+- **Accessibility:** Proper labels prevent phishing/confusion
+- **Focus Indicators:** Clear focus prevents UI confusion attacks
+
+---
+
+### **Story 8.9: US-BACK-OFFICE-VERIFICATION-01 - Admin Document Verification**
+**Priority:** P1 (High)
+**Effort:** 2 days
+
+**Description:**
+As a back office employee, I need a dashboard to review and verify/reject company and truck documents so only legitimate organizations participate in the marketplace.
+
+#### UI Tasks:
+- [ ] Create /admin/verification dashboard page
+- [ ] Display queue of pending documents (PENDING status)
+- [ ] Group documents by organization
+- [ ] Show document preview (PDF viewer, image viewer)
+- [ ] Add "Approve" button with confirmation
+- [ ] Add "Reject" button with reason textarea
+- [ ] Display verification history (who verified, when, reason)
+- [ ] Add filtering: by organization, by document type, by status
+- [ ] Add search by organization name
+- [ ] Show document expiration dates
+- [ ] Add bulk actions (approve/reject multiple)
+- [ ] Send email notifications on status change (optional)
+
+#### API Backend Tasks:
+- [ ] **[SECURITY]** GET /api/admin/verification/queue - Admin/Ops only
+- [ ] GET /api/admin/verification/queue - Return pending documents
+- [ ] GET /api/admin/verification/queue - Include organization details
+- [ ] GET /api/admin/verification/queue - Support filtering and pagination
+- [ ] **[SECURITY]** PATCH /api/admin/verification/[id] - Admin/Ops only
+- [ ] PATCH /api/admin/verification/[id] - Update status
+- [ ] PATCH /api/admin/verification/[id] - Record verifiedById, verifiedAt
+- [ ] PATCH /api/admin/verification/[id] - Log action in audit trail
+- [ ] Create email notification service (optional)
+
+#### Acceptance Criteria:
+- ✓ Admins can view all pending documents
+- ✓ Admins can preview documents before approving
+- ✓ Approval/rejection tracked with audit trail
+- ✓ Rejection reason required
+- ✓ Only admin/ops roles can access
+- ✓ Notifications sent on status change (optional)
+
+#### Security Notes:
+- **Role Check:** Admin or PLATFORM_OPS role required
+- **Audit Trail:** All actions logged with user ID and timestamp
+- **Authorization:** Documents can only be verified, not edited
+- **Input Validation:** Rejection reason sanitized to prevent XSS
+
+---
+
+## **SPRINT 8 PROGRESS TRACKING**
+
+**Sprint 8 Status:**
+```
+Sprint 8: TRD Amendments - Truck Posting & Matching
+  - Database Tasks:                        [ ] 0/51 (0%)
+  - API Backend Tasks:                     [ ] 0/60 (0%)
+  - UI Components & Pages:                 [ ] 0/45 (0%)
+  - Testing Tasks:                         [ ] 0/60 (0%)
+─────────────────────────────────────────────────────────────
+TOTAL SPRINT 8 TASKS:                      [ ] 0/216 (0%)
+```
+
+**Overall Progress (Including Sprint 8):**
+```
+TOTAL MVP TASKS:                           [x] 197/448 tasks (44%)
+Sprint 1-6 (Previous):                     [x] 78/109 (72%)
+Sprint 7 (Load Board):                     [x] 119/123 (97%)
+Sprint 8 (Truck Posting):                  [ ] 0/216 (0%)
+```
+
+**Last Updated:** 2025-12-24
+**Current Sprint:** Sprint 8 - TRD Amendments
+**Next Steps:** Begin Phase 1 - Database Schema Implementation
+
+---
+
+## **SECURITY SUMMARY - SPRINT 8**
+
+### Critical Security Considerations:
+
+#### 1. Authentication & Authorization
+- **Truck Posting:** Only carriers can post trucks for their own organization
+- **Document Upload:** Users can only upload for their own organization
+- **Verification:** Only Admin/Ops can approve/reject documents
+- **Matching:** Privacy masking applied (anonymous shippers, contact hiding)
+
+#### 2. Input Validation
+- **File Uploads:** MIME type validation, magic bytes verification, size limits
+- **Location IDs:** Validated before use in FK relationships
+- **Search Queries:** Sanitized to prevent SQL/NoSQL injection
+- **Form Inputs:** Zod schemas validate all API inputs
+
+#### 3. Rate Limiting
+- **Truck Posting:** 100 posts/day per carrier
+- **Distance API:** 500 calculations/hour per user
+- **Matching API:** 100 requests/hour per user
+- **Location API:** 1000 requests/hour (public)
+
+#### 4. Data Protection
+- **File Storage:** Signed URLs with expiration for downloads
+- **API Keys:** Map API keys in environment variables only
+- **Soft Deletes:** Maintain audit trail (createdById, verifiedById)
+- **Virus Scanning:** All file uploads scanned before storage
+
+#### 5. API Security
+- **CSRF Protection:** Token validation on all POST/PATCH/DELETE
+- **CORS:** Restricted to allowed origins only
+- **SQL Injection:** Parameterized queries via Prisma
+- **XSS Prevention:** Input sanitization, Content-Security-Policy headers
+
+---
+
+**END OF SPRINT 8 USER STORIES**
+
