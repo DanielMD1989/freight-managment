@@ -170,6 +170,14 @@ export async function GET(request: NextRequest) {
     const truckType = searchParams.get("truckType");
     const myLoads = searchParams.get("myLoads") === "true";
 
+    // [NEW] Additional filters
+    const tripKmMin = searchParams.get("tripKmMin");
+    const tripKmMax = searchParams.get("tripKmMax");
+    const fullPartial = searchParams.get("fullPartial");
+    const bookMode = searchParams.get("bookMode");
+    const rateMin = searchParams.get("rateMin");
+    const rateMax = searchParams.get("rateMax");
+
     const where: any = {};
 
     // If myLoads, filter by current user's organization
@@ -201,6 +209,65 @@ export async function GET(request: NextRequest) {
 
     if (truckType) {
       where.truckType = truckType;
+    }
+
+    // [NEW] Trip distance range filter
+    if (tripKmMin || tripKmMax) {
+      where.tripKm = {};
+      if (tripKmMin) {
+        where.tripKm.gte = parseFloat(tripKmMin);
+      }
+      if (tripKmMax) {
+        where.tripKm.lte = parseFloat(tripKmMax);
+      }
+    }
+
+    // [NEW] Full/Partial filter
+    if (fullPartial && (fullPartial === "FULL" || fullPartial === "PARTIAL")) {
+      where.fullPartial = fullPartial;
+    }
+
+    // [NEW] Book mode filter
+    if (bookMode && (bookMode === "REQUEST" || bookMode === "INSTANT")) {
+      where.bookMode = bookMode;
+    }
+
+    // [NEW] Rate range filter
+    if (rateMin || rateMax) {
+      where.rate = {};
+      if (rateMin) {
+        where.rate.gte = parseFloat(rateMin);
+      }
+      if (rateMax) {
+        where.rate.lte = parseFloat(rateMax);
+      }
+    }
+
+    // [NEW] Sorting support
+    const sortBy = searchParams.get("sortBy") || "createdAt";
+    const sortOrder = searchParams.get("sortOrder") || "desc";
+
+    let orderBy: any = {};
+
+    // Map sortBy to database fields
+    switch (sortBy) {
+      case "age":
+      case "postedAt":
+        orderBy = { postedAt: sortOrder };
+        break;
+      case "tripKm":
+        orderBy = { tripKm: sortOrder };
+        break;
+      case "rate":
+        orderBy = { rate: sortOrder };
+        break;
+      case "pickupDate":
+        orderBy = { pickupDate: sortOrder };
+        break;
+      case "createdAt":
+      default:
+        orderBy = { createdAt: sortOrder };
+        break;
     }
 
     const [loads, total] = await Promise.all([
@@ -266,9 +333,7 @@ export async function GET(request: NextRequest) {
         },
         skip: (page - 1) * limit,
         take: limit,
-        orderBy: {
-          createdAt: "desc",
-        },
+        orderBy,
       }),
       db.load.count({ where }),
     ]);
@@ -305,6 +370,22 @@ export async function GET(request: NextRequest) {
         shipper: maskedShipper,
       };
     });
+
+    // [NEW] Sort by computed fields (RPM, tRPM) if requested
+    // Note: Database sorting handles most fields, but RPM/tRPM need client-side sorting
+    if (sortBy === "rpm" || sortBy === "rpmEtbPerKm") {
+      loadsWithComputed.sort((a, b) => {
+        const aRpm = a.rpmEtbPerKm ?? -Infinity;
+        const bRpm = b.rpmEtbPerKm ?? -Infinity;
+        return sortOrder === "asc" ? aRpm - bRpm : bRpm - aRpm;
+      });
+    } else if (sortBy === "trpm" || sortBy === "trpmEtbPerKm") {
+      loadsWithComputed.sort((a, b) => {
+        const aTrpm = a.trpmEtbPerKm ?? -Infinity;
+        const bTrpm = b.trpmEtbPerKm ?? -Infinity;
+        return sortOrder === "asc" ? aTrpm - bTrpm : bTrpm - aTrpm;
+      });
+    }
 
     return NextResponse.json({
       loads: loadsWithComputed,

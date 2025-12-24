@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { z } from "zod";
+import {
+  calculateAge,
+  calculateRPM,
+  calculateTRPM,
+  canSeeContact,
+  maskCompany,
+} from "@/lib/loadUtils";
 
 const updateLoadSchema = z.object({
   status: z.enum(["DRAFT", "POSTED", "UNPOSTED", "CANCELLED"]).optional(),
@@ -22,6 +29,16 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const session = await requireAuth();
+
+    // Get current user's info
+    const user = await db.user.findUnique({
+      where: { id: session.userId },
+      select: {
+        organizationId: true,
+        role: true,
+      },
+    });
 
     const load = await db.load.findUnique({
       where: { id },
@@ -60,7 +77,49 @@ export async function GET(
       return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ load });
+    // Compute age
+    const ageMinutes = calculateAge(load.postedAt, load.createdAt);
+
+    // Compute RPM and tRPM
+    const rpmEtbPerKm = calculateRPM(load.rate, load.tripKm);
+    const trpmEtbPerKm = calculateTRPM(
+      load.rate,
+      load.tripKm,
+      load.dhToOriginKm,
+      load.dhAfterDeliveryKm
+    );
+
+    // Determine if viewer can see contact information
+    const userCanSeeContact = canSeeContact(
+      load.assignedTruckId,
+      user?.organizationId || null,
+      load.assignedTruck?.carrier?.id || null,
+      user?.role || "SHIPPER"
+    );
+
+    // Apply company masking
+    const maskedShipper = load.shipper
+      ? {
+          ...load.shipper,
+          name: maskCompany(load.isAnonymous, load.shipper.name),
+        }
+      : null;
+
+    // Build response with conditional contact information
+    const responseLoad = {
+      ...load,
+      // Replace shipper with masked version
+      shipper: maskedShipper,
+      // Computed fields
+      ageMinutes,
+      rpmEtbPerKm,
+      trpmEtbPerKm,
+      // Contact info - only include if authorized
+      shipperContactName: userCanSeeContact ? load.shipperContactName : null,
+      shipperContactPhone: userCanSeeContact ? load.shipperContactPhone : null,
+    };
+
+    return NextResponse.json({ load: responseLoad });
   } catch (error) {
     console.error("Get load error:", error);
     return NextResponse.json(

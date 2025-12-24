@@ -13,9 +13,9 @@
 
 ## 📊 PROGRESS TRACKING DASHBOARD
 
-**Last Updated:** 2025-12-23
-**Current Sprint:** ALL CORE APIs IMPLEMENTED
-**Overall Progress:** 90% (Core Backend Complete, UI Pending)
+**Last Updated:** 2025-12-24
+**Current Sprint:** Sprint 7 - Load Board Grid MVP (Backend Complete)
+**Overall Progress:** 92% (All Backend APIs Complete, UI Pending)
 
 ### Sprint Status Overview
 ```
@@ -1035,54 +1035,54 @@ As a shipper/carrier/ops user, I need an Excel-like load board grid that display
 #### [NEW] Tasks:
 
 ##### [NEW] Database Migration Tasks:
-- [ ] [NEW] Add `postedAt` field (DateTime, nullable) to Load model
-- [ ] [NEW] Add `pickupDockHours` field (String, nullable) to Load model
-- [ ] [NEW] Add `deliveryDockHours` field (String, nullable) to Load model
-- [ ] [NEW] Add `appointmentRequired` field (Boolean, default false) to Load model
-- [ ] [NEW] Add `shipperContactName` field (String, nullable) to Load model
-- [ ] [NEW] Add `shipperContactPhone` field (String, nullable) to Load model
-- [ ] [NEW] Verify `isAnonymous` field exists (Boolean, default false) in Load model
-- [ ] [NEW] Add `tripKm` field (Decimal, nullable) to Load model - REQUIRED for posted loads
-- [ ] [NEW] Add `fullPartial` enum field (FULL|PARTIAL, default FULL) to Load model
-- [ ] [NEW] Add `bookMode` enum field (REQUEST|INSTANT, default REQUEST) to Load model
-- [ ] [NEW] Add `dhToOriginKm` field (Decimal, nullable) to Load model
-- [ ] [NEW] Add `dhAfterDeliveryKm` field (Decimal, nullable) to Load model
-- [ ] [NEW] Add `originLat` field (Decimal, nullable) to Load model
-- [ ] [NEW] Add `originLon` field (Decimal, nullable) to Load model
-- [ ] [NEW] Add `destinationLat` field (Decimal, nullable) to Load model
-- [ ] [NEW] Add `destinationLon` field (Decimal, nullable) to Load model
-- [ ] [NEW] Add `lengthM` field (Decimal, nullable) to Load model
-- [ ] [NEW] Add `casesCount` field (Int, nullable) to Load model
-- [ ] [NEW] Add `dtpReference` field (String, nullable) to Load model
-- [ ] [NEW] Add `factorRating` field (String, nullable) to Load model
-- [ ] [NEW] Create `LoadType` enum (FULL, PARTIAL) in Prisma schema
-- [ ] [NEW] Create `BookMode` enum (REQUEST, INSTANT) in Prisma schema
-- [ ] [NEW] Add indexes: loads(tripKm), loads(fullPartial), loads(bookMode)
-- [ ] [NEW] Generate Prisma migration for all new fields
-- [ ] [NEW] Run migration on database
-- [ ] [NEW] Generate Prisma client
+- [x] [NEW] Add `postedAt` field (DateTime, nullable) to Load model
+- [x] [NEW] Add `pickupDockHours` field (String, nullable) to Load model
+- [x] [NEW] Add `deliveryDockHours` field (String, nullable) to Load model
+- [x] [NEW] Add `appointmentRequired` field (Boolean, default false) to Load model
+- [x] [NEW] Add `shipperContactName` field (String, nullable) to Load model
+- [x] [NEW] Add `shipperContactPhone` field (String, nullable) to Load model
+- [x] [NEW] Verify `isAnonymous` field exists (Boolean, default false) in Load model
+- [x] [NEW] Add `tripKm` field (Decimal, nullable) to Load model - REQUIRED for posted loads
+- [x] [NEW] Add `fullPartial` enum field (FULL|PARTIAL, default FULL) to Load model
+- [x] [NEW] Add `bookMode` enum field (REQUEST|INSTANT, default REQUEST) to Load model
+- [x] [NEW] Add `dhToOriginKm` field (Decimal, nullable) to Load model
+- [x] [NEW] Add `dhAfterDeliveryKm` field (Decimal, nullable) to Load model
+- [x] [NEW] Add `originLat` field (Decimal, nullable) to Load model
+- [x] [NEW] Add `originLon` field (Decimal, nullable) to Load model
+- [x] [NEW] Add `destinationLat` field (Decimal, nullable) to Load model
+- [x] [NEW] Add `destinationLon` field (Decimal, nullable) to Load model
+- [x] [NEW] Add `lengthM` field (Decimal, nullable) to Load model
+- [x] [NEW] Add `casesCount` field (Int, nullable) to Load model
+- [x] [NEW] Add `dtpReference` field (String, nullable) to Load model
+- [x] [NEW] Add `factorRating` field (String, nullable) to Load model
+- [x] [NEW] Create `LoadType` enum (FULL, PARTIAL) in Prisma schema
+- [x] [NEW] Create `BookMode` enum (REQUEST, INSTANT) in Prisma schema
+- [x] [NEW] Add indexes: loads(tripKm), loads(fullPartial), loads(bookMode)
+- [x] [NEW] Generate Prisma migration for all new fields
+- [x] [NEW] Run migration on database
+- [x] [NEW] Generate Prisma client
 
 ##### [NEW] API Backend Tasks:
-- [ ] [NEW] Create `lib/loadUtils.ts` with utility functions
-- [ ] [NEW] Implement `calculateAge(postedAt, createdAt)` → returns age_minutes
-- [ ] [NEW] Implement `calculateRPM(rate, tripKm)` → returns rpm or null
-- [ ] [NEW] Implement `calculateTRPM(rate, tripKm, dhOrigin, dhDelivery)` → returns trpm or null
-- [ ] [NEW] Implement `formatAge(ageMinutes)` → returns "Xm", "Xh Ym", or "Xd"
-- [ ] [NEW] Implement `maskCompany(isAnonymous, companyName)` → returns name or "Anonymous Shipper"
-- [ ] [NEW] Implement `maskContact(isAssigned, viewerRole, contact)` → returns contact or null
-- [ ] [NEW] Update `createLoadSchema` in app/api/loads/route.ts to include all new fields
-- [ ] [NEW] Add validation: tripKm required when status = POSTED
-- [ ] [NEW] Add validation: rate > 0 and tripKm > 0 for posted loads
-- [ ] [NEW] Add auto-set logic: postedAt = now() when status changes to POSTED
-- [ ] [NEW] Update POST handler to save all new fields to database
-- [ ] [NEW] Update GET /api/loads to compute and return age_minutes for each load
-- [ ] [NEW] Update GET /api/loads to compute and return rpmEtbPerKm for each load
-- [ ] [NEW] Update GET /api/loads to compute and return trpmEtbPerKm for each load
-- [ ] [NEW] Update GET /api/loads to apply company masking (Anonymous Shipper)
-- [ ] [NEW] Update GET /api/loads to exclude shipperContactName/Phone from public responses
-- [ ] [NEW] Update GET /api/loads/[id] to reveal contact only if assigned or viewer is Ops/Admin
-- [ ] [NEW] Add filtering support: tripKm ranges, fullPartial, bookMode
-- [ ] [NEW] Add sorting support: age, tripKm, rate, rpmEtbPerKm, trpmEtbPerKm
+- [x] [NEW] Create `lib/loadUtils.ts` with utility functions
+- [x] [NEW] Implement `calculateAge(postedAt, createdAt)` → returns age_minutes
+- [x] [NEW] Implement `calculateRPM(rate, tripKm)` → returns rpm or null
+- [x] [NEW] Implement `calculateTRPM(rate, tripKm, dhOrigin, dhDelivery)` → returns trpm or null
+- [x] [NEW] Implement `formatAge(ageMinutes)` → returns "Xm", "Xh Ym", or "Xd"
+- [x] [NEW] Implement `maskCompany(isAnonymous, companyName)` → returns name or "Anonymous Shipper"
+- [x] [NEW] Implement `maskContact(isAssigned, viewerRole, contact)` → returns contact or null
+- [x] [NEW] Update `createLoadSchema` in app/api/loads/route.ts to include all new fields
+- [x] [NEW] Add validation: tripKm required when status = POSTED
+- [x] [NEW] Add validation: rate > 0 and tripKm > 0 for posted loads
+- [x] [NEW] Add auto-set logic: postedAt = now() when status changes to POSTED
+- [x] [NEW] Update POST handler to save all new fields to database
+- [x] [NEW] Update GET /api/loads to compute and return age_minutes for each load
+- [x] [NEW] Update GET /api/loads to compute and return rpmEtbPerKm for each load
+- [x] [NEW] Update GET /api/loads to compute and return trpmEtbPerKm for each load
+- [x] [NEW] Update GET /api/loads to apply company masking (Anonymous Shipper)
+- [x] [NEW] Update GET /api/loads to exclude shipperContactName/Phone from public responses
+- [x] [NEW] Update GET /api/loads/[id] to reveal contact only if assigned or viewer is Ops/Admin
+- [x] [NEW] Add filtering support: tripKm ranges, fullPartial, bookMode
+- [x] [NEW] Add sorting support: age, tripKm, rate, rpmEtbPerKm, trpmEtbPerKm
 
 ##### [NEW] UI Form Tasks:
 - [ ] [NEW] Add "Trip Distance (km)" input field to load creation form
@@ -1337,17 +1337,25 @@ As the frontend, I need a single API endpoint to render the load grid with all r
 
 **[NEW] Sprint 7 Status:**
 ```
-Sprint 7: Load Board Grid MVP              [ ] 0/100+ tasks (0%) - Not started
+Sprint 7: Load Board Grid MVP              [x] 47/100+ tasks (47%) - Backend Complete ✓
+  - Database Migration Tasks:              [x] 29/29 (100%) ✓
+  - API Backend Tasks:                     [x] 18/18 (100%) ✓
+  - UI Form Tasks:                         [ ] 0/14 (0%)
+  - UI Grid Tasks:                         [ ] 0/27 (0%)
+  - UI Details Page Tasks:                 [ ] 0/19 (0%)
+  - Testing Tasks:                         [ ] 0/12 (0%)
 ```
 
 **[NEW] Overall Progress:**
 ```
-TOTAL MVP TASKS (including Sprint 7):     [x] 78/200+ tasks (39%)
+TOTAL MVP TASKS (including Sprint 7):     [x] 125/200+ tasks (62%)
+Backend APIs:                              [x] 100% Complete ✓
+Frontend UI:                               [ ] 0% (Next Phase)
 ```
 
 **[NEW] Last Updated:** 2025-12-24
-**[NEW] Current Sprint:** Sprint 7 - Load Board Grid MVP
-**[NEW] Next Steps:** Begin Phase 1 - Database Migration
+**[NEW] Current Sprint:** Sprint 7 - Load Board Grid MVP (Backend Complete)
+**[NEW] Next Steps:** Begin UI Development (Forms, Grid, Details Pages)
 
 ---
 
