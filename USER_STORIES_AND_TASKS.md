@@ -25,8 +25,8 @@ Sprint 3: Search & Profiles             [x] 9/13 tasks (69%) - APIs complete
 Sprint 4: GPS Engine                    [x] 11/14 tasks (79%) - APIs complete
 Sprint 5: Finance Core                  [x] 13/16 tasks (81%) - APIs complete
 Sprint 6: Admin & Stabilization         [x] 8/12 tasks (67%) - Core APIs complete
-Sprint 7: Load Board Grid MVP           [x] 119/123 tasks (97%) - Production ready ✓
-Sprint 8: TRD Amendments                [🔄] 42/216 tasks (19%) - Database & Locations complete ✓
+Sprint 7: Load Board Grid MVP           [x] 119/123 tasks (97%) - ✅ PRODUCTION READY
+Sprint 8: TRD Amendments                [🔄] 56/216 tasks (26%) - APIs in progress
 ─────────────────────────────────────────────────────────────
 TOTAL MVP TASKS:                        [x] 239/448 tasks (53%) - SPRINT 8 PHASE 3 READY
 ```
@@ -1484,15 +1484,15 @@ As a user, I need to select Ethiopian cities/towns from searchable dropdowns wit
 - [x] Verify location data in database - ✓ 23 cities, 43 towns
 
 #### API Backend Tasks:
-- [ ] **[SECURITY]** GET /api/locations - Public read-only endpoint (no auth required)
-- [ ] **[SECURITY]** GET /api/locations - Sanitize search queries to prevent injection
-- [ ] GET /api/locations - Support search by name (case-insensitive)
-- [ ] GET /api/locations - Support search by aliases
-- [ ] GET /api/locations - Support filtering by region, type
-- [ ] GET /api/locations - Return: id, name, nameEthiopic, region, latitude, longitude
-- [ ] GET /api/locations - Pagination (limit 100 per request)
-- [ ] **[SECURITY]** GET /api/locations/[id] - Validate location ID format
-- [ ] **[SECURITY]** GET /api/locations/[id] - Return 404 if not found or inactive
+- [x] **[SECURITY]** GET /api/locations - Public read-only endpoint (no auth required)
+- [x] **[SECURITY]** GET /api/locations - Sanitize search queries to prevent injection
+- [x] GET /api/locations - Support search by name (case-insensitive)
+- [x] GET /api/locations - Support search by aliases
+- [x] GET /api/locations - Support filtering by region, type
+- [x] GET /api/locations - Return: id, name, nameEthiopic, region, latitude, longitude
+- [x] GET /api/locations - Pagination (limit 100 per request)
+- [x] **[SECURITY]** GET /api/locations/[id] - Validate location ID format
+- [x] **[SECURITY]** GET /api/locations/[id] - Return 404 if not found or inactive
 - [ ] Create lib/locationService.ts utility
 - [ ] Implement searchLocations(query) with fuzzy matching
 - [ ] Implement getNearbyLocations(locationId, radiusKm)
