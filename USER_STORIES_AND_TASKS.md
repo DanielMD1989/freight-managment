@@ -15,7 +15,7 @@
 
 **Last Updated:** 2025-12-24
 **Current Sprint:** Sprint 8 - TRD Amendments (Truck Posting & Matching)
-**Overall Progress:** 44% (Sprint 7 Complete, Sprint 8 Starting)
+**Overall Progress:** 53% (Sprint 7 Complete, Sprint 8 Phase 1-2 Complete)
 
 ### Sprint Status Overview
 ```
@@ -25,10 +25,10 @@ Sprint 3: Search & Profiles             [x] 9/13 tasks (69%) - APIs complete
 Sprint 4: GPS Engine                    [x] 11/14 tasks (79%) - APIs complete
 Sprint 5: Finance Core                  [x] 13/16 tasks (81%) - APIs complete
 Sprint 6: Admin & Stabilization         [x] 8/12 tasks (67%) - Core APIs complete
-Sprint 7: Load Board Grid MVP           [x] 119/123 tasks (97%) - Automated tests complete ✓
-Sprint 8: TRD Amendments                [ ] 0/216 tasks (0%) - Planning complete, ready to start
+Sprint 7: Load Board Grid MVP           [x] 119/123 tasks (97%) - Production ready ✓
+Sprint 8: TRD Amendments                [🔄] 42/216 tasks (19%) - Database & Locations complete ✓
 ─────────────────────────────────────────────────────────────
-TOTAL MVP TASKS:                        [x] 197/448 tasks (44%) - SPRINT 8 READY
+TOTAL MVP TASKS:                        [x] 239/448 tasks (53%) - SPRINT 8 PHASE 3 READY
 ```
 
 ### Quick Resume Guide
@@ -1390,27 +1390,27 @@ _All new content above is marked with [NEW] and appended without modifying exist
 As a carrier/truck owner, I need to post available trucks with origin, destination, availability window, and preferences so I can find matching loads automatically.
 
 #### Database Tasks:
-- [ ] **[SECURITY]** Create VerificationStatus enum (PENDING, APPROVED, REJECTED, EXPIRED)
-- [ ] **[SECURITY]** Create PostingStatus enum (ACTIVE, EXPIRED, CANCELLED, MATCHED)
-- [ ] Create LocationType enum (CITY, TOWN, VILLAGE, LANDMARK)
-- [ ] Create CompanyDocumentType enum (COMPANY_LICENSE, TIN_CERTIFICATE, BUSINESS_REGISTRATION, etc.)
-- [ ] Create TruckDocumentType enum (TITLE_DEED, REGISTRATION, INSURANCE, DRIVER_LICENSE, etc.)
-- [ ] **[SECURITY]** Create TruckPosting model with proper authorization fields
-- [ ] **[SECURITY]** Add carrierId FK with ON DELETE CASCADE
-- [ ] **[SECURITY]** Add createdById FK for audit trail
-- [ ] Add availableFrom, availableTo (DateTime) - for time window
-- [ ] Add originCityId FK to EthiopianLocation
-- [ ] Add destinationCityId FK to EthiopianLocation (nullable - flexible routing)
-- [ ] Add fullPartial (LoadType) - FULL or PARTIAL
-- [ ] Add availableLength, availableWeight (Decimal)
-- [ ] Add preferredDhToOriginKm, preferredDhAfterDeliveryKm (Decimal, nullable) - filter preferences
-- [ ] Add contactName, contactPhone (String) - posting contact
-- [ ] Add ownerName (String, nullable) - if different from carrier
-- [ ] Add status (PostingStatus), postedAt, expiresAt
-- [ ] **[SECURITY]** Add indexes: status, originCityId, destinationCityId, availableFrom, carrierId
-- [ ] Generate Prisma migration for TruckPosting
-- [ ] Run migration
-- [ ] Generate Prisma client
+- [x] **[SECURITY]** Create VerificationStatus enum (PENDING, APPROVED, REJECTED, EXPIRED)
+- [x] **[SECURITY]** Create PostingStatus enum (ACTIVE, EXPIRED, CANCELLED, MATCHED)
+- [x] Create LocationType enum (CITY, TOWN, VILLAGE, LANDMARK)
+- [x] Create CompanyDocumentType enum (COMPANY_LICENSE, TIN_CERTIFICATE, BUSINESS_REGISTRATION, etc.)
+- [x] Create TruckDocumentType enum (TITLE_DEED, REGISTRATION, INSURANCE, DRIVER_LICENSE, etc.)
+- [x] **[SECURITY]** Create TruckPosting model with proper authorization fields
+- [x] **[SECURITY]** Add carrierId FK with ON DELETE CASCADE
+- [x] **[SECURITY]** Add createdById FK for audit trail
+- [x] Add availableFrom, availableTo (DateTime) - for time window
+- [x] Add originCityId FK to EthiopianLocation
+- [x] Add destinationCityId FK to EthiopianLocation (nullable - flexible routing)
+- [x] Add fullPartial (LoadType) - FULL or PARTIAL
+- [x] Add availableLength, availableWeight (Decimal)
+- [x] Add preferredDhToOriginKm, preferredDhAfterDeliveryKm (Decimal, nullable) - filter preferences
+- [x] Add contactName, contactPhone (String) - posting contact
+- [x] Add ownerName (String, nullable) - if different from carrier
+- [x] Add status (PostingStatus), postedAt, expiresAt
+- [x] **[SECURITY]** Add indexes: status, originCityId, destinationCityId, availableFrom, carrierId
+- [x] Generate Prisma migration for TruckPosting
+- [x] Run migration
+- [x] Generate Prisma client
 
 #### API Backend Tasks:
 - [ ] **[SECURITY]** POST /api/truck-postings - Validate carrier role authorization
@@ -1458,30 +1458,30 @@ As a carrier/truck owner, I need to post available trucks with origin, destinati
 As a user, I need to select Ethiopian cities/towns from searchable dropdowns with lat/lon coordinates so trip distances can be calculated accurately from maps.
 
 #### Database Tasks:
-- [ ] **[SECURITY]** Create EthiopianLocation model with sanitized inputs
-- [ ] Add name (String) - City/town name in English
-- [ ] Add nameEthiopic (String, nullable) - Amharic name
-- [ ] Add region (String) - Administrative region
-- [ ] Add zone (String, nullable) - Sub-region
-- [ ] Add latitude, longitude (Decimal) - Geographic coordinates
-- [ ] Add type (LocationType) - CITY, TOWN, VILLAGE, LANDMARK
-- [ ] Add population (Int, nullable)
-- [ ] Add aliases (String[]) - Alternative spellings for search
-- [ ] Add isActive (Boolean) - Allow disabling locations
-- [ ] **[SECURITY]** Add unique constraint on (name, region)
-- [ ] **[SECURITY]** Add indexes: name, region
-- [ ] Generate migration for EthiopianLocation
-- [ ] Run migration
+- [x] **[SECURITY]** Create EthiopianLocation model with sanitized inputs
+- [x] Add name (String) - City/town name in English
+- [x] Add nameEthiopic (String, nullable) - Amharic name
+- [x] Add region (String) - Administrative region
+- [x] Add zone (String, nullable) - Sub-region
+- [x] Add latitude, longitude (Decimal) - Geographic coordinates
+- [x] Add type (LocationType) - CITY, TOWN, VILLAGE, LANDMARK
+- [x] Add population (Int, nullable)
+- [x] Add aliases (String[]) - Alternative spellings for search
+- [x] Add isActive (Boolean) - Allow disabling locations
+- [x] **[SECURITY]** Add unique constraint on (name, region)
+- [x] **[SECURITY]** Add indexes: name, region
+- [x] Generate migration for EthiopianLocation
+- [x] Run migration
 
 #### Data Seeding Tasks:
-- [ ] **[SECURITY]** Compile verified Ethiopian cities data (50-100 locations)
-- [ ] **[SECURITY]** Validate lat/lon coordinates from trusted sources (OpenStreetMap, GeoNames)
-- [ ] Add major cities: Addis Ababa, Dire Dawa, Mekelle, Gondar, Bahir Dar, Hawassa, etc.
-- [ ] Add regional capitals and major towns
-- [ ] Add alternative spellings in aliases array
-- [ ] **[SECURITY]** Create seed script with data validation
-- [ ] Run seed script
-- [ ] Verify location data in database
+- [x] **[SECURITY]** Compile verified Ethiopian cities data (50-100 locations) - ✓ 66 locations
+- [x] **[SECURITY]** Validate lat/lon coordinates from trusted sources (OpenStreetMap, GeoNames)
+- [x] Add major cities: Addis Ababa, Dire Dawa, Mekelle, Gondar, Bahir Dar, Hawassa, etc.
+- [x] Add regional capitals and major towns - ✓ All 12 regions covered
+- [x] Add alternative spellings in aliases array - ✓ Nazret→Adama, Awassa→Hawassa, etc.
+- [x] **[SECURITY]** Create seed script with data validation
+- [x] Run seed script - ✓ 66/66 seeded successfully
+- [x] Verify location data in database - ✓ 23 cities, 43 towns
 
 #### API Backend Tasks:
 - [ ] **[SECURITY]** GET /api/locations - Public read-only endpoint (no auth required)
