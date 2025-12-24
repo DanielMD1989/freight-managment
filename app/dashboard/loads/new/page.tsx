@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import LocationSelect from "@/components/LocationSelect";
 
 export default function CreateLoadPage() {
   const router = useRouter();
@@ -10,6 +11,8 @@ export default function CreateLoadPage() {
     // Location & Schedule
     origin: "",
     destination: "",
+    pickupCityId: "", // SPRINT 8: Location FK
+    deliveryCityId: "", // SPRINT 8: Location FK
     pickupDate: "",
     deliveryDate: "",
     pickupDockHours: "",
@@ -61,6 +64,8 @@ export default function CreateLoadPage() {
         // Location & Schedule
         pickupCity: formData.origin,
         deliveryCity: formData.destination,
+        pickupCityId: formData.pickupCityId || undefined, // SPRINT 8
+        deliveryCityId: formData.deliveryCityId || undefined, // SPRINT 8
         pickupDate: formData.pickupDate,
         deliveryDate: formData.deliveryDate,
         pickupDockHours: formData.pickupDockHours || undefined,
@@ -128,36 +133,32 @@ export default function CreateLoadPage() {
             Route Information
           </h2>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Origin City *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.origin}
-                onChange={(e) =>
-                  setFormData({ ...formData, origin: e.target.value })
-                }
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                placeholder="e.g., Addis Ababa"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Destination City *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.destination}
-                onChange={(e) =>
-                  setFormData({ ...formData, destination: e.target.value })
-                }
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                placeholder="e.g., Dire Dawa"
-              />
-            </div>
+            <LocationSelect
+              label="Origin City"
+              value={formData.pickupCityId}
+              onChange={(locationId, locationName) =>
+                setFormData({
+                  ...formData,
+                  pickupCityId: locationId,
+                  origin: locationName,
+                })
+              }
+              required
+              placeholder="Search for pickup city..."
+            />
+            <LocationSelect
+              label="Destination City"
+              value={formData.deliveryCityId}
+              onChange={(locationId, locationName) =>
+                setFormData({
+                  ...formData,
+                  deliveryCityId: locationId,
+                  destination: locationName,
+                })
+              }
+              required
+              placeholder="Search for delivery city..."
+            />
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Pickup Date *

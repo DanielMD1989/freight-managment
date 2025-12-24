@@ -26,7 +26,7 @@ Sprint 4: GPS Engine                    [x] 11/14 tasks (79%) - APIs complete
 Sprint 5: Finance Core                  [x] 13/16 tasks (81%) - APIs complete
 Sprint 6: Admin & Stabilization         [x] 8/12 tasks (67%) - Core APIs complete
 Sprint 7: Load Board Grid MVP           [x] 119/123 tasks (97%) - ✅ PRODUCTION READY
-Sprint 8: TRD Amendments                [🔄] 56/216 tasks (26%) - APIs in progress
+Sprint 8: TRD Amendments                [🔄] 65/216 tasks (30%) - Location APIs & UI complete
 ─────────────────────────────────────────────────────────────
 TOTAL MVP TASKS:                        [x] 239/448 tasks (53%) - SPRINT 8 PHASE 3 READY
 ```
