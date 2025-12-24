@@ -34,6 +34,7 @@ export default async function DashboardLayout({
 
   const opsNav = [
     { name: "Dashboard", href: "/dashboard" },
+    { name: "Find Loads", href: "/dashboard/loads/search" },
     { name: "Dispatch", href: "/dashboard/dispatch" },
     { name: "All Loads", href: "/dashboard/loads/all" },
     { name: "GPS Map", href: "/dashboard/gps/map" },
@@ -41,6 +42,7 @@ export default async function DashboardLayout({
 
   const adminNav = [
     { name: "Dashboard", href: "/dashboard" },
+    { name: "Find Loads", href: "/dashboard/loads/search" },
     { name: "Users", href: "/dashboard/admin/users" },
     { name: "Organizations", href: "/dashboard/admin/organizations" },
     { name: "All Loads", href: "/dashboard/loads/all" },
