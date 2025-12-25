@@ -22,6 +22,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { VerificationStatus, CompanyDocumentType, TruckDocumentType } from '@prisma/client';
+import { requireAuth } from '@/lib/auth';
 
 /**
  * GET /api/documents
@@ -47,11 +48,8 @@ import { VerificationStatus, CompanyDocumentType, TruckDocumentType } from '@pri
  */
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Get authenticated user from session/token
-    // For MVP, we'll skip auth checks
-    const userId = 'test-user-id'; // PLACEHOLDER
-    const userOrgId = 'test-org-id'; // PLACEHOLDER
-    const isAdmin = false; // PLACEHOLDER
+    // Require authentication
+    const session = await requireAuth();
 
     const { searchParams } = new URL(request.url);
     const entityType = searchParams.get('entityType');
@@ -89,8 +87,13 @@ export async function GET(request: NextRequest) {
         where.verificationStatus = statusFilter as VerificationStatus;
       }
 
-      // TODO: Verify user has access to this organization
-      // For MVP, we'll allow access
+      // Verify user has access to this organization
+      if (entityId !== session.organizationId && session.role !== 'ADMIN') {
+        return NextResponse.json(
+          { error: 'You can only view documents for your own organization' },
+          { status: 403 }
+        );
+      }
 
       const [documents, total] = await Promise.all([
         db.companyDocument.findMany({
@@ -133,8 +136,25 @@ export async function GET(request: NextRequest) {
         where.verificationStatus = statusFilter as VerificationStatus;
       }
 
-      // TODO: Verify user has access to this truck
-      // For MVP, we'll allow access
+      // Verify user has access to this truck
+      const truck = await db.truck.findUnique({
+        where: { id: entityId },
+        select: { carrierId: true },
+      });
+
+      if (!truck) {
+        return NextResponse.json(
+          { error: 'Truck not found' },
+          { status: 404 }
+        );
+      }
+
+      if (truck.carrierId !== session.organizationId && session.role !== 'ADMIN') {
+        return NextResponse.json(
+          { error: 'You can only view documents for trucks owned by your organization' },
+          { status: 403 }
+        );
+      }
 
       const [documents, total] = await Promise.all([
         db.truckDocument.findMany({

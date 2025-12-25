@@ -10,18 +10,30 @@ export enum Permission {
   VIEW_ORGANIZATIONS = "view_organizations",
   MANAGE_ORGANIZATIONS = "manage_organizations",
   VERIFY_ORGANIZATIONS = "verify_organizations",
+
+  // Document Management
+  UPLOAD_DOCUMENTS = "upload_documents",
+  VIEW_DOCUMENTS = "view_documents",
   VERIFY_DOCUMENTS = "verify_documents",
 
   // Load Management
   CREATE_LOAD = "create_load",
+  POST_LOADS = "post_loads",
   VIEW_LOADS = "view_loads",
+  VIEW_ALL_LOADS = "view_all_loads",
+  EDIT_LOADS = "edit_loads",
+  DELETE_LOADS = "delete_loads",
   MANAGE_OWN_LOADS = "manage_own_loads",
   MANAGE_ALL_LOADS = "manage_all_loads",
   ASSIGN_LOADS = "assign_loads",
 
   // Truck Management
   CREATE_TRUCK = "create_truck",
+  POST_TRUCKS = "post_trucks",
   VIEW_TRUCKS = "view_trucks",
+  VIEW_ALL_TRUCKS = "view_all_trucks",
+  EDIT_TRUCKS = "edit_trucks",
+  DELETE_TRUCKS = "delete_trucks",
   MANAGE_OWN_TRUCKS = "manage_own_trucks",
   MANAGE_ALL_TRUCKS = "manage_all_trucks",
 
@@ -32,6 +44,7 @@ export enum Permission {
 
   // Financial Management
   VIEW_WALLET = "view_wallet",
+  MANAGE_WALLET = "manage_wallet",
   DEPOSIT_FUNDS = "deposit_funds",
   WITHDRAW_FUNDS = "withdraw_funds",
   VIEW_ALL_ACCOUNTS = "view_all_accounts",
@@ -50,6 +63,7 @@ export enum Permission {
 
   // Admin
   VIEW_DASHBOARD = "view_dashboard",
+  VIEW_AUDIT_LOGS = "view_audit_logs",
   MANAGE_SYSTEM_CONFIG = "manage_system_config",
 }
 
@@ -65,9 +79,14 @@ export type Role =
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   SHIPPER: [
     Permission.CREATE_LOAD,
+    Permission.POST_LOADS,
     Permission.VIEW_LOADS,
+    Permission.EDIT_LOADS,
+    Permission.DELETE_LOADS,
     Permission.MANAGE_OWN_LOADS,
     Permission.VIEW_TRUCKS,
+    Permission.UPLOAD_DOCUMENTS,
+    Permission.VIEW_DOCUMENTS,
     Permission.VIEW_WALLET,
     Permission.DEPOSIT_FUNDS,
     Permission.WITHDRAW_FUNDS,
@@ -78,11 +97,16 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
   CARRIER: [
     Permission.CREATE_TRUCK,
+    Permission.POST_TRUCKS,
     Permission.VIEW_TRUCKS,
+    Permission.EDIT_TRUCKS,
+    Permission.DELETE_TRUCKS,
     Permission.MANAGE_OWN_TRUCKS,
     Permission.VIEW_LOADS,
     Permission.ACCEPT_LOADS,
     Permission.VIEW_GPS,
+    Permission.UPLOAD_DOCUMENTS,
+    Permission.VIEW_DOCUMENTS,
     Permission.VIEW_WALLET,
     Permission.DEPOSIT_FUNDS,
     Permission.WITHDRAW_FUNDS,

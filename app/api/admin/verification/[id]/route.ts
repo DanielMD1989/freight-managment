@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { VerificationStatus } from "@prisma/client";
+import { sanitizeRejectionReason, validateIdFormat } from "@/lib/validation";
 
 export async function PATCH(
   request: NextRequest,
@@ -26,6 +27,16 @@ export async function PATCH(
     const session = await requirePermission(Permission.VERIFY_DOCUMENTS);
 
     const { id } = await params;
+
+    // Validate ID format
+    const idValidation = validateIdFormat(id, 'Document ID');
+    if (!idValidation.valid) {
+      return NextResponse.json(
+        { error: idValidation.error },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     const {
       entityType,
@@ -62,7 +73,7 @@ export async function PATCH(
 
     // Sanitize rejection reason to prevent XSS
     const sanitizedReason = rejectionReason
-      ? rejectionReason.trim().substring(0, 500)
+      ? sanitizeRejectionReason(rejectionReason)
       : null;
 
     // Update data

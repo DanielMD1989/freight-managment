@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
+import { generateRequestId } from "@/lib/errorHandler";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "development-jwt-secret"
@@ -13,9 +14,14 @@ const opsPaths = ["/ops"];
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Generate request ID for all requests (for error tracking and logging)
+  const requestId = request.headers.get('x-request-id') || generateRequestId();
+
   // Allow public paths
   if (publicPaths.some((path) => pathname.startsWith(path))) {
-    return NextResponse.next();
+    const response = NextResponse.next();
+    response.headers.set('x-request-id', requestId);
+    return response;
   }
 
   // Get session token
@@ -36,8 +42,8 @@ export async function middleware(request: NextRequest) {
     if (adminPaths.some((path) => pathname.startsWith(path))) {
       if (payload.role !== "ADMIN") {
         return NextResponse.json(
-          { error: "Forbidden: Admin access required" },
-          { status: 403 }
+          { error: "Forbidden: Admin access required", requestId },
+          { status: 403, headers: { 'x-request-id': requestId } }
         );
       }
     }
@@ -46,19 +52,22 @@ export async function middleware(request: NextRequest) {
     if (opsPaths.some((path) => pathname.startsWith(path))) {
       if (payload.role !== "PLATFORM_OPS" && payload.role !== "ADMIN") {
         return NextResponse.json(
-          { error: "Forbidden: Ops access required" },
-          { status: 403 }
+          { error: "Forbidden: Ops access required", requestId },
+          { status: 403, headers: { 'x-request-id': requestId } }
         );
       }
     }
 
-    return NextResponse.next();
+    const response = NextResponse.next();
+    response.headers.set('x-request-id', requestId);
+    return response;
   } catch (error) {
     console.error("Token verification failed:", error);
 
     // Clear invalid token and redirect to login
     const response = NextResponse.redirect(new URL("/login", request.url));
     response.cookies.delete("session");
+    response.headers.set('x-request-id', requestId);
     return response;
   }
 }

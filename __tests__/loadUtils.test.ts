@@ -13,7 +13,7 @@ import {
 } from "../lib/loadUtils";
 
 // Test utilities
-let testResults: { name: string; passed: boolean; error?: string }[] = [];
+const testResults: { name: string; passed: boolean; error?: string }[] = [];
 
 function test(name: string, fn: () => void) {
   try {

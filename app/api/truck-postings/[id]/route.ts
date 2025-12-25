@@ -7,15 +7,20 @@
  *
  * Security:
  * - GET: Public for ACTIVE postings
- * - PATCH/DELETE: Requires ownership verification
+ * - PATCH/DELETE: Requires authentication
+ * - PATCH/DELETE: CSRF protection (double-submit cookie)
+ * - PATCH/DELETE: Ownership verification
  * - DELETE: Soft delete (sets status to CANCELLED)
  *
  * Sprint 8 - Story 8.1: Truck Posting Infrastructure
+ * Sprint 9 - Story 9.6: CSRF Protection
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
+import { requireAuth } from '@/lib/auth';
+import { requireCSRF } from '@/lib/csrf';
 
 // Update schema (partial)
 const UpdateTruckPostingSchema = z.object({
@@ -104,16 +109,18 @@ export async function GET(
       );
     }
 
-    // TODO: Check if requester is the owner
-    // For MVP, show ACTIVE postings to everyone
-    // Show non-ACTIVE postings only to owner
+    // Show ACTIVE postings to everyone
+    // Show non-ACTIVE postings only to owner or admin
     if (posting.status !== 'ACTIVE') {
-      // TODO: Verify ownership
-      // For now, return 404 for non-active postings
-      return NextResponse.json(
-        { error: 'Truck posting not found' },
-        { status: 404 }
-      );
+      const session = await requireAuth();
+
+      // Verify ownership (user's organization owns this posting)
+      if (posting.carrierId !== session.organizationId && session.role !== 'ADMIN') {
+        return NextResponse.json(
+          { error: 'Truck posting not found' },
+          { status: 404 }
+        );
+      }
     }
 
     // Convert Decimals to numbers for JSON
@@ -186,6 +193,15 @@ export async function PATCH(
       );
     }
 
+    // Require authentication
+    const session = await requireAuth();
+
+    // Check CSRF token
+    const csrfError = requireCSRF(request);
+    if (csrfError) {
+      return csrfError;
+    }
+
     // Fetch existing posting
     const existing = await db.truckPosting.findUnique({
       where: { id },
@@ -202,8 +218,13 @@ export async function PATCH(
       );
     }
 
-    // TODO: Verify ownership (carrierId matches authenticated user's org)
-    // For MVP, we'll allow updates
+    // Verify ownership (user's organization owns this posting)
+    if (existing.carrierId !== session.organizationId && session.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'You can only update postings for your own organization' },
+        { status: 403 }
+      );
+    }
 
     // Prevent editing MATCHED or CANCELLED postings
     if (existing.status === 'MATCHED' || existing.status === 'CANCELLED') {
@@ -299,6 +320,15 @@ export async function DELETE(
       );
     }
 
+    // Require authentication
+    const session = await requireAuth();
+
+    // Check CSRF token
+    const csrfError = requireCSRF(request);
+    if (csrfError) {
+      return csrfError;
+    }
+
     // Fetch existing posting
     const existing = await db.truckPosting.findUnique({
       where: { id },
@@ -315,8 +345,13 @@ export async function DELETE(
       );
     }
 
-    // TODO: Verify ownership (carrierId matches authenticated user's org)
-    // For MVP, we'll allow deletion
+    // Verify ownership (user's organization owns this posting)
+    if (existing.carrierId !== session.organizationId && session.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'You can only cancel postings for your own organization' },
+        { status: 403 }
+      );
+    }
 
     // Soft delete: set status to CANCELLED
     const cancelled = await db.truckPosting.update({

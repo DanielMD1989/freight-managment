@@ -6,17 +6,32 @@
  *
  * Security:
  * - POST: Requires CARRIER role authentication
- * - POST: Validates carrierId matches session user's organization
+ * - POST: CSRF protection (double-submit cookie)
  * - POST: Rate limit: 100 postings per day per carrier
+ * - POST: Validates carrierId matches session user's organization
  * - GET: Public endpoint (shows ACTIVE postings only)
  * - GET: Filter by organizationId for "my postings"
  *
  * Sprint 8 - Story 8.1: Truck Posting Infrastructure
+ * Sprint 9 - Story 9.6: CSRF Protection
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
+import { requireAuth } from '@/lib/auth';
+import {
+  weightSchema,
+  lengthSchema,
+  distanceSchema,
+  validateIdFormat,
+  phoneSchema,
+} from '@/lib/validation';
+import {
+  checkRateLimit,
+  RATE_LIMIT_TRUCK_POSTING,
+} from '@/lib/rateLimit';
+import { requireCSRF } from '@/lib/csrf';
 
 // Validation schema for truck posting
 const TruckPostingSchema = z.object({
@@ -26,14 +41,14 @@ const TruckPostingSchema = z.object({
   availableFrom: z.string().datetime(),
   availableTo: z.string().datetime().optional().nullable(),
   fullPartial: z.enum(['FULL', 'PARTIAL']).default('FULL'),
-  availableLength: z.number().positive().optional().nullable(),
-  availableWeight: z.number().positive().optional().nullable(),
-  preferredDhToOriginKm: z.number().nonnegative().optional().nullable(),
-  preferredDhAfterDeliveryKm: z.number().nonnegative().optional().nullable(),
-  contactName: z.string().min(2),
-  contactPhone: z.string().min(10),
-  ownerName: z.string().optional().nullable(),
-  notes: z.string().optional().nullable(),
+  availableLength: lengthSchema.optional().nullable(),
+  availableWeight: weightSchema.optional().nullable(),
+  preferredDhToOriginKm: distanceSchema.optional().nullable(),
+  preferredDhAfterDeliveryKm: distanceSchema.optional().nullable(),
+  contactName: z.string().min(2).max(100, 'Contact name too long'),
+  contactPhone: phoneSchema,
+  ownerName: z.string().min(2).max(100, 'Owner name too long').optional().nullable(),
+  notes: z.string().max(500, 'Notes too long').optional().nullable(),
   expiresAt: z.string().datetime().optional().nullable(),
 });
 
@@ -50,9 +65,38 @@ const TruckPostingSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    // TODO: Add authentication check (req.user)
-    // For MVP, we'll skip auth and use a carrierId from request body
-    // In production, get carrierId from authenticated session
+    // Require authentication
+    const session = await requireAuth();
+
+    // Check CSRF token
+    const csrfError = requireCSRF(request);
+    if (csrfError) {
+      return csrfError;
+    }
+
+    // Check rate limit: 100 postings per day per carrier
+    const rateLimitResult = checkRateLimit(
+      RATE_LIMIT_TRUCK_POSTING,
+      session.organizationId
+    );
+
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Truck posting limit exceeded. Maximum 100 postings per day per carrier.',
+          retryAfter: rateLimitResult.retryAfter,
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString(),
+            'Retry-After': rateLimitResult.retryAfter!.toString(),
+          },
+        }
+      );
+    }
 
     const body = await request.json();
 
@@ -70,6 +114,33 @@ export async function POST(request: NextRequest) {
     }
 
     const data = validationResult.data;
+
+    // Validate IDs format
+    const truckIdValidation = validateIdFormat(data.truckId, 'Truck ID');
+    if (!truckIdValidation.valid) {
+      return NextResponse.json(
+        { error: truckIdValidation.error },
+        { status: 400 }
+      );
+    }
+
+    const originIdValidation = validateIdFormat(data.originCityId, 'Origin city ID');
+    if (!originIdValidation.valid) {
+      return NextResponse.json(
+        { error: originIdValidation.error },
+        { status: 400 }
+      );
+    }
+
+    if (data.destinationCityId) {
+      const destIdValidation = validateIdFormat(data.destinationCityId, 'Destination city ID');
+      if (!destIdValidation.valid) {
+        return NextResponse.json(
+          { error: destIdValidation.error },
+          { status: 400 }
+        );
+      }
+    }
 
     // Validate availableFrom < availableTo
     if (data.availableTo) {
@@ -125,30 +196,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Validate carrierId matches authenticated user's organization
-    // For MVP, we'll use the truck's carrierId
-    const carrierId = truck.carrierId;
-
-    // TODO: Get createdById from authenticated session
-    // For MVP, we'll use a placeholder (first user in the carrier org)
-    const creator = await db.user.findFirst({
-      where: { organizationId: carrierId },
-      select: { id: true },
-    });
-
-    if (!creator) {
+    // Validate user's organization owns this truck
+    if (truck.carrierId !== session.organizationId && session.role !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'No user found for carrier organization' },
-        { status: 400 }
+        { error: 'You can only post trucks owned by your organization' },
+        { status: 403 }
       );
     }
+
+    const carrierId = truck.carrierId;
 
     // Create truck posting
     const posting = await db.truckPosting.create({
       data: {
         truckId: data.truckId,
         carrierId,
-        createdById: creator.id,
+        createdById: session.userId,
         originCityId: data.originCityId,
         destinationCityId: data.destinationCityId || null,
         availableFrom: new Date(data.availableFrom),
@@ -190,7 +253,14 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(posting, { status: 201 });
+    const response = NextResponse.json(posting, { status: 201 });
+
+    // Add rate limit headers
+    response.headers.set('X-RateLimit-Limit', rateLimitResult.limit.toString());
+    response.headers.set('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
+    response.headers.set('X-RateLimit-Reset', new Date(rateLimitResult.resetTime).toISOString());
+
+    return response;
   } catch (error) {
     console.error('Error creating truck posting:', error);
 
@@ -230,6 +300,19 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || 'ACTIVE';
     const limitParam = searchParams.get('limit');
     const offsetParam = searchParams.get('offset');
+
+    // If filtering by specific organization (for "my postings"), verify user has access
+    if (organizationId) {
+      const session = await requireAuth();
+
+      // User can only filter by their own organization unless they're an admin
+      if (organizationId !== session.organizationId && session.role !== 'ADMIN') {
+        return NextResponse.json(
+          { error: 'You can only view postings for your own organization' },
+          { status: 403 }
+        );
+      }
+    }
 
     // Pagination
     const limit = Math.min(parseInt(limitParam || '20', 10), 100);

@@ -8,14 +8,26 @@
  * Security:
  * - GET: Owner or admin only
  * - PATCH: Admin only (for verification)
+ * - PATCH: CSRF protection (double-submit cookie)
  * - DELETE: Owner only, PENDING status only
+ * - DELETE: CSRF protection (double-submit cookie)
  *
  * Sprint 8 - Story 8.5: Document Upload System
+ * Sprint 9 - Story 9.6: CSRF Protection
+ * Sprint 9 - Story 9.8: Email Notifications
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { VerificationStatus } from '@prisma/client';
+import { requireAuth, requirePermission } from '@/lib/auth';
+import { Permission } from '@/lib/rbac/permissions';
+import { requireCSRF } from '@/lib/csrf';
+import {
+  sendEmail,
+  createDocumentApprovalEmail,
+  createDocumentRejectionEmail,
+} from '@/lib/email';
 
 /**
  * GET /api/documents/[id]
@@ -63,9 +75,8 @@ export async function GET(
       );
     }
 
-    // TODO: Get authenticated user
-    const userId = 'test-user-id'; // PLACEHOLDER
-    const isAdmin = false; // PLACEHOLDER
+    // Require authentication
+    const session = await requireAuth();
 
     // Fetch document based on entity type
     if (entityType === 'company') {
@@ -88,8 +99,13 @@ export async function GET(
         );
       }
 
-      // TODO: Verify user has access (owner or admin)
-      // For MVP, allow all access
+      // Verify user has access (owner or admin)
+      if (document.organizationId !== session.organizationId && session.role !== 'ADMIN') {
+        return NextResponse.json(
+          { error: 'You can only view documents for your own organization' },
+          { status: 403 }
+        );
+      }
 
       return NextResponse.json({
         ...document,
@@ -117,8 +133,13 @@ export async function GET(
         );
       }
 
-      // TODO: Verify user has access (owner or admin)
-      // For MVP, allow all access
+      // Verify user has access (owner or admin)
+      if (document.truck.carrierId !== session.organizationId && session.role !== 'ADMIN') {
+        return NextResponse.json(
+          { error: 'You can only view documents for trucks owned by your organization' },
+          { status: 403 }
+        );
+      }
 
       return NextResponse.json({
         ...document,
@@ -164,15 +185,13 @@ export async function PATCH(
       );
     }
 
-    // TODO: Verify user is admin
-    const userId = 'test-admin-id'; // PLACEHOLDER
-    const isAdmin = true; // PLACEHOLDER - check actual role
+    // Require admin permission
+    const session = await requirePermission(Permission.VERIFY_DOCUMENTS);
 
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: 'Unauthorized. Admin access required.' },
-        { status: 403 }
-      );
+    // Check CSRF token
+    const csrfError = requireCSRF(request);
+    if (csrfError) {
+      return csrfError;
     }
 
     // Parse request body
@@ -207,7 +226,7 @@ export async function PATCH(
         where: { id },
         data: {
           verificationStatus: verificationStatus as VerificationStatus,
-          verifiedById: userId,
+          verifiedById: session.userId,
           verifiedAt: new Date(),
           rejectionReason: verificationStatus === 'REJECTED' ? rejectionReason : null,
         },
@@ -218,8 +237,46 @@ export async function PATCH(
               name: true,
             },
           },
+          uploadedBy: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
         },
       });
+
+      // Send email notification
+      try {
+        const emailParams = {
+          recipientEmail: updated.uploadedBy.email,
+          recipientName: updated.uploadedBy.name || 'User',
+          documentType: updated.type,
+          documentName: updated.fileName,
+          organizationName: updated.organization.name,
+        };
+
+        if (verificationStatus === 'APPROVED') {
+          await sendEmail(
+            createDocumentApprovalEmail({
+              ...emailParams,
+              verifiedAt: updated.verifiedAt!,
+            })
+          );
+        } else {
+          await sendEmail(
+            createDocumentRejectionEmail({
+              ...emailParams,
+              rejectionReason: updated.rejectionReason || 'No reason provided',
+              rejectedAt: updated.verifiedAt!,
+            })
+          );
+        }
+      } catch (emailError) {
+        // Log email error but don't fail the verification
+        console.error('Failed to send verification email:', emailError);
+      }
 
       return NextResponse.json({
         message: `Company document ${verificationStatus.toLowerCase()} successfully`,
@@ -231,7 +288,7 @@ export async function PATCH(
         where: { id },
         data: {
           verificationStatus: verificationStatus as VerificationStatus,
-          verifiedById: userId,
+          verifiedById: session.userId,
           verifiedAt: new Date(),
           rejectionReason: verificationStatus === 'REJECTED' ? rejectionReason : null,
         },
@@ -240,10 +297,54 @@ export async function PATCH(
             select: {
               id: true,
               licensePlate: true,
+              carrier: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+          uploadedBy: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
             },
           },
         },
       });
+
+      // Send email notification
+      try {
+        const emailParams = {
+          recipientEmail: updated.uploadedBy.email,
+          recipientName: updated.uploadedBy.name || 'User',
+          documentType: updated.type,
+          documentName: updated.fileName,
+          organizationName: updated.truck.carrier.name,
+        };
+
+        if (verificationStatus === 'APPROVED') {
+          await sendEmail(
+            createDocumentApprovalEmail({
+              ...emailParams,
+              verifiedAt: updated.verifiedAt!,
+            })
+          );
+        } else {
+          await sendEmail(
+            createDocumentRejectionEmail({
+              ...emailParams,
+              rejectionReason: updated.rejectionReason || 'No reason provided',
+              rejectedAt: updated.verifiedAt!,
+            })
+          );
+        }
+      } catch (emailError) {
+        // Log email error but don't fail the verification
+        console.error('Failed to send verification email:', emailError);
+      }
 
       return NextResponse.json({
         message: `Truck document ${verificationStatus.toLowerCase()} successfully`,
@@ -302,8 +403,14 @@ export async function DELETE(
       );
     }
 
-    // TODO: Get authenticated user
-    const userId = 'test-user-id'; // PLACEHOLDER
+    // Require authentication
+    const session = await requireAuth();
+
+    // Check CSRF token
+    const csrfError = requireCSRF(request);
+    if (csrfError) {
+      return csrfError;
+    }
 
     // Check document exists and is PENDING
     if (entityType === 'company') {
@@ -323,8 +430,13 @@ export async function DELETE(
         );
       }
 
-      // TODO: Verify user is the uploader
-      // For MVP, allow deletion
+      // Verify user is the uploader
+      if (document.uploadedById !== session.userId) {
+        return NextResponse.json(
+          { error: 'You can only delete documents you uploaded' },
+          { status: 403 }
+        );
+      }
 
       if (document.verificationStatus !== 'PENDING') {
         return NextResponse.json(
@@ -359,8 +471,13 @@ export async function DELETE(
         );
       }
 
-      // TODO: Verify user is the uploader
-      // For MVP, allow deletion
+      // Verify user is the uploader
+      if (document.uploadedById !== session.userId) {
+        return NextResponse.json(
+          { error: 'You can only delete documents you uploaded' },
+          { status: 403 }
+        );
+      }
 
       if (document.verificationStatus !== 'PENDING') {
         return NextResponse.json(

@@ -7,6 +7,8 @@
  *
  * Security:
  * - Requires authentication
+ * - CSRF protection (double-submit cookie)
+ * - Rate limiting (10 uploads/hour per user)
  * - File type validation (PDF, JPG, PNG only)
  * - File size validation (max 10MB)
  * - Magic bytes verification
@@ -14,6 +16,7 @@
  * - Unique file names to prevent path traversal
  *
  * Sprint 8 - Story 8.5: Document Upload System
+ * Sprint 9 - Story 9.6: CSRF Protection
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -24,6 +27,14 @@ import {
   MAX_FILE_SIZE,
 } from '@/lib/fileStorage';
 import { CompanyDocumentType, TruckDocumentType } from '@prisma/client';
+import { requireAuth } from '@/lib/auth';
+import { validateFileName, validateIdFormat } from '@/lib/validation';
+import {
+  checkRateLimit,
+  addRateLimitHeaders,
+  RATE_LIMIT_DOCUMENT_UPLOAD,
+} from '@/lib/rateLimit';
+import { requireCSRF } from '@/lib/csrf';
 
 /**
  * POST /api/documents/upload
@@ -47,11 +58,37 @@ import { CompanyDocumentType, TruckDocumentType } from '@prisma/client';
  */
 export async function POST(request: NextRequest) {
   try {
-    // TODO: Get authenticated user from session/token
-    // For MVP, we'll skip auth and use a test user
-    // In production, verify user is authenticated and belongs to the organization
-    const userId = 'test-user-id'; // PLACEHOLDER
-    const userOrgId = 'test-org-id'; // PLACEHOLDER
+    // Require authentication
+    const session = await requireAuth();
+    const userId = session.userId;
+    const userOrgId = session.organizationId;
+
+    // Check CSRF token
+    const csrfError = requireCSRF(request);
+    if (csrfError) {
+      return csrfError;
+    }
+
+    // Check rate limit: 10 uploads per hour per user
+    const rateLimitResult = checkRateLimit(RATE_LIMIT_DOCUMENT_UPLOAD, userId);
+
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Document upload limit exceeded. Maximum 10 uploads per hour.',
+          retryAfter: rateLimitResult.retryAfter,
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString(),
+            'Retry-After': rateLimitResult.retryAfter!.toString(),
+          },
+        }
+      );
+    }
 
     // Parse form data
     const formData = await request.formData();
@@ -89,6 +126,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate entity ID format
+    const idValidation = validateIdFormat(entityId, 'Entity ID');
+    if (!idValidation.valid) {
+      return NextResponse.json(
+        { error: idValidation.error },
+        { status: 400 }
+      );
+    }
+
     // Validate document type enum
     const validCompanyTypes = Object.values(CompanyDocumentType);
     const validTruckTypes = Object.values(TruckDocumentType);
@@ -115,6 +161,15 @@ export async function POST(request: NextRequest) {
     const fileSize = file.size;
     const mimeType = file.type;
     const originalName = file.name;
+
+    // Validate file name
+    const fileNameValidation = validateFileName(originalName);
+    if (!fileNameValidation.valid) {
+      return NextResponse.json(
+        { error: fileNameValidation.error },
+        { status: 400 }
+      );
+    }
 
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
@@ -144,8 +199,13 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // TODO: Verify user belongs to this organization
-      // For MVP, we'll allow any upload
+      // Verify user belongs to this organization (admins can upload for any org)
+      if (entityId !== userOrgId && session.role !== 'ADMIN') {
+        return NextResponse.json(
+          { error: 'You can only upload documents for your own organization' },
+          { status: 403 }
+        );
+      }
     } else {
       // entityType === 'truck'
       const truck = await db.truck.findUnique({
@@ -160,8 +220,13 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // TODO: Verify user owns this truck or belongs to owning organization
-      // For MVP, we'll allow any upload
+      // Verify user's organization owns this truck (admins can upload for any truck)
+      if (truck.carrierId !== userOrgId && session.role !== 'ADMIN') {
+        return NextResponse.json(
+          { error: 'You can only upload documents for trucks owned by your organization' },
+          { status: 403 }
+        );
+      }
     }
 
     // Save file to storage
@@ -208,10 +273,17 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return NextResponse.json({
+      const response = NextResponse.json({
         message: 'Company document uploaded successfully',
         document,
       });
+
+      // Add rate limit headers
+      response.headers.set('X-RateLimit-Limit', rateLimitResult.limit.toString());
+      response.headers.set('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
+      response.headers.set('X-RateLimit-Reset', new Date(rateLimitResult.resetTime).toISOString());
+
+      return response;
     } else {
       // entityType === 'truck'
       const document = await db.truckDocument.create({
@@ -236,10 +308,17 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return NextResponse.json({
+      const response = NextResponse.json({
         message: 'Truck document uploaded successfully',
         document,
       });
+
+      // Add rate limit headers
+      response.headers.set('X-RateLimit-Limit', rateLimitResult.limit.toString());
+      response.headers.set('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
+      response.headers.set('X-RateLimit-Reset', new Date(rateLimitResult.resetTime).toISOString());
+
+      return response;
     }
   } catch (error: any) {
     console.error('Error uploading document:', error);

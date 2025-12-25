@@ -194,10 +194,27 @@ model User {
   loadsCreated      Load[]    @relation("LoadCreator")
   disputes          Dispute[]
   reports           Report[]
+  passwordResetTokens PasswordResetToken[]
 
   @@index([email])
   @@index([organizationId])
   @@map("users")
+}
+
+model PasswordResetToken {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 model Organization {
@@ -618,6 +635,45 @@ model SystemConfig {
   updatedAt   DateTime @updatedAt
 
   @@map("system_config")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+
+  // Event Information
+  eventType String   // AUTH_LOGIN_SUCCESS, FILE_UPLOAD, etc.
+  severity  String   // INFO, WARNING, ERROR, CRITICAL
+
+  // User Context
+  userId         String?
+  organizationId String?
+
+  // Request Context
+  ipAddress  String?
+  userAgent  String?
+
+  // Resource Information
+  resource   String?  // DOCUMENT, FILE, USER, etc.
+  resourceId String?  // ID of the resource
+  action     String?  // CREATE, UPDATE, DELETE, VERIFY, etc.
+
+  // Result
+  result   String   // SUCCESS or FAILURE
+  message  String   // Human-readable message
+  metadata Json     @default("{}")  // Additional data
+
+  // Timestamp
+  timestamp DateTime @default(now())
+
+  // Indexes for common queries
+  @@index([userId])
+  @@index([organizationId])
+  @@index([eventType])
+  @@index([severity])
+  @@index([timestamp])
+  @@index([ipAddress])
+
+  @@map("audit_logs")
 }
 
 // ============================================================================

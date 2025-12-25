@@ -8,13 +8,13 @@ dotenv.config();
 
 // Test configuration
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-let authToken: string = "";
-let testLoadId: string = "";
-let testOrganizationId: string = "";
-let testUserId: string = "";
+const authToken: string = "";
+const testLoadId: string = "";
+const testOrganizationId: string = "";
+const testUserId: string = "";
 
 // Test utilities
-let testResults: { name: string; passed: boolean; error?: string }[] = [];
+const testResults: { name: string; passed: boolean; error?: string }[] = [];
 
 function test(name: string, fn: () => Promise<void>) {
   return async () => {
