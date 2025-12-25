@@ -311,9 +311,7 @@ export async function GET(request: NextRequest) {
           rate: true,
           currency: true,
           bookMode: true,  // [NEW]
-          // [NEW] Market
-          dtpReference: true,
-          factorRating: true,
+          // SPRINT 8: Market pricing (dtpReference, factorRating) removed per TRD
           // Privacy & Safety
           isAnonymous: true,
           // NOTE: shipperContactName and shipperContactPhone are NEVER included in public list
@@ -322,6 +320,11 @@ export async function GET(request: NextRequest) {
           // Timestamps
           createdAt: true,
           updatedAt: true,
+          // Foreign Keys (needed for relations)
+          pickupCityId: true,
+          deliveryCityId: true,
+          shipperId: true,
+          createdById: true,
           // Relations
           shipper: {
             select: {

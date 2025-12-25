@@ -79,8 +79,7 @@ async function main() {
       // Pricing
       rate: 25000,
       bookMode: BookMode.REQUEST,
-      dtpReference: "DTP-2025-001",
-      factorRating: "A+",
+      // SPRINT 8: Market pricing (dtpReference, factorRating) removed per TRD
       // Privacy & Safety
       isAnonymous: false,
       shipperContactName: "Ahmed Hassan",
@@ -124,8 +123,7 @@ async function main() {
       casesCount: 150,
       rate: 45000,
       bookMode: BookMode.INSTANT,
-      dtpReference: "DTP-2025-002",
-      factorRating: "A",
+      // SPRINT 8: Market pricing removed per TRD
       isAnonymous: false,
       shipperContactName: "Tsegaye Abebe",
       shipperContactPhone: "+251922345678",
@@ -167,8 +165,7 @@ async function main() {
       casesCount: 25,
       rate: 8500,
       bookMode: BookMode.REQUEST,
-      dtpReference: "DTP-2025-003",
-      factorRating: "B+",
+      // SPRINT 8: Market pricing removed per TRD
       isAnonymous: true, // Anonymous shipper
       shipperContactName: "Contact Hidden",
       shipperContactPhone: "+251933456789",
@@ -208,8 +205,7 @@ async function main() {
       lengthM: 10.0,
       rate: 35000,
       bookMode: BookMode.INSTANT,
-      dtpReference: "DTP-2025-004",
-      factorRating: "A",
+      // SPRINT 8: Market pricing removed per TRD
       isAnonymous: false,
       shipperContactName: "Mulugeta Tesfaye",
       shipperContactPhone: "+251944567890",
@@ -249,8 +245,7 @@ async function main() {
       casesCount: 200,
       rate: 12000,
       bookMode: BookMode.REQUEST,
-      dtpReference: "DTP-2025-005",
-      factorRating: "B",
+      // SPRINT 8: Market pricing removed per TRD
       isAnonymous: false,
       shipperContactName: "Sara Kebede",
       shipperContactPhone: "+251955678901",

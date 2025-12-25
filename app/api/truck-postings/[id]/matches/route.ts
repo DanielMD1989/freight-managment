@@ -41,10 +41,10 @@ import { findMatchingLoadsForTruck } from '@/lib/matchingEngine';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const { searchParams } = new URL(request.url);
 
     // Validate ID format

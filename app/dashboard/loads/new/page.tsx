@@ -35,9 +35,7 @@ export default function CreateLoadPage() {
     // Pricing
     rate: "",
     bookMode: "REQUEST" as "REQUEST" | "INSTANT",  // [NEW]
-    // [NEW] Market Pricing
-    dtpReference: "",
-    factorRating: "",
+    // SPRINT 8: Market pricing removed per TRD requirements
     // Privacy & Safety
     isAnonymous: false,
     shipperContactName: "",  // [NEW]
@@ -116,9 +114,7 @@ export default function CreateLoadPage() {
         // Pricing
         rate: parseFloat(formData.rate),
         bookMode: formData.bookMode,  // [NEW]
-        // [NEW] Market Pricing
-        dtpReference: formData.dtpReference || undefined,
-        factorRating: formData.factorRating || undefined,
+        // SPRINT 8: Market pricing removed per TRD requirements
         // Privacy & Safety
         isAnonymous: formData.isAnonymous,
         shipperContactName: formData.shipperContactName || undefined,  // [NEW]
@@ -273,7 +269,7 @@ export default function CreateLoadPage() {
           <h2 className="mb-4 text-lg font-semibold text-gray-900">
             Logistics &amp; Distance
           </h2>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Trip Distance (km) *
@@ -301,39 +297,8 @@ export default function CreateLoadPage() {
                   : "Select origin and destination to auto-calculate"}
               </p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Deadhead to Origin (km)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={formData.dhToOriginKm}
-                onChange={(e) =>
-                  setFormData({ ...formData, dhToOriginKm: e.target.value })
-                }
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                placeholder="e.g., 50"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Deadhead after Delivery (km)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={formData.dhAfterDeliveryKm}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    dhAfterDeliveryKm: e.target.value,
-                  })
-                }
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                placeholder="e.g., 30"
-              />
-            </div>
+            {/* SPRINT 8: Deadhead input fields hidden per TRD requirements.
+                Fields remain in state/API for matching algorithm but not user-entered. */}
           </div>
         </div>
 
@@ -508,42 +473,7 @@ export default function CreateLoadPage() {
           </div>
         </div>
 
-        {/* Market Pricing */}
-        <div className="rounded-lg bg-white p-6 shadow">
-          <h2 className="mb-4 text-lg font-semibold text-gray-900">
-            Market Pricing
-          </h2>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                DTP Reference
-              </label>
-              <input
-                type="text"
-                value={formData.dtpReference}
-                onChange={(e) =>
-                  setFormData({ ...formData, dtpReference: e.target.value })
-                }
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                placeholder="e.g., DTP-2024-001"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Factor Rating
-              </label>
-              <input
-                type="text"
-                value={formData.factorRating}
-                onChange={(e) =>
-                  setFormData({ ...formData, factorRating: e.target.value })
-                }
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                placeholder="e.g., A+"
-              />
-            </div>
-          </div>
-        </div>
+        {/* SPRINT 8: Market Pricing section removed per TRD requirements */}
 
         {/* Privacy */}
         <div className="rounded-lg bg-white p-6 shadow">
