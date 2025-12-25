@@ -1,7 +1,5 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { db } from "@/lib/db";
-import Link from "next/link";
 
 export default async function DashboardPage() {
   const session = await getSession();
@@ -10,18 +8,24 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  // Check if user has an organization
-  const user = await db.user.findUnique({
-    where: { id: session.userId },
-    select: {
-      organizationId: true,
-      organization: {
-        select: { name: true, type: true }
-      }
-    },
-  });
-
   const role = session.role;
+
+  // Redirect to role-specific portal
+  switch (role) {
+    case "ADMIN":
+      redirect("/admin");
+    case "SHIPPER":
+      redirect("/shipper");
+    case "CARRIER":
+      redirect("/carrier");
+    case "DRIVER":
+      redirect("/driver");
+    case "PLATFORM_OPS":
+      redirect("/ops");
+    default:
+      // If no specific role, show generic dashboard
+      break;
+  }
 
   // Quick action cards based on role
   const getQuickActions = () => {
