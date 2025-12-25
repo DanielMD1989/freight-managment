@@ -24,3 +24,96 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ===================================
+   ACCESSIBILITY IMPROVEMENTS
+   Sprint 8 - Story 8.8: UI Readability
+   =================================== */
+
+/* Enhanced Input Text Contrast */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+input[type="url"],
+input[type="search"],
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"],
+textarea,
+select {
+  @apply text-gray-900 font-medium;
+  @apply placeholder:text-gray-500 placeholder:font-normal;
+}
+
+/* Dark mode input contrast */
+@media (prefers-color-scheme: dark) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="time"],
+  textarea,
+  select {
+    @apply text-gray-100 bg-gray-800;
+  }
+}
+
+/* Enhanced Label Readability */
+label {
+  @apply text-gray-900 font-medium;
+}
+
+@media (prefers-color-scheme: dark) {
+  label {
+    @apply text-gray-100;
+  }
+}
+
+/* Focus Indicators for Keyboard Navigation */
+*:focus-visible {
+  @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+}
+
+/* Button focus indicators */
+button:focus-visible,
+a:focus-visible {
+  @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+}
+
+/* Enhanced button text contrast */
+button {
+  @apply font-semibold;
+}
+
+/* Ensure proper contrast for disabled elements */
+input:disabled,
+textarea:disabled,
+select:disabled,
+button:disabled {
+  @apply opacity-60 cursor-not-allowed;
+}
+
+/* Link contrast */
+a {
+  @apply text-blue-600 hover:text-blue-800;
+}
+
+@media (prefers-color-scheme: dark) {
+  a {
+    @apply text-blue-400 hover:text-blue-300;
+  }
+}
+
+/* Skip to main content link for screen readers */
+.skip-to-main {
+  @apply sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4;
+  @apply bg-blue-600 text-white px-4 py-2 rounded;
+  @apply z-50;
+}

@@ -104,7 +104,7 @@ export default function MarketplacePage() {
 
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-2 overflow-x-auto" aria-label="Tabs">
+        <nav className="-mb-px flex space-x-2 overflow-x-auto" aria-label="Marketplace tabs">
           {TABS.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -120,9 +120,12 @@ export default function MarketplacePage() {
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   }
                 `}
-                aria-current={isActive ? "page" : undefined}
+                role="tab"
+                aria-selected={isActive}
+                aria-controls={`${tab.id}-panel`}
+                aria-label={`${tab.label} - ${tab.description}`}
               >
-                <span className="text-lg">{tab.icon}</span>
+                <span className="text-lg" aria-hidden="true">{tab.icon}</span>
                 <span>{tab.label}</span>
               </button>
             );
@@ -139,10 +142,26 @@ export default function MarketplacePage() {
 
       {/* Tab Content */}
       <div className="min-h-[600px]">
-        {activeTab === "post-truck" && <PostTruckTab />}
-        {activeTab === "post-load" && <PostLoadTab />}
-        {activeTab === "find-loads" && <FindLoadsTab />}
-        {activeTab === "find-trucks" && <FindTrucksTab />}
+        {activeTab === "post-truck" && (
+          <div role="tabpanel" id="post-truck-panel" aria-labelledby="post-truck-tab">
+            <PostTruckTab />
+          </div>
+        )}
+        {activeTab === "post-load" && (
+          <div role="tabpanel" id="post-load-panel" aria-labelledby="post-load-tab">
+            <PostLoadTab />
+          </div>
+        )}
+        {activeTab === "find-loads" && (
+          <div role="tabpanel" id="find-loads-panel" aria-labelledby="find-loads-tab">
+            <FindLoadsTab />
+          </div>
+        )}
+        {activeTab === "find-trucks" && (
+          <div role="tabpanel" id="find-trucks-panel" aria-labelledby="find-trucks-tab">
+            <FindTrucksTab />
+          </div>
+        )}
       </div>
     </div>
   );
