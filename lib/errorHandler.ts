@@ -17,7 +17,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
-import crypto from 'crypto';
 
 /**
  * Standard error codes for the application
