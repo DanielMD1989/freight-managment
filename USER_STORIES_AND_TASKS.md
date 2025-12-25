@@ -15,7 +15,7 @@
 
 **Last Updated:** 2025-12-25
 **Current Sprint:** Sprint 8 - TRD Amendments (Truck Posting & Matching)
-**Overall Progress:** 86% (Sprint 7 Complete, Sprint 8 Document Upload Complete)
+**Overall Progress:** 90% (Sprint 7 Complete, Sprint 8 at 95%)
 
 ### Sprint Status Overview
 ```
@@ -26,9 +26,9 @@ Sprint 4: GPS Engine                    [x] 11/14 tasks (79%) - APIs complete
 Sprint 5: Finance Core                  [x] 13/16 tasks (81%) - APIs complete
 Sprint 6: Admin & Stabilization         [x] 8/12 tasks (67%) - Core APIs complete
 Sprint 7: Load Board Grid MVP           [x] 119/123 tasks (97%) - ✅ PRODUCTION READY
-Sprint 8: TRD Amendments                [🔄] 191/216 tasks (88%) - Document upload system complete
+Sprint 8: TRD Amendments                [🔄] 206/216 tasks (95%) - Doc upload & verification complete
 ─────────────────────────────────────────────────────────────
-TOTAL MVP TASKS:                        [x] 388/448 tasks (87%) - Back-office verification next
+TOTAL MVP TASKS:                        [x] 403/448 tasks (90%) - Single-page experience next
 ```
 
 ### Quick Resume Guide
@@ -1873,29 +1873,29 @@ As a user, I need readable text with proper contrast so I can use the platform c
 As a back office employee, I need a dashboard to review and verify/reject company and truck documents so only legitimate organizations participate in the marketplace.
 
 #### UI Tasks:
-- [ ] Create /admin/verification dashboard page
-- [ ] Display queue of pending documents (PENDING status)
-- [ ] Group documents by organization
-- [ ] Show document preview (PDF viewer, image viewer)
-- [ ] Add "Approve" button with confirmation
-- [ ] Add "Reject" button with reason textarea
-- [ ] Display verification history (who verified, when, reason)
-- [ ] Add filtering: by organization, by document type, by status
-- [ ] Add search by organization name
-- [ ] Show document expiration dates
-- [ ] Add bulk actions (approve/reject multiple)
-- [ ] Send email notifications on status change (optional)
+- [x] Create /admin/verification dashboard page
+- [x] Display queue of pending documents (PENDING status)
+- [x] Group documents by organization
+- [x] Show document preview (PDF viewer, image viewer)
+- [x] Add "Approve" button with confirmation
+- [x] Add "Reject" button with reason textarea
+- [x] Display verification history (who verified, when, reason)
+- [x] Add filtering: by organization, by document type, by status
+- [x] Add search by organization name
+- [x] Show document expiration dates
+- [ ] Add bulk actions (approve/reject multiple) - DEFERRED to future enhancement
+- [ ] Send email notifications on status change (optional) - DEFERRED (TODO in code)
 
 #### API Backend Tasks:
-- [ ] **[SECURITY]** GET /api/admin/verification/queue - Admin/Ops only
-- [ ] GET /api/admin/verification/queue - Return pending documents
-- [ ] GET /api/admin/verification/queue - Include organization details
-- [ ] GET /api/admin/verification/queue - Support filtering and pagination
-- [ ] **[SECURITY]** PATCH /api/admin/verification/[id] - Admin/Ops only
-- [ ] PATCH /api/admin/verification/[id] - Update status
-- [ ] PATCH /api/admin/verification/[id] - Record verifiedById, verifiedAt
-- [ ] PATCH /api/admin/verification/[id] - Log action in audit trail
-- [ ] Create email notification service (optional)
+- [x] **[SECURITY]** GET /api/admin/verification/queue - Admin/Ops only
+- [x] GET /api/admin/verification/queue - Return pending documents
+- [x] GET /api/admin/verification/queue - Include organization details
+- [x] GET /api/admin/verification/queue - Support filtering and pagination
+- [x] **[SECURITY]** PATCH /api/admin/verification/[id] - Admin/Ops only
+- [x] PATCH /api/admin/verification/[id] - Update status
+- [x] PATCH /api/admin/verification/[id] - Record verifiedById, verifiedAt
+- [x] PATCH /api/admin/verification/[id] - Log action in audit trail
+- [ ] Create email notification service (optional) - DEFERRED (TODO in code)
 
 #### Acceptance Criteria:
 - ✓ Admins can view all pending documents
@@ -1926,24 +1926,24 @@ Sprint 8: TRD Amendments - Truck Posting & Matching
   Story 8.6: Load Posting Enhancements      [x] 13/17 (76%) - UI complete, search deferred
   Story 8.7: Single-Page Experience         [ ] 0/13 (0%)
   Story 8.8: UI Readability                 [ ] 0/8 (0%)
-  Story 8.9: Back-Office Verification       [ ] 0/17 (0%)
+  Story 8.9: Back-Office Verification       [x] 15/17 (88%) - Bulk actions & email deferred
 ─────────────────────────────────────────────────────────────
-TOTAL SPRINT 8 TASKS:                      [🔄] 191/216 (88%)
+TOTAL SPRINT 8 TASKS:                      [🔄] 206/216 (95%)
 ```
 
 **Overall Progress (Including Sprint 8):**
 ```
-TOTAL MVP TASKS:                           [x] 388/448 tasks (87%)
+TOTAL MVP TASKS:                           [x] 403/448 tasks (90%)
 Sprint 1-6 (Previous):                     [x] 78/109 (72%)
 Sprint 7 (Load Board):                     [x] 119/123 (97%)
-Sprint 8 (Truck Posting):                  [🔄] 191/216 (88%)
+Sprint 8 (Truck Posting):                  [🔄] 206/216 (95%)
 ```
 
 **Last Updated:** 2025-12-25
 **Current Sprint:** Sprint 8 - TRD Amendments
-**Completed:** Stories 8.1-8.5 (Infrastructure, APIs, Matching, Document Upload), Story 8.6 (Load enhancements)
-**Phase 1 & 2 Complete:** Document upload system with file storage, APIs, and UI components
-**Next Steps:** Story 8.9 - Back-Office Verification Dashboard (admin document review)
+**Completed:** Stories 8.1-8.6, 8.9 (Infrastructure, APIs, Matching, Document Upload & Verification)
+**Phase 1 & 2 Complete:** Document upload system with admin verification dashboard
+**Next Steps:** Story 8.7 - Single-Page Experience OR Story 8.8 - UI Readability
 
 ---
 
