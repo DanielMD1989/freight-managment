@@ -10,6 +10,7 @@ export enum Permission {
   VIEW_ORGANIZATIONS = "view_organizations",
   MANAGE_ORGANIZATIONS = "manage_organizations",
   VERIFY_ORGANIZATIONS = "verify_organizations",
+  VERIFY_DOCUMENTS = "verify_documents",
 
   // Load Management
   CREATE_LOAD = "create_load",
@@ -118,6 +119,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   PLATFORM_OPS: [
     Permission.VIEW_USERS,
     Permission.VIEW_ORGANIZATIONS,
+    Permission.VERIFY_DOCUMENTS,
     Permission.VIEW_LOADS,
     Permission.MANAGE_ALL_LOADS,
     Permission.ASSIGN_LOADS,
