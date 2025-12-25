@@ -15,7 +15,7 @@
 
 **Last Updated:** 2025-12-25
 **Current Sprint:** Sprint 8 - TRD Amendments (Truck Posting & Matching)
-**Overall Progress:** 79% (Sprint 7 Complete, Sprint 8 Document Upload Phase 1 Complete)
+**Overall Progress:** 86% (Sprint 7 Complete, Sprint 8 Document Upload Complete)
 
 ### Sprint Status Overview
 ```
@@ -26,9 +26,9 @@ Sprint 4: GPS Engine                    [x] 11/14 tasks (79%) - APIs complete
 Sprint 5: Finance Core                  [x] 13/16 tasks (81%) - APIs complete
 Sprint 6: Admin & Stabilization         [x] 8/12 tasks (67%) - Core APIs complete
 Sprint 7: Load Board Grid MVP           [x] 119/123 tasks (97%) - ✅ PRODUCTION READY
-Sprint 8: TRD Amendments                [🔄] 177/216 tasks (82%) - Document upload APIs complete
+Sprint 8: TRD Amendments                [🔄] 191/216 tasks (88%) - Document upload system complete
 ─────────────────────────────────────────────────────────────
-TOTAL MVP TASKS:                        [x] 374/448 tasks (83%) - UI components next
+TOTAL MVP TASKS:                        [x] 388/448 tasks (87%) - Back-office verification next
 ```
 
 ### Quick Resume Guide
@@ -1712,7 +1712,25 @@ As a company or truck owner, I need to upload verification documents during regi
 - [ ] **[SECURITY]** GET /api/uploads/[...path] - Signed URLs with expiration - Deferred
 - [ ] **[SECURITY]** POST /api/documents/upload - Virus scanning - Deferred to production
 
+#### UI Tasks (Phase 2):
+- [x] Create DocumentUpload component with drag & drop
+- [x] Create DocumentStatusBadge component for status visualization
+- [x] Create DocumentList component for viewing uploaded documents
+- [x] Create documents management page (/dashboard/documents)
+- [x] Add company document upload sections (license, TIN, VAT, trade license)
+- [x] Add truck document upload sections (registration, insurance, road worthiness, title deed)
+- [x] Implement file preview before upload
+- [x] Add upload progress indication
+- [x] Add success/error messaging
+- [x] Implement document view/download action
+- [x] Implement document delete action (pending only)
+- [x] Add empty state messaging
+- [x] Implement auto-refresh on upload/delete
+- [x] Add responsive grid layout
+
 #### Acceptance Criteria:
+- ✓ Users can upload company documents via UI
+- ✓ Users can upload truck documents via UI
 - ✓ Users can upload company documents during registration
 - ✓ File types restricted to PDF, JPG, PNG
 - ✓ File size limited to 10MB
@@ -1904,28 +1922,28 @@ Sprint 8: TRD Amendments - Truck Posting & Matching
   Story 8.2: Location Management            [x] 27/27 (100%) ✅ COMPLETE
   Story 8.3: Truck Posting APIs             [x] 19/19 (100%) ✅ COMPLETE
   Story 8.4: Matching Algorithm             [x] 31/31 (100%) ✅ COMPLETE
-  Story 8.5: Document Upload System         [🔄] 34/48 (71%) - Phase 1 APIs complete, UI pending
+  Story 8.5: Document Upload System         [x] 48/48 (100%) ✅ COMPLETE (Auth deferred)
   Story 8.6: Load Posting Enhancements      [x] 13/17 (76%) - UI complete, search deferred
   Story 8.7: Single-Page Experience         [ ] 0/13 (0%)
   Story 8.8: UI Readability                 [ ] 0/8 (0%)
   Story 8.9: Back-Office Verification       [ ] 0/17 (0%)
 ─────────────────────────────────────────────────────────────
-TOTAL SPRINT 8 TASKS:                      [🔄] 177/216 (82%)
+TOTAL SPRINT 8 TASKS:                      [🔄] 191/216 (88%)
 ```
 
 **Overall Progress (Including Sprint 8):**
 ```
-TOTAL MVP TASKS:                           [x] 374/448 tasks (83%)
+TOTAL MVP TASKS:                           [x] 388/448 tasks (87%)
 Sprint 1-6 (Previous):                     [x] 78/109 (72%)
 Sprint 7 (Load Board):                     [x] 119/123 (97%)
-Sprint 8 (Truck Posting):                  [🔄] 177/216 (82%)
+Sprint 8 (Truck Posting):                  [🔄] 191/216 (88%)
 ```
 
 **Last Updated:** 2025-12-25
 **Current Sprint:** Sprint 8 - TRD Amendments
-**Completed:** Stories 8.1-8.4 (Infrastructure, APIs, Matching), Story 8.6 (Load enhancements)
-**In Progress:** Story 8.5 Phase 1 (Document upload APIs) ✅ Complete - UI components next
-**Next Steps:** Story 8.5 Phase 2 - Document upload UI components
+**Completed:** Stories 8.1-8.5 (Infrastructure, APIs, Matching, Document Upload), Story 8.6 (Load enhancements)
+**Phase 1 & 2 Complete:** Document upload system with file storage, APIs, and UI components
+**Next Steps:** Story 8.9 - Back-Office Verification Dashboard (admin document review)
 
 ---
 
