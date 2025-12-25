@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { hashPassword, setSession } from "@/lib/auth";
 import { z } from "zod";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -23,6 +24,36 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const validatedData = registerSchema.parse(body);
+
+    // Rate limiting: 3 registrations per hour per IP
+    const clientIp = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const rateLimit = checkRateLimit(
+      {
+        name: 'register',
+        limit: 3,
+        windowMs: 60 * 60 * 1000, // 1 hour
+        message: 'Too many registration attempts. Please try again later.',
+      },
+      clientIp
+    );
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Too many registration attempts. Please try again later.',
+          retryAfter: Math.ceil((rateLimit.retryAfter || 0) / 1000),
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimit.limit.toString(),
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': new Date(rateLimit.resetTime).toISOString(),
+            'Retry-After': Math.ceil((rateLimit.retryAfter || 0) / 1000).toString(),
+          },
+        }
+      );
+    }
 
     // Check if user already exists
     const existingUser = await db.user.findFirst({

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { verifyPassword, setSession } from "@/lib/auth";
 import { z } from "zod";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { logAuthFailure, logAuthSuccess } from "@/lib/auditLog";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -12,6 +14,38 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const validatedData = loginSchema.parse(body);
+
+    // Rate limiting: 5 login attempts per 15 minutes per email
+    const clientIp = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const rateLimitKey = `${validatedData.email}:${clientIp}`;
+    const rateLimit = checkRateLimit(
+      {
+        name: 'login',
+        limit: 5,
+        windowMs: 15 * 60 * 1000, // 15 minutes
+        message: 'Too many login attempts. Please try again later.',
+      },
+      rateLimitKey
+    );
+
+    if (!rateLimit.allowed) {
+      await logAuthFailure(validatedData.email, clientIp, 'Rate limit exceeded');
+      return NextResponse.json(
+        {
+          error: 'Too many login attempts. Please try again later.',
+          retryAfter: Math.ceil((rateLimit.retryAfter || 0) / 1000),
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimit.limit.toString(),
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': new Date(rateLimit.resetTime).toISOString(),
+            'Retry-After': Math.ceil((rateLimit.retryAfter || 0) / 1000).toString(),
+          },
+        }
+      );
+    }
 
     // Find user by email
     const user = await db.user.findUnique({
@@ -31,6 +65,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
+      await logAuthFailure(validatedData.email, clientIp, 'User not found');
       return NextResponse.json(
         {
           error: "Invalid email or password",
@@ -40,6 +75,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!user.isActive) {
+      await logAuthFailure(validatedData.email, clientIp, 'Account inactive');
       return NextResponse.json(
         {
           error: "Account is inactive. Please contact support.",
@@ -55,6 +91,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (!isValidPassword) {
+      await logAuthFailure(validatedData.email, clientIp, 'Invalid password');
       return NextResponse.json(
         {
           error: "Invalid email or password",
@@ -76,6 +113,9 @@ export async function POST(request: NextRequest) {
       role: user.role,
       organizationId: user.organizationId || undefined,
     });
+
+    // Log successful login
+    await logAuthSuccess(user.id, user.email, clientIp);
 
     return NextResponse.json({
       message: "Login successful",

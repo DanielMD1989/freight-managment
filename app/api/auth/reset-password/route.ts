@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { hashPassword } from '@/lib/auth';
 import { validatePassword } from '@/lib/validation';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 /**
  * POST /api/auth/reset-password
@@ -44,6 +45,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Password is required' },
         { status: 400 }
+      );
+    }
+
+    // Rate limiting: 5 password reset attempts per 15 minutes per IP
+    const clientIp = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const rateLimit = checkRateLimit(
+      {
+        name: 'reset-password',
+        limit: 5,
+        windowMs: 15 * 60 * 1000, // 15 minutes
+        message: 'Too many password reset attempts. Please try again later.',
+      },
+      clientIp
+    );
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Too many password reset attempts. Please try again later.',
+          retryAfter: Math.ceil((rateLimit.retryAfter || 0) / 1000),
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimit.limit.toString(),
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': new Date(rateLimit.resetTime).toISOString(),
+            'Retry-After': Math.ceil((rateLimit.retryAfter || 0) / 1000).toString(),
+          },
+        }
       );
     }
 

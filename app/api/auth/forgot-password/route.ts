@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { sendEmail, createPasswordResetEmail } from '@/lib/email';
+import { checkRateLimit } from '@/lib/rateLimit';
 import crypto from 'crypto';
 
 /**
@@ -37,6 +38,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Email is required' },
         { status: 400 }
+      );
+    }
+
+    // Rate limiting: 3 password reset requests per hour per email
+    const clientIp = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const rateLimitKey = `${email}:${clientIp}`;
+    const rateLimit = checkRateLimit(
+      {
+        name: 'forgot-password',
+        limit: 3,
+        windowMs: 60 * 60 * 1000, // 1 hour
+        message: 'Too many password reset attempts. Please try again later.',
+      },
+      rateLimitKey
+    );
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Too many password reset attempts. Please try again later.',
+          retryAfter: Math.ceil((rateLimit.retryAfter || 0) / 1000),
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimit.limit.toString(),
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': new Date(rateLimit.resetTime).toISOString(),
+            'Retry-After': Math.ceil((rateLimit.retryAfter || 0) / 1000).toString(),
+          },
+        }
       );
     }
 
