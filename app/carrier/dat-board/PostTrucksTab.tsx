@@ -15,6 +15,7 @@ import {
   DatAgeIndicator,
 } from '@/components/dat-ui';
 import { DatColumn, DatStatusTab, DatRowAction } from '@/types/dat-ui';
+import TruckPostingModal from './TruckPostingModal';
 
 interface PostTrucksTabProps {
   user: any;
@@ -423,21 +424,14 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         </div>
       )}
 
-      {/* TODO: TruckPostingModal */}
-      {showNewTruckModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-6 max-w-md">
-            <h3 className="text-lg font-bold mb-4">New Truck Post</h3>
-            <p className="text-gray-600 mb-4">Truck posting modal coming soon...</p>
-            <button
-              onClick={() => setShowNewTruckModal(false)}
-              className="px-4 py-2 bg-gray-600 text-white rounded"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Truck Posting Modal */}
+      <TruckPostingModal
+        isOpen={showNewTruckModal}
+        onClose={() => setShowNewTruckModal(false)}
+        onSuccess={() => {
+          fetchTrucks();
+        }}
+      />
     </div>
   );
 }

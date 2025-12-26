@@ -19,6 +19,7 @@ import {
   DatCompanyModal,
 } from '@/components/dat-ui';
 import { DatColumn, DatStatusTab, DatFilter, DatRowAction } from '@/types/dat-ui';
+import TruckSearchModal from './TruckSearchModal';
 
 interface SearchTrucksTabProps {
   user: any;
@@ -490,21 +491,16 @@ export default function SearchTrucksTab({ user }: SearchTrucksTabProps) {
         />
       )}
 
-      {/* TODO: TruckSearchModal */}
-      {showNewSearchModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-6 max-w-md">
-            <h3 className="text-lg font-bold mb-4">New Truck Search</h3>
-            <p className="text-gray-600 mb-4">Search modal coming soon...</p>
-            <button
-              onClick={() => setShowNewSearchModal(false)}
-              className="px-4 py-2 bg-gray-600 text-white rounded"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Truck Search Modal */}
+      <TruckSearchModal
+        isOpen={showNewSearchModal}
+        onClose={() => setShowNewSearchModal(false)}
+        onSuccess={(searchId) => {
+          fetchSavedSearches();
+          setActiveSearchId(searchId);
+          setShowNewSearchModal(false);
+        }}
+      />
     </div>
   );
 }

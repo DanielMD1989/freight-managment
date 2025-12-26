@@ -20,6 +20,7 @@ import {
   DatRateAnalysis,
 } from '@/components/dat-ui';
 import { DatColumn, DatStatusTab, DatFilter, DatRowAction } from '@/types/dat-ui';
+import LoadSearchModal from './LoadSearchModal';
 
 interface SearchLoadsTabProps {
   user: any;
@@ -581,21 +582,16 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
         />
       )}
 
-      {/* TODO: LoadSearchModal */}
-      {showNewSearchModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-6 max-w-md">
-            <h3 className="text-lg font-bold mb-4">New Load Search</h3>
-            <p className="text-gray-600 mb-4">Load search modal coming soon...</p>
-            <button
-              onClick={() => setShowNewSearchModal(false)}
-              className="px-4 py-2 bg-gray-600 text-white rounded"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Load Search Modal */}
+      <LoadSearchModal
+        isOpen={showNewSearchModal}
+        onClose={() => setShowNewSearchModal(false)}
+        onSuccess={(searchId) => {
+          fetchSavedSearches();
+          setActiveSearchId(searchId);
+          setShowNewSearchModal(false);
+        }}
+      />
     </div>
   );
 }
