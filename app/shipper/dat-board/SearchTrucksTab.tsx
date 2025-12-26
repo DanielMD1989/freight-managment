@@ -498,7 +498,10 @@ export default function SearchTrucksTab({ user }: SearchTrucksTabProps) {
         onSuccess={(searchId) => {
           fetchSavedSearches();
           setActiveSearchId(searchId);
-          setShowNewSearchModal(false);
+          const search = savedSearches.find((s) => s.id === searchId);
+          if (search) {
+            setFilterValues(search.criteria || {});
+          }
         }}
       />
     </div>

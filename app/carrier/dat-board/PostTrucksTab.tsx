@@ -430,6 +430,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         onClose={() => setShowNewTruckModal(false)}
         onSuccess={() => {
           fetchTrucks();
+          setShowNewTruckModal(false);
         }}
       />
     </div>

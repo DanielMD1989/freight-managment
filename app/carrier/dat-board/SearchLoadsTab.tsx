@@ -589,7 +589,10 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
         onSuccess={(searchId) => {
           fetchSavedSearches();
           setActiveSearchId(searchId);
-          setShowNewSearchModal(false);
+          const search = savedSearches.find((s) => s.id === searchId);
+          if (search) {
+            setFilterValues(search.criteria || {});
+          }
         }}
       />
     </div>
