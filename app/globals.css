@@ -44,7 +44,7 @@ input[type="time"],
 textarea,
 select {
   @apply text-black font-medium;
-  @apply placeholder:text-white placeholder:font-normal;
+  @apply placeholder:text-gray-400 placeholder:font-normal;
 }
 
 /* Dark mode input contrast */
