@@ -9,6 +9,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/components/Toast';
 
 interface Truck {
   id: string;
@@ -26,6 +27,7 @@ interface Location {
 
 export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
   const router = useRouter();
+  const toast = useToast();
 
   const [formData, setFormData] = useState({
     truckId: '',
@@ -202,16 +204,21 @@ export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
 
       if (response.ok) {
         // Success - redirect to postings list
+        toast.success('Truck posting created successfully!');
         router.push('/carrier/postings?success=posting-created');
         router.refresh();
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to create posting');
+        const errorMessage = errorData.error || 'Failed to create posting';
+        setError(errorMessage);
+        toast.error(errorMessage);
         setIsSubmitting(false);
       }
     } catch (error) {
       console.error('Error creating posting:', error);
-      setError('Failed to create posting. Please try again.');
+      const errorMessage = 'Failed to create posting. Please try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
       setIsSubmitting(false);
     }
   };

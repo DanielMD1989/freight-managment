@@ -9,6 +9,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/components/Toast';
 
 const TRUCK_TYPES = [
   { value: 'FLATBED', label: 'Flatbed' },
@@ -31,6 +32,7 @@ const ETHIOPIAN_CITIES = [
 
 export default function LoadCreationForm() {
   const router = useRouter();
+  const toast = useToast();
 
   // Form state
   const [step, setStep] = useState(1);
@@ -191,15 +193,22 @@ export default function LoadCreationForm() {
 
       if (response.ok) {
         const result = await response.json();
+        toast.success(
+          isDraft ? 'Load saved as draft' : 'Load posted successfully!'
+        );
         router.push(`/shipper/loads/${result.load.id}`);
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to create load');
+        const errorMessage = errorData.error || 'Failed to create load';
+        setError(errorMessage);
+        toast.error(errorMessage);
         setIsSubmitting(false);
       }
     } catch (error) {
       console.error('Error creating load:', error);
-      setError('Failed to create load. Please try again.');
+      const errorMessage = 'Failed to create load. Please try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
       setIsSubmitting(false);
     }
   };

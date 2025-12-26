@@ -9,6 +9,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/components/Toast';
 
 const TRUCK_TYPES = [
   { value: 'FLATBED', label: 'Flatbed' },
@@ -67,6 +68,7 @@ const ETHIOPIAN_REGIONS = [
 
 export default function AddTruckForm() {
   const router = useRouter();
+  const toast = useToast();
 
   const [formData, setFormData] = useState({
     truckType: 'FLATBED',
@@ -180,16 +182,21 @@ export default function AddTruckForm() {
 
       if (response.ok) {
         // Success - redirect to trucks list
+        toast.success('Truck added successfully!');
         router.push('/carrier/trucks?success=truck-added');
         router.refresh();
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to add truck');
+        const errorMessage = errorData.error || 'Failed to add truck';
+        setError(errorMessage);
+        toast.error(errorMessage);
         setIsSubmitting(false);
       }
     } catch (error) {
       console.error('Error adding truck:', error);
-      setError('Failed to add truck. Please try again.');
+      const errorMessage = 'Failed to add truck. Please try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
       setIsSubmitting(false);
     }
   };
