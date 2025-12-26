@@ -60,6 +60,10 @@ export async function POST(
       data: {
         // Copy all fields except unique identifiers and status
         status: 'DRAFT',
+        // Reset Sprint 14 DAT-style fields
+        isKept: false,
+        hasAlerts: false,
+        groupId: null,
         pickupCity: originalLoad.pickupCity,
         pickupCityId: originalLoad.pickupCityId,
         pickupAddress: originalLoad.pickupAddress,

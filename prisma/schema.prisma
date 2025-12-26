@@ -150,6 +150,12 @@ enum LocationType {
   LANDMARK
 }
 
+// SPRINT 14: DAT-Style UI - Saved Search Type
+enum SearchType {
+  LOADS
+  TRUCKS
+}
+
 enum CompanyDocumentType {
   COMPANY_LICENSE
   TIN_CERTIFICATE
@@ -195,6 +201,7 @@ model User {
   disputes          Dispute[]
   reports           Report[]
   passwordResetTokens PasswordResetToken[]
+  savedSearches     SavedSearch[]  // SPRINT 14: DAT-Style UI
 
   @@index([email])
   @@index([organizationId])
@@ -230,6 +237,7 @@ model Organization {
   verifiedAt        DateTime?
   licenseNumber     String?
   taxId             String?
+  allowNameDisplay  Boolean          @default(true)  // SPRINT 14: Company masking preference
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 
@@ -320,6 +328,11 @@ model Load {
   // Assignment
   assignedTruckId       String?     @unique
   assignedAt            DateTime?
+
+  // SPRINT 14: DAT-Style UI - Status tracking
+  isKept                Boolean     @default(false)  // Star/favorite
+  hasAlerts             Boolean     @default(false)  // Bell icon
+  groupId               String?                      // GROUP tab
 
   // Tracking
   expiresAt             DateTime?
@@ -815,4 +828,25 @@ model TruckDocument {
   @@index([truckId])
   @@index([verificationStatus])
   @@map("truck_documents")
+}
+
+// ============================================================================
+// SPRINT 14: DAT-STYLE UI MODELS
+// ============================================================================
+
+model SavedSearch {
+  id        String     @id @default(cuid())
+  name      String
+  type      SearchType // LOADS or TRUCKS
+  criteria  Json       // Flexible search criteria
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Relations
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@map("saved_searches")
 }
