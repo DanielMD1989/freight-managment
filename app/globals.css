@@ -43,8 +43,8 @@ input[type="datetime-local"],
 input[type="time"],
 textarea,
 select {
-  @apply text-gray-900 font-medium;
-  @apply placeholder:text-gray-500 placeholder:font-normal;
+  @apply text-black font-medium;
+  @apply placeholder:text-white placeholder:font-normal;
 }
 
 /* Dark mode input contrast */
