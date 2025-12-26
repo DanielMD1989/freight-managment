@@ -74,7 +74,34 @@ export default async function CarrierDashboardPage() {
         </p>
       </div>
 
-      {dashboardData && dashboardData.totalTrucks === 0 ? (
+      {!dashboardData ? (
+        /* Error State - No Organization or API Failed */
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center">
+          <div className="text-6xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Organization Setup Required
+          </h2>
+          <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
+            To access carrier features, you need to set up your organization profile.
+            Please complete your organization setup or contact support if you believe
+            this is an error.
+          </p>
+          <div className="flex gap-4 justify-center">
+            <Link
+              href="/dashboard/organization/setup"
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            >
+              Setup Organization
+            </Link>
+            <Link
+              href="/dashboard"
+              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+            >
+              Go to Dashboard
+            </Link>
+          </div>
+        </div>
+      ) : dashboardData.totalTrucks === 0 ? (
         /* Getting Started - No Trucks */
         <div className="bg-white rounded-lg shadow-lg p-8 text-center">
           <div className="text-6xl mb-4">🚛</div>
@@ -199,13 +226,13 @@ export default async function CarrierDashboardPage() {
 
           {/* Fleet Status Breakdown */}
           {dashboardData?.trucksByStatus &&
-            dashboardData.trucksByStatus.length > 0 && (
+            dashboardData?.trucksByStatus?.length > 0 && (
               <div className="bg-white rounded-lg shadow p-6 mb-8">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">
                   Fleet Status
                 </h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {dashboardData.trucksByStatus.map(
+                  {dashboardData?.trucksByStatus?.map(
                     (item: { status: string; count: number }) => (
                       <div key={item.status} className="text-center p-4 bg-gray-50 rounded-lg">
                         <div className="text-2xl font-bold text-gray-900">
