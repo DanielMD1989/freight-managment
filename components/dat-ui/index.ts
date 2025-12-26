@@ -10,6 +10,7 @@ export { default as DatActionButton } from './DatActionButton';
 export { default as DatStatusTabs } from './DatStatusTabs';
 export { default as DatNavTabs } from './DatNavTabs';
 export { default as DatDataTable } from './DatDataTable';
+export { default as DatTableSkeleton } from './DatTableSkeleton';
 
 // Search & Filtering
 export { default as DatFilterPanel } from './DatFilterPanel';

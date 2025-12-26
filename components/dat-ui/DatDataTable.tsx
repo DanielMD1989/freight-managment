@@ -4,7 +4,7 @@
  * DAT Data Table Component
  *
  * Reusable data-dense table with expandable rows, sorting, inline editing, and selection
- * Sprint 14 - DAT-Style UI Transformation
+ * Sprint 14 - DAT-Style UI Transformation (Phase 6: Enhanced Loading States)
  *
  * FEATURES:
  * - Expandable rows (click to show details)
@@ -12,12 +12,13 @@
  * - Row selection (checkbox)
  * - Inline actions
  * - Responsive (horizontal scroll on mobile)
- * - Loading states
+ * - Enhanced loading states with skeleton
  * - Empty states
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { DatDataTableProps, DatColumn } from '@/types/dat-ui';
+import DatTableSkeleton from './DatTableSkeleton';
 
 export default function DatDataTable<T = any>({
   columns,
@@ -39,22 +40,24 @@ export default function DatDataTable<T = any>({
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   /**
-   * Toggle row expansion
+   * Toggle row expansion (memoized)
    */
-  const toggleRowExpansion = (rowId: string) => {
-    const newExpanded = new Set(expandedRows);
-    if (newExpanded.has(rowId)) {
-      newExpanded.delete(rowId);
-    } else {
-      newExpanded.add(rowId);
-    }
-    setExpandedRows(newExpanded);
-  };
+  const toggleRowExpansion = useCallback((rowId: string) => {
+    setExpandedRows((prev) => {
+      const newExpanded = new Set(prev);
+      if (newExpanded.has(rowId)) {
+        newExpanded.delete(rowId);
+      } else {
+        newExpanded.add(rowId);
+      }
+      return newExpanded;
+    });
+  }, []);
 
   /**
-   * Toggle row selection
+   * Toggle row selection (memoized)
    */
-  const toggleRowSelection = (rowId: string) => {
+  const toggleRowSelection = useCallback((rowId: string) => {
     if (!onSelectionChange) return;
 
     const newSelected = selectedRows.includes(rowId)
@@ -62,12 +65,12 @@ export default function DatDataTable<T = any>({
       : [...selectedRows, rowId];
 
     onSelectionChange(newSelected);
-  };
+  }, [selectedRows, onSelectionChange]);
 
   /**
-   * Toggle select all
+   * Toggle select all (memoized)
    */
-  const toggleSelectAll = () => {
+  const toggleSelectAll = useCallback(() => {
     if (!onSelectionChange) return;
 
     if (selectedRows.length === data.length) {
@@ -75,7 +78,7 @@ export default function DatDataTable<T = any>({
     } else {
       onSelectionChange(data.map((row) => row[rowKey]));
     }
-  };
+  }, [selectedRows, data, onSelectionChange, rowKey]);
 
   /**
    * Handle column sort
@@ -93,9 +96,9 @@ export default function DatDataTable<T = any>({
   };
 
   /**
-   * Get sorted data
+   * Get sorted data (memoized for performance)
    */
-  const getSortedData = () => {
+  const sortedData = useMemo(() => {
     if (!sortColumn) return data;
 
     return [...data].sort((a, b) => {
@@ -116,9 +119,7 @@ export default function DatDataTable<T = any>({
 
       return sortDirection === 'asc' ? comparison : -comparison;
     });
-  };
-
-  const sortedData = getSortedData();
+  }, [data, sortColumn, sortDirection]);
 
   /**
    * Render cell value
@@ -137,18 +138,9 @@ export default function DatDataTable<T = any>({
     return row[rowKey];
   };
 
-  // Loading state
+  // Loading state with enhanced skeleton
   if (loading) {
-    return (
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="animate-pulse">
-          <div className="h-12 bg-gray-200"></div>
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-16 bg-gray-50 border-t border-gray-200"></div>
-          ))}
-        </div>
-      </div>
-    );
+    return <DatTableSkeleton rows={8} columns={columns.length + (selectable ? 1 : 0) + (actions?.length ? 1 : 0)} />;
   }
 
   // Empty state
@@ -163,49 +155,67 @@ export default function DatDataTable<T = any>({
 
   return (
     <div className={`bg-white rounded-lg shadow overflow-hidden ${className}`}>
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      {/* Mobile scroll hint */}
+      <div className="md:hidden bg-gray-100 px-4 py-2 text-xs text-gray-600 text-center border-b border-gray-200">
+        ← Scroll horizontally to see all columns →
+      </div>
+
+      <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100" role="region" aria-label="Data table">
+        <table className="w-full min-w-full" role="table" aria-label="Data table with sorting and selection">
           {/* Header */}
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
+          <thead className="bg-gray-50 border-b border-gray-200" role="rowgroup">
+            <tr role="row">
               {/* Selection checkbox */}
               {selectable && (
-                <th className="w-12 px-4 py-3">
+                <th className="w-12 px-2 sm:px-4 py-2 sm:py-3" role="columnheader">
                   <input
                     type="checkbox"
                     checked={selectedRows.length === data.length && data.length > 0}
                     onChange={toggleSelectAll}
                     className="h-4 w-4 rounded border-gray-300"
+                    aria-label="Select all rows"
                   />
                 </th>
               )}
 
               {/* Expandable icon column */}
-              {expandable && <th className="w-12"></th>}
+              {expandable && <th className="w-12" role="columnheader" aria-label="Expand"></th>}
 
               {/* Column headers */}
               {columns.map((column) => (
                 <th
                   key={column.key}
+                  role="columnheader"
+                  aria-sort={sortColumn === column.key ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
                   className={`
-                    px-4 py-3
+                    px-2 sm:px-4 py-2 sm:py-3
                     text-left
                     text-xs
                     font-semibold
                     text-gray-600
                     uppercase
                     tracking-wider
+                    whitespace-nowrap
                     ${column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''}
                     ${column.align === 'center' ? 'text-center' : ''}
                     ${column.align === 'right' ? 'text-right' : ''}
                   `}
                   style={{ width: column.width }}
                   onClick={() => handleSort(column)}
+                  {...(column.sortable && {
+                    tabIndex: 0,
+                    onKeyDown: (e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleSort(column);
+                      }
+                    }
+                  })}
                 >
-                  <div className="flex items-center gap-2">
-                    {column.label}
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <span className="truncate">{column.label}</span>
                     {column.sortable && sortColumn === column.key && (
-                      <span className="text-blue-600">
+                      <span className="text-blue-600 flex-shrink-0" aria-hidden="true">
                         {sortDirection === 'asc' ? '↑' : '↓'}
                       </span>
                     )}
@@ -223,7 +233,7 @@ export default function DatDataTable<T = any>({
           </thead>
 
           {/* Body */}
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-200" role="rowgroup">
             {sortedData.map((row, rowIndex) => {
               const rowId = getRowId(row);
               const isExpanded = expandedRows.has(rowId);
@@ -233,6 +243,8 @@ export default function DatDataTable<T = any>({
                 <React.Fragment key={rowId}>
                   {/* Main Row */}
                   <tr
+                    role="row"
+                    aria-selected={isSelected}
                     className={`
                       hover:bg-gray-50
                       transition-colors
@@ -243,7 +255,7 @@ export default function DatDataTable<T = any>({
                   >
                     {/* Selection checkbox */}
                     {selectable && (
-                      <td className="px-4 py-3">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3" role="cell">
                         <input
                           type="checkbox"
                           checked={isSelected}
@@ -252,19 +264,22 @@ export default function DatDataTable<T = any>({
                             toggleRowSelection(rowId);
                           }}
                           className="h-4 w-4 rounded border-gray-300"
+                          aria-label={`Select row ${rowIndex + 1}`}
                         />
                       </td>
                     )}
 
                     {/* Expand/collapse icon */}
                     {expandable && (
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-center" role="cell">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleRowExpansion(rowId);
                           }}
                           className="text-gray-400 hover:text-gray-600"
+                          aria-label={isExpanded ? `Collapse row ${rowIndex + 1}` : `Expand row ${rowIndex + 1}`}
+                          aria-expanded={isExpanded}
                         >
                           {isExpanded ? '▼' : '▶'}
                         </button>
@@ -275,9 +290,10 @@ export default function DatDataTable<T = any>({
                     {columns.map((column) => (
                       <td
                         key={column.key}
+                        role="cell"
                         className={`
-                          px-4 py-3
-                          text-sm
+                          px-2 sm:px-4 py-2 sm:py-3
+                          text-xs sm:text-sm
                           text-gray-900
                           ${column.align === 'center' ? 'text-center' : ''}
                           ${column.align === 'right' ? 'text-right' : ''}
@@ -289,7 +305,7 @@ export default function DatDataTable<T = any>({
 
                     {/* Actions */}
                     {actions && actions.length > 0 && (
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-right" role="cell">
                         <div className="flex gap-2 justify-end">
                           {actions.map((action) => {
                             const show = action.show ? action.show(row) : true;
@@ -303,11 +319,12 @@ export default function DatDataTable<T = any>({
                                   action.onClick(row);
                                 }}
                                 className={`
-                                  px-3 py-1.5
-                                  text-sm
+                                  px-2 sm:px-3 py-1 sm:py-1.5
+                                  text-xs sm:text-sm
                                   font-medium
                                   rounded-md
                                   transition-colors
+                                  whitespace-nowrap
                                   ${
                                     action.variant === 'primary'
                                       ? 'bg-lime-500 hover:bg-lime-600 text-white'
@@ -319,8 +336,9 @@ export default function DatDataTable<T = any>({
                                   }
                                 `}
                               >
-                                {action.icon && <span className="mr-1">{action.icon}</span>}
-                                {action.label}
+                                {action.icon && <span className="mr-0.5 sm:mr-1">{action.icon}</span>}
+                                <span className="hidden sm:inline">{action.label}</span>
+                                {action.icon && <span className="sm:hidden">{action.icon}</span>}
                               </button>
                             );
                           })}
@@ -339,7 +357,7 @@ export default function DatDataTable<T = any>({
                           (expandable ? 1 : 0) +
                           (actions && actions.length > 0 ? 1 : 0)
                         }
-                        className="bg-gray-700 px-4 py-4"
+                        className="bg-gray-700 px-2 sm:px-4 py-3 sm:py-4"
                       >
                         {renderExpandedRow(row)}
                       </td>

@@ -4,11 +4,12 @@
  * Carrier DAT Board Client Component
  *
  * Main client wrapper with tab navigation between POST TRUCKS and SEARCH LOADS
- * Sprint 14 - DAT-Style UI Transformation (Phase 4)
+ * Sprint 14 - DAT-Style UI Transformation (Phase 6: Error Boundaries)
  */
 
 import React, { useState } from 'react';
 import { DatNavTabs } from '@/components/dat-ui';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import PostTrucksTab from './PostTrucksTab';
 import SearchLoadsTab from './SearchLoadsTab';
 
@@ -42,8 +43,10 @@ export default function CarrierDatBoardClient({ user }: CarrierDatBoardClientPro
 
       {/* Tab Content */}
       <div className="p-6">
-        {activeTab === 'POST_TRUCKS' && <PostTrucksTab user={user} />}
-        {activeTab === 'SEARCH_LOADS' && <SearchLoadsTab user={user} />}
+        <ErrorBoundary>
+          {activeTab === 'POST_TRUCKS' && <PostTrucksTab user={user} />}
+          {activeTab === 'SEARCH_LOADS' && <SearchLoadsTab user={user} />}
+        </ErrorBoundary>
       </div>
     </div>
   );

@@ -4,11 +4,12 @@
  * Shipper DAT Board Client Component
  *
  * Main client wrapper with tab navigation between POST LOADS and SEARCH TRUCKS
- * Sprint 14 - DAT-Style UI Transformation
+ * Sprint 14 - DAT-Style UI Transformation (Phase 6: Error Boundaries)
  */
 
 import React, { useState } from 'react';
 import { DatNavTabs } from '@/components/dat-ui';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import PostLoadsTab from './PostLoadsTab';
 import SearchTrucksTab from './SearchTrucksTab';
 
@@ -42,8 +43,10 @@ export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientPro
 
       {/* Tab Content */}
       <div className="p-6">
-        {activeTab === 'POST_LOADS' && <PostLoadsTab user={user} />}
-        {activeTab === 'SEARCH_TRUCKS' && <SearchTrucksTab user={user} />}
+        <ErrorBoundary>
+          {activeTab === 'POST_LOADS' && <PostLoadsTab user={user} />}
+          {activeTab === 'SEARCH_TRUCKS' && <SearchTrucksTab user={user} />}
+        </ErrorBoundary>
       </div>
     </div>
   );
