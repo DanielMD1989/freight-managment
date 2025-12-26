@@ -13,8 +13,8 @@ import TruckMatchesClient from './TruckMatchesClient';
 
 interface Load {
   id: string;
-  pickupCity: string;
-  deliveryCity: string;
+  pickupCity: string | null;
+  deliveryCity: string | null;
   pickupDate: string;
   deliveryDate: string;
   truckType: string;
@@ -53,6 +53,10 @@ async function getPostedLoads(organizationId: string): Promise<Load[]> {
       ...load,
       weight: Number(load.weight),
       rate: Number(load.rate),
+      pickupDate: load.pickupDate.toISOString(),
+      deliveryDate: load.deliveryDate.toISOString(),
+      truckType: load.truckType.toString(),
+      status: load.status.toString(),
     }));
   } catch (error) {
     console.error('Error fetching posted loads:', error);

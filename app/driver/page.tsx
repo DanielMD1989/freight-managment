@@ -69,14 +69,14 @@ async function getDriverData(userId: string): Promise<{
           : undefined,
       },
       include: {
-        pickupCityLocation: {
+        pickupLocation: {
           select: {
             name: true,
             latitude: true,
             longitude: true,
           },
         },
-        deliveryCityLocation: {
+        deliveryLocation: {
           select: {
             name: true,
             latitude: true,
@@ -113,18 +113,18 @@ async function getDriverData(userId: string): Promise<{
       cargoDescription: load.cargoDescription,
       weight: Number(load.weight),
       rate: Number(load.rate),
-      pickupCity: load.pickupCityLocation
+      pickupCity: load.pickupLocation
         ? {
-            name: load.pickupCityLocation.name,
-            latitude: Number(load.pickupCityLocation.latitude),
-            longitude: Number(load.pickupCityLocation.longitude),
+            name: load.pickupLocation.name,
+            latitude: Number(load.pickupLocation.latitude),
+            longitude: Number(load.pickupLocation.longitude),
           }
         : null,
-      deliveryCity: load.deliveryCityLocation
+      deliveryCity: load.deliveryLocation
         ? {
-            name: load.deliveryCityLocation.name,
-            latitude: Number(load.deliveryCityLocation.latitude),
-            longitude: Number(load.deliveryCityLocation.longitude),
+            name: load.deliveryLocation.name,
+            latitude: Number(load.deliveryLocation.latitude),
+            longitude: Number(load.deliveryLocation.longitude),
           }
         : null,
       pickupAddress: load.pickupAddress,
@@ -328,7 +328,7 @@ export default async function DriverDashboardPage() {
                       <button
                         onClick={() =>
                           alert(
-                            `Navigate to: ${load.pickupAddress || load.pickupCity.name}`
+                            `Navigate to: ${load.pickupAddress || load.pickupCity?.name || 'Unknown'}`
                           )
                         }
                         className="py-2 px-3 text-sm bg-blue-600 text-white rounded-lg font-medium active:bg-blue-700"
@@ -340,7 +340,7 @@ export default async function DriverDashboardPage() {
                       <button
                         onClick={() =>
                           alert(
-                            `Navigate to: ${load.deliveryAddress || load.deliveryCity.name}`
+                            `Navigate to: ${load.deliveryAddress || load.deliveryCity?.name || 'Unknown'}`
                           )
                         }
                         className="py-2 px-3 text-sm bg-green-600 text-white rounded-lg font-medium active:bg-green-700"

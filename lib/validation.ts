@@ -324,3 +324,37 @@ export function validateFileSize(
 
   return { valid: true };
 }
+
+/**
+ * Password validation
+ * - Minimum 8 characters
+ * - At least one uppercase letter
+ * - At least one lowercase letter
+ * - At least one number
+ */
+export function validatePassword(password: string): boolean {
+  if (!password || typeof password !== 'string') {
+    return false;
+  }
+
+  if (password.length < 8) {
+    return false;
+  }
+
+  // Check for at least one uppercase letter
+  if (!/[A-Z]/.test(password)) {
+    return false;
+  }
+
+  // Check for at least one lowercase letter
+  if (!/[a-z]/.test(password)) {
+    return false;
+  }
+
+  // Check for at least one number
+  if (!/[0-9]/.test(password)) {
+    return false;
+  }
+
+  return true;
+}

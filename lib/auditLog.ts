@@ -120,7 +120,6 @@ function getIpAddress(request: NextRequest): string {
   return (
     request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
     request.headers.get('x-real-ip') ||
-    request.ip ||
     'unknown'
   );
 }
@@ -145,26 +144,30 @@ function getUserAgent(request: NextRequest): string {
  */
 async function writeAuditLogToDatabase(entry: AuditLogEntry): Promise<void> {
   try {
-    await db.auditLog.create({
-      data: {
-        eventType: entry.eventType,
-        severity: entry.severity,
-        userId: entry.userId || null,
-        organizationId: entry.organizationId || null,
-        ipAddress: entry.ipAddress || null,
-        userAgent: entry.userAgent || null,
-        resource: entry.resource || null,
-        resourceId: entry.resourceId || null,
-        action: entry.action || null,
-        result: entry.result,
-        message: entry.message,
-        metadata: entry.metadata || {},
-        timestamp: entry.timestamp,
-      },
-    });
+    // TODO: Add AuditLog model to Prisma schema
+    // await db.auditLog.create({
+    //   data: {
+    //     eventType: entry.eventType,
+    //     severity: entry.severity,
+    //     userId: entry.userId || null,
+    //     organizationId: entry.organizationId || null,
+    //     ipAddress: entry.ipAddress || null,
+    //     userAgent: entry.userAgent || null,
+    //     resource: entry.resource || null,
+    //     resourceId: entry.resourceId || null,
+    //     action: entry.action || null,
+    //     result: entry.result,
+    //     message: entry.message,
+    //     metadata: entry.metadata || {},
+    //     timestamp: entry.timestamp,
+    //   },
+    // });
+
+    // For now, just log to console
+    console.log('[AUDIT LOG]', JSON.stringify(entry, null, 2));
   } catch (error) {
-    // If database write fails, log to console
-    console.error('[AUDIT LOG DB ERROR]', error);
+    // If logging fails, log to console
+    console.error('[AUDIT LOG ERROR]', error);
     console.log('[AUDIT LOG FALLBACK]', JSON.stringify(entry, null, 2));
   }
 }
@@ -489,19 +492,20 @@ export async function queryAuditLogs(filters: {
   const limit = Math.min(filters.limit || 100, 1000);
   const offset = filters.offset || 0;
 
-  const [logs, total] = await Promise.all([
-    db.auditLog.findMany({
-      where,
-      orderBy: { timestamp: 'desc' },
-      take: limit,
-      skip: offset,
-    }),
-    db.auditLog.count({ where }),
-  ]);
+  // TODO: Add AuditLog model to Prisma schema
+  // const [logs, total] = await Promise.all([
+  //   db.auditLog.findMany({
+  //     where,
+  //     orderBy: { timestamp: 'desc' },
+  //     take: limit,
+  //     skip: offset,
+  //   }),
+  //   db.auditLog.count({ where }),
+  // ]);
 
   return {
-    logs,
-    total,
+    logs: [],
+    total: 0,
     limit,
     offset,
   };
@@ -530,36 +534,37 @@ export async function getAuditLogStats(
     if (endDate) where.timestamp.lte = endDate;
   }
 
-  const [
-    totalLogs,
-    authFailures,
-    authzFailures,
-    rateLimitViolations,
-    csrfViolations,
-    fileUploads,
-    documentVerifications,
-  ] = await Promise.all([
-    db.auditLog.count({ where }),
-    db.auditLog.count({ where: { ...where, eventType: AuditEventType.AUTH_LOGIN_FAILURE } }),
-    db.auditLog.count({ where: { ...where, eventType: AuditEventType.AUTHZ_ACCESS_DENIED } }),
-    db.auditLog.count({ where: { ...where, eventType: AuditEventType.RATE_LIMIT_EXCEEDED } }),
-    db.auditLog.count({ where: { ...where, eventType: AuditEventType.CSRF_VIOLATION } }),
-    db.auditLog.count({ where: { ...where, eventType: AuditEventType.FILE_UPLOAD } }),
-    db.auditLog.count({
-      where: {
-        ...where,
-        eventType: { in: [AuditEventType.DOCUMENT_VERIFIED, AuditEventType.DOCUMENT_REJECTED] },
-      },
-    }),
-  ]);
+  // TODO: Add AuditLog model to Prisma schema
+  // const [
+  //   totalLogs,
+  //   authFailures,
+  //   authzFailures,
+  //   rateLimitViolations,
+  //   csrfViolations,
+  //   fileUploads,
+  //   documentVerifications,
+  // ] = await Promise.all([
+  //   db.auditLog.count({ where }),
+  //   db.auditLog.count({ where: { ...where, eventType: AuditEventType.AUTH_LOGIN_FAILURE } }),
+  //   db.auditLog.count({ where: { ...where, eventType: AuditEventType.AUTHZ_ACCESS_DENIED } }),
+  //   db.auditLog.count({ where: { ...where, eventType: AuditEventType.RATE_LIMIT_EXCEEDED } }),
+  //   db.auditLog.count({ where: { ...where, eventType: AuditEventType.CSRF_VIOLATION } }),
+  //   db.auditLog.count({ where: { ...where, eventType: AuditEventType.FILE_UPLOAD } }),
+  //   db.auditLog.count({
+  //     where: {
+  //       ...where,
+  //       eventType: { in: [AuditEventType.DOCUMENT_VERIFIED, AuditEventType.DOCUMENT_REJECTED] },
+  //     },
+  //   }),
+  // ]);
 
   return {
-    totalLogs,
-    authFailures,
-    authzFailures,
-    rateLimitViolations,
-    csrfViolations,
-    fileUploads,
-    documentVerifications,
+    totalLogs: 0,
+    authFailures: 0,
+    authzFailures: 0,
+    rateLimitViolations: 0,
+    csrfViolations: 0,
+    fileUploads: 0,
+    documentVerifications: 0,
   };
 }

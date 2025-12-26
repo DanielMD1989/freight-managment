@@ -36,7 +36,15 @@ export async function GET(
     const document = await db.document.findUnique({
       where: { id: documentId },
       include: {
-        load: true,
+        load: {
+          include: {
+            assignedTruck: {
+              select: {
+                carrierId: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -58,7 +66,7 @@ export async function GET(
     // Check access (owner or assigned carrier or admin)
     const hasAccess =
       document.load.shipperId === session.organizationId ||
-      (document.load.assignedTruck && session.organizationId) ||
+      (document.load.assignedTruck?.carrierId === session.organizationId) ||
       session.role === 'ADMIN';
 
     if (!hasAccess) {

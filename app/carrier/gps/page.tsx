@@ -14,14 +14,13 @@ interface TruckWithGPS {
   id: string;
   licensePlate: string;
   truckType: string;
-  status: string;
+  isAvailable: boolean;
   currentCity: string | null;
   gpsDevice: {
     id: string;
     imei: string;
     status: string;
     lastSeenAt: string;
-    batteryLevel: number | null;
   } | null;
 }
 
@@ -40,7 +39,7 @@ async function getTrucksWithGPS(
         id: true,
         licensePlate: true,
         truckType: true,
-        status: true,
+        isAvailable: true,
         currentCity: true,
         gpsDevice: {
           select: {
@@ -48,7 +47,6 @@ async function getTrucksWithGPS(
             imei: true,
             status: true,
             lastSeenAt: true,
-            batteryLevel: true,
           },
         },
       },
@@ -207,14 +205,6 @@ export default async function GPSTrackingPage() {
                       <div className="text-xs text-gray-500">Last Location</div>
                       <div className="text-sm font-medium text-gray-900">
                         {truck.currentCity || 'Unknown'}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500">Battery</div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {truck.gpsDevice?.batteryLevel !== null
-                          ? `${truck.gpsDevice.batteryLevel}%`
-                          : 'N/A'}
                       </div>
                     </div>
                   </div>

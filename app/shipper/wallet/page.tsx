@@ -53,7 +53,7 @@ export default async function WalletPage() {
     db.load.aggregate({
       where: {
         shipperId: session.organizationId,
-        status: 'COMPLETED',
+        status: 'DELIVERED',
       },
       _sum: {
         rate: true,
@@ -64,7 +64,7 @@ export default async function WalletPage() {
     db.load.count({
       where: {
         shipperId: session.organizationId,
-        status: 'COMPLETED',
+        status: 'DELIVERED',
       },
     }),
 
@@ -73,7 +73,7 @@ export default async function WalletPage() {
       where: {
         shipperId: session.organizationId,
         status: {
-          in: ['MATCHED', 'IN_TRANSIT', 'DELIVERED'],
+          in: ['ASSIGNED', 'IN_TRANSIT', 'DELIVERED'],
         },
       },
       _sum: {

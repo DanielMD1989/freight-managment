@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getSession } from "@/lib/auth";
 
 export default async function DashboardPage() {
@@ -146,15 +147,15 @@ export default async function DashboardPage() {
         <p className="mt-2 text-sm text-gray-600">
           Role: <span className="font-semibold">{session.role}</span>
         </p>
-        {user?.organization && (
-          <p className="mt-1 text-sm text-gray-600">
-            Organization: <span className="font-semibold">{user.organization.name}</span>
+        {session.organizationId && (
+          <p className="mt-1 text-gray-600">
+            Organization ID: <span className="font-semibold">{session.organizationId}</span>
           </p>
         )}
       </div>
 
       {/* Organization Setup Banner */}
-      {!user?.organizationId && role !== "ADMIN" && role !== "PLATFORM_OPS" && (
+      {!session.organizationId && role !== "ADMIN" && role !== "PLATFORM_OPS" && (
         <div className="mb-8 rounded-lg bg-yellow-50 border-2 border-yellow-400 p-6">
           <div className="flex items-start">
             <div className="flex-shrink-0">

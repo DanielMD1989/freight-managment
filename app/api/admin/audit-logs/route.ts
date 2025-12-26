@@ -14,8 +14,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requirePermission } from '@/lib/auth';
-import { Permission } from '@/lib/rbac/permissions';
+import { requirePermission, Permission } from '@/lib/rbac';
 import {
   queryAuditLogs,
   getAuditLogStats,

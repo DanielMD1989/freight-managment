@@ -20,8 +20,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { VerificationStatus } from '@prisma/client';
-import { requireAuth, requirePermission } from '@/lib/auth';
-import { Permission } from '@/lib/rbac/permissions';
+import { requireAuth } from '@/lib/auth';
+import { requirePermission, Permission } from '@/lib/rbac';
 import { requireCSRF } from '@/lib/csrf';
 import {
   sendEmail,
@@ -237,25 +237,31 @@ export async function PATCH(
               name: true,
             },
           },
-          uploadedBy: {
-            select: {
-              id: true,
-              email: true,
-              name: true,
-            },
-          },
+        },
+      });
+
+      // Get uploader information for email notification
+      const uploader = await db.user.findUnique({
+        where: { id: updated.uploadedById },
+        select: {
+          email: true,
+          firstName: true,
+          lastName: true,
         },
       });
 
       // Send email notification
       try {
-        const emailParams = {
-          recipientEmail: updated.uploadedBy.email,
-          recipientName: updated.uploadedBy.name || 'User',
-          documentType: updated.type,
-          documentName: updated.fileName,
-          organizationName: updated.organization.name,
-        };
+        if (!uploader) {
+          console.error('Uploader not found for document:', id);
+        } else {
+          const emailParams = {
+            recipientEmail: uploader.email,
+            recipientName: `${uploader.firstName || ''} ${uploader.lastName || ''}`.trim() || 'User',
+            documentType: updated.type,
+            documentName: updated.fileName,
+            organizationName: updated.organization.name,
+          };
 
         if (verificationStatus === 'APPROVED') {
           await sendEmail(
@@ -273,6 +279,7 @@ export async function PATCH(
             })
           );
         }
+      }
       } catch (emailError) {
         // Log email error but don't fail the verification
         console.error('Failed to send verification email:', emailError);
@@ -305,41 +312,48 @@ export async function PATCH(
               },
             },
           },
-          uploadedBy: {
-            select: {
-              id: true,
-              email: true,
-              name: true,
-            },
-          },
+        },
+      });
+
+      // Get uploader information for email notification
+      const uploader = await db.user.findUnique({
+        where: { id: updated.uploadedById },
+        select: {
+          email: true,
+          firstName: true,
+          lastName: true,
         },
       });
 
       // Send email notification
       try {
-        const emailParams = {
-          recipientEmail: updated.uploadedBy.email,
-          recipientName: updated.uploadedBy.name || 'User',
-          documentType: updated.type,
-          documentName: updated.fileName,
-          organizationName: updated.truck.carrier.name,
-        };
-
-        if (verificationStatus === 'APPROVED') {
-          await sendEmail(
-            createDocumentApprovalEmail({
-              ...emailParams,
-              verifiedAt: updated.verifiedAt!,
-            })
-          );
+        if (!uploader) {
+          console.error('Uploader not found for document:', id);
         } else {
-          await sendEmail(
-            createDocumentRejectionEmail({
-              ...emailParams,
-              rejectionReason: updated.rejectionReason || 'No reason provided',
-              rejectedAt: updated.verifiedAt!,
-            })
-          );
+          const emailParams = {
+            recipientEmail: uploader.email,
+            recipientName: `${uploader.firstName || ''} ${uploader.lastName || ''}`.trim() || 'User',
+            documentType: updated.type,
+            documentName: updated.fileName,
+            organizationName: updated.truck.carrier.name,
+          };
+
+          if (verificationStatus === 'APPROVED') {
+            await sendEmail(
+              createDocumentApprovalEmail({
+                ...emailParams,
+                verifiedAt: updated.verifiedAt!,
+              })
+            );
+          } else {
+            await sendEmail(
+              createDocumentRejectionEmail({
+                ...emailParams,
+                rejectionReason: updated.rejectionReason || 'No reason provided',
+                rejectedAt: updated.verifiedAt!,
+              })
+            );
+          }
         }
       } catch (emailError) {
         // Log email error but don't fail the verification

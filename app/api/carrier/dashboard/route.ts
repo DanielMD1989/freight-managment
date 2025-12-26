@@ -46,32 +46,40 @@ export async function GET(request: NextRequest) {
     // Get statistics in parallel
     const [
       totalTrucks,
+      activeTrucks,
       activePostings,
       completedDeliveries,
       totalRevenue,
       walletAccount,
       recentPostings,
-      trucksByStatus,
     ] = await Promise.all([
       // Total trucks
       db.truck.count({
         where: { carrierId: session.organizationId },
       }),
 
-      // Active postings (POSTED status)
+      // Active trucks (available for work)
+      db.truck.count({
+        where: {
+          carrierId: session.organizationId,
+          isAvailable: true,
+        },
+      }),
+
+      // Active postings (ACTIVE status)
       db.truckPosting.count({
         where: {
           truck: {
             carrierId: session.organizationId,
           },
-          status: 'POSTED',
+          status: 'ACTIVE',
         },
       }),
 
       // Completed deliveries
       db.load.count({
         where: {
-          status: 'COMPLETED',
+          status: 'DELIVERED',
           // TODO: Add carrierId field to Load model for proper tracking
           // For now, we'll use a workaround
         },
@@ -80,7 +88,7 @@ export async function GET(request: NextRequest) {
       // Total revenue from completed loads
       db.load.aggregate({
         where: {
-          status: 'COMPLETED',
+          status: 'DELIVERED',
           // TODO: Filter by carrier's loads
         },
         _sum: {
@@ -111,19 +119,7 @@ export async function GET(request: NextRequest) {
           },
         },
       }),
-
-      // Trucks by status
-      db.truck.groupBy({
-        by: ['status'],
-        where: { carrierId: session.organizationId },
-        _count: true,
-      }),
     ]);
-
-    // Calculate active trucks (ACTIVE or IN_TRANSIT)
-    const activeTrucks = trucksByStatus
-      .filter((s) => s.status === 'ACTIVE' || s.status === 'IN_TRANSIT')
-      .reduce((sum, s) => sum + s._count, 0);
 
     return NextResponse.json({
       totalTrucks,
@@ -136,10 +132,6 @@ export async function GET(request: NextRequest) {
         currency: walletAccount?.currency || 'ETB',
       },
       recentPostings,
-      trucksByStatus: trucksByStatus.map((s) => ({
-        status: s.status,
-        count: s._count,
-      })),
     });
   } catch (error) {
     console.error('Carrier dashboard error:', error);

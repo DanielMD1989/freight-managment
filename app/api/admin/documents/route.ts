@@ -70,22 +70,6 @@ export async function GET(request: NextRequest) {
                 type: true,
               },
             },
-            uploadedBy: {
-              select: {
-                id: true,
-                email: true,
-                firstName: true,
-                lastName: true,
-              },
-            },
-            verifiedBy: {
-              select: {
-                id: true,
-                email: true,
-                firstName: true,
-                lastName: true,
-              },
-            },
           },
           orderBy: {
             uploadedAt: 'desc',
@@ -131,22 +115,6 @@ export async function GET(request: NextRequest) {
                     type: true,
                   },
                 },
-              },
-            },
-            uploadedBy: {
-              select: {
-                id: true,
-                email: true,
-                firstName: true,
-                lastName: true,
-              },
-            },
-            verifiedBy: {
-              select: {
-                id: true,
-                email: true,
-                firstName: true,
-                lastName: true,
               },
             },
           },

@@ -144,7 +144,7 @@ export function withRateLimit<T>(
       // Generate rate limit key
       const identifier = config.keyGenerator
         ? config.keyGenerator(request, userId, orgId)
-        : userId || request.ip || 'anonymous';
+        : userId || request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'anonymous';
 
       // Check rate limit
       const rateLimitResult = checkRateLimit(config, identifier);
@@ -253,7 +253,7 @@ export const RATE_LIMIT_AUTH: RateLimitConfig = {
   name: 'auth_attempt',
   limit: 5,
   windowMs: 15 * 60 * 1000, // 15 minutes
-  keyGenerator: (req) => req.ip || req.headers.get('x-forwarded-for') || 'anonymous',
+  keyGenerator: (req) => req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'anonymous',
   message: 'Too many login attempts. Please try again in 15 minutes.',
 };
 
@@ -284,7 +284,7 @@ export async function getRateLimitIdentifier(request: NextRequest): Promise<{
     }
 
     // Fallback to IP
-    return { userId: request.ip || 'anonymous' };
+    return { userId: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'anonymous' };
   } catch (error) {
     console.error('[Rate Limit] Error getting identifier:', error);
     return { userId: 'anonymous' };

@@ -12,8 +12,8 @@ import { useRouter } from 'next/navigation';
 
 interface Load {
   id: string;
-  pickupCity: string;
-  deliveryCity: string;
+  pickupCity: string | null;
+  deliveryCity: string | null;
   pickupDate: string;
   deliveryDate: string;
   truckType: string;

@@ -55,7 +55,7 @@ export default async function CarrierWalletPage() {
     // Count of completed loads (would need carrierId field on Load)
     db.load.count({
       where: {
-        status: 'COMPLETED',
+        status: 'DELIVERED',
         // TODO: Add carrierId field to Load model for proper tracking
       },
     }),
@@ -63,7 +63,7 @@ export default async function CarrierWalletPage() {
     // Total revenue from completed loads
     db.load.aggregate({
       where: {
-        status: 'COMPLETED',
+        status: 'DELIVERED',
         // TODO: Filter by carrier's loads
       },
       _sum: {

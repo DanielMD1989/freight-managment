@@ -4,6 +4,8 @@
  * Displayed when users try to access pages without proper permissions
  */
 
+'use client';
+
 import Link from 'next/link';
 
 export default function UnauthorizedPage() {

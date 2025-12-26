@@ -68,6 +68,14 @@ export async function POST(request: NextRequest) {
     // Require authentication
     const session = await requireAuth();
 
+    // Require organization
+    if (!session.organizationId) {
+      return NextResponse.json(
+        { error: 'You must belong to an organization to create truck postings' },
+        { status: 403 }
+      );
+    }
+
     // Check CSRF token
     const csrfError = requireCSRF(request);
     if (csrfError) {

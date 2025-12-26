@@ -365,7 +365,7 @@ export function logDetailedError(
       method: request.method,
       url: request.url,
       headers: Object.fromEntries(request.headers.entries()),
-      ip: request.ip || request.headers.get('x-forwarded-for') || 'unknown',
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
     },
     user: userId ? { userId, organizationId, role } : undefined,
     original: {

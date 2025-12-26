@@ -44,18 +44,23 @@ async function getOperationalStats() {
       // Active trucks
       db.truck.count({
         where: {
-          status: {
-            in: ['ACTIVE', 'IN_TRANSIT'],
-          },
+          isAvailable: true,
         },
       }),
 
-      // Pending documents
-      db.document.count({
-        where: {
-          verificationStatus: 'PENDING',
-        },
-      }),
+      // Pending documents (company + truck combined)
+      Promise.all([
+        db.companyDocument.count({
+          where: {
+            verificationStatus: 'PENDING',
+          },
+        }),
+        db.truckDocument.count({
+          where: {
+            verificationStatus: 'PENDING',
+          },
+        }),
+      ]).then(([company, truck]) => company + truck),
 
       // Active disputes (you'd need a Dispute model for this)
       0, // Placeholder
@@ -116,12 +121,12 @@ async function getDispatchBoard() {
         },
       },
       include: {
-        pickupCityLocation: {
+        pickupLocation: {
           select: {
             name: true,
           },
         },
-        deliveryCityLocation: {
+        deliveryLocation: {
           select: {
             name: true,
           },
@@ -366,8 +371,8 @@ export default async function OpsDashboardPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          {load.pickupCityLocation?.name || load.pickupCity} →{' '}
-                          {load.deliveryCityLocation?.name || load.deliveryCity}
+                          {load.pickupLocation?.name || load.pickupCity} →{' '}
+                          {load.deliveryLocation?.name || load.deliveryCity}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

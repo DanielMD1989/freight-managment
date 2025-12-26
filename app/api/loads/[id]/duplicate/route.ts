@@ -10,8 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { Permission } from '@/lib/rbac/permissions';
+import { requirePermission, Permission } from '@/lib/rbac';
 
 /**
  * POST /api/loads/[id]/duplicate
@@ -30,16 +29,8 @@ export async function POST(
   try {
     const { id } = await params;
 
-    // Require authentication
-    const session = await requireAuth();
-
-    // Check permission to post loads
-    if (!session.hasPermission(Permission.POST_LOADS)) {
-      return NextResponse.json(
-        { error: 'Forbidden: You do not have permission to create loads' },
-        { status: 403 }
-      );
-    }
+    // Require permission to post loads
+    const session = await requirePermission(Permission.POST_LOADS);
 
     // Find original load
     const originalLoad = await db.load.findUnique({
@@ -56,7 +47,7 @@ export async function POST(
     // Verify ownership or admin access
     if (
       originalLoad.shipperId !== session.organizationId &&
-      !session.hasPermission(Permission.VIEW_ALL_LOADS)
+      session.role !== 'ADMIN'
     ) {
       return NextResponse.json(
         { error: 'Forbidden: You can only duplicate your own loads' },

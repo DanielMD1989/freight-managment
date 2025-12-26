@@ -13,6 +13,7 @@ import { requireAuth } from '@/lib/auth';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { DocumentType } from '@prisma/client';
 
 /**
  * GET /api/loads/[id]/documents
@@ -41,6 +42,11 @@ export async function GET(
         documents: {
           orderBy: { uploadedAt: 'desc' },
         },
+        assignedTruck: {
+          select: {
+            carrierId: true,
+          },
+        },
       },
     });
 
@@ -54,7 +60,7 @@ export async function GET(
     // Check access (owner or assigned carrier or admin)
     const hasAccess =
       load.shipperId === session.organizationId ||
-      (load.assignedTruck && session.organizationId) ||
+      (load.assignedTruck?.carrierId === session.organizationId) ||
       session.role === 'ADMIN';
 
     if (!hasAccess) {
@@ -105,6 +111,13 @@ export async function POST(
     // Find load
     const load = await db.load.findUnique({
       where: { id },
+      include: {
+        assignedTruck: {
+          select: {
+            carrierId: true,
+          },
+        },
+      },
     });
 
     if (!load) {
@@ -117,7 +130,7 @@ export async function POST(
     // Check ownership or carrier assignment
     const hasAccess =
       load.shipperId === session.organizationId ||
-      (load.assignedTruck && session.organizationId) ||
+      (load.assignedTruck?.carrierId === session.organizationId) ||
       session.role === 'ADMIN';
 
     if (!hasAccess) {
@@ -143,6 +156,15 @@ export async function POST(
     if (!type) {
       return NextResponse.json(
         { error: 'Document type is required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate document type
+    const validTypes = ['BOL', 'POD', 'INVOICE', 'RECEIPT', 'INSURANCE', 'PERMIT', 'OTHER'];
+    if (!validTypes.includes(type)) {
+      return NextResponse.json(
+        { error: 'Invalid document type' },
         { status: 400 }
       );
     }
@@ -192,7 +214,7 @@ export async function POST(
     const document = await db.document.create({
       data: {
         loadId: id,
-        type,
+        type: type as DocumentType,
         fileName: file.name,
         fileUrl: `/uploads/loads/${id}/${fileName}`,
         fileSize: file.size,

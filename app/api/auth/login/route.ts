@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (!rateLimit.allowed) {
-      await logAuthFailure(validatedData.email, clientIp, 'Rate limit exceeded');
+      await logAuthFailure(validatedData.email, 'Rate limit exceeded', request);
       return NextResponse.json(
         {
           error: 'Too many login attempts. Please try again later.',
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      await logAuthFailure(validatedData.email, clientIp, 'User not found');
+      await logAuthFailure(validatedData.email, 'User not found', request);
       return NextResponse.json(
         {
           error: "Invalid email or password",
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!user.isActive) {
-      await logAuthFailure(validatedData.email, clientIp, 'Account inactive');
+      await logAuthFailure(validatedData.email, 'Account inactive', request);
       return NextResponse.json(
         {
           error: "Account is inactive. Please contact support.",
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (!isValidPassword) {
-      await logAuthFailure(validatedData.email, clientIp, 'Invalid password');
+      await logAuthFailure(validatedData.email, 'Invalid password', request);
       return NextResponse.json(
         {
           error: "Invalid email or password",
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Log successful login
-    await logAuthSuccess(user.id, user.email, clientIp);
+    await logAuthSuccess(user.id, user.email, request);
 
     return NextResponse.json({
       message: "Login successful",

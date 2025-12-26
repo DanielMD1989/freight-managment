@@ -43,6 +43,11 @@ interface LoadMatch {
   load: Load & {
     pickupLocation: EthiopianLocation;
     deliveryLocation: EthiopianLocation;
+    shipper: {
+      id: string;
+      name: string;
+      isVerified: boolean;
+    } | null;
   };
   matchScore: MatchScore;
 }
@@ -411,6 +416,13 @@ export async function findMatchingLoadsForTruck(
     include: {
       pickupLocation: true,
       deliveryLocation: true,
+      shipper: {
+        select: {
+          id: true,
+          name: true,
+          isVerified: true,
+        },
+      },
     },
   });
 

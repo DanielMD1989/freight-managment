@@ -57,12 +57,12 @@ export async function GET(request: NextRequest) {
         where: { shipperId: session.organizationId },
       }),
 
-      // Active loads (POSTED, MATCHED, IN_TRANSIT)
+      // Active loads (POSTED, ASSIGNED, IN_TRANSIT)
       db.load.count({
         where: {
           shipperId: session.organizationId,
           status: {
-            in: ['POSTED', 'MATCHED', 'IN_TRANSIT'],
+            in: ['POSTED', 'ASSIGNED', 'IN_TRANSIT'],
           },
         },
       }),
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
       db.load.count({
         where: {
           shipperId: session.organizationId,
-          status: 'COMPLETED',
+          status: 'DELIVERED',
         },
       }),
 
