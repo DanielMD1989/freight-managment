@@ -276,7 +276,9 @@ export default function GpsManagementClient() {
                       : 'Never'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {new Date(device.createdAt).toLocaleDateString()}
+                    {device.createdAt
+                      ? new Date(device.createdAt).toLocaleDateString()
+                      : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button

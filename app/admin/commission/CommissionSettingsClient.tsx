@@ -291,7 +291,7 @@ export default function CommissionSettingsClient() {
                       {(rate.shipperRate + rate.carrierRate).toFixed(2)}%
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {new Date(rate.effectiveFrom).toLocaleString()}
+                      {rate.effectiveFrom ? new Date(rate.effectiveFrom).toLocaleString() : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {rate.effectiveTo ? new Date(rate.effectiveTo).toLocaleString() : '-'}
