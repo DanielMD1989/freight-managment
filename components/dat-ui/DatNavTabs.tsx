@@ -49,7 +49,12 @@ export default function DatNavTabs({
       return false;
     }
 
-    // If portalType is specified, filter by portal context
+    // ADMIN users see ALL tabs regardless of portal type
+    if (userRole === 'ADMIN') {
+      return true;
+    }
+
+    // For non-admin users, filter by portal context
     if (portalType === 'shipper') {
       return tab.key === 'POST_LOADS' || tab.key === 'SEARCH_TRUCKS';
     } else if (portalType === 'carrier') {
