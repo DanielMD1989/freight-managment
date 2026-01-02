@@ -554,6 +554,11 @@ model Truck {
   currentCity     String?
   currentRegion   String?
 
+  // Sprint 6: Current location for DH-O calculations
+  currentLocationLat  Decimal?  @db.Decimal(10, 7)  // Current latitude
+  currentLocationLon  Decimal?  @db.Decimal(10, 7)  // Current longitude
+  locationUpdatedAt   DateTime?                     // When location was last updated
+
   // SPRINT 8: New fields for truck posting
   lengthM         Decimal?    // Truck bed length in meters
   ownerName       String?     // Explicit owner name
