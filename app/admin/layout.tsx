@@ -68,13 +68,40 @@ export default async function AdminLayout({
             <NavLink href="/admin/verification" icon="✓">
               Verification Queue
             </NavLink>
-            <NavLink href="/admin/audit-logs" icon="📋">
-              Audit Logs
-            </NavLink>
-            <NavLink href="/admin/settings" icon="⚙️">
-              Settings
-            </NavLink>
+
+            {/* GPS & Financial Management */}
             <div className="pt-4 mt-4 border-t border-gray-200">
+              <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                GPS & Financial
+              </div>
+              <NavLink href="/admin/gps" icon="📍">
+                GPS Management
+              </NavLink>
+              <NavLink href="/admin/commission" icon="💰">
+                Commission Settings
+              </NavLink>
+              <NavLink href="/admin/settlement" icon="💳">
+                Settlement Automation
+              </NavLink>
+            </div>
+
+            {/* Security & Compliance */}
+            <div className="pt-4 mt-4 border-t border-gray-200">
+              <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Security
+              </div>
+              <NavLink href="/admin/bypass-review" icon="⚠️">
+                Bypass Review
+              </NavLink>
+              <NavLink href="/admin/audit-logs" icon="📋">
+                Audit Logs
+              </NavLink>
+            </div>
+
+            <div className="pt-4 mt-4 border-t border-gray-200">
+              <NavLink href="/admin/settings" icon="⚙️">
+                Settings
+              </NavLink>
               <NavLink href="/" icon="🏠">
                 Back to Platform
               </NavLink>
