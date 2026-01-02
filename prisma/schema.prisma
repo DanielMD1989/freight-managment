@@ -21,6 +21,14 @@ enum UserRole {
   SUPER_ADMIN     // Platform owner, assigns roles, full access
 }
 
+enum UserStatus {
+  REGISTERED           // Just registered, documents not yet uploaded
+  PENDING_VERIFICATION // Documents uploaded, awaiting admin review
+  ACTIVE              // Verified and approved, can access marketplace
+  SUSPENDED           // Temporarily suspended by admin
+  REJECTED            // Registration rejected by admin
+}
+
 enum OrganizationType {
   SHIPPER
   CARRIER_COMPANY
@@ -178,19 +186,20 @@ enum TruckDocumentType {
 // ============================================================================
 
 model User {
-  id                String   @id @default(cuid())
-  email             String   @unique
-  phone             String?  @unique
+  id                String     @id @default(cuid())
+  email             String     @unique
+  phone             String?    @unique
   passwordHash      String
   firstName         String?
   lastName          String?
-  role              UserRole @default(SHIPPER)
-  isEmailVerified   Boolean  @default(false)
-  isPhoneVerified   Boolean  @default(false)
-  isActive          Boolean  @default(true)
+  role              UserRole   @default(SHIPPER)
+  status            UserStatus @default(REGISTERED) // Sprint 2: User verification workflow
+  isEmailVerified   Boolean    @default(false)
+  isPhoneVerified   Boolean    @default(false)
+  isActive          Boolean    @default(true) // DEPRECATED: Use status field instead
   lastLoginAt       DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 
   // Relations
   organizationId    String?

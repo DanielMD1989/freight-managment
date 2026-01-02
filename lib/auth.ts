@@ -11,6 +11,7 @@ export interface SessionPayload extends JWTPayload {
   userId: string;
   email: string;
   role: string;
+  status?: string; // Sprint 2: User verification workflow
   organizationId?: string;
 }
 

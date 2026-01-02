@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
         firstName: true,
         lastName: true,
         role: true,
+        status: true, // Sprint 2: User verification workflow
         organizationId: true,
         isActive: true,
       },
@@ -74,6 +75,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Sprint 2: Check user status
+    if (user.status === 'SUSPENDED') {
+      await logAuthFailure(validatedData.email, 'Account suspended', request);
+      return NextResponse.json(
+        {
+          error: "Your account has been suspended. Please contact support.",
+        },
+        { status: 403 }
+      );
+    }
+
+    if (user.status === 'REJECTED') {
+      await logAuthFailure(validatedData.email, 'Account rejected', request);
+      return NextResponse.json(
+        {
+          error: "Your registration has been rejected. Please contact support.",
+        },
+        { status: 403 }
+      );
+    }
+
+    // Legacy check (will be deprecated)
     if (!user.isActive) {
       await logAuthFailure(validatedData.email, 'Account inactive', request);
       return NextResponse.json(
@@ -111,6 +134,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       email: user.email,
       role: user.role,
+      status: user.status, // Sprint 2: Include status in session
       organizationId: user.organizationId || undefined,
     });
 

@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
         firstName: validatedData.firstName,
         lastName: validatedData.lastName,
         role: validatedData.role,
+        status: 'REGISTERED', // Sprint 2: User verification workflow
         // Sprint 16: Story 16.4 - Assign dispatcher to organization
         organizationId: validatedData.organizationId,
       },
@@ -97,6 +98,7 @@ export async function POST(request: NextRequest) {
         firstName: true,
         lastName: true,
         role: true,
+        status: true, // Sprint 2: Include status in response
         organizationId: true,
       },
     });
@@ -106,6 +108,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       email: user.email,
       role: user.role,
+      status: user.status, // Sprint 2: Include status in session
       organizationId: user.organizationId || undefined,
     });
 
