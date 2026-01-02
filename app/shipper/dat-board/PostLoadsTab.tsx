@@ -17,6 +17,7 @@ import {
 } from '@/components/dat-ui';
 import { DatColumn, DatStatusTab, DatRowAction } from '@/types/dat-ui';
 import { ETHIOPIAN_LOCATIONS } from '@/lib/constants/ethiopian-locations';
+import PlacesAutocomplete, { PlaceResult } from '@/components/PlacesAutocomplete';
 
 interface PostLoadsTabProps {
   user: any;
@@ -756,37 +757,39 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
               </div>
               <div>
                 <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Origin *</label>
-                <select
+                <PlacesAutocomplete
                   value={newLoadForm.pickupCity}
-                  onChange={(e) => handleFormChange('pickupCity', e.target.value)}
+                  onChange={(value, place) => {
+                    handleFormChange('pickupCity', value);
+                    // Store coordinates if available for distance calculation
+                    if (place?.coordinates) {
+                      handleFormChange('pickupCoordinates', place.coordinates);
+                    }
+                  }}
+                  placeholder="Search city..."
                   className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                  style={{ color: '#2B2727' }}
+                  countryRestriction={['ET', 'DJ']}
+                  types={['(cities)']}
                   required
-                >
-                  <option value="">Select City</option>
-                  {ETHIOPIAN_LOCATIONS.map((location) => (
-                    <option key={location} value={location}>
-                      {location}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
               <div>
                 <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Destination *</label>
-                <select
+                <PlacesAutocomplete
                   value={newLoadForm.deliveryCity}
-                  onChange={(e) => handleFormChange('deliveryCity', e.target.value)}
+                  onChange={(value, place) => {
+                    handleFormChange('deliveryCity', value);
+                    // Store coordinates if available for distance calculation
+                    if (place?.coordinates) {
+                      handleFormChange('deliveryCoordinates', place.coordinates);
+                    }
+                  }}
+                  placeholder="Search city..."
                   className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                  style={{ color: '#2B2727' }}
+                  countryRestriction={['ET', 'DJ']}
+                  types={['(cities)']}
                   required
-                >
-                  <option value="">Select City</option>
-                  {ETHIOPIAN_LOCATIONS.map((location) => (
-                    <option key={location} value={location}>
-                      {location}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
               <div>
                 <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Dock Hours</label>
@@ -1065,37 +1068,37 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       </div>
                       <div>
                         <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Origin *</label>
-                        <select
+                        <PlacesAutocomplete
                           value={editingLoad.pickupCity || ''}
-                          onChange={(e) => handleEditFormChange('pickupCity', e.target.value)}
+                          onChange={(value, place) => {
+                            handleEditFormChange('pickupCity', value);
+                            if (place?.coordinates) {
+                              handleEditFormChange('pickupCoordinates', place.coordinates);
+                            }
+                          }}
+                          placeholder="Search city..."
                           className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                          style={{ color: '#2B2727' }}
+                          countryRestriction={['ET', 'DJ']}
+                          types={['(cities)']}
                           required
-                        >
-                          <option value="">Select City</option>
-                          {ETHIOPIAN_LOCATIONS.map((location) => (
-                            <option key={location} value={location}>
-                              {location}
-                            </option>
-                          ))}
-                        </select>
+                        />
                       </div>
                       <div>
                         <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Destination *</label>
-                        <select
+                        <PlacesAutocomplete
                           value={editingLoad.deliveryCity || ''}
-                          onChange={(e) => handleEditFormChange('deliveryCity', e.target.value)}
+                          onChange={(value, place) => {
+                            handleEditFormChange('deliveryCity', value);
+                            if (place?.coordinates) {
+                              handleEditFormChange('deliveryCoordinates', place.coordinates);
+                            }
+                          }}
+                          placeholder="Search city..."
                           className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                          style={{ color: '#2B2727' }}
+                          countryRestriction={['ET', 'DJ']}
+                          types={['(cities)']}
                           required
-                        >
-                          <option value="">Select City</option>
-                          {ETHIOPIAN_LOCATIONS.map((location) => (
-                            <option key={location} value={location}>
-                              {location}
-                            </option>
-                          ))}
-                        </select>
+                        />
                       </div>
                       <div>
                         <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Dock Hours</label>

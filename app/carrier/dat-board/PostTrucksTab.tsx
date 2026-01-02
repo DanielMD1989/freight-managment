@@ -16,6 +16,7 @@ import {
   DatAgeIndicator,
 } from '@/components/dat-ui';
 import { DatColumn, DatStatusTab, DatRowAction } from '@/types/dat-ui';
+import PlacesAutocomplete, { PlaceResult } from '@/components/PlacesAutocomplete';
 
 interface PostTrucksTabProps {
   user: any;
@@ -843,34 +844,40 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
             {/* Origin */}
             <div>
               <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Origin *</label>
-              <select
+              <PlacesAutocomplete
                 value={newTruckForm.origin}
-                onChange={(e) => setNewTruckForm({...newTruckForm, origin: e.target.value})}
+                onChange={(value, place) => {
+                  setNewTruckForm({
+                    ...newTruckForm,
+                    origin: value,
+                    originCoordinates: place?.coordinates
+                  });
+                }}
+                placeholder="Search city..."
                 className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                style={{ color: '#2B2727' }}
+                countryRestriction={['ET', 'DJ']}
+                types={['(cities)']}
                 required
-              >
-                <option value="">Select City</option>
-                {ethiopianCities.map((city) => (
-                  <option key={city.id} value={city.id}>{city.name}</option>
-                ))}
-              </select>
+              />
             </div>
 
             {/* Destination */}
             <div>
               <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Destination</label>
-              <select
+              <PlacesAutocomplete
                 value={newTruckForm.destination}
-                onChange={(e) => setNewTruckForm({...newTruckForm, destination: e.target.value})}
+                onChange={(value, place) => {
+                  setNewTruckForm({
+                    ...newTruckForm,
+                    destination: value,
+                    destinationCoordinates: place?.coordinates
+                  });
+                }}
+                placeholder="Anywhere"
                 className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                style={{ color: '#2B2727' }}
-              >
-                <option value="">Anywhere</option>
-                {ethiopianCities.map((city) => (
-                  <option key={city.id} value={city.id}>{city.name}</option>
-                ))}
-              </select>
+                countryRestriction={['ET', 'DJ']}
+                types={['(cities)']}
+              />
             </div>
 
             {/* Truck Type */}
@@ -1096,34 +1103,40 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                       {/* Origin */}
                       <div>
                         <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Origin *</label>
-                        <select
+                        <PlacesAutocomplete
                           value={editForm.origin || ''}
-                          onChange={(e) => setEditForm({...editForm, origin: e.target.value})}
+                          onChange={(value, place) => {
+                            setEditForm({
+                              ...editForm,
+                              origin: value,
+                              originCoordinates: place?.coordinates
+                            });
+                          }}
+                          placeholder="Search city..."
                           className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                          style={{ color: '#2B2727' }}
+                          countryRestriction={['ET', 'DJ']}
+                          types={['(cities)']}
                           required
-                        >
-                          <option value="">Select City</option>
-                          {ethiopianCities.map((city) => (
-                            <option key={city.id} value={city.id}>{city.name}</option>
-                          ))}
-                        </select>
+                        />
                       </div>
 
                       {/* Destination */}
                       <div>
                         <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Destination</label>
-                        <select
+                        <PlacesAutocomplete
                           value={editForm.destination || ''}
-                          onChange={(e) => setEditForm({...editForm, destination: e.target.value})}
+                          onChange={(value, place) => {
+                            setEditForm({
+                              ...editForm,
+                              destination: value,
+                              destinationCoordinates: place?.coordinates
+                            });
+                          }}
+                          placeholder="Anywhere"
                           className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                          style={{ color: '#2B2727' }}
-                        >
-                          <option value="">Anywhere</option>
-                          {ethiopianCities.map((city) => (
-                            <option key={city.id} value={city.id}>{city.name}</option>
-                          ))}
-                        </select>
+                          countryRestriction={['ET', 'DJ']}
+                          types={['(cities)']}
+                        />
                       </div>
 
                       {/* Truck Type */}
