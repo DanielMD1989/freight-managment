@@ -56,6 +56,9 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     // Sprint 16: GPS fields
     imei: '',
     gpsProvider: '',
+    // Sprint 15: Google Places coordinates
+    originCoordinates: undefined as { lat: number; lng: number } | undefined,
+    destinationCoordinates: undefined as { lat: number; lng: number } | undefined,
   });
 
   // Ethiopian cities
@@ -369,6 +372,9 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         // Sprint 16: GPS fields
         imei: '',
         gpsProvider: '',
+        // Sprint 15: Google Places coordinates
+        originCoordinates: undefined,
+        destinationCoordinates: undefined,
       });
 
       setShowNewTruckForm(false);

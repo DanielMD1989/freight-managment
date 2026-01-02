@@ -56,6 +56,9 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
     baseFareEtb: '',
     perKmEtb: '',
     tripKm: '',
+    // Sprint 15: Google Places coordinates
+    pickupCoordinates: undefined as { lat: number; lng: number } | undefined,
+    deliveryCoordinates: undefined as { lat: number; lng: number } | undefined,
   });
 
   /**
@@ -318,6 +321,9 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
         baseFareEtb: '',
         perKmEtb: '',
         tripKm: '',
+        // Sprint 15: Google Places coordinates
+        pickupCoordinates: undefined,
+        deliveryCoordinates: undefined,
       });
       setShowNewLoadModal(false);
       alert('Load posted successfully!');

@@ -51,6 +51,21 @@ export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientPro
     }
   }, []);
 
+  // Sync activeTab with URL (without page reload)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const currentTab = params.get('tab');
+
+      // Update URL if tab changed
+      if (currentTab !== activeTab) {
+        params.set('tab', activeTab);
+        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        window.history.pushState({}, '', newUrl);
+      }
+    }
+  }, [activeTab]);
+
   // Fetch organization completion rate - Sprint 16: Story 16.6
   useEffect(() => {
     const fetchCompletionRate = async () => {
