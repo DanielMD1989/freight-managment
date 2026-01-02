@@ -54,38 +54,21 @@ export async function GET() {
     });
 
     return NextResponse.json({
-      stats: {
-        users: {
-          total: totalUsers,
-          recentWeek: recentUsers,
-        },
-        organizations: {
-          total: totalOrganizations,
-        },
-        loads: {
-          total: totalLoads,
-          active: activeLoads,
-          recentWeek: recentLoads,
-          byStatus: loadsByStatus.reduce(
-            (acc, item) => ({
-              ...acc,
-              [item.status]: item._count,
-            }),
-            {}
-          ),
-        },
-        trucks: {
-          total: totalTrucks,
-        },
-        financial: {
-          revenue: totalRevenue?.balance || 0,
-          escrow: escrowBalance?.balance || 0,
-          pendingWithdrawals,
-        },
-        disputes: {
-          open: openDisputes,
-        },
-      },
+      totalUsers,
+      totalOrganizations,
+      totalLoads,
+      totalTrucks,
+      activeLoads,
+      totalRevenue: totalRevenue || { balance: 0 },
+      escrowBalance: escrowBalance || { balance: 0 },
+      pendingWithdrawals,
+      openDisputes,
+      loadsByStatus: loadsByStatus.map((item) => ({
+        status: item.status,
+        _count: item._count,
+      })),
+      recentUsers,
+      recentLoads,
     });
   } catch (error) {
     console.error("Dashboard stats error:", error);

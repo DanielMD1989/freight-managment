@@ -24,6 +24,7 @@ interface DashboardStats {
   openDisputes: number;
   loadsByStatus: Array<{ status: string; _count: number }>;
   recentUsers: number;
+  recentLoads: number;
 }
 
 /**
