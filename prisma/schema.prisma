@@ -414,6 +414,7 @@ model Load {
   events                LoadEvent[]
   disputes              Dispute[]
   journalEntries        JournalEntry[]
+  escalations           LoadEscalation[]  // Sprint 4: Dispatcher escalation tracking
 
   @@index([status])
   @@index([pickupCity])
@@ -447,6 +448,78 @@ model LoadEvent {
   @@index([loadId])
   @@index([eventType])
   @@map("load_events")
+}
+
+// Sprint 4: Dispatcher Escalation System
+model LoadEscalation {
+  id                String   @id @default(cuid())
+
+  // Escalation Details
+  escalationType    EscalationType        // Type of issue
+  priority          EscalationPriority    // Severity level
+  status            EscalationStatus      @default(OPEN)
+
+  // Description
+  title             String                // Short description
+  description       String?               // Detailed description
+  notes             String?               // Internal notes
+
+  // Resolution
+  resolution        String?               // How it was resolved
+  resolvedBy        String?               // User ID who resolved
+  resolvedAt        DateTime?             // When it was resolved
+
+  // Assignment
+  assignedTo        String?               // Dispatcher/admin assigned
+  assignedAt        DateTime?             // When it was assigned
+
+  // Tracking
+  createdBy         String                // User ID who created
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  loadId            String
+  load              Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
+
+  @@index([loadId])
+  @@index([status])
+  @@index([priority])
+  @@index([escalationType])
+  @@index([assignedTo])
+  @@map("load_escalations")
+}
+
+enum EscalationType {
+  LATE_PICKUP          // Carrier late to pickup
+  LATE_DELIVERY        // Delivery delayed
+  TRUCK_BREAKDOWN      // Mechanical failure
+  CARRIER_NO_SHOW      // Carrier didn't show up
+  ROUTE_DEVIATION      // Truck went off route
+  GPS_OFFLINE          // GPS device offline
+  CARGO_DAMAGE         // Cargo damaged
+  SHIPPER_ISSUE        // Issue with shipper
+  CARRIER_ISSUE        // Issue with carrier
+  DOCUMENTATION        // Missing/incorrect documents
+  PAYMENT_DISPUTE      // Payment related issue
+  BYPASS_DETECTED      // Platform bypass attempt
+  OTHER                // Other issues
+}
+
+enum EscalationPriority {
+  LOW                  // Minor issue, no immediate action needed
+  MEDIUM               // Standard issue, should be addressed soon
+  HIGH                 // Important issue, needs attention
+  CRITICAL             // Urgent issue, immediate action required
+}
+
+enum EscalationStatus {
+  OPEN                 // New escalation, not yet assigned
+  ASSIGNED             // Assigned to dispatcher
+  IN_PROGRESS          // Being worked on
+  RESOLVED             // Issue resolved
+  CLOSED               // Escalation closed
+  ESCALATED            // Escalated to higher level
 }
 
 model Document {

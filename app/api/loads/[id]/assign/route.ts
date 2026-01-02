@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { enableTrackingForLoad } from '@/lib/gpsTracking';
 import { canAssignLoads } from '@/lib/dispatcherPermissions';
 import { validateStateTransition, LoadStatus } from '@/lib/loadStateMachine';
+import { checkAssignmentConflicts } from '@/lib/assignmentConflictDetection'; // Sprint 4
 
 const assignLoadSchema = z.object({
   truckId: z.string(),
@@ -33,6 +34,8 @@ export async function POST(
         status: true,
         shipperId: true,
         createdById: true,
+        pickupDate: true,  // Sprint 4: For conflict detection
+        deliveryDate: true, // Sprint 4: For conflict detection
       },
     });
 
@@ -110,11 +113,28 @@ export async function POST(
       );
     }
 
-    if (!truck.isAvailable) {
+    // Sprint 4: Check for assignment conflicts
+    const conflictCheck = await checkAssignmentConflicts(
+      truckId,
+      loadId,
+      load.pickupDate,
+      load.deliveryDate
+    );
+
+    if (conflictCheck.hasConflict) {
       return NextResponse.json(
-        { error: 'Truck is not available' },
-        { status: 400 }
+        {
+          error: 'Assignment conflicts detected',
+          conflicts: conflictCheck.conflicts,
+          warnings: conflictCheck.warnings,
+        },
+        { status: 409 } // 409 Conflict
       );
+    }
+
+    // Log warnings if any (but don't block assignment)
+    if (conflictCheck.warnings.length > 0) {
+      console.warn(`Assignment warnings for load ${loadId}:`, conflictCheck.warnings);
     }
 
     // Assign truck to load

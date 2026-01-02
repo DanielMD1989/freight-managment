@@ -1,0 +1,276 @@
+/**
+ * Sprint 4: Dispatcher Escalation System
+ * API endpoints for individual escalation management
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { requireAuth } from '@/lib/auth';
+import { z } from 'zod';
+
+const updateEscalationSchema = z.object({
+  status: z.enum(['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'ESCALATED']).optional(),
+  priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
+  notes: z.string().optional(),
+  resolution: z.string().optional(),
+  assignedTo: z.string().optional(),
+});
+
+// GET /api/escalations/[id] - Get escalation details
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await requireAuth();
+    const { id: escalationId } = await params;
+
+    const escalation = await db.loadEscalation.findUnique({
+      where: { id: escalationId },
+      include: {
+        load: {
+          select: {
+            id: true,
+            status: true,
+            pickupCity: true,
+            deliveryCity: true,
+            shipperId: true,
+            assignedTruck: {
+              select: {
+                carrierId: true,
+                licensePlate: true,
+              },
+            },
+            shipper: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!escalation) {
+      return NextResponse.json(
+        { error: 'Escalation not found' },
+        { status: 404 }
+      );
+    }
+
+    // Permission check
+    const isShipper = session.role === 'SHIPPER' && escalation.load.shipperId === session.userId;
+    const isCarrier = session.role === 'CARRIER' && escalation.load.assignedTruck?.carrierId === session.userId;
+    const isDispatcher = session.role === 'DISPATCHER';
+    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+
+    if (!isShipper && !isCarrier && !isDispatcher && !isAdmin) {
+      return NextResponse.json(
+        { error: 'You do not have permission to view this escalation' },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json({ escalation });
+
+  } catch (error) {
+    console.error('Escalation fetch error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch escalation' },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH /api/escalations/[id] - Update escalation
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await requireAuth();
+    const { id: escalationId } = await params;
+
+    const body = await request.json();
+    const validatedData = updateEscalationSchema.parse(body);
+
+    // Get escalation
+    const escalation = await db.loadEscalation.findUnique({
+      where: { id: escalationId },
+      include: {
+        load: {
+          select: {
+            id: true,
+            shipperId: true,
+            assignedTruck: {
+              select: {
+                carrierId: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!escalation) {
+      return NextResponse.json(
+        { error: 'Escalation not found' },
+        { status: 404 }
+      );
+    }
+
+    // Permission check: Only dispatchers and admins can update escalations
+    const isDispatcher = session.role === 'DISPATCHER';
+    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+
+    if (!isDispatcher && !isAdmin) {
+      return NextResponse.json(
+        { error: 'Only dispatchers and admins can update escalations' },
+        { status: 403 }
+      );
+    }
+
+    // Build update data
+    const updateData: any = {};
+
+    if (validatedData.status !== undefined) {
+      updateData.status = validatedData.status;
+
+      // Auto-set resolvedBy and resolvedAt when status is RESOLVED
+      if (validatedData.status === 'RESOLVED' || validatedData.status === 'CLOSED') {
+        updateData.resolvedBy = session.userId;
+        updateData.resolvedAt = new Date();
+      }
+    }
+
+    if (validatedData.priority !== undefined) {
+      updateData.priority = validatedData.priority;
+    }
+
+    if (validatedData.notes !== undefined) {
+      updateData.notes = validatedData.notes;
+    }
+
+    if (validatedData.resolution !== undefined) {
+      updateData.resolution = validatedData.resolution;
+    }
+
+    if (validatedData.assignedTo !== undefined) {
+      updateData.assignedTo = validatedData.assignedTo;
+      updateData.assignedAt = new Date();
+
+      // Change status to ASSIGNED if it was OPEN
+      if (escalation.status === 'OPEN') {
+        updateData.status = 'ASSIGNED';
+      }
+    }
+
+    // Update escalation
+    const updatedEscalation = await db.loadEscalation.update({
+      where: { id: escalationId },
+      data: updateData,
+      include: {
+        load: {
+          select: {
+            id: true,
+            status: true,
+            pickupCity: true,
+            deliveryCity: true,
+          },
+        },
+      },
+    });
+
+    // Create load event
+    await db.loadEvent.create({
+      data: {
+        loadId: escalation.load.id,
+        eventType: 'ESCALATION_UPDATED',
+        description: `Escalation updated: ${escalation.title}`,
+        userId: session.userId,
+        metadata: {
+          escalationId,
+          changes: validatedData,
+        },
+      },
+    });
+
+    // TODO: Send notification to assigned dispatcher
+    // TODO: Send notification to involved parties if resolved
+
+    return NextResponse.json({
+      message: 'Escalation updated successfully',
+      escalation: updatedEscalation,
+    });
+
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Invalid request data', details: error.issues },
+        { status: 400 }
+      );
+    }
+
+    console.error('Escalation update error:', error);
+    return NextResponse.json(
+      { error: 'Failed to update escalation' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/escalations/[id] - Delete escalation (admin only)
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await requireAuth();
+    const { id: escalationId } = await params;
+
+    // Only admins can delete escalations
+    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
+      return NextResponse.json(
+        { error: 'Only admins can delete escalations' },
+        { status: 403 }
+      );
+    }
+
+    const escalation = await db.loadEscalation.findUnique({
+      where: { id: escalationId },
+      select: { id: true, loadId: true, title: true },
+    });
+
+    if (!escalation) {
+      return NextResponse.json(
+        { error: 'Escalation not found' },
+        { status: 404 }
+      );
+    }
+
+    await db.loadEscalation.delete({
+      where: { id: escalationId },
+    });
+
+    // Create load event
+    await db.loadEvent.create({
+      data: {
+        loadId: escalation.loadId,
+        eventType: 'ESCALATION_DELETED',
+        description: `Escalation deleted: ${escalation.title}`,
+        userId: session.userId,
+      },
+    });
+
+    return NextResponse.json({
+      message: 'Escalation deleted successfully',
+    });
+
+  } catch (error) {
+    console.error('Escalation delete error:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete escalation' },
+      { status: 500 }
+    );
+  }
+}
