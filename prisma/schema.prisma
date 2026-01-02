@@ -14,13 +14,11 @@ datasource db {
 // ============================================================================
 
 enum UserRole {
-  SHIPPER
-  CARRIER
-  LOGISTICS_AGENT // 3PL
-  DRIVER
-  DISPATCHER      // SPRINT 16: Story 16.4 - Company-owned dispatcher
-  PLATFORM_OPS
-  ADMIN
+  SHIPPER         // Posts loads, searches trucks
+  CARRIER         // Posts trucks, searches loads
+  DISPATCHER      // Assigns loads, handles exceptions
+  ADMIN           // Verifies users, manages wallets, configures rules
+  SUPER_ADMIN     // Platform owner, assigns roles, full access
 }
 
 enum OrganizationType {

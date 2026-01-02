@@ -26,8 +26,8 @@ export interface DispatcherUser {
 export function canViewAllLoads(user: DispatcherUser): boolean {
   return (
     user.role === 'DISPATCHER' ||
-    user.role === 'PLATFORM_OPS' ||
-    user.role === 'ADMIN'
+    user.role === 'ADMIN' ||
+    user.role === 'SUPER_ADMIN'
   );
 }
 
@@ -43,7 +43,7 @@ export function canViewAllLoads(user: DispatcherUser): boolean {
 export function canViewAllTrucks(user: DispatcherUser): boolean {
   return (
     user.role === 'DISPATCHER' ||
-    user.role === 'PLATFORM_OPS' ||
+    user.role === 'SUPER_ADMIN' ||
     user.role === 'ADMIN'
   );
 }
@@ -66,7 +66,7 @@ export function canAssignLoads(
   // Dispatcher, platform ops, and admin can assign any load
   if (
     user.role === 'DISPATCHER' ||
-    user.role === 'PLATFORM_OPS' ||
+    user.role === 'SUPER_ADMIN' ||
     user.role === 'ADMIN'
   ) {
     return true;
@@ -100,7 +100,7 @@ export function canUpdateLoadStatus(
   // Dispatcher, platform ops, and admin can update any load
   if (
     user.role === 'DISPATCHER' ||
-    user.role === 'PLATFORM_OPS' ||
+    user.role === 'SUPER_ADMIN' ||
     user.role === 'ADMIN'
   ) {
     return true;
@@ -139,7 +139,7 @@ export function canAccessGpsTracking(
   // Dispatcher, platform ops, and admin can access all GPS tracking
   if (
     user.role === 'DISPATCHER' ||
-    user.role === 'PLATFORM_OPS' ||
+    user.role === 'SUPER_ADMIN' ||
     user.role === 'ADMIN'
   ) {
     return true;
@@ -174,7 +174,7 @@ export function canManageTrucks(
   truckCarrierId?: string
 ): boolean {
   // Platform ops and admin can manage any truck
-  if (user.role === 'PLATFORM_OPS' || user.role === 'ADMIN') {
+  if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
     return true;
   }
 
@@ -199,7 +199,7 @@ export function canManageTrucks(
 export function canViewSystemDashboard(user: DispatcherUser): boolean {
   return (
     user.role === 'DISPATCHER' ||
-    user.role === 'PLATFORM_OPS' ||
+    user.role === 'SUPER_ADMIN' ||
     user.role === 'ADMIN'
   );
 }
@@ -223,7 +223,7 @@ export function isDispatcher(user: DispatcherUser): boolean {
 export function hasElevatedPermissions(user: DispatcherUser): boolean {
   return (
     user.role === 'DISPATCHER' ||
-    user.role === 'PLATFORM_OPS' ||
+    user.role === 'SUPER_ADMIN' ||
     user.role === 'ADMIN'
   );
 }

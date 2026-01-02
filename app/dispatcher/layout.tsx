@@ -32,7 +32,7 @@ export default async function DispatcherLayout({
   // Check if user has dispatcher privileges
   if (
     session.role !== 'DISPATCHER' &&
-    session.role !== 'PLATFORM_OPS' &&
+    session.role !== 'SUPER_ADMIN' &&
     session.role !== 'ADMIN'
   ) {
     redirect('/unauthorized');

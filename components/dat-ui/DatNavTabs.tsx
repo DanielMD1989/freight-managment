@@ -42,19 +42,14 @@ export default function DatNavTabs({
   onTabChange,
   portalType,
 }: DatNavTabsProps) {
-  // Filter tabs based on user role AND portal type
+  // Filter tabs based on portal type (role-based filtering happens via tab.roles)
   const visibleTabs = ALL_TABS.filter((tab) => {
     // First check if user role is allowed for this tab
     if (!tab.roles.includes(userRole)) {
       return false;
     }
 
-    // ADMIN users see ALL tabs regardless of portal type
-    if (userRole === 'ADMIN') {
-      return true;
-    }
-
-    // For non-admin users, filter by portal context
+    // Filter by portal context - applies to ALL users including ADMIN
     if (portalType === 'shipper') {
       return tab.key === 'POST_LOADS' || tab.key === 'SEARCH_TRUCKS';
     } else if (portalType === 'carrier') {

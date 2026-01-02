@@ -44,7 +44,7 @@ const ROLES = [
   { value: 'CARRIER', label: 'Carrier' },
   { value: 'LOGISTICS_AGENT', label: 'Logistics Agent' },
   { value: 'DRIVER', label: 'Driver' },
-  { value: 'PLATFORM_OPS', label: 'Platform Ops' },
+  { value: 'SUPER_ADMIN', label: 'Platform Ops' },
   { value: 'ADMIN', label: 'Admin' },
 ];
 

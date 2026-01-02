@@ -38,9 +38,9 @@ export async function middleware(request: NextRequest) {
     // Verify token
     const { payload } = await jwtVerify(token, JWT_SECRET);
 
-    // Check admin access
+    // Check admin access (ADMIN or SUPER_ADMIN)
     if (adminPaths.some((path) => pathname.startsWith(path))) {
-      if (payload.role !== "ADMIN") {
+      if (payload.role !== "ADMIN" && payload.role !== "SUPER_ADMIN") {
         return NextResponse.json(
           { error: "Forbidden: Admin access required", requestId },
           { status: 403, headers: { 'x-request-id': requestId } }
@@ -48,9 +48,9 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // Check ops access
+    // Check ops access (legacy - now uses ADMIN or SUPER_ADMIN)
     if (opsPaths.some((path) => pathname.startsWith(path))) {
-      if (payload.role !== "PLATFORM_OPS" && payload.role !== "ADMIN") {
+      if (payload.role !== "ADMIN" && payload.role !== "SUPER_ADMIN") {
         return NextResponse.json(
           { error: "Forbidden: Ops access required", requestId },
           { status: 403, headers: { 'x-request-id': requestId } }

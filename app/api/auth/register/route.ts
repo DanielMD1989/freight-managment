@@ -13,11 +13,9 @@ const registerSchema = z.object({
   role: z.enum([
     "SHIPPER",
     "CARRIER",
-    "LOGISTICS_AGENT",
-    "DRIVER",
-    "DISPATCHER", // Sprint 16: Story 16.4 - Dispatcher System
-    "PLATFORM_OPS",
+    "DISPATCHER",
     "ADMIN",
+    "SUPER_ADMIN",
   ]),
   organizationId: z.string().optional(), // Sprint 16: Story 16.4 - Assign dispatcher to organization
 });

@@ -23,7 +23,7 @@ export default async function BypassReviewPage() {
   }
 
   // Only admins can access
-  if (user.role !== 'ADMIN' && user.role !== 'PLATFORM_OPS') {
+  if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
     redirect('/unauthorized');
   }
 

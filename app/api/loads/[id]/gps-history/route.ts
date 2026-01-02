@@ -54,7 +54,7 @@ export async function GET(
 
     const isShipper = user?.organizationId === load.shipperId;
     const isCarrier = user?.organizationId === load.assignedTruck?.carrierId;
-    const isAdmin = session.role === 'ADMIN' || session.role === 'PLATFORM_OPS' || session.role === 'DISPATCHER';
+    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN' || session.role === 'DISPATCHER';
 
     if (!isShipper && !isCarrier && !isAdmin) {
       return NextResponse.json(

@@ -242,7 +242,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Sprint 16: Dispatcher can see all loads
-    const isDispatcher = user?.role === 'DISPATCHER' || user?.role === 'PLATFORM_OPS' || user?.role === 'ADMIN';
+    const isDispatcher = user?.role === 'DISPATCHER' || user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN';
 
     if (isDispatcher) {
       // Dispatcher/Admin: See all loads (no organization filter)

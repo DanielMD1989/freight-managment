@@ -23,7 +23,7 @@ export default async function SettlementAutomationPage() {
   }
 
   // Only admins and platform ops can access
-  if (user.role !== 'ADMIN' && user.role !== 'PLATFORM_OPS') {
+  if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
     redirect('/unauthorized');
   }
 

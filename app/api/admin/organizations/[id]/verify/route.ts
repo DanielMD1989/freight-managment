@@ -24,7 +24,7 @@ export async function POST(
     const session = await requireAuth();
 
     // Only admins can verify organizations
-    if (session.role !== 'ADMIN' && session.role !== 'PLATFORM_OPS') {
+    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
       return NextResponse.json(
         { error: 'Unauthorized - Admin access required' },
         { status: 403 }
@@ -108,7 +108,7 @@ export async function DELETE(
     const session = await requireAuth();
 
     // Only admins can unverify organizations
-    if (session.role !== 'ADMIN' && session.role !== 'PLATFORM_OPS') {
+    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
       return NextResponse.json(
         { error: 'Unauthorized - Admin access required' },
         { status: 403 }

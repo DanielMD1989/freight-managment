@@ -455,7 +455,7 @@ export async function canAccessTracking(loadId: string, userId: string): Promise
   }
 
   // Admin and platform ops can always access
-  if (user.role === 'ADMIN' || user.role === 'PLATFORM_OPS') {
+  if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
     return true;
   }
 

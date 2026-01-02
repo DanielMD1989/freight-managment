@@ -90,11 +90,9 @@ const updateUserSchema = z.object({
   role: z.enum([
     "SHIPPER",
     "CARRIER",
-    "LOGISTICS_AGENT",
-    "DRIVER",
     "DISPATCHER",
-    "PLATFORM_OPS",
     "ADMIN",
+    "SUPER_ADMIN",
   ]),
 });
 

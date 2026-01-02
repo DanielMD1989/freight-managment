@@ -31,7 +31,7 @@ export default async function DispatcherDashboardPage() {
   // Only DISPATCHER, PLATFORM_OPS, and ADMIN can access
   if (
     user.role !== 'DISPATCHER' &&
-    user.role !== 'PLATFORM_OPS' &&
+    user.role !== 'SUPER_ADMIN' &&
     user.role !== 'ADMIN'
   ) {
     redirect('/unauthorized');

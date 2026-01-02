@@ -31,7 +31,7 @@ export async function POST(
 
     // Only admins can trigger settlement
     // In production, this might be automated after POD verification
-    if (session.role !== 'ADMIN' && session.role !== 'PLATFORM_OPS') {
+    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
       return NextResponse.json(
         { error: 'Unauthorized - Admin access required' },
         { status: 403 }
@@ -188,7 +188,7 @@ export async function GET(
 
     const isShipper = user?.organizationId === load.shipperId;
     const isCarrier = user?.organizationId === load.assignedTruck?.carrierId;
-    const isAdmin = session.role === 'ADMIN' || session.role === 'PLATFORM_OPS';
+    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
 
     if (!isShipper && !isCarrier && !isAdmin) {
       return NextResponse.json(

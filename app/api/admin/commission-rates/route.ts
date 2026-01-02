@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     const session = await requireAuth();
 
     // Only admins can view commission rates
-    if (session.role !== 'ADMIN' && session.role !== 'PLATFORM_OPS') {
+    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
       return NextResponse.json(
         { error: 'Unauthorized - Admin access required' },
         { status: 403 }
@@ -84,7 +84,7 @@ export async function PUT(request: NextRequest) {
     const session = await requireAuth();
 
     // Only admins can update commission rates
-    if (session.role !== 'ADMIN' && session.role !== 'PLATFORM_OPS') {
+    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
       return NextResponse.json(
         { error: 'Unauthorized - Admin access required' },
         { status: 403 }

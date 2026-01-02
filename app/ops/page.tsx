@@ -195,7 +195,7 @@ export default async function OpsDashboardPage() {
 
   if (
     !session ||
-    (session.role !== 'PLATFORM_OPS' && session.role !== 'ADMIN')
+    (session.role !== 'SUPER_ADMIN' && session.role !== 'ADMIN')
   ) {
     redirect('/unauthorized');
   }

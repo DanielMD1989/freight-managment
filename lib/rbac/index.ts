@@ -108,14 +108,19 @@ export async function requireAllPermissions(permissions: Permission[]): Promise<
   return session;
 }
 
-// Helper to check if user is admin
+// Helper to check if user is admin or super admin
 export async function isAdmin(): Promise<boolean> {
-  return await hasRole("ADMIN");
+  return await hasAnyRole(["ADMIN", "SUPER_ADMIN"]);
 }
 
-// Helper to check if user is ops
+// Helper to check if user is ops (legacy - now checks for ADMIN or SUPER_ADMIN)
 export async function isOps(): Promise<boolean> {
-  return await hasAnyRole(["PLATFORM_OPS", "ADMIN"]);
+  return await hasAnyRole(["ADMIN", "SUPER_ADMIN"]);
+}
+
+// Helper to check if user is super admin
+export async function isSuperAdmin(): Promise<boolean> {
+  return await hasRole("SUPER_ADMIN");
 }
 
 // Helper to check if user can manage an organization
@@ -123,8 +128,8 @@ export async function canManageOrganization(organizationId: string): Promise<boo
   const session = await getSession();
   if (!session) return false;
 
-  // Admin can manage any organization
-  if (session.role === "ADMIN") return true;
+  // Admin or Super Admin can manage any organization
+  if (session.role === "ADMIN" || session.role === "SUPER_ADMIN") return true;
 
   // User can only manage their own organization
   return session.organizationId === organizationId;

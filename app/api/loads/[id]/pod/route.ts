@@ -61,7 +61,7 @@ export async function POST(
     });
 
     const isCarrier = user?.organizationId === load.assignedTruck?.carrierId;
-    const isAdmin = session.role === 'ADMIN' || session.role === 'PLATFORM_OPS';
+    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
 
     if (!isCarrier && !isAdmin) {
       return NextResponse.json(
@@ -217,7 +217,7 @@ export async function PUT(
     });
 
     const isShipper = user?.organizationId === load.shipperId;
-    const isAdmin = session.role === 'ADMIN' || session.role === 'PLATFORM_OPS';
+    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
 
     if (!isShipper && !isAdmin) {
       return NextResponse.json(
