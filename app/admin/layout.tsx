@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth';
+import NotificationBell from '@/components/NotificationBell';
 
 export default async function AdminLayout({
   children,
@@ -41,6 +42,9 @@ export default async function AdminLayout({
               </h1>
             </div>
             <div className="flex items-center gap-4">
+              {/* Notification Bell - Sprint 16: Story 16.10 */}
+              <NotificationBell />
+
               <span className="text-sm text-gray-600">
                 {session.email}
               </span>
