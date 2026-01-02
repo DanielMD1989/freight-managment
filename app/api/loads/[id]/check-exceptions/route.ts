@@ -1,0 +1,90 @@
+/**
+ * Sprint 5: Exception Detection API
+ * Manually trigger exception detection for a specific load
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth';
+import { checkAllRules, autoCreateEscalations } from '@/lib/exceptionDetection';
+
+// POST /api/loads/[id]/check-exceptions - Manually trigger exception detection
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await requireAuth();
+    const { id: loadId } = await params;
+
+    // Only dispatchers and admins can trigger exception checks
+    if (
+      session.role !== 'DISPATCHER' &&
+      session.role !== 'ADMIN' &&
+      session.role !== 'SUPER_ADMIN'
+    ) {
+      return NextResponse.json(
+        { error: 'Only dispatchers and admins can check for exceptions' },
+        { status: 403 }
+      );
+    }
+
+    // Check all exception rules
+    const triggeredRules = await checkAllRules(loadId);
+
+    // Auto-create escalations for triggered rules
+    const result = await autoCreateEscalations(loadId, session.userId);
+
+    return NextResponse.json({
+      message: `Exception check complete. ${result.created} new escalations created.`,
+      triggeredRules: result.rules,
+      createdEscalations: result.escalations,
+      totalChecked: 4, // Number of rules checked
+    });
+
+  } catch (error) {
+    console.error('Exception check error:', error);
+    return NextResponse.json(
+      { error: 'Failed to check for exceptions' },
+      { status: 500 }
+    );
+  }
+}
+
+// GET /api/loads/[id]/check-exceptions - Preview exceptions without creating
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await requireAuth();
+    const { id: loadId } = await params;
+
+    // Only dispatchers and admins can view exception checks
+    if (
+      session.role !== 'DISPATCHER' &&
+      session.role !== 'ADMIN' &&
+      session.role !== 'SUPER_ADMIN'
+    ) {
+      return NextResponse.json(
+        { error: 'Only dispatchers and admins can check for exceptions' },
+        { status: 403 }
+      );
+    }
+
+    // Check all exception rules without creating escalations
+    const triggeredRules = await checkAllRules(loadId);
+
+    return NextResponse.json({
+      triggeredRules,
+      wouldCreate: triggeredRules.length,
+      totalChecked: 4,
+    });
+
+  } catch (error) {
+    console.error('Exception preview error:', error);
+    return NextResponse.json(
+      { error: 'Failed to preview exceptions' },
+      { status: 500 }
+    );
+  }
+}
