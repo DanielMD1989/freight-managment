@@ -186,10 +186,14 @@ export async function PATCH(request: NextRequest) {
     // Create audit log
     await db.auditLog.create({
       data: {
+        eventType: 'SETTINGS_UPDATED',
+        severity: 'INFO',
         userId: session.userId,
-        action: 'SETTINGS_UPDATED',
-        entityType: 'SYSTEM_SETTINGS',
-        entityId: 'system',
+        resource: 'SYSTEM_SETTINGS',
+        resourceId: 'system',
+        action: 'UPDATE',
+        result: 'SUCCESS',
+        message: 'System settings updated successfully',
         ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
         userAgent: request.headers.get('user-agent') || 'unknown',
         metadata: {
