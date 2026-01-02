@@ -13,21 +13,25 @@ const ALL_TABS: DatNavTab[] = [
   {
     key: 'POST_LOADS',
     label: 'POST LOADS',
+    icon: '📦',
     roles: ['SHIPPER', 'ADMIN'],
   },
   {
     key: 'SEARCH_TRUCKS',
     label: 'SEARCH TRUCKS',
+    icon: '🚛',
     roles: ['SHIPPER', 'ADMIN'],
   },
   {
     key: 'POST_TRUCKS',
     label: 'POST TRUCKS',
+    icon: '🚚',
     roles: ['CARRIER', 'ADMIN'],
   },
   {
     key: 'SEARCH_LOADS',
     label: 'SEARCH LOADS',
+    icon: '🔍',
     roles: ['CARRIER', 'ADMIN'],
   },
 ];
@@ -41,7 +45,7 @@ export default function DatNavTabs({
   const visibleTabs = ALL_TABS.filter((tab) => tab.roles.includes(userRole));
 
   return (
-    <div className="flex gap-2 mb-6 border-b border-gray-200">
+    <div className="flex gap-1">
       {visibleTabs.map((tab) => {
         const isActive = activeTab === tab.key;
 
@@ -50,22 +54,25 @@ export default function DatNavTabs({
             key={tab.key}
             onClick={() => onTabChange(tab.key)}
             className={`
-              px-6 py-3
-              text-sm
-              font-semibold
+              px-5 py-2
+              text-xs
+              font-bold
               uppercase
               tracking-wide
-              border-b-2
+              rounded-t-md
               transition-colors
               duration-150
+              flex
+              items-center
+              gap-2
               ${
                 isActive
-                  ? 'bg-gray-700 text-white border-gray-700'
-                  : 'bg-white text-gray-600 border-transparent hover:bg-gray-50 hover:text-gray-900'
+                  ? 'bg-gray-600 text-white'
+                  : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
               }
             `}
           >
-            {tab.icon && <span className="mr-2">{tab.icon}</span>}
+            {tab.icon && <span className="text-base">{tab.icon}</span>}
             {tab.label}
           </button>
         );

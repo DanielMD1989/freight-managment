@@ -1,36 +1,35 @@
 /**
- * Carrier DAT-Style Load Board
+ * Carrier Main Page - FreightET Power Interface
  *
- * Main entry point for carrier interface with professional DAT-style UI
- * Sprint 14 - DAT-Style UI Transformation
+ * Main entry point for carrier portal with professional load board
+ * Sprint 14 - Professional UI Transformation
  */
 
 import { redirect } from 'next/navigation';
-import { headers } from 'next/headers';
-import CarrierDatBoardClient from './CarrierDatBoardClient';
+import { cookies } from 'next/headers';
+import { verifyToken } from '@/lib/auth';
+import CarrierDatBoardClient from './dat-board/CarrierDatBoardClient';
 
 export const metadata = {
-  title: 'Carrier Dashboard - Load Board',
-  description: 'Professional DAT-style load board for carriers',
+  title: 'FreightET Power - Carrier Portal',
+  description: 'Professional freight load board for carriers',
 };
 
 export default async function CarrierPage() {
-  // Get auth from headers (set by middleware)
-  const headersList = await headers();
-  const userHeader = headersList.get('x-user-data');
+  // Verify authentication
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get('session');
 
-  // Redirect if not authenticated
-  if (!userHeader) {
-    redirect('/login');
+  if (!sessionCookie) {
+    redirect('/login?redirect=/carrier');
   }
 
-  // Parse user data
-  const user = JSON.parse(userHeader);
+  const session = await verifyToken(sessionCookie.value);
 
-  // Verify carrier role
-  if (user.role !== 'CARRIER' && user.role !== 'ADMIN') {
-    redirect('/dashboard');
+  if (!session || (session.role !== 'CARRIER' && session.role !== 'ADMIN')) {
+    redirect('/unauthorized');
   }
 
-  return <CarrierDatBoardClient user={user} />;
+  // Return DAT Power interface
+  return <CarrierDatBoardClient user={session} />;
 }

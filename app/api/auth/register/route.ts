@@ -15,9 +15,11 @@ const registerSchema = z.object({
     "CARRIER",
     "LOGISTICS_AGENT",
     "DRIVER",
+    "DISPATCHER", // Sprint 16: Story 16.4 - Dispatcher System
     "PLATFORM_OPS",
     "ADMIN",
   ]),
+  organizationId: z.string().optional(), // Sprint 16: Story 16.4 - Assign dispatcher to organization
 });
 
 export async function POST(request: NextRequest) {
@@ -88,6 +90,8 @@ export async function POST(request: NextRequest) {
         firstName: validatedData.firstName,
         lastName: validatedData.lastName,
         role: validatedData.role,
+        // Sprint 16: Story 16.4 - Assign dispatcher to organization
+        organizationId: validatedData.organizationId,
       },
       select: {
         id: true,

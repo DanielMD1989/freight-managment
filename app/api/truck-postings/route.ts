@@ -32,6 +32,9 @@ import {
   RATE_LIMIT_TRUCK_POSTING,
 } from '@/lib/rateLimit';
 import { requireCSRF } from '@/lib/csrf';
+import { findMatchingLoads } from '@/lib/matchCalculation';
+import { canViewAllTrucks, hasElevatedPermissions } from '@/lib/dispatcherPermissions';
+import { UserRole } from '@prisma/client';
 
 // Validation schema for truck posting
 const TruckPostingSchema = z.object({
@@ -205,7 +208,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate user's organization owns this truck
-    if (truck.carrierId !== session.organizationId && session.role !== 'ADMIN') {
+    // Sprint 16: Allow dispatcher, platform ops, and admin to post any truck
+    const hasElevatedPerms = hasElevatedPermissions({
+      role: session.role as UserRole,
+      organizationId: session.organizationId,
+      userId: session.userId
+    });
+
+    if (truck.carrierId !== session.organizationId && !hasElevatedPerms) {
       return NextResponse.json(
         { error: 'You can only post trucks owned by your organization' },
         { status: 403 }
@@ -303,18 +313,28 @@ export async function GET(request: NextRequest) {
     const organizationId = searchParams.get('organizationId');
     const originCityId = searchParams.get('originCityId');
     const destinationCityId = searchParams.get('destinationCityId');
+    const origin = searchParams.get('origin'); // City name search
+    const destination = searchParams.get('destination'); // City name search
     const truckType = searchParams.get('truckType');
     const fullPartial = searchParams.get('fullPartial');
     const status = searchParams.get('status') || 'ACTIVE';
     const limitParam = searchParams.get('limit');
     const offsetParam = searchParams.get('offset');
+    const includeMatchCount = searchParams.get('includeMatchCount') === 'true';
 
     // If filtering by specific organization (for "my postings"), verify user has access
     if (organizationId) {
       const session = await requireAuth();
 
-      // User can only filter by their own organization unless they're an admin
-      if (organizationId !== session.organizationId && session.role !== 'ADMIN') {
+      // Sprint 16: Allow dispatcher, platform ops, and admin to view all trucks
+      const hasElevatedPerms = hasElevatedPermissions({
+        role: session.role as UserRole,
+        organizationId: session.organizationId,
+        userId: session.userId
+      });
+
+      // User can only filter by their own organization unless they have elevated permissions
+      if (organizationId !== session.organizationId && !hasElevatedPerms) {
         return NextResponse.json(
           { error: 'You can only view postings for your own organization' },
           { status: 403 }
@@ -325,6 +345,40 @@ export async function GET(request: NextRequest) {
     // Pagination
     const limit = Math.min(parseInt(limitParam || '20', 10), 100);
     const offset = Math.max(parseInt(offsetParam || '0', 10), 0);
+
+    // Convert city names to IDs if provided
+    let resolvedOriginCityId = originCityId;
+    let resolvedDestinationCityId = destinationCityId;
+
+    if (origin) {
+      const originCity = await db.ethiopianLocation.findFirst({
+        where: {
+          name: {
+            contains: origin,
+            mode: 'insensitive',
+          },
+        },
+        select: { id: true },
+      });
+      if (originCity) {
+        resolvedOriginCityId = originCity.id;
+      }
+    }
+
+    if (destination) {
+      const destinationCity = await db.ethiopianLocation.findFirst({
+        where: {
+          name: {
+            contains: destination,
+            mode: 'insensitive',
+          },
+        },
+        select: { id: true },
+      });
+      if (destinationCity) {
+        resolvedDestinationCityId = destinationCity.id;
+      }
+    }
 
     // Build where clause
     const where: any = {};
@@ -341,12 +395,12 @@ export async function GET(request: NextRequest) {
       where.status = 'ACTIVE';
     }
 
-    if (originCityId) {
-      where.originCityId = originCityId;
+    if (resolvedOriginCityId) {
+      where.originCityId = resolvedOriginCityId;
     }
 
-    if (destinationCityId) {
-      where.destinationCityId = destinationCityId;
+    if (resolvedDestinationCityId) {
+      where.destinationCityId = resolvedDestinationCityId;
     }
 
     if (fullPartial && ['FULL', 'PARTIAL'].includes(fullPartial)) {
@@ -370,6 +424,29 @@ export async function GET(request: NextRequest) {
               truckType: true,
               capacity: true,
               lengthM: true,
+              // Sprint 16: GPS fields
+              imei: true,
+              gpsProvider: true,
+              gpsStatus: true,
+              gpsVerifiedAt: true,
+              gpsLastSeenAt: true,
+              // Check if truck is assigned to any load
+              assignedLoad: {
+                where: {
+                  OR: [
+                    { status: 'ASSIGNED' },
+                    { status: 'IN_TRANSIT' },
+                  ],
+                },
+                select: {
+                  id: true,
+                  trackingEnabled: true,
+                  trackingUrl: true,
+                  trackingStartedAt: true,
+                  pickupCity: true,
+                  deliveryCity: true,
+                },
+              },
             },
           },
           originCity: {
@@ -403,8 +480,81 @@ export async function GET(request: NextRequest) {
       db.truckPosting.count({ where }),
     ]);
 
+    // Transform postings to flatten nested fields for UI consumption
+    const transformedPostings = postings.map((posting: any) => ({
+      ...posting,
+      // Flatten city names
+      currentCity: posting.originCity?.name || '',
+      destinationCity: posting.destinationCity?.name || null,
+      // Add availableDate for compatibility
+      availableDate: posting.availableFrom,
+      // Flatten truck info
+      truckType: posting.truck?.truckType || '',
+      lengthM: posting.truck?.lengthM || posting.availableLength,
+      maxWeight: posting.truck?.capacity || posting.availableWeight,
+      // Flatten carrier info
+      carrierContactPhone: posting.contactPhone,
+    }));
+
+    // Calculate match counts if requested
+    let postingsWithMatchCount = transformedPostings;
+    if (includeMatchCount) {
+      // Fetch all posted loads for matching
+      const loads = await db.load.findMany({
+        where: { status: 'POSTED' },
+        select: {
+          id: true,
+          pickupCity: true,
+          deliveryCity: true,
+          pickupDate: true,
+          truckType: true,
+          weight: true,
+          lengthM: true,
+          fullPartial: true,
+        },
+        take: 500,
+      });
+
+      postingsWithMatchCount = postings.map((posting: any) => {
+        const truckCriteria = {
+          currentCity: posting.originCity?.name || '',
+          destinationCity: posting.destinationCity?.name || null,
+          availableDate: posting.availableFrom,
+          truckType: posting.truck?.truckType || '',
+          maxWeight: posting.availableWeight ? Number(posting.availableWeight) : null,
+          lengthM: posting.availableLength ? Number(posting.availableLength) : null,
+          fullPartial: posting.fullPartial,
+        };
+
+        const loadsCriteria = loads
+          .filter(load => load.pickupCity && load.deliveryCity && load.truckType)
+          .map(load => ({
+            pickupCity: load.pickupCity!,
+            deliveryCity: load.deliveryCity!,
+            pickupDate: load.pickupDate,
+            truckType: load.truckType,
+            weight: load.weight ? Number(load.weight) : null,
+            lengthM: load.lengthM ? Number(load.lengthM) : null,
+            fullPartial: load.fullPartial,
+          }));
+
+        const matches = findMatchingLoads(truckCriteria, loadsCriteria, 50);
+
+        return {
+          ...posting,
+          matchCount: matches.length,
+        };
+      });
+    }
+
     return NextResponse.json({
-      postings,
+      truckPostings: postingsWithMatchCount,
+      postings: postingsWithMatchCount, // Keep for backward compatibility
+      pagination: {
+        total,
+        limit,
+        offset,
+      },
       total,
       limit,
       offset,

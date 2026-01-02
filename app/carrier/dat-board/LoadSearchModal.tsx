@@ -301,7 +301,13 @@ export default function LoadSearchModal({
             </button>
             <DatActionButton
               variant="primary"
-              type="submit"
+              onClick={() => {
+                const form = document.querySelector('form');
+                if (form) {
+                  const event = new Event('submit', { cancelable: true, bubbles: true });
+                  form.dispatchEvent(event);
+                }
+              }}
               disabled={loading}
             >
               {loading ? 'Creating...' : 'Create Search'}

@@ -96,7 +96,7 @@ export async function GET(
 ) {
   try {
     // Authenticate
-    await requireAuth(request);
+    await requireAuth();
     const { id } = await params;
 
     // Fetch load

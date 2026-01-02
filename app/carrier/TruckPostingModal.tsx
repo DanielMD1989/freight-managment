@@ -291,11 +291,17 @@ export default function TruckPostingModal({
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Special Requirements
               </label>
-              <DatCharacterCounter
+              <textarea
                 value={formData.specialRequirements}
-                onChange={(value) => setFormData({ ...formData, specialRequirements: value })}
+                onChange={(e) => setFormData({ ...formData, specialRequirements: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md resize-none"
+                rows={3}
                 maxLength={500}
                 placeholder="Any special requirements or notes..."
+              />
+              <DatCharacterCounter
+                value={formData.specialRequirements}
+                maxLength={500}
               />
             </div>
           </div>
@@ -312,7 +318,13 @@ export default function TruckPostingModal({
             </button>
             <DatActionButton
               variant="primary"
-              type="submit"
+              onClick={() => {
+                const form = document.querySelector('form');
+                if (form) {
+                  const event = new Event('submit', { cancelable: true, bubbles: true });
+                  form.dispatchEvent(event);
+                }
+              }}
               disabled={loading}
             >
               {loading ? 'Creating...' : 'Create Truck Post'}

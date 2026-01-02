@@ -1,26 +1,15 @@
 'use client';
 
 /**
- * SEARCH LOADS Tab Component
+ * SEARCH LOADS Tab Component - DAT Power Style
  *
- * Advanced load search with rate analysis and company details
- * Sprint 14 - DAT-Style UI Transformation (Phase 5)
+ * Carrier interface for searching available loads
+ * Sprint 14 - DAT-Style UI Transformation
  */
 
 import React, { useState, useEffect } from 'react';
-import {
-  DatStatusTabs,
-  DatDataTable,
-  DatActionButton,
-  DatAgeIndicator,
-  DatSavedSearches,
-  DatFilterPanel,
-  DatCompanyLink,
-  DatCompanyModal,
-  DatRateAnalysis,
-} from '@/components/dat-ui';
-import { DatColumn, DatStatusTab, DatFilter, DatRowAction } from '@/types/dat-ui';
-import LoadSearchModal from './LoadSearchModal';
+import { DatStatusTabs, DatAgeIndicator, DatSavedSearches } from '@/components/dat-ui';
+import { DatStatusTab } from '@/types/dat-ui';
 
 interface SearchLoadsTabProps {
   user: any;
@@ -32,13 +21,199 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
   const [loads, setLoads] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState<ResultsFilter>('all');
+  const [ethiopianCities, setEthiopianCities] = useState<any[]>([]);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [showSearchForm, setShowSearchForm] = useState(false);
+  const [sortField, setSortField] = useState<string>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  // Saved searches state
   const [savedSearches, setSavedSearches] = useState<any[]>([]);
-  const [activeSearchId, setActiveSearchId] = useState<string | null>(null);
-  const [filterValues, setFilterValues] = useState<Record<string, any>>({});
-  const [selectedLoads, setSelectedLoads] = useState<string[]>([]);
-  const [showNewSearchModal, setShowNewSearchModal] = useState(false);
-  const [selectedCompany, setSelectedCompany] = useState<any>(null);
-  const [showRateAnalysis, setShowRateAnalysis] = useState(true);
+  const [activeSavedSearchId, setActiveSavedSearchId] = useState<string | null>(null);
+  const [loadingSavedSearches, setLoadingSavedSearches] = useState(false);
+
+  // Search form state
+  const [filterValues, setFilterValues] = useState<Record<string, any>>({
+    truckType: '',
+    truckTypeMode: 'ANY',
+    origin: '',
+    destination: '',
+    availDate: '',
+    dhOrigin: '',
+    dhDestination: '',
+    fullPartial: '',
+    length: '',
+    weight: '',
+    searchBack: '',
+  });
+
+  /**
+   * Fetch Ethiopian cities
+   */
+  const fetchEthiopianCities = async () => {
+    setLoadingCities(true);
+    try {
+      const response = await fetch('/api/ethiopian-locations');
+      const data = await response.json();
+      setEthiopianCities(data.locations || []);
+    } catch (error) {
+      console.error('Failed to fetch Ethiopian cities:', error);
+    } finally {
+      setLoadingCities(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEthiopianCities();
+    fetchSavedSearches();
+  }, []);
+
+  /**
+   * Fetch saved searches for LOADS
+   */
+  const fetchSavedSearches = async () => {
+    setLoadingSavedSearches(true);
+    try {
+      const response = await fetch('/api/saved-searches?type=LOADS');
+      const data = await response.json();
+      setSavedSearches(data.searches || []);
+    } catch (error) {
+      console.error('Failed to fetch saved searches:', error);
+    } finally {
+      setLoadingSavedSearches(false);
+    }
+  };
+
+  /**
+   * Save current search criteria
+   */
+  const handleSaveSearch = async () => {
+    const name = prompt('Enter a name for this search:');
+    if (!name) return;
+
+    try {
+      const response = await fetch('/api/saved-searches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          type: 'LOADS',
+          criteria: filterValues,
+        }),
+      });
+
+      if (response.ok) {
+        await fetchSavedSearches();
+        alert('Search saved successfully!');
+      } else {
+        throw new Error('Failed to save search');
+      }
+    } catch (error) {
+      console.error('Failed to save search:', error);
+      alert('Failed to save search. Please try again.');
+    }
+  };
+
+  /**
+   * Select and apply a saved search
+   */
+  const handleSelectSavedSearch = (searchId: string) => {
+    const search = savedSearches.find((s) => s.id === searchId);
+    if (!search) return;
+
+    // Apply saved criteria to filter values
+    setFilterValues(search.criteria);
+    setActiveSavedSearchId(searchId);
+
+    // Automatically trigger search
+    fetchLoads();
+  };
+
+  /**
+   * Delete a saved search
+   */
+  const handleDeleteSavedSearch = async (searchId: string) => {
+    if (!confirm('Are you sure you want to delete this saved search?')) return;
+
+    try {
+      const response = await fetch(`/api/saved-searches/${searchId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        await fetchSavedSearches();
+        if (activeSavedSearchId === searchId) {
+          setActiveSavedSearchId(null);
+        }
+      } else {
+        throw new Error('Failed to delete search');
+      }
+    } catch (error) {
+      console.error('Failed to delete search:', error);
+      alert('Failed to delete search. Please try again.');
+    }
+  };
+
+  /**
+   * Edit a saved search (placeholder)
+   */
+  const handleEditSavedSearch = (searchId: string) => {
+    const search = savedSearches.find((s) => s.id === searchId);
+    if (!search) return;
+
+    const newName = prompt('Enter new name for this search:', search.name);
+    if (!newName || newName === search.name) return;
+
+    updateSavedSearch(searchId, { name: newName });
+  };
+
+  /**
+   * Update saved search
+   */
+  const updateSavedSearch = async (searchId: string, updates: any) => {
+    try {
+      const response = await fetch(`/api/saved-searches/${searchId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+
+      if (response.ok) {
+        await fetchSavedSearches();
+      } else {
+        throw new Error('Failed to update search');
+      }
+    } catch (error) {
+      console.error('Failed to update search:', error);
+      alert('Failed to update search. Please try again.');
+    }
+  };
+
+  /**
+   * Handle filter change
+   */
+  const handleFilterChange = (key: string, value: any) => {
+    setFilterValues({ ...filterValues, [key]: value });
+  };
+
+  /**
+   * Handle filter reset
+   */
+  const handleFilterReset = () => {
+    setFilterValues({
+      truckType: '',
+      truckTypeMode: 'ANY',
+      origin: '',
+      destination: '',
+      availDate: '',
+      dhOrigin: '',
+      dhDestination: '',
+      fullPartial: '',
+      length: '',
+      weight: '',
+      searchBack: '',
+    });
+  };
 
   /**
    * Fetch loads based on filters
@@ -47,52 +222,32 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
     setLoading(true);
     try {
       const params = new URLSearchParams();
+      params.append('status', 'POSTED');
 
-      // Apply filters
-      if (filterValues.ageHours) {
-        params.append('ageHours', filterValues.ageHours.toString());
-      }
-      if (filterValues.origin) {
-        params.append('origin', filterValues.origin);
-      }
-      if (filterValues.destination) {
-        params.append('destination', filterValues.destination);
-      }
       if (filterValues.truckType) {
         params.append('truckType', filterValues.truckType);
+      }
+      if (filterValues.origin) {
+        params.append('pickupCity', filterValues.origin);
+      }
+      if (filterValues.destination) {
+        params.append('deliveryCity', filterValues.destination);
+      }
+      if (filterValues.availDate) {
+        params.append('pickupFrom', filterValues.availDate);
       }
       if (filterValues.fullPartial) {
         params.append('fullPartial', filterValues.fullPartial);
       }
-      if (filterValues.minWeight) {
-        params.append('minWeight', filterValues.minWeight.toString());
+      if (filterValues.length) {
+        params.append('minLength', filterValues.length);
       }
-      if (filterValues.maxWeight) {
-        params.append('maxWeight', filterValues.maxWeight.toString());
-      }
-      if (filterValues.minLength) {
-        params.append('minLength', filterValues.minLength.toString());
-      }
-      if (filterValues.pickupFrom) {
-        params.append('pickupFrom', filterValues.pickupFrom);
-      }
-      if (filterValues.showVerifiedOnly) {
-        params.append('companyVerified', 'true');
-      }
-      if (filterValues.minRate) {
-        params.append('minRate', filterValues.minRate.toString());
-      }
-
-      // Apply company preference filter
-      if (activeFilter === 'PREFERRED') {
-        params.append('isPreferred', 'true');
-      } else if (activeFilter === 'BLOCKED') {
-        params.append('isBlocked', 'true');
+      if (filterValues.weight) {
+        params.append('minWeight', filterValues.weight);
       }
 
       const response = await fetch(`/api/loads?${params.toString()}`);
       const data = await response.json();
-
       setLoads(data.loads || []);
     } catch (error) {
       console.error('Failed to fetch loads:', error);
@@ -102,499 +257,435 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
   };
 
   /**
-   * Fetch saved searches
+   * Handle header column click for sorting
    */
-  const fetchSavedSearches = async () => {
-    try {
-      const response = await fetch('/api/saved-searches?type=LOADS');
-      const data = await response.json();
-      setSavedSearches(data.searches || []);
-    } catch (error) {
-      console.error('Failed to fetch saved searches:', error);
+  const handleHeaderClick = (field: string) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
     }
-  };
 
-  useEffect(() => {
-    fetchLoads();
-    fetchSavedSearches();
-  }, [activeFilter, filterValues]);
+    const sorted = [...loads].sort((a, b) => {
+      const aVal = a[field];
+      const bVal = b[field];
 
-  /**
-   * Calculate rate analysis for active search
-   */
-  const getRateAnalysis = () => {
-    if (loads.length === 0) return null;
+      if (aVal === null || aVal === undefined) return 1;
+      if (bVal === null || bVal === undefined) return -1;
 
-    // Calculate average rate per mile
-    const ratesPerMile = loads
-      .filter((l) => l.rate && l.tripKm)
-      .map((l) => l.rate / l.tripKm);
-
-    if (ratesPerMile.length === 0) return null;
-
-    const avgRatePerMile = ratesPerMile.reduce((a, b) => a + b, 0) / ratesPerMile.length;
-
-    // Calculate average rate per trip
-    const avgRatePerTrip = loads
-      .filter((l) => l.rate)
-      .reduce((sum, l) => sum + l.rate, 0) / loads.filter((l) => l.rate).length;
-
-    // Calculate average trip distance
-    const avgTripKm = loads
-      .filter((l) => l.tripKm)
-      .reduce((sum, l) => sum + l.tripKm, 0) / loads.filter((l) => l.tripKm).length;
-
-    // Calculate average speed (rough estimate)
-    const avgSpeed = 65; // mph estimate
-
-    // Calculate average age
-    const avgAgeHours = loads.length > 0
-      ? loads.reduce((sum, l) => {
-          const ageMs = Date.now() - new Date(l.createdAt).getTime();
-          return sum + (ageMs / (1000 * 60 * 60));
-        }, 0) / loads.length
-      : 0;
-
-    return {
-      ratePerMile: avgRatePerMile,
-      ratePerTrip: avgRatePerTrip,
-      totalMiles: avgTripKm,
-      averageSpeed: avgSpeed,
-      ageHours: avgAgeHours,
-    };
-  };
-
-  const rateAnalysis = getRateAnalysis();
-
-  /**
-   * Handle saved search selection
-   */
-  const handleSelectSearch = (searchId: string) => {
-    const search = savedSearches.find((s) => s.id === searchId);
-    if (search) {
-      setActiveSearchId(searchId);
-      setFilterValues(search.criteria || {});
-    }
-  };
-
-  /**
-   * Handle saved search deletion
-   */
-  const handleDeleteSearch = async (searchId: string) => {
-    if (!confirm('Delete this saved search?')) return;
-
-    try {
-      const response = await fetch(`/api/saved-searches/${searchId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) throw new Error('Failed to delete search');
-
-      fetchSavedSearches();
-      if (activeSearchId === searchId) {
-        setActiveSearchId(null);
-        setFilterValues({});
+      if (sortOrder === 'asc') {
+        return aVal > bVal ? 1 : -1;
+      } else {
+        return aVal < bVal ? 1 : -1;
       }
-    } catch (error) {
-      console.error('Delete search error:', error);
-      alert('Failed to delete saved search');
-    }
+    });
+
+    setLoads(sorted);
   };
 
   /**
-   * Handle saved search edit
+   * Truck types list
    */
-  const handleEditSearch = (searchId: string) => {
-    alert(`Edit search modal coming soon for search ${searchId}`);
-  };
-
-  /**
-   * Handle filter change
-   */
-  const handleFilterChange = (key: string, value: any) => {
-    setFilterValues({ ...filterValues, [key]: value });
-    setActiveSearchId(null);
-  };
-
-  /**
-   * Handle filter reset
-   */
-  const handleFilterReset = () => {
-    setFilterValues({});
-    setActiveSearchId(null);
-  };
-
-  /**
-   * Handle company link click
-   */
-  const handleCompanyClick = async (companyId: string) => {
-    try {
-      const response = await fetch(`/api/organizations/${companyId}`);
-      const data = await response.json();
-      setSelectedCompany(data);
-    } catch (error) {
-      console.error('Failed to fetch company:', error);
-    }
-  };
-
-  /**
-   * Handle load copy
-   */
-  const handleCopyLoad = (load: any) => {
-    alert(`Copy load details: ${load.pickupCity} → ${load.deliveryCity}`);
-  };
+  const truckTypes = [
+    { value: 'AUTO_CARRIER', label: 'Auto Carrier', code: 'AC' },
+    { value: 'B_TRAIN', label: 'B-Train', code: 'BT' },
+    { value: 'CONESTOGA', label: 'Conestoga', code: 'CN' },
+    { value: 'CONTAINER', label: 'Container', code: 'C' },
+    { value: 'CONTAINER_INSULATED', label: 'Container Insulated', code: 'CI' },
+    { value: 'CONTAINER_REFRIGERATED', label: 'Container Refrigerated', code: 'CR' },
+    { value: 'CONVEYOR', label: 'Conveyor', code: 'CV' },
+    { value: 'DOUBLE_DROP', label: 'Double Drop', code: 'DD' },
+    { value: 'DROP_DECK_LANDOLL', label: 'Drop Deck Landoll', code: 'LA' },
+    { value: 'DUMP_TRAILER', label: 'Dump Trailer', code: 'DT' },
+    { value: 'FLATBED', label: 'Flatbed', code: 'F' },
+    { value: 'FLATBED_AIR_RIDE', label: 'Flatbed Air-Ride', code: 'FA' },
+    { value: 'FLATBED_CONESTOGA', label: 'Flatbed Conestoga', code: 'FN' },
+    { value: 'FLATBED_DOUBLE', label: 'Flatbed Double', code: 'F2' },
+    { value: 'FLATBED_HAZMAT', label: 'Flatbed HazMat', code: 'FZ' },
+    { value: 'FLATBED_HOTSHOT', label: 'Flatbed Hotshot', code: 'FH' },
+    { value: 'FLATBED_MAXI', label: 'Flatbed Maxi', code: 'MX' },
+    { value: 'DRY_VAN', label: 'Van', code: 'V' },
+    { value: 'REFRIGERATED', label: 'Reefer', code: 'R' },
+    { value: 'TANKER', label: 'Tanker', code: 'T' },
+  ];
 
   /**
    * Results tabs configuration
    */
   const resultsTabs: DatStatusTab[] = [
-    { key: 'all', label: 'ALL', count: loads.length },
+    { key: 'all', label: 'ALL' },
     { key: 'PREFERRED', label: 'PREFERRED' },
     { key: 'BLOCKED', label: 'BLOCKED' },
   ];
 
-  /**
-   * Filter configuration
-   */
-  const filters: DatFilter[] = [
-    {
-      key: 'ageHours',
-      label: 'AGE (hours)',
-      type: 'slider',
-      min: 0,
-      max: 168,
-      step: 1,
-      unit: 'h',
-    },
-    {
-      key: 'origin',
-      label: 'ORIGIN',
-      type: 'text',
-      placeholder: 'City name...',
-    },
-    {
-      key: 'destination',
-      label: 'DESTINATION',
-      type: 'text',
-      placeholder: 'City name...',
-    },
-    {
-      key: 'truckType',
-      label: 'TRUCK TYPE',
-      type: 'select',
-      options: [
-        { value: 'DRY_VAN', label: 'Dry Van' },
-        { value: 'FLATBED', label: 'Flatbed' },
-        { value: 'REFRIGERATED', label: 'Refrigerated' },
-        { value: 'TANKER', label: 'Tanker' },
-        { value: 'CONTAINER', label: 'Container' },
-      ],
-    },
-    {
-      key: 'fullPartial',
-      label: 'LOAD TYPE',
-      type: 'select',
-      options: [
-        { value: 'FULL', label: 'Full Load' },
-        { value: 'PARTIAL', label: 'Partial Load' },
-      ],
-    },
-    {
-      key: 'weightRange',
-      label: 'WEIGHT RANGE (kg)',
-      type: 'range-slider',
-      min: 0,
-      max: 50000,
-      step: 1000,
-      unit: 'kg',
-    },
-    {
-      key: 'minLength',
-      label: 'MIN LENGTH (m)',
-      type: 'slider',
-      min: 0,
-      max: 20,
-      step: 0.5,
-      unit: 'm',
-    },
-    {
-      key: 'minRate',
-      label: 'MIN RATE (ETB)',
-      type: 'slider',
-      min: 0,
-      max: 100000,
-      step: 1000,
-      unit: 'ETB',
-    },
-    {
-      key: 'pickupFrom',
-      label: 'PICKUP FROM',
-      type: 'date-picker',
-      minDate: new Date(),
-    },
-    {
-      key: 'showVerifiedOnly',
-      label: 'VERIFIED COMPANIES ONLY',
-      type: 'toggle',
-    },
-  ];
-
-  /**
-   * Table columns configuration
-   */
-  const columns: DatColumn[] = [
-    {
-      key: 'age',
-      label: 'Age',
-      width: '80px',
-      render: (_, row) => <DatAgeIndicator date={row.createdAt} />,
-    },
-    {
-      key: 'loadNumber',
-      label: 'Load#',
-      width: '100px',
-      render: (_, row) => row.id.slice(0, 8).toUpperCase(),
-    },
-    {
-      key: 'pickupDate',
-      label: 'Avail',
-      width: '110px',
-      render: (value) => value ? new Date(value).toLocaleDateString() : 'Now',
-    },
-    {
-      key: 'truckType',
-      label: 'Truck',
-      width: '100px',
-    },
-    {
-      key: 'dhToOriginKm',
-      label: 'DH-O',
-      width: '80px',
-      align: 'right' as const,
-      render: (value) => value ? `${value}km` : 'N/A',
-    },
-    {
-      key: 'pickupCity',
-      label: 'Origin',
-      sortable: true,
-    },
-    {
-      key: 'tripKm',
-      label: 'Trip',
-      width: '90px',
-      align: 'right' as const,
-      render: (value) => value ? `${value}km` : 'N/A',
-    },
-    {
-      key: 'deliveryCity',
-      label: 'Destination',
-      sortable: true,
-    },
-    {
-      key: 'dhAfterDeliveryKm',
-      label: 'DH-D',
-      width: '80px',
-      align: 'right' as const,
-      render: (value) => value ? `${value}km` : 'N/A',
-    },
-    {
-      key: 'company',
-      label: 'Company',
-      render: (_, row) => (
-        <DatCompanyLink
-          companyId={row.shipperId}
-          companyName={row.shipper?.name || 'Unknown'}
-          isMasked={!row.shipper?.allowNameDisplay}
-          onClick={handleCompanyClick}
-        />
-      ),
-    },
-    {
-      key: 'contact',
-      label: 'Contact',
-      width: '120px',
-      render: (_, row) => row.shipperContactPhone || 'N/A',
-    },
-    {
-      key: 'lengthM',
-      label: 'Length',
-      width: '80px',
-      align: 'right' as const,
-      render: (value) => value ? `${value}m` : 'N/A',
-    },
-    {
-      key: 'weight',
-      label: 'Weight',
-      width: '90px',
-      align: 'right' as const,
-      render: (value) => value ? `${value}kg` : 'N/A',
-    },
-    {
-      key: 'rate',
-      label: 'Rate',
-      width: '110px',
-      align: 'right' as const,
-      sortable: true,
-      render: (value, row) => value ? `${row.currency} ${value.toLocaleString()}` : 'N/A',
-    },
-  ];
-
-  /**
-   * Row actions configuration
-   */
-  const rowActions: DatRowAction[] = [
-    {
-      key: 'info',
-      label: 'ℹ️',
-      variant: 'primary',
-      onClick: (load) => alert(`Info: ${load.pickupCity} → ${load.deliveryCity}`),
-    },
-    {
-      key: 'rate',
-      label: '💲',
-      variant: 'secondary',
-      onClick: (load) => alert(`Rate details for load ${load.id}`),
-    },
-    {
-      key: 'book',
-      label: '✓',
-      variant: 'primary',
-      onClick: (load) => alert(`Book load ${load.id}`),
-    },
-    {
-      key: 'copy',
-      label: 'COPY',
-      variant: 'secondary',
-      onClick: handleCopyLoad,
-    },
-  ];
-
   return (
-    <div className="flex gap-4">
-      {/* Left Sidebar - Rate Analysis & Saved Searches */}
-      <div className="w-80 flex-shrink-0 space-y-4">
-        {/* Rate Analysis Panel */}
-        {rateAnalysis && showRateAnalysis && (
-          <DatRateAnalysis
-            rateType="SHIPPER-TO-CARRIER SPOT"
-            ratePerMile={rateAnalysis.ratePerMile}
-            ratePerTrip={rateAnalysis.ratePerTrip}
-            totalMiles={rateAnalysis.totalMiles}
-            averageSpeed={rateAnalysis.averageSpeed}
-            ageHours={rateAnalysis.ageHours}
-            onRateBias={() => alert('Rate bias analysis coming soon')}
-            onEdit={() => setShowRateAnalysis(false)}
-            onDelete={() => setShowRateAnalysis(false)}
-          />
-        )}
-
-        {/* New Search Button */}
-        <DatActionButton
-          variant="secondary"
-          size="md"
-          onClick={() => setShowNewSearchModal(true)}
-          icon="+"
-          className="w-full"
-        >
-          NEW LOAD SEARCH
-        </DatActionButton>
-
-        {/* Saved Searches */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Saved Searches</h3>
+    <div className="space-y-4">
+      {/* Saved Searches Panel */}
+      {savedSearches.length > 0 && (
+        <div className="bg-white border border-gray-300 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-gray-700 uppercase">
+              Saved Searches ({savedSearches.length})
+            </h3>
+          </div>
           <DatSavedSearches
             searches={savedSearches}
-            activeSearchId={activeSearchId}
-            onSelect={handleSelectSearch}
-            onDelete={handleDeleteSearch}
-            onEdit={handleEditSearch}
+            activeSearchId={activeSavedSearchId}
+            onSelect={handleSelectSavedSearch}
+            onDelete={handleDeleteSavedSearch}
+            onEdit={handleEditSavedSearch}
             type="LOADS"
+          />
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      <div className="flex gap-3">
+        <button
+          onClick={() => setShowSearchForm(!showSearchForm)}
+          className="px-6 py-3 bg-lime-500 text-white font-bold text-sm rounded hover:bg-lime-600 transition-colors shadow-md flex items-center gap-2"
+        >
+          <span className="text-lg">🔍</span>
+          {showSearchForm ? 'HIDE SEARCH' : 'NEW LOAD SEARCH'}
+        </button>
+
+        {showSearchForm && (
+          <button
+            onClick={handleSaveSearch}
+            className="px-6 py-3 bg-cyan-500 text-white font-bold text-sm rounded hover:bg-cyan-600 transition-colors shadow-md flex items-center gap-2"
+          >
+            <span className="text-lg">💾</span>
+            SAVE SEARCH
+          </button>
+        )}
+      </div>
+
+      {/* Inline Search Form - Only show when toggled */}
+      {showSearchForm && (
+        <div className="bg-white border border-gray-400 rounded shadow-sm">
+          {/* Header Row */}
+          <div className="grid grid-cols-12 gap-2 px-4 py-2 text-xs font-semibold text-gray-700 bg-gray-200 border-b border-gray-400">
+            <div>Truck</div>
+            <div>Origin</div>
+            <div>Destination</div>
+            <div>Avail</div>
+            <div>DH-O</div>
+            <div>DH-D</div>
+            <div>F/P</div>
+            <div>Length</div>
+            <div>Weight</div>
+            <div>Search Back</div>
+            <div className="col-span-2"></div>
+          </div>
+
+          {/* Editable Search Row */}
+          <div className="grid grid-cols-12 gap-2 px-4 py-3 text-xs items-center bg-white">
+            {/* Truck Type with ANY/ONLY */}
+            <div className="flex flex-col gap-1">
+              <div className="flex gap-1">
+                <button
+                  onClick={() => handleFilterChange('truckTypeMode', 'ANY')}
+                  className={`flex-1 px-2 py-0.5 text-xs font-bold rounded ${
+                    filterValues.truckTypeMode === 'ANY'
+                      ? 'bg-lime-500 text-white'
+                      : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                  }`}
+                >
+                  ANY
+                </button>
+                <button
+                  onClick={() => handleFilterChange('truckTypeMode', 'ONLY')}
+                  className={`flex-1 px-2 py-0.5 text-xs font-bold rounded ${
+                    filterValues.truckTypeMode === 'ONLY'
+                      ? 'bg-lime-500 text-white'
+                      : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                  }`}
+                >
+                  ONLY
+                </button>
+              </div>
+              <select
+                value={filterValues.truckType || ''}
+                onChange={(e) => handleFilterChange('truckType', e.target.value)}
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white"
+              >
+                <option value="">Select Type</option>
+                {truckTypes.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.code}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Origin */}
+            <div>
+              <select
+                value={filterValues.origin || ''}
+                onChange={(e) => handleFilterChange('origin', e.target.value)}
+                disabled={loadingCities}
+                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded bg-white"
+                style={{ minHeight: '32px' }}
+              >
+                <option value="">
+                  {loadingCities ? 'Loading...' : 'Any Origin'}
+                </option>
+                {ethiopianCities.map((city) => (
+                  <option key={city.id} value={city.name}>
+                    {city.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Destination */}
+            <div>
+              <select
+                value={filterValues.destination || ''}
+                onChange={(e) => handleFilterChange('destination', e.target.value)}
+                disabled={loadingCities}
+                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded bg-white"
+                style={{ minHeight: '32px' }}
+              >
+                <option value="">
+                  {loadingCities ? 'Loading...' : 'Anywhere'}
+                </option>
+                {ethiopianCities.map((city) => (
+                  <option key={city.id} value={city.name}>
+                    {city.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Avail Date */}
+            <div>
+              <input
+                type="date"
+                value={filterValues.availDate || ''}
+                onChange={(e) => handleFilterChange('availDate', e.target.value)}
+                className="w-full px-2 py-1 text-xs bg-white border border-gray-300 rounded"
+              />
+            </div>
+
+            {/* DH-O */}
+            <div>
+              <input
+                type="number"
+                value={filterValues.dhOrigin || ''}
+                onChange={(e) => handleFilterChange('dhOrigin', e.target.value)}
+                placeholder="km"
+                className="w-full px-2 py-1 text-xs bg-white border border-gray-300 rounded"
+              />
+            </div>
+
+            {/* DH-D */}
+            <div>
+              <input
+                type="number"
+                value={filterValues.dhDestination || ''}
+                onChange={(e) => handleFilterChange('dhDestination', e.target.value)}
+                placeholder="km"
+                className="w-full px-2 py-1 text-xs bg-white border border-gray-300 rounded"
+              />
+            </div>
+
+            {/* F/P */}
+            <div>
+              <select
+                value={filterValues.fullPartial || ''}
+                onChange={(e) => handleFilterChange('fullPartial', e.target.value)}
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white"
+              >
+                <option value="">Both</option>
+                <option value="FULL">Full</option>
+                <option value="PARTIAL">Partial</option>
+              </select>
+            </div>
+
+            {/* Length */}
+            <div>
+              <input
+                type="number"
+                value={filterValues.length || ''}
+                onChange={(e) => handleFilterChange('length', e.target.value)}
+                placeholder="m"
+                className="w-full px-2 py-1 text-xs bg-white border border-gray-300 rounded"
+              />
+            </div>
+
+            {/* Weight */}
+            <div>
+              <input
+                type="number"
+                value={filterValues.weight || ''}
+                onChange={(e) => handleFilterChange('weight', e.target.value)}
+                placeholder="kg"
+                className="w-full px-2 py-1 text-xs bg-white border border-gray-300 rounded"
+              />
+            </div>
+
+            {/* Search Back (days) */}
+            <div>
+              <input
+                type="number"
+                value={filterValues.searchBack || ''}
+                onChange={(e) => handleFilterChange('searchBack', e.target.value)}
+                placeholder="days"
+                className="w-full px-2 py-1 text-xs bg-white border border-gray-300 rounded"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="col-span-2 flex gap-2 justify-end">
+              <button
+                onClick={fetchLoads}
+                className="px-3 py-1.5 bg-lime-500 text-white text-xs font-bold rounded hover:bg-lime-600 transition-colors"
+              >
+                🔍 SEARCH
+              </button>
+              <button
+                onClick={handleFilterReset}
+                className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded hover:bg-red-600 transition-colors"
+              >
+                🗑️ CLEAR
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Results Summary */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-lime-600">
+            {loads.length} TOTAL RESULTS
+          </h3>
+          <DatStatusTabs
+            tabs={resultsTabs}
+            activeTab={activeFilter}
+            onTabChange={(key) => setActiveFilter(key as ResultsFilter)}
           />
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 space-y-4">
-        <h2 className="text-xl font-bold text-gray-900">SEARCH LOADS</h2>
+      {/* Results Section */}
+      <div>
+        <h4 className="text-sm font-bold text-gray-700 mb-2 uppercase">
+          {loads.length} {loads.length === 1 ? 'MATCH' : 'MATCHES'}
+        </h4>
 
-        {/* Results Tabs */}
-        <DatStatusTabs
-          tabs={resultsTabs}
-          activeTab={activeFilter}
-          onTabChange={(tab) => setActiveFilter(tab as ResultsFilter)}
-        />
-
-        {/* Data Table with Checkboxes */}
-        <DatDataTable
-          columns={columns}
-          data={loads}
-          selectable={true}
-          selectedRows={selectedLoads}
-          onSelectionChange={setSelectedLoads}
-          actions={rowActions}
-          loading={loading}
-          emptyMessage="No loads found matching your criteria. Try adjusting filters."
-          rowKey="id"
-        />
-
-        {/* Selected Loads Info */}
-        {selectedLoads.length > 0 && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-green-900 mb-2">
-              {selectedLoads.length} LOADS SELECTED
-            </h3>
-            <div className="flex gap-2">
-              <DatActionButton
-                variant="primary"
-                size="md"
-                onClick={() => alert(`Book ${selectedLoads.length} loads`)}
-              >
-                BOOK SELECTED
-              </DatActionButton>
-              <button
-                onClick={() => setSelectedLoads([])}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
-              >
-                Clear Selection
-              </button>
+        {/* Results Table - Matches SearchTrucksTab styling */}
+        <div className="bg-white border border-gray-300 rounded overflow-visible">
+          {/* Table Header */}
+          <div className="bg-gray-300 grid grid-cols-13 gap-2 px-4 py-2 border-b border-gray-400 text-xs font-semibold text-gray-700">
+            <div
+              className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+              onClick={() => handleHeaderClick('createdAt')}
+            >
+              Age {sortField === 'createdAt' && (sortOrder === 'asc' ? '↑' : '↓')}
+            </div>
+            <div
+              className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+              onClick={() => handleHeaderClick('pickupDate')}
+            >
+              Pickup {sortField === 'pickupDate' && (sortOrder === 'asc' ? '↑' : '↓')}
+            </div>
+            <div
+              className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+              onClick={() => handleHeaderClick('truckType')}
+            >
+              Truck {sortField === 'truckType' && (sortOrder === 'asc' ? '↑' : '↓')}
+            </div>
+            <div
+              className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+              onClick={() => handleHeaderClick('fullPartial')}
+            >
+              F/P {sortField === 'fullPartial' && (sortOrder === 'asc' ? '↑' : '↓')}
+            </div>
+            <div
+              className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+              onClick={() => handleHeaderClick('dhToOriginKm')}
+            >
+              DH-O {sortField === 'dhToOriginKm' && (sortOrder === 'asc' ? '↑' : '↓')}
+            </div>
+            <div
+              className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+              onClick={() => handleHeaderClick('pickupCity')}
+            >
+              Origin {sortField === 'pickupCity' && (sortOrder === 'asc' ? '↑' : '↓')}
+            </div>
+            <div
+              className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+              onClick={() => handleHeaderClick('tripKm')}
+            >
+              Trip {sortField === 'tripKm' && (sortOrder === 'asc' ? '↑' : '↓')}
+            </div>
+            <div
+              className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+              onClick={() => handleHeaderClick('deliveryCity')}
+            >
+              Destination {sortField === 'deliveryCity' && (sortOrder === 'asc' ? '↑' : '↓')}
+            </div>
+            <div
+              className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+              onClick={() => handleHeaderClick('dhAfterDeliveryKm')}
+            >
+              DH-D {sortField === 'dhAfterDeliveryKm' && (sortOrder === 'asc' ? '↑' : '↓')}
+            </div>
+            <div className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded">
+              Company
+            </div>
+            <div className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded">
+              Contact
+            </div>
+            <div
+              className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+              onClick={() => handleHeaderClick('lengthM')}
+            >
+              Length {sortField === 'lengthM' && (sortOrder === 'asc' ? '↑' : '↓')}
+            </div>
+            <div
+              className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+              onClick={() => handleHeaderClick('weight')}
+            >
+              Weight {sortField === 'weight' && (sortOrder === 'asc' ? '↑' : '↓')}
             </div>
           </div>
-        )}
+
+          {/* Load Rows */}
+          {loading ? (
+            <div className="p-8 text-center text-gray-500">Loading loads...</div>
+          ) : loads.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">No loads found. Try adjusting your filters.</div>
+          ) : (
+            loads.map((load) => (
+              <div
+                key={load.id}
+                className="grid grid-cols-13 gap-2 px-4 py-2 border-b border-gray-200 hover:bg-gray-50 cursor-pointer text-xs"
+                style={{ color: '#2B2727' }}
+              >
+                <div><DatAgeIndicator date={load.createdAt} /></div>
+                <div>{load.pickupDate ? new Date(load.pickupDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : 'N/A'}</div>
+                <div>{load.truckType || 'N/A'}</div>
+                <div>{load.fullPartial === 'FULL' ? 'F' : 'P'}</div>
+                <div>{load.dhToOriginKm || '—'}</div>
+                <div className="truncate">{load.pickupCity || 'N/A'}</div>
+                <div>{load.tripKm || '—'}</div>
+                <div className="truncate">{load.deliveryCity || 'N/A'}</div>
+                <div>{load.dhAfterDeliveryKm || '—'}</div>
+                <div className="truncate font-medium">
+                  {load.shipper?.name || 'Anonymous'}
+                </div>
+                <div>{load.shipperContactPhone || 'N/A'}</div>
+                <div>{load.lengthM ? `${load.lengthM}m` : 'N/A'}</div>
+                <div>{load.weight ? `${load.weight.toLocaleString()}kg` : 'N/A'}</div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
-
-      {/* Right Sidebar - Filters */}
-      <div className="w-80 flex-shrink-0">
-        <DatFilterPanel
-          title="Filters"
-          filters={filters}
-          values={filterValues}
-          onChange={handleFilterChange}
-          onReset={handleFilterReset}
-        />
-      </div>
-
-      {/* Company Modal */}
-      {selectedCompany && (
-        <DatCompanyModal
-          isOpen={!!selectedCompany}
-          onClose={() => setSelectedCompany(null)}
-          company={selectedCompany}
-        />
-      )}
-
-      {/* Load Search Modal */}
-      <LoadSearchModal
-        isOpen={showNewSearchModal}
-        onClose={() => setShowNewSearchModal(false)}
-        onSuccess={(searchId) => {
-          fetchSavedSearches();
-          setActiveSearchId(searchId);
-          const search = savedSearches.find((s) => s.id === searchId);
-          if (search) {
-            setFilterValues(search.criteria || {});
-          }
-        }}
-      />
     </div>
   );
 }

@@ -1,103 +1,86 @@
 /**
- * Saved Search Detail API
+ * Individual Saved Search API
  *
- * GET /api/saved-searches/[id] - Get specific saved search
  * PUT /api/saved-searches/[id] - Update saved search
  * DELETE /api/saved-searches/[id] - Delete saved search
+ *
  * Sprint 14 - DAT-Style UI Transformation
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
-
-/**
- * GET /api/saved-searches/[id]
- */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const user = await requireAuth(request);
-    const { id } = await params;
-
-    const search = await db.savedSearch.findUnique({
-      where: { id },
-    });
-
-    if (!search) {
-      return NextResponse.json(
-        { error: 'Saved search not found' },
-        { status: 404 }
-      );
-    }
-
-    // Verify ownership
-    if (search.userId !== user.userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      );
-    }
-
-    return NextResponse.json({ search });
-  } catch (error: any) {
-    console.error('Get saved search error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to fetch saved search' },
-      { status: 500 }
-    );
-  }
-}
+import { db } from '@/lib/db';
+import { SearchType } from '@prisma/client';
 
 /**
  * PUT /api/saved-searches/[id]
- * Update saved search
+ *
+ * Update an existing saved search.
+ *
+ * Body:
+ * {
+ *   name?: string,
+ *   criteria?: object
+ * }
+ *
+ * Returns:
+ * {
+ *   savedSearch: SavedSearch
+ * }
  */
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth(request);
     const { id } = await params;
-    const body = await request.json();
 
-    // Find existing search
-    const existing = await db.savedSearch.findUnique({
+    // Require authentication
+    const session = await requireAuth();
+
+    // Check if saved search exists and belongs to user
+    const existingSearch = await db.savedSearch.findUnique({
       where: { id },
     });
 
-    if (!existing) {
+    if (!existingSearch) {
       return NextResponse.json(
         { error: 'Saved search not found' },
         { status: 404 }
       );
     }
 
-    // Verify ownership
-    if (existing.userId !== user.userId) {
+    if (existingSearch.userId !== session.userId) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Forbidden: You do not own this saved search' },
         { status: 403 }
       );
     }
 
-    // Update search
-    const search = await db.savedSearch.update({
+    // Parse request body
+    const body = await request.json();
+    const { name, criteria } = body;
+
+    // Build update data
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (criteria !== undefined) updateData.criteria = criteria;
+
+    // Update saved search
+    const savedSearch = await db.savedSearch.update({
       where: { id },
-      data: {
-        name: body.name || existing.name,
-        criteria: body.criteria !== undefined ? body.criteria : existing.criteria,
-      },
+      data: updateData,
     });
 
-    return NextResponse.json({ search });
+    return NextResponse.json({
+      savedSearch,
+      message: 'Saved search updated successfully',
+    });
   } catch (error: any) {
-    console.error('Update saved search error:', error);
+    console.error('Error updating saved search:', error);
+
     return NextResponse.json(
-      { error: error.message || 'Failed to update saved search' },
+      { error: 'Failed to update saved search' },
       { status: 500 }
     );
   }
@@ -105,46 +88,56 @@ export async function PUT(
 
 /**
  * DELETE /api/saved-searches/[id]
- * Delete saved search
+ *
+ * Delete a saved search.
+ *
+ * Returns:
+ * {
+ *   message: string
+ * }
  */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth(request);
     const { id } = await params;
 
-    // Find existing search
-    const existing = await db.savedSearch.findUnique({
+    // Require authentication
+    const session = await requireAuth();
+
+    // Check if saved search exists and belongs to user
+    const existingSearch = await db.savedSearch.findUnique({
       where: { id },
     });
 
-    if (!existing) {
+    if (!existingSearch) {
       return NextResponse.json(
         { error: 'Saved search not found' },
         { status: 404 }
       );
     }
 
-    // Verify ownership
-    if (existing.userId !== user.userId) {
+    if (existingSearch.userId !== session.userId) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Forbidden: You do not own this saved search' },
         { status: 403 }
       );
     }
 
-    // Delete search
+    // Delete saved search
     await db.savedSearch.delete({
       where: { id },
     });
 
-    return NextResponse.json({ message: 'Saved search deleted successfully' });
+    return NextResponse.json({
+      message: 'Saved search deleted successfully',
+    });
   } catch (error: any) {
-    console.error('Delete saved search error:', error);
+    console.error('Error deleting saved search:', error);
+
     return NextResponse.json(
-      { error: error.message || 'Failed to delete saved search' },
+      { error: 'Failed to delete saved search' },
       { status: 500 }
     );
   }

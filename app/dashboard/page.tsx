@@ -21,6 +21,8 @@ export default async function DashboardPage() {
       redirect("/carrier");
     case "DRIVER":
       redirect("/driver");
+    case "DISPATCHER":
+      redirect("/dispatcher/dashboard");
     case "PLATFORM_OPS":
       redirect("/ops");
     default:
@@ -82,6 +84,33 @@ export default async function DashboardPage() {
           description: "View earnings and withdraw funds",
           href: "/dashboard/wallet",
           icon: "💰",
+        },
+      ];
+    } else if (role === "DISPATCHER") {
+      return [
+        {
+          title: "Dispatcher Dashboard",
+          description: "View and manage all loads and trucks",
+          href: "/dispatcher/dashboard",
+          icon: "🎯",
+        },
+        {
+          title: "All Loads",
+          description: "View and assign all system loads",
+          href: "/dispatcher/dashboard?tab=loads",
+          icon: "📋",
+        },
+        {
+          title: "All Trucks",
+          description: "Monitor all registered trucks",
+          href: "/dispatcher/dashboard?tab=trucks",
+          icon: "🚛",
+        },
+        {
+          title: "GPS Tracking",
+          description: "Track all active shipments",
+          href: "/dashboard/gps/map",
+          icon: "📍",
         },
       ];
     } else if (role === "PLATFORM_OPS") {

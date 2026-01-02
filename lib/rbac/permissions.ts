@@ -168,6 +168,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
 export function hasPermission(role: Role, permission: Permission): boolean {
   const permissions = ROLE_PERMISSIONS[role];
+  if (!permissions) return false; // Handle invalid roles
   return permissions.includes(permission);
 }
 

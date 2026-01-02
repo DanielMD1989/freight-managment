@@ -9,6 +9,10 @@ import {
   calculateTRPM,
   maskCompany,
 } from "@/lib/loadUtils";
+import {
+  calculateTotalFare,
+  validatePricing,
+} from "@/lib/pricingCalculation";
 
 const createLoadSchema = z.object({
   // Location & Schedule
@@ -45,8 +49,11 @@ const createLoadSchema = z.object({
   lengthM: z.number().positive().optional(),
   casesCount: z.number().int().positive().optional(),
 
-  // Pricing
-  rate: z.number().positive(),
+  // Pricing - Sprint 16: Base + Per-KM Model
+  baseFareEtb: z.number().positive().optional(),  // Base fare (ETB)
+  perKmEtb: z.number().positive().optional(),     // Per-km rate (ETB/km)
+  // Legacy pricing (backward compatibility)
+  rate: z.number().positive().optional(),          // DEPRECATED: Use baseFareEtb + perKmEtb
   bookMode: z.enum(["REQUEST", "INSTANT"]).default("REQUEST"),  // [NEW]
 
   // [NEW] Market Pricing
@@ -86,6 +93,39 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createLoadSchema.parse(body);
 
+    // Pricing validation: Must provide either new model (base + per-km) or legacy rate
+    const hasNewPricing = validatedData.baseFareEtb && validatedData.perKmEtb;
+    const hasLegacyPricing = validatedData.rate;
+
+    if (!hasNewPricing && !hasLegacyPricing) {
+      return NextResponse.json(
+        { error: "Must provide either (baseFareEtb + perKmEtb) or rate" },
+        { status: 400 }
+      );
+    }
+
+    // Calculate totalFareEtb if using new pricing model
+    let totalFareEtb = null;
+    if (hasNewPricing && validatedData.tripKm) {
+      try {
+        validatePricing(
+          validatedData.baseFareEtb!,
+          validatedData.perKmEtb!,
+          validatedData.tripKm
+        );
+        totalFareEtb = calculateTotalFare(
+          validatedData.baseFareEtb!,
+          validatedData.perKmEtb!,
+          validatedData.tripKm
+        );
+      } catch (error: any) {
+        return NextResponse.json(
+          { error: error.message || "Invalid pricing parameters" },
+          { status: 400 }
+        );
+      }
+    }
+
     // [NEW] Additional validation for POSTED loads
     if (validatedData.status === "POSTED") {
       if (!validatedData.tripKm) {
@@ -94,11 +134,22 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      if (validatedData.rate <= 0 || validatedData.tripKm <= 0) {
-        return NextResponse.json(
-          { error: "Rate and trip distance must be greater than 0" },
-          { status: 400 }
-        );
+
+      // Validate pricing for posted loads
+      if (hasNewPricing) {
+        if (!totalFareEtb || totalFareEtb.isZero()) {
+          return NextResponse.json(
+            { error: "Calculated total fare must be greater than 0" },
+            { status: 400 }
+          );
+        }
+      } else if (hasLegacyPricing) {
+        if (validatedData.rate! <= 0) {
+          return NextResponse.json(
+            { error: "Rate must be greater than 0" },
+            { status: 400 }
+          );
+        }
       }
     }
 
@@ -107,6 +158,10 @@ export async function POST(request: NextRequest) {
         ...validatedData,
         pickupDate: new Date(validatedData.pickupDate),
         deliveryDate: new Date(validatedData.deliveryDate),
+        // Sprint 16: Add calculated totalFareEtb
+        totalFareEtb: totalFareEtb ? totalFareEtb.toNumber() : null,
+        // Backward compatibility: If using new pricing, also set rate to totalFare
+        rate: hasNewPricing && totalFareEtb ? totalFareEtb.toNumber() : validatedData.rate!,
         // [NEW] Set postedAt when status is POSTED
         postedAt: validatedData.status === "POSTED" ? new Date() : null,
         shipperId: user.organizationId,
@@ -180,13 +235,20 @@ export async function GET(request: NextRequest) {
 
     const where: any = {};
 
-    // If myLoads, filter by current user's organization
-    if (myLoads) {
-      const user = await db.user.findUnique({
-        where: { id: session.userId },
-        select: { organizationId: true },
-      });
+    // Get user details for role-based filtering
+    const user = await db.user.findUnique({
+      where: { id: session.userId },
+      select: { organizationId: true, role: true },
+    });
 
+    // Sprint 16: Dispatcher can see all loads
+    const isDispatcher = user?.role === 'DISPATCHER' || user?.role === 'PLATFORM_OPS' || user?.role === 'ADMIN';
+
+    if (isDispatcher) {
+      // Dispatcher/Admin: See all loads (no organization filter)
+      // Optional status filter will be applied below if provided
+    } else if (myLoads) {
+      // Filter by current user's organization
       if (user?.organizationId) {
         where.shipperId = user.organizationId;
       }

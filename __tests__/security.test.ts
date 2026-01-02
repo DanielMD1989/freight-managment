@@ -21,7 +21,7 @@ import {
   PATH_TRAVERSAL_PAYLOADS,
   cleanupTestData,
 } from './utils/testUtils';
-import { validateCSRFToken, requireCSRF } from '@/lib/csrf';
+import { validateCSRFToken, requireCSRF, CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from '@/lib/csrf';
 import { NextRequest, NextResponse } from 'next/server';
 
 describe('Security Features', () => {
@@ -52,10 +52,10 @@ describe('Security Features', () => {
         method: 'POST',
         url: 'http://localhost:3000/api/test',
         headers: {
-          'X-CSRF-Token': csrfToken,
+          [CSRF_HEADER_NAME]: csrfToken,
         },
         cookies: {
-          'csrf-token': csrfToken,
+          [CSRF_COOKIE_NAME]: csrfToken,
         },
       });
 
@@ -68,10 +68,10 @@ describe('Security Features', () => {
         method: 'POST',
         url: 'http://localhost:3000/api/test',
         headers: {
-          'X-CSRF-Token': 'token-in-header',
+          [CSRF_HEADER_NAME]: 'token-in-header',
         },
         cookies: {
-          'csrf-token': 'token-in-cookie',
+          [CSRF_COOKIE_NAME]: 'token-in-cookie',
         },
       });
 
@@ -185,10 +185,17 @@ describe('Security Features', () => {
     });
 
     it('should sanitize XSS payloads', () => {
+      const { sanitizeText } = require('@/lib/validation');
+
       for (const payload of XSS_PAYLOADS) {
-        // Test that XSS payloads are escaped
-        // React automatically escapes content, but test explicit sanitization
-        expect(payload).toContain('<'); // Verify payload has HTML chars
+        const sanitized = sanitizeText(payload);
+
+        // Test that XSS payloads are sanitized
+        // Should not contain script tags or javascript: protocol
+        expect(sanitized).not.toContain('<script');
+        expect(sanitized).not.toContain('javascript:');
+        expect(sanitized).not.toContain('onerror=');
+        expect(sanitized).not.toContain('onload=');
       }
     });
 
@@ -229,9 +236,9 @@ describe('Security Features', () => {
       const { validatePhoneNumber } = require('@/lib/validation');
 
       const validPhones = [
-        '+1234567890',
-        '+12345678901',
-        '1234567890',
+        '+251912345678', // Ethiopian international format
+        '0912345678',    // Ethiopian local format with leading 0
+        '912345678',     // Ethiopian format without leading 0
       ];
 
       for (const phone of validPhones) {
@@ -364,7 +371,8 @@ describe('Security Features', () => {
       const requestId = generateRequestId();
 
       expect(requestId).toBeDefined();
-      expect(requestId).toMatch(/^req-[a-f0-9]+$/);
+      // Should be a valid UUID format
+      expect(requestId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
     });
   });
 

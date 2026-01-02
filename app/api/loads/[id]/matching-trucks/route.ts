@@ -1,43 +1,34 @@
 /**
- * Load Matching Trucks API
+ * Matching Trucks API
  *
  * GET /api/loads/[id]/matching-trucks
+ * Find trucks that match a specific load
  *
- * Finds matching truck postings for a load using the matching engine.
- *
- * Sprint 8 - Story 8.4: Truck/Load Matching Algorithm
+ * Sprint 15 - Story 15.8: Match Calculation
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { findMatchingTrucksForLoad } from '@/lib/matchingEngine';
 import { db } from '@/lib/db';
+import { requireAuth } from '@/lib/auth';
+import { findMatchingTrucks } from '@/lib/matchCalculation';
 
 /**
  * GET /api/loads/[id]/matching-trucks
- *
- * Find truck postings that match this load.
- *
- * Query parameters:
- * - minScore: Minimum match score (default: 40, range: 0-100)
- * - limit: Max results (default: 20, max: 100)
- *
- * Returns:
- * {
- *   matches: TruckMatch[]
- * }
+ * Find trucks that match the specified load
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requireAuth();
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
 
-    // Require authentication
-    const session = await requireAuth();
+    const minScore = parseInt(searchParams.get('minScore') || '50');
+    const limit = parseInt(searchParams.get('limit') || '50');
 
-    // Get load
+    // Fetch the load
     const load = await db.load.findUnique({
       where: { id },
     });
@@ -49,68 +40,102 @@ export async function GET(
       );
     }
 
-    // Verify ownership or admin access
-    const hasAccess =
-      load.shipperId === session.organizationId ||
-      session.role === 'ADMIN';
-
-    if (!hasAccess) {
+    // Verify ownership (shipper owns load)
+    if (load.shipperId !== user.organizationId && user.role !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Forbidden: You do not have access to this load' },
+        { error: 'Unauthorized' },
         { status: 403 }
       );
     }
 
-    // Only search for posted loads
-    if (load.status !== 'POSTED') {
+    // Verify load has required fields for matching
+    if (!load.pickupCity || !load.deliveryCity || !load.truckType) {
       return NextResponse.json(
-        {
-          error: 'Cannot find matches for unpublished load',
-          matches: [],
-        },
+        { error: 'Load missing required fields for matching' },
         { status: 400 }
       );
     }
 
-    // Parse query parameters
-    const { searchParams } = new URL(request.url);
-    const minScore = parseInt(searchParams.get('minScore') || '40', 10);
-    const limit = Math.min(
-      parseInt(searchParams.get('limit') || '20', 10),
-      100
-    );
-
-    // Find matching trucks
-    const matches = await findMatchingTrucksForLoad(id, minScore, limit);
-
-    // Add calculated metrics
-    const enrichedMatches = matches.map((match) => {
-      const { posting, matchScore } = match;
-
-      // Calculate DH-O and DH-D
-      const dhToOriginKm = matchScore.details.deadheadKm || 0;
-      const dhAfterDeliveryKm = 0; // Already included in deadheadKm
-
-      return {
-        ...match,
-        metrics: {
-          dhToOriginKm: Math.round(dhToOriginKm * 10) / 10,
-          dhAfterDeliveryKm: Math.round(dhAfterDeliveryKm * 10) / 10,
-          totalDeadheadKm: Math.round((matchScore.details.deadheadKm || 0) * 10) / 10,
+    // Fetch all active truck postings
+    const trucks = await db.truckPosting.findMany({
+      where: {
+        status: 'ACTIVE',
+      },
+      include: {
+        carrier: {
+          select: {
+            id: true,
+            name: true,
+            isVerified: true,
+            contactPhone: true,
+            contactEmail: true,
+          },
         },
-      };
+        originCity: {
+          select: {
+            name: true,
+          },
+        },
+        destinationCity: {
+          select: {
+            name: true,
+          },
+        },
+        truck: {
+          select: {
+            truckType: true,
+            capacity: true,
+            lengthM: true,
+          },
+        },
+      },
+      take: 500, // Limit initial fetch
     });
+
+    // Calculate matches
+    const loadCriteria = {
+      pickupCity: load.pickupCity,
+      deliveryCity: load.deliveryCity,
+      pickupDate: load.pickupDate,
+      truckType: load.truckType,
+      weight: load.weight ? Number(load.weight) : null,
+      lengthM: load.lengthM ? Number(load.lengthM) : null,
+      fullPartial: load.fullPartial,
+    };
+
+    const trucksCriteria = trucks.map(truck => ({
+      id: truck.id,
+      currentCity: truck.originCity?.name || '',
+      destinationCity: truck.destinationCity?.name || null,
+      availableDate: truck.availableFrom,
+      truckType: truck.truck?.truckType || '',
+      maxWeight: truck.availableWeight ? Number(truck.availableWeight) : null,
+      lengthM: truck.availableLength ? Number(truck.availableLength) : null,
+      fullPartial: truck.fullPartial,
+      carrier: truck.carrier,
+      contactName: truck.contactName,
+      contactPhone: truck.contactPhone,
+      createdAt: truck.createdAt,
+      status: truck.status,
+    }));
+
+    const matchedTrucks = findMatchingTrucks(loadCriteria, trucksCriteria, minScore)
+      .slice(0, limit)
+      .map((truck: any) => ({
+        ...truck,
+        // Include full truck object
+        ...trucks.find(t => t.id === truck.id),
+      }));
 
     return NextResponse.json({
-      loadId: id,
-      totalMatches: enrichedMatches.length,
-      matches: enrichedMatches,
+      trucks: matchedTrucks,
+      total: matchedTrucks.length,
+      exactMatches: matchedTrucks.filter(t => t.isExactMatch).length,
     });
   } catch (error: any) {
-    console.error('Error finding matching trucks:', error);
-
+    console.error('Matching trucks error:', error);
     return NextResponse.json(
-      { error: 'Failed to find matching trucks' },
+      { error: error.message || 'Failed to find matching trucks' },
       { status: 500 }
     );
   }

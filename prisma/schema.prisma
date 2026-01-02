@@ -18,6 +18,7 @@ enum UserRole {
   CARRIER
   LOGISTICS_AGENT // 3PL
   DRIVER
+  DISPATCHER      // SPRINT 16: Story 16.4 - Company-owned dispatcher
   PLATFORM_OPS
   ADMIN
 }
@@ -202,6 +203,7 @@ model User {
   reports           Report[]
   passwordResetTokens PasswordResetToken[]
   savedSearches     SavedSearch[]  // SPRINT 14: DAT-Style UI
+  notifications     Notification[] // SPRINT 16: Story 16.10 - Notifications
 
   @@index([email])
   @@index([organizationId])
@@ -238,6 +240,22 @@ model Organization {
   licenseNumber     String?
   taxId             String?
   allowNameDisplay  Boolean          @default(true)  // SPRINT 14: Company masking preference
+
+  // SPRINT 16: Story 16.5 - Trust & Reliability Metrics
+  completionRate    Decimal?         @default(0)     // % of loads completed successfully
+  cancellationRate  Decimal?         @default(0)     // % of loads cancelled
+  disputeRate       Decimal?         @default(0)     // % of loads with disputes
+  totalLoadsCompleted Int            @default(0)     // Total loads delivered
+  totalLoadsCancelled Int            @default(0)     // Total loads cancelled
+  totalDisputes     Int              @default(0)     // Total disputes filed
+
+  // SPRINT 16: Story 16.6 - Anti-Bypass Detection
+  suspiciousCancellationCount Int    @default(0)     // Cancellations after contact view
+  bypassAttemptCount Int             @default(0)     // Reported bypass attempts
+  isFlagged         Boolean          @default(false) // Flagged for suspicious activity
+  flaggedAt         DateTime?                        // When flagged
+  flagReason        String?                          // Reason for flagging
+
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 
@@ -281,7 +299,8 @@ model Load {
   deliveryDate          DateTime
 
   // [NEW] Logistics & Distance
-  tripKm                Decimal?    // Required when status = POSTED
+  tripKm                Decimal?    // Required when status = POSTED (legacy - use estimatedTripKm)
+  estimatedTripKm       Decimal?    // SPRINT 16: Estimated trip distance from map
   dhToOriginKm          Decimal?    // Deadhead to origin
   dhAfterDeliveryKm     Decimal?    // Deadhead after delivery
   originLat             Decimal?
@@ -303,8 +322,14 @@ model Load {
   lengthM               Decimal?    // Cargo length in meters
   casesCount            Int?        // Number of cases/pallets
 
-  // Pricing
-  rate                  Decimal     // in ETB
+  // Pricing - SPRINT 16: Base + Per-KM Model
+  baseFareEtb           Decimal?    // Base fare component (ETB)
+  perKmEtb              Decimal?    // Per-kilometer rate (ETB/km)
+  totalFareEtb          Decimal?    // Calculated: baseFareEtb + (estimatedTripKm × perKmEtb)
+  actualTripKm          Decimal?    // GPS-computed actual trip distance (Phase 2)
+
+  // Legacy pricing field (deprecated - use baseFareEtb + perKmEtb instead)
+  rate                  Decimal     // in ETB - DEPRECATED: Use totalFareEtb
   currency              String      @default("ETB")
   bookMode              BookMode?   @default(REQUEST)  // [NEW] REQUEST | INSTANT
 
@@ -325,6 +350,15 @@ model Load {
   carrierCommission     Decimal?
   platformCommission    Decimal?
 
+  // SPRINT 16: Story 16.7 - Commission & Settlement
+  podUrl                String?                      // Proof of Delivery document URL
+  podSubmitted          Boolean     @default(false)  // POD uploaded by carrier
+  podSubmittedAt        DateTime?                    // When POD was uploaded
+  podVerified           Boolean     @default(false)  // POD verified by shipper
+  podVerifiedAt         DateTime?                    // When POD was verified
+  settlementStatus      String?     @default("PENDING") // PENDING, IN_PROGRESS, PAID, DISPUTED
+  settledAt             DateTime?                    // When commission was deducted
+
   // Assignment
   assignedTruckId       String?     @unique
   assignedAt            DateTime?
@@ -333,6 +367,17 @@ model Load {
   isKept                Boolean     @default(false)  // Star/favorite
   hasAlerts             Boolean     @default(false)  // Bell icon
   groupId               String?                      // GROUP tab
+
+  // SPRINT 16: GPS Live Tracking (Story 16.3)
+  trackingUrl           String?     @unique          // Unique shareable tracking URL
+  trackingEnabled       Boolean     @default(false)  // GPS tracking active
+  trackingStartedAt     DateTime?                    // When tracking began
+
+  // SPRINT 16: Story 16.6 - Anti-Bypass Detection
+  contactViewedAt       DateTime?                    // When contact info was viewed
+  bypassReported        Boolean     @default(false)  // Bypass attempt reported
+  bypassReportedAt      DateTime?                    // When bypass was reported
+  bypassReportedBy      String?                      // User ID who reported
 
   // Tracking
   expiresAt             DateTime?
@@ -369,6 +414,8 @@ model Load {
   @@index([fullPartial])   // [NEW] For filtering by full/partial
   @@index([bookMode])      // [NEW] For filtering by booking mode
   @@index([postedAt])      // [NEW] For age calculation and sorting
+  @@index([trackingUrl])   // SPRINT 16: For tracking page lookups
+  @@index([trackingEnabled]) // SPRINT 16: For filtering tracked loads
   @@map("loads")
 }
 
@@ -427,6 +474,13 @@ model Truck {
   contactName     String?     // Primary contact
   contactPhone    String?     // Primary contact phone
 
+  // SPRINT 16: GPS Tracking Fields (Story 16.2)
+  imei            String?     @unique  // GPS device IMEI (15 digits)
+  gpsProvider     String?              // e.g., "Teltonika", "Queclink", "Coban"
+  gpsStatus       GpsDeviceStatus?     // ACTIVE, INACTIVE, SIGNAL_LOST
+  gpsLastSeenAt   DateTime?            // Last GPS signal received
+  gpsVerifiedAt   DateTime?            // When GPS was verified working
+
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -447,6 +501,8 @@ model Truck {
   @@index([carrierId])
   @@index([truckType])
   @@index([isAvailable])
+  @@index([imei])
+  @@index([gpsStatus])
   @@map("trucks")
 }
 
@@ -476,6 +532,9 @@ model GpsPosition {
   accuracy    Decimal?  // in meters
   timestamp   DateTime  @default(now())
 
+  // SPRINT 16: Story 16.8 - GPS Data Storage
+  loadId      String?   // Link to active load (if truck is on a delivery)
+
   // Relations
   truckId     String
   truck       Truck     @relation(fields: [truckId], references: [id], onDelete: Cascade)
@@ -485,6 +544,7 @@ model GpsPosition {
 
   @@index([truckId, timestamp])
   @@index([deviceId])
+  @@index([loadId])         // SPRINT 16: For querying positions by load
   @@map("gps_positions")
 }
 
@@ -511,6 +571,23 @@ model FinancialAccount {
   @@index([accountType])
   @@index([organizationId])
   @@map("financial_accounts")
+}
+
+// SPRINT 16: Story 16.7 - Commission Configuration
+model CommissionRate {
+  id                  String   @id @default(cuid())
+  shipperRate         Decimal  @default(5.0)  // % of load value (default 5%)
+  carrierRate         Decimal  @default(5.0)  // % of load value (default 5%)
+  effectiveFrom       DateTime @default(now())
+  effectiveTo         DateTime?
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  createdBy           String?  // Admin user ID
+
+  @@index([isActive])
+  @@index([effectiveFrom])
+  @@map("commission_rates")
 }
 
 model JournalEntry {
@@ -849,4 +926,24 @@ model SavedSearch {
   @@index([userId])
   @@index([type])
   @@map("saved_searches")
+}
+
+// ============================================================================
+// SPRINT 16: NOTIFICATION SYSTEM (Story 16.10)
+// ============================================================================
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // GPS_OFFLINE, POD_SUBMITTED, USER_SUSPENDED, etc.
+  title     String
+  message   String   @db.Text
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  metadata  Json?    // Additional context (loadId, exceptionId, etc.)
+
+  @@index([userId, read])
+  @@index([createdAt])
+  @@map("notifications")
 }

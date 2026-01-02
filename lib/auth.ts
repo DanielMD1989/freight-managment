@@ -97,3 +97,41 @@ export async function requireRole(
 
   return session;
 }
+
+/**
+ * Get current user from session
+ * Returns user object with full details from database
+ * Returns null if not authenticated
+ */
+export async function getCurrentUser() {
+  const session = await getSession();
+
+  if (!session) {
+    return null;
+  }
+
+  // Import db here to avoid circular dependencies
+  const { db } = await import("./db");
+
+  const user = await db.user.findUnique({
+    where: { id: session.userId },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      role: true,
+      organizationId: true,
+      isActive: true,
+      organization: {
+        select: {
+          id: true,
+          name: true,
+          type: true,
+        },
+      },
+    },
+  });
+
+  return user;
+}

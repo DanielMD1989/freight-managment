@@ -5,10 +5,14 @@
  *
  * Shows matching loads for carrier's truck postings
  * Sprint 12 - Story 12.4: Matching Loads View
+ * Sprint 16 - Story 16.6: Anti-Bypass Detection Integration
  */
 
 import { useState } from 'react';
 import Link from 'next/link';
+import PlatformBenefitsDisplay from '@/components/PlatformBenefitsDisplay';
+import ReportBypassButton from '@/components/ReportBypassButton';
+import { VerifiedBadgeWithLabel } from '@/components/VerifiedBadge';
 
 interface TruckPosting {
   id: string;
@@ -131,6 +135,9 @@ export default function LoadMatchesClient({
 
   return (
     <div className="space-y-6">
+      {/* Platform Benefits Banner - Sprint 16: Story 16.6 */}
+      <PlatformBenefitsDisplay variant="compact" />
+
       {truckPostings.length === 0 ? (
         /* No Postings */
         <div className="bg-white rounded-lg shadow p-8 text-center">
@@ -213,10 +220,27 @@ export default function LoadMatchesClient({
               {matches.length > 0 ? (
                 <div className="divide-y divide-gray-200">
                   {matches.map((match, index) => (
-                    <div key={index} className="p-6 hover:bg-gray-50">
+                    <div
+                      key={index}
+                      className={`p-6 hover:bg-gray-50 ${
+                        match.load.shipper.isVerified
+                          ? 'bg-blue-50/30 border-l-4 border-l-blue-500'
+                          : ''
+                      }`}
+                    >
                       <div className="flex items-start justify-between mb-4">
                         <div>
                           <div className="flex items-center gap-3 mb-2">
+                            {/* Sprint 16: Story 16.5 - Priority indicator for verified */}
+                            {match.load.shipper.isVerified && (
+                              <svg
+                                className="w-5 h-5 text-yellow-500 flex-shrink-0"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                              </svg>
+                            )}
                             <h3 className="text-lg font-semibold text-gray-900">
                               {match.load.pickupCity} → {match.load.deliveryCity}
                             </h3>
@@ -229,12 +253,13 @@ export default function LoadMatchesClient({
                             </span>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <span>{match.load.shipper.name}</span>
-                            {match.load.shipper.isVerified && (
-                              <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-800 rounded">
-                                Verified
-                              </span>
-                            )}
+                            <span className="font-medium">{match.load.shipper.name}</span>
+                            {/* Sprint 16: Story 16.5 - Enhanced verified badge */}
+                            <VerifiedBadgeWithLabel
+                              isVerified={match.load.shipper.isVerified}
+                              verifiedAt={null}
+                              size="sm"
+                            />
                           </div>
                         </div>
                         <div className="text-right">
@@ -317,7 +342,7 @@ export default function LoadMatchesClient({
                         )}
 
                       {/* Actions */}
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
                         <Link
                           href={`/carrier/loads/${match.load.id}`}
                           className="px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 font-medium"
@@ -332,6 +357,14 @@ export default function LoadMatchesClient({
                             Call Shipper
                           </a>
                         )}
+                        {/* Sprint 16: Story 16.6 - Report Bypass Button */}
+                        {match.load.shipperContactName &&
+                          match.load.shipperContactPhone && (
+                            <ReportBypassButton
+                              loadId={match.load.id}
+                              onReported={() => fetchMatches(selectedPosting)}
+                            />
+                          )}
                       </div>
                     </div>
                   ))}

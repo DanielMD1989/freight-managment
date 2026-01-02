@@ -20,7 +20,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth';
-import { requireCSRF } from '@/lib/csrf';
+import { hasElevatedPermissions } from '@/lib/dispatcherPermissions';
+import { UserRole } from '@prisma/client';
 
 // Update schema (partial)
 const UpdateTruckPostingSchema = z.object({
@@ -110,12 +111,19 @@ export async function GET(
     }
 
     // Show ACTIVE postings to everyone
-    // Show non-ACTIVE postings only to owner or admin
+    // Show non-ACTIVE postings only to owner or elevated roles
     if (posting.status !== 'ACTIVE') {
       const session = await requireAuth();
 
+      // Sprint 16: Allow dispatcher, platform ops, and admin to view all postings
+      const hasElevatedPerms = hasElevatedPermissions({
+        role: session.role as UserRole,
+        organizationId: session.organizationId,
+        userId: session.userId
+      });
+
       // Verify ownership (user's organization owns this posting)
-      if (posting.carrierId !== session.organizationId && session.role !== 'ADMIN') {
+      if (posting.carrierId !== session.organizationId && !hasElevatedPerms) {
         return NextResponse.json(
           { error: 'Truck posting not found' },
           { status: 404 }
@@ -196,12 +204,6 @@ export async function PATCH(
     // Require authentication
     const session = await requireAuth();
 
-    // Check CSRF token
-    const csrfError = requireCSRF(request);
-    if (csrfError) {
-      return csrfError;
-    }
-
     // Fetch existing posting
     const existing = await db.truckPosting.findUnique({
       where: { id },
@@ -218,8 +220,15 @@ export async function PATCH(
       );
     }
 
+    // Sprint 16: Allow dispatcher, platform ops, and admin to update any posting
+    const hasElevatedPerms = hasElevatedPermissions({
+      role: session.role as UserRole,
+      organizationId: session.organizationId,
+      userId: session.userId
+    });
+
     // Verify ownership (user's organization owns this posting)
-    if (existing.carrierId !== session.organizationId && session.role !== 'ADMIN') {
+    if (existing.carrierId !== session.organizationId && !hasElevatedPerms) {
       return NextResponse.json(
         { error: 'You can only update postings for your own organization' },
         { status: 403 }
@@ -323,12 +332,6 @@ export async function DELETE(
     // Require authentication
     const session = await requireAuth();
 
-    // Check CSRF token
-    const csrfError = requireCSRF(request);
-    if (csrfError) {
-      return csrfError;
-    }
-
     // Fetch existing posting
     const existing = await db.truckPosting.findUnique({
       where: { id },
@@ -345,8 +348,15 @@ export async function DELETE(
       );
     }
 
+    // Sprint 16: Allow dispatcher, platform ops, and admin to cancel any posting
+    const hasElevatedPerms = hasElevatedPermissions({
+      role: session.role as UserRole,
+      organizationId: session.organizationId,
+      userId: session.userId
+    });
+
     // Verify ownership (user's organization owns this posting)
-    if (existing.carrierId !== session.organizationId && session.role !== 'ADMIN') {
+    if (existing.carrierId !== session.organizationId && !hasElevatedPerms) {
       return NextResponse.json(
         { error: 'You can only cancel postings for your own organization' },
         { status: 403 }

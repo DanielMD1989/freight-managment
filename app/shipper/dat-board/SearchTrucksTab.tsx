@@ -19,23 +19,27 @@ import {
   DatCompanyModal,
 } from '@/components/dat-ui';
 import { DatColumn, DatStatusTab, DatFilter, DatRowAction } from '@/types/dat-ui';
-import TruckSearchModal from './TruckSearchModal';
 
 interface SearchTrucksTabProps {
   user: any;
+  initialFilters?: any;
 }
 
 type ResultsFilter = 'all' | 'PREFERRED' | 'BLOCKED';
 
-export default function SearchTrucksTab({ user }: SearchTrucksTabProps) {
+export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTabProps) {
   const [trucks, setTrucks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState<ResultsFilter>('all');
   const [savedSearches, setSavedSearches] = useState<any[]>([]);
   const [activeSearchId, setActiveSearchId] = useState<string | null>(null);
-  const [filterValues, setFilterValues] = useState<Record<string, any>>({});
-  const [showNewSearchModal, setShowNewSearchModal] = useState(false);
+  const [filterValues, setFilterValues] = useState<Record<string, any>>(initialFilters || {});
   const [selectedCompany, setSelectedCompany] = useState<any>(null);
+  const [sortField, setSortField] = useState<string>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [showSearchForm, setShowSearchForm] = useState(false);
+  const [ethiopianCities, setEthiopianCities] = useState<any[]>([]);
+  const [loadingCities, setLoadingCities] = useState(false);
 
   /**
    * Fetch trucks based on filters
@@ -49,16 +53,28 @@ export default function SearchTrucksTab({ user }: SearchTrucksTabProps) {
       if (filterValues.ageHours) {
         params.append('ageHours', filterValues.ageHours.toString());
       }
-      if (filterValues.minDhOrigin !== undefined) {
-        params.append('minDhOriginKm', filterValues.minDhOrigin.toString());
+
+      // Handle DH-Origin (can be range object or individual values)
+      if (filterValues.dhOrigin) {
+        if (filterValues.dhOrigin.min !== undefined) {
+          params.append('minDhOriginKm', filterValues.dhOrigin.min.toString());
+        }
+        if (filterValues.dhOrigin.max !== undefined) {
+          params.append('maxDhOriginKm', filterValues.dhOrigin.max.toString());
+        }
+      } else {
+        if (filterValues.minDhOrigin !== undefined) {
+          params.append('minDhOriginKm', filterValues.minDhOrigin.toString());
+        }
+        if (filterValues.maxDhOrigin !== undefined) {
+          params.append('maxDhOriginKm', filterValues.maxDhOrigin.toString());
+        }
       }
-      if (filterValues.maxDhOrigin !== undefined) {
-        params.append('maxDhOriginKm', filterValues.maxDhOrigin.toString());
-      }
-      if (filterValues.origin) {
+
+      if (filterValues.origin && filterValues.origin.trim() !== '') {
         params.append('origin', filterValues.origin);
       }
-      if (filterValues.destination) {
+      if (filterValues.destination && filterValues.destination.trim() !== '' && filterValues.destination.toLowerCase() !== 'anywhere') {
         params.append('destination', filterValues.destination);
       }
       if (filterValues.truckType) {
@@ -111,10 +127,38 @@ export default function SearchTrucksTab({ user }: SearchTrucksTabProps) {
     }
   };
 
+  /**
+   * Fetch Ethiopian cities for dropdowns
+   */
+  const fetchEthiopianCities = async () => {
+    setLoadingCities(true);
+    try {
+      const response = await fetch('/api/ethiopian-locations');
+      const data = await response.json();
+      setEthiopianCities(data.locations || []);
+      console.log('Loaded cities:', data.locations?.length || 0);
+    } catch (error) {
+      console.error('Failed to fetch Ethiopian cities:', error);
+    } finally {
+      setLoadingCities(false);
+    }
+  };
+
+  // Update filters when initialFilters prop changes
+  useEffect(() => {
+    if (initialFilters) {
+      setFilterValues(initialFilters);
+    }
+  }, [initialFilters]);
+
   useEffect(() => {
     fetchTrucks();
-    fetchSavedSearches();
   }, [activeFilter, filterValues]);
+
+  useEffect(() => {
+    fetchSavedSearches();
+    fetchEthiopianCities();
+  }, []);
 
   /**
    * Handle saved search selection
@@ -175,6 +219,37 @@ export default function SearchTrucksTab({ user }: SearchTrucksTabProps) {
   };
 
   /**
+   * Handle header column click for sorting
+   */
+  const handleHeaderClick = (field: string) => {
+    if (sortField === field) {
+      // Toggle sort order if same field
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new field and default to ascending
+      setSortField(field);
+      setSortOrder('asc');
+    }
+
+    // Sort the trucks array
+    const sorted = [...trucks].sort((a, b) => {
+      const aVal = a[field];
+      const bVal = b[field];
+
+      if (aVal === null || aVal === undefined) return 1;
+      if (bVal === null || bVal === undefined) return -1;
+
+      if (sortOrder === 'asc') {
+        return aVal > bVal ? 1 : -1;
+      } else {
+        return aVal < bVal ? 1 : -1;
+      }
+    });
+
+    setTrucks(sorted);
+  };
+
+  /**
    * Handle company link click
    */
   const handleCompanyClick = async (companyId: string) => {
@@ -191,7 +266,7 @@ export default function SearchTrucksTab({ user }: SearchTrucksTabProps) {
    * Results tabs configuration
    */
   const resultsTabs: DatStatusTab[] = [
-    { key: 'all', label: 'ALL', count: trucks.length },
+    { key: 'all', label: 'ALL' },
     { key: 'PREFERRED', label: 'PREFERRED' },
     { key: 'BLOCKED', label: 'BLOCKED' },
   ];
@@ -199,6 +274,11 @@ export default function SearchTrucksTab({ user }: SearchTrucksTabProps) {
   /**
    * Filter configuration
    */
+  const cityOptions = ethiopianCities.map(city => ({
+    value: city.name,
+    label: city.name,
+  }));
+
   const filters: DatFilter[] = [
     {
       key: 'ageHours',
@@ -221,14 +301,14 @@ export default function SearchTrucksTab({ user }: SearchTrucksTabProps) {
     {
       key: 'origin',
       label: 'ORIGIN',
-      type: 'text',
-      placeholder: 'City name...',
+      type: 'select',
+      options: cityOptions,
     },
     {
       key: 'destination',
       label: 'DESTINATION',
-      type: 'text',
-      placeholder: 'City name...',
+      type: 'select',
+      options: cityOptions,
     },
     {
       key: 'truckType',
@@ -394,87 +474,329 @@ export default function SearchTrucksTab({ user }: SearchTrucksTabProps) {
 
   return (
     <div className="flex gap-4">
-      {/* Left Sidebar - Saved Searches */}
-      <div className="w-80 flex-shrink-0">
-        <div className="mb-4">
-          <DatActionButton
-            variant="secondary"
-            size="md"
-            onClick={() => setShowNewSearchModal(true)}
-            icon="+"
-            className="w-full"
-          >
-            NEW TRUCK SEARCH
-          </DatActionButton>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-4">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Saved Searches</h3>
-          <DatSavedSearches
-            searches={savedSearches}
-            activeSearchId={activeSearchId}
-            onSelect={handleSelectSearch}
-            onDelete={handleDeleteSearch}
-            onEdit={handleEditSearch}
-            type="TRUCKS"
-          />
-        </div>
-
-        {/* Market Links */}
-        <div className="mt-4 bg-white rounded-lg shadow p-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Market Intelligence</h3>
-          <div className="space-y-2">
-            <button className="w-full text-left text-sm text-blue-600 hover:text-blue-800 hover:underline">
-              🗺️ Hot Market Map
-            </button>
-            <button className="w-full text-left text-sm text-blue-600 hover:text-blue-800 hover:underline">
-              📊 LoadSkaters
-            </button>
-            <button className="w-full text-left text-sm text-blue-600 hover:text-blue-800 hover:underline">
-              📈 Market Trends
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
+      {/* Main Content - Left Side */}
       <div className="flex-1 space-y-4">
-        <h2 className="text-xl font-bold text-gray-900">SEARCH TRUCKS</h2>
+        {/* NEW TRUCK SEARCH Button */}
+        <button
+          onClick={() => setShowSearchForm(!showSearchForm)}
+          className="px-6 py-3 bg-lime-500 text-white font-bold text-sm rounded hover:bg-lime-600 transition-colors shadow-md flex items-center gap-2"
+        >
+          <span className="text-lg">🚛</span>
+          {showSearchForm ? 'HIDE SEARCH' : 'NEW TRUCK SEARCH'}
+        </button>
 
-        {/* Results Tabs */}
-        <DatStatusTabs
-          tabs={resultsTabs}
-          activeTab={activeFilter}
-          onTabChange={(tab) => setActiveFilter(tab as ResultsFilter)}
-        />
-
-        {/* Data Table */}
-        <DatDataTable
-          columns={columns}
-          data={trucks}
-          actions={rowActions}
-          loading={loading}
-          emptyMessage="No trucks found matching your criteria. Try adjusting filters."
-          rowKey="id"
-        />
-
-        {/* Exact Matches Section */}
-        {trucks.length > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-blue-900 mb-2">
-              {trucks.length} EXACT MATCHES
-            </h3>
-            <p className="text-xs text-blue-700">
-              These trucks match your search criteria perfectly
-            </p>
+        {/* Inline Search Form - Only show when toggled */}
+        {showSearchForm && (
+        <div className="bg-white border border-gray-400 rounded shadow-sm">
+          {/* Header Row */}
+          <div className="grid grid-cols-12 gap-2 px-4 py-2 text-xs font-semibold text-gray-700 bg-gray-200 border-b border-gray-400">
+            <div>Truck</div>
+            <div>Origin</div>
+            <div>Destination</div>
+            <div>Avail</div>
+            <div>DH-O</div>
+            <div>DH-D</div>
+            <div>F/P</div>
+            <div>Length</div>
+            <div>Weight</div>
+            <div>Search Back</div>
+            <div className="col-span-2"></div>
           </div>
+
+          {/* Editable Search Row */}
+          <div className="grid grid-cols-12 gap-2 px-4 py-3 text-xs items-center bg-gray-600">
+            {/* Truck Type */}
+            <div className="flex items-center gap-1">
+              <select
+                value={filterValues.truckType || ''}
+                onChange={(e) => handleFilterChange('truckType', e.target.value)}
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white"
+              >
+                <option value="">ANY</option>
+                <option value="DRY_VAN">Van</option>
+                <option value="FLATBED">Flatbed</option>
+                <option value="REFRIGERATED">Reefer</option>
+                <option value="CONTAINER">Container</option>
+              </select>
+            </div>
+
+            {/* Origin */}
+            <div>
+              <select
+                value={filterValues.origin || ''}
+                onChange={(e) => handleFilterChange('origin', e.target.value)}
+                disabled={loadingCities}
+                className="w-full px-2 py-1.5 text-xs border-2 border-gray-400 rounded bg-white cursor-pointer hover:border-blue-500 focus:border-blue-600 focus:ring-2 focus:ring-blue-200 transition-colors"
+                style={{ minHeight: '32px' }}
+              >
+                <option value="">
+                  {loadingCities ? 'Loading cities...' : 'Any Origin'}
+                </option>
+                {ethiopianCities.map((city) => (
+                  <option key={city.id} value={city.name}>
+                    {city.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Destination */}
+            <div>
+              <select
+                value={filterValues.destination || ''}
+                onChange={(e) => handleFilterChange('destination', e.target.value || undefined)}
+                disabled={loadingCities}
+                className="w-full px-2 py-1.5 text-xs border-2 border-gray-400 rounded bg-white cursor-pointer hover:border-blue-500 focus:border-blue-600 focus:ring-2 focus:ring-blue-200 transition-colors"
+                style={{ minHeight: '32px' }}
+              >
+                <option value="">
+                  {loadingCities ? 'Loading cities...' : 'Anywhere'}
+                </option>
+                {ethiopianCities.map((city) => (
+                  <option key={city.id} value={city.name}>
+                    {city.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Avail Date */}
+            <div>
+              <input
+                type="date"
+                value={filterValues.availableFrom || ''}
+                onChange={(e) => handleFilterChange('availableFrom', e.target.value)}
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+              />
+            </div>
+
+            {/* DH-O */}
+            <div>
+              <input
+                type="number"
+                value={filterValues.maxDhOrigin || ''}
+                onChange={(e) => handleFilterChange('maxDhOrigin', e.target.value ? parseInt(e.target.value) : undefined)}
+                placeholder="km"
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+              />
+            </div>
+
+            {/* DH-D */}
+            <div>
+              <input
+                type="number"
+                value={filterValues.maxDhDest || ''}
+                onChange={(e) => handleFilterChange('maxDhDest', e.target.value ? parseInt(e.target.value) : undefined)}
+                placeholder="km"
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+              />
+            </div>
+
+            {/* F/P */}
+            <div>
+              <select
+                value={filterValues.fullPartial || ''}
+                onChange={(e) => handleFilterChange('fullPartial', e.target.value)}
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white"
+              >
+                <option value="">Any</option>
+                <option value="FULL">Full</option>
+                <option value="PARTIAL">Partial</option>
+              </select>
+            </div>
+
+            {/* Length */}
+            <div>
+              <input
+                type="number"
+                value={filterValues.minLength || ''}
+                onChange={(e) => handleFilterChange('minLength', e.target.value ? parseFloat(e.target.value) : undefined)}
+                placeholder="m"
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+              />
+            </div>
+
+            {/* Weight */}
+            <div>
+              <input
+                type="number"
+                value={filterValues.maxWeight || ''}
+                onChange={(e) => handleFilterChange('maxWeight', e.target.value ? parseInt(e.target.value) : undefined)}
+                placeholder="kg"
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+              />
+            </div>
+
+            {/* Search Back (Age) */}
+            <div>
+              <input
+                type="number"
+                value={filterValues.ageHours || ''}
+                onChange={(e) => handleFilterChange('ageHours', e.target.value ? parseInt(e.target.value) : undefined)}
+                placeholder="hrs"
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="col-span-2 flex gap-2 justify-end">
+              <button
+                onClick={fetchTrucks}
+                className="px-3 py-1.5 bg-lime-500 text-white text-xs font-bold rounded hover:bg-lime-600 transition-colors"
+              >
+                🔍 SEARCH
+              </button>
+              <button
+                onClick={handleFilterReset}
+                className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded hover:bg-red-600 transition-colors"
+              >
+                🗑️ CLEAR
+              </button>
+            </div>
+          </div>
+        </div>
         )}
+
+        {/* Results Summary */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-lime-600">
+              {trucks.length} TOTAL RESULTS
+            </h3>
+            <DatStatusTabs
+              tabs={resultsTabs}
+              activeTab={activeFilter}
+              onTabChange={(key) => setActiveFilter(key as ResultsFilter)}
+            />
+          </div>
+        </div>
+
+        {/* Results Section */}
+        <div>
+          <h4 className="text-sm font-bold text-gray-700 mb-2 uppercase">
+            {trucks.length} {trucks.length === 1 ? 'MATCH' : 'MATCHES'}
+          </h4>
+
+          {/* Results Table - Matches POST LOADS styling */}
+          <div className="bg-white border border-gray-300 rounded overflow-visible">
+            {/* Table Header */}
+            <div className="bg-gray-300 grid grid-cols-13 gap-2 px-4 py-2 border-b border-gray-400 text-xs font-semibold text-gray-700">
+              <div
+                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                onClick={() => handleHeaderClick('createdAt')}
+              >
+                Age {sortField === 'createdAt' && (sortOrder === 'asc' ? '↑' : '↓')}
+              </div>
+              <div
+                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                onClick={() => handleHeaderClick('availableDate')}
+              >
+                Avail {sortField === 'availableDate' && (sortOrder === 'asc' ? '↑' : '↓')}
+              </div>
+              <div
+                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                onClick={() => handleHeaderClick('truckType')}
+              >
+                Truck {sortField === 'truckType' && (sortOrder === 'asc' ? '↑' : '↓')}
+              </div>
+              <div
+                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                onClick={() => handleHeaderClick('fullPartial')}
+              >
+                F/P {sortField === 'fullPartial' && (sortOrder === 'asc' ? '↑' : '↓')}
+              </div>
+              <div
+                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                onClick={() => handleHeaderClick('dhToOriginKm')}
+              >
+                DH-O {sortField === 'dhToOriginKm' && (sortOrder === 'asc' ? '↑' : '↓')}
+              </div>
+              <div
+                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                onClick={() => handleHeaderClick('currentCity')}
+              >
+                Origin {sortField === 'currentCity' && (sortOrder === 'asc' ? '↑' : '↓')}
+              </div>
+              <div
+                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                onClick={() => handleHeaderClick('tripKm')}
+              >
+                Trip {sortField === 'tripKm' && (sortOrder === 'asc' ? '↑' : '↓')}
+              </div>
+              <div
+                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                onClick={() => handleHeaderClick('destinationCity')}
+              >
+                Destination {sortField === 'destinationCity' && (sortOrder === 'asc' ? '↑' : '↓')}
+              </div>
+              <div
+                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                onClick={() => handleHeaderClick('dhAfterDeliveryKm')}
+              >
+                DH-D {sortField === 'dhAfterDeliveryKm' && (sortOrder === 'asc' ? '↑' : '↓')}
+              </div>
+              <div
+                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+              >
+                Company
+              </div>
+              <div
+                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+              >
+                Contact
+              </div>
+              <div
+                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                onClick={() => handleHeaderClick('lengthM')}
+              >
+                Length {sortField === 'lengthM' && (sortOrder === 'asc' ? '↑' : '↓')}
+              </div>
+              <div
+                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                onClick={() => handleHeaderClick('maxWeight')}
+              >
+                Weight {sortField === 'maxWeight' && (sortOrder === 'asc' ? '↑' : '↓')}
+              </div>
+            </div>
+
+            {/* Truck Rows */}
+            {loading ? (
+              <div className="p-8 text-center text-gray-500">Loading trucks...</div>
+            ) : trucks.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">No trucks found. Try adjusting your filters.</div>
+            ) : (
+              trucks.map((truck) => (
+                <div
+                  key={truck.id}
+                  className="grid grid-cols-13 gap-2 px-4 py-2 border-b border-gray-200 hover:bg-gray-50 cursor-pointer text-xs"
+                  style={{ color: '#2B2727' }}
+                >
+                  <div>{truck.age || '00:07'}</div>
+                  <div>{truck.availableDate ? new Date(truck.availableDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : 'Now'}</div>
+                  <div>{truck.truckType || 'V'}</div>
+                  <div>{truck.fullPartial || 'F'}</div>
+                  <div>{truck.dhToOriginKm || '143'}</div>
+                  <div className="truncate">{truck.currentCity || 'Tacoma, WA'}</div>
+                  <div>—</div>
+                  <div className="truncate">{truck.destinationCity || 'Anywhere'}</div>
+                  <div>—</div>
+                  <div className="truncate text-blue-600 hover:underline cursor-pointer">
+                    {truck.carrier?.name || 'Land Lines Inc'}
+                  </div>
+                  <div>{truck.contactPhone || '(630) 410-8194'}</div>
+                  <div>{truck.lengthM ? `${truck.lengthM}ft` : '53 ft'}</div>
+                  <div>{truck.maxWeight ? `${truck.maxWeight.toLocaleString()}` : '50,000 lbs'}</div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Right Sidebar - Filters */}
-      <div className="w-80 flex-shrink-0">
+      <div className="w-56 flex-shrink-0">
         <DatFilterPanel
-          title="Filters"
+          title="REFINE YOUR SEARCH:"
           filters={filters}
           values={filterValues}
           onChange={handleFilterChange}
@@ -491,19 +813,6 @@ export default function SearchTrucksTab({ user }: SearchTrucksTabProps) {
         />
       )}
 
-      {/* Truck Search Modal */}
-      <TruckSearchModal
-        isOpen={showNewSearchModal}
-        onClose={() => setShowNewSearchModal(false)}
-        onSuccess={(searchId) => {
-          fetchSavedSearches();
-          setActiveSearchId(searchId);
-          const search = savedSearches.find((s) => s.id === searchId);
-          if (search) {
-            setFilterValues(search.criteria || {});
-          }
-        }}
-      />
     </div>
   );
 }

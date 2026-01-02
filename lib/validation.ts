@@ -32,6 +32,20 @@ export const emailSchema = z
   );
 
 /**
+ * Validate email address
+ * @param email Email address to validate
+ * @returns true if valid, false otherwise
+ */
+export function validateEmail(email: string): boolean {
+  try {
+    emailSchema.parse(email);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Phone number validation (Ethiopian format)
  * Accepts: +251912345678, 0912345678, 912345678
  */
@@ -51,6 +65,20 @@ export const phoneSchema = z
     },
     { message: 'Invalid Ethiopian phone number format' }
   );
+
+/**
+ * Validate phone number
+ * @param phone Phone number to validate
+ * @returns true if valid, false otherwise
+ */
+export function validatePhoneNumber(phone: string): boolean {
+  try {
+    phoneSchema.parse(phone);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Sanitize text input to prevent XSS attacks

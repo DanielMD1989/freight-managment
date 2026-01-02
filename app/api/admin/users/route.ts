@@ -92,6 +92,7 @@ const updateUserSchema = z.object({
     "CARRIER",
     "LOGISTICS_AGENT",
     "DRIVER",
+    "DISPATCHER",
     "PLATFORM_OPS",
     "ADMIN",
   ]),

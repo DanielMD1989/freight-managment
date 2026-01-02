@@ -10,7 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import { findMatchingLoadsForTruck } from '@/lib/matchingEngine';
+import { findMatchingLoads } from '@/lib/matchCalculation';
 import { db } from '@/lib/db';
 
 /**
@@ -42,6 +42,23 @@ export async function GET(
       where: { id },
       include: {
         carrier: true,
+        originCity: {
+          select: {
+            name: true,
+          },
+        },
+        destinationCity: {
+          select: {
+            name: true,
+          },
+        },
+        truck: {
+          select: {
+            truckType: true,
+            capacity: true,
+            lengthM: true,
+          },
+        },
       },
     });
 
@@ -52,10 +69,11 @@ export async function GET(
       );
     }
 
-    // Verify ownership or admin access
+    // Verify ownership or admin/carrier access
     const hasAccess =
       truckPosting.carrierId === session.organizationId ||
-      session.role === 'ADMIN';
+      session.role === 'ADMIN' ||
+      session.role === 'CARRIER';
 
     if (!hasAccess) {
       return NextResponse.json(
@@ -77,14 +95,80 @@ export async function GET(
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
-    const minScore = parseInt(searchParams.get('minScore') || '40', 10);
+    const minScore = parseInt(searchParams.get('minScore') || '50', 10);
     const limit = Math.min(
-      parseInt(searchParams.get('limit') || '20', 10),
+      parseInt(searchParams.get('limit') || '50', 10),
       100
     );
 
+    // Fetch all posted loads
+    const loads = await db.load.findMany({
+      where: {
+        status: 'POSTED',
+      },
+      include: {
+        shipper: {
+          select: {
+            id: true,
+            name: true,
+            isVerified: true,
+            contactPhone: true,
+            contactEmail: true,
+          },
+        },
+      },
+      take: 500, // Limit initial fetch
+    });
+
+    // Prepare truck criteria
+    const truckCriteria = {
+      id: truckPosting.id,
+      currentCity: truckPosting.originCity?.name || '',
+      destinationCity: truckPosting.destinationCity?.name || null,
+      availableDate: truckPosting.availableFrom,
+      truckType: truckPosting.truck?.truckType || '',
+      maxWeight: truckPosting.availableWeight ? Number(truckPosting.availableWeight) : null,
+      lengthM: truckPosting.availableLength ? Number(truckPosting.availableLength) : null,
+      fullPartial: truckPosting.fullPartial,
+    };
+
+    // Prepare loads criteria (filter out loads with missing required fields)
+    const loadsCriteria = loads
+      .filter(load => load.pickupCity && load.deliveryCity && load.truckType)
+      .map(load => ({
+        id: load.id,
+        pickupCity: load.pickupCity!,
+        deliveryCity: load.deliveryCity!,
+        pickupDate: load.pickupDate,
+        truckType: load.truckType,
+        weight: load.weight ? Number(load.weight) : null,
+        lengthM: load.lengthM ? Number(load.lengthM) : null,
+        fullPartial: load.fullPartial,
+        shipper: load.shipper,
+        isAnonymous: load.isAnonymous,
+        shipperContactName: load.shipperContactName,
+        shipperContactPhone: load.shipperContactPhone,
+        rate: load.rate,
+        currency: load.currency,
+        createdAt: load.createdAt,
+        status: load.status,
+      }));
+
     // Find matching loads
-    const matches = await findMatchingLoadsForTruck(id, minScore, limit);
+    const matchedLoads = findMatchingLoads(truckCriteria, loadsCriteria, minScore)
+      .slice(0, limit)
+      .map((load: any) => ({
+        load: {
+          ...load,
+          // Include full load object
+          ...loads.find(l => l.id === load.id),
+        },
+        matchScore: load.matchScore,
+        matchReasons: load.matchReasons,
+        isExactMatch: load.isExactMatch,
+      }));
+
+    const matches = matchedLoads;
 
     // Mask anonymous shipper information
     const maskedMatches = matches.map((match) => {

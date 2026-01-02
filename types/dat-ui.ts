@@ -74,6 +74,7 @@ export interface DatRowAction {
   variant: DatButtonVariant;
   onClick: (row: any) => void;
   show?: (row: any) => boolean;
+  render?: (row: any) => string | React.ReactNode;
 }
 
 export interface DatDataTableProps<T = any> {
@@ -191,7 +192,7 @@ export interface SavedSearch {
 
 export interface DatSavedSearchesProps {
   searches: SavedSearch[];
-  activeSearchId?: string;
+  activeSearchId?: string | null;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onEdit: (id: string) => void;
@@ -232,9 +233,12 @@ export interface ReferencePricing {
 
 export interface DatReferencePricingProps {
   triHaulRate?: number;
+  trihaulRate?: number; // Alternative casing for compatibility
   brokerSpotRate?: number;
   ratePerMile?: number;
   ratePerTrip?: number;
+  loading?: boolean;
+  className?: string;
   currency?: string;
 }
 
@@ -245,16 +249,26 @@ export interface DatReferencePricingProps {
 export interface RateAnalysis {
   ratePerMile: number;
   ratePerTrip: number;
-  ageRange: string;
-  marketType: string;
-  currency: string;
+  ageRange?: string;
+  marketType?: string;
+  currency?: string;
+  totalMiles?: number;
+  averageSpeed?: number;
+  ageHours?: number;
 }
 
 export interface DatRateAnalysisProps {
-  rateAnalysis: RateAnalysis;
+  rateType?: string;
+  ratePerMile: number;
+  ratePerTrip: number;
+  totalMiles?: number;
+  averageSpeed?: number;
+  ageHours?: number;
+  currency?: string;
   onRateBias?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  className?: string;
   links?: {
     utilizesTrip?: string;
     hotAnalysis?: string;
@@ -272,23 +286,36 @@ export interface CompanyInfo {
   isVerified: boolean;
   isMasked: boolean;
   allowNameDisplay: boolean;
+  isPreferred?: boolean;
+  isBlocked?: boolean;
   contactEmail?: string;
+  email?: string;
   contactPhone?: string;
+  phone?: string;
+  contactName?: string;
   address?: string;
+  location?: string;
+  bondDate?: string;
+  totalLoads?: number;
+  totalTrucks?: number;
+  notes?: string;
 }
 
 export interface DatCompanyLinkProps {
   companyId: string;
   companyName: string;
   isMasked: boolean;
-  isVerified: boolean;
-  onClick?: () => void;
+  isVerified?: boolean;
+  onClick?: (companyId: string) => void;
+  className?: string;
 }
 
 export interface DatCompanyModalProps {
   company: CompanyInfo | null;
   isOpen: boolean;
   onClose: () => void;
+  onMarkPreferred?: (companyId: string) => void;
+  onMarkBlocked?: (companyId: string) => void;
 }
 
 // ============================================================================
@@ -296,9 +323,10 @@ export interface DatCompanyModalProps {
 // ============================================================================
 
 export interface DatAgeIndicatorProps {
-  createdAt: Date | string;
+  date: Date | string;
   format?: 'short' | 'long';
   showIcon?: boolean;
+  className?: string;
 }
 
 // ============================================================================

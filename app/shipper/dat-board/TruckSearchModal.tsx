@@ -9,6 +9,7 @@
 
 import React, { useState } from 'react';
 import { DatActionButton } from '@/components/dat-ui';
+import { ETHIOPIAN_LOCATIONS } from '@/lib/constants/ethiopian-locations';
 
 interface TruckSearchModalProps {
   isOpen: boolean;
@@ -115,7 +116,7 @@ export default function TruckSearchModal({
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="bg-blue-500 px-6 py-4 flex items-center justify-between rounded-t-lg">
+        <div className="bg-cyan-600 px-6 py-4 flex items-center justify-between rounded-t-lg">
           <h2 className="text-xl font-bold text-white">NEW TRUCK SEARCH</h2>
           <button
             onClick={onClose}
@@ -158,23 +159,33 @@ export default function TruckSearchModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Origin</label>
-                  <input
-                    type="text"
+                  <select
                     value={formData.origin}
                     onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    placeholder="e.g., Addis Ababa"
-                  />
+                  >
+                    <option value="">Any</option>
+                    {ETHIOPIAN_LOCATIONS.map((location) => (
+                      <option key={location} value={location}>
+                        {location}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Destination</label>
-                  <input
-                    type="text"
+                  <select
                     value={formData.destination}
                     onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    placeholder="e.g., Dire Dawa"
-                  />
+                  >
+                    <option value="">Any</option>
+                    {ETHIOPIAN_LOCATIONS.map((location) => (
+                      <option key={location} value={location}>
+                        {location}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
@@ -191,11 +202,10 @@ export default function TruckSearchModal({
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   >
                     <option value="">Any</option>
-                    <option value="VAN">VAN</option>
-                    <option value="FLATBED">FLATBED</option>
-                    <option value="REFRIGERATED">REFRIGERATED</option>
-                    <option value="TANKER">TANKER</option>
-                    <option value="CONTAINER">CONTAINER</option>
+                    <option value="Reefer">Reefer</option>
+                    <option value="Van">Van</option>
+                    <option value="Flatbed">Flatbed</option>
+                    <option value="Container">Container</option>
                   </select>
                 </div>
                 <div>
@@ -346,7 +356,7 @@ export default function TruckSearchModal({
                   id="verifiedOnly"
                   checked={formData.showVerifiedOnly}
                   onChange={(e) => setFormData({ ...formData, showVerifiedOnly: e.target.checked })}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                  className="h-4 w-4 rounded border-gray-300 text-cyan-600"
                 />
                 <label htmlFor="verifiedOnly" className="ml-2 text-sm text-gray-700">
                   Show verified companies only
@@ -366,8 +376,14 @@ export default function TruckSearchModal({
               Cancel
             </button>
             <DatActionButton
-              variant="search"
-              type="submit"
+              variant="primary"
+              onClick={() => {
+                const form = document.querySelector('form');
+                if (form) {
+                  const event = new Event('submit', { cancelable: true, bubbles: true });
+                  form.dispatchEvent(event);
+                }
+              }}
               disabled={loading}
             >
               {loading ? 'Creating...' : 'Create Search'}

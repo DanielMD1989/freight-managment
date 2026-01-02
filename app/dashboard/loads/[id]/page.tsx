@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatAge } from "@/lib/loadUtils";
+import PlatformBenefitsDisplay from "@/components/PlatformBenefitsDisplay";
+import ReportBypassButton from "@/components/ReportBypassButton";
 
 interface LoadEvent {
   id: string;
@@ -54,6 +56,8 @@ interface Load {
     id: string;
     name: string;
     verificationType?: string;
+    isFlagged?: boolean;
+    flagReason?: string;
   };
   truck?: {
     id: string;
@@ -158,6 +162,43 @@ export default function LoadDetailPage() {
           {load.status}
         </span>
       </div>
+
+      {/* Sprint 16: Story 16.6 - Platform Benefits Banner */}
+      <div className="mb-6">
+        <PlatformBenefitsDisplay variant="compact" />
+      </div>
+
+      {/* Sprint 16: Story 16.6 - Flagged Shipper Warning */}
+      {load.shipper?.isFlagged && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <svg
+              className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-red-900 mb-1">
+                Warning: This shipper has been flagged for suspicious activity
+              </h3>
+              {load.shipper.flagReason && (
+                <p className="text-sm text-red-800">
+                  <strong>Reason:</strong> {load.shipper.flagReason}
+                </p>
+              )}
+              <p className="text-sm text-red-700 mt-2">
+                Proceed with caution. Complete all transactions through the platform for protection.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Main Content */}
@@ -559,6 +600,16 @@ export default function LoadDetailPage() {
               )}
             </div>
           </div>
+
+          {/* Sprint 16: Story 16.6 - Report Bypass */}
+          {load.shipperContactName && load.shipperContactPhone && (
+            <div className="rounded-lg bg-white p-6 shadow">
+              <h3 className="mb-4 text-sm font-semibold text-gray-900">
+                Report Issue
+              </h3>
+              <ReportBypassButton loadId={load.id} onReported={fetchLoad} />
+            </div>
+          )}
 
           {/* Shipper Info */}
           {!load.isAnonymous && load.shipper && (

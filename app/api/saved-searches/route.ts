@@ -16,7 +16,7 @@ import { requireAuth } from '@/lib/auth';
  */
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireAuth(request);
+    const user = await requireAuth();
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type'); // LOADS or TRUCKS
 
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAuth(request);
+    const user = await requireAuth();
     const body = await request.json();
 
     const { name, type, criteria } = body;

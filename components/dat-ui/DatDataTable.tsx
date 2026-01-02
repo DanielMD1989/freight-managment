@@ -76,7 +76,7 @@ export default function DatDataTable<T = any>({
     if (selectedRows.length === data.length) {
       onSelectionChange([]);
     } else {
-      onSelectionChange(data.map((row) => row[rowKey]));
+      onSelectionChange(data.map((row: any) => row[rowKey]));
     }
   }, [selectedRows, data, onSelectionChange, rowKey]);
 
@@ -101,7 +101,7 @@ export default function DatDataTable<T = any>({
   const sortedData = useMemo(() => {
     if (!sortColumn) return data;
 
-    return [...data].sort((a, b) => {
+    return [...data].sort((a: any, b: any) => {
       const aVal = a[sortColumn];
       const bVal = b[sortColumn];
 
@@ -126,16 +126,16 @@ export default function DatDataTable<T = any>({
    */
   const renderCell = (column: DatColumn, row: T) => {
     if (column.render) {
-      return column.render(row[column.key], row);
+      return column.render((row as any)[column.key], row);
     }
-    return row[column.key]?.toString() || '';
+    return (row as any)[column.key]?.toString() || '';
   };
 
   /**
    * Get row ID
    */
   const getRowId = (row: T): string => {
-    return row[rowKey];
+    return (row as any)[rowKey];
   };
 
   // Loading state with enhanced skeleton
@@ -249,9 +249,12 @@ export default function DatDataTable<T = any>({
                       hover:bg-gray-50
                       transition-colors
                       ${isSelected ? 'bg-blue-50' : ''}
-                      ${onRowClick ? 'cursor-pointer' : ''}
+                      ${onRowClick || expandable ? 'cursor-pointer' : ''}
                     `}
-                    onClick={() => onRowClick && onRowClick(row)}
+                    onClick={() => {
+                      if (onRowClick) onRowClick(row);
+                      if (expandable) toggleRowExpansion(rowId);
+                    }}
                   >
                     {/* Selection checkbox */}
                     {selectable && (
@@ -274,8 +277,12 @@ export default function DatDataTable<T = any>({
                       <td className="px-2 sm:px-4 py-2 sm:py-3 text-center" role="cell">
                         <button
                           onClick={(e) => {
-                            e.stopPropagation();
-                            toggleRowExpansion(rowId);
+                            // If parent has onRowClick, don't stop propagation - let it bubble to row
+                            if (!onRowClick) {
+                              e.stopPropagation();
+                              toggleRowExpansion(rowId);
+                            }
+                            // Otherwise, let the click bubble up to the row's onClick
                           }}
                           className="text-gray-400 hover:text-gray-600"
                           aria-label={isExpanded ? `Collapse row ${rowIndex + 1}` : `Expand row ${rowIndex + 1}`}
@@ -357,7 +364,7 @@ export default function DatDataTable<T = any>({
                           (expandable ? 1 : 0) +
                           (actions && actions.length > 0 ? 1 : 0)
                         }
-                        className="bg-gray-700 px-2 sm:px-4 py-3 sm:py-4"
+                        className="px-0"
                       >
                         {renderExpandedRow(row)}
                       </td>

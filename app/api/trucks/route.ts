@@ -3,6 +3,12 @@ import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
+import {
+  validateImeiFormat,
+  verifyGpsDevice,
+  detectGpsProvider,
+  determineGpsStatus,
+} from "@/lib/gpsVerification";
 
 const createTruckSchema = z.object({
   truckType: z.enum(["FLATBED", "REFRIGERATED", "TANKER", "CONTAINER", "DRY_VAN", "LOWBOY", "DUMP_TRUCK", "BOX_TRUCK"]),
@@ -13,6 +19,9 @@ const createTruckSchema = z.object({
   currentRegion: z.string().optional(),
   isAvailable: z.boolean().default(true),
   gpsDeviceId: z.string().optional(),
+  // Sprint 16: GPS fields
+  imei: z.string().optional(),
+  gpsProvider: z.string().optional(),
 });
 
 // POST /api/trucks - Create truck
@@ -48,9 +57,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Sprint 16: GPS verification
+    let gpsData: any = {};
+
+    if (validatedData.imei) {
+      // Validate IMEI format
+      if (!validateImeiFormat(validatedData.imei)) {
+        return NextResponse.json(
+          { error: "Invalid IMEI format. Must be exactly 15 digits." },
+          { status: 400 }
+        );
+      }
+
+      // Verify GPS device
+      const verification = await verifyGpsDevice(validatedData.imei);
+
+      if (!verification.success) {
+        return NextResponse.json(
+          { error: verification.message },
+          { status: 400 }
+        );
+      }
+
+      // Set GPS data
+      const now = new Date();
+      gpsData = {
+        imei: validatedData.imei,
+        gpsProvider: validatedData.gpsProvider || detectGpsProvider(validatedData.imei),
+        gpsVerifiedAt: now,
+        gpsLastSeenAt: verification.lastSeen || now,
+        gpsStatus: determineGpsStatus(verification.lastSeen || now),
+      };
+    }
+
     const truck = await db.truck.create({
       data: {
         ...validatedData,
+        ...gpsData,
         carrierId: user.organizationId,
       },
       include: {

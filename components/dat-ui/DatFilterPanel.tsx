@@ -51,7 +51,7 @@ export default function DatFilterPanel({
               onChange={(e) => onChange(filter.key, parseFloat(e.target.value))}
               className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
             />
-            <div className="flex justify-between text-sm text-gray-600 mt-1">
+            <div className="flex justify-between text-xs text-gray-600 mt-0.5">
               <span>{filter.min}{filter.unit}</span>
               <span className="font-medium text-gray-900">
                 {value || filter.min}{filter.unit}
@@ -103,7 +103,7 @@ export default function DatFilterPanel({
           <select
             value={value || ''}
             onChange={(e) => onChange(filter.key, e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">All</option>
             {filter.options.map((option) => (
@@ -122,7 +122,7 @@ export default function DatFilterPanel({
             min={filter.minDate?.toISOString().split('T')[0]}
             max={filter.maxDate?.toISOString().split('T')[0]}
             onChange={(e) => onChange(filter.key, e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
           />
         );
 
@@ -138,18 +138,18 @@ export default function DatFilterPanel({
               />
               <div
                 className={`
-                  block w-10 h-6 rounded-full
+                  block w-8 h-5 rounded-full
                   ${value ? 'bg-blue-600' : 'bg-gray-300'}
                 `}
               ></div>
               <div
                 className={`
-                  dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition
-                  ${value ? 'transform translate-x-4' : ''}
+                  dot absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition
+                  ${value ? 'transform translate-x-3' : ''}
                 `}
               ></div>
             </div>
-            <div className="ml-3 text-sm text-gray-700">
+            <div className="ml-2 text-xs text-gray-700">
               {value ? 'Enabled' : 'Disabled'}
             </div>
           </label>
@@ -162,7 +162,7 @@ export default function DatFilterPanel({
             value={value || ''}
             placeholder={filter.placeholder}
             onChange={(e) => onChange(filter.key, e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
           />
         );
 
@@ -172,39 +172,39 @@ export default function DatFilterPanel({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-4 w-full md:w-80">
+    <div className="bg-white rounded-lg shadow p-3 w-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+      <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-200">
+        <h3 className="text-sm font-semibold text-gray-900 uppercase">{title}</h3>
         <button
           onClick={onReset}
-          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
         >
           Reset
         </button>
       </div>
 
       {/* Filters */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {filters.map((filter) => {
           const isCollapsed = collapsedSections.has(filter.key);
 
           return (
-            <div key={filter.key} className="border-b border-gray-100 pb-4 last:border-0">
+            <div key={filter.key} className="border-b border-gray-100 pb-2 last:border-0">
               {/* Filter Label */}
               <button
                 onClick={() => toggleSection(filter.key)}
-                className="w-full flex items-center justify-between mb-2 text-left"
+                className="w-full flex items-center justify-between mb-1 text-left"
               >
-                <span className="text-sm font-medium text-gray-700">{filter.label}</span>
-                <span className="text-gray-400">
+                <span className="text-xs font-medium text-gray-700 uppercase">{filter.label}</span>
+                <span className="text-gray-400 text-xs">
                   {isCollapsed ? '▶' : '▼'}
                 </span>
               </button>
 
               {/* Filter Control */}
               {!isCollapsed && (
-                <div className="mt-2">
+                <div className="mt-1">
                   {renderFilter(filter)}
                 </div>
               )}

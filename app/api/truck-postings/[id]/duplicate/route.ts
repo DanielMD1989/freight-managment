@@ -16,7 +16,7 @@ export async function POST(
 ) {
   try {
     // Authenticate user
-    const user = await requireAuth(request);
+    const user = await requireAuth();
     const { id } = await params;
 
     // Fetch original truck posting
@@ -45,10 +45,8 @@ export async function POST(
     const duplicatePosting = await db.truckPosting.create({
       data: {
         ...postingData,
-        status: 'UNPOSTED', // New posting starts as UNPOSTED
-        isKept: false, // Don't copy KEPT status
-        postedAt: null,
-        expiresAt: null,
+        status: 'ACTIVE', // New posting starts as ACTIVE
+        postedAt: new Date(),
       },
     });
 

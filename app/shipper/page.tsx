@@ -1,36 +1,35 @@
 /**
- * Shipper DAT-Style Load Board
+ * Shipper Main Page - FreightET Power Interface
  *
- * Main entry point for shipper interface with professional DAT-style UI
- * Sprint 14 - DAT-Style UI Transformation
+ * Main entry point for shipper portal with professional load board
+ * Sprint 14 - Professional UI Transformation
  */
 
 import { redirect } from 'next/navigation';
-import { headers } from 'next/headers';
-import ShipperDatBoardClient from './ShipperDatBoardClient';
+import { cookies } from 'next/headers';
+import { verifyToken } from '@/lib/auth';
+import ShipperDatBoardClient from './dat-board/ShipperDatBoardClient';
 
 export const metadata = {
-  title: 'Shipper Dashboard - Load Board',
-  description: 'Professional DAT-style load board for shippers',
+  title: 'FreightET Power - Shipper Portal',
+  description: 'Professional freight load board for shippers',
 };
 
 export default async function ShipperPage() {
-  // Get auth from headers (set by middleware)
-  const headersList = await headers();
-  const userHeader = headersList.get('x-user-data');
+  // Verify authentication
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get('session');
 
-  // Redirect if not authenticated
-  if (!userHeader) {
-    redirect('/login');
+  if (!sessionCookie) {
+    redirect('/login?redirect=/shipper');
   }
 
-  // Parse user data
-  const user = JSON.parse(userHeader);
+  const session = await verifyToken(sessionCookie.value);
 
-  // Verify shipper role
-  if (user.role !== 'SHIPPER' && user.role !== 'ADMIN') {
-    redirect('/dashboard');
+  if (!session || (session.role !== 'SHIPPER' && session.role !== 'ADMIN')) {
+    redirect('/unauthorized');
   }
 
-  return <ShipperDatBoardClient user={user} />;
+  // Return DAT Power interface
+  return <ShipperDatBoardClient user={session} />;
 }
