@@ -11,7 +11,7 @@
  */
 
 import React from 'react';
-import { getGpsStatusIndicator } from '@/lib/trustMetrics';
+import { getGpsStatusIndicator } from '@/lib/gpsUtils';
 
 interface GpsStatusBadgeProps {
   lastSeenAt: Date | null;

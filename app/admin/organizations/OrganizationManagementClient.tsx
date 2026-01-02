@@ -132,24 +132,60 @@ export default function OrganizationManagementClient({
   };
 
   /**
-   * Handle verification (placeholder - API endpoint needed)
+   * Handle organization verification
    */
   const handleVerify = async (orgId: string, orgName: string) => {
     if (
-      confirm(
-        `Are you sure you want to verify "${orgName}"? This action cannot be undone.`
+      !confirm(
+        `Are you sure you want to verify "${orgName}"?`
       )
     ) {
-      alert(
-        `Verification API endpoint needed. Would verify organization ${orgId}`
-      );
-      // TODO: Implement when admin verification endpoint is available
-      // const response = await fetch(`/api/admin/organizations/${orgId}/verify`, {
-      //   method: 'POST',
-      // });
-      // if (response.ok) {
-      //   router.refresh();
-      // }
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/organizations/${orgId}/verify`, {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        alert('Organization verified successfully!');
+        router.refresh();
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || 'Failed to verify organization');
+      }
+    } catch (error) {
+      alert('An error occurred while verifying the organization');
+    }
+  };
+
+  /**
+   * Handle organization unverification
+   */
+  const handleUnverify = async (orgId: string, orgName: string) => {
+    if (
+      !confirm(
+        `Are you sure you want to remove verification from "${orgName}"?`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/organizations/${orgId}/verify`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        alert('Organization verification removed!');
+        router.refresh();
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || 'Failed to remove verification');
+      }
+    } catch (error) {
+      alert('An error occurred while removing verification');
     }
   };
 
@@ -380,12 +416,19 @@ export default function OrganizationManagementClient({
                     >
                       View
                     </button>
-                    {!org.isVerified && (
+                    {!org.isVerified ? (
                       <button
                         onClick={() => handleVerify(org.id, org.name)}
                         className="text-green-600 hover:text-green-900"
                       >
                         Verify
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleUnverify(org.id, org.name)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        Unverify
                       </button>
                     )}
                   </td>

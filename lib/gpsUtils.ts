@@ -64,3 +64,51 @@ export function getGpsSignalStatus(
     return 'lost';
   }
 }
+
+/**
+ * Get GPS status indicator based on last seen time
+ *
+ * - GREEN: Last seen < 5 minutes ago (Active)
+ * - YELLOW: Last seen 5-30 minutes ago (Stale)
+ * - RED: Last seen > 30 minutes ago (Offline)
+ * - GRAY: No GPS data
+ *
+ * @param lastSeenAt - Last GPS update timestamp
+ * @returns Status indicator object
+ */
+export function getGpsStatusIndicator(lastSeenAt: Date | null): {
+  color: 'GREEN' | 'YELLOW' | 'RED' | 'GRAY';
+  label: string;
+  minutesAgo: number | null;
+} {
+  if (!lastSeenAt) {
+    return {
+      color: 'GRAY',
+      label: 'No GPS',
+      minutesAgo: null,
+    };
+  }
+
+  const now = new Date();
+  const minutesAgo = Math.floor((now.getTime() - lastSeenAt.getTime()) / 1000 / 60);
+
+  if (minutesAgo < 5) {
+    return {
+      color: 'GREEN',
+      label: 'Active',
+      minutesAgo,
+    };
+  } else if (minutesAgo < 30) {
+    return {
+      color: 'YELLOW',
+      label: 'Stale',
+      minutesAgo,
+    };
+  } else {
+    return {
+      color: 'RED',
+      label: 'Offline',
+      minutesAgo,
+    };
+  }
+}
