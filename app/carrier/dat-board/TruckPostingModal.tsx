@@ -7,6 +7,7 @@
  */
 
 import React, { useState } from 'react';
+import PlacesAutocomplete, { PlaceResult } from '@/components/PlacesAutocomplete';
 
 interface TruckPostingModalProps {
   isOpen: boolean;
@@ -154,34 +155,36 @@ export default function TruckPostingModal({
               </div>
               <div>
                 <label className="block text-xs text-white mb-1">Origin *</label>
-                <select
+                <PlacesAutocomplete
                   value={formData.origin}
-                  onChange={(e) => handleChange('origin', e.target.value)}
+                  onChange={(value, place) => {
+                    handleChange('origin', value);
+                    if (place?.coordinates) {
+                      handleChange('originCoordinates', place.coordinates);
+                    }
+                  }}
+                  placeholder="Search city..."
                   className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
+                  countryRestriction={['ET', 'DJ']}
+                  types={['(cities)']}
                   required
-                >
-                  <option value="">Select City</option>
-                  {ethiopianCities.map((city) => (
-                    <option key={city.id} value={city.id}>
-                      {city.name}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
               <div>
                 <label className="block text-xs text-white mb-1">Destination</label>
-                <select
+                <PlacesAutocomplete
                   value={formData.destination}
-                  onChange={(e) => handleChange('destination', e.target.value)}
+                  onChange={(value, place) => {
+                    handleChange('destination', value);
+                    if (place?.coordinates) {
+                      handleChange('destinationCoordinates', place.coordinates);
+                    }
+                  }}
+                  placeholder="Anywhere"
                   className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
-                >
-                  <option value="">Anywhere</option>
-                  {ethiopianCities.map((city) => (
-                    <option key={city.id} value={city.id}>
-                      {city.name}
-                    </option>
-                  ))}
-                </select>
+                  countryRestriction={['ET', 'DJ']}
+                  types={['(cities)']}
+                />
               </div>
               <div>
                 <label className="block text-xs text-white mb-1">Truck *</label>

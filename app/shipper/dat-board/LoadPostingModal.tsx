@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ETHIOPIAN_LOCATIONS } from '@/lib/constants/ethiopian-locations';
+import PlacesAutocomplete, { PlaceResult } from '@/components/PlacesAutocomplete';
 
 interface LoadPostingModalProps {
   isOpen: boolean;
@@ -146,35 +147,37 @@ export default function LoadPostingModal({
               </div>
               <div>
                 <label className="block text-xs text-white mb-1">Origin *</label>
-                <select
+                <PlacesAutocomplete
                   value={formData.pickupCity}
-                  onChange={(e) => handleChange('pickupCity', e.target.value)}
+                  onChange={(value, place) => {
+                    handleChange('pickupCity', value);
+                    if (place?.coordinates) {
+                      handleChange('pickupCoordinates', place.coordinates);
+                    }
+                  }}
+                  placeholder="Search city..."
                   className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
+                  countryRestriction={['ET', 'DJ']}
+                  types={['(cities)']}
                   required
-                >
-                  <option value="">Select City</option>
-                  {ETHIOPIAN_LOCATIONS.map((location) => (
-                    <option key={location} value={location}>
-                      {location}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
               <div>
                 <label className="block text-xs text-white mb-1">Destination *</label>
-                <select
+                <PlacesAutocomplete
                   value={formData.deliveryCity}
-                  onChange={(e) => handleChange('deliveryCity', e.target.value)}
+                  onChange={(value, place) => {
+                    handleChange('deliveryCity', value);
+                    if (place?.coordinates) {
+                      handleChange('deliveryCoordinates', place.coordinates);
+                    }
+                  }}
+                  placeholder="Search city..."
                   className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
+                  countryRestriction={['ET', 'DJ']}
+                  types={['(cities)']}
                   required
-                >
-                  <option value="">Select City</option>
-                  {ETHIOPIAN_LOCATIONS.map((location) => (
-                    <option key={location} value={location}>
-                      {location}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
               <div>
                 <label className="block text-xs text-white mb-1">Dock Hours</label>
