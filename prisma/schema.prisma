@@ -1135,3 +1135,47 @@ enum ExecutionStatus {
   COMPLETED
   FAILED
 }
+
+// Sprint 10 - Story 10.6: System Configuration
+model SystemSettings {
+  id                    String    @id @default("system")
+
+  // Rate Limiting Configuration
+  rateLimitDocumentUpload  Int   @default(10)    // Per hour per user
+  rateLimitTruckPosting    Int   @default(100)   // Per day per carrier
+  rateLimitFileDownload    Int   @default(100)   // Per hour per user
+  rateLimitAuthAttempts    Int   @default(5)     // Per 15 minutes per IP
+
+  // Match Score Thresholds
+  matchScoreMinimum     Int       @default(40)    // Minimum score to show match
+  matchScoreGood        Int       @default(70)    // Good match threshold
+  matchScoreExcellent   Int       @default(85)    // Excellent match threshold
+
+  // Email Notification Toggles
+  emailNotificationsEnabled      Boolean @default(true)
+  emailNotifyDocumentApproval    Boolean @default(true)
+  emailNotifyDocumentRejection   Boolean @default(true)
+  emailNotifyLoadAssignment      Boolean @default(true)
+  emailNotifyPodVerification     Boolean @default(true)
+
+  // Platform Fee Configuration (percentages)
+  shipperCommissionRate Decimal   @default(5.0)   @db.Decimal(5, 2)
+  carrierCommissionRate Decimal   @default(5.0)   @db.Decimal(5, 2)
+
+  // File Upload Limits
+  maxFileUploadSizeMb   Int       @default(10)    // Max file size in MB
+  maxDocumentsPerEntity Int       @default(20)    // Max documents per entity
+
+  // General Settings
+  platformMaintenanceMode    Boolean  @default(false)
+  platformMaintenanceMessage String?
+  requireEmailVerification   Boolean  @default(false)
+  requirePhoneVerification   Boolean  @default(false)
+
+  // Metadata
+  lastModifiedBy   String
+  lastModifiedAt   DateTime @default(now()) @updatedAt
+  createdAt        DateTime @default(now())
+
+  @@map("system_settings")
+}
