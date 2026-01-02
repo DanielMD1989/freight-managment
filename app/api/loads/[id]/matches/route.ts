@@ -12,12 +12,16 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth';
+import { db } from '@/lib/db';
 import { findMatchingTrucksForLoad } from '@/lib/matchingEngine';
 
 /**
  * GET /api/loads/[id]/matches
  *
  * Find matching truck postings for a load.
+ *
+ * Sprint 9: Added authentication and authorization checks
  *
  * Query parameters:
  * - minScore: Minimum match score (default: 40, range: 0-100)
@@ -45,6 +49,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+
+    // Sprint 9: Require authentication
+    const session = await requireAuth();
+
     const { searchParams } = new URL(request.url);
 
     // Validate ID format
@@ -52,6 +60,39 @@ export async function GET(
       return NextResponse.json(
         { error: 'Invalid load ID format' },
         { status: 400 }
+      );
+    }
+
+    // Sprint 9: Verify load exists and check ownership/access
+    const load = await db.load.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        shipperId: true,
+        status: true,
+      },
+    });
+
+    if (!load) {
+      return NextResponse.json(
+        { error: 'Load not found' },
+        { status: 404 }
+      );
+    }
+
+    // Sprint 9: Authorization check - only load owner or admin can see matches
+    const user = await db.user.findUnique({
+      where: { id: session.userId },
+      select: { organizationId: true, role: true },
+    });
+
+    const isOwner = user?.organizationId === load.shipperId;
+    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json(
+        { error: 'Forbidden: You can only view matches for your own loads' },
+        { status: 403 }
       );
     }
 
