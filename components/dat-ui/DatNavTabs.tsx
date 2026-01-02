@@ -40,9 +40,25 @@ export default function DatNavTabs({
   userRole,
   activeTab,
   onTabChange,
+  portalType,
 }: DatNavTabsProps) {
-  // Filter tabs based on user role
-  const visibleTabs = ALL_TABS.filter((tab) => tab.roles.includes(userRole));
+  // Filter tabs based on user role AND portal type
+  const visibleTabs = ALL_TABS.filter((tab) => {
+    // First check if user role is allowed for this tab
+    if (!tab.roles.includes(userRole)) {
+      return false;
+    }
+
+    // If portalType is specified, filter by portal context
+    if (portalType === 'shipper') {
+      return tab.key === 'POST_LOADS' || tab.key === 'SEARCH_TRUCKS';
+    } else if (portalType === 'carrier') {
+      return tab.key === 'POST_TRUCKS' || tab.key === 'SEARCH_LOADS';
+    }
+
+    // If no portalType specified, show all tabs for user's role (backward compatible)
+    return true;
+  });
 
   return (
     <div className="flex gap-1">

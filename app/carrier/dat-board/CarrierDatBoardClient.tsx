@@ -103,6 +103,7 @@ export default function CarrierDatBoardClient({ user }: CarrierDatBoardClientPro
             activeTab={activeTab}
             onTabChange={(tab) => setActiveTab(tab as CarrierTabKey)}
             userRole={user.role}
+            portalType="carrier"
           />
         </div>
 

@@ -124,6 +124,7 @@ export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientPro
             activeTab={activeTab}
             onTabChange={(tab) => setActiveTab(tab as ShipperTabKey)}
             userRole={user.role}
+            portalType="shipper"
           />
         </div>
 

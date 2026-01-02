@@ -40,6 +40,7 @@ export interface DatNavTabsProps {
   userRole: UserRole;
   activeTab: DatTabKey;
   onTabChange: (tab: DatTabKey) => void;
+  portalType?: 'shipper' | 'carrier'; // Optional: restricts tabs to portal context
 }
 
 export interface DatStatusTab {
