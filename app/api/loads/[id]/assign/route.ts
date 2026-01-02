@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
 import { enableTrackingForLoad } from '@/lib/gpsTracking';
 import { canAssignLoads } from '@/lib/dispatcherPermissions';
+import { validateStateTransition, LoadStatus } from '@/lib/loadStateMachine';
 
 const assignLoadSchema = z.object({
   truckId: z.string(),
@@ -72,17 +73,23 @@ export async function POST(
       );
     }
 
-    // Check if load is already assigned
-    if (load.status === 'ASSIGNED' || load.status === 'IN_TRANSIT' || load.status === 'DELIVERED') {
-      return NextResponse.json(
-        { error: 'Load is already assigned or completed' },
-        { status: 400 }
-      );
-    }
-
     // Validate request body
     const body = await request.json();
     const { truckId } = assignLoadSchema.parse(body);
+
+    // Sprint 3: Validate state transition to ASSIGNED
+    const stateValidation = validateStateTransition(
+      load.status,
+      LoadStatus.ASSIGNED,
+      session.role
+    );
+
+    if (!stateValidation.valid) {
+      return NextResponse.json(
+        { error: stateValidation.error },
+        { status: 400 }
+      );
+    }
 
     // Check if truck exists and is available
     const truck = await db.truck.findUnique({
@@ -116,7 +123,7 @@ export async function POST(
       data: {
         assignedTruckId: truckId,
         assignedAt: new Date(),
-        status: 'ASSIGNED',
+        status: 'ASSIGNED', // Sprint 3: State machine validated transition
       },
     });
 
@@ -238,17 +245,43 @@ export async function DELETE(
       );
     }
 
-    // Check if load can be unassigned
-    if (load.status === 'IN_TRANSIT' || load.status === 'DELIVERED') {
+    if (!load.assignedTruckId) {
       return NextResponse.json(
-        { error: 'Cannot unassign load that is in transit or delivered' },
+        { error: 'Load is not assigned to any truck' },
         { status: 400 }
       );
     }
 
-    if (!load.assignedTruckId) {
+    // Sprint 3: Determine target status based on current state
+    // ASSIGNED → SEARCHING (reassign workflow)
+    // PICKUP_PENDING → SEARCHING (carrier couldn't pick up)
+    // Other states → cannot unassign
+    let targetStatus: LoadStatus;
+
+    if (load.status === 'ASSIGNED' || load.status === 'PICKUP_PENDING') {
+      targetStatus = LoadStatus.SEARCHING;
+    } else if (load.status === 'IN_TRANSIT' || load.status === 'DELIVERED') {
       return NextResponse.json(
-        { error: 'Load is not assigned to any truck' },
+        { error: 'Cannot unassign load that is in transit or delivered' },
+        { status: 400 }
+      );
+    } else {
+      return NextResponse.json(
+        { error: `Cannot unassign load with status ${load.status}` },
+        { status: 400 }
+      );
+    }
+
+    // Sprint 3: Validate state transition
+    const stateValidation = validateStateTransition(
+      load.status,
+      targetStatus,
+      session.role
+    );
+
+    if (!stateValidation.valid) {
+      return NextResponse.json(
+        { error: stateValidation.error },
         { status: 400 }
       );
     }
@@ -259,7 +292,7 @@ export async function DELETE(
       data: {
         assignedTruckId: null,
         assignedAt: null,
-        status: 'POSTED',
+        status: targetStatus, // Sprint 3: State machine validated transition
         // Disable tracking
         trackingEnabled: false,
       },

@@ -37,14 +37,20 @@ enum OrganizationType {
 }
 
 enum LoadStatus {
-  DRAFT
-  POSTED
-  UNPOSTED
-  ASSIGNED
-  IN_TRANSIT
-  DELIVERED
-  CANCELLED
-  EXPIRED
+  // Sprint 3: Complete Load Lifecycle State Machine
+  DRAFT              // Load created but not yet posted
+  POSTED             // Load posted to marketplace, carriers can search
+  SEARCHING          // Actively being matched with carriers
+  OFFERED            // Load offered to a specific carrier
+  ASSIGNED           // Carrier accepted, load assigned
+  PICKUP_PENDING     // Waiting for carrier to pick up load
+  IN_TRANSIT         // Load picked up, in transit to destination
+  DELIVERED          // Load delivered to destination
+  COMPLETED          // POD uploaded, payment processed
+  EXCEPTION          // Issue detected (late, rejected, etc.)
+  CANCELLED          // Load cancelled by shipper
+  EXPIRED            // Load expired (no carrier found)
+  UNPOSTED           // Load removed from marketplace
 }
 
 enum TruckType {
