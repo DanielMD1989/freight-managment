@@ -1038,3 +1038,100 @@ model Notification {
   @@index([createdAt])
   @@map("notifications")
 }
+
+// ============================================================================
+// SPRINT 7: AUTOMATION RULES ENGINE
+// ============================================================================
+
+model AutomationRule {
+  id               String             @id @default(cuid())
+  name             String             // Descriptive name (e.g., "Late Pickup Alert - 2hr Grace")
+  description      String?            // Detailed description
+
+  // Rule Type & Configuration
+  ruleType         RuleType           // TIME_BASED, GPS_BASED, THRESHOLD_BASED, CUSTOM
+  trigger          RuleTrigger        // When to evaluate this rule
+
+  // Conditions (JSON)
+  conditions       Json               // Flexible conditions: { field, operator, value, thresholds }
+  // Example: { "graceHours": 2, "status": ["ASSIGNED", "PICKUP_PENDING"], "hoursLateForHigh": 4 }
+
+  // Actions (JSON array)
+  actions          Json               // Array of actions to execute
+  // Example: [{ "type": "CREATE_ESCALATION", "escalationType": "LATE_PICKUP", "priority": "MEDIUM" }]
+
+  // Status & Control
+  isEnabled        Boolean            @default(true)
+  isSystem         Boolean            @default(false)  // System rules can't be deleted
+  priority         Int                @default(0)      // Execution order (higher = first)
+
+  // Scheduling (for ON_SCHEDULE triggers)
+  schedulePattern  String?            // Cron-like pattern: "*/5 * * * *" (every 5 minutes)
+  lastExecutedAt   DateTime?          // When it was last run
+  nextExecutionAt  DateTime?          // When it should run next
+
+  // Metadata
+  createdBy        String             // User ID
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  executionCount   Int                @default(0)      // How many times executed
+  successCount     Int                @default(0)      // Successful executions
+  failureCount     Int                @default(0)      // Failed executions
+
+  // Relations
+  executions       AutomationRuleExecution[]
+
+  @@index([ruleType])
+  @@index([trigger])
+  @@index([isEnabled])
+  @@index([nextExecutionAt])
+  @@map("automation_rules")
+}
+
+model AutomationRuleExecution {
+  id               String            @id @default(cuid())
+
+  // Execution Details
+  status           ExecutionStatus   // PENDING, RUNNING, COMPLETED, FAILED
+  executedAt       DateTime          @default(now())
+  completedAt      DateTime?
+
+  // Results
+  result           Json?             // Execution result (actions taken, errors, etc.)
+  matchedLoads     Int               @default(0)      // How many loads matched
+  actionsExecuted  Int               @default(0)      // How many actions executed
+  errorMessage     String?           // Error details if failed
+
+  // Relations
+  ruleId           String
+  rule             AutomationRule    @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId])
+  @@index([status])
+  @@index([executedAt])
+  @@map("automation_rule_executions")
+}
+
+enum RuleType {
+  TIME_BASED      // Time-based rules (late pickup, late delivery)
+  GPS_BASED       // GPS-based rules (offline, stalled)
+  THRESHOLD_BASED // Threshold rules (custom metrics)
+  CUSTOM          // Custom JavaScript/logic rules
+}
+
+enum RuleTrigger {
+  ON_LOAD_CREATED      // When load is created
+  ON_LOAD_ASSIGNED     // When load is assigned to carrier
+  ON_PICKUP_PENDING    // When load enters PICKUP_PENDING status
+  ON_IN_TRANSIT        // When load enters IN_TRANSIT status
+  ON_STATUS_CHANGE     // Any status change
+  ON_SCHEDULE          // Scheduled execution (cron-like)
+  ON_MANUAL            // Manual trigger by admin
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}

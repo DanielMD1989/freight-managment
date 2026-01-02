@@ -78,8 +78,10 @@ export enum Permission {
   RESOLVE_EXCEPTIONS = "resolve_exceptions", // Admin
   OVERRIDE_EXCEPTIONS = "override_exceptions", // SuperAdmin
 
-  // Automation Rules
+  // Automation Rules (Sprint 7)
   CONFIGURE_AUTOMATION_RULES = "configure_automation_rules", // Admin
+  MANAGE_RULES = "manage_rules", // Admin - Create, update, delete automation rules
+  VIEW_RULES = "view_rules", // Admin, Dispatcher - View automation rules
   CONFIGURE_THRESHOLDS = "configure_thresholds", // Admin
   VIEW_AUTOMATION_LOGS = "view_automation_logs", // Admin, SuperAdmin
 
@@ -230,6 +232,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.VIEW_EXCEPTIONS,
     Permission.ESCALATE_TO_ADMIN,
 
+    // Automation rules (view only)
+    Permission.VIEW_RULES,
+
     // GPS monitoring
     Permission.VIEW_ALL_GPS,
 
@@ -274,6 +279,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
     // Automation rules
     Permission.CONFIGURE_AUTOMATION_RULES,
+    Permission.MANAGE_RULES,
+    Permission.VIEW_RULES,
     Permission.CONFIGURE_THRESHOLDS,
     Permission.VIEW_AUTOMATION_LOGS,
 
