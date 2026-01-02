@@ -6,6 +6,7 @@ import { enableTrackingForLoad } from '@/lib/gpsTracking';
 import { canAssignLoads } from '@/lib/dispatcherPermissions';
 import { validateStateTransition, LoadStatus } from '@/lib/loadStateMachine';
 import { checkAssignmentConflicts } from '@/lib/assignmentConflictDetection'; // Sprint 4
+import { holdFundsInEscrow, refundEscrowFunds } from '@/lib/escrowManagement'; // Sprint 8
 
 const assignLoadSchema = z.object({
   truckId: z.string(),
@@ -157,6 +158,48 @@ export async function POST(
       },
     });
 
+    // Sprint 8: Hold funds in escrow
+    let escrowResult = null;
+    try {
+      escrowResult = await holdFundsInEscrow(loadId);
+
+      if (!escrowResult.success) {
+        console.warn(`Escrow hold failed for load ${loadId}:`, escrowResult.error);
+
+        // Create warning event
+        await db.loadEvent.create({
+          data: {
+            loadId,
+            eventType: 'ESCROW_HOLD_FAILED',
+            description: `Escrow hold failed: ${escrowResult.error}`,
+            userId: session.userId,
+            metadata: {
+              error: escrowResult.error,
+              escrowAmount: escrowResult.escrowAmount.toFixed(2),
+              shipperBalance: escrowResult.shipperBalance.toFixed(2),
+            },
+          },
+        });
+      } else {
+        // Create success event
+        await db.loadEvent.create({
+          data: {
+            loadId,
+            eventType: 'ESCROW_FUNDED',
+            description: `Funds held in escrow: ${escrowResult.escrowAmount.toFixed(2)} ETB`,
+            userId: session.userId,
+            metadata: {
+              escrowAmount: escrowResult.escrowAmount.toFixed(2),
+              transactionId: escrowResult.transactionId,
+            },
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Escrow hold error:', error);
+      // Continue - assignment succeeded, escrow can be handled manually if needed
+    }
+
     // Sprint 16: Enable GPS tracking if truck has GPS
     let trackingUrl: string | null = null;
 
@@ -182,6 +225,13 @@ export async function POST(
     return NextResponse.json({
       load: updatedLoad,
       trackingUrl,
+      escrow: escrowResult
+        ? {
+            success: escrowResult.success,
+            amount: escrowResult.escrowAmount.toFixed(2),
+            error: escrowResult.error,
+          }
+        : null,
       message: trackingUrl
         ? 'Load assigned successfully. GPS tracking enabled.'
         : 'Load assigned successfully. GPS tracking not available for this truck.',
@@ -306,6 +356,37 @@ export async function DELETE(
       );
     }
 
+    // Sprint 8: Refund escrowed funds if load was funded
+    const loadDetails = await db.load.findUnique({
+      where: { id: loadId },
+      select: { escrowFunded: true },
+    });
+
+    let refundResult = null;
+    if (loadDetails?.escrowFunded) {
+      try {
+        refundResult = await refundEscrowFunds(loadId);
+
+        if (refundResult.success) {
+          await db.loadEvent.create({
+            data: {
+              loadId,
+              eventType: 'ESCROW_REFUNDED',
+              description: `Escrow funds refunded: ${refundResult.escrowAmount.toFixed(2)} ETB`,
+              userId: session.userId,
+              metadata: {
+                escrowAmount: refundResult.escrowAmount.toFixed(2),
+                transactionId: refundResult.transactionId,
+              },
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Escrow refund error:', error);
+        // Continue with unassignment even if refund fails
+      }
+    }
+
     // Unassign truck
     const updatedLoad = await db.load.update({
       where: { id: loadId },
@@ -330,6 +411,12 @@ export async function DELETE(
 
     return NextResponse.json({
       load: updatedLoad,
+      refund: refundResult
+        ? {
+            success: refundResult.success,
+            amount: refundResult.escrowAmount.toFixed(2),
+          }
+        : null,
       message: 'Load unassigned successfully. GPS tracking disabled.',
     });
   } catch (error) {

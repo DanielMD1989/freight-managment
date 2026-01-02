@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { processSettlement } from '@/lib/commissionCalculation';
+import { releaseFundsFromEscrow } from '@/lib/escrowManagement'; // Sprint 8
 
 /**
  * POST /api/loads/[id]/settle
@@ -82,40 +83,107 @@ export async function POST(
       );
     }
 
+    // Sprint 8: Check if load was funded via escrow
+    const loadEscrowStatus = await db.load.findUnique({
+      where: { id: loadId },
+      select: { escrowFunded: true },
+    });
+
     // Process settlement
     try {
-      await processSettlement(loadId);
+      if (loadEscrowStatus?.escrowFunded) {
+        // Sprint 8: Use escrow release for escrow-funded loads
+        const escrowResult = await releaseFundsFromEscrow(loadId);
 
-      // Get updated load with commission details
-      const updatedLoad = await db.load.findUnique({
-        where: { id: loadId },
-        select: {
-          id: true,
-          settlementStatus: true,
-          settledAt: true,
-          shipperCommission: true,
-          carrierCommission: true,
-          platformCommission: true,
-        },
-      });
+        if (!escrowResult.success) {
+          return NextResponse.json(
+            {
+              error: 'Escrow release failed',
+              details: escrowResult.error,
+            },
+            { status: 400 }
+          );
+        }
 
-      return NextResponse.json({
-        message: 'Settlement processed successfully',
-        settlement: {
-          loadId: updatedLoad?.id,
-          status: updatedLoad?.settlementStatus,
-          settledAt: updatedLoad?.settledAt,
-          shipperCommission: updatedLoad?.shipperCommission
-            ? Number(updatedLoad.shipperCommission)
-            : null,
-          carrierCommission: updatedLoad?.carrierCommission
-            ? Number(updatedLoad.carrierCommission)
-            : null,
-          platformRevenue: updatedLoad?.platformCommission
-            ? Number(updatedLoad.platformCommission)
-            : null,
-        },
-      });
+        // Create load event
+        await db.loadEvent.create({
+          data: {
+            loadId,
+            eventType: 'ESCROW_RELEASED',
+            description: `Escrow funds released: Carrier received ${escrowResult.carrierPayout.toFixed(2)} ETB, Platform earned ${escrowResult.platformRevenue.toFixed(2)} ETB`,
+            userId: session.userId,
+            metadata: {
+              carrierPayout: escrowResult.carrierPayout.toFixed(2),
+              platformRevenue: escrowResult.platformRevenue.toFixed(2),
+              shipperCommission: escrowResult.shipperCommission.toFixed(2),
+              carrierCommission: escrowResult.carrierCommission.toFixed(2),
+              transactionId: escrowResult.transactionId,
+            },
+          },
+        });
+
+        // Get updated load
+        const updatedLoad = await db.load.findUnique({
+          where: { id: loadId },
+          select: {
+            id: true,
+            settlementStatus: true,
+            settledAt: true,
+            shipperCommission: true,
+            carrierCommission: true,
+            platformCommission: true,
+          },
+        });
+
+        return NextResponse.json({
+          message: 'Settlement processed successfully via escrow release',
+          settlement: {
+            loadId: updatedLoad?.id,
+            status: updatedLoad?.settlementStatus,
+            settledAt: updatedLoad?.settledAt,
+            shipperCommission: escrowResult.shipperCommission.toNumber(),
+            carrierCommission: escrowResult.carrierCommission.toNumber(),
+            platformRevenue: escrowResult.platformRevenue.toNumber(),
+            carrierPayout: escrowResult.carrierPayout.toNumber(),
+            method: 'ESCROW_RELEASE',
+          },
+        });
+      } else {
+        // Legacy: Use old commission deduction for non-escrow loads
+        await processSettlement(loadId);
+
+        // Get updated load with commission details
+        const updatedLoad = await db.load.findUnique({
+          where: { id: loadId },
+          select: {
+            id: true,
+            settlementStatus: true,
+            settledAt: true,
+            shipperCommission: true,
+            carrierCommission: true,
+            platformCommission: true,
+          },
+        });
+
+        return NextResponse.json({
+          message: 'Settlement processed successfully via commission deduction (legacy)',
+          settlement: {
+            loadId: updatedLoad?.id,
+            status: updatedLoad?.settlementStatus,
+            settledAt: updatedLoad?.settledAt,
+            shipperCommission: updatedLoad?.shipperCommission
+              ? Number(updatedLoad.shipperCommission)
+              : null,
+            carrierCommission: updatedLoad?.carrierCommission
+              ? Number(updatedLoad.carrierCommission)
+              : null,
+            platformRevenue: updatedLoad?.platformCommission
+              ? Number(updatedLoad.platformCommission)
+              : null,
+            method: 'COMMISSION_DEDUCTION',
+          },
+        });
+      }
     } catch (settlementError: any) {
       console.error('Settlement processing error:', settlementError);
 

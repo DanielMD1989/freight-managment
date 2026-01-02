@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { createNotification, NotificationType } from '@/lib/notifications';
+import { releaseFundsFromEscrow } from '@/lib/escrowManagement'; // Sprint 8
 
 /**
  * POST /api/loads/[id]/pod
@@ -294,16 +295,84 @@ export async function PUT(
       });
     }
 
-    // TODO: Trigger settlement workflow after POD verification
-    // await processSettlement(loadId);
+    // Sprint 8: Automatically release funds from escrow after POD verification
+    let escrowReleaseResult = null;
+    try {
+      // Check if load was funded via escrow
+      const loadEscrowStatus = await db.load.findUnique({
+        where: { id: loadId },
+        select: { escrowFunded: true },
+      });
+
+      if (loadEscrowStatus?.escrowFunded) {
+        escrowReleaseResult = await releaseFundsFromEscrow(loadId);
+
+        if (escrowReleaseResult.success) {
+          // Create success event
+          await db.loadEvent.create({
+            data: {
+              loadId,
+              eventType: 'ESCROW_RELEASED',
+              description: `Escrow funds released: Carrier received ${escrowReleaseResult.carrierPayout.toFixed(2)} ETB, Platform earned ${escrowReleaseResult.platformRevenue.toFixed(2)} ETB`,
+              userId: session.userId,
+              metadata: {
+                carrierPayout: escrowReleaseResult.carrierPayout.toFixed(2),
+                platformRevenue: escrowReleaseResult.platformRevenue.toFixed(2),
+                shipperCommission: escrowReleaseResult.shipperCommission.toFixed(2),
+                carrierCommission: escrowReleaseResult.carrierCommission.toFixed(2),
+                transactionId: escrowReleaseResult.transactionId,
+              },
+            },
+          });
+
+          console.log(`Escrow released successfully for load ${loadId}`);
+        } else {
+          console.warn(`Escrow release failed for load ${loadId}:`, escrowReleaseResult.error);
+
+          // Create warning event
+          await db.loadEvent.create({
+            data: {
+              loadId,
+              eventType: 'ESCROW_RELEASE_FAILED',
+              description: `Escrow release failed: ${escrowReleaseResult.error}`,
+              userId: session.userId,
+              metadata: { error: escrowReleaseResult.error },
+            },
+          });
+        }
+      } else {
+        console.log(`Load ${loadId} not funded via escrow - skipping automatic release`);
+      }
+    } catch (error) {
+      console.error('Escrow release error:', error);
+      // Create error event but don't block POD verification
+      await db.loadEvent.create({
+        data: {
+          loadId,
+          eventType: 'ESCROW_RELEASE_FAILED',
+          description: `Escrow release error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          userId: session.userId,
+        },
+      });
+    }
 
     return NextResponse.json({
-      message: 'POD verified successfully. Settlement can now be processed.',
+      message: escrowReleaseResult?.success
+        ? 'POD verified successfully. Funds released from escrow.'
+        : 'POD verified successfully. Settlement can now be processed.',
       load: {
         id: updatedLoad.id,
         podVerified: updatedLoad.podVerified,
         podVerifiedAt: updatedLoad.podVerifiedAt,
       },
+      escrowRelease: escrowReleaseResult
+        ? {
+            success: escrowReleaseResult.success,
+            carrierPayout: escrowReleaseResult.success ? escrowReleaseResult.carrierPayout.toFixed(2) : null,
+            platformRevenue: escrowReleaseResult.success ? escrowReleaseResult.platformRevenue.toFixed(2) : null,
+            error: escrowReleaseResult.error,
+          }
+        : null,
     });
   } catch (error) {
     console.error('Verify POD error:', error);
