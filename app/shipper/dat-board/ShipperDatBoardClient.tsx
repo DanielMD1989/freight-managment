@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { DatNavTabs } from '@/components/dat-ui';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import PostLoadsTab from './PostLoadsTab';
@@ -22,6 +23,7 @@ interface ShipperDatBoardClientProps {
 type ShipperTabKey = 'POST_LOADS' | 'SEARCH_TRUCKS';
 
 export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientProps) {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<ShipperTabKey>('POST_LOADS');
   const [searchFilters, setSearchFilters] = useState<any>(null);
   const [completionRate, setCompletionRate] = useState<number>(0);
@@ -29,35 +31,34 @@ export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientPro
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Story 15.11: Task 15.11.1-15.11.6 - Tab State Management with URL persistence
-  // Check URL parameters on mount to set active tab and filters
+  // Sync tab state with URL parameters (works with both initial load and client-side navigation)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const tabParam = params.get('tab') as ShipperTabKey;
+    const tabParam = searchParams.get('tab') as ShipperTabKey;
 
-      if (tabParam === 'POST_LOADS' || tabParam === 'SEARCH_TRUCKS') {
-        setActiveTab(tabParam);
-      }
+    if (tabParam === 'POST_LOADS' || tabParam === 'SEARCH_TRUCKS') {
+      setActiveTab(tabParam);
+    }
 
-      // Extract search filters from URL (restore filter state)
-      const filters = {
-        origin: params.get('origin') || '',
-        destination: params.get('destination') || '',
-        truckType: params.get('truckType') || '',
-        pickupDate: params.get('pickupDate') || '',
-        length: params.get('length') || '',
-        weight: params.get('weight') || '',
-      };
+    // Extract search filters from URL (restore filter state)
+    const filters = {
+      origin: searchParams.get('origin') || '',
+      destination: searchParams.get('destination') || '',
+      truckType: searchParams.get('truckType') || '',
+      pickupDate: searchParams.get('pickupDate') || '',
+      length: searchParams.get('length') || '',
+      weight: searchParams.get('weight') || '',
+    };
 
-      // Only set filters if at least one filter has a value
-      if (Object.values(filters).some(v => v)) {
-        setSearchFilters(filters);
-      }
+    // Only set filters if at least one filter has a value
+    if (Object.values(filters).some(v => v)) {
+      setSearchFilters(filters);
+    }
 
-      // Mark initial load complete after a short delay
+    // Mark initial load complete after a short delay
+    if (isInitialLoad) {
       setTimeout(() => setIsInitialLoad(false), 100);
     }
-  }, []);
+  }, [searchParams, isInitialLoad]);
 
   // Sync activeTab with URL (without page reload)
   useEffect(() => {

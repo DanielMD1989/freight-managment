@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { DatNavTabs } from '@/components/dat-ui';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import PostTrucksTab from './PostTrucksTab';
@@ -22,26 +23,26 @@ interface CarrierDatBoardClientProps {
 type CarrierTabKey = 'POST_TRUCKS' | 'SEARCH_LOADS';
 
 export default function CarrierDatBoardClient({ user }: CarrierDatBoardClientProps) {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<CarrierTabKey>('POST_TRUCKS');
   const [completionRate, setCompletionRate] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Story 15.11: Task 15.11.1-15.11.6 - Tab State Management with URL persistence
-  // Check URL parameters on mount to set active tab
+  // Sync tab state with URL parameters (works with both initial load and client-side navigation)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const tabParam = params.get('tab') as CarrierTabKey;
+    const tabParam = searchParams.get('tab') as CarrierTabKey;
 
-      if (tabParam === 'SEARCH_LOADS' || tabParam === 'POST_TRUCKS') {
-        setActiveTab(tabParam);
-      }
+    if (tabParam === 'SEARCH_LOADS' || tabParam === 'POST_TRUCKS') {
+      setActiveTab(tabParam);
+    }
 
-      // Mark initial load complete after a short delay
+    // Mark initial load complete after a short delay
+    if (isInitialLoad) {
       setTimeout(() => setIsInitialLoad(false), 100);
     }
-  }, []);
+  }, [searchParams, isInitialLoad]);
 
   // Sync activeTab with URL (without page reload)
   useEffect(() => {
