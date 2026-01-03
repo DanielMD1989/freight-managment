@@ -1,14 +1,14 @@
 /**
- * Admin Audit Logs Viewer Page
+ * Global Audit Log Viewer Page
  *
  * View and filter audit logs for security monitoring
  * Sprint 10 - Story 10.5: Audit Logs Viewer
+ * Sprint 16 - Story 16.9A: SuperAdmin Tools (Enhanced)
  */
 
-import { cookies } from 'next/headers';
-import { verifyToken } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import AuditLogsClient from './AuditLogsClient';
+import { getCurrentUser } from '@/lib/auth';
+import AuditLogViewerClient from './AuditLogViewerClient';
 
 interface AuditLog {
   id: string;
@@ -94,88 +94,69 @@ async function getAuditLogs(
 }
 
 /**
- * Admin Audit Logs Viewer Page
+ * Global Audit Log Viewer Page - SuperAdmin Access
  */
-export default async function AdminAuditLogsPage({
-  searchParams,
-}: {
-  searchParams: {
-    offset?: string;
-    limit?: string;
-    severity?: string;
-    eventType?: string;
-    userId?: string;
-    organizationId?: string;
-    startDate?: string;
-    endDate?: string;
-  };
-}) {
-  // Verify authentication
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get('session');
+export default async function AdminAuditLogsPage() {
+  const user = await getCurrentUser();
 
-  if (!sessionCookie) {
-    redirect('/login?redirect=/admin/audit-logs');
+  if (!user) {
+    redirect('/login');
   }
 
-  const session = await verifyToken(sessionCookie.value);
-
-  if (!session || session.role !== 'ADMIN') {
+  // Only Super Admins can access
+  if (user.role !== 'SUPER_ADMIN') {
     redirect('/unauthorized');
   }
 
-  // Get query parameters
-  const offset = parseInt(searchParams.offset || '0');
-  const limit = parseInt(searchParams.limit || '100');
-  const filters = {
-    severity: searchParams.severity,
-    eventType: searchParams.eventType,
-    userId: searchParams.userId,
-    organizationId: searchParams.organizationId,
-    startDate: searchParams.startDate,
-    endDate: searchParams.endDate,
-  };
-
-  // Fetch audit logs
-  const data = await getAuditLogs(offset, limit, filters);
-
-  if (!data) {
-    return (
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Audit Logs</h1>
-          <p className="text-gray-600 mt-2">
-            Security and activity monitoring
-          </p>
-        </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800">
-            Failed to load audit logs. Please try refreshing the page.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Audit Logs</h1>
-        <p className="text-gray-600 mt-2">
-          Security and activity monitoring ({data.total.toLocaleString()} total
-          events)
-        </p>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">
+            Global Audit Log Viewer
+          </h1>
+          <p className="text-gray-600 mt-2">
+            View and filter all platform activity and security events
+          </p>
+        </div>
 
-      {/* Audit Logs Client Component */}
-      <AuditLogsClient
-        initialLogs={data.logs}
-        total={data.total}
-        limit={data.limit}
-        offset={data.offset}
-        initialFilters={filters}
-      />
+        {/* Info Panel */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+          <h3 className="font-semibold text-blue-900 mb-3">
+            About Audit Logs
+          </h3>
+          <ul className="space-y-2 text-sm text-blue-800">
+            <li className="flex items-start gap-2">
+              <span className="font-bold">•</span>
+              <span>
+                <strong>Security Events:</strong> Authentication attempts, permission changes, and access violations
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="font-bold">•</span>
+              <span>
+                <strong>Data Operations:</strong> Create, update, and delete operations on critical resources
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="font-bold">•</span>
+              <span>
+                <strong>System Events:</strong> Configuration changes, automation runs, and system alerts
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="font-bold">•</span>
+              <span>
+                <strong>Compliance:</strong> All events are immutable and retained for audit and compliance purposes
+              </span>
+            </li>
+          </ul>
+        </div>
+
+        {/* Client Component */}
+        <AuditLogViewerClient />
+      </div>
     </div>
   );
 }
