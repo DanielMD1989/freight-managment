@@ -9,6 +9,7 @@
 
 import { db } from './db';
 import { createNotification } from './notifications';
+import { sendEmailToUser, EmailTemplate } from './emailService';
 
 export interface GpsAlertEvent {
   type: 'GPS_OFFLINE' | 'GPS_SIGNAL_LOST' | 'GPS_BACK_ONLINE';
@@ -48,10 +49,10 @@ export async function sendGpsOfflineAlert(truckId: string): Promise<void> {
     where: { id: truckId },
     select: {
       id: true,
-      plateNumber: true,
+      licensePlate: true,
       gpsLastSeenAt: true,
       gpsStatus: true,
-      organization: {
+      carrier: {
         select: {
           id: true,
           name: true,
@@ -71,7 +72,6 @@ export async function sendGpsOfflineAlert(truckId: string): Promise<void> {
       assignedLoad: {
         select: {
           id: true,
-          loadNumber: true,
           status: true,
           shipper: {
             select: {
@@ -104,19 +104,25 @@ export async function sendGpsOfflineAlert(truckId: string): Promise<void> {
     : 0;
 
   // Create notification for carrier organization
-  for (const user of truck.organization.users) {
+  for (const user of truck.carrier.users) {
     await createNotification({
       userId: user.id,
       type: 'GPS_OFFLINE',
-      title: `GPS Signal Lost: ${truck.plateNumber}`,
-      message: `Truck ${truck.plateNumber} on Load #${truck.assignedLoad.loadNumber} has lost GPS signal (offline for ${minutesOffline} minutes).`,
-      priority: 'HIGH',
+      title: `GPS Signal Lost: ${truck.licensePlate}`,
+      message: `Truck ${truck.licensePlate} on Load #${truck.assignedLoad.id.slice(-8)} has lost GPS signal (offline for ${minutesOffline} minutes).`,
       metadata: {
         truckId: truck.id,
         loadId: truck.assignedLoad.id,
         minutesOffline,
         gpsStatus: truck.gpsStatus,
       },
+    });
+
+    // Send email notification
+    await sendEmailToUser(user.id, EmailTemplate.GPS_OFFLINE, {
+      truckPlate: truck.licensePlate,
+      loadId: truck.assignedLoad.id,
+      lastLocation: 'Unknown', // Could be enhanced with actual location
     });
   }
 
@@ -125,9 +131,8 @@ export async function sendGpsOfflineAlert(truckId: string): Promise<void> {
     await createNotification({
       userId: user.id,
       type: 'GPS_OFFLINE',
-      title: `Tracking Alert: Load #${truck.assignedLoad.loadNumber}`,
-      message: `GPS tracking for Load #${truck.assignedLoad.loadNumber} is currently unavailable. The carrier has been notified.`,
-      priority: 'MEDIUM',
+      title: `Tracking Alert: Load #${truck.assignedLoad.id.slice(-8)}`,
+      message: `GPS tracking for Load #${truck.assignedLoad.id.slice(-8)} is currently unavailable. The carrier has been notified.`,
       metadata: {
         truckId: truck.id,
         loadId: truck.assignedLoad.id,
@@ -137,7 +142,7 @@ export async function sendGpsOfflineAlert(truckId: string): Promise<void> {
   }
 
   console.log(
-    `[GPS Alert] Offline alert sent for truck ${truck.plateNumber} (Load #${truck.assignedLoad.loadNumber})`
+    `[GPS Alert] Offline alert sent for truck ${truck.licensePlate} (Load #${truck.assignedLoad.id.slice(-8)})`
   );
 }
 
@@ -153,9 +158,9 @@ export async function sendGpsBackOnlineAlert(truckId: string): Promise<void> {
     where: { id: truckId },
     select: {
       id: true,
-      plateNumber: true,
+      licensePlate: true,
       gpsStatus: true,
-      organization: {
+      carrier: {
         select: {
           users: {
             where: {
@@ -172,7 +177,6 @@ export async function sendGpsBackOnlineAlert(truckId: string): Promise<void> {
       assignedLoad: {
         select: {
           id: true,
-          loadNumber: true,
           shipper: {
             select: {
               users: {
@@ -197,17 +201,22 @@ export async function sendGpsBackOnlineAlert(truckId: string): Promise<void> {
   }
 
   // Notify carrier
-  for (const user of truck.organization.users) {
+  for (const user of truck.carrier.users) {
     await createNotification({
       userId: user.id,
       type: 'GPS_BACK_ONLINE',
-      title: `GPS Restored: ${truck.plateNumber}`,
-      message: `GPS signal has been restored for truck ${truck.plateNumber}.`,
-      priority: 'LOW',
+      title: `GPS Restored: ${truck.licensePlate}`,
+      message: `GPS signal has been restored for truck ${truck.licensePlate}.`,
       metadata: {
         truckId: truck.id,
         loadId: truck.assignedLoad.id,
       },
+    });
+
+    // Send email notification
+    await sendEmailToUser(user.id, EmailTemplate.GPS_BACK_ONLINE, {
+      truckPlate: truck.licensePlate,
+      loadId: truck.assignedLoad.id,
     });
   }
 
@@ -216,9 +225,8 @@ export async function sendGpsBackOnlineAlert(truckId: string): Promise<void> {
     await createNotification({
       userId: user.id,
       type: 'GPS_BACK_ONLINE',
-      title: `Tracking Restored: Load #${truck.assignedLoad.loadNumber}`,
-      message: `GPS tracking has been restored for Load #${truck.assignedLoad.loadNumber}.`,
-      priority: 'LOW',
+      title: `Tracking Restored: Load #${truck.assignedLoad.id.slice(-8)}`,
+      message: `GPS tracking has been restored for Load #${truck.assignedLoad.id.slice(-8)}.`,
       metadata: {
         truckId: truck.id,
         loadId: truck.assignedLoad.id,
@@ -227,7 +235,7 @@ export async function sendGpsBackOnlineAlert(truckId: string): Promise<void> {
   }
 
   console.log(
-    `[GPS Alert] Back online alert sent for truck ${truck.plateNumber}`
+    `[GPS Alert] Back online alert sent for truck ${truck.licensePlate}`
   );
 }
 
@@ -277,7 +285,7 @@ export async function getGpsAlertStats(
   trucksCurrentlyOffline: number;
   mostUnreliableTrucks: Array<{
     truckId: string;
-    plateNumber: string;
+    licensePlate: string;
     offlineEvents: number;
   }>;
 }> {
@@ -285,8 +293,8 @@ export async function getGpsAlertStats(
   const offlineTrucks = await db.truck.count({
     where: {
       gpsStatus: 'SIGNAL_LOST',
-      assignedLoadId: {
-        not: null,
+      assignedLoad: {
+        isNot: null,
       },
     },
   });

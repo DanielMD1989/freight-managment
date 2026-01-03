@@ -10,6 +10,7 @@
 import { db } from './db';
 import { createNotification } from './notifications';
 import { checkGeofenceEvents, GeofenceAlert } from './gpsTracking';
+import { sendEmailToUser, EmailTemplate } from './emailService';
 
 /**
  * Geofence event tracking to prevent duplicate notifications
@@ -186,6 +187,12 @@ async function sendPickupArrivalNotification(
         timestamp: alert.timestamp,
       },
     });
+
+    // Send email notification
+    await sendEmailToUser(user.id, EmailTemplate.TRUCK_AT_PICKUP, {
+      truckPlate: load.assignedTruck.licensePlate,
+      loadId: load.id,
+    });
   }
 
   // Notify carrier
@@ -280,6 +287,12 @@ async function sendDeliveryArrivalNotification(
         location: alert.location,
         timestamp: alert.timestamp,
       },
+    });
+
+    // Send email notification
+    await sendEmailToUser(user.id, EmailTemplate.TRUCK_AT_DELIVERY, {
+      truckPlate: load.assignedTruck.licensePlate,
+      loadId: load.id,
     });
   }
 

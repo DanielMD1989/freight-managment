@@ -7,6 +7,8 @@
  */
 
 import { db } from './db';
+import { createNotification } from './notifications';
+import { sendEmail, EmailTemplate } from './emailService';
 
 /**
  * Warning types for bypass detection
@@ -113,23 +115,26 @@ async function sendInAppNotification(
     }
 
     // Create notification for each user
-    // Note: Assuming a Notification model exists or will be created
-    // For now, we'll log the notification (can be implemented later with actual Notification model)
     console.log(`📬 In-app notification sent to ${users.length} users of organization ${organizationId}`);
     console.log(`Subject: ${message.subject}`);
     console.log(`Severity: ${message.severity}`);
 
-    // TODO: Create actual notification records when Notification model is implemented
-    // await db.notification.createMany({
-    //   data: users.map(user => ({
-    //     userId: user.id,
-    //     type: 'BYPASS_WARNING',
-    //     title: message.subject,
-    //     message: message.message,
-    //     severity: message.severity,
-    //     isRead: false,
-    //   })),
-    // });
+    // Create actual notification records using the notification system
+    await Promise.all(
+      users.map((user) =>
+        createNotification({
+          userId: user.id,
+          type: type === BypassWarningType.ACCOUNT_FLAGGED ? 'ACCOUNT_FLAGGED' : 'BYPASS_WARNING',
+          title: message.subject,
+          message: message.message,
+          metadata: {
+            severity: message.severity,
+            actionRequired: message.actionRequired,
+            warningType: type,
+          },
+        })
+      )
+    );
   } catch (error) {
     console.error('Failed to send in-app notification:', error);
   }
@@ -138,7 +143,7 @@ async function sendInAppNotification(
 /**
  * Send email notification
  *
- * Placeholder for email integration (SendGrid, AWS SES, etc.)
+ * Uses the email service to send bypass warnings via email
  */
 async function sendEmailNotification(
   organizationId: string,
@@ -160,20 +165,21 @@ async function sendEmailNotification(
       return;
     }
 
-    // TODO: Integrate with email service (SendGrid, AWS SES, etc.)
-    // For now, we'll log the email that would be sent
-    console.log(`📧 Email would be sent to: ${organization.contactEmail}`);
-    console.log(`Subject: ${message.subject}`);
-    console.log(`Severity: ${message.severity}`);
-    console.log(`\n--- Email Content ---\n${message.message}\n--- End Email ---\n`);
+    // Send email using the email service
+    if (type === BypassWarningType.ACCOUNT_FLAGGED) {
+      await sendEmail(organization.contactEmail, EmailTemplate.ACCOUNT_FLAGGED, {
+        recipientName: organization.name,
+        reason: message.message,
+      });
+    } else {
+      // For other bypass warnings, use generic message
+      await sendEmail(organization.contactEmail, EmailTemplate.BYPASS_WARNING, {
+        recipientName: organization.name,
+        message: message.message,
+      });
+    }
 
-    // Example integration:
-    // await sendEmail({
-    //   to: organization.contactEmail,
-    //   subject: message.subject,
-    //   html: formatEmailHtml(message),
-    //   text: message.message,
-    // });
+    console.log(`📧 Bypass warning email sent to: ${organization.contactEmail}`);
   } catch (error) {
     console.error('Failed to send email notification:', error);
   }
@@ -266,6 +272,86 @@ export async function sendBypassWarning(
     console.log(`✓ Bypass warning sent successfully to ${organization.name}\n`);
   } catch (error) {
     console.error('Failed to send bypass warning:', error);
+    throw error;
+  }
+}
+
+/**
+ * Report a bypass attempt by another user
+ *
+ * Allows users to report suspected bypass behavior
+ *
+ * @param loadId - Load ID where bypass was suspected
+ * @param reportedOrgId - Organization being reported
+ * @param reporterUserId - User making the report
+ * @param reason - Reason for report
+ */
+export async function reportBypassAttempt(
+  loadId: string,
+  reportedOrgId: string,
+  reporterUserId: string,
+  reason: string
+): Promise<void> {
+  try {
+    // Get load and reporter details
+    const [load, reporter] = await Promise.all([
+      db.load.findUnique({
+        where: { id: loadId },
+        select: { id: true },
+      }),
+      db.user.findUnique({
+        where: { id: reporterUserId },
+        select: {
+          organization: {
+            select: { name: true },
+          },
+        },
+      }),
+    ]);
+
+    if (!load) {
+      throw new Error('Load not found');
+    }
+
+    // Send warning to reported organization
+    await sendBypassWarning(reportedOrgId, BypassWarningType.BYPASS_REPORTED, {
+      loadId,
+      reportedBy: reporter?.organization?.name || 'Another user',
+      reportedAt: new Date(),
+      reason,
+    });
+
+    // Notify admins about the report
+    const admins = await db.user.findMany({
+      where: {
+        role: {
+          in: ['ADMIN', 'SUPER_ADMIN'],
+        },
+        isActive: true,
+      },
+      select: { id: true },
+    });
+
+    await Promise.all(
+      admins.map((admin) =>
+        createNotification({
+          userId: admin.id,
+          type: 'BYPASS_REPORTED',
+          title: 'Bypass Attempt Reported',
+          message: `A bypass attempt has been reported for Load #${loadId.slice(-8)}`,
+          metadata: {
+            loadId,
+            reportedOrgId,
+            reporterUserId,
+            reason,
+          },
+        })
+      )
+    );
+
+    console.log(`Bypass report submitted for load ${loadId}`);
+  } catch (error) {
+    console.error('Failed to report bypass attempt:', error);
     throw error;
   }
 }

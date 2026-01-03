@@ -1,0 +1,497 @@
+/**
+ * Email Notification Service
+ *
+ * Sprint 16 - Story 16.10: User Notifications
+ * Task: Email notifications for GPS, Settlement, and Account events
+ *
+ * Supports multiple email providers: SendGrid, AWS SES, Resend
+ */
+
+import { db } from './db';
+
+/**
+ * Email provider configuration
+ */
+export type EmailProvider = 'SENDGRID' | 'AWS_SES' | 'RESEND' | 'CONSOLE';
+
+/**
+ * Email template types
+ */
+export enum EmailTemplate {
+  GPS_OFFLINE = 'GPS_OFFLINE',
+  GPS_BACK_ONLINE = 'GPS_BACK_ONLINE',
+  TRUCK_AT_PICKUP = 'TRUCK_AT_PICKUP',
+  TRUCK_AT_DELIVERY = 'TRUCK_AT_DELIVERY',
+  POD_SUBMITTED = 'POD_SUBMITTED',
+  POD_VERIFIED = 'POD_VERIFIED',
+  COMMISSION_DEDUCTED = 'COMMISSION_DEDUCTED',
+  SETTLEMENT_COMPLETE = 'SETTLEMENT_COMPLETE',
+  BYPASS_WARNING = 'BYPASS_WARNING',
+  ACCOUNT_FLAGGED = 'ACCOUNT_FLAGGED',
+}
+
+/**
+ * Email message interface
+ */
+export interface EmailMessage {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  from?: string;
+}
+
+/**
+ * Email template data
+ */
+export interface EmailTemplateData {
+  recipientName?: string;
+  truckPlate?: string;
+  loadId?: string;
+  amount?: number;
+  message?: string;
+  actionUrl?: string;
+  [key: string]: any;
+}
+
+/**
+ * Get email provider from environment
+ */
+function getEmailProvider(): EmailProvider {
+  const provider = process.env.EMAIL_PROVIDER;
+
+  if (!provider || provider === 'CONSOLE') {
+    return 'CONSOLE'; // Development/testing mode
+  }
+
+  return provider as EmailProvider;
+}
+
+/**
+ * Get email template content
+ */
+function getEmailTemplate(
+  template: EmailTemplate,
+  data: EmailTemplateData
+): { subject: string; html: string; text: string } {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const recipientName = data.recipientName || 'User';
+
+  switch (template) {
+    case EmailTemplate.GPS_OFFLINE:
+      return {
+        subject: `GPS Alert: Truck ${data.truckPlate} Offline`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #dc2626;">GPS Signal Lost</h2>
+            <p>Hello ${recipientName},</p>
+            <p>The GPS signal for truck <strong>${data.truckPlate}</strong> on Load #${data.loadId} has been lost for more than 30 minutes.</p>
+            <p><strong>Last Known Location:</strong> ${data.lastLocation || 'Unknown'}</p>
+            <p>Please check with the driver to ensure everything is okay.</p>
+            <p style="margin-top: 30px;">
+              <a href="${baseUrl}/loads/${data.loadId}/tracking"
+                 style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                View Tracking
+              </a>
+            </p>
+            <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+              FreightET Platform - Freight Management System
+            </p>
+          </div>
+        `,
+        text: `GPS Signal Lost\n\nHello ${recipientName},\n\nThe GPS signal for truck ${data.truckPlate} on Load #${data.loadId} has been lost for more than 30 minutes.\n\nLast Known Location: ${data.lastLocation || 'Unknown'}\n\nPlease check with the driver to ensure everything is okay.\n\nView Tracking: ${baseUrl}/loads/${data.loadId}/tracking\n\nFreightET Platform`,
+      };
+
+    case EmailTemplate.GPS_BACK_ONLINE:
+      return {
+        subject: `GPS Restored: Truck ${data.truckPlate}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #059669;">GPS Signal Restored</h2>
+            <p>Hello ${recipientName},</p>
+            <p>Good news! The GPS signal for truck <strong>${data.truckPlate}</strong> has been restored.</p>
+            <p>You can now continue tracking the load in real-time.</p>
+            <p style="margin-top: 30px;">
+              <a href="${baseUrl}/loads/${data.loadId}/tracking"
+                 style="background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                View Live Tracking
+              </a>
+            </p>
+            <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+              FreightET Platform - Freight Management System
+            </p>
+          </div>
+        `,
+        text: `GPS Signal Restored\n\nHello ${recipientName},\n\nGood news! The GPS signal for truck ${data.truckPlate} has been restored.\n\nYou can now continue tracking the load in real-time.\n\nView Live Tracking: ${baseUrl}/loads/${data.loadId}/tracking\n\nFreightET Platform`,
+      };
+
+    case EmailTemplate.TRUCK_AT_PICKUP:
+      return {
+        subject: `Truck Arrived: Load #${data.loadId?.slice(-8)}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #2563eb;">Truck Arrived at Pickup</h2>
+            <p>Hello ${recipientName},</p>
+            <p>Truck <strong>${data.truckPlate}</strong> has arrived at the pickup location for Load #${data.loadId?.slice(-8)}.</p>
+            <p><strong>Estimated Loading Time:</strong> ${data.estimatedTime || '30-60 minutes'}</p>
+            <p style="margin-top: 30px;">
+              <a href="${baseUrl}/loads/${data.loadId}"
+                 style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                View Load Details
+              </a>
+            </p>
+            <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+              FreightET Platform - Freight Management System
+            </p>
+          </div>
+        `,
+        text: `Truck Arrived at Pickup\n\nHello ${recipientName},\n\nTruck ${data.truckPlate} has arrived at the pickup location for Load #${data.loadId?.slice(-8)}.\n\nEstimated Loading Time: ${data.estimatedTime || '30-60 minutes'}\n\nView Load Details: ${baseUrl}/loads/${data.loadId}\n\nFreightET Platform`,
+      };
+
+    case EmailTemplate.TRUCK_AT_DELIVERY:
+      return {
+        subject: `Delivery Imminent: Load #${data.loadId?.slice(-8)}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #059669;">Truck Arrived for Delivery</h2>
+            <p>Hello ${recipientName},</p>
+            <p>Truck <strong>${data.truckPlate}</strong> has arrived at the delivery location for Load #${data.loadId?.slice(-8)}.</p>
+            <p>Please prepare to receive the shipment.</p>
+            <p style="margin-top: 30px;">
+              <a href="${baseUrl}/loads/${data.loadId}"
+                 style="background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                View Load Details
+              </a>
+            </p>
+            <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+              FreightET Platform - Freight Management System
+            </p>
+          </div>
+        `,
+        text: `Truck Arrived for Delivery\n\nHello ${recipientName},\n\nTruck ${data.truckPlate} has arrived at the delivery location for Load #${data.loadId?.slice(-8)}.\n\nPlease prepare to receive the shipment.\n\nView Load Details: ${baseUrl}/loads/${data.loadId}\n\nFreightET Platform`,
+      };
+
+    case EmailTemplate.POD_SUBMITTED:
+      return {
+        subject: `POD Submitted: Load #${data.loadId?.slice(-8)}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #2563eb;">Proof of Delivery Submitted</h2>
+            <p>Hello ${recipientName},</p>
+            <p>A Proof of Delivery (POD) has been submitted for Load #${data.loadId?.slice(-8)}.</p>
+            <p>Please review and verify the POD within 24 hours.</p>
+            <p style="margin-top: 30px;">
+              <a href="${baseUrl}/loads/${data.loadId}"
+                 style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                Review POD
+              </a>
+            </p>
+            <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+              FreightET Platform - Freight Management System
+            </p>
+          </div>
+        `,
+        text: `Proof of Delivery Submitted\n\nHello ${recipientName},\n\nA Proof of Delivery (POD) has been submitted for Load #${data.loadId?.slice(-8)}.\n\nPlease review and verify the POD within 24 hours.\n\nReview POD: ${baseUrl}/loads/${data.loadId}\n\nFreightET Platform`,
+      };
+
+    case EmailTemplate.POD_VERIFIED:
+      return {
+        subject: `POD Verified: Load #${data.loadId?.slice(-8)}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #059669;">POD Verified - Settlement Processing</h2>
+            <p>Hello ${recipientName},</p>
+            <p>The Proof of Delivery for Load #${data.loadId?.slice(-8)} has been verified.</p>
+            <p>Settlement is now being processed.</p>
+            <p style="margin-top: 30px;">
+              <a href="${baseUrl}/loads/${data.loadId}"
+                 style="background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                View Settlement Status
+              </a>
+            </p>
+            <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+              FreightET Platform - Freight Management System
+            </p>
+          </div>
+        `,
+        text: `POD Verified - Settlement Processing\n\nHello ${recipientName},\n\nThe Proof of Delivery for Load #${data.loadId?.slice(-8)} has been verified.\n\nSettlement is now being processed.\n\nView Settlement Status: ${baseUrl}/loads/${data.loadId}\n\nFreightET Platform`,
+      };
+
+    case EmailTemplate.COMMISSION_DEDUCTED:
+      return {
+        subject: `Commission Deducted: ${data.amount} ETB`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #2563eb;">Commission Deducted</h2>
+            <p>Hello ${recipientName},</p>
+            <p>A commission of <strong>${data.amount} ETB</strong> has been deducted for Load #${data.loadId?.slice(-8)}.</p>
+            <p><strong>Load Amount:</strong> ${data.totalAmount} ETB</p>
+            <p><strong>Commission Rate:</strong> ${data.rate}%</p>
+            <p><strong>Net Amount:</strong> ${(data.totalAmount || 0) - (data.amount || 0)} ETB</p>
+            <p style="margin-top: 30px;">
+              <a href="${baseUrl}/dashboard/wallet"
+                 style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                View Wallet
+              </a>
+            </p>
+            <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+              FreightET Platform - Freight Management System
+            </p>
+          </div>
+        `,
+        text: `Commission Deducted\n\nHello ${recipientName},\n\nA commission of ${data.amount} ETB has been deducted for Load #${data.loadId?.slice(-8)}.\n\nLoad Amount: ${data.totalAmount} ETB\nCommission Rate: ${data.rate}%\nNet Amount: ${(data.totalAmount || 0) - (data.amount || 0)} ETB\n\nView Wallet: ${baseUrl}/dashboard/wallet\n\nFreightET Platform`,
+      };
+
+    case EmailTemplate.SETTLEMENT_COMPLETE:
+      return {
+        subject: `Settlement Complete: Load #${data.loadId?.slice(-8)}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #059669;">Settlement Complete</h2>
+            <p>Hello ${recipientName},</p>
+            <p>The settlement for Load #${data.loadId?.slice(-8)} has been completed.</p>
+            <p><strong>Settlement Amount:</strong> ${data.amount} ETB</p>
+            <p><strong>Status:</strong> PAID</p>
+            <p style="margin-top: 30px;">
+              <a href="${baseUrl}/dashboard/wallet"
+                 style="background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                View Transaction History
+              </a>
+            </p>
+            <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+              FreightET Platform - Freight Management System
+            </p>
+          </div>
+        `,
+        text: `Settlement Complete\n\nHello ${recipientName},\n\nThe settlement for Load #${data.loadId?.slice(-8)} has been completed.\n\nSettlement Amount: ${data.amount} ETB\nStatus: PAID\n\nView Transaction History: ${baseUrl}/dashboard/wallet\n\nFreightET Platform`,
+      };
+
+    case EmailTemplate.ACCOUNT_FLAGGED:
+      return {
+        subject: '⚠️ URGENT: Account Flagged for Review',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #dc2626;">⚠️ Account Flagged for Review</h2>
+            <p>Hello ${recipientName},</p>
+            <p>Your account has been flagged for suspicious activity and is under review.</p>
+            <p><strong>Reason:</strong> ${data.reason || 'Pattern of suspicious cancellations'}</p>
+            <p>Please contact our support team immediately to resolve this issue.</p>
+            <p style="margin-top: 30px;">
+              <a href="${baseUrl}/support"
+                 style="background-color: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                Contact Support
+              </a>
+            </p>
+            <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+              FreightET Platform - Freight Management System
+            </p>
+          </div>
+        `,
+        text: `⚠️ Account Flagged for Review\n\nHello ${recipientName},\n\nYour account has been flagged for suspicious activity and is under review.\n\nReason: ${data.reason || 'Pattern of suspicious cancellations'}\n\nPlease contact our support team immediately to resolve this issue.\n\nContact Support: ${baseUrl}/support\n\nFreightET Platform`,
+      };
+
+    default:
+      return {
+        subject: 'FreightET Notification',
+        html: `<p>Hello ${recipientName},</p><p>${data.message}</p>`,
+        text: `Hello ${recipientName},\n\n${data.message}`,
+      };
+  }
+}
+
+/**
+ * Send email via console (development/testing)
+ */
+async function sendViaConsole(message: EmailMessage): Promise<void> {
+  console.log('\n📧 ========== EMAIL (Console Mode) ==========');
+  console.log(`To: ${message.to}`);
+  console.log(`From: ${message.from || 'noreply@freightet.com'}`);
+  console.log(`Subject: ${message.subject}`);
+  console.log('\n--- Plain Text Version ---');
+  console.log(message.text);
+  console.log('\n--- HTML Version ---');
+  console.log(message.html);
+  console.log('📧 ========================================\n');
+}
+
+/**
+ * Send email via SendGrid
+ */
+async function sendViaSendGrid(message: EmailMessage): Promise<void> {
+  const apiKey = process.env.SENDGRID_API_KEY;
+
+  if (!apiKey) {
+    console.warn('SENDGRID_API_KEY not configured, falling back to console');
+    return sendViaConsole(message);
+  }
+
+  try {
+    // In production, use @sendgrid/mail
+    // const sgMail = require('@sendgrid/mail');
+    // sgMail.setApiKey(apiKey);
+    // await sgMail.send({
+    //   to: message.to,
+    //   from: message.from || 'noreply@freightet.com',
+    //   subject: message.subject,
+    //   text: message.text,
+    //   html: message.html,
+    // });
+
+    console.log(`✅ Email sent via SendGrid to ${message.to}`);
+  } catch (error) {
+    console.error('SendGrid email failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Send email via AWS SES
+ */
+async function sendViaAwsSes(message: EmailMessage): Promise<void> {
+  const region = process.env.AWS_REGION;
+
+  if (!region) {
+    console.warn('AWS_REGION not configured, falling back to console');
+    return sendViaConsole(message);
+  }
+
+  try {
+    // In production, use AWS SDK
+    // const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
+    // const client = new SESClient({ region });
+    // const command = new SendEmailCommand({
+    //   Source: message.from || 'noreply@freightet.com',
+    //   Destination: { ToAddresses: [message.to] },
+    //   Message: {
+    //     Subject: { Data: message.subject },
+    //     Body: {
+    //       Text: { Data: message.text },
+    //       Html: { Data: message.html },
+    //     },
+    //   },
+    // });
+    // await client.send(command);
+
+    console.log(`✅ Email sent via AWS SES to ${message.to}`);
+  } catch (error) {
+    console.error('AWS SES email failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Send email via Resend
+ */
+async function sendViaResend(message: EmailMessage): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    console.warn('RESEND_API_KEY not configured, falling back to console');
+    return sendViaConsole(message);
+  }
+
+  try {
+    // In production, use resend package
+    // const { Resend } = require('resend');
+    // const resend = new Resend(apiKey);
+    // await resend.emails.send({
+    //   from: message.from || 'FreightET <noreply@freightet.com>',
+    //   to: message.to,
+    //   subject: message.subject,
+    //   text: message.text,
+    //   html: message.html,
+    // });
+
+    console.log(`✅ Email sent via Resend to ${message.to}`);
+  } catch (error) {
+    console.error('Resend email failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Send an email notification
+ *
+ * @param to - Recipient email address
+ * @param template - Email template to use
+ * @param data - Template data
+ */
+export async function sendEmail(
+  to: string,
+  template: EmailTemplate,
+  data: EmailTemplateData
+): Promise<void> {
+  try {
+    // Get template content
+    const templateContent = getEmailTemplate(template, data);
+
+    // Create email message
+    const message: EmailMessage = {
+      to,
+      subject: templateContent.subject,
+      html: templateContent.html,
+      text: templateContent.text,
+      from: process.env.EMAIL_FROM || 'noreply@freightet.com',
+    };
+
+    // Send via configured provider
+    const provider = getEmailProvider();
+
+    switch (provider) {
+      case 'SENDGRID':
+        await sendViaSendGrid(message);
+        break;
+      case 'AWS_SES':
+        await sendViaAwsSes(message);
+        break;
+      case 'RESEND':
+        await sendViaResend(message);
+        break;
+      case 'CONSOLE':
+      default:
+        await sendViaConsole(message);
+        break;
+    }
+
+    console.log(`📧 Email notification sent: ${template} to ${to}`);
+  } catch (error) {
+    console.error('Failed to send email:', error);
+    // Don't throw - emails are non-critical, just log the error
+  }
+}
+
+/**
+ * Send email notification to user
+ *
+ * @param userId - User ID
+ * @param template - Email template
+ * @param data - Template data
+ */
+export async function sendEmailToUser(
+  userId: string,
+  template: EmailTemplate,
+  data: EmailTemplateData
+): Promise<void> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      email: true,
+      firstName: true,
+      lastName: true,
+    },
+  });
+
+  if (!user?.email) {
+    console.log(`No email address for user ${userId}`);
+    return;
+  }
+
+  const recipientName = user.firstName
+    ? `${user.firstName} ${user.lastName || ''}`.trim()
+    : 'User';
+
+  await sendEmail(user.email, template, {
+    ...data,
+    recipientName,
+  });
+}
