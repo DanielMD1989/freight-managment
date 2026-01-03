@@ -14,12 +14,12 @@
 ## 📊 PROGRESS TRACKING DASHBOARD
 
 **Last Updated:** 2026-01-03
-**Current Sprint:** Sprint 16 - GPS Tracking & Commission System 🚀 85% COMPLETE
-**Overall Progress:** 1280/1482 tasks (86%) 🎯 Platform 86% Complete!
-**Backend Status:** ✅ 93% Complete (518/555 tasks) - All APIs Operational
+**Current Sprint:** Sprint 16 - GPS Tracking & Commission System 🚀 91% COMPLETE
+**Overall Progress:** 1294/1482 tasks (87%) 🎯 Platform 87% Complete!
+**Backend Status:** ✅ 94% Complete (532/555 tasks) - All APIs Operational
 **Frontend Status:** ✅ 100% Complete (555/555 tasks) - All UI Complete! ✅
 **DAT Functionality:** ✅ 85% Complete (141/165 tasks) - Match Counts Display Complete
-**GPS & Commission:** ✅ 85% Complete (175/207 tasks) - MVP Phase 1 100% + Admin Tools ✅
+**GPS & Commission:** ✅ 91% Complete (189/207 tasks) - MVP + Data Storage Complete ✅
 **Build Status:** ✅ PASSING - All TypeScript errors resolved, production build successful
 **Test Suite:** 96/106 passing (91% pass rate) ✅
 **Code Cleanup:** ✅ Duplicate files removed, unused code cleaned
@@ -56,17 +56,18 @@ FRONTEND SUBTOTAL:                      [✅] 536/555 tasks (97%) ✅ COMPLETE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
                     GPS & REVENUE SYSTEM (IN PROGRESS)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Sprint 16: GPS & Commission System      [✅] 175/207 tasks (85%) - ✅ MVP + ADMIN TOOLS COMPLETE
+Sprint 16: GPS & Commission System      [✅] 189/207 tasks (91%) - ✅ MVP + DATA STORAGE COMPLETE
   Story 16.1-16.7 (P0-P1):              [✅] 144/144 tasks (100%) - ✅ ALL MVP TASKS COMPLETE
-  Story 16.9-16.10 (P2):                [✅] 31/63 tasks (49%) - ✅ ADMIN TOOLS + NOTIFICATIONS CORE
+  Story 16.8 (P1):                      [✅] 14/14 tasks (100%) - ✅ GPS DATA STORAGE COMPLETE
+  Story 16.9-16.10 (P2):                [✅] 31/49 tasks (63%) - ✅ ADMIN TOOLS + NOTIFICATIONS
 ─────────────────────────────────────────────────────────────
-GPS & REVENUE SUBTOTAL:                 [✅] 175/207 tasks (85%) ✅ CORE FEATURES COMPLETE
+GPS & REVENUE SUBTOTAL:                 [✅] 189/207 tasks (91%) ✅ CORE FEATURES COMPLETE
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-TOTAL PLATFORM TASKS:                   [✅] 1268/1482 tasks (86%)
-  Backend:                              [✅] 518/555 (93%) - COMPLETE
-  Frontend:                             [✅] 547/555 (99%) - COMPLETE
-  GPS & Revenue:                        [✅] 175/207 (85%) - CORE COMPLETE
+TOTAL PLATFORM TASKS:                   [✅] 1294/1482 tasks (87%)
+  Backend:                              [✅] 532/555 (96%) - NEARLY COMPLETE
+  Frontend:                             [✅] 555/555 (100%) - COMPLETE ✅
+  GPS & Revenue:                        [✅] 189/207 (91%) - NEARLY COMPLETE
   DAT Functionality:                    [✅] 141/165 (85%) - NEARLY COMPLETE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
@@ -4996,12 +4997,13 @@ As a platform, I need to store GPS position data in time-series format for track
   - [x] `storePositionData(truckId, loadId, lat, lon, speed, heading): Promise<void>`
   - [x] `updateTruckLastSeen(truckId): Promise<void>`
   - [x] `updateAllTruckGpsStatuses(): Promise<void>` - background status updates
-- [ ] Create background GPS monitoring cron job (infrastructure/DevOps task - deferred)
-  - [ ] Poll GPS devices every 30 seconds
-  - [ ] Fetch latest position from GPS provider API
-  - [ ] Store position in database (API ready via ingestGpsData)
-  - [ ] Update truck `gpsLastSeenAt` (implemented in updateTruckLastSeen)
-  - [ ] Update truck `gpsStatus` based on freshness (implemented in updateAllTruckGpsStatuses)
+- [x] Create background GPS monitoring cron job - ✅ COMPLETE (2026-01-03)
+  - [x] Poll GPS devices every 30 seconds - `lib/gpsMonitoring.ts`
+  - [x] Fetch latest position from GPS provider API - `pollGpsDevice()` function
+  - [x] Store position in database - Uses `ingestGpsData()`
+  - [x] Update truck `gpsLastSeenAt` - `updateTruckLastSeen()`
+  - [x] Update truck `gpsStatus` based on freshness - `updateAllTruckGpsStatuses()`
+  - [x] Cron endpoint created - `POST /api/cron/gps-monitor`
 - [x] Create GPS position query utility (`lib/gpsQuery.ts`)
   - [x] `getLatestPosition(truckId): Promise<GpsPosition>`
   - [x] `getPositionHistory(truckId, startDate, endDate): Promise<GpsPosition[]>`
@@ -5016,14 +5018,19 @@ As a platform, I need to store GPS position data in time-series format for track
   - [x] Mark truck as INACTIVE if position 5-30 min old
   - [x] Mark truck as SIGNAL_LOST if position > 30 min old
   - [x] updateAllTruckGpsStatuses() function implemented
-- [ ] Create GPS alert system (P2 - future enhancement)
-  - [ ] Alert if truck goes offline during active load
-  - [ ] Alert if truck leaves geofence (Phase 2)
-  - [ ] Alert if truck stops for extended period (Phase 2)
-- [x] Add GPS data retention policy
+- [x] Create GPS alert system - ✅ COMPLETE (2026-01-03)
+  - [x] Alert if truck goes offline during active load - `lib/gpsAlerts.ts`
+  - [x] `triggerGpsOfflineAlerts()` - Send notifications to shipper & carrier
+  - [x] `sendGpsBackOnlineAlert()` - Notify when truck comes back online
+  - [x] Integrated with GPS monitoring cron job
+  - [ ] Alert if truck leaves geofence (Phase 2 - deferred)
+  - [ ] Alert if truck stops for extended period (Phase 2 - deferred)
+- [x] Add GPS data retention policy - ✅ COMPLETE (2026-01-03)
   - [x] Keep position data for 90 days
   - [x] deleteOldPositions(daysToKeep) function implemented
-  - [ ] Schedule cleanup job (infrastructure task - deferred)
+  - [x] Schedule cleanup job - `POST /api/cron/gps-cleanup`
+  - [x] Daily cron endpoint for data cleanup
+  - [x] Setup documentation in `CRON_SETUP.md`
 
 #### Acceptance Criteria:
 - ✓ GPS positions stored every 30 seconds
