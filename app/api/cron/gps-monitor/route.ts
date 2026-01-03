@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { pollAllGpsDevices, checkForOfflineTrucks } from '@/lib/gpsMonitoring';
 import { triggerGpsOfflineAlerts } from '@/lib/gpsAlerts';
+import { checkAllGeofenceEvents } from '@/lib/geofenceNotifications';
 
 /**
  * GPS monitoring cron endpoint
@@ -48,11 +49,19 @@ export async function POST(request: NextRequest) {
       console.log('[GPS Monitor] Offline alerts triggered');
     }
 
+    // Check for geofence events (arrivals at pickup/delivery)
+    console.log('[GPS Monitor] Checking geofence events...');
+    const geofenceNotifications = await checkAllGeofenceEvents();
+    console.log(
+      `[GPS Monitor] Sent ${geofenceNotifications} geofence notifications`
+    );
+
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
       polling: pollingSummary,
       offlineAlerts: offlineTruckIds.length,
+      geofenceNotifications,
     });
   } catch (error) {
     console.error('[GPS Monitor] Error:', error);
