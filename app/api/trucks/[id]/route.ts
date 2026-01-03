@@ -20,13 +20,14 @@ const updateTruckSchema = z.object({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await requireAuth();
+    const { id } = await params;
 
     const truck = await db.truck.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         carrier: {
           select: {
@@ -53,8 +54,7 @@ export async function GET(
     });
 
     const canView =
-      user?.role === "ADMIN" ||
-      user?.role === "SUPERADMIN" ||
+      user?.role === "SUPER_ADMIN" ||
       truck.carrierId === user?.organizationId;
 
     if (!canView) {
@@ -79,14 +79,15 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await requireAuth();
-    await requirePermission(Permission.UPDATE_TRUCK);
+    await requirePermission(Permission.EDIT_TRUCKS);
+    const { id } = await params;
 
     const truck = await db.truck.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!truck) {
@@ -103,8 +104,7 @@ export async function PATCH(
     });
 
     const canUpdate =
-      user?.role === "ADMIN" ||
-      user?.role === "SUPERADMIN" ||
+      user?.role === "SUPER_ADMIN" ||
       truck.carrierId === user?.organizationId;
 
     if (!canUpdate) {
@@ -132,7 +132,7 @@ export async function PATCH(
     }
 
     const updatedTruck = await db.truck.update({
-      where: { id: params.id },
+      where: { id },
       data: validatedData,
       include: {
         carrier: {
@@ -151,7 +151,7 @@ export async function PATCH(
     console.error("PATCH /api/trucks/[id] error:", error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Invalid data", details: error.errors },
+        { error: "Invalid data", details: error.issues },
         { status: 400 }
       );
     }
@@ -168,23 +168,15 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await requireAuth();
-    await requirePermission(Permission.DELETE_TRUCK);
+    await requirePermission(Permission.DELETE_TRUCKS);
+    const { id } = await params;
 
     const truck = await db.truck.findUnique({
-      where: { id: params.id },
-      include: {
-        truckPostings: {
-          where: {
-            status: {
-              in: ["ACTIVE", "POSTED"],
-            },
-          },
-        },
-      },
+      where: { id },
     });
 
     if (!truck) {
@@ -201,8 +193,7 @@ export async function DELETE(
     });
 
     const canDelete =
-      user?.role === "ADMIN" ||
-      user?.role === "SUPERADMIN" ||
+      user?.role === "SUPER_ADMIN" ||
       truck.carrierId === user?.organizationId;
 
     if (!canDelete) {
@@ -212,22 +203,24 @@ export async function DELETE(
       );
     }
 
-    // Check if truck has active postings
-    if (truck.truckPostings && truck.truckPostings.length > 0) {
-      return NextResponse.json(
-        {
-          error: "Cannot delete truck with active postings",
-          message: "This truck has active postings. Please cancel or complete all active postings before deleting the truck.",
-          activePostings: truck.truckPostings.length,
-        },
-        { status: 409 } // 409 Conflict
-      );
+    // Try to delete the truck
+    try {
+      await db.truck.delete({
+        where: { id },
+      });
+    } catch (deleteError: any) {
+      // Handle foreign key constraint errors
+      if (deleteError.code === 'P2003' || deleteError.message?.includes('foreign key constraint')) {
+        return NextResponse.json(
+          {
+            error: "Cannot delete truck with active postings",
+            message: "This truck has active postings or associated records. Please remove them first.",
+          },
+          { status: 409 }
+        );
+      }
+      throw deleteError;
     }
-
-    // Delete the truck
-    await db.truck.delete({
-      where: { id: params.id },
-    });
 
     return NextResponse.json({
       success: true,
