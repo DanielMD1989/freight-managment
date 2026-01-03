@@ -5,11 +5,13 @@
  *
  * View and interact with truck matches for loads
  * Sprint 11 - Story 11.4: Matching Trucks View
+ * Updated: Task 6 - Manual Load ↔ Truck Matching
  */
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { VerifiedBadgeWithLabel } from '@/components/VerifiedBadge';
+import { toast } from 'react-hot-toast';
 
 interface Load {
   id: string;
@@ -97,6 +99,12 @@ export default function TruckMatchesClient({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [minScore, setMinScore] = useState(40);
+  const [assigningTruckId, setAssigningTruckId] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState<{
+    truckId: string;
+    carrierName: string;
+    licensePlate: string;
+  } | null>(null);
 
   /**
    * Fetch truck matches for selected load
@@ -133,6 +141,54 @@ export default function TruckMatchesClient({
   const handleLoadChange = (loadId: string) => {
     setCurrentLoadId(loadId);
     router.push(`/shipper/matches?loadId=${loadId}`);
+  };
+
+  /**
+   * Handle truck assignment to load (Manual Matching)
+   * Task 6: Load ↔ Truck Matching Control
+   */
+  const handleAssignTruck = async (truckId: string) => {
+    if (!currentLoadId) return;
+
+    setAssigningTruckId(truckId);
+    setShowConfirmModal(null);
+
+    try {
+      const response = await fetch(`/api/loads/${currentLoadId}/assign`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ truckId }),
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(data.message || 'Truck matched successfully!');
+
+        // Refresh matches list and redirect to load details
+        router.push(`/shipper/loads?success=truck-matched`);
+        router.refresh();
+      } else {
+        const errorData = await response.json();
+
+        if (response.status === 409) {
+          // Conflict - assignment issues
+          toast.error(errorData.error || 'Assignment conflict detected');
+          if (errorData.conflicts) {
+            console.warn('Conflicts:', errorData.conflicts);
+          }
+        } else {
+          toast.error(errorData.error || 'Failed to match truck');
+        }
+      }
+    } catch (error) {
+      console.error('Error assigning truck:', error);
+      toast.error('An unexpected error occurred. Please try again.');
+    } finally {
+      setAssigningTruckId(null);
+    }
   };
 
   /**
@@ -395,15 +451,38 @@ export default function TruckMatchesClient({
                     {formatDate(match.truckPosting.availableUntil)}
                   </div>
 
-                  {/* Actions */}
+                  {/* Actions - Task 6: Manual Matching UI */}
                   <div className="flex gap-3">
                     <button
                       onClick={() =>
                         router.push(`/shipper/trucks/${match.truckPosting.truck.id}`)
                       }
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                      className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       View Details
+                    </button>
+                    <button
+                      onClick={() =>
+                        setShowConfirmModal({
+                          truckId: match.truckPosting.truck.id,
+                          carrierName: match.truckPosting.truck.carrier.name,
+                          licensePlate: match.truckPosting.truck.licensePlate,
+                        })
+                      }
+                      disabled={assigningTruckId !== null}
+                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {assigningTruckId === match.truckPosting.truck.id ? (
+                        <>
+                          <span className="animate-spin">⟳</span>
+                          Matching...
+                        </>
+                      ) : (
+                        <>
+                          <span>🤝</span>
+                          Match Truck
+                        </>
+                      )}
                     </button>
                     <button
                       onClick={() =>
@@ -411,9 +490,9 @@ export default function TruckMatchesClient({
                           `Contact carrier functionality coming soon!\n\nCarrier: ${match.truckPosting.truck.carrier.name}\nTruck: ${match.truckPosting.truck.licensePlate}`
                         )
                       }
-                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                     >
-                      Contact Carrier
+                      Contact
                     </button>
                   </div>
                 </div>
@@ -437,6 +516,59 @@ export default function TruckMatchesClient({
             </div>
           )}
         </>
+      )}
+
+      {/* Match Truck Confirmation Modal - Task 6 */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Confirm Truck Match
+            </h3>
+            <p className="text-gray-600 mb-4">
+              You are about to match this truck to your load:
+            </p>
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <div className="text-sm">
+                <div className="font-medium text-gray-900">
+                  {showConfirmModal.carrierName}
+                </div>
+                <div className="text-gray-600">
+                  Truck: {showConfirmModal.licensePlate}
+                </div>
+              </div>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
+              <p className="text-sm text-blue-800">
+                <strong>Note:</strong> Once matched, the carrier will be notified and funds
+                will be held in escrow. You can unassign later if needed.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowConfirmModal(null)}
+                disabled={assigningTruckId !== null}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleAssignTruck(showConfirmModal.truckId)}
+                disabled={assigningTruckId !== null}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {assigningTruckId ? (
+                  <>
+                    <span className="animate-spin">⟳</span>
+                    Matching...
+                  </>
+                ) : (
+                  'Confirm Match'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

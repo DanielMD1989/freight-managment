@@ -3,13 +3,15 @@
 /**
  * Add Truck Form Component
  *
- * Form for registering a new truck
+ * Form for registering a new truck with Google Places Autocomplete
  * Sprint 12 - Story 12.2: Truck Management
+ * Updated: Task 4 - PlacesAutocomplete for location
  */
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/Toast';
+import PlacesAutocomplete, { PlaceResult } from '@/components/PlacesAutocomplete';
 
 const TRUCK_TYPES = [
   { value: 'FLATBED', label: 'Flatbed' },
@@ -22,33 +24,7 @@ const TRUCK_TYPES = [
   { value: 'BOX_TRUCK', label: 'Box Truck' },
 ];
 
-const ETHIOPIAN_CITIES = [
-  'Addis Ababa',
-  'Dire Dawa',
-  'Mekele',
-  'Gondar',
-  'Bahir Dar',
-  'Hawassa',
-  'Awasa',
-  'Dessie',
-  'Jimma',
-  'Jijiga',
-  'Shashamane',
-  'Bishoftu',
-  'Adama',
-  'Arba Minch',
-  'Hosaena',
-  'Harar',
-  'Dilla',
-  'Nekemte',
-  'Debre Birhan',
-  'Asella',
-  'Debre Markos',
-  'Kombolcha',
-  'Debre Tabor',
-  'Adigrat',
-  'Weldiya',
-];
+// Ethiopian cities removed - now using Google Places Autocomplete for dynamic location search
 
 const ETHIOPIAN_REGIONS = [
   'Addis Ababa',
@@ -77,6 +53,8 @@ export default function AddTruckForm() {
     volume: '',
     currentCity: '',
     currentRegion: '',
+    currentLat: undefined as number | undefined,
+    currentLng: undefined as number | undefined,
     isAvailable: true,
     gpsDeviceId: '',
   });
@@ -112,6 +90,30 @@ export default function AddTruckForm() {
           ? (e.target as HTMLInputElement).checked
           : value,
     });
+  };
+
+  /**
+   * Handle location change from PlacesAutocomplete
+   */
+  const handleLocationChange = (value: string, place?: PlaceResult) => {
+    if (place) {
+      // Full place selected with coordinates
+      setFormData({
+        ...formData,
+        currentCity: place.city || value,
+        currentRegion: place.region || '',
+        currentLat: place.coordinates.lat,
+        currentLng: place.coordinates.lng,
+      });
+    } else {
+      // Manual text input
+      setFormData({
+        ...formData,
+        currentCity: value,
+        currentLat: undefined,
+        currentLng: undefined,
+      });
+    }
   };
 
   /**
@@ -286,25 +288,24 @@ export default function AddTruckForm() {
           </div>
         </div>
 
-        {/* Current Location */}
+        {/* Current Location - Google Places Autocomplete */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Current City
             </label>
-            <select
-              name="currentCity"
+            <PlacesAutocomplete
               value={formData.currentCity}
-              onChange={handleChange}
+              onChange={handleLocationChange}
+              placeholder="Search for city..."
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">Select city...</option>
-              {ETHIOPIAN_CITIES.map((city) => (
-                <option key={city} value={city}>
-                  {city}
-                </option>
-              ))}
-            </select>
+              countryRestriction={['ET', 'DJ']}
+              types={['(cities)']}
+              name="currentCity"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Start typing to search Ethiopian and Djibouti cities
+            </p>
           </div>
 
           <div>
@@ -324,6 +325,9 @@ export default function AddTruckForm() {
                 </option>
               ))}
             </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Auto-populated when selecting a city
+            </p>
           </div>
         </div>
 

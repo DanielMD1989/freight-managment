@@ -1,13 +1,14 @@
 /**
  * Shipper Portal Layout
  *
- * Minimal layout for shipper portal without sidebar
+ * Layout with role-aware sidebar navigation
  * Sprint 14 - Professional UI Transformation
  */
 
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth';
+import RoleAwareSidebar from '@/components/RoleAwareSidebar';
 
 export default async function ShipperLayout({
   children,
@@ -28,11 +29,18 @@ export default async function ShipperLayout({
     redirect('/login?redirect=/shipper');
   }
 
-  // Check if user is a shipper
-  if (session.role !== 'SHIPPER' && session.role !== 'ADMIN') {
+  // Check if user is a shipper or admin
+  if (session.role !== 'SHIPPER' && session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
     redirect('/unauthorized');
   }
 
-  // Simple full-width layout without sidebar
-  return <>{children}</>;
+  // Layout with sidebar
+  return (
+    <div className="flex min-h-screen bg-gray-50">
+      <RoleAwareSidebar userRole={session.role} portalType="shipper" />
+      <main className="flex-1 overflow-auto">
+        {children}
+      </main>
+    </div>
+  );
 }

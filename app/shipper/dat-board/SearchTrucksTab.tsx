@@ -54,22 +54,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
         params.append('ageHours', filterValues.ageHours.toString());
       }
 
-      // Handle DH-Origin (can be range object or individual values)
-      if (filterValues.dhOrigin) {
-        if (filterValues.dhOrigin.min !== undefined) {
-          params.append('minDhOriginKm', filterValues.dhOrigin.min.toString());
-        }
-        if (filterValues.dhOrigin.max !== undefined) {
-          params.append('maxDhOriginKm', filterValues.dhOrigin.max.toString());
-        }
-      } else {
-        if (filterValues.minDhOrigin !== undefined) {
-          params.append('minDhOriginKm', filterValues.minDhOrigin.toString());
-        }
-        if (filterValues.maxDhOrigin !== undefined) {
-          params.append('maxDhOriginKm', filterValues.maxDhOrigin.toString());
-        }
-      }
+      // Note: DH-Origin and DH-Destination are carrier-only metrics, hidden from shipper view
 
       if (filterValues.origin && filterValues.origin.trim() !== '') {
         params.append('origin', filterValues.origin);
@@ -289,15 +274,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
       step: 1,
       unit: 'h',
     },
-    {
-      key: 'dhOrigin',
-      label: 'DH-ORIGIN (km)',
-      type: 'range-slider',
-      min: 0,
-      max: 500,
-      step: 10,
-      unit: 'km',
-    },
+    // Note: DH-O and DH-D filters hidden from shipper (carrier-only metrics)
     {
       key: 'origin',
       label: 'ORIGIN',
@@ -389,13 +366,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
       width: '60px',
       align: 'center' as const,
     },
-    {
-      key: 'dhToOriginKm',
-      label: 'DH-O',
-      width: '80px',
-      align: 'right' as const,
-      render: (value) => value ? `${value}km` : 'N/A',
-    },
+    // DH-O column hidden from shipper (carrier-only metric)
     {
       key: 'currentCity',
       label: 'Origin',
@@ -413,13 +384,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
       label: 'Destination',
       sortable: true,
     },
-    {
-      key: 'dhAfterDeliveryKm',
-      label: 'DH-D',
-      width: '80px',
-      align: 'right' as const,
-      render: (value) => value ? `${value}km` : 'N/A',
-    },
+    // DH-D column hidden from shipper (carrier-only metric)
     {
       key: 'company',
       label: 'Company',
@@ -488,14 +453,12 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
         {/* Inline Search Form - Only show when toggled */}
         {showSearchForm && (
         <div className="bg-white border border-gray-400 rounded shadow-sm">
-          {/* Header Row */}
-          <div className="grid grid-cols-12 gap-2 px-4 py-2 text-xs font-semibold text-gray-700 bg-gray-200 border-b border-gray-400">
+          {/* Header Row - DH-O and DH-D hidden from shipper */}
+          <div className="grid grid-cols-10 gap-2 px-4 py-2 text-xs font-semibold text-gray-700 bg-gray-200 border-b border-gray-400">
             <div>Truck</div>
             <div>Origin</div>
             <div>Destination</div>
             <div>Avail</div>
-            <div>DH-O</div>
-            <div>DH-D</div>
             <div>F/P</div>
             <div>Length</div>
             <div>Weight</div>
@@ -503,8 +466,8 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
             <div className="col-span-2"></div>
           </div>
 
-          {/* Editable Search Row */}
-          <div className="grid grid-cols-12 gap-2 px-4 py-3 text-xs items-center bg-gray-600">
+          {/* Editable Search Row - DH-O and DH-D hidden from shipper */}
+          <div className="grid grid-cols-10 gap-2 px-4 py-3 text-xs items-center bg-gray-600">
             {/* Truck Type */}
             <div className="flex items-center gap-1">
               <select
@@ -566,28 +529,6 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
                 type="date"
                 value={filterValues.availableFrom || ''}
                 onChange={(e) => handleFilterChange('availableFrom', e.target.value)}
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
-              />
-            </div>
-
-            {/* DH-O */}
-            <div>
-              <input
-                type="number"
-                value={filterValues.maxDhOrigin || ''}
-                onChange={(e) => handleFilterChange('maxDhOrigin', e.target.value ? parseInt(e.target.value) : undefined)}
-                placeholder="km"
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
-              />
-            </div>
-
-            {/* DH-D */}
-            <div>
-              <input
-                type="number"
-                value={filterValues.maxDhDest || ''}
-                onChange={(e) => handleFilterChange('maxDhDest', e.target.value ? parseInt(e.target.value) : undefined)}
-                placeholder="km"
                 className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
               />
             </div>
@@ -677,10 +618,10 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
             {trucks.length} {trucks.length === 1 ? 'MATCH' : 'MATCHES'}
           </h4>
 
-          {/* Results Table - Matches POST LOADS styling */}
+          {/* Results Table - DH-O and DH-D hidden from shipper */}
           <div className="bg-white border border-gray-300 rounded overflow-visible">
             {/* Table Header */}
-            <div className="bg-gray-300 grid grid-cols-13 gap-2 px-4 py-2 border-b border-gray-400 text-xs font-semibold text-gray-700">
+            <div className="bg-gray-300 grid grid-cols-11 gap-2 px-4 py-2 border-b border-gray-400 text-xs font-semibold text-gray-700">
               <div
                 className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
                 onClick={() => handleHeaderClick('createdAt')}
@@ -707,12 +648,6 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
               </div>
               <div
                 className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
-                onClick={() => handleHeaderClick('dhToOriginKm')}
-              >
-                DH-O {sortField === 'dhToOriginKm' && (sortOrder === 'asc' ? '↑' : '↓')}
-              </div>
-              <div
-                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
                 onClick={() => handleHeaderClick('currentCity')}
               >
                 Origin {sortField === 'currentCity' && (sortOrder === 'asc' ? '↑' : '↓')}
@@ -728,12 +663,6 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
                 onClick={() => handleHeaderClick('destinationCity')}
               >
                 Destination {sortField === 'destinationCity' && (sortOrder === 'asc' ? '↑' : '↓')}
-              </div>
-              <div
-                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
-                onClick={() => handleHeaderClick('dhAfterDeliveryKm')}
-              >
-                DH-D {sortField === 'dhAfterDeliveryKm' && (sortOrder === 'asc' ? '↑' : '↓')}
               </div>
               <div
                 className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
@@ -768,18 +697,16 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
               trucks.map((truck) => (
                 <div
                   key={truck.id}
-                  className="grid grid-cols-13 gap-2 px-4 py-2 border-b border-gray-200 hover:bg-gray-50 cursor-pointer text-xs"
+                  className="grid grid-cols-11 gap-2 px-4 py-2 border-b border-gray-200 hover:bg-gray-50 cursor-pointer text-xs"
                   style={{ color: '#2B2727' }}
                 >
                   <div>{truck.age || '00:07'}</div>
                   <div>{truck.availableDate ? new Date(truck.availableDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : 'Now'}</div>
                   <div>{truck.truckType || 'V'}</div>
                   <div>{truck.fullPartial || 'F'}</div>
-                  <div>{truck.dhToOriginKm || '143'}</div>
                   <div className="truncate">{truck.currentCity || 'Tacoma, WA'}</div>
                   <div>—</div>
                   <div className="truncate">{truck.destinationCity || 'Anywhere'}</div>
-                  <div>—</div>
                   <div className="truncate text-blue-600 hover:underline cursor-pointer">
                     {truck.carrier?.name || 'Land Lines Inc'}
                   </div>
