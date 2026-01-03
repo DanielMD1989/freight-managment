@@ -10,6 +10,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
 
 interface Load {
   id: string;
@@ -88,6 +89,9 @@ export default function LoadManagementClient({
   const searchParams = useSearchParams();
 
   const [statusFilter, setStatusFilter] = useState(initialStatus || 'all');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [copyingLoadId, setCopyingLoadId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   /**
    * Handle status filter change
@@ -113,6 +117,75 @@ export default function LoadManagementClient({
     const params = new URLSearchParams(searchParams.toString());
     params.set('page', newPage.toString());
     router.push(`/shipper/loads?${params.toString()}`);
+  };
+
+  /**
+   * Handle load copy
+   * Story 15.4: Task 15.4.1-15.4.3 - Copy load with confirmation
+   */
+  const handleCopyLoad = async (loadId: string) => {
+    setCopyingLoadId(loadId);
+    try {
+      const response = await fetch(`/api/loads/${loadId}/duplicate`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        toast.error(error.message || 'Failed to copy load');
+        return;
+      }
+
+      const newLoad = await response.json();
+      toast.success('Load copied successfully');
+
+      // Refresh to show the new load
+      router.refresh();
+    } catch (error) {
+      console.error('Error copying load:', error);
+      toast.error('An unexpected error occurred. Please try again.');
+    } finally {
+      setCopyingLoadId(null);
+    }
+  };
+
+  /**
+   * Handle load deletion
+   * Story 15.4: Task 15.4.5-15.4.7 - Delete with confirmation and error handling
+   */
+  const handleDeleteLoad = async (loadId: string) => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/loads/${loadId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+
+        if (response.status === 409) {
+          toast.error(
+            error.message || 'Cannot delete load that has been assigned'
+          );
+        } else if (response.status === 404) {
+          toast.error('Load not found');
+        } else {
+          toast.error(error.message || 'Failed to delete load');
+        }
+        return;
+      }
+
+      toast.success('Load deleted successfully');
+      setDeleteConfirmId(null);
+      router.refresh();
+    } catch (error) {
+      console.error('Error deleting load:', error);
+      toast.error('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -246,28 +319,45 @@ export default function LoadManagementClient({
 
                       {/* Actions */}
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <Link
-                          href={`/shipper/loads/${load.id}`}
-                          className="text-blue-600 hover:text-blue-900 mr-3"
-                        >
-                          View
-                        </Link>
-                        {load.status === 'DRAFT' && (
+                        <div className="flex gap-2">
                           <Link
-                            href={`/shipper/loads/${load.id}/edit`}
-                            className="text-gray-600 hover:text-gray-900"
+                            href={`/shipper/loads/${load.id}`}
+                            className="text-blue-600 hover:text-blue-900"
                           >
-                            Edit
+                            View
                           </Link>
-                        )}
-                        {load.status === 'POSTED' && (
-                          <Link
-                            href={`/shipper/matches?loadId=${load.id}`}
-                            className="text-green-600 hover:text-green-900"
+                          {load.status === 'DRAFT' && (
+                            <Link
+                              href={`/shipper/loads/${load.id}/edit`}
+                              className="text-gray-600 hover:text-gray-900"
+                            >
+                              Edit
+                            </Link>
+                          )}
+                          {load.status === 'POSTED' && (
+                            <Link
+                              href={`/shipper/matches?loadId=${load.id}`}
+                              className="text-green-600 hover:text-green-900"
+                            >
+                              Matches
+                            </Link>
+                          )}
+                          <button
+                            onClick={() => handleCopyLoad(load.id)}
+                            disabled={copyingLoadId === load.id}
+                            className="text-purple-600 hover:text-purple-900 disabled:opacity-50"
                           >
-                            Matches
-                          </Link>
-                        )}
+                            {copyingLoadId === load.id ? 'Copying...' : 'Copy'}
+                          </button>
+                          {(load.status === 'DRAFT' || load.status === 'POSTED') && (
+                            <button
+                              onClick={() => setDeleteConfirmId(load.id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -333,6 +423,37 @@ export default function LoadManagementClient({
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Confirm Delete
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete this load? This action cannot be undone.
+              {' '}If this load has been assigned to a carrier, you won't be able to delete it.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteLoad(deleteConfirmId)}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Load'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

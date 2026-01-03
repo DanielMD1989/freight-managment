@@ -10,6 +10,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
 
 interface Truck {
   id: string;
@@ -85,13 +86,15 @@ export default function TruckManagementClient({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [trucks] = useState<Truck[]>(initialTrucks);
+  const [trucks, setTrucks] = useState<Truck[]>(initialTrucks);
   const [truckTypeFilter, setTruckTypeFilter] = useState(
     searchParams.get('truckType') || 'all'
   );
   const [statusFilter, setStatusFilter] = useState(
     searchParams.get('status') || 'all'
   );
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   /**
    * Handle truck type filter change
@@ -130,6 +133,50 @@ export default function TruckManagementClient({
     const params = new URLSearchParams(searchParams.toString());
     params.set('page', newPage.toString());
     router.push(`/carrier/trucks?${params.toString()}`);
+  };
+
+  /**
+   * Handle truck deletion
+   * Story 15.5: Task 15.5.1-15.5.4 - Delete with confirmation and error handling
+   */
+  const handleDelete = async (truckId: string) => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/trucks/${truckId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+
+        // Handle specific error cases
+        if (response.status === 409) {
+          // Conflict - truck has active postings
+          toast.error(
+            error.message || 'Cannot delete truck with active postings. Please cancel or complete all active postings first.'
+          );
+        } else if (response.status === 404) {
+          toast.error('Truck not found');
+        } else {
+          toast.error(error.message || 'Failed to delete truck');
+        }
+        return;
+      }
+
+      // Success - remove truck from list and refresh
+      setTrucks(prevTrucks => prevTrucks.filter(t => t.id !== truckId));
+      toast.success('Truck deleted successfully');
+      setDeleteConfirmId(null);
+
+      // Refresh the page to get updated data
+      router.refresh();
+    } catch (error) {
+      console.error('Error deleting truck:', error);
+      toast.error('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -296,6 +343,12 @@ export default function TruckManagementClient({
                           >
                             Edit
                           </Link>
+                          <button
+                            onClick={() => setDeleteConfirmId(truck.id)}
+                            className="text-red-600 hover:text-red-700 font-medium"
+                          >
+                            Delete
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -344,7 +397,7 @@ export default function TruckManagementClient({
                       href={`/carrier/trucks/${truck.id}`}
                       className="flex-1 px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 text-center font-medium"
                     >
-                      View Details
+                      View
                     </Link>
                     <Link
                       href={`/carrier/trucks/${truck.id}/edit`}
@@ -352,6 +405,12 @@ export default function TruckManagementClient({
                     >
                       Edit
                     </Link>
+                    <button
+                      onClick={() => setDeleteConfirmId(truck.id)}
+                      className="flex-1 px-4 py-2 text-sm text-red-600 border border-red-600 rounded-lg hover:bg-red-50 text-center font-medium"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
               ))}
@@ -401,6 +460,37 @@ export default function TruckManagementClient({
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Confirm Delete
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete this truck? This action cannot be undone.
+              {' '}If this truck has active postings, you'll need to cancel them first.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(deleteConfirmId)}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Truck'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

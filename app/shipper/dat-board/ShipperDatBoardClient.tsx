@@ -26,17 +26,65 @@ export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientPro
   const [searchFilters, setSearchFilters] = useState<any>(null);
   const [completionRate, setCompletionRate] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
+  // Story 15.11: Task 15.11.1-15.11.6 - Tab State Management with URL persistence
   // Check URL parameters on mount to set active tab and filters
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get('tab') as ShipperTabKey;
 
-      if (tabParam === 'SEARCH_TRUCKS') {
-        setActiveTab('SEARCH_TRUCKS');
+      if (tabParam === 'POST_LOADS' || tabParam === 'SEARCH_TRUCKS') {
+        setActiveTab(tabParam);
+      }
 
-        // Extract search filters from URL
+      // Extract search filters from URL (restore filter state)
+      const filters = {
+        origin: params.get('origin') || '',
+        destination: params.get('destination') || '',
+        truckType: params.get('truckType') || '',
+        pickupDate: params.get('pickupDate') || '',
+        length: params.get('length') || '',
+        weight: params.get('weight') || '',
+      };
+
+      // Only set filters if at least one filter has a value
+      if (Object.values(filters).some(v => v)) {
+        setSearchFilters(filters);
+      }
+
+      // Mark initial load complete after a short delay
+      setTimeout(() => setIsInitialLoad(false), 100);
+    }
+  }, []);
+
+  // Sync activeTab with URL (without page reload)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !isInitialLoad) {
+      const params = new URLSearchParams(window.location.search);
+      const currentTab = params.get('tab');
+
+      // Update URL if tab changed
+      if (currentTab !== activeTab) {
+        params.set('tab', activeTab);
+        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        // Use pushState for user actions to support back/forward navigation
+        window.history.pushState({ tab: activeTab }, '', newUrl);
+      }
+    }
+  }, [activeTab, isInitialLoad]);
+
+  // Handle browser back/forward navigation
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab') as ShipperTabKey;
+
+      if (tabParam === 'POST_LOADS' || tabParam === 'SEARCH_TRUCKS') {
+        setActiveTab(tabParam);
+
+        // Restore filters from URL
         const filters = {
           origin: params.get('origin') || '',
           destination: params.get('destination') || '',
@@ -46,25 +94,17 @@ export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientPro
           weight: params.get('weight') || '',
         };
 
-        setSearchFilters(filters);
+        if (Object.values(filters).some(v => v)) {
+          setSearchFilters(filters);
+        }
+      } else {
+        setActiveTab('POST_LOADS');
       }
-    }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
-
-  // Sync activeTab with URL (without page reload)
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const currentTab = params.get('tab');
-
-      // Update URL if tab changed
-      if (currentTab !== activeTab) {
-        params.set('tab', activeTab);
-        const newUrl = `${window.location.pathname}?${params.toString()}`;
-        window.history.pushState({}, '', newUrl);
-      }
-    }
-  }, [activeTab]);
 
   // Fetch organization completion rate - Sprint 16: Story 16.6
   useEffect(() => {
@@ -164,20 +204,32 @@ export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientPro
 
       {/* Tab Content */}
       <div className="p-6">
-        <ErrorBoundary>
-          {activeTab === 'POST_LOADS' && (
-            <PostLoadsTab
-              user={user}
-              onSwitchToSearchTrucks={handleSwitchToSearchTrucks}
-            />
-          )}
-          {activeTab === 'SEARCH_TRUCKS' && (
-            <SearchTrucksTab
-              user={user}
-              initialFilters={searchFilters}
-            />
-          )}
-        </ErrorBoundary>
+        {isInitialLoad ? (
+          /* Loading skeleton while restoring tab state */
+          <div className="bg-white rounded-lg shadow p-6 animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+            <div className="space-y-4">
+              <div className="h-4 bg-gray-200 rounded w-full"></div>
+              <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+              <div className="h-4 bg-gray-200 rounded w-4/6"></div>
+            </div>
+          </div>
+        ) : (
+          <ErrorBoundary>
+            {activeTab === 'POST_LOADS' && (
+              <PostLoadsTab
+                user={user}
+                onSwitchToSearchTrucks={handleSwitchToSearchTrucks}
+              />
+            )}
+            {activeTab === 'SEARCH_TRUCKS' && (
+              <SearchTrucksTab
+                user={user}
+                initialFilters={searchFilters}
+              />
+            )}
+          </ErrorBoundary>
+        )}
       </div>
     </div>
   );
