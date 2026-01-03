@@ -26,8 +26,14 @@ export default function DatSavedSearches({
 
     if (criteria.origin) parts.push(`From: ${criteria.origin}`);
     if (criteria.destination) parts.push(`To: ${criteria.destination}`);
-    if (criteria.truckType && criteria.truckType.length > 0) {
-      parts.push(`Type: ${criteria.truckType.join(', ')}`);
+    if (criteria.truckType) {
+      // Handle both array and string types
+      const truckTypeDisplay = Array.isArray(criteria.truckType)
+        ? criteria.truckType.join(', ')
+        : criteria.truckType;
+      if (truckTypeDisplay) {
+        parts.push(`Type: ${truckTypeDisplay}`);
+      }
     }
     if (criteria.minWeight || criteria.maxWeight) {
       parts.push(`Weight: ${criteria.minWeight || 0}-${criteria.maxWeight || '∞'} kg`);
