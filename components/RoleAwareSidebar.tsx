@@ -10,7 +10,11 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
+
+// Simple className utility
+function cn(...classes: (string | boolean | undefined)[]): string {
+  return classes.filter(Boolean).join(' ');
+}
 
 interface NavItem {
   label: string;

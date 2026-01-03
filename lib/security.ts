@@ -3,34 +3,34 @@
  * Sprint 9 - Security Hardening
  *
  * CSRF protection, XSS sanitization, and security headers
+ * Note: Uses Web Crypto API for Edge Runtime compatibility
  */
 
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
 
 /**
- * Generate CSRF token
+ * Generate CSRF token (Edge-compatible using Web Crypto API)
  */
 export function generateCSRFToken(): string {
-  return crypto.randomBytes(32).toString('hex');
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 /**
- * Verify CSRF token
+ * Verify CSRF token (Edge-compatible constant-time comparison)
  */
 export function verifyCSRFToken(token: string, expectedToken: string): boolean {
-  if (!token || !expectedToken) {
+  if (!token || !expectedToken || token.length !== expectedToken.length) {
     return false;
   }
 
-  try {
-    return crypto.timingSafeEqual(
-      Buffer.from(token),
-      Buffer.from(expectedToken)
-    );
-  } catch {
-    return false;
+  // Constant-time comparison to prevent timing attacks
+  let result = 0;
+  for (let i = 0; i < token.length; i++) {
+    result |= token.charCodeAt(i) ^ expectedToken.charCodeAt(i);
   }
+  return result === 0;
 }
 
 /**
@@ -184,17 +184,25 @@ export function isStrongPassword(password: string): {
 }
 
 /**
- * Generate secure random string
+ * Generate secure random string (Edge-compatible)
  */
 export function generateSecureToken(length: number = 32): string {
-  return crypto.randomBytes(length).toString('hex');
+  const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 /**
- * Hash sensitive data (one-way)
+ * Hash sensitive data (one-way, Edge-compatible)
+ * Note: For Edge runtime, uses a simple hash. For server-side,
+ * you may want to use bcrypt or argon2 for password hashing.
  */
-export function hashData(data: string): string {
-  return crypto.createHash('sha256').update(data).digest('hex');
+export async function hashData(data: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const dataBuffer = encoder.encode(data);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 /**
