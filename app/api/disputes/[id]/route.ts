@@ -1,0 +1,196 @@
+/**
+ * Dispute Detail API
+ * Sprint 6 - Story 6.4: Dispute Management
+ *
+ * Get and update individual disputes
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { requireAuth } from '@/lib/auth';
+import { requirePermission, Permission } from '@/lib/rbac';
+import { z } from 'zod';
+
+const updateDisputeSchema = z.object({
+  status: z.enum(['OPEN', 'UNDER_REVIEW', 'RESOLVED', 'CLOSED']).optional(),
+  resolution: z.string().optional(),
+  resolutionNotes: z.string().optional(),
+});
+
+/**
+ * GET /api/disputes/[id]
+ * Get dispute details
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await requireAuth(request);
+    const disputeId = params.id;
+
+    const dispute = await db.dispute.findUnique({
+      where: { id: disputeId },
+      include: {
+        load: {
+          select: {
+            id: true,
+            loadNumber: true,
+            pickupCity: true,
+            deliveryCity: true,
+            status: true,
+            shipper: { select: { id: true, name: true } },
+            assignedTruck: {
+              select: {
+                id: true,
+                plateNumber: true,
+                carrier: { select: { id: true, name: true } },
+              },
+            },
+          },
+        },
+        raisedBy: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        resolvedBy: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    if (!dispute) {
+      return NextResponse.json({ error: 'Dispute not found' }, { status: 404 });
+    }
+
+    // Check access
+    const isShipper = dispute.load.shipper?.id === session.organizationId;
+    const isCarrier = dispute.load.assignedTruck?.carrier?.id === session.organizationId;
+    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+
+    if (!isShipper && !isCarrier && !isAdmin) {
+      return NextResponse.json(
+        { error: 'Forbidden: You do not have access to this dispute' },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json({ dispute });
+  } catch (error: any) {
+    console.error('Error fetching dispute:', error);
+
+    if (error.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    return NextResponse.json(
+      { error: 'Failed to fetch dispute' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PATCH /api/disputes/[id]
+ * Update dispute status (admin/ops only)
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await requireAuth(request);
+    await requirePermission(session, Permission.MANAGE_DISPUTES);
+
+    const disputeId = params.id;
+    const body = await request.json();
+    const validatedData = updateDisputeSchema.parse(body);
+
+    const dispute = await db.dispute.findUnique({
+      where: { id: disputeId },
+    });
+
+    if (!dispute) {
+      return NextResponse.json({ error: 'Dispute not found' }, { status: 404 });
+    }
+
+    // Update dispute
+    const updatedDispute = await db.dispute.update({
+      where: { id: disputeId },
+      data: {
+        ...validatedData,
+        resolvedById: validatedData.status === 'RESOLVED' || validatedData.status === 'CLOSED'
+          ? session.userId
+          : undefined,
+        resolvedAt: validatedData.status === 'RESOLVED' || validatedData.status === 'CLOSED'
+          ? new Date()
+          : undefined,
+      },
+      include: {
+        load: {
+          select: {
+            id: true,
+            loadNumber: true,
+            pickupCity: true,
+            deliveryCity: true,
+          },
+        },
+        raisedBy: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        resolvedBy: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({
+      message: 'Dispute updated successfully',
+      dispute: updatedDispute,
+    });
+  } catch (error: any) {
+    console.error('Error updating dispute:', error);
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation error', details: error.issues },
+        { status: 400 }
+      );
+    }
+
+    if (error.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (error.message?.includes('Permission denied')) {
+      return NextResponse.json(
+        { error: 'Forbidden: Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Failed to update dispute' },
+      { status: 500 }
+    );
+  }
+}
