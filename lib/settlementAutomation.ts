@@ -10,21 +10,37 @@ import { db } from './db';
 import { processSettlement } from './commissionCalculation';
 
 /**
- * Auto-verify POD after 24 hours if shipper hasn't responded
+ * Auto-verify POD after configured timeout if shipper hasn't responded
  *
- * Checks loads with submitted POD that haven't been verified within 24 hours
+ * Checks loads with submitted POD that haven't been verified within the configured timeout
  * and automatically approves them to prevent blocking settlement.
  */
 export async function autoVerifyExpiredPODs(): Promise<number> {
-  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  // Get system settings for timeout configuration
+  const settings = await db.systemSettings.findUnique({
+    where: { id: 'system' },
+    select: {
+      autoVerifyPodEnabled: true,
+      autoVerifyPodTimeoutHours: true,
+    },
+  });
 
-  // Find loads with POD submitted >24h ago but not verified
+  // If auto-verify is disabled, return early
+  if (!settings?.autoVerifyPodEnabled) {
+    console.log('Auto-verify POD is disabled in system settings');
+    return 0;
+  }
+
+  const timeoutHours = settings.autoVerifyPodTimeoutHours || 24;
+  const timeoutAgo = new Date(Date.now() - timeoutHours * 60 * 60 * 1000);
+
+  // Find loads with POD submitted past timeout but not verified
   const loadsToVerify = await db.load.findMany({
     where: {
       podSubmitted: true,
       podVerified: false,
       podSubmittedAt: {
-        lt: twentyFourHoursAgo,
+        lt: timeoutAgo,
       },
       settlementStatus: 'PENDING',
     },
@@ -65,13 +81,56 @@ export async function autoVerifyExpiredPODs(): Promise<number> {
  * then processes commission deduction and settlement.
  */
 export async function processReadySettlements(): Promise<number> {
+  // Get system settings for batch size and automation toggle
+  const settings = await db.systemSettings.findUnique({
+    where: { id: 'system' },
+    select: {
+      settlementAutomationEnabled: true,
+      settlementBatchSize: true,
+      autoSettlementMinAmount: true,
+      autoSettlementMaxAmount: true,
+    },
+  });
+
+  // If settlement automation is disabled, return early
+  if (!settings?.settlementAutomationEnabled) {
+    console.log('Settlement automation is disabled in system settings');
+    return 0;
+  }
+
+  const batchSize = settings.settlementBatchSize || 50;
+  const minAmount = settings.autoSettlementMinAmount || 0;
+  const maxAmount = settings.autoSettlementMaxAmount || 0;
+
+  // Build where clause with amount constraints
+  const whereClause: any = {
+    status: 'DELIVERED',
+    podVerified: true,
+    settlementStatus: 'PENDING',
+  };
+
+  // Add amount constraints if configured
+  if (minAmount > 0) {
+    whereClause.OR = [
+      { totalFareEtb: { gte: minAmount } },
+      { AND: [{ totalFareEtb: null }, { rate: { gte: minAmount } }] },
+    ];
+  }
+
+  if (maxAmount > 0) {
+    whereClause.AND = [
+      {
+        OR: [
+          { totalFareEtb: { lte: maxAmount } },
+          { AND: [{ totalFareEtb: null }, { rate: { lte: maxAmount } }] },
+        ],
+      },
+    ];
+  }
+
   // Find loads ready for settlement
   const loadsToSettle = await db.load.findMany({
-    where: {
-      status: 'DELIVERED',
-      podVerified: true,
-      settlementStatus: 'PENDING',
-    },
+    where: whereClause,
     select: {
       id: true,
       shipper: {
@@ -89,7 +148,7 @@ export async function processReadySettlements(): Promise<number> {
         },
       },
     },
-    take: 50, // Process in batches
+    take: batchSize, // Process in batches
   });
 
   if (loadsToSettle.length === 0) {

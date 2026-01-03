@@ -41,9 +41,9 @@ export default function BypassReviewClient() {
       setLoading(true);
       setError(null);
 
-      // In a real implementation, this would be a dedicated API endpoint
-      // For now, we'll show a placeholder
-      const response = await fetch(`/api/admin/organizations?flagged=${filter === 'flagged'}`);
+      // Use the new bypass warnings API endpoint
+      const status = filter === 'flagged' ? 'flagged' : 'all';
+      const response = await fetch(`/api/admin/bypass-warnings/organizations?status=${status}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch organizations');
@@ -64,12 +64,24 @@ export default function BypassReviewClient() {
     }
 
     try {
-      // TODO: Implement unflag API endpoint
-      alert('Unflag functionality will be implemented');
-      // After successful unflag, refresh the list
+      const response = await fetch('/api/admin/bypass-warnings/organizations', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId: orgId,
+          isFlagged: false,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to unflag organization');
+      }
+
+      // Refresh the list after successful unflag
       await fetchFlaggedOrganizations();
+      alert('Organization unflagged successfully');
     } catch (err: any) {
-      alert('Failed to unflag organization');
+      alert('Failed to unflag organization: ' + err.message);
     }
   };
 

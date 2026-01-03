@@ -1172,6 +1172,16 @@ model SystemSettings {
   requireEmailVerification   Boolean  @default(false)
   requirePhoneVerification   Boolean  @default(false)
 
+  // Settlement Automation Settings (Sprint 16 - Story 16.9A)
+  settlementAutomationEnabled  Boolean  @default(true)   // Enable/disable auto-settlement
+  autoVerifyPodEnabled         Boolean  @default(true)   // Enable/disable auto-POD verification
+  autoVerifyPodTimeoutHours    Int      @default(24)     // Hours before auto-verifying POD
+  settlementBatchSize          Int      @default(50)     // Max settlements to process per batch
+  emailNotifySettlementSuccess Boolean  @default(false)  // Notify admin on successful settlements
+  emailNotifySettlementFailure Boolean  @default(true)   // Notify admin on failed settlements
+  autoSettlementMinAmount      Decimal  @default(0)      @db.Decimal(10, 2) // Minimum amount for auto-settlement
+  autoSettlementMaxAmount      Decimal  @default(0)      @db.Decimal(10, 2) // Maximum amount for auto-settlement (0 = unlimited)
+
   // Metadata
   lastModifiedBy   String
   lastModifiedAt   DateTime @default(now()) @updatedAt
