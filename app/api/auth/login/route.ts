@@ -5,6 +5,16 @@ import { z } from "zod";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { logAuthFailure, logAuthSuccess } from "@/lib/auditLog";
 import { generateAndSetCSRFToken } from "@/lib/csrf";
+import {
+  getClientIP,
+  isIPBlocked,
+  isBlockedByBruteForce,
+  recordFailedAttempt,
+  resetFailedAttempts,
+  getRemainingBlockTime,
+  blockIP,
+  logSecurityEvent,
+} from "@/lib/security";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -16,8 +26,50 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = loginSchema.parse(body);
 
+    // Extract client IP
+    const clientIp = getClientIP(request.headers);
+
+    // Check if IP is blocked
+    if (isIPBlocked(clientIp)) {
+      await logSecurityEvent({
+        type: 'IP_BLOCKED',
+        ip: clientIp,
+        details: { endpoint: '/api/auth/login', email: validatedData.email },
+      });
+
+      return NextResponse.json(
+        {
+          error: 'Access denied. Your IP address has been blocked.',
+        },
+        { status: 403 }
+      );
+    }
+
+    // Check brute force protection
+    const bruteForceKey = `login:${validatedData.email}`;
+    if (isBlockedByBruteForce(bruteForceKey)) {
+      const remainingTime = getRemainingBlockTime(bruteForceKey);
+
+      await logSecurityEvent({
+        type: 'BRUTE_FORCE',
+        ip: clientIp,
+        details: {
+          endpoint: '/api/auth/login',
+          email: validatedData.email,
+          remainingBlockTime: remainingTime,
+        },
+      });
+
+      return NextResponse.json(
+        {
+          error: `Too many failed login attempts. Account temporarily locked. Please try again in ${Math.ceil(remainingTime / 60)} minutes.`,
+          retryAfter: remainingTime,
+        },
+        { status: 429 }
+      );
+    }
+
     // Rate limiting: 5 login attempts per 15 minutes per email
-    const clientIp = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
     const rateLimitKey = `${validatedData.email}:${clientIp}`;
     const rateLimit = checkRateLimit(
       {
@@ -115,7 +167,29 @@ export async function POST(request: NextRequest) {
     );
 
     if (!isValidPassword) {
+      // Record failed login attempt for brute force protection
+      const shouldBlock = recordFailedAttempt(bruteForceKey);
+
+      // Auto-block IP after 10 failed attempts from same IP
+      const ipKey = `login:ip:${clientIp}`;
+      const ipShouldBlock = recordFailedAttempt(ipKey);
+
+      if (ipShouldBlock) {
+        // Permanently block IP after too many attempts
+        blockIP(clientIp, 'Excessive failed login attempts', 24 * 60 * 60 * 1000); // 24 hours
+      }
+
       await logAuthFailure(validatedData.email, 'Invalid password', request);
+
+      if (shouldBlock) {
+        return NextResponse.json(
+          {
+            error: "Too many failed attempts. Account temporarily locked.",
+          },
+          { status: 429 }
+        );
+      }
+
       return NextResponse.json(
         {
           error: "Invalid email or password",
@@ -123,6 +197,10 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    // Reset failed attempts on successful login
+    resetFailedAttempts(bruteForceKey);
+    resetFailedAttempts(`login:ip:${clientIp}`);
 
     // Update last login
     await db.user.update({

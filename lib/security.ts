@@ -224,7 +224,7 @@ export function hasSQLInjectionPattern(input: string): boolean {
  * Log security event
  */
 export async function logSecurityEvent(event: {
-  type: 'RATE_LIMIT' | 'SQL_INJECTION' | 'XSS_ATTEMPT' | 'UNAUTHORIZED_ACCESS' | 'CSRF_FAILURE';
+  type: 'RATE_LIMIT' | 'SQL_INJECTION' | 'XSS_ATTEMPT' | 'UNAUTHORIZED_ACCESS' | 'CSRF_FAILURE' | 'BRUTE_FORCE' | 'IP_BLOCKED';
   ip: string;
   userAgent?: string;
   userId?: string;
@@ -238,4 +238,235 @@ export async function logSecurityEvent(event: {
 
   // TODO: Store in database for audit trail
   // await db.securityEvent.create({ data: event });
+}
+
+/**
+ * Brute Force Protection
+ * Track failed login attempts and block IPs after threshold
+ */
+
+interface BruteForceAttempt {
+  count: number;
+  firstAttempt: Date;
+  lastAttempt: Date;
+}
+
+const bruteForceStore = new Map<string, BruteForceAttempt>();
+
+export interface BruteForceConfig {
+  maxAttempts: number;
+  windowMs: number; // Time window in milliseconds
+  blockDurationMs: number; // How long to block after threshold
+}
+
+export const DEFAULT_BRUTE_FORCE_CONFIG: BruteForceConfig = {
+  maxAttempts: 5,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  blockDurationMs: 60 * 60 * 1000, // 1 hour
+};
+
+/**
+ * Record a failed login attempt
+ */
+export function recordFailedAttempt(
+  identifier: string,
+  config: BruteForceConfig = DEFAULT_BRUTE_FORCE_CONFIG
+): boolean {
+  const now = new Date();
+  const existing = bruteForceStore.get(identifier);
+
+  if (existing) {
+    const timeSinceFirst = now.getTime() - existing.firstAttempt.getTime();
+
+    // Reset if outside window
+    if (timeSinceFirst > config.windowMs) {
+      bruteForceStore.set(identifier, {
+        count: 1,
+        firstAttempt: now,
+        lastAttempt: now,
+      });
+      return false;
+    }
+
+    // Increment attempt count
+    existing.count++;
+    existing.lastAttempt = now;
+    bruteForceStore.set(identifier, existing);
+
+    // Check if threshold exceeded
+    return existing.count >= config.maxAttempts;
+  } else {
+    // First attempt
+    bruteForceStore.set(identifier, {
+      count: 1,
+      firstAttempt: now,
+      lastAttempt: now,
+    });
+    return false;
+  }
+}
+
+/**
+ * Check if identifier is currently blocked due to brute force
+ */
+export function isBlockedByBruteForce(
+  identifier: string,
+  config: BruteForceConfig = DEFAULT_BRUTE_FORCE_CONFIG
+): boolean {
+  const attempt = bruteForceStore.get(identifier);
+  if (!attempt) return false;
+
+  const now = new Date();
+  const timeSinceLast = now.getTime() - attempt.lastAttempt.getTime();
+
+  // Check if still in block period
+  if (attempt.count >= config.maxAttempts && timeSinceLast < config.blockDurationMs) {
+    return true;
+  }
+
+  // Block period expired, clean up
+  if (timeSinceLast >= config.blockDurationMs) {
+    bruteForceStore.delete(identifier);
+  }
+
+  return false;
+}
+
+/**
+ * Reset failed attempts for identifier (e.g., after successful login)
+ */
+export function resetFailedAttempts(identifier: string): void {
+  bruteForceStore.delete(identifier);
+}
+
+/**
+ * Get remaining block time in seconds
+ */
+export function getRemainingBlockTime(
+  identifier: string,
+  config: BruteForceConfig = DEFAULT_BRUTE_FORCE_CONFIG
+): number {
+  const attempt = bruteForceStore.get(identifier);
+  if (!attempt || attempt.count < config.maxAttempts) return 0;
+
+  const now = new Date();
+  const timeSinceLast = now.getTime() - attempt.lastAttempt.getTime();
+  const remainingMs = config.blockDurationMs - timeSinceLast;
+
+  return remainingMs > 0 ? Math.ceil(remainingMs / 1000) : 0;
+}
+
+/**
+ * IP Blocking System
+ * Maintain a list of blocked IPs and check against it
+ */
+
+interface IPBlockEntry {
+  ip: string;
+  reason: string;
+  blockedAt: Date;
+  expiresAt?: Date;
+}
+
+const blockedIPs = new Map<string, IPBlockEntry>();
+
+/**
+ * Block an IP address
+ */
+export function blockIP(
+  ip: string,
+  reason: string,
+  durationMs?: number
+): void {
+  const now = new Date();
+  const entry: IPBlockEntry = {
+    ip,
+    reason,
+    blockedAt: now,
+    expiresAt: durationMs ? new Date(now.getTime() + durationMs) : undefined,
+  };
+
+  blockedIPs.set(ip, entry);
+
+  logSecurityEvent({
+    type: 'IP_BLOCKED',
+    ip,
+    details: { reason, durationMs },
+  });
+}
+
+/**
+ * Check if IP is blocked
+ */
+export function isIPBlocked(ip: string): boolean {
+  const entry = blockedIPs.get(ip);
+  if (!entry) return false;
+
+  // Check if temporary block has expired
+  if (entry.expiresAt) {
+    const now = new Date();
+    if (now > entry.expiresAt) {
+      blockedIPs.delete(ip);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Unblock an IP address
+ */
+export function unblockIP(ip: string): boolean {
+  return blockedIPs.delete(ip);
+}
+
+/**
+ * Get list of blocked IPs
+ */
+export function getBlockedIPs(): IPBlockEntry[] {
+  return Array.from(blockedIPs.values());
+}
+
+/**
+ * Get block details for an IP
+ */
+export function getIPBlockDetails(ip: string): IPBlockEntry | undefined {
+  return blockedIPs.get(ip);
+}
+
+/**
+ * Clean up expired IP blocks
+ */
+export function cleanupExpiredBlocks(): number {
+  const now = new Date();
+  let cleaned = 0;
+
+  for (const [ip, entry] of blockedIPs.entries()) {
+    if (entry.expiresAt && now > entry.expiresAt) {
+      blockedIPs.delete(ip);
+      cleaned++;
+    }
+  }
+
+  return cleaned;
+}
+
+/**
+ * Extract IP from request headers
+ */
+export function getClientIP(headers: Headers): string {
+  // Try common proxy headers first
+  const forwarded = headers.get('x-forwarded-for');
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+
+  const realIP = headers.get('x-real-ip');
+  if (realIP) {
+    return realIP.trim();
+  }
+
+  // Fallback to connection IP
+  return headers.get('x-vercel-forwarded-for') || 'unknown';
 }

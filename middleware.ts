@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 import { generateRequestId } from "@/lib/errorHandler";
+import {
+  isIPBlocked,
+  addSecurityHeaders,
+  logSecurityEvent,
+  verifyCSRFToken,
+  getClientIP,
+} from "@/lib/security";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "development-jwt-secret"
@@ -15,17 +22,86 @@ const marketplacePaths = ["/shipper", "/carrier", "/dashboard", "/dispatcher", "
 // Paths that don't require ACTIVE status (for pending users)
 const pendingAllowedPaths = ["/profile", "/verification", "/api/user"];
 
+// Routes exempt from CSRF protection
+const CSRF_EXEMPT_ROUTES = [
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/auth/logout',
+  '/api/auth/forgot-password',
+  '/api/auth/reset-password',
+  '/api/cron/',
+  '/api/webhooks/',
+  '/api/tracking/ingest', // GPS data ingestion
+];
+
+// State-changing HTTP methods that require CSRF protection
+const STATE_CHANGING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const method = request.method;
 
   // Generate request ID for all requests (for error tracking and logging)
   const requestId = request.headers.get('x-request-id') || generateRequestId();
+
+  // Extract client IP
+  const clientIP = getClientIP(request.headers);
+
+  // Sprint 9: IP Blocking Check
+  if (isIPBlocked(clientIP)) {
+    await logSecurityEvent({
+      type: 'IP_BLOCKED',
+      ip: clientIP,
+      details: {
+        path: pathname,
+        method,
+        userAgent: request.headers.get('user-agent') || 'unknown',
+      },
+    });
+
+    const response = NextResponse.json(
+      { error: 'Access denied. Your IP address has been blocked.', requestId },
+      { status: 403 }
+    );
+    response.headers.set('x-request-id', requestId);
+    return addSecurityHeaders(response);
+  }
+
+  // Sprint 9: CSRF Protection for API routes with state-changing methods
+  if (pathname.startsWith('/api') && STATE_CHANGING_METHODS.includes(method)) {
+    const isExempt = CSRF_EXEMPT_ROUTES.some((route) => pathname.startsWith(route));
+
+    if (!isExempt) {
+      const csrfToken = request.headers.get('x-csrf-token');
+      const csrfCookie = request.cookies.get('csrf-token')?.value;
+
+      if (!csrfToken || !csrfCookie || !verifyCSRFToken(csrfToken, csrfCookie)) {
+        await logSecurityEvent({
+          type: 'CSRF_FAILURE',
+          ip: clientIP,
+          details: {
+            path: pathname,
+            method,
+            hasToken: !!csrfToken,
+            hasCookie: !!csrfCookie,
+          },
+        });
+
+        const response = NextResponse.json(
+          { error: 'Invalid or missing CSRF token', requestId },
+          { status: 403 }
+        );
+        response.headers.set('x-request-id', requestId);
+        return addSecurityHeaders(response);
+      }
+    }
+  }
 
   // Allow public paths
   if (publicPaths.some((path) => pathname.startsWith(path))) {
     const response = NextResponse.next();
     response.headers.set('x-request-id', requestId);
-    return response;
+    return addSecurityHeaders(response);
   }
 
   // Get session token
@@ -92,7 +168,7 @@ export async function middleware(request: NextRequest) {
 
     const response = NextResponse.next();
     response.headers.set('x-request-id', requestId);
-    return response;
+    return addSecurityHeaders(response);
   } catch (error) {
     console.error("Token verification failed:", error);
 
@@ -100,7 +176,7 @@ export async function middleware(request: NextRequest) {
     const response = NextResponse.redirect(new URL("/login", request.url));
     response.cookies.delete("session");
     response.headers.set('x-request-id', requestId);
-    return response;
+    return addSecurityHeaders(response);
   }
 }
 

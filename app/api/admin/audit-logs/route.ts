@@ -36,8 +36,10 @@ import {
  * - endDate: Filter by end date (ISO 8601)
  * - limit: Max results (default: 100, max: 1000)
  * - offset: Pagination offset
+ * - format: Export format ('json' or 'csv')
  *
  * Returns: { logs: [], total: number, limit: number, offset: number }
+ * Or CSV file if format=csv
  */
 export async function GET(request: NextRequest) {
   try {
@@ -55,6 +57,7 @@ export async function GET(request: NextRequest) {
     const endDateStr = searchParams.get('endDate');
     const limit = parseInt(searchParams.get('limit') || '100', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
+    const format = searchParams.get('format') || 'json';
 
     // Parse dates
     const startDate = startDateStr ? new Date(startDateStr) : undefined;
@@ -88,6 +91,21 @@ export async function GET(request: NextRequest) {
       offset,
     });
 
+    // Export as CSV if requested
+    if (format === 'csv') {
+      const csv = convertLogsToCSV(result.logs);
+      const filename = `audit-logs-${new Date().toISOString().split('T')[0]}.csv`;
+
+      return new NextResponse(csv, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/csv',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Cache-Control': 'no-cache',
+        },
+      });
+    }
+
     return NextResponse.json(result);
   } catch (error: any) {
     console.error('Error querying audit logs:', error);
@@ -97,6 +115,57 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Convert audit logs to CSV format
+ */
+function convertLogsToCSV(logs: any[]): string {
+  // CSV header
+  const header = [
+    'Timestamp',
+    'Event Type',
+    'Severity',
+    'User ID',
+    'Organization ID',
+    'IP Address',
+    'User Agent',
+    'Resource Type',
+    'Resource ID',
+    'Action',
+    'Details',
+  ].join(',');
+
+  // CSV rows
+  const rows = logs.map((log) => {
+    const row = [
+      log.createdAt || '',
+      log.eventType || '',
+      log.severity || '',
+      log.userId || '',
+      log.organizationId || '',
+      log.ipAddress || '',
+      escapeCSV(log.userAgent || ''),
+      log.resourceType || '',
+      log.resourceId || '',
+      log.action || '',
+      escapeCSV(JSON.stringify(log.details || {})),
+    ];
+
+    return row.map(String).join(',');
+  });
+
+  return [header, ...rows].join('\n');
+}
+
+/**
+ * Escape CSV values to handle commas, quotes, and newlines
+ */
+function escapeCSV(value: string): string {
+  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
 }
 
 /**
