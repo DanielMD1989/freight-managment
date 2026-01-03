@@ -7,9 +7,9 @@
  * Shows role-appropriate menu items based on user's role
  */
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 // Simple className utility
 function cn(...classes: (string | boolean | undefined)[]): string {
@@ -41,35 +41,29 @@ interface RoleAwareSidebarProps {
 const navigationSections: Record<string, NavSection[]> = {
   carrier: [
     {
-      title: 'Load & Truck',
+      title: 'DAT Board',
       items: [
         {
-          label: 'Dashboard',
-          href: '/carrier',
-          icon: '📊',
+          label: 'Post Trucks',
+          href: '/carrier/dat-board?tab=POST_TRUCKS',
+          icon: '📤',
           roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'],
         },
         {
-          label: 'My Trucks',
-          href: '/carrier/trucks',
-          icon: '🚛',
-          roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'],
-        },
-        {
-          label: 'Truck Postings',
-          href: '/carrier/postings',
-          icon: '📋',
+          label: 'Search Loads',
+          href: '/carrier/dat-board?tab=SEARCH_LOADS',
+          icon: '🔍',
           roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'],
         },
       ],
     },
     {
-      title: 'Search',
+      title: 'Truck Management',
       items: [
         {
-          label: 'Search Loads',
-          href: '/carrier/dat-board',
-          icon: '🔍',
+          label: 'My Trucks',
+          href: '/carrier/trucks',
+          icon: '🚛',
           roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'],
         },
         {
@@ -117,35 +111,29 @@ const navigationSections: Record<string, NavSection[]> = {
   ],
   shipper: [
     {
-      title: 'Load Management',
+      title: 'DAT Board',
       items: [
         {
-          label: 'Dashboard',
-          href: '/shipper',
-          icon: '📊',
+          label: 'Post Loads',
+          href: '/shipper/dat-board?tab=POST_LOADS',
+          icon: '📤',
           roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'],
         },
         {
-          label: 'My Loads',
-          href: '/shipper/loads',
-          icon: '📦',
-          roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'],
-        },
-        {
-          label: 'Post New Load',
-          href: '/shipper/loads/create',
-          icon: '➕',
+          label: 'Search Trucks',
+          href: '/shipper/dat-board?tab=SEARCH_TRUCKS',
+          icon: '🔍',
           roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'],
         },
       ],
     },
     {
-      title: 'Search',
+      title: 'Load Management',
       items: [
         {
-          label: 'Search Trucks',
-          href: '/shipper/dat-board',
-          icon: '🔍',
+          label: 'My Loads',
+          href: '/shipper/loads',
+          icon: '📦',
           roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'],
         },
         {
@@ -358,6 +346,7 @@ export default function RoleAwareSidebar({
   portalType,
 }: RoleAwareSidebarProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const sections = navigationSections[portalType] || [];
   const config = portalConfig[portalType];
 
@@ -369,13 +358,36 @@ export default function RoleAwareSidebar({
   };
 
   /**
-   * Check if route is active
+   * Check if route is active (handles query parameters)
    */
   const isActive = (href: string): boolean => {
-    if (href === `/${portalType}`) {
-      return pathname === href;
+    // Parse href to separate path and query
+    const [hrefPath, hrefQuery] = href.split('?');
+
+    // Check if path matches
+    const pathMatches = pathname === hrefPath || pathname?.startsWith(`${hrefPath}/`);
+
+    // If href has query params, check if they match
+    if (hrefQuery && pathMatches) {
+      const hrefParams = new URLSearchParams(hrefQuery);
+      const tabParam = hrefParams.get('tab');
+      const currentTab = searchParams.get('tab');
+
+      // For tab-based navigation, require exact tab match
+      if (tabParam) {
+        return currentTab === tabParam;
+      }
     }
-    return pathname === href || pathname?.startsWith(`${href}/`);
+
+    // For paths without query params
+    if (!hrefQuery) {
+      if (href === `/${portalType}`) {
+        return pathname === href;
+      }
+      return pathMatches;
+    }
+
+    return pathMatches;
   };
 
   return (
