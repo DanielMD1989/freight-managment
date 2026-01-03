@@ -1,9 +1,11 @@
 /**
  * Notification System - Sprint 16 Story 16.10
+ * Phase 2 - Story 15.13: Real-time WebSocket Notifications
  * Handles creation and management of user notifications
  */
 
 import { db } from '@/lib/db';
+import { sendRealtimeNotification } from '@/lib/websocket-server';
 
 /**
  * Notification Types
@@ -48,7 +50,7 @@ export async function createNotification(params: {
   const { userId, type, title, message, metadata } = params;
 
   try {
-    await db.notification.create({
+    const notification = await db.notification.create({
       data: {
         userId,
         type,
@@ -57,6 +59,17 @@ export async function createNotification(params: {
         read: false,
         metadata: metadata || {},
       },
+    });
+
+    // Send real-time notification via WebSocket
+    await sendRealtimeNotification(userId, {
+      id: notification.id,
+      userId: notification.userId,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      metadata: notification.metadata,
+      createdAt: notification.createdAt,
     });
   } catch (error) {
     console.error('Failed to create notification:', error);

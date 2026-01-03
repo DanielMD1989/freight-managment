@@ -204,6 +204,7 @@ model User {
   isPhoneVerified   Boolean    @default(false)
   isActive          Boolean    @default(true) // DEPRECATED: Use status field instead
   lastLoginAt       DateTime?
+  notificationPreferences Json?  // PHASE 2: Story 15.13 - User notification preferences
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 
