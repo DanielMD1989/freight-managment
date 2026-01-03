@@ -5,6 +5,7 @@
  * Sprint 14 - Professional UI Transformation
  */
 
+import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth';
@@ -30,6 +31,10 @@ export default async function ShipperPage() {
     redirect('/unauthorized');
   }
 
-  // Return DAT Power interface
-  return <ShipperDatBoardClient user={session} />;
+  // Return DAT Power interface wrapped in Suspense for useSearchParams
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-100 animate-pulse" />}>
+      <ShipperDatBoardClient user={session} />
+    </Suspense>
+  );
 }

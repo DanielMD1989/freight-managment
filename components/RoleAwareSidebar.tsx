@@ -45,13 +45,13 @@ const navigationSections: Record<string, NavSection[]> = {
       items: [
         {
           label: 'Post Trucks',
-          href: '/carrier/dat-board?tab=POST_TRUCKS',
+          href: '/carrier?tab=POST_TRUCKS',
           icon: '📤',
           roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'],
         },
         {
           label: 'Search Loads',
-          href: '/carrier/dat-board?tab=SEARCH_LOADS',
+          href: '/carrier?tab=SEARCH_LOADS',
           icon: '🔍',
           roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'],
         },
@@ -115,13 +115,13 @@ const navigationSections: Record<string, NavSection[]> = {
       items: [
         {
           label: 'Post Loads',
-          href: '/shipper/dat-board?tab=POST_LOADS',
+          href: '/shipper?tab=POST_LOADS',
           icon: '📤',
           roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'],
         },
         {
           label: 'Search Trucks',
-          href: '/shipper/dat-board?tab=SEARCH_TRUCKS',
+          href: '/shipper?tab=SEARCH_TRUCKS',
           icon: '🔍',
           roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'],
         },
