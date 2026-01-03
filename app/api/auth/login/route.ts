@@ -4,6 +4,7 @@ import { verifyPassword, setSession } from "@/lib/auth";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { logAuthFailure, logAuthSuccess } from "@/lib/auditLog";
+import { generateAndSetCSRFToken } from "@/lib/csrf";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -141,7 +142,8 @@ export async function POST(request: NextRequest) {
     // Log successful login
     await logAuthSuccess(user.id, user.email, request);
 
-    return NextResponse.json({
+    // Generate CSRF token for the session
+    const response = NextResponse.json({
       message: "Login successful",
       user: {
         id: user.id,
@@ -152,6 +154,11 @@ export async function POST(request: NextRequest) {
         organizationId: user.organizationId,
       },
     });
+
+    // Set CSRF token cookie
+    const csrfToken = generateAndSetCSRFToken(response);
+
+    return response;
   } catch (error) {
     console.error("Login error:", error);
 

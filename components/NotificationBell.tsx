@@ -6,6 +6,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { csrfFetch } from '@/lib/csrfFetch';
 
 interface Notification {
   id: string;
@@ -51,7 +52,7 @@ export default function NotificationBell() {
 
   const handleMarkAsRead = async (notificationId: string) => {
     try {
-      const response = await fetch(`/api/notifications/${notificationId}/read`, {
+      const response = await csrfFetch(`/api/notifications/${notificationId}/read`, {
         method: 'PUT',
       });
       if (response.ok) {
@@ -67,7 +68,7 @@ export default function NotificationBell() {
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/notifications/mark-all-read', {
+      const response = await csrfFetch('/api/notifications/mark-all-read', {
         method: 'PUT',
       });
       if (response.ok) {

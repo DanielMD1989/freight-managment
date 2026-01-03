@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server";
 import { clearSession } from "@/lib/auth";
+import { clearCSRFToken } from "@/lib/csrf";
 
 export async function POST() {
   try {
     await clearSession();
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       message: "Logout successful",
     });
+
+    // Clear CSRF token
+    clearCSRFToken(response);
+
+    return response;
   } catch (error) {
     console.error("Logout error:", error);
 
