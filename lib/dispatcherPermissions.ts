@@ -2,11 +2,22 @@
  * Dispatcher Permissions Utility
  *
  * Sprint 16 - Story 16.4: Dispatcher System
+ * Phase 2 Update - Foundation Rule: DISPATCHER_COORDINATION_ONLY
  *
- * Manages permissions for dispatcher role to view and manage loads/trucks
+ * Manages permissions for dispatcher role to view and coordinate loads/trucks
+ *
+ * CRITICAL FOUNDATION RULES:
+ * - Dispatcher can VIEW loads and posted trucks (availability)
+ * - Dispatcher can PROPOSE matches (carrier must approve)
+ * - Dispatcher CANNOT directly assign, accept, or start trips
+ * - Carrier is FINAL authority on execution
  */
 
 import { UserRole } from '@prisma/client';
+import {
+  RULE_DISPATCHER_COORDINATION_ONLY,
+  assertDispatcherCannotAssign,
+} from './foundation-rules';
 
 export interface DispatcherUser {
   role: UserRole;
@@ -49,32 +60,113 @@ export function canViewAllTrucks(user: DispatcherUser): boolean {
 }
 
 /**
- * Check if user can assign loads to trucks
+ * Check if user can DIRECTLY assign loads to trucks
  *
- * Dispatchers can assign any load to any truck
- * Platform ops and admins also have this permission
- * Shippers can only assign their own loads
+ * PHASE 2 UPDATE - Foundation Rule: DISPATCHER_COORDINATION_ONLY
+ * - Dispatchers CANNOT directly assign (they can only PROPOSE)
+ * - Only Admin/SuperAdmin can directly assign
+ * - Shippers can request their own loads be assigned (requires carrier approval)
+ * - Carriers approve requests on their own trucks
  *
  * @param user - User with role information
  * @param loadShipperId - Optional: Organization ID of the load's shipper
- * @returns True if user can assign the load
+ * @returns True if user can DIRECTLY assign the load
  */
 export function canAssignLoads(
   user: DispatcherUser,
   loadShipperId?: string
 ): boolean {
-  // Dispatcher, platform ops, and admin can assign any load
-  if (
-    user.role === 'DISPATCHER' ||
-    user.role === 'SUPER_ADMIN' ||
-    user.role === 'ADMIN'
-  ) {
+  // FOUNDATION RULE: Dispatcher CANNOT directly assign loads
+  // They can only PROPOSE matches that require carrier approval
+  if (user.role === 'DISPATCHER') {
+    return false; // Use canProposeMatch() instead
+  }
+
+  // Platform ops and admin can directly assign (override for support)
+  if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
     return true;
   }
 
-  // Shippers can only assign their own loads
+  // Carriers can assign loads to their own trucks (they are final authority)
+  if (user.role === 'CARRIER') {
+    return true; // Will be validated against their own trucks
+  }
+
+  // Shippers can only REQUEST assignment of their own loads (requires carrier approval)
+  // This returns false because shippers don't directly assign - they request
+  if (user.role === 'SHIPPER' && loadShipperId) {
+    // Shippers use request flow, not direct assignment
+    return false;
+  }
+
+  return false;
+}
+
+/**
+ * Check if user can PROPOSE a match (without direct assignment)
+ *
+ * PHASE 2 - Foundation Rule: DISPATCHER_COORDINATION_ONLY
+ * Dispatcher can propose load-truck matches that require carrier approval
+ *
+ * @param user - User with role information
+ * @returns True if user can propose matches
+ */
+export function canProposeMatch(user: DispatcherUser): boolean {
+  return (
+    user.role === 'DISPATCHER' ||
+    user.role === 'ADMIN' ||
+    user.role === 'SUPER_ADMIN'
+  );
+}
+
+/**
+ * Check if user can REQUEST a truck for a load
+ *
+ * PHASE 2 - Shipper-led matching: Shipper requests truck, carrier approves
+ *
+ * @param user - User with role information
+ * @param loadShipperId - Organization ID of the load's shipper
+ * @returns True if user can request trucks for this load
+ */
+export function canRequestTruck(
+  user: DispatcherUser,
+  loadShipperId?: string
+): boolean {
+  // Shippers can request trucks for their own loads
   if (user.role === 'SHIPPER' && loadShipperId) {
     return user.organizationId === loadShipperId;
+  }
+
+  // Admin/SuperAdmin can request on behalf of shippers
+  if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Check if user can APPROVE/REJECT truck requests
+ *
+ * PHASE 2 - Foundation Rule: CARRIER_FINAL_AUTHORITY
+ * Only carriers can approve requests for their trucks
+ *
+ * @param user - User with role information
+ * @param truckCarrierId - Organization ID of the truck's carrier
+ * @returns True if user can approve/reject requests
+ */
+export function canApproveRequests(
+  user: DispatcherUser,
+  truckCarrierId?: string
+): boolean {
+  // Carriers can approve requests for their own trucks
+  if (user.role === 'CARRIER' && truckCarrierId) {
+    return user.organizationId === truckCarrierId;
+  }
+
+  // Admin/SuperAdmin can approve (override for support)
+  if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
+    return true;
   }
 
   return false;
@@ -231,18 +323,30 @@ export function hasElevatedPermissions(user: DispatcherUser): boolean {
 /**
  * Get permission summary for a user
  *
+ * PHASE 2 UPDATE: Added proposal and request permissions
+ *
  * @param user - User with role information
  * @returns Object with all permission flags
  */
 export function getDispatcherPermissions(user: DispatcherUser) {
   return {
+    // View permissions
     canViewAllLoads: canViewAllLoads(user),
     canViewAllTrucks: canViewAllTrucks(user),
-    canAssignLoads: canAssignLoads(user),
+    canViewSystemDashboard: canViewSystemDashboard(user),
+
+    // Assignment permissions (Phase 2: Dispatcher cannot directly assign)
+    canAssignLoads: canAssignLoads(user),      // FALSE for DISPATCHER
+    canProposeMatch: canProposeMatch(user),    // TRUE for DISPATCHER - propose only
+    canRequestTruck: canRequestTruck(user),    // Shipper-led matching
+    canApproveRequests: canApproveRequests(user), // Carrier authority
+
+    // Other permissions
     canUpdateLoadStatus: canUpdateLoadStatus(user),
     canAccessGpsTracking: canAccessGpsTracking(user),
     canManageTrucks: canManageTrucks(user),
-    canViewSystemDashboard: canViewSystemDashboard(user),
+
+    // Role checks
     isDispatcher: isDispatcher(user),
     hasElevatedPermissions: hasElevatedPermissions(user),
   };

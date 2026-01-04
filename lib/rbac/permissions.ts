@@ -1,5 +1,6 @@
 // RBAC Permission System for Freight Management Platform
 // Sprint 1: Role Consolidation - 5 Roles Only
+// Phase 2 Update: Foundation Rules Enforcement - Dispatcher Coordination Only
 
 export enum Permission {
   // User Management
@@ -71,6 +72,7 @@ export enum Permission {
   VIEW_UNASSIGNED_LOADS = "view_unassigned_loads", // Dispatcher
   VIEW_REJECTED_LOADS = "view_rejected_loads", // Dispatcher
   ESCALATE_TO_ADMIN = "escalate_to_admin", // Dispatcher
+  PROPOSE_MATCH = "propose_match", // Dispatcher - propose load-truck match (Phase 2: no direct assignment)
 
   // Exception Management
   VIEW_EXCEPTIONS = "view_exceptions", // Dispatcher, Admin, SuperAdmin
@@ -206,27 +208,31 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
   /**
    * DISPATCHER
-   * - Manage daily dispatching
-   * - Assign and unassign loads
+   * Phase 2 Update: Coordination Only (Foundation Rule: DISPATCHER_COORDINATION_ONLY)
+   * - View loads and posted trucks (availability)
+   * - PROPOSE matches (carrier must approve)
    * - Monitor unassigned and rejected loads
    * - Handle operational issues
    * - Escalate to Admin when required
+   *
+   * CANNOT: Assign loads, accept loads, start trips (carrier authority only)
    */
   DISPATCHER: [
-    // Load management
+    // Load visibility (read-only coordination)
     Permission.VIEW_ALL_LOADS,
-    Permission.MANAGE_ALL_LOADS,
-    Permission.ASSIGN_LOADS,
-    Permission.UNASSIGN_LOADS,
+    Permission.VIEW_LOADS,
     Permission.DISPATCH_LOADS,
+
+    // Match proposal (NOT assignment - carrier must approve)
+    Permission.PROPOSE_MATCH,
 
     // Queue monitoring
     Permission.VIEW_UNASSIGNED_LOADS,
     Permission.VIEW_REJECTED_LOADS,
 
-    // Truck visibility
+    // Truck visibility (posted trucks only for availability)
     Permission.VIEW_ALL_TRUCKS,
-    Permission.MANAGE_ALL_TRUCKS,
+    Permission.VIEW_TRUCKS,
 
     // Exception handling
     Permission.VIEW_EXCEPTIONS,
@@ -235,7 +241,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     // Automation rules (view only)
     Permission.VIEW_RULES,
 
-    // GPS monitoring
+    // GPS monitoring (for coordination)
     Permission.VIEW_ALL_GPS,
 
     // Dashboard

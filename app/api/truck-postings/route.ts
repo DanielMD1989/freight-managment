@@ -14,6 +14,10 @@
  *
  * Sprint 8 - Story 8.1: Truck Posting Infrastructure
  * Sprint 9 - Story 9.6: CSRF Protection
+ *
+ * PHASE 2 UPDATE - Foundation Rules:
+ * - ONE_ACTIVE_POST_PER_TRUCK: Each truck can only have one active posting
+ * - POSTING_IS_AVAILABILITY: Posting expresses availability, not ownership
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -35,6 +39,10 @@ import { requireCSRF } from '@/lib/csrf';
 import { findMatchingLoads } from '@/lib/matchCalculation';
 import { canViewAllTrucks, hasElevatedPermissions } from '@/lib/dispatcherPermissions';
 import { UserRole } from '@prisma/client';
+import {
+  RULE_ONE_ACTIVE_POST_PER_TRUCK,
+  validateOneActivePostPerTruck,
+} from '@/lib/foundation-rules';
 
 // Validation schema for truck posting
 const TruckPostingSchema = z.object({
@@ -204,6 +212,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Truck not found' },
         { status: 404 }
+      );
+    }
+
+    // PHASE 2: Enforce ONE_ACTIVE_POST_PER_TRUCK rule
+    // Foundation Rule: Each truck can only have one active posting
+    const existingActivePost = await db.truckPosting.findFirst({
+      where: {
+        truckId: data.truckId,
+        status: 'ACTIVE',
+      },
+      select: { id: true },
+    });
+
+    const oneActivePostValidation = validateOneActivePostPerTruck({
+      truckId: data.truckId,
+      hasActivePost: !!existingActivePost,
+      activePostId: existingActivePost?.id,
+    });
+
+    if (!oneActivePostValidation.valid) {
+      return NextResponse.json(
+        {
+          error: oneActivePostValidation.error,
+          existingPostId: existingActivePost?.id,
+          rule: RULE_ONE_ACTIVE_POST_PER_TRUCK.id,
+        },
+        { status: 409 } // 409 Conflict
       );
     }
 

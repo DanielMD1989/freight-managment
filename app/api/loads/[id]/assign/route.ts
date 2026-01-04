@@ -7,6 +7,7 @@ import { canAssignLoads } from '@/lib/dispatcherPermissions';
 import { validateStateTransition, LoadStatus } from '@/lib/loadStateMachine';
 import { checkAssignmentConflicts } from '@/lib/assignmentConflictDetection'; // Sprint 4
 import { holdFundsInEscrow, refundEscrowFunds } from '@/lib/escrowManagement'; // Sprint 8
+import { RULE_CARRIER_FINAL_AUTHORITY } from '@/lib/foundation-rules'; // Phase 2
 
 const assignLoadSchema = z.object({
   truckId: z.string(),
@@ -18,6 +19,11 @@ const assignLoadSchema = z.object({
  * Assign a truck to a load and enable GPS tracking
  *
  * Sprint 16 - Story 16.3: GPS Live Tracking
+ *
+ * PHASE 2 UPDATE - Foundation Rules:
+ * - DISPATCHER cannot use this endpoint (they use /propose instead)
+ * - CARRIER can only assign their own trucks
+ * - ADMIN/SUPER_ADMIN can override for support
  */
 export async function POST(
   request: NextRequest,
@@ -104,6 +110,7 @@ export async function POST(
         imei: true,
         gpsVerifiedAt: true,
         licensePlate: true,
+        carrierId: true, // Phase 2: For ownership validation
       },
     });
 
@@ -112,6 +119,17 @@ export async function POST(
         { error: 'Truck not found' },
         { status: 404 }
       );
+    }
+
+    // PHASE 2: Carrier can only assign their own trucks
+    // Foundation Rule: CARRIER_FINAL_AUTHORITY
+    if (user.role === 'CARRIER') {
+      if (truck.carrierId !== user.organizationId) {
+        return NextResponse.json(
+          { error: 'Carriers can only assign their own trucks' },
+          { status: 403 }
+        );
+      }
     }
 
     // Sprint 4: Check for assignment conflicts

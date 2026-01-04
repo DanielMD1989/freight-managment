@@ -188,6 +188,29 @@ enum TruckDocumentType {
 }
 
 // ============================================================================
+// PHASE 2: MATCHING & AUTHORITY ENUMS
+// Foundation Rules: DISPATCHER_COORDINATION_ONLY, CARRIER_FINAL_AUTHORITY
+// ============================================================================
+
+// Dispatcher match proposal status
+enum ProposalStatus {
+  PENDING      // Proposal created, awaiting carrier review
+  ACCEPTED     // Carrier accepted the proposal
+  REJECTED     // Carrier rejected the proposal
+  EXPIRED      // Proposal expired without response
+  CANCELLED    // Dispatcher cancelled the proposal
+}
+
+// Shipper truck request status
+enum RequestStatus {
+  PENDING      // Request created, awaiting carrier approval
+  APPROVED     // Carrier approved the request
+  REJECTED     // Carrier rejected the request
+  EXPIRED      // Request expired without response
+  CANCELLED    // Shipper cancelled the request
+}
+
+// ============================================================================
 // CORE MODELS
 // ============================================================================
 
@@ -218,6 +241,12 @@ model User {
   passwordResetTokens PasswordResetToken[]
   savedSearches     SavedSearch[]  // SPRINT 14: DAT-Style UI
   notifications     Notification[] // SPRINT 16: Story 16.10 - Notifications
+
+  // PHASE 2: Match proposal and request relations
+  proposalsCreated      MatchProposal[]  @relation("ProposedBy")
+  proposalsResponded    MatchProposal[]  @relation("RespondedBy")
+  requestsCreated       TruckRequest[]   @relation("RequestedBy")
+  requestsResponded     TruckRequest[]   @relation("RespondedByCarrier")
 
   @@index([email])
   @@index([organizationId])
@@ -283,6 +312,11 @@ model Organization {
   // SPRINT 8: New relations
   documents         CompanyDocument[]
   truckPostings     TruckPosting[]
+
+  // PHASE 2: Match proposal and request relations
+  matchProposals    MatchProposal[]
+  shipperRequests   TruckRequest[]   @relation("ShipperRequests")
+  carrierRequests   TruckRequest[]   @relation("CarrierRequests")
 
   @@index([type])
   @@index([isVerified])
@@ -416,6 +450,10 @@ model Load {
   disputes              Dispute[]
   journalEntries        JournalEntry[]
   escalations           LoadEscalation[]  // Sprint 4: Dispatcher escalation tracking
+
+  // PHASE 2: Match proposal and request relations
+  matchProposals        MatchProposal[]
+  truckRequests         TruckRequest[]
 
   @@index([status])
   @@index([pickupCity])
@@ -589,6 +627,10 @@ model Truck {
   // SPRINT 8: New relations
   postings        TruckPosting[]
   documents       TruckDocument[]
+
+  // PHASE 2: Match proposal and request relations
+  matchProposals  MatchProposal[]
+  truckRequests   TruckRequest[]
 
   @@index([carrierId])
   @@index([truckType])
@@ -941,6 +983,107 @@ model TruckPosting {
   @@index([availableFrom])
   @@index([carrierId])
   @@map("truck_postings")
+}
+
+// ============================================================================
+// PHASE 2: MATCHING & AUTHORITY MODELS
+// Foundation Rules: DISPATCHER_COORDINATION_ONLY, CARRIER_FINAL_AUTHORITY
+// ============================================================================
+
+// Dispatcher proposes a match between load and truck
+// Carrier must approve before assignment happens
+model MatchProposal {
+  id                String            @id @default(cuid())
+  status            ProposalStatus    @default(PENDING)
+
+  // Load being proposed
+  loadId            String
+  load              Load              @relation(fields: [loadId], references: [id])
+
+  // Truck being proposed
+  truckId           String
+  truck             Truck             @relation(fields: [truckId], references: [id])
+
+  // Carrier who owns the truck (must approve)
+  carrierId         String
+  carrier           Organization      @relation(fields: [carrierId], references: [id])
+
+  // Dispatcher who created the proposal
+  proposedById      String
+  proposedBy        User              @relation("ProposedBy", fields: [proposedById], references: [id])
+
+  // Proposal metadata
+  notes             String?           // Dispatcher's notes for the carrier
+  proposedRate      Decimal?          // Suggested rate (optional)
+
+  // Response from carrier
+  respondedAt       DateTime?
+  responseNotes     String?
+  respondedById     String?
+  respondedBy       User?             @relation("RespondedBy", fields: [respondedById], references: [id])
+
+  // Expiration
+  expiresAt         DateTime
+
+  // Timestamps
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([status])
+  @@index([loadId])
+  @@index([truckId])
+  @@index([carrierId])
+  @@index([proposedById])
+  @@map("match_proposals")
+}
+
+// Shipper requests a specific truck for their load
+// Carrier must approve before assignment happens
+model TruckRequest {
+  id                String            @id @default(cuid())
+  status            RequestStatus     @default(PENDING)
+
+  // Load for which truck is requested
+  loadId            String
+  load              Load              @relation(fields: [loadId], references: [id])
+
+  // Truck being requested
+  truckId           String
+  truck             Truck             @relation(fields: [truckId], references: [id])
+
+  // Shipper who made the request
+  shipperId         String
+  shipper           Organization      @relation("ShipperRequests", fields: [shipperId], references: [id])
+  requestedById     String
+  requestedBy       User              @relation("RequestedBy", fields: [requestedById], references: [id])
+
+  // Carrier who owns the truck (must approve)
+  carrierId         String
+  carrier           Organization      @relation("CarrierRequests", fields: [carrierId], references: [id])
+
+  // Request metadata
+  notes             String?           // Shipper's notes for the carrier
+  offeredRate       Decimal?          // Rate shipper is willing to pay
+
+  // Response from carrier
+  respondedAt       DateTime?
+  responseNotes     String?
+  respondedById     String?
+  respondedBy       User?             @relation("RespondedByCarrier", fields: [respondedById], references: [id])
+
+  // Expiration
+  expiresAt         DateTime
+
+  // Timestamps
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([status])
+  @@index([loadId])
+  @@index([truckId])
+  @@index([shipperId])
+  @@index([carrierId])
+  @@map("truck_requests")
 }
 
 model CompanyDocument {
