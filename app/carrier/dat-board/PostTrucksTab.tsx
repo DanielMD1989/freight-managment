@@ -42,7 +42,6 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   // User's approved trucks (from My Trucks)
   const [approvedTrucks, setApprovedTrucks] = useState<any[]>([]);
   const [loadingApprovedTrucks, setLoadingApprovedTrucks] = useState(false);
-  const [selectedTruckId, setSelectedTruckIdForPosting] = useState<string>('');
 
   // New truck posting form state
   const [newTruckForm, setNewTruckForm] = useState({

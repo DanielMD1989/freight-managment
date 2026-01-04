@@ -177,6 +177,12 @@ export async function GET(request: NextRequest) {
     // Role-based filtering
     if (user.role === 'CARRIER') {
       // Carriers can only see their own fleet
+      if (!user.organizationId) {
+        return NextResponse.json(
+          { error: "Carrier must belong to an organization to view trucks" },
+          { status: 403 }
+        );
+      }
       where.carrierId = user.organizationId;
     } else if (user.role === 'DISPATCHER') {
       // Dispatchers can see all trucks (for coordination)
