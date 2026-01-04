@@ -5230,7 +5230,7 @@ See [DEPLOYMENT_SETUP.md](DEPLOYMENT_SETUP.md) for cron job setup instructions.
 
 ## **SPRINT 17: PHASE 2 - AUTHORITY & WORKFLOW REFINEMENT**
 **Goal:** Enforce proper authority boundaries and implement request-approval workflow
-**Status:** 🔄 IN PROGRESS
+**Status:** ✅ COMPLETE
 
 > **⚠️ MANDATORY INSTRUCTION:**
 > Implement incrementally. Never refactor ownership, availability, or authority logic unless explicitly instructed.
@@ -5249,11 +5249,11 @@ See [DEPLOYMENT_SETUP.md](DEPLOYMENT_SETUP.md) for cron job setup instructions.
 5. **Carrier is final authority on execution** - Must approve before trip starts
 
 #### Tasks:
-- [ ] 17.0.1: Document global rules in `/docs/GLOBAL_RULES.md`
-- [ ] 17.0.2: Add rule validation comments in key files (`lib/dispatcherPermissions.ts`, `lib/loadStateMachine.ts`)
-- [ ] 17.0.3: Create `lib/ruleValidation.ts` with enforcement helpers
-- [ ] 17.0.4: Add automated lint/test check for rule violations
-- [ ] 17.0.5: Update RBAC documentation with authority matrix
+- [x] 17.0.1: Document global rules in `/docs/GLOBAL_RULES.md`
+- [x] 17.0.2: Add rule validation comments in key files (`lib/dispatcherPermissions.ts`, `lib/loadStateMachine.ts`)
+- [x] 17.0.3: Create `lib/ruleValidation.ts` with enforcement helpers
+- [x] 17.0.4: Add automated lint/test check for rule violations
+- [x] 17.0.5: Update RBAC documentation with authority matrix
 
 **Done When:** Rules are written and referenced by all modules
 
@@ -5271,16 +5271,16 @@ See [DEPLOYMENT_SETUP.md](DEPLOYMENT_SETUP.md) for cron job setup instructions.
 | **Dispatcher** | Coordinates/proposes matches, NO execute authority |
 
 #### Tasks:
-- [ ] 17.1.1: Remove `Permission.ASSIGN_LOADS` from DISPATCHER role in `lib/rbac/permissions.ts`
-- [ ] 17.1.2: Create new `Permission.PROPOSE_MATCH` for Dispatcher
-- [ ] 17.1.3: Update `canAssignLoads()` in `lib/dispatcherPermissions.ts` - DISPATCHER returns false
-- [ ] 17.1.4: Create `canProposeMatch()` function for Dispatcher proposals
-- [ ] 17.1.5: Update `/api/loads/[id]/assign` to reject DISPATCHER direct assignments
-- [ ] 17.1.6: Ensure Carrier cannot see other carriers' fleets (verify existing)
-- [ ] 17.1.7: Ensure Shipper sees only eligible trucks for their load (radius, type, capacity)
-- [ ] 17.1.8: Add server-side permission checks for all load/truck mutations
-- [ ] 17.1.9: Update UI to hide unauthorized actions per role
-- [ ] 17.1.10: Write permission boundary tests
+- [x] 17.1.1: Remove `Permission.ASSIGN_LOADS` from DISPATCHER role in `lib/rbac/permissions.ts`
+- [x] 17.1.2: Create new `Permission.PROPOSE_MATCH` for Dispatcher
+- [x] 17.1.3: Update `canAssignLoads()` in `lib/dispatcherPermissions.ts` - DISPATCHER returns false
+- [x] 17.1.4: Create `canProposeMatch()` function for Dispatcher proposals
+- [x] 17.1.5: Update `/api/loads/[id]/assign` to reject DISPATCHER direct assignments
+- [x] 17.1.6: Ensure Carrier cannot see other carriers' fleets (verify existing)
+- [x] 17.1.7: Ensure Shipper sees only eligible trucks for their load (radius, type, capacity)
+- [x] 17.1.8: Add server-side permission checks for all load/truck mutations
+- [x] 17.1.9: Update UI to hide unauthorized actions per role
+- [x] 17.1.10: Write permission boundary tests
 
 **Done When:**
 - Dispatcher cannot modify trucks or assign loads directly
@@ -5293,16 +5293,16 @@ See [DEPLOYMENT_SETUP.md](DEPLOYMENT_SETUP.md) for cron job setup instructions.
 **Objective:** Clean separation of ownership and availability.
 
 #### Tasks:
-- [ ] 17.2.1: Verify Carrier account creation flow works correctly
-- [ ] 17.2.2: Verify fleet registration (multiple trucks per carrier)
-- [ ] 17.2.3: Ensure truck master stores: plate, type, capacity, documents
-- [ ] 17.2.4: Verify Admin approval workflow for carriers/trucks
-- [ ] 17.2.5: Create/update "My Trucks" view for Carrier dashboard
-- [ ] 17.2.6: Show truck status in list (Idle / Posted / On Trip)
-- [ ] 17.2.7: Verify no location stored in truck master table (only in posting/GPS)
-- [ ] 17.2.8: Add document upload for compliance (COC, insurance, etc.)
-- [ ] 17.2.9: Carrier can view own fleet statistics
-- [ ] 17.2.10: Carrier receives notifications for truck requests
+- [x] 17.2.1: Verify Carrier account creation flow works correctly
+- [x] 17.2.2: Verify fleet registration (multiple trucks per carrier)
+- [x] 17.2.3: Ensure truck master stores: plate, type, capacity, documents
+- [x] 17.2.4: Verify Admin approval workflow for carriers/trucks
+- [x] 17.2.5: Create/update "My Trucks" view for Carrier dashboard
+- [x] 17.2.6: Show truck status in list (Idle / Posted / On Trip)
+- [x] 17.2.7: Verify no location stored in truck master table (only in posting/GPS)
+- [x] 17.2.8: Add document upload for compliance (COC, insurance, etc.)
+- [x] 17.2.9: Carrier can view own fleet statistics
+- [x] 17.2.10: Carrier receives notifications for truck requests
 
 **Done When:**
 - Trucks exist independently of availability
@@ -5315,14 +5315,14 @@ See [DEPLOYMENT_SETUP.md](DEPLOYMENT_SETUP.md) for cron job setup instructions.
 **Objective:** Enable live supply without duplication.
 
 #### Tasks:
-- [ ] 17.3.1: Verify "Post Truck" flow - select truck, enter location & availability
-- [ ] 17.3.2: **Add DB constraint**: One active post per truck (`@@unique([truckId, status]) WHERE status='ACTIVE'`)
-- [ ] 17.3.3: **Add API validation**: Check for existing ACTIVE posting before creating new
-- [ ] 17.3.4: **Implement auto-expiry**: Create `/api/cron/expire-truck-postings` cron job
-- [ ] 17.3.5: Add `expireTruckPostings()` to `lib/loadAutomation.ts`
-- [ ] 17.3.6: Visibility rule: Posted trucks → visible, Unposted → invisible to searchers
-- [ ] 17.3.7: Allow carrier to cancel/unpublish posting manually
-- [ ] 17.3.8: Show posting status in carrier dashboard (Active / Expired / Cancelled)
+- [x] 17.3.1: Verify "Post Truck" flow - select truck, enter location & availability
+- [x] 17.3.2: **Add DB constraint**: One active post per truck (`@@unique([truckId, status]) WHERE status='ACTIVE'`)
+- [x] 17.3.3: **Add API validation**: Check for existing ACTIVE posting before creating new
+- [x] 17.3.4: **Implement auto-expiry**: Create `/api/cron/expire-truck-postings` cron job
+- [x] 17.3.5: Add `expireTruckPostings()` to `lib/loadAutomation.ts`
+- [x] 17.3.6: Visibility rule: Posted trucks → visible, Unposted → invisible to searchers
+- [x] 17.3.7: Allow carrier to cancel/unpublish posting manually
+- [x] 17.3.8: Show posting status in carrier dashboard (Active / Expired / Cancelled)
 
 **Done When:**
 - Posting never creates trucks (only references existing)
@@ -5340,14 +5340,14 @@ Post Load → Search Trucks → Send Request → Wait for Carrier Approval → T
 ```
 
 #### Tasks:
-- [ ] 17.4.1: Verify Shipper account creation flow
-- [ ] 17.4.2: Verify load posting (origin, destination, cargo, time, pricing)
-- [ ] 17.4.3: Verify load lifecycle: POSTED → REQUESTED → ASSIGNED → IN_TRANSIT → COMPLETED
-- [ ] 17.4.4: Create truck search for Shipper (filter by location radius, type, capacity, availability)
-- [ ] 17.4.5: **Create REQUEST endpoint**: `POST /api/truck-requests` - Shipper requests specific truck
-- [ ] 17.4.6: Show request status to Shipper (Pending / Approved / Rejected)
-- [ ] 17.4.7: Allow Shipper to cancel pending request and request another truck
-- [ ] 17.4.8: Shipper tracking: see assigned truck, live GPS during trip
+- [x] 17.4.1: Verify Shipper account creation flow
+- [x] 17.4.2: Verify load posting (origin, destination, cargo, time, pricing)
+- [x] 17.4.3: Verify load lifecycle: POSTED → REQUESTED → ASSIGNED → IN_TRANSIT → COMPLETED
+- [x] 17.4.4: Create truck search for Shipper (filter by location radius, type, capacity, availability)
+- [x] 17.4.5: **Create REQUEST endpoint**: `POST /api/truck-requests` - Shipper requests specific truck
+- [x] 17.4.6: Show request status to Shipper (Pending / Approved / Rejected)
+- [x] 17.4.7: Allow Shipper to cancel pending request and request another truck
+- [x] 17.4.8: Shipper tracking: see assigned truck, live GPS during trip
 
 **Done When:**
 - Shipper cannot commit a truck directly
@@ -5369,18 +5369,18 @@ Post Load → Search Trucks → Send Request → Wait for Carrier Approval → T
 | Escalate to Admin | Commit carriers |
 
 #### Tasks:
-- [ ] 17.5.1: Update Dispatcher dashboard - remove Assign button
-- [ ] 17.5.2: Replace QuickAssignModal with ProposalModal (suggest, don't execute)
-- [ ] 17.5.3: **Create proposal endpoint**: `POST /api/match-proposals` - Dispatcher proposes match
-- [ ] 17.5.4: Create `MatchProposal` model in schema (loadId, truckId, dispatcherId, status, notes)
-- [ ] 17.5.5: Proposal goes to Carrier dashboard for review
-- [ ] 17.5.6: Carrier can approve/reject dispatcher proposals
-- [ ] 17.5.7: Add load status visibility filters (Unassigned, Requested, Assigned, In-Transit)
-- [ ] 17.5.8: Add notes/alerts feature for loads
-- [ ] 17.5.9: Add escalation to Admin feature
-- [ ] 17.5.10: Show pending proposals count
-- [ ] 17.5.11: Update dispatcher permissions utility functions
-- [ ] 17.5.12: Write tests: Dispatcher cannot accept/assign/start trip
+- [x] 17.5.1: Update Dispatcher dashboard - remove Assign button
+- [x] 17.5.2: Replace QuickAssignModal with ProposalModal (suggest, don't execute)
+- [x] 17.5.3: **Create proposal endpoint**: `POST /api/match-proposals` - Dispatcher proposes match
+- [x] 17.5.4: Create `MatchProposal` model in schema (loadId, truckId, dispatcherId, status, notes)
+- [x] 17.5.5: Proposal goes to Carrier dashboard for review
+- [x] 17.5.6: Carrier can approve/reject dispatcher proposals
+- [x] 17.5.7: Add load status visibility filters (Unassigned, Requested, Assigned, In-Transit)
+- [x] 17.5.8: Add notes/alerts feature for loads
+- [x] 17.5.9: Add escalation to Admin feature
+- [x] 17.5.10: Show pending proposals count
+- [x] 17.5.11: Update dispatcher permissions utility functions
+- [x] 17.5.12: Write tests: Dispatcher cannot accept/assign/start trip
 
 **Done When:**
 - Dispatcher can coordinate but NOT execute
@@ -5400,14 +5400,14 @@ Post Load → Search Trucks → Send Request → Wait for Carrier Approval → T
 | Dispatcher | Posted trucks, unassigned loads |
 
 #### Tasks:
-- [ ] 17.6.1: Create shared map component `components/RoleFilteredMap.tsx`
-- [ ] 17.6.2: Implement role-based data filtering in map API
-- [ ] 17.6.3: Add map to Admin dashboard (full visibility)
-- [ ] 17.6.4: Add map to Carrier dashboard (own fleet filter)
-- [ ] 17.6.5: Add map to Shipper dashboard (own loads filter)
-- [ ] 17.6.6: Add map to Dispatcher dashboard (available trucks, open loads)
-- [ ] 17.6.7: Marker interactions are read-only (click shows details modal)
-- [ ] 17.6.8: Write tests: No unauthorized data visible on map
+- [x] 17.6.1: Create shared map component `components/RoleFilteredMap.tsx`
+- [x] 17.6.2: Implement role-based data filtering in map API
+- [x] 17.6.3: Add map to Admin dashboard (full visibility)
+- [x] 17.6.4: Add map to Carrier dashboard (own fleet filter)
+- [x] 17.6.5: Add map to Shipper dashboard (own loads filter)
+- [x] 17.6.6: Add map to Dispatcher dashboard (available trucks, open loads)
+- [x] 17.6.7: Marker interactions are read-only (click shows details modal)
+- [x] 17.6.8: Write tests: No unauthorized data visible on map
 
 **Done When:**
 - Single map engine used across all roles
@@ -5436,16 +5436,16 @@ Post Load → Search Trucks → Send Request → Wait for Carrier Approval → T
 ```
 
 #### Tasks:
-- [ ] 17.7.1: Create `TruckRequest` model (loadId, truckId, shipperId, carrierId, status, createdAt)
-- [ ] 17.7.2: Request statuses: PENDING → APPROVED | REJECTED | CANCELLED | EXPIRED
-- [ ] 17.7.3: `POST /api/truck-requests` - Shipper sends request
-- [ ] 17.7.4: `PATCH /api/truck-requests/[id]/respond` - Carrier approves/rejects
-- [ ] 17.7.5: On approval: automatically assign load to truck, set load status ASSIGNED
-- [ ] 17.7.6: On rejection: notify shipper, allow new request
-- [ ] 17.7.7: Add Carrier dashboard "Incoming Requests" section
-- [ ] 17.7.8: Trip lifecycle: ASSIGNED → IN_TRANSIT → DELIVERED → COMPLETED (Carrier only)
-- [ ] 17.7.9: Only Carrier can start trip (transition ASSIGNED → IN_TRANSIT)
-- [ ] 17.7.10: Add request expiry (auto-expire after 24 hours if no response)
+- [x] 17.7.1: Create `TruckRequest` model (loadId, truckId, shipperId, carrierId, status, createdAt)
+- [x] 17.7.2: Request statuses: PENDING → APPROVED | REJECTED | CANCELLED | EXPIRED
+- [x] 17.7.3: `POST /api/truck-requests` - Shipper sends request
+- [x] 17.7.4: `PATCH /api/truck-requests/[id]/respond` - Carrier approves/rejects
+- [x] 17.7.5: On approval: automatically assign load to truck, set load status ASSIGNED
+- [x] 17.7.6: On rejection: notify shipper, allow new request
+- [x] 17.7.7: Add Carrier dashboard "Incoming Requests" section
+- [x] 17.7.8: Trip lifecycle: ASSIGNED → IN_TRANSIT → DELIVERED → COMPLETED (Carrier only)
+- [x] 17.7.9: Only Carrier can start trip (transition ASSIGNED → IN_TRANSIT)
+- [x] 17.7.10: Add request expiry (auto-expire after 24 hours if no response)
 
 **Done When:**
 - No execution without Carrier confirmation
@@ -5458,11 +5458,11 @@ Post Load → Search Trucks → Send Request → Wait for Carrier Approval → T
 **Objective:** Platform control & safety.
 
 #### Tasks:
-- [ ] 17.8.1: Verify Admin carrier & truck approval workflow
-- [ ] 17.8.2: Verify Admin full map visibility (all entities)
-- [ ] 17.8.3: Verify audit logs capture all critical actions
-- [ ] 17.8.4: Verify dispute tools are functional
-- [ ] 17.8.5: Admin can view all requests, proposals, and their statuses
+- [x] 17.8.1: Verify Admin carrier & truck approval workflow
+- [x] 17.8.2: Verify Admin full map visibility (all entities)
+- [x] 17.8.3: Verify audit logs capture all critical actions
+- [x] 17.8.4: Verify dispute tools are functional
+- [x] 17.8.5: Admin can view all requests, proposals, and their statuses
 
 **Done When:**
 - Admin can trace every action
@@ -5474,10 +5474,10 @@ Post Load → Search Trucks → Send Request → Wait for Carrier Approval → T
 **Objective:** Prevent regressions and ensure authority boundaries hold.
 
 #### Tasks:
-- [ ] 17.9.1: Permission boundary tests (each role can only do allowed actions)
-- [ ] 17.9.2: Visibility tests (no cross-organization data leaks)
-- [ ] 17.9.3: State transition tests (load/request status machine)
-- [ ] 17.9.4: Edge case tests (expired requests, cancelled loads, etc.)
+- [x] 17.9.1: Permission boundary tests (each role can only do allowed actions)
+- [x] 17.9.2: Visibility tests (no cross-organization data leaks)
+- [x] 17.9.3: State transition tests (load/request status machine)
+- [x] 17.9.4: Edge case tests (expired requests, cancelled loads, etc.)
 
 **Done When:**
 - No role can overstep authority
@@ -5490,17 +5490,17 @@ Post Load → Search Trucks → Send Request → Wait for Carrier Approval → T
 
 | Task Group | Tasks | Status |
 |------------|-------|--------|
-| 0: Foundation Lock | 5 | [ ] |
-| 1: RBAC Enforcement | 10 | [ ] |
-| 2: Truck & Fleet Mgmt | 10 | [ ] |
-| 3: Truck Posting | 8 | [ ] |
-| 4: Load Management | 8 | [ ] |
-| 5: Dispatcher Module | 12 | [ ] |
-| 6: Map View | 8 | [ ] |
-| 7: Matching & Execution | 10 | [ ] |
-| 8: Admin & Monitoring | 5 | [ ] |
-| 9: Validation | 4 | [ ] |
-| **TOTAL** | **80** | **0%** |
+| 0: Foundation Lock | 5 | ✅ |
+| 1: RBAC Enforcement | 10 | ✅ |
+| 2: Truck & Fleet Mgmt | 10 | ✅ |
+| 3: Truck Posting | 8 | ✅ |
+| 4: Load Management | 8 | ✅ |
+| 5: Dispatcher Module | 12 | ✅ |
+| 6: Map View | 8 | ✅ |
+| 7: Matching & Execution | 10 | ✅ |
+| 8: Admin & Monitoring | 5 | ✅ |
+| 9: Validation | 4 | ✅ |
+| **TOTAL** | **80** | **100%** ✅ |
 
 ---
 
