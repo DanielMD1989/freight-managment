@@ -27,7 +27,11 @@ interface PostTrucksTabProps {
  */
 const getCSRFToken = async (): Promise<string | null> => {
   try {
-    const response = await fetch('/api/auth/csrf');
+    const response = await fetch('/api/csrf-token');
+    if (!response.ok) {
+      console.error('CSRF token request failed:', response.status);
+      return null;
+    }
     const data = await response.json();
     return data.csrfToken;
   } catch (error) {
