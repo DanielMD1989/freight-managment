@@ -1234,9 +1234,25 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         const dhDA = a.load?.dhAfterDeliveryKm || 0;
         const dhDB = b.load?.dhAfterDeliveryKm || 0;
         if (dhDA !== dhDB) return dhDA - dhDB;
+      } else {
+        // No truck selected: sort by recency first, then by location
+        // First: by most recent (newest first)
+        const dateA = new Date(a.load?.createdAt || 0).getTime();
+        const dateB = new Date(b.load?.createdAt || 0).getTime();
+        if (dateA !== dateB) return dateB - dateA;
+
+        // Second: by pickup city (alphabetically for easier scanning)
+        const cityA = (a.load?.pickupCity || '').toLowerCase();
+        const cityB = (b.load?.pickupCity || '').toLowerCase();
+        if (cityA !== cityB) return cityA.localeCompare(cityB);
+
+        // Third: by delivery city
+        const destA = (a.load?.deliveryCity || '').toLowerCase();
+        const destB = (b.load?.deliveryCity || '').toLowerCase();
+        return destA.localeCompare(destB);
       }
 
-      // Sort by most recent first
+      // Fallback: sort by most recent first
       const dateA = new Date(a.load?.createdAt || 0).getTime();
       const dateB = new Date(b.load?.createdAt || 0).getTime();
       return dateB - dateA;
