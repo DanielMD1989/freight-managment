@@ -47,24 +47,35 @@ export async function GET(request: NextRequest) {
     // Check if token already exists in cookie
     const existingToken = getCSRFTokenFromCookie(request);
 
-    const response = NextResponse.json({
-      csrfToken: existingToken || '',
-    });
-
-    // If no existing token, generate and set new one
-    if (!existingToken) {
-      const newToken = generateAndSetCSRFToken(response);
+    if (existingToken) {
+      // Return existing token
       return NextResponse.json({
-        csrfToken: newToken,
-      }, {
-        headers: response.headers,
+        csrfToken: existingToken,
       });
     }
 
-    // Return existing token
-    return NextResponse.json({
-      csrfToken: existingToken,
+    // Generate new token and set cookie
+    const response = NextResponse.json({
+      csrfToken: '', // Will be replaced
     });
+
+    const newToken = generateAndSetCSRFToken(response);
+
+    // Create new response with the token and copy cookies
+    const finalResponse = NextResponse.json({
+      csrfToken: newToken,
+    });
+
+    // Copy the CSRF cookie to the final response
+    finalResponse.cookies.set(CSRF_COOKIE_NAME, newToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24, // 24 hours
+    });
+
+    return finalResponse;
   } catch (error: any) {
     console.error('Error generating CSRF token:', error);
 
