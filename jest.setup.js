@@ -13,80 +13,149 @@ process.env.DATABASE_URL = 'postgresql://test@localhost:5432/freight_test';
 process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
 process.env.EMAIL_PROVIDER = 'console';
 
-// Mock Prisma client for tests
+// Mock Prisma client for tests with in-memory storage
 jest.mock('@/lib/db', () => {
+  // In-memory stores for test data
+  const stores = {
+    users: new Map(),
+    organizations: new Map(),
+    loads: new Map(),
+    trucks: new Map(),
+    notifications: new Map(),
+    truckPostings: new Map(),
+  };
+
   let userIdCounter = 1;
   let orgIdCounter = 1;
   let loadIdCounter = 1;
   let truckIdCounter = 1;
+  let notificationIdCounter = 1;
+  let truckPostingIdCounter = 1;
+
+  // Default values for different model types
+  const modelDefaults = {
+    org: {
+      currentCommissionRatePercent: 2, // Default 2% commission
+      totalCommissionPaidEtb: 0,
+      isActive: true,
+      verificationStatus: 'PENDING',
+    },
+    user: {
+      isActive: true,
+      emailVerified: false,
+    },
+    load: {},
+    truck: {},
+    notification: {
+      read: false,
+    },
+    truckPosting: {},
+  };
+
+  // Helper to create model methods with in-memory storage
+  const createModelMethods = (store, idPrefix, idCounter) => ({
+    create: jest.fn(({ data }) => {
+      const id = data.id || `${idPrefix}-${idCounter.value++}`;
+      const defaults = modelDefaults[idPrefix] || {};
+      const record = {
+        id,
+        ...defaults,
+        ...data,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      store.set(id, record);
+      return Promise.resolve(record);
+    }),
+    findUnique: jest.fn(({ where, include }) => {
+      const record = store.get(where.id);
+      if (!record) return Promise.resolve(null);
+
+      // Handle includes for relationships
+      if (include && record) {
+        const result = { ...record };
+        if (include.users && stores.users) {
+          result.users = Array.from(stores.users.values()).filter(
+            u => u.organizationId === record.id
+          );
+        }
+        if (include.loads && stores.loads) {
+          result.loads = Array.from(stores.loads.values()).filter(
+            l => l.shipperId === record.id
+          );
+        }
+        return Promise.resolve(result);
+      }
+      return Promise.resolve(record);
+    }),
+    findMany: jest.fn(({ where } = {}) => {
+      let records = Array.from(store.values());
+      if (where) {
+        records = records.filter(r => {
+          return Object.entries(where).every(([key, value]) => r[key] === value);
+        });
+      }
+      return Promise.resolve(records);
+    }),
+    update: jest.fn(({ where, data }) => {
+      const record = store.get(where.id);
+      if (!record) return Promise.resolve(null);
+      const updated = { ...record, ...data, updatedAt: new Date() };
+      store.set(where.id, updated);
+      return Promise.resolve(updated);
+    }),
+    delete: jest.fn(({ where }) => {
+      const record = store.get(where.id);
+      store.delete(where.id);
+      return Promise.resolve(record);
+    }),
+    deleteMany: jest.fn(({ where } = {}) => {
+      let count = 0;
+      if (where?.id) {
+        if (store.has(where.id)) {
+          store.delete(where.id);
+          count = 1;
+        }
+      } else {
+        count = store.size;
+        store.clear();
+      }
+      return Promise.resolve({ count });
+    }),
+    count: jest.fn(({ where } = {}) => {
+      if (!where) return Promise.resolve(store.size);
+      let count = 0;
+      store.forEach(record => {
+        const matches = Object.entries(where).every(([key, value]) => record[key] === value);
+        if (matches) count++;
+      });
+      return Promise.resolve(count);
+    }),
+  });
+
+  // Counter objects (so they can be passed by reference)
+  const counters = {
+    user: { value: userIdCounter },
+    org: { value: orgIdCounter },
+    load: { value: loadIdCounter },
+    truck: { value: truckIdCounter },
+    notification: { value: notificationIdCounter },
+    truckPosting: { value: truckPostingIdCounter },
+  };
 
   return {
     db: {
-      user: {
-        create: jest.fn(({ data }) => Promise.resolve({
-          id: `user-${userIdCounter++}`,
-          email: data.email,
-          password: data.password,
-          name: data.name,
-          role: data.role,
-          organizationId: data.organizationId || null,
-          emailVerified: data.emailVerified || false,
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })),
-        findUnique: jest.fn(),
-        findMany: jest.fn(() => Promise.resolve([])),
-        update: jest.fn(),
-        delete: jest.fn(),
-        deleteMany: jest.fn(() => Promise.resolve({ count: 0 })),
-      },
-      organization: {
-        create: jest.fn(({ data }) => Promise.resolve({
-          id: `org-${orgIdCounter++}`,
-          name: data.name,
-          type: data.type,
-          verificationStatus: data.verificationStatus || 'PENDING',
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })),
-        findUnique: jest.fn(),
-        findMany: jest.fn(() => Promise.resolve([])),
-        update: jest.fn(),
-        delete: jest.fn(),
-        deleteMany: jest.fn(() => Promise.resolve({ count: 0 })),
-      },
-      load: {
-        create: jest.fn(({ data }) => Promise.resolve({
-          id: `load-${loadIdCounter++}`,
-          ...data,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })),
-        findUnique: jest.fn(),
-        findMany: jest.fn(() => Promise.resolve([])),
-        update: jest.fn(),
-        delete: jest.fn(),
-        deleteMany: jest.fn(() => Promise.resolve({ count: 0 })),
-      },
-      truck: {
-        create: jest.fn(({ data }) => Promise.resolve({
-          id: `truck-${truckIdCounter++}`,
-          ...data,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })),
-        findUnique: jest.fn(),
-        findMany: jest.fn(() => Promise.resolve([])),
-        update: jest.fn(),
-        delete: jest.fn(),
-        deleteMany: jest.fn(() => Promise.resolve({ count: 0 })),
-      },
+      user: createModelMethods(stores.users, 'user', counters.user),
+      organization: createModelMethods(stores.organizations, 'org', counters.org),
+      load: createModelMethods(stores.loads, 'load', counters.load),
+      truck: createModelMethods(stores.trucks, 'truck', counters.truck),
+      notification: createModelMethods(stores.notifications, 'notification', counters.notification),
+      truckPosting: createModelMethods(stores.truckPostings, 'truckPosting', counters.truckPosting),
       auditLog: {
         create: jest.fn(() => Promise.resolve({ id: 'audit-1' })),
         createMany: jest.fn(() => Promise.resolve({ count: 0 })),
         deleteMany: jest.fn(() => Promise.resolve({ count: 0 })),
+        count: jest.fn(() => Promise.resolve(0)),
       },
       companyDocument: {
         deleteMany: jest.fn(() => Promise.resolve({ count: 0 })),
@@ -103,6 +172,10 @@ jest.mock('@/lib/db', () => {
         }
         return Promise.resolve();
       }),
+      // Helper to clear all stores between tests if needed
+      _clearStores: () => {
+        Object.values(stores).forEach(store => store.clear());
+      },
     },
   };
 });

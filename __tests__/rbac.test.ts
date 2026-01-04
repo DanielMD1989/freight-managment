@@ -76,7 +76,7 @@ describe('RBAC System', () => {
   });
 
   describe('Admin Role Permissions', () => {
-    it('should grant admin all permissions', async () => {
+    it('should grant admin key administrative permissions', async () => {
       const org = await createTestOrganization({
         name: 'Admin Org',
         type: 'CARRIER',
@@ -90,13 +90,25 @@ describe('RBAC System', () => {
         organizationId: org.id,
       });
 
-      // Test all permissions
-      const allPermissions = Object.values(Permission);
+      // Test key admin permissions
+      const adminPermissions = [
+        Permission.MANAGE_USERS,
+        Permission.VIEW_ALL_LOADS,
+        Permission.VIEW_ALL_TRUCKS,
+        Permission.VERIFY_DOCUMENTS,
+        Permission.MANAGE_WALLET,
+        Permission.VIEW_AUDIT_LOGS,
+        Permission.MANAGE_SYSTEM_CONFIG,
+      ];
 
-      for (const permission of allPermissions) {
+      for (const permission of adminPermissions) {
         const hasAccess = await hasPermission('ADMIN', permission);
         expect(hasAccess).toBe(true);
       }
+
+      // ADMIN should NOT have SuperAdmin-only permissions
+      expect(await hasPermission('ADMIN', Permission.ASSIGN_ROLES)).toBe(false);
+      expect(await hasPermission('ADMIN', Permission.GLOBAL_OVERRIDE)).toBe(false);
     });
 
     it('should allow admin cross-organization access', async () => {

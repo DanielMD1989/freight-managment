@@ -130,6 +130,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     // Load management
     Permission.CREATE_LOAD,
     Permission.POST_LOADS,
+    Permission.VIEW_LOADS,
     Permission.EDIT_LOADS,
     Permission.DELETE_LOADS,
     Permission.MANAGE_OWN_LOADS,
@@ -174,6 +175,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     // Truck management
     Permission.CREATE_TRUCK,
     Permission.POST_TRUCKS,
+    Permission.VIEW_TRUCKS,
     Permission.EDIT_TRUCKS,
     Permission.DELETE_TRUCKS,
     Permission.MANAGE_OWN_TRUCKS,
@@ -260,15 +262,19 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   ADMIN: [
     // User management
     Permission.VIEW_USERS,
+    Permission.MANAGE_USERS,
     Permission.VIEW_ORGANIZATIONS,
+    Permission.MANAGE_ORGANIZATIONS,
 
     // Document verification
     Permission.VERIFY_DOCUMENTS,
     Permission.VERIFY_ORGANIZATIONS,
 
     // Load & truck visibility
+    Permission.VIEW_LOADS,
     Permission.VIEW_ALL_LOADS,
     Permission.MANAGE_ALL_LOADS,
+    Permission.VIEW_TRUCKS,
     Permission.VIEW_ALL_TRUCKS,
     Permission.MANAGE_ALL_TRUCKS,
 
@@ -309,6 +315,10 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
     // Analytics (limited)
     Permission.VIEW_ANALYTICS,
+    Permission.VIEW_AUDIT_LOGS,
+
+    // System config
+    Permission.MANAGE_SYSTEM_CONFIG,
 
     // Dashboard
     Permission.VIEW_DASHBOARD,
