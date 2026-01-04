@@ -329,7 +329,23 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         new Map(allLoads.map(load => [load.load?.id || load.id, load])).values()
       );
 
-      setMatchingLoads(uniqueLoads);
+      // Sort by most recent first, then by origin alphabetically
+      const sortedLoads = uniqueLoads.sort((a, b) => {
+        const loadA = a.load || a;
+        const loadB = b.load || b;
+
+        // First: by most recent (newest first)
+        const dateA = new Date(loadA.createdAt || 0).getTime();
+        const dateB = new Date(loadB.createdAt || 0).getTime();
+        if (dateA !== dateB) return dateB - dateA;
+
+        // Second: by pickup city (origin) alphabetically
+        const cityA = (loadA.pickupCity || '').toLowerCase();
+        const cityB = (loadB.pickupCity || '').toLowerCase();
+        return cityA.localeCompare(cityB);
+      });
+
+      setMatchingLoads(sortedLoads);
     } catch (error) {
       console.error('Failed to fetch all matching loads:', error);
       setMatchingLoads([]);
