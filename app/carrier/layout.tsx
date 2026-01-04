@@ -36,7 +36,7 @@ export default async function CarrierLayout({
 
   // Layout with sidebar
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-slate-950">
       <RoleAwareSidebar userRole={session.role} portalType="carrier" />
       <main className="flex-1 overflow-auto">
         {children}

@@ -204,25 +204,25 @@ export default function AddTruckForm() {
     }
   };
 
-  // Standard input class for consistency
-  const inputClass = "w-full px-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400";
-  const selectClass = "w-full px-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
-  const labelClass = "block text-sm font-semibold text-gray-800 mb-2";
-  const hintClass = "text-xs text-gray-500 mt-1";
+  // Standard input class for consistency (dark mode supported via globals.css)
+  const inputClass = "w-full px-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 dark:bg-slate-800 dark:text-gray-100 dark:border-slate-600";
+  const selectClass = "w-full px-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-800 dark:text-gray-100 dark:border-slate-600";
+  const labelClass = "block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2";
+  const hintClass = "text-xs text-gray-500 dark:text-gray-400 mt-1";
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-lg p-6 md:p-8">
+    <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 rounded-lg shadow-lg p-6 md:p-8">
       <div className="space-y-6">
         {/* Form Header */}
-        <div className="border-b border-gray-200 pb-4">
-          <h2 className="text-2xl font-bold text-gray-900">Add New Truck</h2>
-          <p className="text-gray-600 mt-1">Fill in the details below to register a new truck</p>
+        <div className="border-b border-gray-200 dark:border-slate-700 pb-4">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Add New Truck</h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Fill in the details below to register a new truck</p>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-800 text-sm font-medium">{error}</p>
+          <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <p className="text-red-800 dark:text-red-300 text-sm font-medium">{error}</p>
           </div>
         )}
 
@@ -363,7 +363,7 @@ export default function AddTruckForm() {
         </div>
 
         {/* Is Available */}
-        <div className="flex items-center bg-gray-50 p-4 rounded-lg">
+        <div className="flex items-center bg-gray-50 dark:bg-slate-800 p-4 rounded-lg">
           <input
             type="checkbox"
             name="isAvailable"
@@ -371,13 +371,13 @@ export default function AddTruckForm() {
             onChange={handleChange}
             className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
           />
-          <label className="ml-3 block text-sm font-medium text-gray-800">
+          <label className="ml-3 block text-sm font-medium text-gray-800 dark:text-gray-200">
             Mark truck as available for new loads
           </label>
         </div>
 
         {/* Submit Buttons */}
-        <div className="flex gap-4 pt-6 border-t border-gray-200">
+        <div className="flex gap-4 pt-6 border-t border-gray-200 dark:border-slate-700">
           <button
             type="submit"
             disabled={isSubmitting}
@@ -389,7 +389,7 @@ export default function AddTruckForm() {
             type="button"
             onClick={() => router.back()}
             disabled={isSubmitting}
-            className="px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            className="px-6 py-3 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors"
           >
             Cancel
           </button>

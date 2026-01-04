@@ -7,9 +7,10 @@
  * Shows role-appropriate menu items based on user's role
  */
 
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { ThemeToggle } from './ThemeToggle';
 
 // Simple className utility
 function cn(...classes: (string | boolean | undefined)[]): string {
@@ -391,11 +392,11 @@ export default function RoleAwareSidebar({
   };
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 min-h-[calc(100vh-4rem)] flex flex-col">
+    <aside className="w-64 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-700 min-h-[calc(100vh-4rem)] flex flex-col">
       {/* Portal Header */}
-      <div className="flex items-center gap-2 px-4 py-4 border-b border-gray-200">
+      <div className="flex items-center gap-2 px-4 py-4 border-b border-gray-200 dark:border-slate-700">
         <span className="text-2xl">{config.icon}</span>
-        <span className="text-lg font-bold text-gray-900">{config.title}</span>
+        <span className="text-lg font-bold text-gray-900 dark:text-white">{config.title}</span>
       </div>
 
       {/* Navigation Sections */}
@@ -407,7 +408,7 @@ export default function RoleAwareSidebar({
           return (
             <div key={sectionIndex}>
               {section.title && (
-                <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   {section.title}
                 </div>
               )}
@@ -419,8 +420,8 @@ export default function RoleAwareSidebar({
                     className={cn(
                       'flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors',
                       isActive(item.href)
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
+                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-slate-800 dark:hover:text-white'
                     )}
                   >
                     <span className="text-lg">{item.icon}</span>
@@ -433,11 +434,15 @@ export default function RoleAwareSidebar({
         })}
       </nav>
 
-      {/* Footer - Back Link */}
-      <div className="border-t border-gray-200 p-4">
+      {/* Footer - Theme Toggle & Back Link */}
+      <div className="border-t border-gray-200 dark:border-slate-700 p-4 space-y-2">
+        <div className="flex items-center justify-between px-3 py-2">
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Theme</span>
+          <ThemeToggle />
+        </div>
         <Link
           href={config.backLink.href}
-          className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100"
+          className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-slate-800"
         >
           <span className="text-lg">🏠</span>
           <span>{config.backLink.label}</span>
