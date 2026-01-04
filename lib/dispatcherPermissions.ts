@@ -119,6 +119,36 @@ export function canProposeMatch(user: DispatcherUser): boolean {
   );
 }
 
+// Alias for consistency
+export const canPropose = canProposeMatch;
+
+/**
+ * Check if user can APPROVE/REJECT match proposals
+ *
+ * PHASE 2 - Foundation Rule: CARRIER_FINAL_AUTHORITY
+ * Only carriers can approve proposals for their trucks
+ *
+ * @param user - User with role information
+ * @param truckCarrierId - Organization ID of the truck's carrier
+ * @returns True if user can approve/reject proposals
+ */
+export function canApproveProposals(
+  user: DispatcherUser,
+  truckCarrierId?: string
+): boolean {
+  // Carriers can approve proposals for their own trucks
+  if (user.role === 'CARRIER' && truckCarrierId) {
+    return user.organizationId === truckCarrierId;
+  }
+
+  // Admin/SuperAdmin can approve (override for support)
+  if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * Check if user can REQUEST a truck for a load
  *

@@ -76,6 +76,16 @@ export enum AuditEventType {
   LOAD_UPDATED = 'LOAD_UPDATED',
   LOAD_DELETED = 'LOAD_DELETED',
 
+  // Phase 2: Foundation Rule Events
+  MATCH_PROPOSAL_CREATED = 'MATCH_PROPOSAL_CREATED',
+  MATCH_PROPOSAL_APPROVED = 'MATCH_PROPOSAL_APPROVED',
+  MATCH_PROPOSAL_REJECTED = 'MATCH_PROPOSAL_REJECTED',
+  TRUCK_REQUEST_CREATED = 'TRUCK_REQUEST_CREATED',
+  TRUCK_REQUEST_APPROVED = 'TRUCK_REQUEST_APPROVED',
+  TRUCK_REQUEST_REJECTED = 'TRUCK_REQUEST_REJECTED',
+  AUTHORITY_VIOLATION = 'AUTHORITY_VIOLATION', // Attempts to bypass carrier authority
+  VISIBILITY_VIOLATION = 'VISIBILITY_VIOLATION', // Attempts to access restricted resources
+
   // System Events
   SYSTEM_ERROR = 'SYSTEM_ERROR',
   CSRF_VIOLATION = 'CSRF_VIOLATION',
@@ -144,30 +154,27 @@ function getUserAgent(request: NextRequest): string {
  */
 async function writeAuditLogToDatabase(entry: AuditLogEntry): Promise<void> {
   try {
-    // TODO: Add AuditLog model to Prisma schema
-    // await db.auditLog.create({
-    //   data: {
-    //     eventType: entry.eventType,
-    //     severity: entry.severity,
-    //     userId: entry.userId || null,
-    //     organizationId: entry.organizationId || null,
-    //     ipAddress: entry.ipAddress || null,
-    //     userAgent: entry.userAgent || null,
-    //     resource: entry.resource || null,
-    //     resourceId: entry.resourceId || null,
-    //     action: entry.action || null,
-    //     result: entry.result,
-    //     message: entry.message,
-    //     metadata: entry.metadata || {},
-    //     timestamp: entry.timestamp,
-    //   },
-    // });
-
-    // For now, just log to console
-    console.log('[AUDIT LOG]', JSON.stringify(entry, null, 2));
+    // Write to database for persistence and querying
+    await db.auditLog.create({
+      data: {
+        eventType: entry.eventType,
+        severity: entry.severity,
+        userId: entry.userId || null,
+        organizationId: entry.organizationId || null,
+        ipAddress: entry.ipAddress || null,
+        userAgent: entry.userAgent || null,
+        resource: entry.resource || null,
+        resourceId: entry.resourceId || null,
+        action: entry.action || null,
+        result: entry.result,
+        message: entry.message,
+        metadata: entry.metadata || {},
+        timestamp: entry.timestamp,
+      },
+    });
   } catch (error) {
-    // If logging fails, log to console
-    console.error('[AUDIT LOG ERROR]', error);
+    // If database write fails, log to console as fallback
+    console.error('[AUDIT LOG DB ERROR]', error);
     console.log('[AUDIT LOG FALLBACK]', JSON.stringify(entry, null, 2));
   }
 }
@@ -492,20 +499,19 @@ export async function queryAuditLogs(filters: {
   const limit = Math.min(filters.limit || 100, 1000);
   const offset = filters.offset || 0;
 
-  // TODO: Add AuditLog model to Prisma schema
-  // const [logs, total] = await Promise.all([
-  //   db.auditLog.findMany({
-  //     where,
-  //     orderBy: { timestamp: 'desc' },
-  //     take: limit,
-  //     skip: offset,
-  //   }),
-  //   db.auditLog.count({ where }),
-  // ]);
+  const [logs, total] = await Promise.all([
+    db.auditLog.findMany({
+      where,
+      orderBy: { timestamp: 'desc' },
+      take: limit,
+      skip: offset,
+    }),
+    db.auditLog.count({ where }),
+  ]);
 
   return {
-    logs: [],
-    total: 0,
+    logs,
+    total,
     limit,
     offset,
   };
@@ -534,37 +540,249 @@ export async function getAuditLogStats(
     if (endDate) where.timestamp.lte = endDate;
   }
 
-  // TODO: Add AuditLog model to Prisma schema
-  // const [
-  //   totalLogs,
-  //   authFailures,
-  //   authzFailures,
-  //   rateLimitViolations,
-  //   csrfViolations,
-  //   fileUploads,
-  //   documentVerifications,
-  // ] = await Promise.all([
-  //   db.auditLog.count({ where }),
-  //   db.auditLog.count({ where: { ...where, eventType: AuditEventType.AUTH_LOGIN_FAILURE } }),
-  //   db.auditLog.count({ where: { ...where, eventType: AuditEventType.AUTHZ_ACCESS_DENIED } }),
-  //   db.auditLog.count({ where: { ...where, eventType: AuditEventType.RATE_LIMIT_EXCEEDED } }),
-  //   db.auditLog.count({ where: { ...where, eventType: AuditEventType.CSRF_VIOLATION } }),
-  //   db.auditLog.count({ where: { ...where, eventType: AuditEventType.FILE_UPLOAD } }),
-  //   db.auditLog.count({
-  //     where: {
-  //       ...where,
-  //       eventType: { in: [AuditEventType.DOCUMENT_VERIFIED, AuditEventType.DOCUMENT_REJECTED] },
-  //     },
-  //   }),
-  // ]);
+  const [
+    totalLogs,
+    authFailures,
+    authzFailures,
+    rateLimitViolations,
+    csrfViolations,
+    fileUploads,
+    documentVerifications,
+  ] = await Promise.all([
+    db.auditLog.count({ where }),
+    db.auditLog.count({ where: { ...where, eventType: AuditEventType.AUTH_LOGIN_FAILURE } }),
+    db.auditLog.count({ where: { ...where, eventType: AuditEventType.AUTHZ_ACCESS_DENIED } }),
+    db.auditLog.count({ where: { ...where, eventType: AuditEventType.RATE_LIMIT_EXCEEDED } }),
+    db.auditLog.count({ where: { ...where, eventType: AuditEventType.CSRF_VIOLATION } }),
+    db.auditLog.count({ where: { ...where, eventType: AuditEventType.FILE_UPLOAD } }),
+    db.auditLog.count({
+      where: {
+        ...where,
+        eventType: { in: [AuditEventType.DOCUMENT_VERIFIED, AuditEventType.DOCUMENT_REJECTED] },
+      },
+    }),
+  ]);
 
   return {
-    totalLogs: 0,
-    authFailures: 0,
-    authzFailures: 0,
-    rateLimitViolations: 0,
-    csrfViolations: 0,
-    fileUploads: 0,
-    documentVerifications: 0,
+    totalLogs,
+    authFailures,
+    authzFailures,
+    rateLimitViolations,
+    csrfViolations,
+    fileUploads,
+    documentVerifications,
   };
+}
+
+// ============================================================================
+// PHASE 2: FOUNDATION RULE AUDIT FUNCTIONS
+// ============================================================================
+
+/**
+ * Log match proposal creation
+ *
+ * @param userId Dispatcher user ID
+ * @param proposalId Proposal ID
+ * @param loadId Load ID
+ * @param truckId Truck ID
+ * @param request Request object
+ */
+export async function logMatchProposalCreated(
+  userId: string,
+  proposalId: string,
+  loadId: string,
+  truckId: string,
+  request: NextRequest,
+  organizationId?: string
+): Promise<void> {
+  await writeAuditLog({
+    eventType: AuditEventType.MATCH_PROPOSAL_CREATED,
+    severity: AuditSeverity.INFO,
+    userId,
+    organizationId,
+    ipAddress: getIpAddress(request),
+    userAgent: getUserAgent(request),
+    resource: 'MATCH_PROPOSAL',
+    resourceId: proposalId,
+    action: 'CREATE',
+    result: 'SUCCESS',
+    message: `Match proposal created: Load ${loadId} -> Truck ${truckId}`,
+    metadata: { loadId, truckId, proposalId },
+    timestamp: new Date(),
+  });
+}
+
+/**
+ * Log match proposal response (approve/reject)
+ *
+ * @param userId Carrier user ID
+ * @param proposalId Proposal ID
+ * @param action APPROVE or REJECT
+ * @param request Request object
+ */
+export async function logMatchProposalResponse(
+  userId: string,
+  proposalId: string,
+  action: 'APPROVE' | 'REJECT',
+  request: NextRequest,
+  organizationId?: string
+): Promise<void> {
+  await writeAuditLog({
+    eventType: action === 'APPROVE'
+      ? AuditEventType.MATCH_PROPOSAL_APPROVED
+      : AuditEventType.MATCH_PROPOSAL_REJECTED,
+    severity: AuditSeverity.INFO,
+    userId,
+    organizationId,
+    ipAddress: getIpAddress(request),
+    userAgent: getUserAgent(request),
+    resource: 'MATCH_PROPOSAL',
+    resourceId: proposalId,
+    action,
+    result: 'SUCCESS',
+    message: `Match proposal ${action.toLowerCase()}d by carrier`,
+    metadata: { proposalId, action },
+    timestamp: new Date(),
+  });
+}
+
+/**
+ * Log truck request creation
+ *
+ * @param userId Shipper user ID
+ * @param requestId Request ID
+ * @param loadId Load ID
+ * @param truckId Truck ID
+ * @param request Request object
+ */
+export async function logTruckRequestCreated(
+  userId: string,
+  requestId: string,
+  loadId: string,
+  truckId: string,
+  request: NextRequest,
+  organizationId?: string
+): Promise<void> {
+  await writeAuditLog({
+    eventType: AuditEventType.TRUCK_REQUEST_CREATED,
+    severity: AuditSeverity.INFO,
+    userId,
+    organizationId,
+    ipAddress: getIpAddress(request),
+    userAgent: getUserAgent(request),
+    resource: 'TRUCK_REQUEST',
+    resourceId: requestId,
+    action: 'CREATE',
+    result: 'SUCCESS',
+    message: `Truck request created: Load ${loadId} -> Truck ${truckId}`,
+    metadata: { loadId, truckId, requestId },
+    timestamp: new Date(),
+  });
+}
+
+/**
+ * Log truck request response (approve/reject)
+ *
+ * @param userId Carrier user ID
+ * @param requestId Request ID
+ * @param action APPROVE or REJECT
+ * @param request Request object
+ */
+export async function logTruckRequestResponse(
+  userId: string,
+  requestId: string,
+  action: 'APPROVE' | 'REJECT',
+  request: NextRequest,
+  organizationId?: string
+): Promise<void> {
+  await writeAuditLog({
+    eventType: action === 'APPROVE'
+      ? AuditEventType.TRUCK_REQUEST_APPROVED
+      : AuditEventType.TRUCK_REQUEST_REJECTED,
+    severity: AuditSeverity.INFO,
+    userId,
+    organizationId,
+    ipAddress: getIpAddress(request),
+    userAgent: getUserAgent(request),
+    resource: 'TRUCK_REQUEST',
+    resourceId: requestId,
+    action,
+    result: 'SUCCESS',
+    message: `Truck request ${action.toLowerCase()}d by carrier`,
+    metadata: { requestId, action },
+    timestamp: new Date(),
+  });
+}
+
+/**
+ * Log authority violation attempt
+ *
+ * Foundation Rule: CARRIER_FINAL_AUTHORITY
+ * Logs attempts to bypass carrier authority (e.g., dispatcher trying to assign)
+ *
+ * @param userId User ID who attempted violation
+ * @param attemptedAction Action attempted
+ * @param resource Resource type
+ * @param resourceId Resource ID
+ * @param rule Foundation rule violated
+ * @param request Request object
+ */
+export async function logAuthorityViolation(
+  userId: string,
+  attemptedAction: string,
+  resource: string,
+  resourceId: string,
+  rule: string,
+  request: NextRequest,
+  organizationId?: string
+): Promise<void> {
+  await writeAuditLog({
+    eventType: AuditEventType.AUTHORITY_VIOLATION,
+    severity: AuditSeverity.WARNING,
+    userId,
+    organizationId,
+    ipAddress: getIpAddress(request),
+    userAgent: getUserAgent(request),
+    resource,
+    resourceId,
+    action: attemptedAction,
+    result: 'FAILURE',
+    message: `Authority violation: Attempted ${attemptedAction} on ${resource} ${resourceId}`,
+    metadata: { rule, attemptedAction },
+    timestamp: new Date(),
+  });
+}
+
+/**
+ * Log visibility violation attempt
+ *
+ * Foundation Rule: SHIPPER_DEMAND_FOCUS, CARRIER_SUPPLY_FOCUS
+ * Logs attempts to access restricted resources (e.g., shipper browsing fleet)
+ *
+ * @param userId User ID who attempted violation
+ * @param resource Resource type attempted to access
+ * @param rule Foundation rule violated
+ * @param request Request object
+ */
+export async function logVisibilityViolation(
+  userId: string,
+  resource: string,
+  rule: string,
+  request: NextRequest,
+  organizationId?: string
+): Promise<void> {
+  await writeAuditLog({
+    eventType: AuditEventType.VISIBILITY_VIOLATION,
+    severity: AuditSeverity.WARNING,
+    userId,
+    organizationId,
+    ipAddress: getIpAddress(request),
+    userAgent: getUserAgent(request),
+    resource,
+    action: 'ACCESS',
+    result: 'FAILURE',
+    message: `Visibility violation: Attempted to access ${resource}`,
+    metadata: { rule },
+    timestamp: new Date(),
+  });
 }

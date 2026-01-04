@@ -9,6 +9,7 @@ import {
   detectGpsProvider,
   determineGpsStatus,
 } from "@/lib/gpsVerification";
+import { getVisibilityRules, RULE_SHIPPER_DEMAND_FOCUS } from "@/lib/foundation-rules";
 
 const createTruckSchema = z.object({
   truckType: z.enum(["FLATBED", "REFRIGERATED", "TANKER", "CONTAINER", "DRY_VAN", "LOWBOY", "DUMP_TRUCK", "BOX_TRUCK"]),
@@ -126,6 +127,11 @@ export async function POST(request: NextRequest) {
 }
 
 // GET /api/trucks - List trucks
+// PHASE 2: Role-based visibility enforcement
+// - SHIPPER: Cannot browse fleet inventory (use /api/truck-postings for availability)
+// - CARRIER: Can view their own fleet only
+// - DISPATCHER: Can view all trucks (for coordination)
+// - ADMIN/SUPER_ADMIN: Full access
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth();
@@ -136,18 +142,55 @@ export async function GET(request: NextRequest) {
     const truckType = searchParams.get("truckType");
     const isAvailable = searchParams.get("isAvailable");
     const myTrucks = searchParams.get("myTrucks") === "true";
+    const carrierId = searchParams.get("carrierId"); // Admin filter
+
+    // Get user with role info
+    const user = await db.user.findUnique({
+      where: { id: session.userId },
+      select: { organizationId: true, role: true },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // PHASE 2: Get visibility rules based on role
+    const visibility = getVisibilityRules(user.role);
+
+    // PHASE 2: SHIPPER cannot browse fleet inventory
+    // Foundation Rule: SHIPPER_DEMAND_FOCUS
+    // Shippers should use /api/truck-postings to search for available trucks
+    if (user.role === 'SHIPPER') {
+      return NextResponse.json(
+        {
+          error: "Shippers cannot browse truck fleet inventory",
+          hint: "Use /api/truck-postings to search for available trucks",
+          rule: RULE_SHIPPER_DEMAND_FOCUS.id,
+        },
+        { status: 403 }
+      );
+    }
 
     const where: any = {};
 
-    if (myTrucks) {
-      const user = await db.user.findUnique({
-        where: { id: session.userId },
-        select: { organizationId: true },
-      });
+    // Role-based filtering
+    if (user.role === 'CARRIER') {
+      // Carriers can only see their own fleet
+      where.carrierId = user.organizationId;
+    } else if (user.role === 'DISPATCHER') {
+      // Dispatchers can see all trucks (for coordination)
+      // But they cannot modify - enforced by other endpoints
+    }
+    // ADMIN/SUPER_ADMIN: No filter - can see all
 
-      if (user?.organizationId) {
-        where.carrierId = user.organizationId;
-      }
+    // myTrucks filter for carriers
+    if (myTrucks && user.organizationId) {
+      where.carrierId = user.organizationId;
+    }
+
+    // Admin can filter by specific carrier
+    if (carrierId && (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN')) {
+      where.carrierId = carrierId;
     }
 
     if (truckType) {
@@ -177,6 +220,17 @@ export async function GET(request: NextRequest) {
               lastSeenAt: true,
             },
           },
+          // Include active posting info
+          postings: {
+            where: { status: 'ACTIVE' },
+            select: {
+              id: true,
+              status: true,
+              originCityId: true,
+              availableFrom: true,
+            },
+            take: 1,
+          },
         },
         skip: (page - 1) * limit,
         take: limit,
@@ -187,8 +241,15 @@ export async function GET(request: NextRequest) {
       db.truck.count({ where }),
     ]);
 
+    // Add hasActivePosting flag
+    const trucksWithPostingStatus = trucks.map(truck => ({
+      ...truck,
+      hasActivePosting: truck.postings.length > 0,
+      activePostingId: truck.postings[0]?.id || null,
+    }));
+
     return NextResponse.json({
-      trucks,
+      trucks: trucksWithPostingStatus,
       pagination: {
         page,
         limit,
