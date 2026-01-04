@@ -12,16 +12,11 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* Dark mode disabled - using light theme only for consistency */
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: #ffffff;
+  color: #171717;
   font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -43,37 +38,14 @@ input[type="datetime-local"],
 input[type="time"],
 textarea,
 select {
-  @apply text-black font-medium;
+  @apply text-gray-900 bg-white font-medium;
   @apply placeholder:text-gray-400 placeholder:font-normal;
-}
-
-/* Dark mode input contrast */
-@media (prefers-color-scheme: dark) {
-  input[type="text"],
-  input[type="email"],
-  input[type="password"],
-  input[type="number"],
-  input[type="tel"],
-  input[type="url"],
-  input[type="search"],
-  input[type="date"],
-  input[type="datetime-local"],
-  input[type="time"],
-  textarea,
-  select {
-    @apply text-gray-100 bg-gray-800;
-  }
+  @apply border-gray-300;
 }
 
 /* Enhanced Label Readability */
 label {
   @apply text-gray-900 font-medium;
-}
-
-@media (prefers-color-scheme: dark) {
-  label {
-    @apply text-gray-100;
-  }
 }
 
 /* Focus Indicators for Keyboard Navigation */
@@ -103,12 +75,6 @@ button:disabled {
 /* Link contrast */
 a {
   @apply text-blue-600 hover:text-blue-800;
-}
-
-@media (prefers-color-scheme: dark) {
-  a {
-    @apply text-blue-400 hover:text-blue-300;
-  }
 }
 
 /* Skip to main content link for screen readers */
