@@ -20,6 +20,8 @@ interface Truck {
   currentRegion: string | null;
   isAvailable: boolean;
   status: string;
+  approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
+  rejectionReason: string | null;
   createdAt: string;
   updatedAt: string;
   carrier: {
@@ -36,13 +38,14 @@ interface Truck {
 }
 
 /**
- * Fetch trucks
+ * Fetch trucks with optional approval status filter
  */
 async function getTrucks(
   sessionCookie: string,
   page: number = 1,
   truckType?: string,
-  status?: string
+  status?: string,
+  approvalStatus?: string
 ): Promise<{ trucks: Truck[]; pagination: any } | null> {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -54,6 +57,11 @@ async function getTrucks(
 
     if (truckType && truckType !== 'all') {
       params.set('truckType', truckType);
+    }
+
+    // Sprint 18: Filter by approval status
+    if (approvalStatus) {
+      params.set('approvalStatus', approvalStatus);
     }
 
     const response = await fetch(`${baseUrl}/api/trucks?${params.toString()}`, {
@@ -77,11 +85,12 @@ async function getTrucks(
 
 /**
  * Truck Management Page
+ * Sprint 18: Shows approved trucks + pending approval section
  */
 export default async function TrucksPage({
   searchParams,
 }: {
-  searchParams: { page?: string; truckType?: string; status?: string };
+  searchParams: { page?: string; truckType?: string; status?: string; tab?: string };
 }) {
   // Verify authentication
   const cookieStore = await cookies();
@@ -101,12 +110,18 @@ export default async function TrucksPage({
     redirect('/carrier?error=no-organization');
   }
 
-  // Fetch trucks
+  // Parse params
   const page = parseInt(searchParams.page || '1');
   const truckType = searchParams.truckType;
   const status = searchParams.status;
+  const activeTab = searchParams.tab || 'approved';
 
-  const data = await getTrucks(sessionCookie.value, page, truckType, status);
+  // Sprint 18: Fetch approved and pending trucks separately
+  const [approvedData, pendingData, rejectedData] = await Promise.all([
+    getTrucks(sessionCookie.value, activeTab === 'approved' ? page : 1, truckType, status, 'APPROVED'),
+    getTrucks(sessionCookie.value, activeTab === 'pending' ? page : 1, undefined, undefined, 'PENDING'),
+    getTrucks(sessionCookie.value, activeTab === 'rejected' ? page : 1, undefined, undefined, 'REJECTED'),
+  ]);
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -118,8 +133,13 @@ export default async function TrucksPage({
 
       {/* Truck Management Client Component */}
       <TruckManagementClient
-        initialTrucks={data?.trucks || []}
-        pagination={data?.pagination}
+        initialApprovedTrucks={approvedData?.trucks || []}
+        initialPendingTrucks={pendingData?.trucks || []}
+        initialRejectedTrucks={rejectedData?.trucks || []}
+        approvedPagination={approvedData?.pagination}
+        pendingPagination={pendingData?.pagination}
+        rejectedPagination={rejectedData?.pagination}
+        initialTab={activeTab}
       />
     </div>
   );

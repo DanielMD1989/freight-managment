@@ -248,6 +248,11 @@ model User {
   requestsCreated       TruckRequest[]   @relation("RequestedBy")
   requestsResponded     TruckRequest[]   @relation("RespondedByCarrier")
 
+  // SPRINT 18: Truck approval and load requests
+  trucksApproved        Truck[]          @relation("TruckApprovedBy")
+  loadRequestsCreated   LoadRequest[]    @relation("LoadRequestedBy")
+  loadRequestsResponded LoadRequest[]    @relation("LoadRequestRespondedBy")
+
   @@index([email])
   @@index([organizationId])
   @@map("users")
@@ -317,6 +322,10 @@ model Organization {
   matchProposals    MatchProposal[]
   shipperRequests   TruckRequest[]   @relation("ShipperRequests")
   carrierRequests   TruckRequest[]   @relation("CarrierRequests")
+
+  // SPRINT 18: LoadRequest - Carrier requests loads
+  carrierLoadRequests  LoadRequest[]   @relation("CarrierLoadRequests")
+  shipperLoadRequests  LoadRequest[]   @relation("ShipperLoadRequests")
 
   @@index([type])
   @@index([isVerified])
@@ -454,6 +463,9 @@ model Load {
   // PHASE 2: Match proposal and request relations
   matchProposals        MatchProposal[]
   truckRequests         TruckRequest[]
+
+  // SPRINT 18: LoadRequest - Carrier requests this load
+  loadRequests          LoadRequest[]    @relation("LoadRequests")
 
   @@index([status])
   @@index([pickupCity])
@@ -611,6 +623,13 @@ model Truck {
   gpsLastSeenAt   DateTime?            // Last GPS signal received
   gpsVerifiedAt   DateTime?            // When GPS was verified working
 
+  // SPRINT 18: Admin Truck Approval
+  approvalStatus    VerificationStatus  @default(PENDING)
+  approvedAt        DateTime?
+  approvedById      String?
+  approvedBy        User?               @relation("TruckApprovedBy", fields: [approvedById], references: [id])
+  rejectionReason   String?
+
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -631,8 +650,10 @@ model Truck {
   // PHASE 2: Match proposal and request relations
   matchProposals  MatchProposal[]
   truckRequests   TruckRequest[]
+  loadRequests    LoadRequest[]    // SPRINT 18: Carrier requests loads
 
   @@index([carrierId])
+  @@index([approvalStatus])
   @@index([truckType])
   @@index([isAvailable])
   @@index([imei])
@@ -1084,6 +1105,53 @@ model TruckRequest {
   @@index([shipperId])
   @@index([carrierId])
   @@map("truck_requests")
+}
+
+// SPRINT 18: LoadRequest - Carrier requests load from shipper
+model LoadRequest {
+  id                String            @id @default(cuid())
+  status            RequestStatus     @default(PENDING)
+
+  // Load being requested by carrier
+  loadId            String
+  load              Load              @relation("LoadRequests", fields: [loadId], references: [id])
+
+  // Truck carrier wants to use
+  truckId           String
+  truck             Truck             @relation(fields: [truckId], references: [id])
+
+  // Carrier making the request
+  carrierId         String
+  carrier           Organization      @relation("CarrierLoadRequests", fields: [carrierId], references: [id])
+  requestedById     String
+  requestedBy       User              @relation("LoadRequestedBy", fields: [requestedById], references: [id])
+
+  // Shipper who owns the load (must approve)
+  shipperId         String
+  shipper           Organization      @relation("ShipperLoadRequests", fields: [shipperId], references: [id])
+
+  // Request metadata
+  notes             String?
+  proposedRate      Decimal?          @db.Decimal(10, 2)
+
+  // Response from shipper
+  respondedAt       DateTime?
+  responseNotes     String?
+  respondedById     String?
+  respondedBy       User?             @relation("LoadRequestRespondedBy", fields: [respondedById], references: [id])
+
+  // Expiration
+  expiresAt         DateTime
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([status])
+  @@index([loadId])
+  @@index([truckId])
+  @@index([carrierId])
+  @@index([shipperId])
+  @@map("load_requests")
 }
 
 model CompanyDocument {

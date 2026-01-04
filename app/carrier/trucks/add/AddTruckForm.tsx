@@ -183,9 +183,10 @@ export default function AddTruckForm() {
       });
 
       if (response.ok) {
-        // Success - redirect to trucks list
-        toast.success('Truck added successfully!');
-        router.push('/carrier/trucks?success=truck-added');
+        // Success - redirect to trucks list with pending tab selected
+        // Sprint 18: Trucks are now pending admin approval
+        toast.success('Truck submitted for admin approval!');
+        router.push('/carrier/trucks?tab=pending&success=truck-added');
         router.refresh();
       } else {
         const errorData = await response.json();
@@ -370,7 +371,7 @@ export default function AddTruckForm() {
             disabled={isSubmitting}
             className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isSubmitting ? 'Adding Truck...' : 'Add Truck'}
+            {isSubmitting ? 'Submitting...' : 'Submit for Approval'}
           </button>
           <button
             type="button"

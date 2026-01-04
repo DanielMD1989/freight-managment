@@ -143,6 +143,7 @@ export async function GET(request: NextRequest) {
     const isAvailable = searchParams.get("isAvailable");
     const myTrucks = searchParams.get("myTrucks") === "true";
     const carrierId = searchParams.get("carrierId"); // Admin filter
+    const approvalStatus = searchParams.get("approvalStatus"); // Sprint 18: Filter by approval status
 
     // Get user with role info
     const user = await db.user.findUnique({
@@ -199,6 +200,11 @@ export async function GET(request: NextRequest) {
 
     if (isAvailable !== null) {
       where.isAvailable = isAvailable === "true";
+    }
+
+    // Sprint 18: Filter by approval status
+    if (approvalStatus) {
+      where.approvalStatus = approvalStatus;
     }
 
     const [trucks, total] = await Promise.all([

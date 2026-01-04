@@ -72,6 +72,14 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     fullPartial: '',
   });
 
+  // Sprint 18: Load request modal state
+  const [requestModalOpen, setRequestModalOpen] = useState(false);
+  const [selectedLoadForRequest, setSelectedLoadForRequest] = useState<any>(null);
+  const [selectedTruckForRequest, setSelectedTruckForRequest] = useState<string>('');
+  const [requestNotes, setRequestNotes] = useState('');
+  const [requestProposedRate, setRequestProposedRate] = useState('');
+  const [submittingRequest, setSubmittingRequest] = useState(false);
+
   /**
    * Fetch Ethiopian cities
    */
@@ -409,6 +417,77 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   };
 
   /**
+   * Sprint 18: Handle opening the load request modal
+   */
+  const handleOpenRequestModal = (load: any) => {
+    setSelectedLoadForRequest(load);
+    // Pre-select first posted truck
+    const postedTrucks = trucks.filter(t =>
+      (t.status === 'POSTED' || t.status === 'ACTIVE') && t.truck?.approvalStatus === 'APPROVED'
+    );
+    if (postedTrucks.length > 0) {
+      setSelectedTruckForRequest(postedTrucks[0].truck?.id || '');
+    }
+    setRequestNotes('');
+    setRequestProposedRate('');
+    setRequestModalOpen(true);
+  };
+
+  /**
+   * Sprint 18: Submit load request to shipper
+   */
+  const handleSubmitLoadRequest = async () => {
+    if (!selectedLoadForRequest || !selectedTruckForRequest) {
+      alert('Please select a truck for this load request');
+      return;
+    }
+
+    setSubmittingRequest(true);
+    try {
+      const response = await fetch('/api/load-requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': 'temp-token',
+        },
+        body: JSON.stringify({
+          loadId: selectedLoadForRequest.id,
+          truckId: selectedTruckForRequest,
+          notes: requestNotes || undefined,
+          proposedRate: requestProposedRate ? parseFloat(requestProposedRate) : undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to submit load request');
+      }
+
+      alert('Load request sent to shipper! You will be notified when they respond.');
+      setRequestModalOpen(false);
+      setSelectedLoadForRequest(null);
+      setSelectedTruckForRequest('');
+      setRequestNotes('');
+      setRequestProposedRate('');
+    } catch (error: any) {
+      console.error('Load request error:', error);
+      alert(error.message || 'Failed to submit load request');
+    } finally {
+      setSubmittingRequest(false);
+    }
+  };
+
+  /**
+   * Get posted trucks that are approved for requests
+   */
+  const getApprovedPostedTrucks = () => {
+    return trucks.filter(t =>
+      (t.status === 'POSTED' || t.status === 'ACTIVE') &&
+      t.truck?.approvalStatus === 'APPROVED'
+    );
+  };
+
+  /**
    * Truck table columns
    */
   const truckColumns: DatColumn[] = [
@@ -565,27 +644,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       align: 'right' as const,
       render: (value) => value ? `${value}kg` : 'N/A',
     },
-    {
-      key: 'matchCount',
-      label: 'Loads',
-      width: '100px',
-      align: 'center' as const,
-      render: (value, row) => {
-        if (row.status !== 'POSTED' && row.status !== 'ACTIVE') {
-          return <span className="text-gray-400">-</span>;
-        }
-        const count = value || 0;
-        return (
-          <span className={`
-            px-2 py-1 rounded text-xs font-semibold
-            ${count > 0 ? 'bg-lime-100 text-lime-800' : 'bg-gray-100 text-gray-600'}
-          `}>
-            {count} LOADS
-          </span>
-        );
-      },
-    },
-  ];
+      ];
 
   /**
    * Matching loads table columns
@@ -676,6 +735,24 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       width: '70px',
       align: 'right' as const,
       render: (value) => value ? `${value} lbs` : '-',
+    },
+    // Sprint 18: Request Load button column
+    {
+      key: 'actions',
+      label: 'Action',
+      width: '120px',
+      align: 'center' as const,
+      render: (_, row) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleOpenRequestModal(row);
+          }}
+          className="px-3 py-1.5 bg-lime-500 text-white text-xs font-bold rounded hover:bg-lime-600 transition-colors whitespace-nowrap"
+        >
+          REQUEST LOAD
+        </button>
+      ),
     },
   ];
 
@@ -1530,6 +1607,126 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
           rowKey="id"
         />
       </div>
+
+      {/* Sprint 18: Load Request Modal */}
+      {requestModalOpen && selectedLoadForRequest && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Request Load
+            </h3>
+
+            {/* Load Summary */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <div className="text-gray-500">Route</div>
+                  <div className="font-medium">
+                    {selectedLoadForRequest.pickupCity} → {selectedLoadForRequest.deliveryCity}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Shipper</div>
+                  <div className="font-medium">
+                    {selectedLoadForRequest.shipper?.name || 'N/A'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Truck Type</div>
+                  <div className="font-medium">
+                    {selectedLoadForRequest.truckType?.replace('_', ' ') || 'N/A'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Rate</div>
+                  <div className="font-medium">
+                    {selectedLoadForRequest.rate ? `${selectedLoadForRequest.rate} ETB` : 'Negotiable'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Truck Selection */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Truck *
+              </label>
+              <select
+                value={selectedTruckForRequest}
+                onChange={(e) => setSelectedTruckForRequest(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+              >
+                <option value="">Select a truck...</option>
+                {getApprovedPostedTrucks().map((posting) => (
+                  <option key={posting.truck?.id} value={posting.truck?.id}>
+                    {posting.truck?.licensePlate} - {posting.truck?.truckType?.replace('_', ' ')} ({posting.originCity?.name || 'N/A'})
+                  </option>
+                ))}
+              </select>
+              {getApprovedPostedTrucks().length === 0 && (
+                <p className="text-xs text-red-500 mt-1">
+                  No approved trucks with active postings. Please post a truck first.
+                </p>
+              )}
+            </div>
+
+            {/* Proposed Rate (Optional) */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Proposed Rate (ETB) <span className="text-gray-400">(Optional)</span>
+              </label>
+              <input
+                type="number"
+                value={requestProposedRate}
+                onChange={(e) => setRequestProposedRate(e.target.value)}
+                placeholder="Leave blank to accept posted rate"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Notes */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Message to Shipper <span className="text-gray-400">(Optional)</span>
+              </label>
+              <textarea
+                value={requestNotes}
+                onChange={(e) => setRequestNotes(e.target.value)}
+                placeholder="Add any notes or special requirements..."
+                rows={3}
+                maxLength={500}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-transparent resize-none"
+              />
+              <p className="text-xs text-gray-500 mt-1">{requestNotes.length}/500</p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setRequestModalOpen(false);
+                  setSelectedLoadForRequest(null);
+                }}
+                disabled={submittingRequest}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitLoadRequest}
+                disabled={submittingRequest || !selectedTruckForRequest}
+                className="flex-1 px-4 py-2 bg-lime-500 text-white rounded-lg hover:bg-lime-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submittingRequest ? 'Sending...' : 'Send Request'}
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-500 mt-4 text-center">
+              The shipper will review your request and can approve or reject it.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
