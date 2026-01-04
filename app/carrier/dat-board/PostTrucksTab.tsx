@@ -39,23 +39,25 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   const [showNewTruckForm, setShowNewTruckForm] = useState(false);
   const [activeLoadTab, setActiveLoadTab] = useState<LoadTab>('all');
 
-  // New truck form state
+  // User's approved trucks (from My Trucks)
+  const [approvedTrucks, setApprovedTrucks] = useState<any[]>([]);
+  const [loadingApprovedTrucks, setLoadingApprovedTrucks] = useState(false);
+  const [selectedTruckId, setSelectedTruckIdForPosting] = useState<string>('');
+
+  // New truck posting form state
   const [newTruckForm, setNewTruckForm] = useState({
+    truckId: '',
     availableFrom: '',
     availableTo: '',
-    owner: '',
     origin: '',
     destination: '',
-    truckType: 'DRY_VAN',
+    dhOrigin: '', // Deadhead to origin (km)
     fullPartial: 'FULL',
     lengthM: '',
     weight: '',
     contactPhone: '',
     comments1: '',
     comments2: '',
-    // Sprint 16: GPS fields
-    imei: '',
-    gpsProvider: '',
     // Sprint 15: Google Places coordinates
     originCoordinates: undefined as { lat: number; lng: number } | undefined,
     destinationCoordinates: undefined as { lat: number; lng: number } | undefined,
@@ -96,8 +98,25 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     }
   };
 
+  /**
+   * Fetch user's approved trucks from My Trucks
+   */
+  const fetchApprovedTrucks = async () => {
+    setLoadingApprovedTrucks(true);
+    try {
+      const response = await fetch('/api/trucks?myTrucks=true&approvalStatus=APPROVED');
+      const data = await response.json();
+      setApprovedTrucks(data.trucks || []);
+    } catch (error) {
+      console.error('Failed to fetch approved trucks:', error);
+    } finally {
+      setLoadingApprovedTrucks(false);
+    }
+  };
+
   useEffect(() => {
     fetchEthiopianCities();
+    fetchApprovedTrucks();
   }, []);
 
   /**
@@ -313,25 +332,40 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   };
 
   /**
+   * Handle truck selection - pre-fill form with truck data
+   */
+  const handleTruckSelection = (truckId: string) => {
+    setNewTruckForm(prev => ({ ...prev, truckId }));
+
+    const selectedTruck = approvedTrucks.find(t => t.id === truckId);
+    if (selectedTruck) {
+      // Pre-fill some fields from the truck data
+      setNewTruckForm(prev => ({
+        ...prev,
+        truckId,
+        origin: selectedTruck.currentCity || '',
+        lengthM: selectedTruck.volume ? String(selectedTruck.volume) : '',
+        weight: selectedTruck.capacity ? String(selectedTruck.capacity) : '',
+      }));
+    }
+  };
+
+  /**
    * Handle new truck form submission
    */
   const handlePostTruck = async () => {
     // Validate required fields
+    if (!newTruckForm.truckId) {
+      alert('Please select a truck from your fleet');
+      return;
+    }
     if (!newTruckForm.origin || !newTruckForm.availableFrom || !newTruckForm.contactPhone) {
       alert('Please fill in all required fields: Origin, Available Date, and Contact Phone');
       return;
     }
 
     try {
-      // Find first truck from user's organization
-      const trucksResponse = await fetch(`/api/trucks?organizationId=${user.organizationId}&limit=1`);
-      const trucksData = await trucksResponse.json();
-      const userTruck = trucksData.trucks?.[0];
-
-      if (!userTruck) {
-        alert('No truck found for your organization. Please add a truck first.');
-        return;
-      }
+      const selectedTruck = approvedTrucks.find(t => t.id === newTruckForm.truckId);
 
       const response = await fetch('/api/truck-postings', {
         method: 'POST',
@@ -340,7 +374,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
           'X-CSRF-Token': 'temp-token',
         },
         body: JSON.stringify({
-          truckId: userTruck.id,
+          truckId: newTruckForm.truckId,
           originCityId: newTruckForm.origin,
           destinationCityId: newTruckForm.destination || null,
           availableFrom: newTruckForm.availableFrom,
@@ -348,7 +382,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
           fullPartial: newTruckForm.fullPartial,
           availableLength: newTruckForm.lengthM ? parseFloat(newTruckForm.lengthM) : null,
           availableWeight: newTruckForm.weight ? parseFloat(newTruckForm.weight) : null,
-          ownerName: newTruckForm.owner || null,
+          ownerName: selectedTruck?.carrier?.name || null,
           contactName: user.firstName + ' ' + user.lastName,
           contactPhone: newTruckForm.contactPhone,
           notes: (newTruckForm.comments1 + '\n' + newTruckForm.comments2).trim() || null,
@@ -360,27 +394,22 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         throw new Error(error.error || 'Failed to create truck posting');
       }
 
-      const newTruck = await response.json();
       alert('Truck posting created successfully!');
 
       // Reset form
       setNewTruckForm({
+        truckId: '',
         availableFrom: '',
         availableTo: '',
-        owner: '',
         origin: '',
         destination: '',
-        truckType: 'DRY_VAN',
+        dhOrigin: '',
         fullPartial: 'FULL',
         lengthM: '',
         weight: '',
         contactPhone: '',
         comments1: '',
         comments2: '',
-        // Sprint 16: GPS fields
-        imei: '',
-        gpsProvider: '',
-        // Sprint 15: Google Places coordinates
         originCoordinates: undefined,
         destinationCoordinates: undefined,
       });
@@ -883,235 +912,279 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         </button>
       </div>
 
-      {/* Inline New Truck Form */}
+      {/* New Truck Posting Form - Clean Organized Layout */}
       {showNewTruckForm && (
-        <div className="border-b border-gray-400 p-4" style={{ backgroundColor: '#F3F2F2' }}>
-          {/* Main Form Row */}
-          <div className="grid grid-cols-12 gap-2 mb-4 items-end">
-            {/* Alert Checkbox */}
-            <div className="flex items-center gap-1 pt-5">
-              <input type="checkbox" className="w-4 h-4" />
-              <span className="text-lg cursor-pointer" style={{ color: '#2B2727' }}>☆</span>
-            </div>
-
-            {/* Empty columns for Age and Status */}
-            <div></div>
-            <div></div>
-
-            {/* Avail From */}
-            <div>
-              <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Avail From *</label>
-              <input
-                type="date"
-                value={newTruckForm.availableFrom}
-                onChange={(e) => setNewTruckForm({...newTruckForm, availableFrom: e.target.value})}
-                className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                style={{ color: '#2B2727' }}
-                required
-              />
-            </div>
-
-            {/* Owner */}
-            <div>
-              <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Owner</label>
-              <input
-                type="text"
-                value={newTruckForm.owner}
-                onChange={(e) => setNewTruckForm({...newTruckForm, owner: e.target.value})}
-                className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                style={{ color: '#2B2727' }}
-                placeholder="Owner"
-              />
-            </div>
-
-            {/* Origin */}
-            <div>
-              <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Origin *</label>
-              <PlacesAutocomplete
-                value={newTruckForm.origin}
-                onChange={(value, place) => {
-                  setNewTruckForm({
-                    ...newTruckForm,
-                    origin: value,
-                    originCoordinates: place?.coordinates
-                  });
-                }}
-                placeholder="Search city..."
-                className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                countryRestriction={['ET', 'DJ']}
-                types={['(cities)']}
-                required
-              />
-            </div>
-
-            {/* Destination */}
-            <div>
-              <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Destination</label>
-              <PlacesAutocomplete
-                value={newTruckForm.destination}
-                onChange={(value, place) => {
-                  setNewTruckForm({
-                    ...newTruckForm,
-                    destination: value,
-                    destinationCoordinates: place?.coordinates
-                  });
-                }}
-                placeholder="Anywhere"
-                className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                countryRestriction={['ET', 'DJ']}
-                types={['(cities)']}
-              />
-            </div>
-
-            {/* Truck Type */}
-            <div>
-              <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Truck *</label>
-              <select
-                value={newTruckForm.truckType}
-                onChange={(e) => setNewTruckForm({...newTruckForm, truckType: e.target.value})}
-                className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                style={{ color: '#2B2727' }}
-              >
-                <option value="DRY_VAN">Van</option>
-                <option value="FLATBED">Flatbed</option>
-                <option value="REFRIGERATED">Reefer</option>
-                <option value="TANKER">Tanker</option>
-              </select>
-            </div>
-
-            {/* F/P */}
-            <div>
-              <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>F/P</label>
-              <select
-                value={newTruckForm.fullPartial}
-                onChange={(e) => setNewTruckForm({...newTruckForm, fullPartial: e.target.value})}
-                className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                style={{ color: '#2B2727' }}
-              >
-                <option value="FULL">Full</option>
-                <option value="PARTIAL">Partial</option>
-              </select>
-            </div>
-
-            {/* Length */}
-            <div>
-              <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Length</label>
-              <input
-                type="number"
-                value={newTruckForm.lengthM}
-                onChange={(e) => setNewTruckForm({...newTruckForm, lengthM: e.target.value})}
-                className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                style={{ color: '#2B2727' }}
-                placeholder="52"
-              />
-            </div>
-
-            {/* Weight */}
-            <div>
-              <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Weight</label>
-              <input
-                type="number"
-                value={newTruckForm.weight}
-                onChange={(e) => setNewTruckForm({...newTruckForm, weight: e.target.value})}
-                className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                style={{ color: '#2B2727' }}
-                placeholder="48000"
-              />
-            </div>
+        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg shadow-sm p-6 mb-4">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Create New Truck Posting
+            </h3>
+            <button
+              onClick={() => setShowNewTruckForm(false)}
+              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              ✕
+            </button>
           </div>
 
-          {/* Comments and Actions Row */}
-          <div className="grid grid-cols-3 gap-4">
-            {/* Comments 1 */}
-            <div>
-              <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>
-                Comments 1 <span className="text-gray-500">({newTruckForm.comments1.length}/70 max)</span>
-              </label>
-              <textarea
-                value={newTruckForm.comments1}
-                onChange={(e) => setNewTruckForm({...newTruckForm, comments1: e.target.value.slice(0, 70)})}
-                className="w-full px-3 py-2 !bg-white border border-gray-400 rounded resize-none"
-                style={{ color: '#2B2727' }}
-                rows={3}
-                maxLength={70}
-              />
-            </div>
-
-            {/* Comments 2 */}
-            <div>
-              <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>
-                Comments 2 <span className="text-gray-500">({newTruckForm.comments2.length}/70 max)</span>
-              </label>
-              <textarea
-                value={newTruckForm.comments2}
-                onChange={(e) => setNewTruckForm({...newTruckForm, comments2: e.target.value.slice(0, 70)})}
-                className="w-full px-3 py-2 !bg-white border border-gray-400 rounded resize-none"
-                style={{ color: '#2B2727' }}
-                rows={3}
-                maxLength={70}
-              />
-            </div>
-
-            {/* Contact and GPS */}
-            <div className="space-y-2">
-              <div>
-                <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Contact Phone *</label>
-                <input
-                  type="tel"
-                  value={newTruckForm.contactPhone}
-                  onChange={(e) => setNewTruckForm({...newTruckForm, contactPhone: e.target.value})}
-                  className="w-full px-3 py-2 text-xs !bg-white border border-gray-400 rounded"
-                  style={{ color: '#2B2727' }}
-                  placeholder="+251-9xx-xxx-xxx"
-                  required
-                />
+          {/* Step 1: Select Truck */}
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">
+              Step 1: Select Truck from Your Fleet <span className="text-red-500">*</span>
+            </label>
+            {loadingApprovedTrucks ? (
+              <div className="text-gray-500 dark:text-gray-400 py-4">Loading your trucks...</div>
+            ) : approvedTrucks.length === 0 ? (
+              <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                <p className="text-yellow-800 dark:text-yellow-300 text-sm">
+                  No approved trucks found. Please add and get a truck approved in <a href="/carrier/trucks" className="underline font-medium">My Trucks</a> first.
+                </p>
               </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {approvedTrucks.map((truck) => (
+                  <button
+                    key={truck.id}
+                    onClick={() => handleTruckSelection(truck.id)}
+                    className={`
+                      p-4 border-2 rounded-lg text-left transition-all
+                      ${newTruckForm.truckId === truck.id
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                        : 'border-gray-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-500'
+                      }
+                    `}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">🚛</span>
+                      <div>
+                        <div className="font-semibold text-gray-900 dark:text-white">
+                          {truck.licensePlate}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          {truck.truckType?.replace('_', ' ')} • {truck.capacity} kg
+                        </div>
+                        {truck.currentCity && (
+                          <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                            📍 {truck.currentCity}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {newTruckForm.truckId === truck.id && (
+                      <div className="mt-2 text-xs text-blue-600 dark:text-blue-400 font-medium">
+                        ✓ Selected
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-              {/* Sprint 16: GPS IMEI */}
-              <div>
-                <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>
-                  GPS IMEI <span className="text-gray-500">(Optional - 15 digits)</span>
+          {/* Step 2: Posting Details - Only show when truck is selected */}
+          {newTruckForm.truckId && (
+            <>
+              <div className="border-t border-gray-200 dark:border-slate-700 pt-6 mb-6">
+                <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">
+                  Step 2: Posting Details
                 </label>
-                <input
-                  type="text"
-                  value={newTruckForm.imei}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '').slice(0, 15);
-                    setNewTruckForm({...newTruckForm, imei: value});
-                  }}
-                  className="w-full px-3 py-2 text-xs !bg-white border border-gray-400 rounded"
-                  style={{ color: '#2B2727' }}
-                  placeholder="359000000000000"
-                  maxLength={15}
-                />
-                {newTruckForm.imei && newTruckForm.imei.length === 15 && (
-                  <div className="mt-1 text-xs text-green-600 flex items-center gap-1">
-                    <span>✓</span> GPS-equipped badge will be displayed
+
+                {/* Row 1: Location & Availability */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                  {/* Origin */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Origin (Available At) <span className="text-red-500">*</span>
+                    </label>
+                    <PlacesAutocomplete
+                      value={newTruckForm.origin}
+                      onChange={(value, place) => {
+                        setNewTruckForm({
+                          ...newTruckForm,
+                          origin: value,
+                          originCoordinates: place?.coordinates
+                        });
+                      }}
+                      placeholder="Where is truck available?"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      countryRestriction={['ET', 'DJ']}
+                      types={['(cities)']}
+                    />
                   </div>
-                )}
-                {newTruckForm.imei && newTruckForm.imei.length > 0 && newTruckForm.imei.length !== 15 && (
-                  <div className="mt-1 text-xs text-amber-600">
-                    ⚠ IMEI must be exactly 15 digits
+
+                  {/* Destination */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Destination (Preferred)
+                    </label>
+                    <PlacesAutocomplete
+                      value={newTruckForm.destination}
+                      onChange={(value, place) => {
+                        setNewTruckForm({
+                          ...newTruckForm,
+                          destination: value,
+                          destinationCoordinates: place?.coordinates
+                        });
+                      }}
+                      placeholder="Anywhere"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      countryRestriction={['ET', 'DJ']}
+                      types={['(cities)']}
+                    />
                   </div>
-                )}
+
+                  {/* Available From */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Available From <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={newTruckForm.availableFrom}
+                      onChange={(e) => setNewTruckForm({...newTruckForm, availableFrom: e.target.value})}
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
+
+                  {/* Available To */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Available Until
+                    </label>
+                    <input
+                      type="date"
+                      value={newTruckForm.availableTo}
+                      onChange={(e) => setNewTruckForm({...newTruckForm, availableTo: e.target.value})}
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      min={newTruckForm.availableFrom || new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
+                </div>
+
+                {/* Row 2: Load Details */}
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-4">
+                  {/* DH-O (Deadhead to Origin) */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      DH-O (km)
+                    </label>
+                    <input
+                      type="number"
+                      value={newTruckForm.dhOrigin}
+                      onChange={(e) => setNewTruckForm({...newTruckForm, dhOrigin: e.target.value})}
+                      placeholder="Max deadhead"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {/* F/P */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Full/Partial
+                    </label>
+                    <select
+                      value={newTruckForm.fullPartial}
+                      onChange={(e) => setNewTruckForm({...newTruckForm, fullPartial: e.target.value})}
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="FULL">Full Load</option>
+                      <option value="PARTIAL">Partial</option>
+                    </select>
+                  </div>
+
+                  {/* Length */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Length (m)
+                    </label>
+                    <input
+                      type="number"
+                      value={newTruckForm.lengthM}
+                      onChange={(e) => setNewTruckForm({...newTruckForm, lengthM: e.target.value})}
+                      placeholder="Available length"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {/* Weight */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Weight (kg)
+                    </label>
+                    <input
+                      type="number"
+                      value={newTruckForm.weight}
+                      onChange={(e) => setNewTruckForm({...newTruckForm, weight: e.target.value})}
+                      placeholder="Max capacity"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {/* Contact Phone */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Contact Phone <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={newTruckForm.contactPhone}
+                      onChange={(e) => setNewTruckForm({...newTruckForm, contactPhone: e.target.value})}
+                      placeholder="+251-9xx-xxx-xxx"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 3: Comments */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Comments <span className="text-gray-400">({newTruckForm.comments1.length}/70)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newTruckForm.comments1}
+                      onChange={(e) => setNewTruckForm({...newTruckForm, comments1: e.target.value.slice(0, 70)})}
+                      placeholder="Additional notes for shippers..."
+                      maxLength={70}
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Additional Comments <span className="text-gray-400">({newTruckForm.comments2.length}/70)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newTruckForm.comments2}
+                      onChange={(e) => setNewTruckForm({...newTruckForm, comments2: e.target.value.slice(0, 70)})}
+                      placeholder="Special equipment, requirements..."
+                      maxLength={70}
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="flex gap-2">
-                <button
-                  onClick={handlePostTruck}
-                  className="flex-1 px-6 py-2 bg-cyan-400 text-white font-medium rounded hover:bg-cyan-500 transition-colors"
-                >
-                  + POST
-                </button>
+              {/* Submit Button */}
+              <div className="flex gap-3 justify-end">
                 <button
                   onClick={() => setShowNewTruckForm(false)}
-                  className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800 transition-colors font-bold"
+                  className="px-6 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 font-medium transition-colors"
                 >
-                  ✕
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePostTruck}
+                  disabled={!newTruckForm.truckId || !newTruckForm.origin || !newTruckForm.availableFrom || !newTruckForm.contactPhone}
+                  className="px-6 py-2 bg-lime-500 text-white rounded-lg hover:bg-lime-600 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Post Truck
                 </button>
               </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
       )}
 
