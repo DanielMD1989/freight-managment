@@ -22,6 +22,20 @@ interface PostTrucksTabProps {
   user: any;
 }
 
+/**
+ * Get CSRF token for secure form submissions
+ */
+const getCSRFToken = async (): Promise<string | null> => {
+  try {
+    const response = await fetch('/api/auth/csrf');
+    const data = await response.json();
+    return data.csrfToken;
+  } catch (error) {
+    console.error('Failed to get CSRF token:', error);
+    return null;
+  }
+};
+
 type TruckStatus = 'all' | 'mine' | 'group' | 'POSTED' | 'UNPOSTED' | 'EXPIRED' | 'KEPT';
 type LoadTab = 'all' | 'preferred' | 'blocked';
 
@@ -364,13 +378,20 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     }
 
     try {
+      // Get CSRF token
+      const csrfToken = await getCSRFToken();
+      if (!csrfToken) {
+        alert('Failed to get security token. Please refresh and try again.');
+        return;
+      }
+
       const selectedTruck = approvedTrucks.find(t => t.id === newTruckForm.truckId);
 
       const response = await fetch('/api/truck-postings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': 'temp-token',
+          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify({
           truckId: newTruckForm.truckId,
@@ -472,11 +493,19 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
     setSubmittingRequest(true);
     try {
+      // Get CSRF token
+      const csrfToken = await getCSRFToken();
+      if (!csrfToken) {
+        alert('Failed to get security token. Please refresh and try again.');
+        setSubmittingRequest(false);
+        return;
+      }
+
       const response = await fetch('/api/load-requests', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': 'temp-token',
+          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify({
           loadId: selectedLoadForRequest.id,
