@@ -349,9 +349,38 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   };
 
   /**
+   * Check if a truck already has an active posting
+   */
+  const getActivePostingForTruck = (truckId: string) => {
+    return trucks.find(
+      posting => posting.truckId === truckId &&
+      (posting.status === 'ACTIVE' || posting.status === 'POSTED')
+    );
+  };
+
+  /**
    * Handle truck selection - pre-fill form with truck data
+   * If truck already has an active posting, scroll to it and open edit mode
    */
   const handleTruckSelection = (truckId: string) => {
+    // Check if this truck already has an active posting
+    const existingPosting = getActivePostingForTruck(truckId);
+
+    if (existingPosting) {
+      // Truck is already posted - close the form and open edit mode for the existing posting
+      setShowNewTruckForm(false);
+      setExpandedTruckId(existingPosting.id);
+      handleEdit(existingPosting);
+      // Scroll to the posting
+      setTimeout(() => {
+        const element = document.getElementById(`posting-${existingPosting.id}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+      return;
+    }
+
     setNewTruckForm(prev => ({ ...prev, truckId }));
 
     const selectedTruck = approvedTrucks.find(t => t.id === truckId);
@@ -1000,41 +1029,61 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {approvedTrucks.map((truck) => (
-                  <button
-                    key={truck.id}
-                    onClick={() => handleTruckSelection(truck.id)}
-                    className={`
-                      p-4 border-2 rounded-lg text-left transition-all
-                      ${newTruckForm.truckId === truck.id
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
-                        : 'border-gray-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-500'
-                      }
-                    `}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">🚛</span>
-                      <div>
-                        <div className="font-semibold text-gray-900 dark:text-white">
-                          {truck.licensePlate}
+                {approvedTrucks.map((truck) => {
+                  const existingPosting = getActivePostingForTruck(truck.id);
+                  const isAlreadyPosted = !!existingPosting;
+
+                  return (
+                    <button
+                      key={truck.id}
+                      onClick={() => handleTruckSelection(truck.id)}
+                      className={`
+                        p-4 border-2 rounded-lg text-left transition-all relative
+                        ${isAlreadyPosted
+                          ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:border-amber-500'
+                          : newTruckForm.truckId === truck.id
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                            : 'border-gray-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-500'
+                        }
+                      `}
+                    >
+                      {/* Already Posted Badge */}
+                      {isAlreadyPosted && (
+                        <div className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
+                          POSTED
                         </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                          {truck.truckType?.replace('_', ' ')} • {truck.capacity} kg
-                        </div>
-                        {truck.currentCity && (
-                          <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                            📍 {truck.currentCity}
+                      )}
+
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">🚛</span>
+                        <div>
+                          <div className="font-semibold text-gray-900 dark:text-white">
+                            {truck.licensePlate}
                           </div>
-                        )}
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
+                            {truck.truckType?.replace('_', ' ')} • {truck.capacity} kg
+                          </div>
+                          {truck.currentCity && (
+                            <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                              📍 {truck.currentCity}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    {newTruckForm.truckId === truck.id && (
-                      <div className="mt-2 text-xs text-blue-600 dark:text-blue-400 font-medium">
-                        ✓ Selected
-                      </div>
-                    )}
-                  </button>
-                ))}
+
+                      {/* Status indicator */}
+                      {isAlreadyPosted ? (
+                        <div className="mt-2 text-xs text-amber-600 dark:text-amber-400 font-medium">
+                          ⚠️ Already posted - Click to edit
+                        </div>
+                      ) : newTruckForm.truckId === truck.id ? (
+                        <div className="mt-2 text-xs text-blue-600 dark:text-blue-400 font-medium">
+                          ✓ Selected
+                        </div>
+                      ) : null}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1276,7 +1325,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
             const isEditing = editingTruckId === truck.id;
 
             return (
-              <div className="p-4 border border-gray-400" style={{ backgroundColor: '#F3F2F2' }}>
+              <div id={`posting-${truck.id}`} className="p-4 border border-gray-400" style={{ backgroundColor: '#F3F2F2' }}>
                 {isEditing ? (
                   /* Edit Mode - Full Form */
                   <div className="space-y-3">
