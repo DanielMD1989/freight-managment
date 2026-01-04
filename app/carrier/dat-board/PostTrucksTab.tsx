@@ -932,6 +932,8 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       }
     };
 
+    // Ensure the row stays expanded when editing
+    setExpandedTruckId(truck.id);
     setEditingTruckId(truck.id);
     setEditForm({
       availableFrom: formatDate(truck.availableFrom),
@@ -1311,6 +1313,12 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
       {/* Truck Posts Table */}
       <div className="bg-white rounded-lg overflow-hidden mb-4">
+        {/* Header */}
+        <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+          <h3 className="text-lg font-bold text-gray-800">
+            {trucks.length} POSTED TRUCKS
+          </h3>
+        </div>
         <DatDataTable
           columns={truckColumns}
           data={trucks}
@@ -1341,124 +1349,106 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
             }
 
             return (
-              <div id={`posting-${truck.id}`} className="p-4 border-t border-gray-300 bg-gray-50">
-                {/* Edit Mode - Full Form */}
-                <div className="space-y-3">
-                    {/* Truck Info Header - Read-only fields from fleet registration */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
-                      <div className="text-xs text-blue-600 font-medium mb-2">
-                        Truck Details (from fleet registration - cannot be edited here)
-                      </div>
-                      <div className="flex gap-6 text-sm">
-                        <div>
-                          <span className="text-gray-500">Plate:</span>{' '}
-                          <span className="font-semibold">{truck.truck?.licensePlate || 'N/A'}</span>
+              <div id={`posting-${truck.id}`} className="p-4 bg-white border-t-2 border-blue-500 shadow-md rounded-b-lg">
+                {/* Edit Mode - Professional Form Layout */}
+                <div className="space-y-4">
+                    {/* Header with truck info */}
+                    <div className="flex items-center justify-between border-b border-gray-200 pb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                          <span className="text-xl">🚛</span>
                         </div>
                         <div>
-                          <span className="text-gray-500">Type:</span>{' '}
-                          <span className="font-semibold">{(truck.truck?.truckType || 'N/A').replace('_', ' ')}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Capacity:</span>{' '}
-                          <span className="font-semibold">{truck.truck?.capacity ? `${truck.truck.capacity} kg` : 'N/A'}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Owner:</span>{' '}
-                          <span className="font-semibold">{truck.ownerName || truck.truck?.carrier?.name || 'N/A'}</span>
+                          <h3 className="text-base font-bold text-gray-900">
+                            Edit Truck Posting
+                          </h3>
+                          <p className="text-xs text-gray-500">
+                            {truck.truck?.licensePlate} • {(truck.truck?.truckType || 'N/A').replace('_', ' ')} • {truck.truck?.capacity ? `${truck.truck.capacity} kg` : 'N/A'}
+                          </p>
                         </div>
                       </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCancelEdit();
+                        }}
+                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                      >
+                        <span className="text-lg">✕</span>
+                      </button>
                     </div>
 
-                    {/* Editable Fields */}
-                    <div className="grid grid-cols-12 gap-2 items-end">
-                      {/* Empty columns for checkbox and star */}
-                      <div></div>
-                      {/* Empty columns for Age and Status */}
-                      <div></div>
-                      <div></div>
-
-                      {/* Avail From */}
-                      <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Avail From *</label>
-                        <input
-                          type="date"
-                          value={editForm.availableFrom || ''}
-                          onChange={(e) => setEditForm({...editForm, availableFrom: e.target.value})}
-                          className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                          style={{ color: '#2B2727' }}
-                          required
-                        />
-                      </div>
-
-                      {/* Owner - Read-only (from fleet registration) */}
-                      <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Owner</label>
-                        <div
-                          className="w-full px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded"
-                          style={{ color: '#2B2727' }}
-                        >
-                          {editForm.owner || truck.ownerName || 'N/A'}
-                        </div>
-                      </div>
-
+                    {/* Form Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
                       {/* Origin */}
                       <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Origin *</label>
-                        <PlacesAutocomplete
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Origin <span className="text-red-500">*</span>
+                        </label>
+                        <select
                           value={editForm.origin || ''}
-                          onChange={(value, place) => {
-                            setEditForm({
-                              ...editForm,
-                              origin: value,
-                              originCoordinates: place?.coordinates
-                            });
-                          }}
-                          placeholder="Search city..."
-                          className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                          countryRestriction={['ET', 'DJ']}
-                          types={['(cities)']}
-                          required
-                        />
+                          onChange={(e) => setEditForm({...editForm, origin: e.target.value})}
+                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Select city</option>
+                          {ethiopianCities.map((city: any) => (
+                            <option key={city.id} value={city.id}>{city.name}</option>
+                          ))}
+                        </select>
                       </div>
 
                       {/* Destination */}
                       <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Destination</label>
-                        <PlacesAutocomplete
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Destination
+                        </label>
+                        <select
                           value={editForm.destination || ''}
-                          onChange={(value, place) => {
-                            setEditForm({
-                              ...editForm,
-                              destination: value,
-                              destinationCoordinates: place?.coordinates
-                            });
-                          }}
-                          placeholder="Anywhere"
-                          className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                          countryRestriction={['ET', 'DJ']}
-                          types={['(cities)']}
+                          onChange={(e) => setEditForm({...editForm, destination: e.target.value})}
+                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Anywhere</option>
+                          {ethiopianCities.map((city: any) => (
+                            <option key={city.id} value={city.id}>{city.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Available From */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          From <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={editForm.availableFrom || ''}
+                          onChange={(e) => setEditForm({...editForm, availableFrom: e.target.value})}
+                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
 
-                      {/* Truck Type - Read-only (from fleet registration) */}
+                      {/* Available To */}
                       <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Truck</label>
-                        <div
-                          className="w-full px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded"
-                          style={{ color: '#2B2727' }}
-                        >
-                          {(editForm.truckType || truck.truck?.truckType || 'DRY_VAN').replace('_', ' ')}
-                        </div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Until
+                        </label>
+                        <input
+                          type="date"
+                          value={editForm.availableTo || ''}
+                          onChange={(e) => setEditForm({...editForm, availableTo: e.target.value})}
+                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
                       </div>
 
-                      {/* F/P */}
+                      {/* Full/Partial */}
                       <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>F/P</label>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Load Type
+                        </label>
                         <select
                           value={editForm.fullPartial || 'FULL'}
                           onChange={(e) => setEditForm({...editForm, fullPartial: e.target.value})}
-                          className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                          style={{ color: '#2B2727' }}
+                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           <option value="FULL">Full</option>
                           <option value="PARTIAL">Partial</option>
@@ -1467,97 +1457,94 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
                       {/* Length */}
                       <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Length</label>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Length (m)
+                        </label>
                         <input
                           type="number"
                           value={editForm.lengthM || ''}
                           onChange={(e) => setEditForm({...editForm, lengthM: e.target.value})}
-                          className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                          style={{ color: '#2B2727' }}
-                          placeholder="52"
+                          placeholder="12"
+                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
 
                       {/* Weight */}
                       <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Weight</label>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Weight (kg)
+                        </label>
                         <input
                           type="number"
                           value={editForm.weight || ''}
                           onChange={(e) => setEditForm({...editForm, weight: e.target.value})}
-                          className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
-                          style={{ color: '#2B2727' }}
-                          placeholder="48000"
+                          placeholder="25000"
+                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      {/* Contact Phone */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Phone <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="tel"
+                          value={editForm.contactPhone || ''}
+                          onChange={(e) => setEditForm({...editForm, contactPhone: e.target.value})}
+                          placeholder="+251 9XX"
+                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
                     </div>
 
-                    {/* Bottom Section: Comments and Actions */}
-                    <div className="grid grid-cols-3 gap-4">
-                      {/* Comments 1 */}
-                      <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>
-                          Comments 1 <span className="text-gray-500">({editForm.comments1?.length || 0}/70 max)</span>
+                    {/* Comments and Actions Row */}
+                    <div className="flex items-end gap-4">
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Comments <span className="text-gray-400">({editForm.comments1?.length || 0}/70)</span>
                         </label>
-                        <textarea
+                        <input
+                          type="text"
                           value={editForm.comments1 || ''}
                           onChange={(e) => setEditForm({...editForm, comments1: e.target.value.slice(0, 70)})}
-                          className="w-full px-3 py-2 !bg-white border border-gray-400 rounded resize-none"
-                          style={{ color: '#2B2727' }}
-                          rows={3}
+                          placeholder="Additional notes..."
+                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           maxLength={70}
                         />
                       </div>
-
-                      {/* Comments 2 */}
-                      <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>
-                          Comments 2 <span className="text-gray-500">({editForm.comments2?.length || 0}/70 max)</span>
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Additional <span className="text-gray-400">({editForm.comments2?.length || 0}/70)</span>
                         </label>
-                        <textarea
+                        <input
+                          type="text"
                           value={editForm.comments2 || ''}
                           onChange={(e) => setEditForm({...editForm, comments2: e.target.value.slice(0, 70)})}
-                          className="w-full px-3 py-2 !bg-white border border-gray-400 rounded resize-none"
-                          style={{ color: '#2B2727' }}
-                          rows={3}
+                          placeholder="Special requirements..."
+                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           maxLength={70}
                         />
                       </div>
-
-                      {/* Contact and Actions */}
-                      <div className="space-y-2">
-                        <div>
-                          <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Contact Phone *</label>
-                          <input
-                            type="tel"
-                            value={editForm.contactPhone || ''}
-                            onChange={(e) => setEditForm({...editForm, contactPhone: e.target.value})}
-                            className="w-full px-3 py-2 text-xs !bg-white border border-gray-400 rounded"
-                            style={{ color: '#2B2727' }}
-                            placeholder="+251-9xx-xxx-xxx"
-                            required
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSaveEdit();
-                            }}
-                            className="flex-1 px-6 py-2 bg-cyan-400 text-white font-medium rounded hover:bg-cyan-500 transition-colors"
-                          >
-                            SAVE
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCancelEdit();
-                            }}
-                            className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800 transition-colors font-bold"
-                          >
-                            ✕
-                          </button>
-                        </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCancelEdit();
+                          }}
+                          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSaveEdit();
+                          }}
+                          className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+                        >
+                          Save
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1568,7 +1555,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       </div>
 
       {/* Matching Loads Section */}
-      <div className="bg-white rounded-lg p-4">
+      <div className="bg-white rounded-lg p-4 mt-32">
         {/* Header with Total Count and Tabs */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
