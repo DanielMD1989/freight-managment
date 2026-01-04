@@ -204,27 +204,39 @@ export default function AddTruckForm() {
     }
   };
 
+  // Standard input class for consistency
+  const inputClass = "w-full px-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400";
+  const selectClass = "w-full px-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
+  const labelClass = "block text-sm font-semibold text-gray-800 mb-2";
+  const hintClass = "text-xs text-gray-500 mt-1";
+
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
+    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-lg p-6 md:p-8">
       <div className="space-y-6">
+        {/* Form Header */}
+        <div className="border-b border-gray-200 pb-4">
+          <h2 className="text-2xl font-bold text-gray-900">Add New Truck</h2>
+          <p className="text-gray-600 mt-1">Fill in the details below to register a new truck</p>
+        </div>
+
         {/* Error Message */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-800 text-sm">{error}</p>
+            <p className="text-red-800 text-sm font-medium">{error}</p>
           </div>
         )}
 
         {/* Truck Type */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Truck Type *
+          <label className={labelClass}>
+            Truck Type <span className="text-red-500">*</span>
           </label>
           <select
             name="truckType"
             value={formData.truckType}
             onChange={handleChange}
             required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className={selectClass}
           >
             {TRUCK_TYPES.map((type) => (
               <option key={type.value} value={type.value}>
@@ -236,8 +248,8 @@ export default function AddTruckForm() {
 
         {/* License Plate */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            License Plate *
+          <label className={labelClass}>
+            License Plate <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
@@ -246,9 +258,9 @@ export default function AddTruckForm() {
             onChange={handleChange}
             required
             placeholder="e.g., AA-12345"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className={inputClass}
           />
-          <p className="text-xs text-gray-500 mt-1">
+          <p className={hintClass}>
             Must be unique and at least 3 characters
           </p>
         </div>
@@ -256,8 +268,8 @@ export default function AddTruckForm() {
         {/* Capacity and Volume */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Capacity (kg) *
+            <label className={labelClass}>
+              Capacity (kg) <span className="text-red-500">*</span>
             </label>
             <input
               type="number"
@@ -268,12 +280,12 @@ export default function AddTruckForm() {
               min="1"
               step="0.01"
               placeholder="e.g., 5000"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={inputClass}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className={labelClass}>
               Volume (m³)
             </label>
             <input
@@ -284,7 +296,7 @@ export default function AddTruckForm() {
               min="0.01"
               step="0.01"
               placeholder="e.g., 20"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={inputClass}
             />
           </div>
         </div>
@@ -292,32 +304,32 @@ export default function AddTruckForm() {
         {/* Current Location - Google Places Autocomplete */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className={labelClass}>
               Current City
             </label>
             <PlacesAutocomplete
               value={formData.currentCity}
               onChange={handleLocationChange}
               placeholder="Search for city..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={inputClass}
               countryRestriction={['ET', 'DJ']}
               types={['(cities)']}
               name="currentCity"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className={hintClass}>
               Start typing to search Ethiopian and Djibouti cities
             </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className={labelClass}>
               Current Region
             </label>
             <select
               name="currentRegion"
               value={formData.currentRegion}
               onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={selectClass}
             >
               <option value="">Select region...</option>
               {ETHIOPIAN_REGIONS.map((region) => (
@@ -326,7 +338,7 @@ export default function AddTruckForm() {
                 </option>
               ))}
             </select>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className={hintClass}>
               Auto-populated when selecting a city
             </p>
           </div>
@@ -334,7 +346,7 @@ export default function AddTruckForm() {
 
         {/* GPS Device ID */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className={labelClass}>
             GPS Device ID
           </label>
           <input
@@ -343,33 +355,33 @@ export default function AddTruckForm() {
             value={formData.gpsDeviceId}
             onChange={handleChange}
             placeholder="e.g., GPS123456"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className={inputClass}
           />
-          <p className="text-xs text-gray-500 mt-1">
+          <p className={hintClass}>
             Optional: Enter the GPS device ID if the truck has tracking enabled
           </p>
         </div>
 
         {/* Is Available */}
-        <div className="flex items-center">
+        <div className="flex items-center bg-gray-50 p-4 rounded-lg">
           <input
             type="checkbox"
             name="isAvailable"
             checked={formData.isAvailable}
             onChange={handleChange}
-            className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
           />
-          <label className="ml-2 block text-sm text-gray-700">
+          <label className="ml-3 block text-sm font-medium text-gray-800">
             Mark truck as available for new loads
           </label>
         </div>
 
         {/* Submit Buttons */}
-        <div className="flex gap-4 pt-4">
+        <div className="flex gap-4 pt-6 border-t border-gray-200">
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
           >
             {isSubmitting ? 'Submitting...' : 'Submit for Approval'}
           </button>
@@ -377,7 +389,7 @@ export default function AddTruckForm() {
             type="button"
             onClick={() => router.back()}
             disabled={isSubmitting}
-            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            className="px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 disabled:opacity-50 transition-colors"
           >
             Cancel
           </button>
