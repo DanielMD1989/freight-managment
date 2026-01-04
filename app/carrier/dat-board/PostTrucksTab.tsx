@@ -84,12 +84,8 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   const [ethiopianCities, setEthiopianCities] = useState<any[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
 
-  // Matching loads filters
-  const [loadFilters, setLoadFilters] = useState({
-    dhOrigin: '',
-    dhDestination: '',
-    fullPartial: '',
-  });
+  // Note: DH-O, DH-D, F/P filters removed - these are already specified when posting the truck
+  // The system auto-calculates distances based on truck location
 
   // Sprint 18: Load request modal state
   const [requestModalOpen, setRequestModalOpen] = useState(false);
@@ -289,15 +285,23 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   }, [trucks]);
 
   /**
-   * Handle truck row click - show matching loads
+   * Handle truck row click - show matching loads for this specific truck
    */
-  const handleTruckClick = (truck: any) => {
+  const handleTruckClick = async (truck: any) => {
     if (selectedTruckId === truck.id) {
+      // Deselect - show all loads again
       setSelectedTruckId(null);
-      setMatchingLoads([]);
+      fetchAllMatchingLoads();
     } else {
+      // Select this truck - show only its matching loads
       setSelectedTruckId(truck.id);
-      fetchMatchingLoads(truck.id);
+      setLoadingMatches(true);
+      try {
+        const loads = await fetchMatchingLoads(truck.id);
+        setMatchingLoads(loads);
+      } finally {
+        setLoadingMatches(false);
+      }
     }
   };
 
@@ -360,28 +364,13 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
   /**
    * Handle truck selection - pre-fill form with truck data
-   * If truck already has an active posting, scroll to it and open edit mode
+   * Only unposted trucks appear in the dropdown
    */
   const handleTruckSelection = (truckId: string) => {
-    // Check if this truck already has an active posting
-    const existingPosting = getActivePostingForTruck(truckId);
-
-    if (existingPosting) {
-      // Truck is already posted - close the form and open edit mode for the existing posting
-      setShowNewTruckForm(false);
-      setExpandedTruckId(existingPosting.id);
-      handleEdit(existingPosting);
-      // Scroll to the posting
-      setTimeout(() => {
-        const element = document.getElementById(`posting-${existingPosting.id}`);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
+    if (!truckId) {
+      setNewTruckForm(prev => ({ ...prev, truckId: '' }));
       return;
     }
-
-    setNewTruckForm(prev => ({ ...prev, truckId }));
 
     const selectedTruck = approvedTrucks.find(t => t.id === truckId);
     if (selectedTruck) {
@@ -740,13 +729,6 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       },
     },
     {
-      key: 'fullPartial',
-      label: 'F/P',
-      width: '60px',
-      align: 'center' as const,
-      render: (value) => value === 'FULL' ? 'Full' : 'Partial',
-    },
-    {
       key: 'availableLength',
       label: 'Length',
       width: '80px',
@@ -759,6 +741,66 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       width: '100px',
       align: 'right' as const,
       render: (value) => value ? `${value}kg` : 'N/A',
+    },
+    {
+      key: 'matchCount',
+      label: 'Loads',
+      width: '80px',
+      align: 'center' as const,
+      render: (value, row) => (
+        <span className={`
+          px-2 py-1 rounded text-xs font-bold
+          ${value > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}
+        `}>
+          {value || 0}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      width: '280px',
+      align: 'center' as const,
+      render: (_, row) => {
+        const isExpanded = expandedTruckId === row.id;
+        const isEditing = editingTruckId === row.id;
+
+        if (!isExpanded || isEditing) {
+          return null;
+        }
+
+        return (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEdit(row);
+              }}
+              className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded hover:bg-blue-700 transition-all"
+            >
+              ✏️ Edit
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCopy(row);
+              }}
+              className="px-4 py-1.5 bg-slate-600 text-white text-xs font-semibold rounded hover:bg-slate-700 transition-all"
+            >
+              📋 Copy
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(row);
+              }}
+              className="px-4 py-1.5 bg-red-600 text-white text-xs font-semibold rounded hover:bg-red-700 transition-all"
+            >
+              🗑️ Delete
+            </button>
+          </div>
+        );
+      },
     },
       ];
 
@@ -951,7 +993,8 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
    * Truck row actions
    */
   /**
-   * Filter matching loads based on active tab and filters
+   * Filter matching loads based on active tab
+   * Note: DH-O, DH-D, F/P filters removed - these are set when posting the truck
    */
   const filteredMatchingLoads = matchingLoads
     .map(match => {
@@ -969,17 +1012,6 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       }
       if (activeLoadTab === 'blocked') {
         // TODO: Implement blocked company logic
-        return false;
-      }
-
-      // Filter by DH-O, DH-D, F/P
-      if (loadFilters.dhOrigin && load.dhToOriginKm > parseInt(loadFilters.dhOrigin)) {
-        return false;
-      }
-      if (loadFilters.dhDestination && load.dhAfterDeliveryKm > parseInt(loadFilters.dhDestination)) {
-        return false;
-      }
-      if (loadFilters.fullPartial && load.fullPartial !== loadFilters.fullPartial) {
         return false;
       }
 
@@ -1021,71 +1053,46 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
             </label>
             {loadingApprovedTrucks ? (
               <div className="text-gray-500 dark:text-gray-400 py-4">Loading your trucks...</div>
-            ) : approvedTrucks.length === 0 ? (
-              <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-                <p className="text-yellow-800 dark:text-yellow-300 text-sm">
-                  No approved trucks found. Please add and get a truck approved in <a href="/carrier/trucks" className="underline font-medium">My Trucks</a> first.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {approvedTrucks.map((truck) => {
-                  const existingPosting = getActivePostingForTruck(truck.id);
-                  const isAlreadyPosted = !!existingPosting;
+            ) : (() => {
+              // Filter to only show unposted trucks
+              const unpostedTrucks = approvedTrucks.filter(truck => !getActivePostingForTruck(truck.id));
 
-                  return (
-                    <button
-                      key={truck.id}
-                      onClick={() => handleTruckSelection(truck.id)}
-                      className={`
-                        p-4 border-2 rounded-lg text-left transition-all relative
-                        ${isAlreadyPosted
-                          ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:border-amber-500'
-                          : newTruckForm.truckId === truck.id
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
-                            : 'border-gray-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-500'
-                        }
-                      `}
-                    >
-                      {/* Already Posted Badge */}
-                      {isAlreadyPosted && (
-                        <div className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
-                          POSTED
-                        </div>
-                      )}
+              if (approvedTrucks.length === 0) {
+                return (
+                  <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                    <p className="text-yellow-800 dark:text-yellow-300 text-sm">
+                      No approved trucks found. Please add and get a truck approved in <a href="/carrier/trucks" className="underline font-medium">My Trucks</a> first.
+                    </p>
+                  </div>
+                );
+              }
 
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">🚛</span>
-                        <div>
-                          <div className="font-semibold text-gray-900 dark:text-white">
-                            {truck.licensePlate}
-                          </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">
-                            {truck.truckType?.replace('_', ' ')} • {truck.capacity} kg
-                          </div>
-                          {truck.currentCity && (
-                            <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                              📍 {truck.currentCity}
-                            </div>
-                          )}
-                        </div>
-                      </div>
+              if (unpostedTrucks.length === 0) {
+                return (
+                  <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <p className="text-blue-800 dark:text-blue-300 text-sm">
+                      All your trucks are already posted. To edit an existing posting, click on it in the list below.
+                    </p>
+                  </div>
+                );
+              }
 
-                      {/* Status indicator */}
-                      {isAlreadyPosted ? (
-                        <div className="mt-2 text-xs text-amber-600 dark:text-amber-400 font-medium">
-                          ⚠️ Already posted - Click to edit
-                        </div>
-                      ) : newTruckForm.truckId === truck.id ? (
-                        <div className="mt-2 text-xs text-blue-600 dark:text-blue-400 font-medium">
-                          ✓ Selected
-                        </div>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+              return (
+                <select
+                  value={newTruckForm.truckId}
+                  onChange={(e) => handleTruckSelection(e.target.value)}
+                  className="w-full max-w-md px-4 py-3 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Select a truck to post --</option>
+                  {unpostedTrucks.map((truck) => (
+                    <option key={truck.id} value={truck.id}>
+                      {truck.licensePlate} - {truck.truckType?.replace('_', ' ')} • {truck.capacity} kg
+                      {truck.currentCity ? ` (📍 ${truck.currentCity})` : ''}
+                    </option>
+                  ))}
+                </select>
+              );
+            })()}
           </div>
 
           {/* Step 2: Posting Details - Only show when truck is selected */}
@@ -1312,10 +1319,14 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
           rowKey="id"
           expandable={true}
           onRowClick={(truck) => {
+            // Toggle expanded state
             if (expandedTruckId === truck.id) {
               setExpandedTruckId(null);
+              setSelectedTruckId(null);
+              fetchAllMatchingLoads(); // Show all loads when deselected
             } else {
               setExpandedTruckId(truck.id);
+              handleTruckClick(truck); // Fetch loads for this specific truck
             }
           }}
           renderExpandedRow={(truck) => {
@@ -1324,12 +1335,41 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
             const comments2 = notesLines[1] || '';
             const isEditing = editingTruckId === truck.id;
 
+            // Only show expanded content when editing - action buttons are now in the row itself
+            if (!isEditing) {
+              return null;
+            }
+
             return (
-              <div id={`posting-${truck.id}`} className="p-4 border border-gray-400" style={{ backgroundColor: '#F3F2F2' }}>
-                {isEditing ? (
-                  /* Edit Mode - Full Form */
-                  <div className="space-y-3">
-                    {/* Main Form Row - Grid matching table columns */}
+              <div id={`posting-${truck.id}`} className="p-4 border-t border-gray-300 bg-gray-50">
+                {/* Edit Mode - Full Form */}
+                <div className="space-y-3">
+                    {/* Truck Info Header - Read-only fields from fleet registration */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
+                      <div className="text-xs text-blue-600 font-medium mb-2">
+                        Truck Details (from fleet registration - cannot be edited here)
+                      </div>
+                      <div className="flex gap-6 text-sm">
+                        <div>
+                          <span className="text-gray-500">Plate:</span>{' '}
+                          <span className="font-semibold">{truck.truck?.licensePlate || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Type:</span>{' '}
+                          <span className="font-semibold">{(truck.truck?.truckType || 'N/A').replace('_', ' ')}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Capacity:</span>{' '}
+                          <span className="font-semibold">{truck.truck?.capacity ? `${truck.truck.capacity} kg` : 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Owner:</span>{' '}
+                          <span className="font-semibold">{truck.ownerName || truck.truck?.carrier?.name || 'N/A'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Editable Fields */}
                     <div className="grid grid-cols-12 gap-2 items-end">
                       {/* Empty columns for checkbox and star */}
                       <div></div>
@@ -1350,17 +1390,15 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                         />
                       </div>
 
-                      {/* Owner */}
+                      {/* Owner - Read-only (from fleet registration) */}
                       <div>
                         <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Owner</label>
-                        <input
-                          type="text"
-                          value={editForm.owner || ''}
-                          onChange={(e) => setEditForm({...editForm, owner: e.target.value})}
-                          className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                        <div
+                          className="w-full px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded"
                           style={{ color: '#2B2727' }}
-                          placeholder="Owner"
-                        />
+                        >
+                          {editForm.owner || truck.ownerName || 'N/A'}
+                        </div>
                       </div>
 
                       {/* Origin */}
@@ -1402,20 +1440,15 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                         />
                       </div>
 
-                      {/* Truck Type */}
+                      {/* Truck Type - Read-only (from fleet registration) */}
                       <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Truck *</label>
-                        <select
-                          value={editForm.truckType || 'DRY_VAN'}
-                          onChange={(e) => setEditForm({...editForm, truckType: e.target.value})}
-                          className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Truck</label>
+                        <div
+                          className="w-full px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded"
                           style={{ color: '#2B2727' }}
                         >
-                          <option value="DRY_VAN">Van</option>
-                          <option value="FLATBED">Flatbed</option>
-                          <option value="REFRIGERATED">Reefer</option>
-                          <option value="TANKER">Tanker</option>
-                        </select>
+                          {(editForm.truckType || truck.truck?.truckType || 'DRY_VAN').replace('_', ' ')}
+                        </div>
                       </div>
 
                       {/* F/P */}
@@ -1528,168 +1561,6 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                       </div>
                     </div>
                   </div>
-                ) : (
-                  /* View Mode - Match Load Post Style */
-                  <div>
-                    <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                      {/* Comments 1 */}
-                      <div>
-                        <div className="font-medium mb-1" style={{ color: '#2B2727' }}>
-                          Comments 1
-                        </div>
-                        <div style={{ color: '#2B2727' }}>
-                          {comments1 || 'N/A'}
-                        </div>
-                      </div>
-
-                      {/* Comments 2 */}
-                      <div>
-                        <div className="font-medium mb-1" style={{ color: '#2B2727' }}>
-                          Comments 2
-                        </div>
-                        <div style={{ color: '#2B2727' }}>
-                          {comments2 || 'N/A'}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Sprint 16: GPS Tracking Section */}
-                    {truck.truck?.assignedLoads?.[0]?.trackingEnabled && truck.truck?.assignedLoads?.[0]?.trackingUrl && (
-                      <div className="mb-4 p-3 bg-green-50 border-2 border-green-400 rounded">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="font-semibold text-sm text-green-700 flex items-center gap-2">
-                            <span>📍</span> TRUCK CURRENTLY ON GPS-TRACKED LOAD
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                            <span className="text-xs text-green-700">Live</span>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 text-xs mb-3">
-                          <div>
-                            <div className="text-gray-600 mb-1">Load Route</div>
-                            <div className="font-semibold text-gray-800">
-                              {truck.truck.assignedLoads[0].pickupCity} → {truck.truck.assignedLoads[0].deliveryCity}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-gray-600 mb-1">Tracking Started</div>
-                            <div className="font-semibold text-gray-800">
-                              {truck.truck.assignedLoads[0].trackingStartedAt
-                                ? new Date(truck.truck.assignedLoads[0].trackingStartedAt).toLocaleString()
-                                : 'N/A'}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <a
-                            href={truck.truck.assignedLoads[0].trackingUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="flex-1 px-4 py-2 bg-green-600 text-white text-sm font-bold rounded hover:bg-green-700 transition-colors text-center"
-                          >
-                            🗺️ VIEW LIVE TRACKING
-                          </a>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigator.clipboard.writeText(
-                                `${window.location.origin}${truck.truck.assignedLoads[0].trackingUrl}`
-                              );
-                              alert('Tracking URL copied! Share it with your customer.');
-                            }}
-                            className="px-4 py-2 bg-green-500 text-white text-sm font-medium rounded hover:bg-green-600 transition-colors"
-                          >
-                            SHARE
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* GPS Device Status - Show if GPS enabled but not currently tracking */}
-                    {truck.truck?.imei && truck.truck?.gpsVerifiedAt && !truck.truck?.assignedLoads?.[0]?.trackingEnabled && (
-                      <div className="mb-4 p-3 bg-blue-50 border-2 border-blue-400 rounded">
-                        <div className="font-semibold text-sm text-blue-700 mb-2 flex items-center gap-2">
-                          <span>📡</span> GPS DEVICE ACTIVE
-                        </div>
-                        <div className="grid grid-cols-3 gap-3 text-xs">
-                          <div>
-                            <div className="text-gray-600 mb-1">IMEI</div>
-                            <div className="font-semibold text-gray-800 font-mono">
-                              {truck.truck.imei}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-gray-600 mb-1">Provider</div>
-                            <div className="font-semibold text-gray-800">
-                              {truck.truck.gpsProvider || 'N/A'}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-gray-600 mb-1">Status</div>
-                            <div className={`font-semibold ${
-                              truck.truck.gpsStatus === 'ACTIVE' ? 'text-green-600' :
-                              truck.truck.gpsStatus === 'SIGNAL_LOST' ? 'text-yellow-600' :
-                              'text-gray-600'
-                            }`}>
-                              {truck.truck.gpsStatus === 'ACTIVE' ? '🟢 Active' :
-                               truck.truck.gpsStatus === 'SIGNAL_LOST' ? '🟡 Signal Lost' :
-                               truck.truck.gpsStatus === 'INACTIVE' ? '⚫ Inactive' :
-                               'Unknown'}
-                            </div>
-                          </div>
-                        </div>
-                        <p className="text-xs text-blue-800 mt-2">
-                          ℹ️ This truck is ready for GPS tracking when assigned to a load.
-                        </p>
-                      </div>
-                    )}
-
-                    {/* GPS Not Available */}
-                    {!truck.truck?.imei && (
-                      <div className="mb-4 p-3 bg-yellow-50 border-2 border-yellow-400 rounded">
-                        <div className="font-semibold text-sm text-yellow-700 mb-1">
-                          ⚠️ GPS Not Registered
-                        </div>
-                        <p className="text-xs text-yellow-800">
-                          This truck does not have a GPS device registered. Register a GPS device to enable live tracking for future loads.
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Action Buttons */}
-                    <div className="flex gap-2 justify-end items-center">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCopy(truck);
-                        }}
-                        className="px-4 py-2 bg-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-400 transition-colors"
-                      >
-                        COPY
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(truck);
-                        }}
-                        className="px-4 py-2 bg-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-400 transition-colors"
-                      >
-                        EDIT
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(truck);
-                        }}
-                        className="px-4 py-2 bg-red-500 text-white text-sm font-medium rounded hover:bg-red-600 transition-colors"
-                      >
-                        DELETE
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             );
           }}
@@ -1698,49 +1569,29 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
       {/* Matching Loads Section */}
       <div className="bg-white rounded-lg p-4">
-        {/* Header with Filters and Tabs */}
+        {/* Header with Total Count and Tabs */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <h3 className="text-sm font-bold text-gray-700 uppercase">
-              {filteredMatchingLoads.length} TOTAL RESULTS
+            <h3 className="text-lg font-bold text-lime-600">
+              {filteredMatchingLoads.length} MATCHING LOADS
+              {selectedTruckId && (
+                <span className="ml-2 text-blue-600 font-normal text-sm">
+                  (for selected truck)
+                </span>
+              )}
             </h3>
-            <div className="flex items-center gap-3 text-xs">
-              <div className="flex items-center gap-1">
-                <label className="text-gray-600">DH-O:</label>
-                <input
-                  type="number"
-                  value={loadFilters.dhOrigin}
-                  onChange={(e) => setLoadFilters({...loadFilters, dhOrigin: e.target.value})}
-                  className="w-16 px-1 py-1 border rounded"
-                  placeholder="150"
-                />
-              </div>
-              <div className="flex items-center gap-1">
-                <label className="text-gray-600">DH-D:</label>
-                <input
-                  type="number"
-                  value={loadFilters.dhDestination}
-                  onChange={(e) => setLoadFilters({...loadFilters, dhDestination: e.target.value})}
-                  className="w-16 px-1 py-1 border rounded"
-                  placeholder="0"
-                />
-              </div>
-              <div className="flex items-center gap-1">
-                <label className="text-gray-600">F/P:</label>
-                <select
-                  value={loadFilters.fullPartial}
-                  onChange={(e) => setLoadFilters({...loadFilters, fullPartial: e.target.value})}
-                  className="px-2 py-1 border rounded text-xs"
-                >
-                  <option value="">Both</option>
-                  <option value="FULL">Full</option>
-                  <option value="PARTIAL">Partial</option>
-                </select>
-              </div>
-              <div className="flex items-center gap-1">
-                <label className="text-gray-600">Each</label>
-              </div>
-            </div>
+            {selectedTruckId && (
+              <button
+                onClick={() => {
+                  setSelectedTruckId(null);
+                  setExpandedTruckId(null);
+                  fetchAllMatchingLoads();
+                }}
+                className="text-xs text-blue-600 hover:text-blue-800 underline"
+              >
+                Show all loads
+              </button>
+            )}
           </div>
 
           {/* Tabs on the right */}
