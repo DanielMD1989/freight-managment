@@ -490,6 +490,8 @@ export async function GET(request: NextRequest) {
               name: true,
               nameEthiopic: true,
               region: true,
+              latitude: true,
+              longitude: true,
             },
           },
           destinationCity: {
@@ -497,6 +499,8 @@ export async function GET(request: NextRequest) {
               name: true,
               nameEthiopic: true,
               region: true,
+              latitude: true,
+              longitude: true,
             },
           },
           carrier: {

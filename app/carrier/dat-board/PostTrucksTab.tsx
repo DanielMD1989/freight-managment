@@ -68,7 +68,8 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     availableTo: '',
     origin: '',
     destination: '',
-    dhOrigin: '', // Deadhead to origin (km)
+    declaredDhO: '', // Declared DH-O limit (km) - carrier sets max distance to pickup
+    declaredDhD: '', // Declared DH-D limit (km) - carrier sets max distance after delivery
     fullPartial: 'FULL',
     lengthM: '',
     weight: '',
@@ -231,7 +232,64 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   };
 
   /**
+   * Calculate distance between two coordinates using Haversine formula
+   * Returns distance in kilometers
+   */
+  const haversineDistance = (
+    lat1: number, lon1: number,
+    lat2: number, lon2: number
+  ): number => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return Math.round(R * c); // Return rounded km
+  };
+
+  /**
+   * Calculate actual distance between two cities using coordinates
+   * Looks up city coordinates from ethiopianCities array
+   */
+  const calculateDeadhead = (city1: string | null | undefined, city2: string | null | undefined): number => {
+    if (!city1 || !city2) return 0;
+
+    const c1 = city1.toLowerCase().trim();
+    const c2 = city2.toLowerCase().trim();
+
+    // Same city = 0 distance
+    if (c1 === c2) return 0;
+
+    // Look up coordinates for both cities
+    const city1Data = ethiopianCities.find(
+      (city: any) => city.name?.toLowerCase().trim() === c1
+    );
+    const city2Data = ethiopianCities.find(
+      (city: any) => city.name?.toLowerCase().trim() === c2
+    );
+
+    // If both cities have coordinates, calculate actual distance
+    if (city1Data?.latitude && city1Data?.longitude &&
+        city2Data?.latitude && city2Data?.longitude) {
+      return haversineDistance(
+        Number(city1Data.latitude),
+        Number(city1Data.longitude),
+        Number(city2Data.latitude),
+        Number(city2Data.longitude)
+      );
+    }
+
+    // Fallback: if coordinates not available, estimate based on name matching
+    if (c1.includes(c2) || c2.includes(c1)) return 50; // Nearby/similar names
+    return 0; // Return 0 if we can't calculate (no coordinates)
+  };
+
+  /**
    * Fetch all matching loads for all posted trucks
+   * Shows recent loads with DH-O and DH-D set to 0 (will be calculated when truck is selected)
    */
   const fetchAllMatchingLoads = async () => {
     setLoadingMatches(true);
@@ -249,7 +307,14 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       const allLoadsPromises = postedTrucks.map(truck =>
         fetch(`/api/truck-postings/${truck.id}/matching-loads?limit=100`)
           .then(res => res.json())
-          .then(data => data.matches || [])
+          .then(data => {
+            // Add truck info to each load for DH calculation
+            return (data.matches || []).map((match: any) => ({
+              ...match,
+              truckOrigin: truck.originCity?.name || truck.origin,
+              truckDestination: truck.destinationCity?.name || truck.destination,
+            }));
+          })
           .catch(err => {
             console.error(`Failed to fetch loads for truck ${truck.id}:`, err);
             return [];
@@ -285,7 +350,61 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   }, [trucks]);
 
   /**
+   * Calculate distance using coordinates directly (more reliable than name lookup)
+   */
+  const calculateDistanceWithCoords = (
+    originLat: number | null | undefined,
+    originLon: number | null | undefined,
+    destLat: number | null | undefined,
+    destLon: number | null | undefined
+  ): number => {
+    if (!originLat || !originLon || !destLat || !destLon) return 0;
+    return haversineDistance(
+      Number(originLat), Number(originLon),
+      Number(destLat), Number(destLon)
+    );
+  };
+
+  /**
+   * Get coordinates for a city name from ethiopianCities
+   * Uses fuzzy matching to handle name variations (e.g., "Mekele" vs "Mekelle", "Jima" vs "Jimma")
+   */
+  const getCityCoords = (cityName: string | null | undefined): { lat: number; lon: number } | null => {
+    if (!cityName || ethiopianCities.length === 0) return null;
+
+    const searchName = cityName.toLowerCase().trim();
+
+    // Try exact match first
+    let city = ethiopianCities.find(
+      (c: any) => c.name?.toLowerCase().trim() === searchName
+    );
+
+    // If no exact match, try fuzzy match (contains or similar spelling)
+    if (!city) {
+      city = ethiopianCities.find((c: any) => {
+        const cityNameLower = c.name?.toLowerCase().trim() || '';
+        // Check if one contains the other
+        if (cityNameLower.includes(searchName) || searchName.includes(cityNameLower)) {
+          return true;
+        }
+        // Check for common spelling variations (remove double letters)
+        const simplify = (s: string) => s.replace(/(.)\1+/g, '$1'); // e.g., "Mekelle" -> "Mekele"
+        if (simplify(cityNameLower) === simplify(searchName)) {
+          return true;
+        }
+        return false;
+      });
+    }
+
+    if (city?.latitude && city?.longitude) {
+      return { lat: Number(city.latitude), lon: Number(city.longitude) };
+    }
+    return null;
+  };
+
+  /**
    * Handle truck row click - show matching loads for this specific truck
+   * The API now calculates DH-O and DH-D distances and returns them sorted
    */
   const handleTruckClick = async (truck: any) => {
     if (selectedTruckId === truck.id) {
@@ -297,6 +416,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       setSelectedTruckId(truck.id);
       setLoadingMatches(true);
       try {
+        // API returns loads with calculated dhToOriginKm, dhAfterDeliveryKm, and withinDhLimits
         const loads = await fetchMatchingLoads(truck.id);
         setMatchingLoads(loads);
       } finally {
@@ -427,7 +547,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         ? new Date(newTruckForm.availableTo + 'T23:59:59').toISOString()
         : null;
 
-      // Debug: log the payload
+      // Build the payload with all fields including declared DH limits
       const payload = {
         truckId: newTruckForm.truckId,
         originCityId: originCity.id,
@@ -441,6 +561,9 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         contactName: user.firstName + ' ' + user.lastName,
         contactPhone: newTruckForm.contactPhone,
         notes: (newTruckForm.comments1 + '\n' + newTruckForm.comments2).trim() || null,
+        // Declared DH limits (carrier specifies max distances they're willing to accept)
+        preferredDhToOriginKm: newTruckForm.declaredDhO ? parseFloat(newTruckForm.declaredDhO) : null,
+        preferredDhAfterDeliveryKm: newTruckForm.declaredDhD ? parseFloat(newTruckForm.declaredDhD) : null,
       };
 
       const response = await fetch('/api/truck-postings', {
@@ -471,7 +594,8 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         availableTo: '',
         origin: '',
         destination: '',
-        dhOrigin: '',
+        declaredDhO: '',
+        declaredDhD: '',
         fullPartial: 'FULL',
         lengthM: '',
         weight: '',
@@ -684,6 +808,20 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       },
     },
     {
+      key: 'preferredDhToOriginKm',
+      label: 'DH-O',
+      width: '65px',
+      align: 'right' as const,
+      render: (value) => value ? `${value} km` : '-',
+    },
+    {
+      key: 'preferredDhAfterDeliveryKm',
+      label: 'DH-D',
+      width: '65px',
+      align: 'right' as const,
+      render: (value) => value ? `${value} km` : '-',
+    },
+    {
       key: 'truckType',
       label: 'Truck',
       width: '100px',
@@ -836,9 +974,18 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     {
       key: 'dhToOriginKm',
       label: 'DH-O',
-      width: '60px',
+      width: '70px',
       align: 'right' as const,
-      render: (value) => value ? `${value}` : '-',
+      render: (value, row) => {
+        if (!value && value !== 0) return '-';
+        // Show green if within declared limits, gray otherwise
+        const withinLimits = row.withinDhLimits;
+        return (
+          <span className={`font-medium ${withinLimits ? 'text-green-600' : 'text-gray-500'}`}>
+            {value} km
+          </span>
+        );
+      },
     },
     {
       key: 'pickupCity',
@@ -860,9 +1007,18 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     {
       key: 'dhAfterDeliveryKm',
       label: 'DH-D',
-      width: '60px',
+      width: '70px',
       align: 'right' as const,
-      render: (value) => value ? `${value}` : '-',
+      render: (value, row) => {
+        if (!value && value !== 0) return '-';
+        // Show green if within declared limits, gray otherwise
+        const withinLimits = row.withinDhLimits;
+        return (
+          <span className={`font-medium ${withinLimits ? 'text-green-600' : 'text-gray-500'}`}>
+            {value} km
+          </span>
+        );
+      },
     },
     {
       key: 'shipper',
@@ -948,6 +1104,9 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       contactPhone: truck.contactPhone || '',
       comments1: notesLines[0] || '',
       comments2: notesLines[1] || '',
+      // Declared DH limits
+      declaredDhO: truck.preferredDhToOriginKm || '',
+      declaredDhD: truck.preferredDhAfterDeliveryKm || '',
     });
   };
 
@@ -971,6 +1130,9 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
           ownerName: editForm.owner || null,
           contactPhone: editForm.contactPhone,
           notes: (editForm.comments1 + '\n' + editForm.comments2).trim() || null,
+          // Declared DH limits
+          preferredDhToOriginKm: editForm.declaredDhO ? parseFloat(editForm.declaredDhO) : null,
+          preferredDhAfterDeliveryKm: editForm.declaredDhD ? parseFloat(editForm.declaredDhD) : null,
         }),
       });
 
@@ -995,14 +1157,29 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
    * Truck row actions
    */
   /**
-   * Filter matching loads based on active tab
-   * Note: DH-O, DH-D, F/P filters removed - these are set when posting the truck
+   * Get selected truck's origin for filtering
+   */
+  const selectedTruck = selectedTruckId ? trucks.find(t => t.id === selectedTruckId) : null;
+  const selectedTruckOrigin = selectedTruck?.originCity?.name || selectedTruck?.origin || '';
+
+  /**
+   * Filter matching loads based on active tab and truck origin
+   * Sorts by: loads within DH limits first, then DH-O, DH-D, then by recent (createdAt)
    */
   const filteredMatchingLoads = matchingLoads
     .map(match => {
       // Extract load from match object (API returns { load: {...}, matchScore: X })
       const load = match.load || match;
-      return { ...match, load };
+      return {
+        ...match,
+        load: {
+          ...load,
+          // Preserve DH values and limits flag from match if available
+          dhToOriginKm: match.dhToOriginKm ?? load.dhToOriginKm ?? 0,
+          dhAfterDeliveryKm: match.dhAfterDeliveryKm ?? load.dhAfterDeliveryKm ?? 0,
+          withinDhLimits: match.withinDhLimits ?? load.withinDhLimits ?? true,
+        }
+      };
     })
     .filter(({ load }) => {
       if (!load) return false;
@@ -1017,7 +1194,52 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         return false;
       }
 
+      // Filter by truck origin - only show loads where pickup is near truck's origin
+      if (selectedTruckId && selectedTruckOrigin && load.pickupCity) {
+        const truckOriginLower = selectedTruckOrigin.toLowerCase().trim();
+        const loadOriginLower = load.pickupCity.toLowerCase().trim();
+
+        // Check if origins match or are related
+        const originsMatch =
+          truckOriginLower === loadOriginLower ||
+          truckOriginLower.includes(loadOriginLower) ||
+          loadOriginLower.includes(truckOriginLower);
+
+        // Also allow loads with low DH-O (within reasonable distance) or within declared limits
+        const dhOk = (load.dhToOriginKm || 0) <= 200 || load.withinDhLimits;
+
+        if (!originsMatch && !dhOk) {
+          return false;
+        }
+      }
+
       return true;
+    })
+    .sort((a, b) => {
+      // If a truck is selected, sort by within-limits first, then DH-O
+      if (selectedTruckId) {
+        // First priority: loads within declared DH limits come first
+        const aWithin = a.load?.withinDhLimits ?? true;
+        const bWithin = b.load?.withinDhLimits ?? true;
+        if (aWithin !== bWithin) {
+          return aWithin ? -1 : 1;
+        }
+
+        // Second: by DH-O (lower is better)
+        const dhA = a.load?.dhToOriginKm || 0;
+        const dhB = b.load?.dhToOriginKm || 0;
+        if (dhA !== dhB) return dhA - dhB;
+
+        // Third: by DH-D (lower is better)
+        const dhDA = a.load?.dhAfterDeliveryKm || 0;
+        const dhDB = b.load?.dhAfterDeliveryKm || 0;
+        if (dhDA !== dhDB) return dhDA - dhDB;
+      }
+
+      // Sort by most recent first
+      const dateA = new Date(a.load?.createdAt || 0).getTime();
+      const dateB = new Date(b.load?.createdAt || 0).getTime();
+      return dateB - dateA;
     })
     .map(match => match.load); // Return just the load object for the table
 
@@ -1179,19 +1401,37 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                 </div>
 
                 {/* Row 2: Load Details */}
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-4">
-                  {/* DH-O (Deadhead to Origin) */}
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-4">
+                  {/* DH-O (Declared Deadhead to Origin Limit) */}
                   <div>
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      DH-O (km)
+                      DH-O Limit (km)
                     </label>
                     <input
                       type="number"
-                      value={newTruckForm.dhOrigin}
-                      onChange={(e) => setNewTruckForm({...newTruckForm, dhOrigin: e.target.value})}
-                      placeholder="Max deadhead"
+                      value={newTruckForm.declaredDhO}
+                      onChange={(e) => setNewTruckForm({...newTruckForm, declaredDhO: e.target.value})}
+                      placeholder="e.g. 100"
                       className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      min="0"
                     />
+                    <p className="text-xs text-gray-500 mt-1">Max distance to pickup</p>
+                  </div>
+
+                  {/* DH-D (Declared Deadhead after Delivery Limit) */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      DH-D Limit (km)
+                    </label>
+                    <input
+                      type="number"
+                      value={newTruckForm.declaredDhD}
+                      onChange={(e) => setNewTruckForm({...newTruckForm, declaredDhD: e.target.value})}
+                      placeholder="e.g. 100"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      min="0"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Max distance after delivery</p>
                   </div>
 
                   {/* F/P */}
@@ -1379,7 +1619,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                     </div>
 
                     {/* Form Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-10 gap-3">
                       {/* Origin */}
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -1453,6 +1693,36 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                           <option value="FULL">Full</option>
                           <option value="PARTIAL">Partial</option>
                         </select>
+                      </div>
+
+                      {/* DH-O Limit */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          DH-O (km)
+                        </label>
+                        <input
+                          type="number"
+                          value={editForm.declaredDhO || ''}
+                          onChange={(e) => setEditForm({...editForm, declaredDhO: e.target.value})}
+                          placeholder="100"
+                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          min="0"
+                        />
+                      </div>
+
+                      {/* DH-D Limit */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          DH-D (km)
+                        </label>
+                        <input
+                          type="number"
+                          value={editForm.declaredDhD || ''}
+                          onChange={(e) => setEditForm({...editForm, declaredDhD: e.target.value})}
+                          placeholder="100"
+                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          min="0"
+                        />
                       </div>
 
                       {/* Length */}

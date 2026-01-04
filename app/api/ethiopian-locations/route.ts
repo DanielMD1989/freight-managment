@@ -25,6 +25,8 @@ export async function GET(request: NextRequest) {
         name: true,
         nameEthiopic: true,
         region: true,
+        latitude: true,
+        longitude: true,
       },
       orderBy: {
         name: 'asc',
