@@ -42,6 +42,22 @@ interface RoleAwareSidebarProps {
 const navigationSections: Record<string, NavSection[]> = {
   carrier: [
     {
+      items: [
+        {
+          label: 'Dashboard',
+          href: '/carrier/dashboard',
+          icon: '📊',
+          roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'],
+        },
+        {
+          label: 'Map',
+          href: '/carrier/map',
+          icon: '🗺️',
+          roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'],
+        },
+      ],
+    },
+    {
       title: 'DAT Board',
       items: [
         {
@@ -111,6 +127,22 @@ const navigationSections: Record<string, NavSection[]> = {
     },
   ],
   shipper: [
+    {
+      items: [
+        {
+          label: 'Dashboard',
+          href: '/shipper/dashboard',
+          icon: '📊',
+          roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'],
+        },
+        {
+          label: 'Map',
+          href: '/shipper/map',
+          icon: '🗺️',
+          roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'],
+        },
+      ],
+    },
     {
       title: 'DAT Board',
       items: [
@@ -183,6 +215,12 @@ const navigationSections: Record<string, NavSection[]> = {
           href: '/admin',
           icon: '📊',
           roles: ['ADMIN', 'SUPER_ADMIN'],
+        },
+        {
+          label: 'Map',
+          href: '/admin/map',
+          icon: '🗺️',
+          roles: ['ADMIN', 'SUPER_ADMIN', 'DISPATCHER'],
         },
         {
           label: 'Platform Metrics',
@@ -319,12 +357,70 @@ const navigationSections: Record<string, NavSection[]> = {
       ],
     },
   ],
+  dispatcher: [
+    {
+      items: [
+        {
+          label: 'Dashboard',
+          href: '/dispatcher',
+          icon: '📊',
+          roles: ['DISPATCHER', 'ADMIN', 'SUPER_ADMIN'],
+        },
+        {
+          label: 'Map',
+          href: '/dispatcher/map',
+          icon: '🗺️',
+          roles: ['DISPATCHER', 'ADMIN', 'SUPER_ADMIN'],
+        },
+      ],
+    },
+    {
+      title: 'Operations',
+      items: [
+        {
+          label: 'All Loads',
+          href: '/dispatcher/loads',
+          icon: '📦',
+          roles: ['DISPATCHER', 'ADMIN', 'SUPER_ADMIN'],
+        },
+        {
+          label: 'All Trucks',
+          href: '/dispatcher/trucks',
+          icon: '🚛',
+          roles: ['DISPATCHER', 'ADMIN', 'SUPER_ADMIN'],
+        },
+        {
+          label: 'Match Proposals',
+          href: '/dispatcher/proposals',
+          icon: '🎯',
+          roles: ['DISPATCHER', 'ADMIN', 'SUPER_ADMIN'],
+        },
+      ],
+    },
+    {
+      title: 'Monitoring',
+      items: [
+        {
+          label: 'Active Trips',
+          href: '/dispatcher/trips',
+          icon: '🚚',
+          roles: ['DISPATCHER', 'ADMIN', 'SUPER_ADMIN'],
+        },
+        {
+          label: 'Escalations',
+          href: '/dispatcher/escalations',
+          icon: '⚠️',
+          roles: ['DISPATCHER', 'ADMIN', 'SUPER_ADMIN'],
+        },
+      ],
+    },
+  ],
 };
 
 /**
  * Portal titles and back links
  */
-const portalConfig = {
+const portalConfig: Record<string, { title: string; icon: string; backLink: { href: string; label: string } }> = {
   admin: {
     title: 'Admin Panel',
     icon: '🛡️',
@@ -338,6 +434,11 @@ const portalConfig = {
   shipper: {
     title: 'Shipper Portal',
     icon: '📦',
+    backLink: { href: '/', label: 'Back to Home' },
+  },
+  dispatcher: {
+    title: 'Dispatcher Portal',
+    icon: '📡',
     backLink: { href: '/', label: 'Back to Home' },
   },
 };

@@ -3,12 +3,13 @@
  *
  * Sprint 16 - Story 16.4: Dispatcher System
  *
- * Layout for dispatcher portal with authentication and role checks
+ * Layout for dispatcher portal with role-aware sidebar
  */
 
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth';
+import RoleAwareSidebar from '@/components/RoleAwareSidebar';
 
 export default async function DispatcherLayout({
   children,
@@ -38,6 +39,13 @@ export default async function DispatcherLayout({
     redirect('/unauthorized');
   }
 
-  // Simple full-width layout
-  return <>{children}</>;
+  // Layout with sidebar
+  return (
+    <div className="flex min-h-screen bg-gray-50 dark:bg-slate-950">
+      <RoleAwareSidebar userRole={session.role} portalType="dispatcher" />
+      <main className="flex-1 overflow-auto">
+        {children}
+      </main>
+    </div>
+  );
 }
