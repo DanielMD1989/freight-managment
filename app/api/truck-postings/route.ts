@@ -23,7 +23,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, requireActiveUser } from '@/lib/auth';
 import {
   weightSchema,
   lengthSchema,
@@ -76,8 +76,8 @@ const TruckPostingSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    // Require authentication
-    const session = await requireAuth();
+    // Require ACTIVE user status for posting trucks
+    const session = await requireActiveUser();
 
     // Require organization
     if (!session.organizationId) {

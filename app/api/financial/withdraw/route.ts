@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requireActiveUser } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
 
@@ -14,7 +14,8 @@ const withdrawSchema = z.object({
 // POST /api/financial/withdraw - Request withdrawal
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    // Require ACTIVE user status for financial transactions
+    const session = await requireActiveUser();
     await requirePermission(Permission.WITHDRAW_FUNDS);
 
     const user = await db.user.findUnique({

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { verifyPassword, setSession } from "@/lib/auth";
+import { verifyPassword, setSession, isLoginAllowed } from "@/lib/auth";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { logAuthFailure, logAuthSuccess } from "@/lib/auditLog";
@@ -128,22 +128,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Sprint 2: Check user status
-    if (user.status === 'SUSPENDED') {
-      await logAuthFailure(validatedData.email, 'Account suspended', request);
-      return NextResponse.json(
-        {
-          error: "Your account has been suspended. Please contact support.",
-        },
-        { status: 403 }
-      );
-    }
+    // Check user status using centralized function
+    const loginCheck = isLoginAllowed(user.status);
 
-    if (user.status === 'REJECTED') {
-      await logAuthFailure(validatedData.email, 'Account rejected', request);
+    if (!loginCheck.allowed) {
+      await logAuthFailure(validatedData.email, `Account status: ${user.status}`, request);
       return NextResponse.json(
         {
-          error: "Your registration has been rejected. Please contact support.",
+          error: loginCheck.error || "Account inactive. Please contact support.",
         },
         { status: 403 }
       );
@@ -151,7 +143,7 @@ export async function POST(request: NextRequest) {
 
     // Legacy check (will be deprecated)
     if (!user.isActive) {
-      await logAuthFailure(validatedData.email, 'Account inactive', request);
+      await logAuthFailure(validatedData.email, 'Account inactive (legacy)', request);
       return NextResponse.json(
         {
           error: "Account is inactive. Please contact support.",
@@ -159,6 +151,9 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       );
     }
+
+    // Determine access level based on status
+    const isLimitedAccess = loginCheck.limited;
 
     // Verify password
     const isValidPassword = await verifyPassword(
@@ -222,15 +217,25 @@ export async function POST(request: NextRequest) {
 
     // Generate CSRF token for the session
     const response = NextResponse.json({
-      message: "Login successful",
+      message: isLimitedAccess
+        ? "Login successful. Please complete your registration."
+        : "Login successful",
       user: {
         id: user.id,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        status: user.status,
         organizationId: user.organizationId,
       },
+      // Indicate if user has limited access (pending verification)
+      limitedAccess: isLimitedAccess,
+      // If limited, tell frontend what actions are allowed
+      ...(isLimitedAccess && {
+        allowedActions: ['view_profile', 'upload_documents', 'complete_registration'],
+        restrictedMessage: 'Your account is pending verification. Some features are restricted.',
+      }),
     });
 
     // Set CSRF token cookie

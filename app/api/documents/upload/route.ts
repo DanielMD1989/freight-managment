@@ -27,7 +27,7 @@ import {
   MAX_FILE_SIZE,
 } from '@/lib/fileStorage';
 import { CompanyDocumentType, TruckDocumentType } from '@prisma/client';
-import { requireAuth } from '@/lib/auth';
+import { requireRegistrationAccess } from '@/lib/auth';
 import { validateFileName, validateIdFormat } from '@/lib/validation';
 import {
   checkRateLimit,
@@ -58,8 +58,9 @@ import { requireCSRF } from '@/lib/csrf';
  */
 export async function POST(request: NextRequest) {
   try {
-    // Require authentication
-    const session = await requireAuth();
+    // Allow document upload for users in registration flow
+    // (REGISTERED, PENDING_VERIFICATION, and ACTIVE users)
+    const session = await requireRegistrationAccess();
     const userId = session.userId;
     const userOrgId = session.organizationId;
 

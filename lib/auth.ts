@@ -87,6 +87,53 @@ export async function requireAuth(): Promise<SessionPayload> {
   return session;
 }
 
+/**
+ * Require authenticated user with ACTIVE status
+ * Checks database to ensure user is still active (real-time enforcement)
+ * Use this for protected actions that require verified active users
+ */
+export async function requireActiveUser(): Promise<SessionPayload & { dbStatus: string }> {
+  const session = await getSession();
+
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  // Import db here to avoid circular dependencies
+  const { db } = await import("./db");
+
+  // Fetch current user status from database (real-time check)
+  const user = await db.user.findUnique({
+    where: { id: session.userId },
+    select: { status: true, isActive: true },
+  });
+
+  if (!user) {
+    throw new Error("Unauthorized: User not found");
+  }
+
+  // Check user status - only ACTIVE users can perform actions
+  if (user.status !== 'ACTIVE') {
+    if (user.status === 'SUSPENDED') {
+      throw new Error("Forbidden: Account suspended");
+    }
+    if (user.status === 'REJECTED') {
+      throw new Error("Forbidden: Account rejected");
+    }
+    if (user.status === 'REGISTERED' || user.status === 'PENDING_VERIFICATION') {
+      throw new Error("Forbidden: Account pending verification");
+    }
+    throw new Error("Forbidden: Account inactive");
+  }
+
+  // Legacy check
+  if (!user.isActive) {
+    throw new Error("Forbidden: Account inactive");
+  }
+
+  return { ...session, dbStatus: user.status };
+}
+
 export async function requireRole(
   allowedRoles: string[]
 ): Promise<SessionPayload> {
@@ -97,6 +144,81 @@ export async function requireRole(
   }
 
   return session;
+}
+
+/**
+ * Require active user with specific role
+ * Combines role check with active status verification
+ */
+export async function requireActiveRole(
+  allowedRoles: string[]
+): Promise<SessionPayload & { dbStatus: string }> {
+  const session = await requireActiveUser();
+
+  if (!allowedRoles.includes(session.role)) {
+    throw new Error("Forbidden: Insufficient permissions");
+  }
+
+  return session;
+}
+
+/**
+ * Allow access for users in registration flow
+ * Permits REGISTERED and PENDING_VERIFICATION users for limited actions
+ * (e.g., document upload, profile completion)
+ */
+export async function requireRegistrationAccess(): Promise<SessionPayload & { dbStatus: string }> {
+  const session = await getSession();
+
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  const { db } = await import("./db");
+
+  const user = await db.user.findUnique({
+    where: { id: session.userId },
+    select: { status: true, isActive: true },
+  });
+
+  if (!user) {
+    throw new Error("Unauthorized: User not found");
+  }
+
+  // Allow REGISTERED, PENDING_VERIFICATION, and ACTIVE users
+  const allowedStatuses = ['REGISTERED', 'PENDING_VERIFICATION', 'ACTIVE'];
+  if (!allowedStatuses.includes(user.status)) {
+    if (user.status === 'SUSPENDED') {
+      throw new Error("Forbidden: Account suspended");
+    }
+    if (user.status === 'REJECTED') {
+      throw new Error("Forbidden: Account rejected");
+    }
+    throw new Error("Forbidden: Account inactive");
+  }
+
+  return { ...session, dbStatus: user.status };
+}
+
+/**
+ * Check if user status allows login
+ * SUSPENDED and REJECTED users cannot login
+ * REGISTERED and PENDING_VERIFICATION get limited access
+ */
+export function isLoginAllowed(status: string): { allowed: boolean; limited: boolean; error?: string } {
+  switch (status) {
+    case 'ACTIVE':
+      return { allowed: true, limited: false };
+    case 'REGISTERED':
+    case 'PENDING_VERIFICATION':
+      return { allowed: true, limited: true };
+    case 'SUSPENDED':
+      return { allowed: false, limited: false, error: 'Account suspended. Please contact support.' };
+    case 'REJECTED':
+      return { allowed: false, limited: false, error: 'Registration rejected. Please contact support.' };
+    default:
+      return { allowed: false, limited: false, error: 'Account inactive.' };
+  }
 }
 
 /**

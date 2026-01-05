@@ -13,7 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, requireActiveUser } from '@/lib/auth';
 import { canProposeMatch } from '@/lib/dispatcherPermissions';
 import { RULE_DISPATCHER_COORDINATION_ONLY } from '@/lib/foundation-rules';
 import { UserRole } from '@prisma/client';
@@ -42,8 +42,8 @@ const MatchProposalSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    // Require authentication
-    const session = await requireAuth();
+    // Require ACTIVE user status for creating proposals
+    const session = await requireActiveUser();
 
     // Check if user can propose matches
     const user = {

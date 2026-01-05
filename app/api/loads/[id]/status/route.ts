@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, requireActiveUser } from '@/lib/auth';
 import { z } from 'zod';
 import { validateStateTransition, LoadStatus, getStatusDescription } from '@/lib/loadStateMachine';
 
@@ -35,8 +35,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Require authentication
-    const session = await requireAuth();
+    // Require ACTIVE user status for updating load status
+    const session = await requireActiveUser();
     const { id: loadId } = await params;
 
     const body = await request.json();
