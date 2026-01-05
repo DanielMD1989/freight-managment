@@ -3,10 +3,25 @@
 // Phase 2 Update: Foundation Rules Enforcement - Dispatcher Coordination Only
 
 export enum Permission {
-  // User Management
-  VIEW_USERS = "view_users",
-  MANAGE_USERS = "manage_users",
+  // User Management - Granular Permissions
+  VIEW_USERS = "view_users", // View non-admin users (Admin)
+  VIEW_ALL_USERS = "view_all_users", // View all users including admins (SuperAdmin)
+  MANAGE_USERS = "manage_users", // Legacy - general user management
   ASSIGN_ROLES = "assign_roles", // SuperAdmin only
+
+  // User Creation (role-specific)
+  CREATE_ADMIN = "create_admin", // SuperAdmin only
+  CREATE_OPERATIONAL_USERS = "create_operational_users", // Create Carrier/Shipper/Dispatcher (Admin, SuperAdmin)
+
+  // User Status Management
+  ACTIVATE_DEACTIVATE_USERS = "activate_deactivate_users", // Admin (non-admin), SuperAdmin (any)
+
+  // User Data Management
+  CHANGE_USER_PHONE = "change_user_phone", // Admin, SuperAdmin (users cannot change own)
+
+  // User Deletion (role-specific)
+  DELETE_ADMIN = "delete_admin", // SuperAdmin only
+  DELETE_NON_ADMIN_USERS = "delete_non_admin_users", // Admin, SuperAdmin
 
   // Organization Management
   VIEW_ORGANIZATIONS = "view_organizations",
@@ -119,12 +134,17 @@ export type Role =
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   /**
    * SHIPPER
-   * - Post loads
-   * - Track load status
-   * - View live map tracking
+   * Can Do:
+   * - Manage own profile
+   * - Create loads
+   * - View assigned trucks
+   * - Track trips
    * - View proof of delivery
-   * - View shipment history
-   * - Optionally select trucks on web (shipper-led matching)
+   *
+   * Cannot Do:
+   * - Create/manage users
+   * - Modify trucks
+   * - Execute trips
    */
   SHIPPER: [
     // Load management
@@ -160,14 +180,21 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
   /**
    * CARRIER
-   * - Register and upload documents
-   * - Search and filter loads
-   * - Accept loads
-   * - Execute trips
+   * Can Do:
+   * - Manage own profile
+   * - Manage own trucks
+   * - Post trucks
+   * - Search loads
+   * - Accept/execute loads
    * - Update trip status
    * - Upload proof of delivery
    * - View wallet (read-only)
-   * - Mobile location tracking enabled during active trips
+   *
+   * Cannot Do:
+   * - Create/manage users
+   * - Activate/deactivate users
+   * - Change phone number of others
+   * - Delete users
    */
   CARRIER: [
     // Truck management
@@ -206,14 +233,20 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
   /**
    * DISPATCHER
-   * Phase 2 Update: Coordination Only (Foundation Rule: DISPATCHER_COORDINATION_ONLY)
-   * - View loads and posted trucks (availability)
-   * - PROPOSE matches (carrier must approve)
-   * - Monitor unassigned and rejected loads
-   * - Handle operational issues
-   * - Escalate to Admin when required
+   * Can Do:
+   * - View trucks (availability only)
+   * - View loads
+   * - Propose matches (carrier must approve)
+   * - Monitor trips
+   * - Escalate to Admin
    *
-   * CANNOT: Assign loads, accept loads, start trips (carrier authority only)
+   * Cannot Do:
+   * - Create/manage users
+   * - Modify trucks
+   * - Execute trips
+   * - Upload POD
+   * - Change user data
+   * - Assign loads directly (carrier authority only)
    */
   DISPATCHER: [
     // Load visibility (read-only coordination)
@@ -251,17 +284,35 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
   /**
    * ADMIN
-   * - Verify and approve registration documents
+   * User Management (non-admin only):
+   * - Create Carrier, Shipper, Dispatcher
+   * - Activate/Deactivate Carrier, Shipper, Dispatcher
+   * - Change phone for Carrier, Shipper, Dispatcher
+   * - Delete Carrier, Shipper, Dispatcher
+   * - View all non-admin users
+   *
+   * Cannot Do:
+   * - Create Super Admin or Admin
+   * - Modify Super Admin
+   * - Delete Admin users
+   * - Execute trips
+   *
+   * Platform:
+   * - Verify documents and organizations
    * - Manage wallet top-ups and adjustments
    * - Configure commission and penalties
-   * - Configure automation rules and thresholds
    * - Resolve escalations and exceptions
-   * - View analytics
    */
   ADMIN: [
-    // User management
-    Permission.VIEW_USERS,
-    Permission.MANAGE_USERS,
+    // User management (non-admin users only)
+    Permission.VIEW_USERS, // View Carrier, Shipper, Dispatcher
+    Permission.CREATE_OPERATIONAL_USERS, // Create Carrier, Shipper, Dispatcher
+    Permission.ACTIVATE_DEACTIVATE_USERS, // Activate/Deactivate non-admin users
+    Permission.CHANGE_USER_PHONE, // Change phone for non-admin users
+    Permission.DELETE_NON_ADMIN_USERS, // Delete Carrier, Shipper, Dispatcher
+    // Cannot: CREATE_ADMIN, DELETE_ADMIN, VIEW_ALL_USERS, ASSIGN_ROLES
+
+    // Organization management
     Permission.VIEW_ORGANIZATIONS,
     Permission.MANAGE_ORGANIZATIONS,
 
@@ -324,12 +375,22 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   ],
 
   /**
-   * SUPER_ADMIN
-   * - Assign and revoke roles
+   * SUPER_ADMIN (Highest Authority)
+   * User Management:
+   * - Create Admin users (CREATE_ADMIN)
+   * - Activate/Deactivate ANY user
+   * - Change phone number for ANY user
+   * - Delete ANY user including Admin (DELETE_ADMIN)
+   * - View ALL users (VIEW_ALL_USERS)
+   * - Assign and revoke roles (ASSIGN_ROLES)
+   *
+   * Platform:
    * - Platform-wide configuration
    * - Full analytics access
    * - Audit log access
    * - Global override authority
+   *
+   * Cannot: Execute trips, act as carrier/shipper/dispatcher
    */
   SUPER_ADMIN: [
     // ALL permissions
