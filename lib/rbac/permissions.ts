@@ -147,10 +147,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.UPLOAD_DOCUMENTS,
     Permission.VIEW_DOCUMENTS,
 
-    // Wallet
+    // Wallet (view only)
     Permission.VIEW_WALLET,
-    Permission.DEPOSIT_FUNDS,
-    Permission.WITHDRAW_FUNDS,
 
     // Disputes
     Permission.CREATE_DISPUTE,
@@ -195,10 +193,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.UPLOAD_DOCUMENTS,
     Permission.VIEW_DOCUMENTS,
 
-    // Wallet (read-only)
+    // Wallet (view only)
     Permission.VIEW_WALLET,
-    Permission.DEPOSIT_FUNDS,
-    Permission.WITHDRAW_FUNDS,
 
     // Disputes
     Permission.CREATE_DISPUTE,
@@ -245,6 +241,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
     // GPS monitoring (for coordination)
     Permission.VIEW_ALL_GPS,
+
+    // Wallet (view only)
+    Permission.VIEW_WALLET,
 
     // Dashboard
     Permission.VIEW_DASHBOARD,
