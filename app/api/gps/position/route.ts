@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
+import { broadcastGpsPosition } from '@/lib/websocket-server';
 
 const gpsUpdateSchema = z.object({
   truckId: z.string().min(1),
@@ -116,6 +117,27 @@ export async function POST(request: NextRequest) {
           loadId: activeLoad?.id || null,
         },
       });
+    }
+
+    // Broadcast GPS position update via WebSocket (Phase 3)
+    try {
+      await broadcastGpsPosition(
+        data.truckId,
+        activeLoad?.id || null,
+        user.organizationId,
+        {
+          truckId: data.truckId,
+          loadId: activeLoad?.id,
+          lat: data.latitude,
+          lng: data.longitude,
+          speed: data.speed,
+          heading: data.heading,
+          timestamp: data.timestamp || new Date().toISOString(),
+        }
+      );
+    } catch (broadcastError) {
+      // Don't fail the request if broadcast fails
+      console.error('GPS broadcast error:', broadcastError);
     }
 
     return NextResponse.json({
