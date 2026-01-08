@@ -35,6 +35,7 @@ const CSRF_EXEMPT_ROUTES = [
   '/api/truck-postings', // TODO: Fix CSRF cookie implementation
   '/api/trucks', // TODO: Fix CSRF cookie implementation
   '/api/load-requests', // TODO: Fix CSRF cookie implementation
+  '/api/saved-searches', // TODO: Fix CSRF cookie implementation
 ];
 
 // State-changing HTTP methods that require CSRF protection
