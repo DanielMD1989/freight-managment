@@ -10,6 +10,7 @@
 import { Server as HTTPServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { db } from './db';
+import { UserRole } from '@prisma/client';
 
 export interface NotificationPayload {
   id: string;
@@ -115,9 +116,16 @@ export function initializeWebSocketServer(httpServer: HTTPServer): SocketIOServe
         select: {
           id: true,
           status: true,
-          organizationId: true,
+          shipperId: true,
+          assignedTruckId: true,
           assignedTruck: {
-            select: { carrierId: true },
+            select: {
+              id: true,
+              carrierId: true,
+              currentLocationLat: true,
+              currentLocationLon: true,
+              locationUpdatedAt: true,
+            },
           },
         },
       });
@@ -133,14 +141,7 @@ export function initializeWebSocketServer(httpServer: HTTPServer): SocketIOServe
 
       // Send current position if available
       if (load.assignedTruck) {
-        const truck = await db.truck.findUnique({
-          where: { id: load.assignedTruck.carrierId },
-          select: {
-            currentLocationLat: true,
-            currentLocationLon: true,
-            locationUpdatedAt: true,
-          },
-        });
+        const truck = load.assignedTruck;
 
         if (truck?.currentLocationLat && truck?.currentLocationLon) {
           socket.emit('gps-position', {
@@ -228,7 +229,7 @@ export async function broadcastToRole(
 
   // Get all users with this role
   const users = await db.user.findMany({
-    where: { role, isActive: true },
+    where: { role: role as UserRole, isActive: true },
     select: { id: true },
   });
 

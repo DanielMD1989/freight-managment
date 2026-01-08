@@ -90,9 +90,10 @@ describe('RBAC System', () => {
         organizationId: org.id,
       });
 
-      // Test key admin permissions
+      // Test key admin permissions (using granular permissions, not legacy MANAGE_USERS)
       const adminPermissions = [
-        Permission.MANAGE_USERS,
+        Permission.VIEW_USERS,
+        Permission.CREATE_OPERATIONAL_USERS,
         Permission.VIEW_ALL_LOADS,
         Permission.VIEW_ALL_TRUCKS,
         Permission.VERIFY_DOCUMENTS,

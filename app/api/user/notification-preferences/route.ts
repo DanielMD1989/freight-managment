@@ -7,8 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 
 /**
@@ -17,18 +16,11 @@ import { db } from '@/lib/db';
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const session = await requireAuth();
 
     // Get user preferences
     const user = await db.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: session.userId },
       select: {
         notificationPreferences: true,
       },
@@ -52,14 +44,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const session = await requireAuth();
 
     const body = await request.json();
     const { preferences } = body;
@@ -72,14 +57,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Convert preferences array to object
-    const preferencesObj = preferences.reduce((acc, pref) => {
+    const preferencesObj = preferences.reduce((acc: Record<string, boolean>, pref: { type: string; enabled: boolean }) => {
       acc[pref.type] = pref.enabled;
       return acc;
     }, {} as Record<string, boolean>);
 
     // Update user preferences
     await db.user.update({
-      where: { id: session.user.id },
+      where: { id: session.userId },
       data: {
         notificationPreferences: preferencesObj,
       },

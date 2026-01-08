@@ -23,11 +23,11 @@ const updateDisputeSchema = z.object({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await requireAuth(request);
-    const disputeId = params.id;
+    const session = await requireAuth();
+    const { id: disputeId } = await params;
 
     const dispute = await db.dispute.findUnique({
       where: { id: disputeId },
@@ -35,7 +35,6 @@ export async function GET(
         load: {
           select: {
             id: true,
-            loadNumber: true,
             pickupCity: true,
             deliveryCity: true,
             status: true,
@@ -43,13 +42,13 @@ export async function GET(
             assignedTruck: {
               select: {
                 id: true,
-                plateNumber: true,
+                licensePlate: true,
                 carrier: { select: { id: true, name: true } },
               },
             },
           },
         },
-        raisedBy: {
+        createdBy: {
           select: {
             id: true,
             email: true,
@@ -57,12 +56,10 @@ export async function GET(
             lastName: true,
           },
         },
-        resolvedBy: {
+        disputedOrg: {
           select: {
             id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
+            name: true,
           },
         },
       },
@@ -105,13 +102,12 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await requireAuth(request);
-    await requirePermission(session, Permission.MANAGE_DISPUTES);
+    const session = await requirePermission(Permission.MANAGE_DISPUTES);
 
-    const disputeId = params.id;
+    const { id: disputeId } = await params;
     const body = await request.json();
     const validatedData = updateDisputeSchema.parse(body);
 
@@ -128,23 +124,20 @@ export async function PATCH(
       where: { id: disputeId },
       data: {
         ...validatedData,
-        resolvedById: validatedData.status === 'RESOLVED' || validatedData.status === 'CLOSED'
-          ? session.userId
-          : undefined,
-        resolvedAt: validatedData.status === 'RESOLVED' || validatedData.status === 'CLOSED'
-          ? new Date()
-          : undefined,
+        // Mark resolution time if status is resolved or closed
+        ...(validatedData.status === 'RESOLVED' || validatedData.status === 'CLOSED'
+          ? { resolvedAt: new Date() }
+          : {}),
       },
       include: {
         load: {
           select: {
             id: true,
-            loadNumber: true,
             pickupCity: true,
             deliveryCity: true,
           },
         },
-        raisedBy: {
+        createdBy: {
           select: {
             id: true,
             email: true,
@@ -152,12 +145,10 @@ export async function PATCH(
             lastName: true,
           },
         },
-        resolvedBy: {
+        disputedOrg: {
           select: {
             id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
+            name: true,
           },
         },
       },

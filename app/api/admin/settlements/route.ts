@@ -86,17 +86,6 @@ export async function GET(request: NextRequest) {
               },
             },
           },
-          settlementRecord: {
-            select: {
-              id: true,
-              grossAmount: true,
-              commissionAmount: true,
-              netAmount: true,
-              commissionRate: true,
-              paymentStatus: true,
-              processedAt: true,
-            },
-          },
         },
         orderBy: [
           { podVerifiedAt: 'asc' }, // Oldest verified first

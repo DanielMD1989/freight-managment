@@ -32,7 +32,7 @@ interface NavSection {
 
 interface RoleAwareSidebarProps {
   userRole: string;
-  portalType: 'admin' | 'carrier' | 'shipper';
+  portalType: 'admin' | 'carrier' | 'shipper' | 'dispatcher';
   children?: ReactNode;
 }
 

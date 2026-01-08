@@ -16,7 +16,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth, requireActiveUser } from '@/lib/auth';
-import { hasPermission, Permission } from '@/lib/rbac';
+import { Permission } from '@/lib/rbac';
+import { hasPermission } from '@/lib/rbac/permissions';
 import { z } from 'zod';
 import { UserRole } from '@prisma/client';
 

@@ -23,7 +23,7 @@ const createDisputeSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireAuth(request);
+    const session = await requireAuth();
     const body = await request.json();
     const validatedData = createDisputeSchema.parse(body);
 
@@ -59,23 +59,22 @@ export async function POST(request: NextRequest) {
     const dispute = await db.dispute.create({
       data: {
         loadId: validatedData.loadId,
-        raisedById: session.userId,
-        raisedByOrganizationId: session.organizationId!,
+        createdById: session.userId,
+        disputedOrgId: session.organizationId!,
         type: validatedData.type,
         description: validatedData.description,
-        evidence: validatedData.evidence,
+        evidenceUrls: validatedData.evidence ? [validatedData.evidence] : [],
         status: 'OPEN',
       },
       include: {
         load: {
           select: {
             id: true,
-            loadNumber: true,
             pickupCity: true,
             deliveryCity: true,
           },
         },
-        raisedBy: {
+        createdBy: {
           select: {
             id: true,
             email: true,
@@ -117,7 +116,7 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireAuth(request);
+    const session = await requireAuth();
     const { searchParams } = new URL(request.url);
 
     const status = searchParams.get('status');
@@ -157,13 +156,12 @@ export async function GET(request: NextRequest) {
         load: {
           select: {
             id: true,
-            loadNumber: true,
             pickupCity: true,
             deliveryCity: true,
             status: true,
           },
         },
-        raisedBy: {
+        createdBy: {
           select: {
             id: true,
             email: true,
@@ -171,12 +169,10 @@ export async function GET(request: NextRequest) {
             lastName: true,
           },
         },
-        resolvedBy: {
+        disputedOrg: {
           select: {
             id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
+            name: true,
           },
         },
       },

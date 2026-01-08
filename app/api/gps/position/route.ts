@@ -198,14 +198,26 @@ export async function GET(request: NextRequest) {
     const truckWhere: any = { id: truckId };
 
     if (session.role === 'CARRIER') {
+      if (!user?.organizationId) {
+        return NextResponse.json(
+          { error: 'User not associated with an organization' },
+          { status: 403 }
+        );
+      }
       // Carrier can only see their own trucks
-      truckWhere.carrierId = user?.organizationId;
+      truckWhere.carrierId = user.organizationId;
     } else if (session.role === 'SHIPPER') {
+      if (!user?.organizationId) {
+        return NextResponse.json(
+          { error: 'User not associated with an organization' },
+          { status: 403 }
+        );
+      }
       // Shipper can only see truck if it's on their load
       const activeLoad = await db.load.findFirst({
         where: {
           assignedTruckId: truckId,
-          organizationId: user?.organizationId,
+          shipperId: user.organizationId,
           status: 'IN_TRANSIT',
         },
       });

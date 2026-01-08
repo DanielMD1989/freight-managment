@@ -43,14 +43,14 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ vehicles: [] });
       }
 
-      where.organizationId = user.organizationId;
+      where.carrierId = user.organizationId;
     } else if (role === 'SHIPPER') {
       // Shippers cannot see vehicles directly (only through trips)
       return NextResponse.json({ vehicles: [] });
     } else if (role === 'DISPATCHER' || role === 'ADMIN' || role === 'SUPER_ADMIN') {
       // Admin/Dispatcher can see all vehicles
       if (carrierId) {
-        where.organizationId = carrierId;
+        where.carrierId = carrierId;
       }
     } else {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
         locationUpdatedAt: true,
         gpsStatus: true,
         gpsLastSeenAt: true,
-        organization: {
+        carrier: {
           select: {
             id: true,
             name: true,
@@ -130,8 +130,8 @@ export async function GET(request: NextRequest) {
           updatedAt: truck.locationUpdatedAt?.toISOString(),
         } : null,
         carrier: {
-          id: truck.organization?.id,
-          name: truck.organization?.name,
+          id: truck.carrier?.id,
+          name: truck.carrier?.name,
         },
       };
     });

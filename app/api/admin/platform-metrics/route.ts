@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       // Organizations
       db.organization.count(),
       db.organization.count({ where: { isVerified: true } }),
-      db.organization.count({ where: { type: 'CARRIER' } }),
+      db.organization.count({ where: { type: { in: ['CARRIER_COMPANY', 'CARRIER_INDIVIDUAL'] } } }),
       db.organization.count({ where: { type: 'SHIPPER' } }),
 
       // Loads
@@ -81,14 +81,14 @@ export async function GET(request: NextRequest) {
       db.truck.count(),
       db.truck.count({ where: { isAvailable: true } }),
 
-      // Financial
-      db.settlementRecord.aggregate({
-        _sum: { grossAmount: true },
+      // Financial - aggregate total load value
+      db.load.aggregate({
+        _sum: { rate: true },
+        where: { status: 'COMPLETED' },
       }),
       db.load.count({
         where: {
           settlementStatus: 'PENDING',
-          podVerified: true,
         },
       }),
       db.load.count({ where: { settlementStatus: 'PAID' } }),
@@ -183,7 +183,7 @@ export async function GET(request: NextRequest) {
           active: activeTrucks,
         },
         financial: {
-          totalRevenue: Number(totalRevenue._sum.grossAmount || 0),
+          totalRevenue: Number(totalRevenue._sum.rate || 0),
           pendingSettlements: pendingSettlements,
           paidSettlements: paidSettlements,
         },

@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
         currentLocationLon: true,
         currentCity: true,
         // Get truck's preferred destination from active posting
-        truckPostings: {
+        postings: {
           where: { status: 'ACTIVE' },
           select: {
             destinationCity: {
@@ -160,8 +160,7 @@ export async function GET(request: NextRequest) {
       where: { id: loadId },
       select: {
         id: true,
-        referenceNumber: true,
-        pickupCity: true,
+                pickupCity: true,
         originLat: true,
         originLon: true,
         deliveryCity: true,
@@ -178,7 +177,7 @@ export async function GET(request: NextRequest) {
       truckId: truck.id,
       truckPlate: truck.licensePlate,
       loadId: load.id,
-      loadRef: load.referenceNumber,
+      loadRef: load.id,
     };
 
     // Calculate DH-O (truck current location → load pickup)
@@ -217,7 +216,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate DH-D (load delivery → truck preferred destination)
     if (type === 'dhd' || type === 'both') {
-      const truckDestination = truck.truckPostings?.[0]?.destinationCity;
+      const truckDestination = truck.postings?.[0]?.destinationCity;
 
       if (load.destinationLat && load.destinationLon && truckDestination?.latitude && truckDestination?.longitude) {
         const dhdResult = await calculateDistance(

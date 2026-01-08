@@ -34,6 +34,7 @@ export interface MapMarker {
     truckId?: string;
     plateNumber?: string;
   };
+  data?: unknown; // Additional data payload for marker interactions
 }
 
 export interface MapRoute {
@@ -254,12 +255,12 @@ export default function GoogleMap({
 
   // Get marker icon based on type and status
   const getMarkerIcon = useCallback((marker: MapMarker): google.maps.Icon => {
-    let iconKey = marker.type;
+    let iconKey: string = marker.type;
     if (marker.type === 'truck' && marker.status) {
       iconKey = `truck_${marker.status}`;
     }
 
-    const iconConfig = markerIcons[iconKey] || markerIcons.truck_available;
+    const iconConfig = markerIcons[iconKey as keyof typeof markerIcons] || markerIcons.truck_available;
 
     return {
       url: iconConfig.url,

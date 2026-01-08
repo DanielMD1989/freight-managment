@@ -145,9 +145,8 @@ export async function GET(request: NextRequest) {
       where: { id: loadId },
       select: {
         id: true,
-        referenceNumber: true,
         status: true,
-        organizationId: true,
+        shipperId: true,
         deliveryCity: true,
         destinationLat: true,
         destinationLon: true,
@@ -176,7 +175,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 });
       }
     } else if (session.role === 'SHIPPER') {
-      if (load.organizationId !== user?.organizationId) {
+      if (load.shipperId !== user?.organizationId) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 });
       }
     }
@@ -218,7 +217,6 @@ export async function GET(request: NextRequest) {
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       return NextResponse.json({
         loadId: load.id,
-        referenceNumber: load.referenceNumber,
         status: load.status,
         truck: {
           id: truck.id,
@@ -262,7 +260,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       loadId: load.id,
-      referenceNumber: load.referenceNumber,
       status: load.status,
       truck: {
         id: truck.id,

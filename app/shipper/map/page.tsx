@@ -140,7 +140,7 @@ export default function ShipperMapPage() {
       destination: selectedTrip.deliveryLocation,
       waypoints: selectedTrip.currentLocation ? [selectedTrip.currentLocation] : [],
       color: '#2563eb',
-      data: selectedTrip,
+      tripId: selectedTrip.id,
     }];
   };
 

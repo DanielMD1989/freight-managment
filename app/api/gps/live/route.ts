@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
         select: {
           id: true,
           status: true,
-          organizationId: true,
+          shipperId: true,
           assignedTruck: {
             select: {
               id: true,
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
           );
         }
       } else if (session.role === 'SHIPPER') {
-        if (load.organizationId !== user?.organizationId) {
+        if (load.shipperId !== user?.organizationId) {
           return NextResponse.json(
             { error: 'Access denied' },
             { status: 403 }
@@ -118,12 +118,18 @@ export async function GET(request: NextRequest) {
       };
 
       if (session.role === 'CARRIER') {
-        where.carrierId = user?.organizationId;
+        if (!user?.organizationId) {
+          return NextResponse.json({ error: 'User not associated with an organization' }, { status: 403 });
+        }
+        where.carrierId = user.organizationId;
       } else if (session.role === 'SHIPPER') {
+        if (!user?.organizationId) {
+          return NextResponse.json({ error: 'User not associated with an organization' }, { status: 403 });
+        }
         // Shipper can only get positions for trucks on their loads
         const activeLoads = await db.load.findMany({
           where: {
-            organizationId: user?.organizationId,
+            shipperId: user.organizationId,
             status: 'IN_TRANSIT',
             assignedTruckId: { in: truckIds },
           },
@@ -177,11 +183,17 @@ export async function GET(request: NextRequest) {
     };
 
     if (session.role === 'CARRIER') {
+      if (!user?.organizationId) {
+        return NextResponse.json({ error: 'User not associated with an organization' }, { status: 403 });
+      }
       activeLoadsWhere.assignedTruck = {
-        carrierId: user?.organizationId,
+        carrierId: user.organizationId,
       };
     } else if (session.role === 'SHIPPER') {
-      activeLoadsWhere.organizationId = user?.organizationId;
+      if (!user?.organizationId) {
+        return NextResponse.json({ error: 'User not associated with an organization' }, { status: 403 });
+      }
+      activeLoadsWhere.shipperId = user.organizationId;
     }
     // Admin/Dispatcher see all active trips
 
@@ -189,7 +201,6 @@ export async function GET(request: NextRequest) {
       where: activeLoadsWhere,
       select: {
         id: true,
-        referenceNumber: true,
         status: true,
         assignedTruck: {
           select: {
@@ -208,7 +219,6 @@ export async function GET(request: NextRequest) {
 
     const liveTrips = activeLoads.map((load) => ({
       loadId: load.id,
-      referenceNumber: load.referenceNumber,
       status: load.status,
       truck: load.assignedTruck ? {
         id: load.assignedTruck.id,

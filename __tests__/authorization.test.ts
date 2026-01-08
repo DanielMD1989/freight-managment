@@ -43,9 +43,10 @@ describe('Authorization', () => {
         organizationId: org.id,
       });
 
-      // Test various admin permissions
+      // Test various admin permissions (using granular permissions, not legacy MANAGE_USERS)
       const permissions = [
-        Permission.MANAGE_USERS,
+        Permission.VIEW_USERS,
+        Permission.CREATE_OPERATIONAL_USERS,
         Permission.VIEW_ALL_LOADS,
         Permission.VIEW_ALL_TRUCKS,
         Permission.VERIFY_DOCUMENTS,

@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
         where: { id: loadId },
         select: {
           id: true,
-          organizationId: true,
+          shipperId: true,
           assignedTruck: {
             select: {
               carrierId: true,
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
           );
         }
       } else if (session.role === 'SHIPPER') {
-        if (load.organizationId !== user?.organizationId) {
+        if (load.shipperId !== user?.organizationId) {
           return NextResponse.json(
             { error: 'You do not have access to this load' },
             { status: 403 }
@@ -87,10 +87,17 @@ export async function GET(request: NextRequest) {
     if (truckId) {
       // Verify access to truck
       if (session.role === 'CARRIER') {
+        if (!user?.organizationId) {
+          return NextResponse.json(
+            { error: 'User not associated with an organization' },
+            { status: 403 }
+          );
+        }
+
         const truck = await db.truck.findFirst({
           where: {
             id: truckId,
-            carrierId: user?.organizationId,
+            carrierId: user.organizationId,
           },
         });
 

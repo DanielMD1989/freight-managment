@@ -99,8 +99,8 @@ export async function processReadySettlements(): Promise<number> {
   }
 
   const batchSize = settings.settlementBatchSize || 50;
-  const minAmount = settings.autoSettlementMinAmount || 0;
-  const maxAmount = settings.autoSettlementMaxAmount || 0;
+  const minAmount = Number(settings.autoSettlementMinAmount || 0);
+  const maxAmount = Number(settings.autoSettlementMaxAmount || 0);
 
   // Build where clause with amount constraints
   const whereClause: any = {

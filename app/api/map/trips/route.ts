@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
 
       // Find loads assigned to carrier's trucks
       where.assignedTruck = {
-        organizationId: user.organizationId,
+        carrierId: user.organizationId,
       };
     } else if (role === 'SHIPPER' || roleFilter === 'shipper') {
       // Shipper can only see their own loads that are IN_TRANSIT
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ trips: [] });
       }
 
-      where.organizationId = user.organizationId;
+      where.shipperId = user.organizationId;
       // Only show trips that are approved and in transit
       where.status = { in: ['IN_TRANSIT', 'DELIVERED'] };
       where.assignedTruckId = { not: null };
@@ -71,11 +71,11 @@ export async function GET(request: NextRequest) {
       // Admin/Dispatcher can see all trips
       if (carrierId) {
         where.assignedTruck = {
-          organizationId: carrierId,
+          carrierId: carrierId,
         };
       }
       if (shipperId) {
-        where.organizationId = shipperId;
+        where.shipperId = shipperId;
       }
     } else {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
@@ -107,7 +107,6 @@ export async function GET(request: NextRequest) {
       where,
       select: {
         id: true,
-        referenceNumber: true,
         status: true,
         pickupCity: true,
         pickupAddress: true,
@@ -127,7 +126,7 @@ export async function GET(request: NextRequest) {
             currentLocationLat: true,
             currentLocationLon: true,
             locationUpdatedAt: true,
-            organization: {
+            carrier: {
               select: {
                 id: true,
                 name: true,
@@ -135,7 +134,7 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        organization: {
+        shipper: {
           select: {
             id: true,
             name: true,
@@ -152,20 +151,19 @@ export async function GET(request: NextRequest) {
     const trips = loads.map((load) => ({
       id: load.id,
       loadId: load.id,
-      referenceNumber: load.referenceNumber,
       status: load.status,
       truck: load.assignedTruck ? {
         id: load.assignedTruck.id,
         plateNumber: load.assignedTruck.licensePlate,
         truckType: load.assignedTruck.truckType,
       } : null,
-      carrier: load.assignedTruck?.organization ? {
-        id: load.assignedTruck.organization.id,
-        name: load.assignedTruck.organization.name,
+      carrier: load.assignedTruck?.carrier ? {
+        id: load.assignedTruck.carrier.id,
+        name: load.assignedTruck.carrier.name,
       } : null,
       shipper: {
-        id: load.organization?.id,
-        name: load.organization?.name,
+        id: load.shipper?.id,
+        name: load.shipper?.name,
       },
       // Current location comes from the assigned truck's GPS
       currentLocation: load.assignedTruck?.currentLocationLat && load.assignedTruck?.currentLocationLon ? {

@@ -394,8 +394,7 @@ export default function AdminMapPage() {
             </button>
           </div>
           <div className="text-sm text-gray-600 space-y-1">
-            {/* Vehicle details */}
-            {selectedItem.id.startsWith('vehicle-') && selectedItem.data && (
+            {selectedItem.id.startsWith('vehicle-') && selectedItem.data ? (
               <div className="grid grid-cols-2 gap-2">
                 <p><strong>Type:</strong> {(selectedItem.data as Vehicle).truckType}</p>
                 <p><strong>Status:</strong> {(selectedItem.data as Vehicle).status}</p>
@@ -408,10 +407,9 @@ export default function AdminMapPage() {
                   </p>
                 )}
               </div>
-            )}
+            ) : null}
 
-            {/* Trip details */}
-            {selectedItem.id.startsWith('trip-') && selectedItem.data && (
+            {selectedItem.id.startsWith('trip-') && selectedItem.data ? (
               <div className="grid grid-cols-2 gap-2">
                 <p><strong>Load ID:</strong> {(selectedItem.data as Trip).loadId}</p>
                 <p><strong>Status:</strong> {(selectedItem.data as Trip).status}</p>
@@ -425,7 +423,7 @@ export default function AdminMapPage() {
                   </p>
                 )}
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       )}

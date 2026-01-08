@@ -63,7 +63,6 @@ export async function GET(request: NextRequest) {
       where,
       select: {
         id: true,
-        referenceNumber: true,
         status: true,
         cargoDescription: true,
         weight: true,
@@ -79,9 +78,9 @@ export async function GET(request: NextRequest) {
         destinationLon: true,
         pickupDate: true,
         deliveryDate: true,
-        ratePerKm: true,
+        rate: true,
         truckType: true,
-        organization: {
+        shipper: {
           select: {
             id: true,
             name: true,
@@ -97,7 +96,6 @@ export async function GET(request: NextRequest) {
     // Transform for map display
     const mapLoads = loads.map((load) => ({
       id: load.id,
-      referenceNumber: load.referenceNumber,
       status: load.status,
       cargoType: load.cargoDescription,
       weight: Number(load.weight),
@@ -116,10 +114,10 @@ export async function GET(request: NextRequest) {
       } : null,
       pickupDate: load.pickupDate?.toISOString(),
       deliveryDate: load.deliveryDate?.toISOString(),
-      rate: load.ratePerKm ? Number(load.ratePerKm) : null,
+      rate: load.rate ? Number(load.rate) : null,
       shipper: {
-        id: load.organization?.id,
-        name: load.organization?.name,
+        id: load.shipper?.id,
+        name: load.shipper?.name,
       },
     }));
 

@@ -311,28 +311,29 @@ export async function GET(request: NextRequest) {
     // =========================================================================
     // SUMMARY
     // =========================================================================
+    const orgId = user.organizationId;
     let summaryWhere: any = {};
-    if (isCarrier) {
-      summaryWhere = { carrierId: user.organizationId };
-    } else if (isShipper) {
-      summaryWhere = { shipperId: user.organizationId };
+    if (isCarrier && orgId) {
+      summaryWhere = { carrierId: orgId };
+    } else if (isShipper && orgId) {
+      summaryWhere = { shipperId: orgId };
     }
 
     const [totalTrucks, totalLoads, activeTrips] = await Promise.all([
-      isCarrier
-        ? db.truck.count({ where: { carrierId: user.organizationId } })
+      isCarrier && orgId
+        ? db.truck.count({ where: { carrierId: orgId } })
         : isShipper
           ? 0
           : db.truck.count(),
-      isShipper
-        ? db.load.count({ where: { shipperId: user.organizationId } })
-        : isCarrier
-          ? db.load.count({ where: { assignedTruck: { carrierId: user.organizationId } } })
+      isShipper && orgId
+        ? db.load.count({ where: { shipperId: orgId } })
+        : isCarrier && orgId
+          ? db.load.count({ where: { assignedTruck: { carrierId: orgId } } })
           : db.load.count({ where: { status: { in: ['POSTED', 'ASSIGNED', 'IN_TRANSIT'] } } }),
-      isShipper
-        ? db.load.count({ where: { shipperId: user.organizationId, status: 'IN_TRANSIT' } })
-        : isCarrier
-          ? db.load.count({ where: { assignedTruck: { carrierId: user.organizationId }, status: 'IN_TRANSIT' } })
+      isShipper && orgId
+        ? db.load.count({ where: { shipperId: orgId, status: 'IN_TRANSIT' } })
+        : isCarrier && orgId
+          ? db.load.count({ where: { assignedTruck: { carrierId: orgId }, status: 'IN_TRANSIT' } })
           : db.load.count({ where: { status: 'IN_TRANSIT' } }),
     ]);
 

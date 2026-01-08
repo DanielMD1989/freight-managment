@@ -77,7 +77,7 @@ export async function pollAllGpsDevices(): Promise<{
 export async function getActiveGpsDevices(): Promise<GpsDeviceData[]> {
   const devices = await db.gpsDevice.findMany({
     where: {
-      isActive: true,
+      status: 'ACTIVE',
       truck: {
         isNot: null,
       },
@@ -85,12 +85,11 @@ export async function getActiveGpsDevices(): Promise<GpsDeviceData[]> {
     select: {
       id: true,
       imei: true,
-      provider: true,
       lastSeenAt: true,
       truck: {
         select: {
           id: true,
-          plateNumber: true,
+          licensePlate: true,
         },
       },
     },
@@ -100,8 +99,8 @@ export async function getActiveGpsDevices(): Promise<GpsDeviceData[]> {
     imei: device.imei,
     gpsDeviceId: device.id,
     truckId: device.truck!.id,
-    truckPlateNumber: device.truck!.plateNumber,
-    provider: device.provider,
+    truckPlateNumber: device.truck!.licensePlate,
+    provider: 'default',
     lastSeenAt: device.lastSeenAt,
   }));
 }
@@ -189,31 +188,32 @@ export async function fetchGpsProviderApi(
  * @returns Array of truck IDs that went offline
  */
 export async function checkForOfflineTrucks(): Promise<string[]> {
-  // Get trucks with active loads that recently went offline
-  const offlineTrucks = await db.truck.findMany({
+  // Get loads with trucks that recently went offline
+  const loadsWithOfflineTrucks = await db.load.findMany({
     where: {
-      gpsStatus: 'SIGNAL_LOST',
-      assignedLoadId: {
+      status: {
+        in: ['IN_TRANSIT', 'ASSIGNED'],
+      },
+      assignedTruckId: {
         not: null,
       },
-      assignedLoad: {
-        status: {
-          in: ['IN_TRANSIT', 'ASSIGNED'],
-        },
+      assignedTruck: {
+        gpsStatus: 'SIGNAL_LOST',
       },
     },
     select: {
-      id: true,
-      plateNumber: true,
-      gpsLastSeenAt: true,
-      assignedLoad: {
+      assignedTruckId: true,
+      assignedTruck: {
         select: {
           id: true,
-          loadNumber: true,
+          licensePlate: true,
+          gpsLastSeenAt: true,
         },
       },
     },
   });
 
-  return offlineTrucks.map((truck) => truck.id);
+  return loadsWithOfflineTrucks
+    .filter((load) => load.assignedTruckId !== null)
+    .map((load) => load.assignedTruckId!);
 }

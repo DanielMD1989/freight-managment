@@ -300,13 +300,13 @@ export default function CarrierMapPage() {
             </button>
           </div>
           <div className="text-sm text-gray-600 dark:text-gray-400">
-            {selectedItem.type === 'truck' && selectedItem.data && (
+            {selectedItem.type === 'truck' && !!selectedItem.data && (
               <div className="space-y-1">
                 <p>Type: {(selectedItem.data as Truck).truckType}</p>
                 <p>Status: {(selectedItem.data as Truck).status}</p>
               </div>
             )}
-            {(selectedItem.type === 'pickup' || selectedItem.type === 'delivery') && selectedItem.data && (
+            {(selectedItem.type === 'pickup' || selectedItem.type === 'delivery') && !!selectedItem.data && (
               <div className="space-y-1">
                 <p>Load ID: {(selectedItem.data as ActiveTrip).loadId}</p>
                 <p>Trip Status: {(selectedItem.data as ActiveTrip).status}</p>

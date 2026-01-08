@@ -356,7 +356,7 @@ export default function DispatcherMapPage() {
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
               {/* Truck details */}
-              {selectedItem.id.startsWith('truck-') && selectedItem.data && (
+              {selectedItem.id.startsWith('truck-') && !!selectedItem.data && (
                 <div className="grid grid-cols-2 gap-2">
                   <p><strong>Type:</strong> {(selectedItem.data as Truck).truckType}</p>
                   <p><strong>Capacity:</strong> {(selectedItem.data as Truck).capacity} tons</p>
@@ -366,7 +366,7 @@ export default function DispatcherMapPage() {
               )}
 
               {/* Load details */}
-              {selectedItem.id.startsWith('load-') && selectedItem.data && (
+              {selectedItem.id.startsWith('load-') && !!selectedItem.data && (
                 <div className="grid grid-cols-2 gap-2">
                   <p><strong>Ref:</strong> {(selectedItem.data as Load).referenceNumber}</p>
                   <p><strong>Cargo:</strong> {(selectedItem.data as Load).cargoType}</p>

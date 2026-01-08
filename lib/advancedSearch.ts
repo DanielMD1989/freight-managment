@@ -5,7 +5,7 @@
  * Multi-criteria search for loads and trucks
  */
 
-import { Prisma } from '@prisma/client';
+import { Prisma, TruckType } from '@prisma/client';
 
 export interface LoadSearchFilters {
   pickupCity?: string;
@@ -49,22 +49,22 @@ export function buildLoadSearchWhere(filters: LoadSearchFilters): Prisma.LoadWhe
 
   // Truck type filter
   if (filters.truckType && filters.truckType.length > 0) {
-    where.truckType = { in: filters.truckType };
+    where.truckType = { in: filters.truckType as TruckType[] };
   }
 
-  // Load type filter
+  // Load type filter (search in cargo description)
   if (filters.loadType) {
-    where.loadType = filters.loadType as any;
+    where.cargoDescription = { contains: filters.loadType, mode: 'insensitive' };
   }
 
   // Weight filters
   if (filters.minWeight !== undefined || filters.maxWeight !== undefined) {
-    where.weightKg = {};
+    where.weight = {};
     if (filters.minWeight !== undefined) {
-      where.weightKg.gte = filters.minWeight;
+      where.weight.gte = filters.minWeight;
     }
     if (filters.maxWeight !== undefined) {
-      where.weightKg.lte = filters.maxWeight;
+      where.weight.lte = filters.maxWeight;
     }
   }
 
@@ -123,17 +123,17 @@ export function buildTruckSearchWhere(filters: TruckSearchFilters): Prisma.Truck
 
   // Truck type filter
   if (filters.truckType && filters.truckType.length > 0) {
-    where.truckType = { in: filters.truckType };
+    where.truckType = { in: filters.truckType as TruckType[] };
   }
 
   // Capacity filters
   if (filters.minCapacity !== undefined || filters.maxCapacity !== undefined) {
-    where.capacityKg = {};
+    where.capacity = {};
     if (filters.minCapacity !== undefined) {
-      where.capacityKg.gte = filters.minCapacity;
+      where.capacity.gte = filters.minCapacity;
     }
     if (filters.maxCapacity !== undefined) {
-      where.capacityKg.lte = filters.maxCapacity;
+      where.capacity.lte = filters.maxCapacity;
     }
   }
 
