@@ -33,13 +33,11 @@ export default async function AddTruckPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="w-full max-w-lg mx-auto py-6">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Add New Truck</h1>
-        <p className="text-gray-600 mt-2">
-          Register a new vehicle to your fleet
-        </p>
+      <div className="mb-6 text-center">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Register New Truck</h1>
+        <p className="text-sm text-gray-500 mt-1">Add a vehicle to your fleet</p>
       </div>
 
       {/* Add Truck Form */}
