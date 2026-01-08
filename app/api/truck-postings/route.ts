@@ -285,9 +285,11 @@ export async function POST(request: NextRequest) {
       include: {
         truck: {
           select: {
+            id: true,
             licensePlate: true,
             truckType: true,
             capacity: true,
+            approvalStatus: true,
           },
         },
         originCity: {
@@ -456,10 +458,12 @@ export async function GET(request: NextRequest) {
         include: {
           truck: {
             select: {
+              id: true,
               licensePlate: true,
               truckType: true,
               capacity: true,
               lengthM: true,
+              approvalStatus: true,
               // Sprint 16: GPS fields
               imei: true,
               gpsProvider: true,

@@ -25,8 +25,8 @@ import { UserRole } from '@prisma/client';
 
 // Update schema (partial)
 const UpdateTruckPostingSchema = z.object({
-  availableFrom: z.string().datetime().optional(),
-  availableTo: z.string().datetime().optional().nullable(),
+  availableFrom: z.string().optional(),
+  availableTo: z.string().optional().nullable(),
   availableLength: z.number().positive().optional().nullable(),
   availableWeight: z.number().positive().optional().nullable(),
   preferredDhToOriginKm: z.number().nonnegative().optional().nullable(),
@@ -35,6 +35,11 @@ const UpdateTruckPostingSchema = z.object({
   contactPhone: z.string().min(10).optional(),
   notes: z.string().optional().nullable(),
   status: z.enum(['ACTIVE', 'EXPIRED', 'CANCELLED', 'MATCHED']).optional(),
+  // Additional fields from frontend
+  originCityId: z.string().optional(),
+  destinationCityId: z.string().optional().nullable(),
+  fullPartial: z.enum(['FULL', 'PARTIAL']).optional(),
+  ownerName: z.string().optional().nullable(),
 });
 
 /**
@@ -287,6 +292,13 @@ export async function PATCH(
         ...(data.contactPhone && { contactPhone: data.contactPhone }),
         ...(data.notes !== undefined && { notes: data.notes }),
         ...(data.status && { status: data.status }),
+        // Additional fields from frontend
+        ...(data.originCityId && { originCityId: data.originCityId }),
+        ...(data.destinationCityId !== undefined && {
+          destinationCityId: data.destinationCityId,
+        }),
+        ...(data.fullPartial && { fullPartial: data.fullPartial }),
+        ...(data.ownerName !== undefined && { ownerName: data.ownerName }),
       },
       include: {
         truck: true,

@@ -13,6 +13,9 @@ const updateTruckSchema = z.object({
   currentRegion: z.string().optional().nullable(),
   isAvailable: z.boolean().optional(),
   status: z.enum(["ACTIVE", "IN_TRANSIT", "MAINTENANCE", "INACTIVE"]).optional(),
+  // Support resubmission of rejected trucks
+  approvalStatus: z.enum(["PENDING"]).optional(), // Only allow setting to PENDING (resubmit)
+  rejectionReason: z.null().optional(), // Clear rejection reason on resubmit
 });
 
 /**
