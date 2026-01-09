@@ -27,10 +27,11 @@ const TRUCK_TYPES = [
 ];
 
 const TRUCK_DOCUMENT_TYPES: { value: TruckDocumentType; label: string; description: string }[] = [
+  { value: 'TITLE_DEED', label: 'Title Deed', description: 'Proof of truck ownership' },
   { value: 'REGISTRATION', label: 'Vehicle Registration', description: 'Official vehicle registration document' },
   { value: 'INSURANCE', label: 'Insurance Certificate', description: 'Valid insurance coverage document' },
-  { value: 'INSPECTION', label: 'Inspection Certificate', description: 'Latest vehicle inspection report' },
   { value: 'ROAD_WORTHINESS', label: 'Road Worthiness', description: 'Road worthiness certification' },
+  { value: 'DRIVER_LICENSE', label: 'Driver License', description: "Driver's license for this truck" },
   { value: 'OTHER', label: 'Other Document', description: 'Any other relevant document' },
 ];
 
