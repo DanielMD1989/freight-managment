@@ -11,7 +11,10 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
 import { Decimal } from 'decimal.js';
-import { CorridorDirection } from '@prisma/client';
+
+// Define the enum values directly to avoid Prisma import issues at module load time
+const CORRIDOR_DIRECTIONS = ['ONE_WAY', 'ROUND_TRIP', 'BIDIRECTIONAL'] as const;
+type CorridorDirectionType = typeof CORRIDOR_DIRECTIONS[number];
 
 // Ethiopian regions for validation
 const ETHIOPIAN_REGIONS = [
@@ -42,7 +45,7 @@ const createCorridorSchema = z.object({
   }),
   distanceKm: z.number().positive().max(5000),
   pricePerKm: z.number().positive().max(100),
-  direction: z.nativeEnum(CorridorDirection).default('ONE_WAY'),
+  direction: z.enum(CORRIDOR_DIRECTIONS).default('ONE_WAY'),
   promoFlag: z.boolean().default(false),
   promoDiscountPct: z.number().min(0).max(100).nullable().optional(),
   isActive: z.boolean().default(true),
