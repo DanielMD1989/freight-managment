@@ -91,6 +91,11 @@ const navigationItems: NavItem[] = [
     icon: Route,
   },
   {
+    label: 'Service Fees',
+    href: '/admin/service-fees',
+    icon: DollarSign,
+  },
+  {
     label: 'Notifications',
     href: '/admin/notifications',
     icon: Bell,

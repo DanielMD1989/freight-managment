@@ -438,9 +438,23 @@ Task 7 (Frontend)
 - `app/api/loads/[id]/status/route.ts` - Added service fee deduct/refund on status change
 - `lib/loadAutomation.ts` - Updated auto-settlement to use service fees instead of commission
 
-### Pending (Future Work)
-- [ ] Frontend service fee display on load details page
-- [ ] Admin dashboard for service fee metrics
+### Completed (Frontend)
+- [x] Frontend service fee display on load details page (`/dashboard/loads/[id]`)
+- [x] Admin dashboard for service fee metrics (`/admin/service-fees`)
+
+### Files Added (Frontend):
+- `app/admin/service-fees/page.tsx` - Admin dashboard with metrics
+- `app/api/admin/service-fees/metrics/route.ts` - Metrics aggregation API
+
+### Frontend Features:
+- Load details page shows service fee with corridor info and breakdown
+- Color-coded status badges (DEDUCTED/RESERVED/REFUNDED/WAIVED/PENDING)
+- Fee timeline showing reservation, deduction, or refund dates
+- Admin dashboard with:
+  - Total fees collected, reserved, and refunded
+  - Fee status distribution
+  - Top corridors by revenue
+  - Recent service fee transactions table
 
 ---
 

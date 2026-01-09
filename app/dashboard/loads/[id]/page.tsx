@@ -14,6 +14,33 @@ interface LoadEvent {
   metadata?: any;
 }
 
+interface ServiceFeeInfo {
+  loadId: string;
+  serviceFee: {
+    amount: number | null;
+    status: string;
+    reservedAt: string | null;
+    deductedAt: string | null;
+    refundedAt: string | null;
+  };
+  corridor: {
+    id: string;
+    name: string;
+    originRegion: string;
+    destinationRegion: string;
+    distanceKm: number;
+    pricePerKm: number;
+    promoFlag: boolean;
+    promoDiscountPct: number | null;
+  } | null;
+  feeBreakdown: {
+    baseFee: number;
+    discount: number;
+    finalFee: number;
+    promoApplied: boolean;
+  } | null;
+}
+
 interface Load {
   id: string;
   pickupCity: string;
@@ -74,10 +101,12 @@ export default function LoadDetailPage() {
   const router = useRouter();
   const [load, setLoad] = useState<Load | null>(null);
   const [loading, setLoading] = useState(true);
+  const [serviceFee, setServiceFee] = useState<ServiceFeeInfo | null>(null);
 
   useEffect(() => {
     if (params.id) {
       fetchLoad();
+      fetchServiceFee();
     }
   }, [params.id]);
 
@@ -95,6 +124,18 @@ export default function LoadDetailPage() {
       console.error("Failed to fetch load:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchServiceFee = async () => {
+    try {
+      const response = await fetch(`/api/loads/${params.id}/service-fee`);
+      if (response.ok) {
+        const data = await response.json();
+        setServiceFee(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch service fee:", error);
     }
   };
 
@@ -351,6 +392,97 @@ export default function LoadDetailPage() {
               )}
             </dl>
           </div>
+
+          {/* Service Fee Section */}
+          {serviceFee && (serviceFee.serviceFee.amount || serviceFee.corridor) && (
+            <div className="rounded-lg bg-white p-6 shadow">
+              <h2 className="mb-4 text-lg font-semibold text-gray-900 flex items-center gap-2">
+                Service Fee
+                {serviceFee.serviceFee.status && (
+                  <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                    serviceFee.serviceFee.status === 'DEDUCTED' ? 'bg-green-100 text-green-800' :
+                    serviceFee.serviceFee.status === 'RESERVED' ? 'bg-yellow-100 text-yellow-800' :
+                    serviceFee.serviceFee.status === 'REFUNDED' ? 'bg-blue-100 text-blue-800' :
+                    serviceFee.serviceFee.status === 'WAIVED' ? 'bg-gray-100 text-gray-800' :
+                    'bg-gray-100 text-gray-600'
+                  }`}>
+                    {serviceFee.serviceFee.status}
+                  </span>
+                )}
+              </h2>
+
+              {/* Corridor Info */}
+              {serviceFee.corridor && (
+                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm font-medium text-gray-900 mb-1">
+                    {serviceFee.corridor.name}
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    {serviceFee.corridor.distanceKm} km × {serviceFee.corridor.pricePerKm.toFixed(2)} ETB/km
+                    {serviceFee.corridor.promoFlag && serviceFee.corridor.promoDiscountPct && (
+                      <span className="ml-2 text-green-600">
+                        ({serviceFee.corridor.promoDiscountPct}% promo discount)
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
+
+              {/* Fee Breakdown */}
+              {serviceFee.feeBreakdown && (
+                <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Base Fee</dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      ETB {serviceFee.feeBreakdown.baseFee.toLocaleString()}
+                    </dd>
+                  </div>
+                  {serviceFee.feeBreakdown.promoApplied && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Discount</dt>
+                      <dd className="mt-1 text-sm text-green-600">
+                        - ETB {serviceFee.feeBreakdown.discount.toLocaleString()}
+                      </dd>
+                    </div>
+                  )}
+                  <div className="sm:col-span-2 pt-2 border-t border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">Total Service Fee</dt>
+                    <dd className="mt-1 text-lg font-semibold text-gray-900">
+                      ETB {serviceFee.feeBreakdown.finalFee.toLocaleString()}
+                    </dd>
+                  </div>
+                </dl>
+              )}
+
+              {/* Fee without breakdown (from load) */}
+              {!serviceFee.feeBreakdown && serviceFee.serviceFee.amount && (
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Service Fee</dt>
+                  <dd className="mt-1 text-lg font-semibold text-gray-900">
+                    ETB {serviceFee.serviceFee.amount.toLocaleString()}
+                  </dd>
+                </div>
+              )}
+
+              {/* Fee Timeline */}
+              {(serviceFee.serviceFee.reservedAt || serviceFee.serviceFee.deductedAt || serviceFee.serviceFee.refundedAt) && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Timeline</h4>
+                  <div className="space-y-1 text-xs text-gray-600">
+                    {serviceFee.serviceFee.reservedAt && (
+                      <p>Reserved: {new Date(serviceFee.serviceFee.reservedAt).toLocaleString()}</p>
+                    )}
+                    {serviceFee.serviceFee.deductedAt && (
+                      <p>Deducted: {new Date(serviceFee.serviceFee.deductedAt).toLocaleString()}</p>
+                    )}
+                    {serviceFee.serviceFee.refundedAt && (
+                      <p>Refunded: {new Date(serviceFee.serviceFee.refundedAt).toLocaleString()}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Load Details */}
           <div className="rounded-lg bg-white p-6 shadow">
