@@ -8,6 +8,7 @@ import { validateStateTransition, LoadStatus } from '@/lib/loadStateMachine';
 import { checkAssignmentConflicts } from '@/lib/assignmentConflictDetection'; // Sprint 4
 import { holdFundsInEscrow, refundEscrowFunds } from '@/lib/escrowManagement'; // Sprint 8
 import { RULE_CARRIER_FINAL_AUTHORITY } from '@/lib/foundation-rules'; // Phase 2
+import { reserveServiceFee } from '@/lib/serviceFeeManagement'; // Service Fee Implementation
 
 const assignLoadSchema = z.object({
   truckId: z.string(),
@@ -218,6 +219,47 @@ export async function POST(
       // Continue - assignment succeeded, escrow can be handled manually if needed
     }
 
+    // Service Fee Implementation: Reserve service fee from shipper wallet
+    let serviceFeeResult = null;
+    try {
+      serviceFeeResult = await reserveServiceFee(loadId);
+
+      if (!serviceFeeResult.success && serviceFeeResult.error) {
+        console.warn(`Service fee reserve failed for load ${loadId}:`, serviceFeeResult.error);
+
+        // Create warning event (non-blocking)
+        await db.loadEvent.create({
+          data: {
+            loadId,
+            eventType: 'SERVICE_FEE_RESERVE_FAILED',
+            description: `Service fee reserve failed: ${serviceFeeResult.error}`,
+            userId: session.userId,
+            metadata: {
+              error: serviceFeeResult.error,
+              serviceFee: serviceFeeResult.serviceFee.toFixed(2),
+            },
+          },
+        });
+      } else if (serviceFeeResult.success && serviceFeeResult.transactionId) {
+        // Create success event
+        await db.loadEvent.create({
+          data: {
+            loadId,
+            eventType: 'SERVICE_FEE_RESERVED',
+            description: `Service fee reserved: ${serviceFeeResult.serviceFee.toFixed(2)} ETB`,
+            userId: session.userId,
+            metadata: {
+              serviceFee: serviceFeeResult.serviceFee.toFixed(2),
+              transactionId: serviceFeeResult.transactionId,
+            },
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Service fee reserve error:', error);
+      // Continue - assignment succeeded, service fee can be handled manually if needed
+    }
+
     // Sprint 16: Enable GPS tracking if truck has GPS
     let trackingUrl: string | null = null;
 
@@ -248,6 +290,13 @@ export async function POST(
             success: escrowResult.success,
             amount: escrowResult.escrowAmount.toFixed(2),
             error: escrowResult.error,
+          }
+        : null,
+      serviceFee: serviceFeeResult
+        ? {
+            success: serviceFeeResult.success,
+            amount: serviceFeeResult.serviceFee.toFixed(2),
+            error: serviceFeeResult.error,
           }
         : null,
       message: trackingUrl

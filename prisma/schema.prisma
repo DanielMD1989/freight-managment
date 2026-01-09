@@ -89,6 +89,28 @@ enum TransactionType {
   ESCROW_FUND
   ESCROW_RELEASE
   REFUND
+  // Service Fee Transactions (NEW - Service Fee Implementation)
+  SERVICE_FEE_RESERVE   // Reserve service fee from shipper wallet
+  SERVICE_FEE_DEDUCT    // Deduct to platform on trip completion
+  SERVICE_FEE_REFUND    // Refund to shipper on cancellation
+}
+
+// ============================================================================
+// SERVICE FEE ENUMS (NEW - Service Fee Implementation)
+// ============================================================================
+
+enum CorridorDirection {
+  ONE_WAY       // Origin → Destination only
+  ROUND_TRIP    // Origin → Destination → Origin
+  BIDIRECTIONAL // Both directions priced separately
+}
+
+enum ServiceFeeStatus {
+  PENDING   // Not yet calculated/reserved
+  RESERVED  // Held from wallet when trip starts
+  DEDUCTED  // Moved to platform revenue on completion
+  REFUNDED  // Returned to shipper on cancellation
+  WAIVED    // Admin waived the fee
 }
 
 enum DisputeStatus {
@@ -252,6 +274,9 @@ model User {
   trucksApproved        Truck[]          @relation("TruckApprovedBy")
   loadRequestsCreated   LoadRequest[]    @relation("LoadRequestedBy")
   loadRequestsResponded LoadRequest[]    @relation("LoadRequestRespondedBy")
+
+  // Service Fee Implementation: Corridors created by admin
+  corridorsCreated      Corridor[]       @relation("CorridorCreatedBy")
 
   @@index([email])
   @@index([organizationId])
@@ -436,6 +461,26 @@ model Load {
   bypassReportedAt      DateTime?                    // When bypass was reported
   bypassReportedBy      String?                      // User ID who reported
 
+  // ============================================================================
+  // SERVICE FEE FIELDS (NEW - Service Fee Implementation)
+  // ============================================================================
+
+  // Corridor & Service Fee
+  corridorId            String?
+  corridor              Corridor?         @relation("LoadCorridor", fields: [corridorId], references: [id])
+  serviceFeeEtb         Decimal?          @db.Decimal(10, 2)   // Calculated service fee
+  serviceFeeStatus      ServiceFeeStatus  @default(PENDING)
+  serviceFeeReservedAt  DateTime?                              // When fee was reserved
+  serviceFeeDeductedAt  DateTime?                              // When fee was deducted
+  serviceFeeRefundedAt  DateTime?                              // When fee was refunded
+
+  // Trip Progress (for return-load notifications)
+  tripProgressPercent   Int?              @default(0)          // 0-100
+  remainingDistanceKm   Decimal?          @db.Decimal(10, 2)   // Remaining KM to destination
+  lastProgressUpdateAt  DateTime?                              // Last GPS progress update
+  enteredDestGeofence   Boolean           @default(false)      // Truck entered destination geofence
+  enteredDestGeofenceAt DateTime?                              // When truck entered geofence
+
   // Tracking
   expiresAt             DateTime?
   createdAt             DateTime    @default(now())
@@ -481,6 +526,8 @@ model Load {
   @@index([postedAt])      // [NEW] For age calculation and sorting
   @@index([trackingUrl])   // SPRINT 16: For tracking page lookups
   @@index([trackingEnabled]) // SPRINT 16: For filtering tracked loads
+  @@index([corridorId])      // Service Fee: For corridor-based queries
+  @@index([serviceFeeStatus]) // Service Fee: For fee status filtering
   @@map("loads")
 }
 
@@ -1400,5 +1447,36 @@ model SystemSettings {
   createdAt        DateTime @default(now())
 
   @@map("system_settings")
+}
+
+// ============================================================================
+// SERVICE FEE MODELS (NEW - Service Fee Implementation)
+// ============================================================================
+
+model Corridor {
+  id                String            @id @default(cuid())
+  name              String            // "Addis Ababa - Dire Dawa"
+  originRegion      String            // Ethiopian region name
+  destinationRegion String            // Ethiopian region name
+  distanceKm        Decimal           @db.Decimal(10, 2)
+  pricePerKm        Decimal           @db.Decimal(10, 4) // ETB per km for service fee
+  direction         CorridorDirection @default(ONE_WAY)
+  promoFlag         Boolean           @default(false)
+  promoDiscountPct  Decimal?          @db.Decimal(5, 2) // e.g., 10.00 for 10%
+  isActive          Boolean           @default(true)
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  createdById       String?
+  createdBy         User?             @relation("CorridorCreatedBy", fields: [createdById], references: [id])
+
+  // Relations
+  loads             Load[]            @relation("LoadCorridor")
+
+  @@unique([originRegion, destinationRegion, direction])
+  @@index([isActive])
+  @@index([originRegion])
+  @@index([destinationRegion])
+  @@map("corridors")
 }
 

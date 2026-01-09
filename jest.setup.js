@@ -23,6 +23,9 @@ jest.mock('@/lib/db', () => {
     trucks: new Map(),
     notifications: new Map(),
     truckPostings: new Map(),
+    corridors: new Map(),
+    financialAccounts: new Map(),
+    journalEntries: new Map(),
   };
 
   let userIdCounter = 1;
@@ -31,6 +34,9 @@ jest.mock('@/lib/db', () => {
   let truckIdCounter = 1;
   let notificationIdCounter = 1;
   let truckPostingIdCounter = 1;
+  let corridorIdCounter = 1;
+  let financialAccountIdCounter = 1;
+  let journalEntryIdCounter = 1;
 
   // Default values for different model types
   const modelDefaults = {
@@ -44,12 +50,24 @@ jest.mock('@/lib/db', () => {
       isActive: true,
       emailVerified: false,
     },
-    load: {},
+    load: {
+      serviceFeeStatus: 'PENDING',
+    },
     truck: {},
     notification: {
       read: false,
     },
     truckPosting: {},
+    corridor: {
+      isActive: true,
+      promoFlag: false,
+      direction: 'ONE_WAY',
+    },
+    financialAccount: {
+      isActive: true,
+      currency: 'ETB',
+    },
+    journalEntry: {},
   };
 
   // Helper to create model methods with in-memory storage
@@ -67,7 +85,7 @@ jest.mock('@/lib/db', () => {
       store.set(id, record);
       return Promise.resolve(record);
     }),
-    findUnique: jest.fn(({ where, include }) => {
+    findUnique: jest.fn(({ where, include, select }) => {
       const record = store.get(where.id);
       if (!record) return Promise.resolve(null);
 
@@ -84,15 +102,40 @@ jest.mock('@/lib/db', () => {
             l => l.shipperId === record.id
           );
         }
+        if (include.corridor && stores.corridors && record.corridorId) {
+          result.corridor = stores.corridors.get(record.corridorId);
+        }
         return Promise.resolve(result);
       }
       return Promise.resolve(record);
     }),
-    findMany: jest.fn(({ where } = {}) => {
+    findFirst: jest.fn(({ where, include } = {}) => {
       let records = Array.from(store.values());
       if (where) {
         records = records.filter(r => {
-          return Object.entries(where).every(([key, value]) => r[key] === value);
+          return Object.entries(where).every(([key, value]) => {
+            if (value === undefined) return true;
+            return r[key] === value;
+          });
+        });
+      }
+      const record = records[0] || null;
+      if (record && include) {
+        // Handle includes for relationships
+        if (include.corridor && stores.corridors && record.corridorId) {
+          record.corridor = stores.corridors.get(record.corridorId);
+        }
+      }
+      return Promise.resolve(record);
+    }),
+    findMany: jest.fn(({ where, include } = {}) => {
+      let records = Array.from(store.values());
+      if (where) {
+        records = records.filter(r => {
+          return Object.entries(where).every(([key, value]) => {
+            if (value === undefined) return true;
+            return r[key] === value;
+          });
         });
       }
       return Promise.resolve(records);
@@ -141,6 +184,9 @@ jest.mock('@/lib/db', () => {
     truck: { value: truckIdCounter },
     notification: { value: notificationIdCounter },
     truckPosting: { value: truckPostingIdCounter },
+    corridor: { value: corridorIdCounter },
+    financialAccount: { value: financialAccountIdCounter },
+    journalEntry: { value: journalEntryIdCounter },
   };
 
   return {
@@ -151,6 +197,9 @@ jest.mock('@/lib/db', () => {
       truck: createModelMethods(stores.trucks, 'truck', counters.truck),
       notification: createModelMethods(stores.notifications, 'notification', counters.notification),
       truckPosting: createModelMethods(stores.truckPostings, 'truckPosting', counters.truckPosting),
+      corridor: createModelMethods(stores.corridors, 'corridor', counters.corridor),
+      financialAccount: createModelMethods(stores.financialAccounts, 'financialAccount', counters.financialAccount),
+      journalEntry: createModelMethods(stores.journalEntries, 'journalEntry', counters.journalEntry),
       auditLog: {
         create: jest.fn(() => Promise.resolve({ id: 'audit-1' })),
         createMany: jest.fn(() => Promise.resolve({ count: 0 })),
@@ -165,6 +214,9 @@ jest.mock('@/lib/db', () => {
       },
       document: {
         deleteMany: jest.fn(() => Promise.resolve({ count: 0 })),
+      },
+      loadEvent: {
+        create: jest.fn(() => Promise.resolve({ id: 'event-1' })),
       },
       $transaction: jest.fn((callback) => {
         if (typeof callback === 'function') {

@@ -8,6 +8,7 @@
 
 import { db } from '@/lib/db';
 import { createNotification, NotificationType } from '@/lib/notifications';
+import { deductServiceFee } from '@/lib/serviceFeeManagement'; // Service Fee Implementation
 
 /**
  * Expire old loads that haven't been assigned
@@ -75,6 +76,8 @@ export async function expireOldLoads() {
 /**
  * Automatically settle completed loads
  * Run via cron job or manual trigger
+ *
+ * Service Fee Implementation: Uses per-KM service fee instead of commission
  */
 export async function autoSettleCompletedLoads() {
   try {
@@ -110,11 +113,21 @@ export async function autoSettleCompletedLoads() {
 
     for (const load of loadsToSettle) {
       try {
-        // Calculate commission
         const totalFare = Number(load.totalFareEtb || 0);
-        const commissionRate = 0.02; // 2% default
-        const commission = totalFare * commissionRate;
-        const carrierPay = totalFare - commission;
+
+        // Service Fee Implementation: Deduct service fee to platform
+        let serviceFeeAmount = 0;
+        try {
+          const serviceFeeResult = await deductServiceFee(load.id);
+          if (serviceFeeResult.success) {
+            serviceFeeAmount = Number(serviceFeeResult.serviceFee);
+          }
+        } catch (error) {
+          console.error(`Service fee deduction error for load ${load.id}:`, error);
+        }
+
+        // Carrier receives full fare (service fee is separate per-KM charge)
+        const carrierPay = totalFare;
 
         // Update load status
         await db.load.update({
@@ -131,11 +144,11 @@ export async function autoSettleCompletedLoads() {
             userId: load.shipper.users[0].id,
             type: NotificationType.SETTLEMENT_COMPLETE,
             title: 'Load Settled',
-            message: `Load from ${load.pickupCity} to ${load.deliveryCity} has been settled. Total: ${totalFare} ETB.`,
+            message: `Load from ${load.pickupCity} to ${load.deliveryCity} has been settled. Freight: ${totalFare.toFixed(2)} ETB, Service fee: ${serviceFeeAmount.toFixed(2)} ETB.`,
             metadata: {
               loadId: load.id,
               totalFare,
-              commission,
+              serviceFee: serviceFeeAmount,
             },
           });
         }
@@ -150,7 +163,6 @@ export async function autoSettleCompletedLoads() {
             metadata: {
               loadId: load.id,
               carrierPay,
-              commission,
             },
           });
         }

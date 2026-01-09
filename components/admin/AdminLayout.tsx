@@ -25,6 +25,7 @@ import {
   Bell,
   Shield,
   TrendingUp,
+  Route,
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -83,6 +84,11 @@ const navigationItems: NavItem[] = [
     label: 'Commission Rates',
     href: '/admin/commission',
     icon: TrendingUp,
+  },
+  {
+    label: 'Corridor Pricing',
+    href: '/admin/corridors',
+    icon: Route,
   },
   {
     label: 'Notifications',

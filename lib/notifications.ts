@@ -35,6 +35,16 @@ export const NotificationType = {
   // Bypass Detection
   BYPASS_WARNING: 'BYPASS_WARNING',
   ACCOUNT_FLAGGED: 'ACCOUNT_FLAGGED',
+
+  // Return Load Notifications (Service Fee Implementation)
+  RETURN_LOAD_AVAILABLE: 'RETURN_LOAD_AVAILABLE',
+  RETURN_LOAD_MATCHED: 'RETURN_LOAD_MATCHED',
+  TRIP_PROGRESS_80: 'TRIP_PROGRESS_80',
+
+  // Service Fee Notifications (Service Fee Implementation)
+  SERVICE_FEE_RESERVED: 'SERVICE_FEE_RESERVED',
+  SERVICE_FEE_DEDUCTED: 'SERVICE_FEE_DEDUCTED',
+  SERVICE_FEE_REFUNDED: 'SERVICE_FEE_REFUNDED',
 } as const;
 
 /**
@@ -45,8 +55,8 @@ export async function createNotification(params: {
   type: string;
   title: string;
   message: string;
-  metadata?: any;
-}) {
+  metadata?: Record<string, unknown>;
+}): Promise<{ id: string; userId: string; type: string } | null> {
   const { userId, type, title, message, metadata } = params;
 
   try {
@@ -57,7 +67,7 @@ export async function createNotification(params: {
         title,
         message,
         read: false,
-        metadata: metadata || {},
+        metadata: metadata ? JSON.parse(JSON.stringify(metadata)) : undefined,
       },
     });
 
@@ -71,9 +81,16 @@ export async function createNotification(params: {
       metadata: notification.metadata,
       createdAt: notification.createdAt,
     });
+
+    return {
+      id: notification.id,
+      userId: notification.userId,
+      type: notification.type,
+    };
   } catch (error) {
     console.error('Failed to create notification:', error);
     // Don't throw - notifications are non-critical
+    return null;
   }
 }
 

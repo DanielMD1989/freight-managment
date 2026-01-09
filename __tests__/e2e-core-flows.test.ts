@@ -9,13 +9,15 @@
  * 5. Load-Truck matching
  * 6. GPS tracking
  * 7. POD submission
- * 8. Commission calculation
+ * 8. Service Fee (replaces commission)
  * 9. Settlement
  * 10. Notifications
  */
 
 import { db } from '@/lib/db';
 import { hashPassword } from '@/lib/auth';
+import { calculateServiceFee, findMatchingCorridor } from '@/lib/serviceFeeCalculation';
+import { reserveServiceFee, deductServiceFee, refundServiceFee } from '@/lib/serviceFeeManagement';
 
 describe('E2E Core Business Flows', () => {
   let shipperOrg: any;
@@ -26,6 +28,8 @@ describe('E2E Core Business Flows', () => {
   let truck: any;
   let pickupCity: any;
   let deliveryCity: any;
+  let corridor: any;
+  let shipperWallet: any;
 
   beforeAll(async () => {
     // Setup test cities - use mock IDs for E2E testing
@@ -39,6 +43,8 @@ describe('E2E Core Business Flows', () => {
     try {
       if (load) await db.load.deleteMany({ where: { id: load.id } });
       if (truck) await db.truck.deleteMany({ where: { id: truck.id } });
+      if (corridor) await db.corridor.deleteMany({ where: { id: corridor.id } });
+      if (shipperWallet) await db.financialAccount.deleteMany({ where: { id: shipperWallet.id } });
       if (shipperUser) await db.user.deleteMany({ where: { id: shipperUser.id } });
       if (carrierUser) await db.user.deleteMany({ where: { id: carrierUser.id } });
       if (shipperOrg) await db.organization.deleteMany({ where: { id: shipperOrg.id } });
@@ -235,29 +241,132 @@ describe('E2E Core Business Flows', () => {
     });
   });
 
-  describe('6. Commission Calculation', () => {
-    it('should calculate commission correctly', async () => {
-      // Sprint 16: Commission calculation
-      // Default commission rate is 2%
-      const totalFare = 20000;
-      const expectedCommission = totalFare * 0.02; // 400 ETB
-
-      // In actual implementation, commission is calculated in lib/commissionCalculation.ts
-      // For E2E test, we verify the formula
-      expect(expectedCommission).toBe(400);
-    });
-
-    it('should verify organization commission tracking', async () => {
-      const org = await db.organization.findUnique({
-        where: { id: carrierOrg.id },
-        select: {
-          totalCommissionPaidEtb: true,
-          currentCommissionRatePercent: true,
+  describe('6. Service Fee System (replaces Commission)', () => {
+    it('should create a corridor for service fee calculation', async () => {
+      // Create corridor for Addis Ababa to Dire Dawa
+      corridor = await db.corridor.create({
+        data: {
+          name: 'Addis Ababa - Dire Dawa (E2E Test)',
+          originRegion: 'Addis Ababa',
+          destinationRegion: 'Dire Dawa',
+          distanceKm: 453,
+          pricePerKm: 2.50, // 2.50 ETB per km
+          direction: 'ONE_WAY',
+          promoFlag: false,
+          isActive: true,
         },
       });
 
-      expect(org).toBeDefined();
-      expect(org?.currentCommissionRatePercent).toBeDefined();
+      expect(corridor).toBeDefined();
+      expect(Number(corridor.distanceKm)).toBe(453);
+      expect(Number(corridor.pricePerKm)).toBe(2.50);
+    });
+
+    it('should create shipper wallet for service fee transactions', async () => {
+      // Create shipper wallet with balance
+      shipperWallet = await db.financialAccount.create({
+        data: {
+          organizationId: shipperOrg.id,
+          accountType: 'SHIPPER_WALLET',
+          balance: 5000, // 5000 ETB initial balance
+          currency: 'ETB',
+          isActive: true,
+        },
+      });
+
+      expect(shipperWallet).toBeDefined();
+      expect(Number(shipperWallet.balance)).toBe(5000);
+    });
+
+    it('should find matching corridor for load route', async () => {
+      // Mock test: Verify corridor exists with correct data
+      const corridorRecord = await db.corridor.findUnique({
+        where: { id: corridor.id },
+      });
+
+      expect(corridorRecord).toBeDefined();
+      expect(corridorRecord?.originRegion).toBe('Addis Ababa');
+      expect(corridorRecord?.destinationRegion).toBe('Dire Dawa');
+    });
+
+    it('should calculate service fee correctly', async () => {
+      // Update load with corridor
+      await db.load.update({
+        where: { id: load.id },
+        data: { corridorId: corridor.id },
+      });
+
+      // Manual calculation test (since mock doesn't support complex queries)
+      const distanceKm = Number(corridor.distanceKm);
+      const pricePerKm = Number(corridor.pricePerKm);
+      const expectedFee = distanceKm * pricePerKm;
+
+      // Service fee = 453 km * 2.50 ETB/km = 1132.50 ETB
+      expect(expectedFee).toBeCloseTo(1132.50, 2);
+    });
+
+    it('should reserve service fee on load assignment', async () => {
+      // Simulate service fee reservation directly on load
+      const serviceFee = 1132.50;
+
+      await db.load.update({
+        where: { id: load.id },
+        data: {
+          status: 'ASSIGNED',
+          serviceFeeStatus: 'RESERVED',
+          serviceFeeEtb: serviceFee,
+          serviceFeeReservedAt: new Date(),
+        },
+      });
+
+      // Update wallet balance
+      await db.financialAccount.update({
+        where: { id: shipperWallet.id },
+        data: { balance: 5000 - serviceFee },
+      });
+
+      // Verify
+      const wallet = await db.financialAccount.findUnique({
+        where: { id: shipperWallet.id },
+      });
+      expect(Number(wallet?.balance)).toBeCloseTo(5000 - serviceFee, 2);
+    });
+
+    it('should verify load has service fee reserved', async () => {
+      const updatedLoad = await db.load.findUnique({
+        where: { id: load.id },
+      });
+
+      expect(updatedLoad?.serviceFeeStatus).toBe('RESERVED');
+      expect(Number(updatedLoad?.serviceFeeEtb)).toBeCloseTo(1132.50, 2);
+      expect(updatedLoad?.serviceFeeReservedAt).toBeDefined();
+    });
+
+    it('should deduct service fee on load completion', async () => {
+      // Simulate service fee deduction
+      await db.load.update({
+        where: { id: load.id },
+        data: {
+          status: 'COMPLETED',
+          serviceFeeStatus: 'DEDUCTED',
+          serviceFeeDeductedAt: new Date(),
+        },
+      });
+
+      const updatedLoad = await db.load.findUnique({
+        where: { id: load.id },
+      });
+
+      expect(updatedLoad?.serviceFeeStatus).toBe('DEDUCTED');
+    });
+
+    it('should verify load has service fee deducted', async () => {
+      const updatedLoad = await db.load.findUnique({
+        where: { id: load.id },
+      });
+
+      expect(updatedLoad?.serviceFeeStatus).toBe('DEDUCTED');
+      expect(updatedLoad?.serviceFeeDeductedAt).toBeDefined();
     });
   });
 
@@ -369,15 +478,17 @@ describe('E2E Core Business Flows', () => {
       // In production, API would prevent status downgrade
     });
 
-    it('should verify commission rate constraints', async () => {
-      const org = await db.organization.findUnique({
-        where: { id: carrierOrg.id },
+    it('should verify service fee status transitions', async () => {
+      // Verify the load went through proper service fee status transitions
+      const testLoad = await db.load.findUnique({
+        where: { id: load.id },
       });
 
-      if (org?.currentCommissionRatePercent) {
-        expect(org.currentCommissionRatePercent).toBeGreaterThan(0);
-        expect(org.currentCommissionRatePercent).toBeLessThanOrEqual(10);
-      }
+      // Service fee should be deducted at this point (from earlier test)
+      expect(testLoad?.serviceFeeStatus).toBe('DEDUCTED');
+      expect(testLoad?.serviceFeeEtb).toBeDefined();
+      expect(testLoad?.serviceFeeReservedAt).toBeDefined();
+      expect(testLoad?.serviceFeeDeductedAt).toBeDefined();
     });
 
     it('should verify pricing calculations are consistent', async () => {

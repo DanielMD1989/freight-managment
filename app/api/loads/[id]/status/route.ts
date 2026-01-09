@@ -8,6 +8,7 @@ import { db } from '@/lib/db';
 import { requireAuth, requireActiveUser } from '@/lib/auth';
 import { z } from 'zod';
 import { validateStateTransition, LoadStatus, getStatusDescription } from '@/lib/loadStateMachine';
+import { deductServiceFee, refundServiceFee } from '@/lib/serviceFeeManagement'; // Service Fee Implementation
 
 const updateStatusSchema = z.object({
   status: z.enum([
@@ -155,6 +156,54 @@ export async function PATCH(
       timestamp: new Date().toISOString(),
     });
 
+    // Service Fee Implementation: Handle service fee based on new status
+    let serviceFeeResult = null;
+    if (newStatus === 'COMPLETED') {
+      // Deduct service fee to platform on completion
+      try {
+        serviceFeeResult = await deductServiceFee(loadId);
+
+        if (serviceFeeResult.success && serviceFeeResult.transactionId) {
+          await db.loadEvent.create({
+            data: {
+              loadId,
+              eventType: 'SERVICE_FEE_DEDUCTED',
+              description: `Service fee deducted: ${serviceFeeResult.serviceFee.toFixed(2)} ETB`,
+              userId: session.userId,
+              metadata: {
+                serviceFee: serviceFeeResult.serviceFee.toFixed(2),
+                transactionId: serviceFeeResult.transactionId,
+              },
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Service fee deduction error:', error);
+      }
+    } else if (newStatus === 'CANCELLED') {
+      // Refund service fee to shipper on cancellation
+      try {
+        serviceFeeResult = await refundServiceFee(loadId);
+
+        if (serviceFeeResult.success && serviceFeeResult.transactionId) {
+          await db.loadEvent.create({
+            data: {
+              loadId,
+              eventType: 'SERVICE_FEE_REFUNDED',
+              description: `Service fee refunded: ${serviceFeeResult.serviceFee.toFixed(2)} ETB`,
+              userId: session.userId,
+              metadata: {
+                serviceFee: serviceFeeResult.serviceFee.toFixed(2),
+                transactionId: serviceFeeResult.transactionId,
+              },
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Service fee refund error:', error);
+      }
+    }
+
     // TODO: Create LoadStatusHistory record for audit trail
     // TODO: Trigger notifications to relevant parties
     // TODO: Trigger automation rules based on new status
@@ -163,6 +212,14 @@ export async function PATCH(
       message: `Load status updated to ${newStatus}`,
       description: getStatusDescription(newStatus as LoadStatus),
       load: updatedLoad,
+      serviceFee: serviceFeeResult
+        ? {
+            success: serviceFeeResult.success,
+            amount: serviceFeeResult.serviceFee.toFixed(2),
+            action: newStatus === 'COMPLETED' ? 'deducted' : newStatus === 'CANCELLED' ? 'refunded' : null,
+            error: serviceFeeResult.error,
+          }
+        : null,
     });
 
   } catch (error) {

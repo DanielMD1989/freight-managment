@@ -17,6 +17,7 @@ import { canApproveRequests } from '@/lib/dispatcherPermissions';
 import { RULE_CARRIER_FINAL_AUTHORITY } from '@/lib/foundation-rules';
 import { UserRole } from '@prisma/client';
 import { enableTrackingForLoad } from '@/lib/gpsTracking';
+import { reserveServiceFee } from '@/lib/serviceFeeManagement'; // Service Fee Implementation
 
 // Validation schema for proposal response
 const ProposalResponseSchema = z.object({
@@ -204,6 +205,32 @@ export async function POST(
         return { proposal: updatedProposal, load: updatedLoad };
       });
 
+      // Service Fee Implementation: Reserve service fee from shipper wallet
+      let serviceFeeResult = null;
+      try {
+        serviceFeeResult = await reserveServiceFee(proposal.loadId);
+
+        if (serviceFeeResult.success && serviceFeeResult.transactionId) {
+          await db.loadEvent.create({
+            data: {
+              loadId: proposal.loadId,
+              eventType: 'SERVICE_FEE_RESERVED',
+              description: `Service fee reserved: ${serviceFeeResult.serviceFee.toFixed(2)} ETB`,
+              userId: session.userId,
+              metadata: {
+                serviceFee: serviceFeeResult.serviceFee.toFixed(2),
+                transactionId: serviceFeeResult.transactionId,
+              },
+            },
+          });
+        } else if (!serviceFeeResult.success && serviceFeeResult.error) {
+          console.warn(`Service fee reserve failed for load ${proposal.loadId}:`, serviceFeeResult.error);
+        }
+      } catch (error) {
+        console.error('Service fee reserve error:', error);
+        // Continue - assignment succeeded
+      }
+
       // Enable GPS tracking if available
       let trackingUrl: string | null = null;
       if (proposal.truck.imei && proposal.truck.gpsVerifiedAt) {
@@ -218,6 +245,13 @@ export async function POST(
         proposal: result.proposal,
         load: result.load,
         trackingUrl,
+        serviceFee: serviceFeeResult
+          ? {
+              success: serviceFeeResult.success,
+              amount: serviceFeeResult.serviceFee.toFixed(2),
+              error: serviceFeeResult.error,
+            }
+          : null,
         message: 'Proposal accepted. Load has been assigned to your truck.',
         rule: RULE_CARRIER_FINAL_AUTHORITY.id,
       });
