@@ -168,8 +168,8 @@ export default async function CarrierWalletPage() {
             <span className="text-gray-400">→</span>
           </Link>
 
-          <button
-            onClick={() => alert('Withdrawal functionality coming soon!')}
+          <Link
+            href="/carrier/wallet/withdraw"
             className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <div>
@@ -177,7 +177,7 @@ export default async function CarrierWalletPage() {
               <div className="text-sm text-gray-600">Transfer funds to bank</div>
             </div>
             <span className="text-gray-400">→</span>
-          </button>
+          </Link>
 
           <Link
             href="/carrier"

@@ -173,8 +173,8 @@ export default async function WalletPage() {
             <span className="text-gray-400">→</span>
           </a>
 
-          <button
-            onClick={() => alert('Top-up functionality coming soon!')}
+          <a
+            href="/shipper/wallet/topup"
             className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <div>
@@ -182,10 +182,10 @@ export default async function WalletPage() {
               <div className="text-sm text-gray-600">Add funds to your account</div>
             </div>
             <span className="text-gray-400">→</span>
-          </button>
+          </a>
 
-          <button
-            onClick={() => alert('Withdrawal functionality coming soon!')}
+          <a
+            href="/shipper/wallet/withdraw"
             className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <div>
@@ -193,7 +193,7 @@ export default async function WalletPage() {
               <div className="text-sm text-gray-600">Transfer funds to bank</div>
             </div>
             <span className="text-gray-400">→</span>
-          </button>
+          </a>
 
           <a
             href="/shipper/loads"
