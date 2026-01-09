@@ -18,7 +18,31 @@ const registerSchema = z.object({
     "SUPER_ADMIN",
   ]),
   organizationId: z.string().optional(), // Sprint 16: Story 16.4 - Assign dispatcher to organization
+  // Organization fields
+  companyName: z.string().optional(),
+  carrierType: z.enum(["CARRIER_COMPANY", "CARRIER_INDIVIDUAL", "FLEET_OWNER"]).optional(),
+  associationId: z.string().optional(), // For individual carriers joining an association
 });
+
+// Map carrier type to organization type
+function getOrganizationType(role: string, carrierType?: string): string {
+  if (role === "SHIPPER") {
+    return "SHIPPER";
+  }
+  if (role === "CARRIER") {
+    switch (carrierType) {
+      case "CARRIER_COMPANY":
+        return "CARRIER_COMPANY";
+      case "CARRIER_INDIVIDUAL":
+        return "CARRIER_INDIVIDUAL";
+      case "FLEET_OWNER":
+        return "FLEET_OWNER";
+      default:
+        return "CARRIER_COMPANY";
+    }
+  }
+  return "SHIPPER"; // Default
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -79,6 +103,28 @@ export async function POST(request: NextRequest) {
     // Hash password
     const passwordHash = await hashPassword(validatedData.password);
 
+    // Determine if we need to create an organization
+    let organizationId = validatedData.organizationId;
+
+    // Create organization for shippers and carriers with company name
+    if ((validatedData.role === "SHIPPER" || validatedData.role === "CARRIER") && validatedData.companyName) {
+      const orgType = getOrganizationType(validatedData.role, validatedData.carrierType);
+
+      const organization = await db.organization.create({
+        data: {
+          name: validatedData.companyName,
+          type: orgType as any,
+          contactEmail: validatedData.email, // Use user's email as contact
+          contactPhone: validatedData.phone || "N/A",
+          isVerified: false, // Pending verification
+          // For individual carriers joining an association
+          associationId: validatedData.carrierType === "CARRIER_INDIVIDUAL" ? validatedData.associationId || null : null,
+        },
+      });
+
+      organizationId = organization.id;
+    }
+
     // Create user
     const user = await db.user.create({
       data: {
@@ -89,8 +135,7 @@ export async function POST(request: NextRequest) {
         lastName: validatedData.lastName,
         role: validatedData.role,
         status: 'REGISTERED', // Sprint 2: User verification workflow
-        // Sprint 16: Story 16.4 - Assign dispatcher to organization
-        organizationId: validatedData.organizationId,
+        organizationId,
       },
       select: {
         id: true,

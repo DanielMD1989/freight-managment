@@ -31,8 +31,10 @@ enum UserStatus {
 
 enum OrganizationType {
   SHIPPER
-  CARRIER_COMPANY
-  CARRIER_INDIVIDUAL
+  CARRIER_COMPANY       // Trucking company with multiple trucks
+  CARRIER_INDIVIDUAL    // Single truck owner (may belong to association)
+  CARRIER_ASSOCIATION   // Governing body that groups owner-operators
+  FLEET_OWNER           // Independent fleet operator (multiple owned trucks)
   LOGISTICS_AGENT
 }
 
@@ -314,6 +316,11 @@ model Organization {
   taxId             String?
   allowNameDisplay  Boolean          @default(true)  // SPRINT 14: Company masking preference
 
+  // Association Support - For CARRIER_INDIVIDUAL belonging to an association
+  associationId     String?          // FK to parent association (if any)
+  association       Organization?    @relation("AssociationMembers", fields: [associationId], references: [id])
+  members           Organization[]   @relation("AssociationMembers") // For associations: their member carriers
+
   // SPRINT 16: Story 16.5 - Trust & Reliability Metrics
   completionRate    Decimal?         @default(0)     // % of loads completed successfully
   cancellationRate  Decimal?         @default(0)     // % of loads cancelled
@@ -354,6 +361,7 @@ model Organization {
 
   @@index([type])
   @@index([isVerified])
+  @@index([associationId])  // For filtering carriers by association
   @@map("organizations")
 }
 
