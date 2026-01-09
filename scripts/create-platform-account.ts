@@ -54,7 +54,7 @@ async function main() {
   const carriersWithoutWallets = await prisma.organization.findMany({
     where: {
       type: 'CARRIER_COMPANY',
-      financialAccount: {
+      financialAccounts: {
         none: { accountType: 'CARRIER_WALLET' },
       },
     },
@@ -81,7 +81,7 @@ async function main() {
   const shippersWithoutWallets = await prisma.organization.findMany({
     where: {
       type: 'SHIPPER',
-      financialAccount: {
+      financialAccounts: {
         none: { accountType: 'SHIPPER_WALLET' },
       },
     },

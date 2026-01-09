@@ -32,7 +32,7 @@ describe('Authorization', () => {
     it('should grant admin users all permissions', async () => {
       const org = await createTestOrganization({
         name: 'Test Org',
-        type: 'CARRIER',
+        type: 'CARRIER_COMPANY',
       });
 
       const adminUser = await createTestUser({
@@ -62,7 +62,7 @@ describe('Authorization', () => {
     it('should restrict carrier permissions appropriately', async () => {
       const org = await createTestOrganization({
         name: 'Carrier Org',
-        type: 'CARRIER',
+        type: 'CARRIER_COMPANY',
       });
 
       const carrierUser = await createTestUser({
@@ -114,12 +114,12 @@ describe('Authorization', () => {
     it('should prevent cross-organization access', async () => {
       const org1 = await createTestOrganization({
         name: 'Carrier Org 1',
-        type: 'CARRIER',
+        type: 'CARRIER_COMPANY',
       });
 
       const org2 = await createTestOrganization({
         name: 'Carrier Org 2',
-        type: 'CARRIER',
+        type: 'CARRIER_COMPANY',
       });
 
       const user1 = await createTestUser({
@@ -173,7 +173,7 @@ describe('Authorization', () => {
       });
 
       await expect(
-        requirePermission(Permission.VIEW_LOADS, request)
+        requirePermission(Permission.VIEW_LOADS)
       ).rejects.toThrow();
     });
   });
@@ -210,7 +210,7 @@ describe('Authorization', () => {
     it('should prevent carriers from gaining admin privileges', async () => {
       const org = await createTestOrganization({
         name: 'Test Org',
-        type: 'CARRIER',
+        type: 'CARRIER_COMPANY',
       });
 
       const carrier = await createTestUser({

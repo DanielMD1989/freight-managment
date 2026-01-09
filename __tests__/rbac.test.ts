@@ -79,7 +79,7 @@ describe('RBAC System', () => {
     it('should grant admin key administrative permissions', async () => {
       const org = await createTestOrganization({
         name: 'Admin Org',
-        type: 'CARRIER',
+        type: 'CARRIER_COMPANY',
       });
 
       const admin = await createTestUser({
@@ -115,12 +115,12 @@ describe('RBAC System', () => {
     it('should allow admin cross-organization access', async () => {
       const org1 = await createTestOrganization({
         name: 'Org 1',
-        type: 'CARRIER',
+        type: 'CARRIER_COMPANY',
       });
 
       const org2 = await createTestOrganization({
         name: 'Org 2',
-        type: 'CARRIER',
+        type: 'CARRIER_COMPANY',
       });
 
       // Admin should have access to both organizations

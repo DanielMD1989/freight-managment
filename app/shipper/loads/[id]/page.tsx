@@ -264,7 +264,7 @@ export default async function LoadDetailsPage({ params }: LoadDetailsProps) {
                 </div>
                 <div>
                   <div className="text-sm text-gray-600">Plate Number</div>
-                  <div className="font-medium">{load.assignedTruck.plateNumber}</div>
+                  <div className="font-medium">{load.assignedTruck.licensePlate}</div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-600">Truck Type</div>
@@ -273,7 +273,7 @@ export default async function LoadDetailsPage({ params }: LoadDetailsProps) {
                 <div>
                   <div className="text-sm text-gray-600">Capacity</div>
                   <div className="font-medium">
-                    {Number(load.assignedTruck.capacityTons).toLocaleString()} tons
+                    {Number(load.assignedTruck.capacity).toLocaleString()} kg
                   </div>
                 </div>
               </div>

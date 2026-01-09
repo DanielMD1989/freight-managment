@@ -264,7 +264,7 @@ async function main() {
     if (serviceFeeTransactions.length > 0) {
       console.log('Recent Service Fee Transactions:');
       serviceFeeTransactions.forEach(t => {
-        console.log(`  ${t.transactionType}: ${t.amount} ETB (${t.createdAt.toISOString().split('T')[0]})`);
+        console.log(`  ${t.transactionType}: ${t.description} (${t.createdAt.toISOString().split('T')[0]})`);
       });
       console.log();
     }
@@ -357,7 +357,7 @@ async function main() {
 
     // Check for unread notifications
     const unreadCount = await prisma.notification.count({
-      where: { readAt: null },
+      where: { read: false },
     });
 
     console.log(`Unread notifications: ${unreadCount}`);
@@ -436,14 +436,14 @@ async function main() {
     });
     console.log();
 
-    const orgStatuses = await prisma.organization.groupBy({
-      by: ['status'],
+    const orgVerification = await prisma.organization.groupBy({
+      by: ['isVerified'],
       _count: { id: true },
     });
 
-    console.log('Organization Status:');
-    orgStatuses.forEach(o => {
-      console.log(`  ${o.status}: ${o._count.id}`);
+    console.log('Organization Verification:');
+    orgVerification.forEach(o => {
+      console.log(`  ${o.isVerified ? 'Verified' : 'Not Verified'}: ${o._count.id}`);
     });
     console.log();
 

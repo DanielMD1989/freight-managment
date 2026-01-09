@@ -64,14 +64,14 @@ describe('E2E Core Business Flows', () => {
           type: 'SHIPPER',
           contactEmail: 'shipper-e2e@test.com',
           contactPhone: '+251911111111',
-          verified: true,
+          isVerified: true,
         },
       });
 
       shipperUser = await db.user.create({
         data: {
           email: 'shipper-e2e@test.com',
-          password: hashedPassword,
+          passwordHash: hashedPassword,
           firstName: 'Test',
           lastName: 'Shipper',
           phone: '+251911111111',
@@ -96,14 +96,14 @@ describe('E2E Core Business Flows', () => {
           type: 'CARRIER_COMPANY',
           contactEmail: 'carrier-e2e@test.com',
           contactPhone: '+251922222222',
-          verified: true,
+          isVerified: true,
         },
       });
 
       carrierUser = await db.user.create({
         data: {
           email: 'carrier-e2e@test.com',
-          password: hashedPassword,
+          passwordHash: hashedPassword,
           firstName: 'Test',
           lastName: 'Carrier',
           phone: '+251922222222',

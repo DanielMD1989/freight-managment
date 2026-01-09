@@ -293,7 +293,7 @@ export default async function CarrierLoadDetailsPage({ params }: LoadDetailsProp
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="text-sm text-gray-600">Plate Number</div>
-                  <div className="font-medium">{load.assignedTruck.plateNumber}</div>
+                  <div className="font-medium">{load.assignedTruck.licensePlate}</div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-600">Truck Type</div>
@@ -302,7 +302,7 @@ export default async function CarrierLoadDetailsPage({ params }: LoadDetailsProp
                 <div>
                   <div className="text-sm text-gray-600">Capacity</div>
                   <div className="font-medium">
-                    {Number(load.assignedTruck.capacityTons).toLocaleString()} tons
+                    {Number(load.assignedTruck.capacity).toLocaleString()} kg
                   </div>
                 </div>
                 {load.assignedAt && (

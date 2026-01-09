@@ -138,10 +138,10 @@ describe('Authentication', () => {
       const token = await generateToken(payload);
       const decoded = await verifyToken(token);
 
-      expect(decoded.userId).toBe(payload.userId);
-      expect(decoded.email).toBe(payload.email);
-      expect(decoded.role).toBe(payload.role);
-      expect(decoded.organizationId).toBe(payload.organizationId);
+      expect(decoded!.userId).toBe(payload.userId);
+      expect(decoded!.email).toBe(payload.email);
+      expect(decoded!.role).toBe(payload.role);
+      expect(decoded!.organizationId).toBe(payload.organizationId);
     });
 
     it('should set expiration time', async () => {
@@ -174,7 +174,7 @@ describe('Authentication', () => {
       const decoded = await verifyToken(token);
 
       expect(decoded).toBeDefined();
-      expect(decoded.userId).toBe(payload.userId);
+      expect(decoded!.userId).toBe(payload.userId);
     });
 
     it('should reject invalid tokens', async () => {

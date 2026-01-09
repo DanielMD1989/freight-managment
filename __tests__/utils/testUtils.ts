@@ -84,11 +84,11 @@ export async function createTestUser(data: {
   const user = await db.user.create({
     data: {
       email: data.email,
-      password: hashedPassword,
-      name: data.name,
+      passwordHash: hashedPassword,
+      firstName: data.name,
       role: data.role,
       organizationId: data.organizationId || null,
-      emailVerified: true,
+      isEmailVerified: true,
     },
   });
 
@@ -100,14 +100,15 @@ export async function createTestUser(data: {
  */
 export async function createTestOrganization(data: {
   name: string;
-  type: 'CARRIER' | 'SHIPPER';
+  type: 'SHIPPER' | 'CARRIER_COMPANY' | 'CARRIER_INDIVIDUAL' | 'CARRIER_ASSOCIATION' | 'FLEET_OWNER' | 'LOGISTICS_AGENT';
   verificationStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
 }) {
   const org = await db.organization.create({
     data: {
       name: data.name,
       type: data.type,
-      verificationStatus: data.verificationStatus || 'PENDING',
+      contactEmail: `${data.name.toLowerCase().replace(/\s+/g, '-')}@test.com`,
+      contactPhone: '+251900000000',
     },
   });
 

@@ -31,7 +31,7 @@ describe('File Access Control', () => {
     it('should allow users to upload documents for their organization', async () => {
       const org = await createTestOrganization({
         name: 'Test Carrier',
-        type: 'CARRIER',
+        type: 'CARRIER_COMPANY',
       });
 
       const user = await createTestUser({
@@ -50,12 +50,12 @@ describe('File Access Control', () => {
     it('should prevent users from uploading to other organizations', async () => {
       const org1 = await createTestOrganization({
         name: 'Carrier 1',
-        type: 'CARRIER',
+        type: 'CARRIER_COMPANY',
       });
 
       const org2 = await createTestOrganization({
         name: 'Carrier 2',
-        type: 'CARRIER',
+        type: 'CARRIER_COMPANY',
       });
 
       const user = await createTestUser({
@@ -83,7 +83,7 @@ describe('File Access Control', () => {
 
       const org = await createTestOrganization({
         name: 'Test Carrier',
-        type: 'CARRIER',
+        type: 'CARRIER_COMPANY',
       });
 
       const user = await createTestUser({
@@ -98,7 +98,7 @@ describe('File Access Control', () => {
         data: {
           organizationId: org.id,
           uploadedById: user.id,
-          type: 'MC_AUTHORITY',
+          type: 'COMPANY_LICENSE',
           fileName: 'mc-authority.pdf',
           fileUrl: '/uploads/test.pdf',
           fileSize: 1024,
@@ -114,12 +114,12 @@ describe('File Access Control', () => {
     it.skip('should prevent users from downloading other organizations documents', async () => {
       const org1 = await createTestOrganization({
         name: 'Carrier 1',
-        type: 'CARRIER',
+        type: 'CARRIER_COMPANY',
       });
 
       const org2 = await createTestOrganization({
         name: 'Carrier 2',
-        type: 'CARRIER',
+        type: 'CARRIER_COMPANY',
       });
 
       const user1 = await createTestUser({
@@ -142,7 +142,7 @@ describe('File Access Control', () => {
         data: {
           organizationId: org1.id,
           uploadedById: user1.id,
-          type: 'MC_AUTHORITY',
+          type: 'COMPANY_LICENSE',
           fileName: 'mc-authority.pdf',
           fileUrl: '/uploads/test.pdf',
           fileSize: 1024,
@@ -158,7 +158,7 @@ describe('File Access Control', () => {
     it.skip('should allow admins to download any document', async () => {
       const org = await createTestOrganization({
         name: 'Test Carrier',
-        type: 'CARRIER',
+        type: 'CARRIER_COMPANY',
       });
 
       const carrier = await createTestUser({
@@ -180,7 +180,7 @@ describe('File Access Control', () => {
         data: {
           organizationId: org.id,
           uploadedById: carrier.id,
-          type: 'MC_AUTHORITY',
+          type: 'COMPANY_LICENSE',
           fileName: 'mc-authority.pdf',
           fileUrl: '/uploads/test.pdf',
           fileSize: 1024,
@@ -198,7 +198,7 @@ describe('File Access Control', () => {
     it('should only allow admins to verify documents', async () => {
       const org = await createTestOrganization({
         name: 'Test Carrier',
-        type: 'CARRIER',
+        type: 'CARRIER_COMPANY',
       });
 
       const carrier = await createTestUser({
@@ -224,7 +224,7 @@ describe('File Access Control', () => {
     it.skip('should prevent users from verifying their own documents', async () => {
       const org = await createTestOrganization({
         name: 'Test Carrier',
-        type: 'CARRIER',
+        type: 'CARRIER_COMPANY',
       });
 
       const user = await createTestUser({
@@ -239,7 +239,7 @@ describe('File Access Control', () => {
         data: {
           organizationId: org.id,
           uploadedById: user.id,
-          type: 'MC_AUTHORITY',
+          type: 'COMPANY_LICENSE',
           fileName: 'mc-authority.pdf',
           fileUrl: '/uploads/test.pdf',
           fileSize: 1024,
@@ -350,7 +350,7 @@ describe('File Access Control', () => {
     it.skip('should allow users to delete their own pending documents', async () => {
       const org = await createTestOrganization({
         name: 'Test Carrier',
-        type: 'CARRIER',
+        type: 'CARRIER_COMPANY',
       });
 
       const user = await createTestUser({
@@ -365,7 +365,7 @@ describe('File Access Control', () => {
         data: {
           organizationId: org.id,
           uploadedById: user.id,
-          type: 'MC_AUTHORITY',
+          type: 'COMPANY_LICENSE',
           fileName: 'mc-authority.pdf',
           fileUrl: '/uploads/test.pdf',
           fileSize: 1024,
@@ -382,7 +382,7 @@ describe('File Access Control', () => {
     it.skip('should prevent deletion of approved documents', async () => {
       const org = await createTestOrganization({
         name: 'Test Carrier',
-        type: 'CARRIER',
+        type: 'CARRIER_COMPANY',
       });
 
       const user = await createTestUser({
@@ -397,7 +397,7 @@ describe('File Access Control', () => {
         data: {
           organizationId: org.id,
           uploadedById: user.id,
-          type: 'MC_AUTHORITY',
+          type: 'COMPANY_LICENSE',
           fileName: 'mc-authority.pdf',
           fileUrl: '/uploads/test.pdf',
           fileSize: 1024,
