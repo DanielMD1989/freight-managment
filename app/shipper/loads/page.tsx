@@ -55,6 +55,7 @@ async function getLoads(
     const params = new URLSearchParams({
       page: page.toString(),
       limit: '20',
+      myLoads: 'true',  // Only show shipper's own loads
     });
 
     if (status && status !== 'all') {
