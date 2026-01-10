@@ -214,7 +214,7 @@ export default function LoadCreationForm() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 md:p-8">
+    <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6 md:p-8">
       {/* Progress Steps */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
@@ -226,8 +226,8 @@ export default function LoadCreationForm() {
               <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
                   step >= s
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-600'
+                    ? 'bg-[#064d51] text-white'
+                    : 'bg-[#064d51]/10 text-[#064d51]/60'
                 }`}
               >
                 {s}
@@ -235,14 +235,14 @@ export default function LoadCreationForm() {
               {s < 4 && (
                 <div
                   className={`flex-1 h-1 mx-2 ${
-                    step > s ? 'bg-blue-600' : 'bg-gray-200'
+                    step > s ? 'bg-[#064d51]' : 'bg-[#064d51]/10'
                   }`}
                 />
               )}
             </div>
           ))}
         </div>
-        <div className="flex justify-between mt-2 text-xs text-gray-600">
+        <div className="flex justify-between mt-2 text-xs text-[#064d51]/70">
           <span>Location</span>
           <span>Load Details</span>
           <span>Pricing</span>
@@ -252,32 +252,32 @@ export default function LoadCreationForm() {
 
       {/* Error Message */}
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800">{error}</p>
+        <div className="mb-6 bg-rose-50 border border-rose-200 rounded-xl p-4">
+          <p className="text-rose-800">{error}</p>
         </div>
       )}
 
       {/* Step 1: Location & Schedule */}
       {step === 1 && (
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-gray-900">
+          <h2 className="text-2xl font-bold text-[#064d51]">
             Location & Schedule
           </h2>
 
           {/* Pickup Information */}
-          <div className="border-t border-gray-200 pt-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="border-t border-[#064d51]/10 pt-6">
+            <h3 className="text-lg font-semibold text-[#064d51] mb-4">
               Pickup Information
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[#064d51] mb-2">
                   Pickup City *
                 </label>
                 <select
                   value={formData.pickupCity}
                   onChange={(e) => updateField('pickupCity', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                 >
                   <option value="">Select city...</option>
                   {ETHIOPIAN_CITIES.map((city) => (
@@ -289,7 +289,7 @@ export default function LoadCreationForm() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[#064d51] mb-2">
                   Pickup Date *
                 </label>
                 <input
@@ -297,12 +297,12 @@ export default function LoadCreationForm() {
                   value={formData.pickupDate}
                   onChange={(e) => updateField('pickupDate', e.target.value)}
                   min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[#064d51] mb-2">
                   Pickup Address (Optional)
                 </label>
                 <input
@@ -310,26 +310,26 @@ export default function LoadCreationForm() {
                   value={formData.pickupAddress}
                   onChange={(e) => updateField('pickupAddress', e.target.value)}
                   placeholder="Enter specific pickup location..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                 />
               </div>
             </div>
           </div>
 
           {/* Delivery Information */}
-          <div className="border-t border-gray-200 pt-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="border-t border-[#064d51]/10 pt-6">
+            <h3 className="text-lg font-semibold text-[#064d51] mb-4">
               Delivery Information
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[#064d51] mb-2">
                   Delivery City *
                 </label>
                 <select
                   value={formData.deliveryCity}
                   onChange={(e) => updateField('deliveryCity', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                 >
                   <option value="">Select city...</option>
                   {ETHIOPIAN_CITIES.map((city) => (
@@ -341,7 +341,7 @@ export default function LoadCreationForm() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[#064d51] mb-2">
                   Delivery Date *
                 </label>
                 <input
@@ -349,12 +349,12 @@ export default function LoadCreationForm() {
                   value={formData.deliveryDate}
                   onChange={(e) => updateField('deliveryDate', e.target.value)}
                   min={formData.pickupDate || new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[#064d51] mb-2">
                   Delivery Address (Optional)
                 </label>
                 <input
@@ -364,7 +364,7 @@ export default function LoadCreationForm() {
                     updateField('deliveryAddress', e.target.value)
                   }
                   placeholder="Enter specific delivery location..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                 />
               </div>
             </div>
@@ -379,11 +379,11 @@ export default function LoadCreationForm() {
               onChange={(e) =>
                 updateField('appointmentRequired', e.target.checked)
               }
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-[#1e9c99] focus:ring-[#1e9c99] border-[#064d51]/30 rounded"
             />
             <label
               htmlFor="appointmentRequired"
-              className="ml-2 block text-sm text-gray-700"
+              className="ml-2 block text-sm text-[#064d51]/80"
             >
               Appointment required for pickup/delivery
             </label>
@@ -394,17 +394,17 @@ export default function LoadCreationForm() {
       {/* Step 2: Load Details */}
       {step === 2 && (
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-gray-900">Load Details</h2>
+          <h2 className="text-2xl font-bold text-[#064d51]">Load Details</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#064d51] mb-2">
                 Truck Type *
               </label>
               <select
                 value={formData.truckType}
                 onChange={(e) => updateField('truckType', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
               >
                 {TRUCK_TYPES.map((type) => (
                   <option key={type.value} value={type.value}>
@@ -415,7 +415,7 @@ export default function LoadCreationForm() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#064d51] mb-2">
                 Weight (kg) *
               </label>
               <input
@@ -425,18 +425,18 @@ export default function LoadCreationForm() {
                 min="0"
                 step="0.01"
                 placeholder="Enter weight..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#064d51] mb-2">
                 Load Type *
               </label>
               <select
                 value={formData.fullPartial}
                 onChange={(e) => updateField('fullPartial', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
               >
                 <option value="FULL">Full Truckload</option>
                 <option value="PARTIAL">Partial Load</option>
@@ -444,7 +444,7 @@ export default function LoadCreationForm() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#064d51] mb-2">
                 Cargo Description *
               </label>
               <textarea
@@ -454,17 +454,17 @@ export default function LoadCreationForm() {
                 }
                 rows={3}
                 placeholder="Describe the cargo..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-[#064d51]/60 mt-1">
                 Minimum 5 characters
               </p>
             </div>
           </div>
 
           {/* Special Requirements */}
-          <div className="border-t border-gray-200 pt-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="border-t border-[#064d51]/10 pt-6">
+            <h3 className="text-lg font-semibold text-[#064d51] mb-4">
               Special Requirements
             </h3>
             <div className="space-y-3">
@@ -474,11 +474,11 @@ export default function LoadCreationForm() {
                   id="isFragile"
                   checked={formData.isFragile}
                   onChange={(e) => updateField('isFragile', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-[#1e9c99] focus:ring-[#1e9c99] border-[#064d51]/30 rounded"
                 />
                 <label
                   htmlFor="isFragile"
-                  className="ml-2 block text-sm text-gray-700"
+                  className="ml-2 block text-sm text-[#064d51]/80"
                 >
                   Fragile cargo (requires special handling)
                 </label>
@@ -492,11 +492,11 @@ export default function LoadCreationForm() {
                   onChange={(e) =>
                     updateField('requiresRefrigeration', e.target.checked)
                   }
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-[#1e9c99] focus:ring-[#1e9c99] border-[#064d51]/30 rounded"
                 />
                 <label
                   htmlFor="requiresRefrigeration"
-                  className="ml-2 block text-sm text-gray-700"
+                  className="ml-2 block text-sm text-[#064d51]/80"
                 >
                   Requires refrigeration
                 </label>
@@ -509,13 +509,13 @@ export default function LoadCreationForm() {
       {/* Step 3: Pricing */}
       {step === 3 && (
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-gray-900">
+          <h2 className="text-2xl font-bold text-[#064d51]">
             Pricing & Booking
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#064d51] mb-2">
                 Rate (ETB) *
               </label>
               <input
@@ -525,21 +525,21 @@ export default function LoadCreationForm() {
                 min="0"
                 step="0.01"
                 placeholder="Enter rate..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-[#064d51]/60 mt-1">
                 Total amount you're willing to pay
               </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#064d51] mb-2">
                 Booking Mode *
               </label>
               <select
                 value={formData.bookMode}
                 onChange={(e) => updateField('bookMode', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
               >
                 <option value="REQUEST">Request (carrier must apply)</option>
                 <option value="INSTANT">Instant (first come, first served)</option>
@@ -548,8 +548,8 @@ export default function LoadCreationForm() {
           </div>
 
           {/* Privacy & Contact */}
-          <div className="border-t border-gray-200 pt-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="border-t border-[#064d51]/10 pt-6">
+            <h3 className="text-lg font-semibold text-[#064d51] mb-4">
               Privacy & Contact
             </h3>
 
@@ -560,11 +560,11 @@ export default function LoadCreationForm() {
                   id="isAnonymous"
                   checked={formData.isAnonymous}
                   onChange={(e) => updateField('isAnonymous', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-[#1e9c99] focus:ring-[#1e9c99] border-[#064d51]/30 rounded"
                 />
                 <label
                   htmlFor="isAnonymous"
-                  className="ml-2 block text-sm text-gray-700"
+                  className="ml-2 block text-sm text-[#064d51]/80"
                 >
                   Post anonymously (hide company name from carriers)
                 </label>
@@ -573,7 +573,7 @@ export default function LoadCreationForm() {
               {!formData.isAnonymous && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-[#064d51] mb-2">
                       Contact Name
                     </label>
                     <input
@@ -583,12 +583,12 @@ export default function LoadCreationForm() {
                         updateField('shipperContactName', e.target.value)
                       }
                       placeholder="Contact person name..."
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-[#064d51] mb-2">
                       Contact Phone
                     </label>
                     <input
@@ -598,14 +598,14 @@ export default function LoadCreationForm() {
                         updateField('shipperContactPhone', e.target.value)
                       }
                       placeholder="+251..."
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                     />
                   </div>
                 </div>
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[#064d51] mb-2">
                   Special Instructions (Optional)
                 </label>
                 <textarea
@@ -615,7 +615,7 @@ export default function LoadCreationForm() {
                   }
                   rows={3}
                   placeholder="Any special instructions for the carrier..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                 />
               </div>
             </div>
@@ -626,52 +626,52 @@ export default function LoadCreationForm() {
       {/* Step 4: Review */}
       {step === 4 && (
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-gray-900">Review & Submit</h2>
+          <h2 className="text-2xl font-bold text-[#064d51]">Review & Submit</h2>
 
-          <div className="bg-gray-50 rounded-lg p-6 space-y-4">
+          <div className="bg-[#f0fdfa] rounded-xl p-6 space-y-4 border border-[#064d51]/10">
             <div>
-              <h3 className="font-semibold text-gray-900 mb-2">Route</h3>
-              <p className="text-gray-700">
+              <h3 className="font-semibold text-[#064d51] mb-2">Route</h3>
+              <p className="text-[#064d51]">
                 {formData.pickupCity} → {formData.deliveryCity}
               </p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-[#064d51]/70">
                 {formData.pickupDate} to {formData.deliveryDate}
               </p>
             </div>
 
             <div>
-              <h3 className="font-semibold text-gray-900 mb-2">Load</h3>
-              <p className="text-gray-700">
+              <h3 className="font-semibold text-[#064d51] mb-2">Load</h3>
+              <p className="text-[#064d51]">
                 {TRUCK_TYPES.find((t) => t.value === formData.truckType)?.label}
               </p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-[#064d51]/70">
                 {formData.weight} kg •{' '}
                 {formData.fullPartial === 'FULL' ? 'Full Load' : 'Partial Load'}
               </p>
-              <p className="text-sm text-gray-600">{formData.cargoDescription}</p>
+              <p className="text-sm text-[#064d51]/70">{formData.cargoDescription}</p>
             </div>
 
             <div>
-              <h3 className="font-semibold text-gray-900 mb-2">Rate</h3>
-              <p className="text-2xl font-bold text-blue-600">
+              <h3 className="font-semibold text-[#064d51] mb-2">Rate</h3>
+              <p className="text-2xl font-bold text-[#1e9c99]">
                 {parseFloat(formData.rate || '0').toLocaleString()} ETB
               </p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-[#064d51]/70">
                 {formData.bookMode === 'INSTANT' ? 'Instant Book' : 'Request to Book'}
               </p>
             </div>
 
             {formData.isAnonymous && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
-                <p className="text-sm text-yellow-800">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-sm text-amber-800">
                   This load will be posted anonymously
                 </p>
               </div>
             )}
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-800">
+          <div className="bg-[#1e9c99]/10 border border-[#1e9c99]/20 rounded-xl p-4">
+            <p className="text-sm text-[#064d51]">
               By posting this load, you agree to the platform's terms of service
               and authorize carriers to bid on or accept this shipment.
             </p>
@@ -684,7 +684,7 @@ export default function LoadCreationForm() {
         <button
           onClick={prevStep}
           disabled={step === 1 || isSubmitting}
-          className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="px-6 py-2 border border-[#064d51]/20 rounded-lg text-[#064d51] font-medium hover:bg-[#064d51]/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           Previous
         </button>
@@ -695,14 +695,14 @@ export default function LoadCreationForm() {
               <button
                 onClick={() => handleSubmit(true)}
                 disabled={isSubmitting}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                className="px-6 py-2 border border-[#064d51]/20 rounded-lg text-[#064d51] font-medium hover:bg-[#064d51]/5 disabled:opacity-50 transition-colors"
               >
                 Save Draft
               </button>
               <button
                 onClick={nextStep}
                 disabled={isSubmitting}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="px-6 py-2 bg-[#064d51] text-white rounded-lg font-medium hover:bg-[#053d40] disabled:opacity-50 transition-colors"
               >
                 Next
               </button>
@@ -712,14 +712,14 @@ export default function LoadCreationForm() {
               <button
                 onClick={() => handleSubmit(true)}
                 disabled={isSubmitting}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                className="px-6 py-2 border border-[#064d51]/20 rounded-lg text-[#064d51] font-medium hover:bg-[#064d51]/5 disabled:opacity-50 transition-colors"
               >
                 {isSubmitting ? 'Saving...' : 'Save Draft'}
               </button>
               <button
                 onClick={() => handleSubmit(false)}
                 disabled={isSubmitting}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="px-6 py-2 bg-[#064d51] text-white rounded-lg font-medium hover:bg-[#053d40] disabled:opacity-50 transition-colors"
               >
                 {isSubmitting ? 'Posting...' : 'Post Load'}
               </button>

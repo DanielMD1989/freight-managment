@@ -115,11 +115,11 @@ export default async function LoadsPage({
     return (
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">My Loads</h1>
-          <p className="text-gray-600 mt-2">Manage your shipment postings</p>
+          <h1 className="text-3xl font-bold text-[#064d51]">My Loads</h1>
+          <p className="text-[#064d51]/70 mt-2">Manage your shipment postings</p>
         </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800">
+        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4">
+          <p className="text-rose-800">
             Failed to load your loads. Please try refreshing the page.
           </p>
         </div>
@@ -132,14 +132,14 @@ export default async function LoadsPage({
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">My Loads</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-3xl font-bold text-[#064d51]">My Loads</h1>
+          <p className="text-[#064d51]/70 mt-2">
             Manage your shipment postings ({data.pagination.total} total)
           </p>
         </div>
         <a
           href="/shipper/loads/create"
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          className="px-6 py-3 bg-[#064d51] text-white rounded-lg font-medium hover:bg-[#053d40] transition-colors"
         >
           + Post New Load
         </a>

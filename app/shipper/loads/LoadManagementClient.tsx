@@ -65,15 +65,15 @@ function formatCurrency(amount: number): string {
 
 function getStatusColor(status: string): string {
   const colors: Record<string, string> = {
-    DRAFT: 'bg-gray-100 text-gray-800',
-    POSTED: 'bg-blue-100 text-blue-800',
-    MATCHED: 'bg-purple-100 text-purple-800',
-    IN_TRANSIT: 'bg-yellow-100 text-yellow-800',
-    DELIVERED: 'bg-green-100 text-green-800',
-    COMPLETED: 'bg-gray-100 text-gray-800',
-    CANCELLED: 'bg-red-100 text-red-800',
+    DRAFT: 'bg-[#064d51]/10 text-[#064d51]',
+    POSTED: 'bg-[#1e9c99]/15 text-[#0d6b69]',
+    MATCHED: 'bg-indigo-100 text-indigo-800',
+    IN_TRANSIT: 'bg-amber-100 text-amber-800',
+    DELIVERED: 'bg-emerald-100 text-emerald-800',
+    COMPLETED: 'bg-[#064d51]/10 text-[#064d51]',
+    CANCELLED: 'bg-rose-100 text-rose-800',
   };
-  return colors[status] || 'bg-gray-100 text-gray-800';
+  return colors[status] || 'bg-[#064d51]/10 text-[#064d51]';
 }
 
 export default function LoadManagementClient({
@@ -191,13 +191,13 @@ export default function LoadManagementClient({
   return (
     <div className="space-y-6">
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Status Filter */}
           <div>
             <label
               htmlFor="status"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-[#064d51] mb-2"
             >
               Filter by Status
             </label>
@@ -205,7 +205,7 @@ export default function LoadManagementClient({
               id="status"
               value={statusFilter}
               onChange={(e) => handleStatusChange(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
             >
               {STATUS_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -218,8 +218,8 @@ export default function LoadManagementClient({
           {/* Summary Stats */}
           <div className="flex items-center justify-end gap-4">
             <div className="text-right">
-              <div className="text-sm text-gray-600">Total Loads</div>
-              <div className="text-2xl font-bold text-gray-900">
+              <div className="text-sm text-[#064d51]/70">Total Loads</div>
+              <div className="text-2xl font-bold text-[#064d51]">
                 {pagination.total}
               </div>
             </div>
@@ -228,44 +228,44 @@ export default function LoadManagementClient({
       </div>
 
       {/* Loads Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 overflow-hidden">
         {initialLoads.length > 0 ? (
           <>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-[#064d51]/10">
+                <thead className="bg-[#064d51]/5">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
                       Route
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
                       Dates
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
                       Details
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
                       Rate
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-[#064d51]/10">
                   {initialLoads.map((load) => (
-                    <tr key={load.id} className="hover:bg-gray-50">
+                    <tr key={load.id} className="hover:bg-[#f0fdfa]">
                       {/* Route */}
                       <td className="px-6 py-4">
                         <div className="flex flex-col text-sm">
-                          <div className="font-medium text-gray-900">
+                          <div className="font-medium text-[#064d51]">
                             {load.pickupCity}
                           </div>
-                          <div className="text-gray-500">↓</div>
-                          <div className="font-medium text-gray-900">
+                          <div className="text-[#064d51]/50">↓</div>
+                          <div className="font-medium text-[#064d51]">
                             {load.deliveryCity}
                           </div>
                         </div>
@@ -274,11 +274,11 @@ export default function LoadManagementClient({
                       {/* Dates */}
                       <td className="px-6 py-4">
                         <div className="flex flex-col text-sm">
-                          <div className="text-gray-900">
+                          <div className="text-[#064d51]">
                             {formatDate(load.pickupDate)}
                           </div>
-                          <div className="text-gray-500">to</div>
-                          <div className="text-gray-900">
+                          <div className="text-[#064d51]/50">to</div>
+                          <div className="text-[#064d51]">
                             {formatDate(load.deliveryDate)}
                           </div>
                         </div>
@@ -287,13 +287,13 @@ export default function LoadManagementClient({
                       {/* Details */}
                       <td className="px-6 py-4">
                         <div className="flex flex-col text-sm">
-                          <div className="text-gray-900">
+                          <div className="text-[#064d51]">
                             {load.truckType.replace(/_/g, ' ')}
                           </div>
-                          <div className="text-gray-500">
+                          <div className="text-[#064d51]/60">
                             {load.weight.toLocaleString()} kg
                           </div>
-                          <div className="text-xs text-gray-400">
+                          <div className="text-xs text-[#064d51]/50">
                             {load.fullPartial === 'FULL' ? 'Full Load' : 'Partial'}
                           </div>
                         </div>
@@ -301,7 +301,7 @@ export default function LoadManagementClient({
 
                       {/* Rate */}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-lg font-semibold text-gray-900">
+                        <div className="text-lg font-semibold text-[#064d51]">
                           {formatCurrency(load.rate)}
                         </div>
                       </td>
@@ -322,14 +322,14 @@ export default function LoadManagementClient({
                         <div className="flex gap-2">
                           <Link
                             href={`/shipper/loads/${load.id}`}
-                            className="text-blue-600 hover:text-blue-900"
+                            className="text-[#1e9c99] hover:text-[#0d6b69]"
                           >
                             View
                           </Link>
                           {load.status === 'DRAFT' && (
                             <Link
                               href={`/shipper/loads/${load.id}/edit`}
-                              className="text-gray-600 hover:text-gray-900"
+                              className="text-[#064d51]/70 hover:text-[#064d51]"
                             >
                               Edit
                             </Link>
@@ -337,7 +337,7 @@ export default function LoadManagementClient({
                           {load.status === 'POSTED' && (
                             <Link
                               href={`/shipper/matches?loadId=${load.id}`}
-                              className="text-green-600 hover:text-green-900"
+                              className="text-emerald-600 hover:text-emerald-800"
                             >
                               Matches
                             </Link>
@@ -345,14 +345,14 @@ export default function LoadManagementClient({
                           <button
                             onClick={() => handleCopyLoad(load.id)}
                             disabled={copyingLoadId === load.id}
-                            className="text-purple-600 hover:text-purple-900 disabled:opacity-50"
+                            className="text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
                           >
                             {copyingLoadId === load.id ? 'Copying...' : 'Copy'}
                           </button>
                           {(load.status === 'DRAFT' || load.status === 'POSTED') && (
                             <button
                               onClick={() => setDeleteConfirmId(load.id)}
-                              className="text-red-600 hover:text-red-900"
+                              className="text-rose-600 hover:text-rose-800"
                             >
                               Delete
                             </button>
@@ -367,34 +367,34 @@ export default function LoadManagementClient({
 
             {/* Pagination */}
             {pagination.pages > 1 && (
-              <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
-                <div className="text-sm text-gray-700">
+              <div className="bg-[#f0fdfa] px-6 py-4 flex items-center justify-between border-t border-[#064d51]/10">
+                <div className="text-sm text-[#064d51]/70">
                   Showing{' '}
-                  <span className="font-medium">
+                  <span className="font-medium text-[#064d51]">
                     {(pagination.page - 1) * pagination.limit + 1}
                   </span>{' '}
                   to{' '}
-                  <span className="font-medium">
+                  <span className="font-medium text-[#064d51]">
                     {Math.min(pagination.page * pagination.limit, pagination.total)}
                   </span>{' '}
-                  of <span className="font-medium">{pagination.total}</span>{' '}
+                  of <span className="font-medium text-[#064d51]">{pagination.total}</span>{' '}
                   loads
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => handlePageChange(pagination.page - 1)}
                     disabled={pagination.page === 1}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 border border-[#064d51]/20 rounded-lg text-sm font-medium text-[#064d51] bg-white hover:bg-[#064d51]/5 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Previous
                   </button>
-                  <span className="px-4 py-2 text-sm text-gray-700">
+                  <span className="px-4 py-2 text-sm text-[#064d51]">
                     Page {pagination.page} of {pagination.pages}
                   </span>
                   <button
                     onClick={() => handlePageChange(pagination.page + 1)}
                     disabled={pagination.page === pagination.pages}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 border border-[#064d51]/20 rounded-lg text-sm font-medium text-[#064d51] bg-white hover:bg-[#064d51]/5 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Next
                   </button>
@@ -406,17 +406,17 @@ export default function LoadManagementClient({
           /* Empty State */
           <div className="px-6 py-12 text-center">
             <div className="text-6xl mb-4">📦</div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-[#064d51] mb-2">
               No loads found
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-[#064d51]/70 mb-6">
               {statusFilter !== 'all'
                 ? `You don't have any ${statusFilter} loads yet.`
                 : "You haven't posted any loads yet."}
             </p>
             <Link
               href="/shipper/loads/create"
-              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              className="inline-block px-6 py-3 bg-[#064d51] text-white rounded-lg font-medium hover:bg-[#053d40] transition-colors"
             >
               Post Your First Load
             </Link>
@@ -426,12 +426,12 @@ export default function LoadManagementClient({
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 border border-[#064d51]/10">
+            <h3 className="text-lg font-semibold text-[#064d51] mb-2">
               Confirm Delete
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-[#064d51]/70 mb-6">
               Are you sure you want to delete this load? This action cannot be undone.
               {' '}If this load has been assigned to a carrier, you won't be able to delete it.
             </p>
@@ -439,14 +439,14 @@ export default function LoadManagementClient({
               <button
                 onClick={() => setDeleteConfirmId(null)}
                 disabled={isDeleting}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium disabled:opacity-50"
+                className="flex-1 px-4 py-2 border border-[#064d51]/20 text-[#064d51] rounded-lg hover:bg-[#064d51]/5 font-medium disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleDeleteLoad(deleteConfirmId)}
                 disabled={isDeleting}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isDeleting ? 'Deleting...' : 'Delete Load'}
               </button>
