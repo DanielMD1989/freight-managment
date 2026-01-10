@@ -6,6 +6,8 @@
  *
  * Features:
  * - View active shipment location (only when IN_TRANSIT)
+ * - Real-time GPS updates via WebSocket
+ * - Trip progress tracking (%, remaining km, ETA)
  * - See pickup and delivery markers
  * - Route visualization
  * - Access control: Only after carrier approves load
@@ -13,8 +15,20 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import GoogleMap, { MapMarker, MapRoute } from '@/components/GoogleMap';
+import { useGpsRealtime, GpsPosition } from '@/hooks/useGpsRealtime';
+
+interface TripProgress {
+  percent: number;
+  remainingKm: number | null;
+  totalDistanceKm: number | null;
+  travelledKm: number | null;
+  estimatedArrival: string | null;
+  isNearDestination: boolean;
+  enteredDestGeofence: boolean;
+  lastUpdate: string | null;
+}
 
 interface ShipmentTrip {
   id: string;
@@ -53,10 +67,71 @@ export default function ShipperMapPage() {
   const [selectedTrip, setSelectedTrip] = useState<ShipmentTrip | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tripProgress, setTripProgress] = useState<TripProgress | null>(null);
+  const [progressLoading, setProgressLoading] = useState(false);
+
+  // Real-time GPS updates
+  const { isConnected, positions, subscribeToTrip, unsubscribeFromTrip } = useGpsRealtime({
+    autoConnect: true,
+    onPositionUpdate: useCallback((position: GpsPosition) => {
+      // Update the selected trip's current location if it matches
+      if (selectedTrip && position.truckId === selectedTrip.truck.id) {
+        setSelectedTrip(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            currentLocation: {
+              lat: position.lat,
+              lng: position.lng,
+              updatedAt: position.timestamp,
+            },
+          };
+        });
+        // Also update in the activeTrips list
+        setActiveTrips(prev => prev.map(trip => {
+          if (trip.truck.id === position.truckId) {
+            return {
+              ...trip,
+              currentLocation: {
+                lat: position.lat,
+                lng: position.lng,
+                updatedAt: position.timestamp,
+              },
+            };
+          }
+          return trip;
+        }));
+      }
+    }, [selectedTrip]),
+  });
 
   useEffect(() => {
     fetchMyTrips();
   }, []);
+
+  // Subscribe to selected trip's GPS updates
+  useEffect(() => {
+    if (selectedTrip && selectedTrip.status === 'IN_TRANSIT') {
+      subscribeToTrip(selectedTrip.loadId);
+      return () => {
+        unsubscribeFromTrip(selectedTrip.loadId);
+      };
+    }
+  }, [selectedTrip, subscribeToTrip, unsubscribeFromTrip]);
+
+  // Fetch trip progress when selected trip changes
+  useEffect(() => {
+    if (selectedTrip && selectedTrip.status === 'IN_TRANSIT') {
+      fetchTripProgress(selectedTrip.loadId);
+      // Refresh progress every 30 seconds
+      const interval = setInterval(() => {
+        fetchTripProgress(selectedTrip.loadId);
+      }, 30000);
+      return () => clearInterval(interval);
+    } else {
+      setTripProgress(null);
+    }
+  }, [selectedTrip]);
 
   const fetchMyTrips = async () => {
     try {
@@ -85,6 +160,21 @@ export default function ShipperMapPage() {
     }
   };
 
+  const fetchTripProgress = async (loadId: string) => {
+    try {
+      setProgressLoading(true);
+      const response = await fetch(`/api/loads/${loadId}/progress`);
+      if (response.ok) {
+        const data = await response.json();
+        setTripProgress(data.progress);
+      }
+    } catch (err) {
+      console.error('Failed to fetch trip progress:', err);
+    } finally {
+      setProgressLoading(false);
+    }
+  };
+
   // Build markers for selected trip
   const buildMarkers = (): MapMarker[] => {
     if (!selectedTrip) return [];
@@ -98,7 +188,6 @@ export default function ShipperMapPage() {
         position: selectedTrip.pickupLocation,
         title: `Pickup: ${selectedTrip.pickupLocation.address}`,
         type: 'pickup',
-        data: selectedTrip,
       });
     }
 
@@ -109,7 +198,6 @@ export default function ShipperMapPage() {
         position: selectedTrip.deliveryLocation,
         title: `Delivery: ${selectedTrip.deliveryLocation.address}`,
         type: 'delivery',
-        data: selectedTrip,
       });
     }
 
@@ -121,7 +209,6 @@ export default function ShipperMapPage() {
         title: `${selectedTrip.truck.plateNumber} - In Transit`,
         type: 'truck',
         status: 'in_transit',
-        data: selectedTrip,
       });
     }
 
@@ -142,6 +229,17 @@ export default function ShipperMapPage() {
       color: '#2563eb',
       tripId: selectedTrip.id,
     }];
+  };
+
+  const formatETA = (eta: string | null) => {
+    if (!eta) return 'Calculating...';
+    const date = new Date(eta);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatDistance = (km: number | null) => {
+    if (km === null) return '--';
+    return `${km.toFixed(1)} km`;
   };
 
   if (loading) {
@@ -183,12 +281,21 @@ export default function ShipperMapPage() {
             Real-time tracking of your active shipments
           </p>
         </div>
-        <button
-          onClick={fetchMyTrips}
-          className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"
-        >
-          Refresh
-        </button>
+        <div className="flex items-center gap-3">
+          {/* WebSocket Status */}
+          <div className="flex items-center gap-2 text-sm">
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+            <span className="text-gray-500 dark:text-gray-400">
+              {isConnected ? 'Live' : 'Offline'}
+            </span>
+          </div>
+          <button
+            onClick={fetchMyTrips}
+            className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -213,6 +320,79 @@ export default function ShipperMapPage() {
               Load #{trip.loadId.slice(-6)}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Trip Progress Card */}
+      {selectedTrip && selectedTrip.status === 'IN_TRANSIT' && tripProgress && (
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-gray-900 dark:text-white">Trip Progress</h3>
+            {progressLoading && (
+              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            )}
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mb-4">
+            <div className="flex justify-between text-sm mb-1">
+              <span className="text-gray-600 dark:text-gray-400">
+                {tripProgress.travelledKm !== null
+                  ? `${tripProgress.travelledKm.toFixed(1)} km travelled`
+                  : 'In progress'}
+              </span>
+              <span className="font-medium text-gray-900 dark:text-white">
+                {tripProgress.percent}%
+              </span>
+            </div>
+            <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-blue-600 rounded-full transition-all duration-500"
+                style={{ width: `${tripProgress.percent}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>Pickup</span>
+              <span>
+                {tripProgress.remainingKm !== null
+                  ? `${tripProgress.remainingKm.toFixed(1)} km remaining`
+                  : ''}
+              </span>
+              <span>Delivery</span>
+            </div>
+          </div>
+
+          {/* Progress Stats */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{tripProgress.percent}%</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Complete</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                {formatDistance(tripProgress.remainingKm)}
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Remaining</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">
+                {formatETA(tripProgress.estimatedArrival)}
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">ETA</div>
+            </div>
+          </div>
+
+          {/* Near Destination Alert */}
+          {tripProgress.isNearDestination && (
+            <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                  Approaching destination!
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -244,7 +424,9 @@ export default function ShipperMapPage() {
             <div>
               <div className="text-sm text-gray-500 dark:text-gray-400">ETA</div>
               <div className="font-semibold text-gray-900 dark:text-white">
-                {selectedTrip.estimatedArrival || 'Calculating...'}
+                {tripProgress?.estimatedArrival
+                  ? formatETA(tripProgress.estimatedArrival)
+                  : selectedTrip.estimatedArrival || 'Calculating...'}
               </div>
             </div>
           </div>
@@ -259,7 +441,7 @@ export default function ShipperMapPage() {
           height="500px"
           autoFitBounds={true}
           showTraffic={true}
-          refreshInterval={15000}
+          refreshInterval={0} // Disabled - using WebSocket instead
         />
       </div>
 
@@ -293,16 +475,23 @@ export default function ShipperMapPage() {
       {/* GPS Status */}
       {selectedTrip && selectedTrip.status === 'IN_TRANSIT' && (
         <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-            <span className="text-sm text-blue-700 dark:text-blue-300">
-              Live tracking active
-              {selectedTrip.currentLocation?.updatedAt && (
-                <span className="text-blue-500 dark:text-blue-400 ml-2">
-                  - Last update: {new Date(selectedTrip.currentLocation.updatedAt).toLocaleTimeString()}
-                </span>
-              )}
-            </span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-blue-500 animate-pulse' : 'bg-gray-400'}`}></div>
+              <span className="text-sm text-blue-700 dark:text-blue-300">
+                {isConnected ? 'Live tracking active' : 'Connecting to live tracking...'}
+                {selectedTrip.currentLocation?.updatedAt && (
+                  <span className="text-blue-500 dark:text-blue-400 ml-2">
+                    - Last update: {new Date(selectedTrip.currentLocation.updatedAt).toLocaleTimeString()}
+                  </span>
+                )}
+              </span>
+            </div>
+            {tripProgress?.lastUpdate && (
+              <span className="text-xs text-blue-500 dark:text-blue-400">
+                Progress updated: {new Date(tripProgress.lastUpdate).toLocaleTimeString()}
+              </span>
+            )}
           </div>
         </div>
       )}
