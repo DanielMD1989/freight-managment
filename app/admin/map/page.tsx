@@ -6,8 +6,10 @@
  *
  * Features:
  * - View all active and historical trips
+ * - Real-time GPS updates via WebSocket
  * - Fleet overview with GPS status
  * - Platform-wide statistics
+ * - Filter by carrier, shipper, status, date
  * - Historical trip playback
  */
 
@@ -15,6 +17,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import GoogleMap, { MapMarker, MapRoute } from '@/components/GoogleMap';
+import { useGpsRealtime, GpsPosition } from '@/hooks/useGpsRealtime';
+import TripHistoryPlayback from '@/components/TripHistoryPlayback';
 
 interface Vehicle {
   id: string;
@@ -77,12 +81,23 @@ interface PlatformStats {
   completedToday: number;
 }
 
+interface Carrier {
+  id: string;
+  name: string;
+}
+
+interface Shipper {
+  id: string;
+  name: string;
+}
+
 type ViewMode = 'overview' | 'fleet' | 'trips' | 'historical';
 
 export default function AdminMapPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [historicalTrips, setHistoricalTrips] = useState<Trip[]>([]);
+  const [filteredHistorical, setFilteredHistorical] = useState<Trip[]>([]);
   const [stats, setStats] = useState<PlatformStats>({
     totalVehicles: 0,
     activeGps: 0,
@@ -95,16 +110,83 @@ export default function AdminMapPage() {
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
   const [selectedItem, setSelectedItem] = useState<MapMarker | null>(null);
+  const [carriers, setCarriers] = useState<Carrier[]>([]);
+  const [shippers, setShippers] = useState<Shipper[]>([]);
   const [filters, setFilters] = useState({
     carrier: '',
+    shipper: '',
     status: '',
     dateFrom: '',
     dateTo: '',
   });
+  const [showPlayback, setShowPlayback] = useState(false);
+  const [playbackTripId, setPlaybackTripId] = useState<string | null>(null);
+
+  // Real-time GPS updates (subscribe to all for admin)
+  const { isConnected, positions } = useGpsRealtime({
+    autoConnect: true,
+    subscribeAll: true,
+    onPositionUpdate: useCallback((position: GpsPosition) => {
+      // Update vehicles with new position
+      setVehicles(prev => prev.map(v => {
+        if (v.id === position.truckId) {
+          return {
+            ...v,
+            currentLocation: {
+              lat: position.lat,
+              lng: position.lng,
+              updatedAt: position.timestamp,
+            },
+            gpsStatus: 'ACTIVE' as const,
+          };
+        }
+        return v;
+      }));
+
+      // Update trips with new position
+      setTrips(prev => prev.map(t => {
+        if (t.truck.id === position.truckId) {
+          return {
+            ...t,
+            currentLocation: {
+              lat: position.lat,
+              lng: position.lng,
+              updatedAt: position.timestamp,
+            },
+          };
+        }
+        return t;
+      }));
+    }, []),
+  });
 
   useEffect(() => {
     fetchMapData();
+    fetchFiltersData();
   }, []);
+
+  // Apply filters to historical trips
+  useEffect(() => {
+    let filtered = [...historicalTrips];
+
+    if (filters.carrier) {
+      filtered = filtered.filter(t => t.carrier.id === filters.carrier);
+    }
+    if (filters.shipper) {
+      filtered = filtered.filter(t => t.shipper.id === filters.shipper);
+    }
+    if (filters.dateFrom) {
+      const fromDate = new Date(filters.dateFrom);
+      filtered = filtered.filter(t => t.completedAt && new Date(t.completedAt) >= fromDate);
+    }
+    if (filters.dateTo) {
+      const toDate = new Date(filters.dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(t => t.completedAt && new Date(t.completedAt) <= toDate);
+    }
+
+    setFilteredHistorical(filtered.slice(0, 20));
+  }, [historicalTrips, filters]);
 
   const fetchMapData = useCallback(async () => {
     try {
@@ -121,7 +203,6 @@ export default function AdminMapPage() {
         const vehicleList = data.vehicles || [];
         setVehicles(vehicleList);
 
-        // Calculate stats
         setStats((prev) => ({
           ...prev,
           totalVehicles: vehicleList.length,
@@ -159,11 +240,30 @@ export default function AdminMapPage() {
     }
   }, []);
 
-  // Build markers based on view mode
+  const fetchFiltersData = async () => {
+    try {
+      const [carriersRes, shippersRes] = await Promise.all([
+        fetch('/api/organizations?type=CARRIER_COMPANY'),
+        fetch('/api/organizations?type=SHIPPER'),
+      ]);
+
+      if (carriersRes.ok) {
+        const data = await carriersRes.json();
+        setCarriers(data.organizations || []);
+      }
+
+      if (shippersRes.ok) {
+        const data = await shippersRes.json();
+        setShippers(data.organizations || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch filter options:', err);
+    }
+  };
+
   const buildMarkers = (): MapMarker[] => {
     const markers: MapMarker[] = [];
 
-    // Vehicle markers
     if (viewMode === 'overview' || viewMode === 'fleet') {
       vehicles.forEach((vehicle) => {
         if (vehicle.currentLocation) {
@@ -172,18 +272,15 @@ export default function AdminMapPage() {
             position: vehicle.currentLocation,
             title: `${vehicle.plateNumber} (${vehicle.carrier.name})`,
             type: 'truck',
-            status: vehicle.status === 'IN_TRANSIT' ? 'in_transit' :
-                   vehicle.status === 'AVAILABLE' ? 'available' : 'offline',
-            data: vehicle,
+            status: vehicle.gpsStatus === 'ACTIVE' ? 'active' :
+                   vehicle.gpsStatus === 'OFFLINE' ? 'offline' : 'available',
           });
         }
       });
     }
 
-    // Active trip markers
     if (viewMode === 'overview' || viewMode === 'trips') {
       trips.forEach((trip) => {
-        // Current position
         if (trip.currentLocation) {
           markers.push({
             id: `trip-pos-${trip.id}`,
@@ -191,29 +288,45 @@ export default function AdminMapPage() {
             title: `${trip.truck.plateNumber} - In Transit`,
             type: 'truck',
             status: 'in_transit',
-            data: trip,
           });
         }
 
-        // Pickup
         if (trip.pickupLocation) {
           markers.push({
             id: `trip-pickup-${trip.id}`,
             position: trip.pickupLocation,
             title: `Pickup: ${trip.pickupLocation.address}`,
             type: 'pickup',
-            data: trip,
           });
         }
 
-        // Delivery
         if (trip.deliveryLocation) {
           markers.push({
             id: `trip-delivery-${trip.id}`,
             position: trip.deliveryLocation,
             title: `Delivery: ${trip.deliveryLocation.address}`,
             type: 'delivery',
-            data: trip,
+          });
+        }
+      });
+    }
+
+    if (viewMode === 'historical') {
+      filteredHistorical.forEach((trip) => {
+        if (trip.pickupLocation) {
+          markers.push({
+            id: `hist-pickup-${trip.id}`,
+            position: trip.pickupLocation,
+            title: `Pickup: ${trip.pickupLocation.address}`,
+            type: 'pickup',
+          });
+        }
+        if (trip.deliveryLocation) {
+          markers.push({
+            id: `hist-delivery-${trip.id}`,
+            position: trip.deliveryLocation,
+            title: `Delivery: ${trip.deliveryLocation.address}`,
+            type: 'delivery',
           });
         }
       });
@@ -222,11 +335,10 @@ export default function AdminMapPage() {
     return markers;
   };
 
-  // Build routes for active trips
   const buildRoutes = (): MapRoute[] => {
     if (viewMode === 'fleet') return [];
 
-    const tripList = viewMode === 'historical' ? historicalTrips.slice(0, 10) : trips;
+    const tripList = viewMode === 'historical' ? filteredHistorical : trips;
 
     return tripList
       .filter((trip) => trip.pickupLocation && trip.deliveryLocation)
@@ -236,12 +348,39 @@ export default function AdminMapPage() {
         destination: trip.deliveryLocation,
         waypoints: trip.currentLocation ? [trip.currentLocation] : [],
         color: viewMode === 'historical' ? '#94a3b8' : '#2563eb',
-        data: trip,
+        tripId: trip.id,
       }));
   };
 
   const handleMarkerClick = (marker: MapMarker) => {
-    setSelectedItem(marker);
+    const tripId = marker.id.replace(/^(trip-pos-|trip-pickup-|trip-delivery-|hist-pickup-|hist-delivery-)/, '');
+    const vehicleId = marker.id.replace('vehicle-', '');
+
+    const trip = [...trips, ...historicalTrips].find(t => t.id === tripId);
+    const vehicle = vehicles.find(v => v.id === vehicleId);
+
+    if (trip) {
+      setSelectedItem({ ...marker, data: trip });
+    } else if (vehicle) {
+      setSelectedItem({ ...marker, data: vehicle });
+    } else {
+      setSelectedItem(marker);
+    }
+  };
+
+  const handleViewPlayback = (tripId: string) => {
+    setPlaybackTripId(tripId);
+    setShowPlayback(true);
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      carrier: '',
+      shipper: '',
+      status: '',
+      dateFrom: '',
+      dateTo: '',
+    });
   };
 
   if (loading) {
@@ -265,12 +404,20 @@ export default function AdminMapPage() {
             Global overview of all operations
           </p>
         </div>
-        <button
-          onClick={fetchMapData}
-          className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"
-        >
-          Refresh
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-sm">
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+            <span className="text-gray-500">
+              {isConnected ? 'Live' : 'Offline'}
+            </span>
+          </div>
+          <button
+            onClick={fetchMapData}
+            className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -327,16 +474,31 @@ export default function AdminMapPage() {
       {/* Filters (for historical view) */}
       {viewMode === 'historical' && (
         <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Carrier</label>
               <select
                 value={filters.carrier}
                 onChange={(e) => setFilters({ ...filters, carrier: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
               >
                 <option value="">All Carriers</option>
-                {/* Carrier options would be populated dynamically */}
+                {carriers.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Shipper</label>
+              <select
+                value={filters.shipper}
+                onChange={(e) => setFilters({ ...filters, shipper: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="">All Shippers</option>
+                {shippers.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
               </select>
             </div>
             <div>
@@ -345,7 +507,7 @@ export default function AdminMapPage() {
                 type="date"
                 value={filters.dateFrom}
                 onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
               />
             </div>
             <div>
@@ -354,14 +516,20 @@ export default function AdminMapPage() {
                 type="date"
                 value={filters.dateTo}
                 onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
               />
             </div>
             <div className="flex items-end">
-              <button className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
-                Apply Filters
+              <button
+                onClick={clearFilters}
+                className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Clear Filters
               </button>
             </div>
+          </div>
+          <div className="mt-2 text-sm text-gray-500">
+            Showing {filteredHistorical.length} of {historicalTrips.length} historical trips
           </div>
         </div>
       )}
@@ -375,55 +543,49 @@ export default function AdminMapPage() {
           autoFitBounds={true}
           showTraffic={viewMode === 'trips'}
           onMarkerClick={handleMarkerClick}
-          refreshInterval={30000}
+          refreshInterval={0}
         />
       </div>
 
       {/* Selected Item Details */}
       {selectedItem && (
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-gray-900">
-              {selectedItem.title}
-            </h3>
-            <button
-              onClick={() => setSelectedItem(null)}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              Close
-            </button>
-          </div>
-          <div className="text-sm text-gray-600 space-y-1">
-            {selectedItem.id.startsWith('vehicle-') && selectedItem.data ? (
-              <div className="grid grid-cols-2 gap-2">
-                <p><strong>Type:</strong> {(selectedItem.data as Vehicle).truckType}</p>
-                <p><strong>Status:</strong> {(selectedItem.data as Vehicle).status}</p>
-                <p><strong>GPS:</strong> {(selectedItem.data as Vehicle).gpsStatus}</p>
-                <p><strong>Carrier:</strong> {(selectedItem.data as Vehicle).carrier.name}</p>
-                {(selectedItem.data as Vehicle).currentLocation?.updatedAt && (
-                  <p className="col-span-2">
-                    <strong>Last Update:</strong>{' '}
-                    {new Date((selectedItem.data as Vehicle).currentLocation!.updatedAt).toLocaleString()}
-                  </p>
-                )}
-              </div>
-            ) : null}
+        <SelectedItemCard
+          selectedItem={selectedItem}
+          viewMode={viewMode}
+          onClose={() => setSelectedItem(null)}
+          onViewPlayback={handleViewPlayback}
+        />
+      )}
 
-            {selectedItem.id.startsWith('trip-') && selectedItem.data ? (
-              <div className="grid grid-cols-2 gap-2">
-                <p><strong>Load ID:</strong> {(selectedItem.data as Trip).loadId}</p>
-                <p><strong>Status:</strong> {(selectedItem.data as Trip).status}</p>
-                <p><strong>Truck:</strong> {(selectedItem.data as Trip).truck.plateNumber}</p>
-                <p><strong>Carrier:</strong> {(selectedItem.data as Trip).carrier.name}</p>
-                <p><strong>Shipper:</strong> {(selectedItem.data as Trip).shipper.name}</p>
-                {(selectedItem.data as Trip).startedAt && (
-                  <p>
-                    <strong>Started:</strong>{' '}
-                    {new Date((selectedItem.data as Trip).startedAt!).toLocaleString()}
-                  </p>
-                )}
+      {/* Historical Trips List (for historical view) */}
+      {viewMode === 'historical' && filteredHistorical.length > 0 && (
+        <div className="bg-white rounded-lg border border-gray-200">
+          <div className="p-4 border-b border-gray-200">
+            <h3 className="font-semibold text-gray-900">Historical Trips</h3>
+          </div>
+          <div className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
+            {filteredHistorical.map((trip) => (
+              <div
+                key={trip.id}
+                className="p-4 hover:bg-gray-50 cursor-pointer flex items-center justify-between"
+                onClick={() => handleViewPlayback(trip.id)}
+              >
+                <div>
+                  <div className="font-medium text-gray-900">
+                    {trip.truck.plateNumber} - {trip.carrier.name}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {trip.pickupLocation.address} → {trip.deliveryLocation.address}
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    Completed: {trip.completedAt ? new Date(trip.completedAt).toLocaleDateString() : 'N/A'}
+                  </div>
+                </div>
+                <button className="px-3 py-1 text-sm text-blue-600 bg-blue-50 rounded hover:bg-blue-100">
+                  Playback
+                </button>
               </div>
-            ) : null}
+            ))}
           </div>
         </div>
       )}
@@ -434,15 +596,19 @@ export default function AdminMapPage() {
         <div className="flex flex-wrap gap-4 text-sm">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-            <span className="text-gray-600">Available</span>
+            <span className="text-gray-600">GPS Active</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
             <span className="text-gray-600">In Transit</span>
           </div>
           <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-orange-500 rounded-full"></div>
+            <span className="text-gray-600">GPS Offline</span>
+          </div>
+          <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-gray-400 rounded-full"></div>
-            <span className="text-gray-600">Offline</span>
+            <span className="text-gray-600">No GPS</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-emerald-500 rounded"></div>
@@ -453,6 +619,107 @@ export default function AdminMapPage() {
             <span className="text-gray-600">Delivery</span>
           </div>
         </div>
+      </div>
+
+      {/* Trip History Playback Modal */}
+      {showPlayback && playbackTripId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Trip Playback</h2>
+              <button
+                onClick={() => {
+                  setShowPlayback(false);
+                  setPlaybackTripId(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                Close
+              </button>
+            </div>
+            <div className="p-4">
+              <TripHistoryPlayback
+                tripId={playbackTripId}
+                onClose={() => {
+                  setShowPlayback(false);
+                  setPlaybackTripId(null);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Helper component for selected item details
+function SelectedItemCard({
+  selectedItem,
+  viewMode,
+  onClose,
+  onViewPlayback,
+}: {
+  selectedItem: MapMarker;
+  viewMode: ViewMode;
+  onClose: () => void;
+  onViewPlayback: (id: string) => void;
+}) {
+  const isVehicle = selectedItem.id.startsWith('vehicle-');
+  const isTrip = selectedItem.id.includes('trip-') || selectedItem.id.includes('hist-');
+
+  const vehicle = isVehicle ? (selectedItem.data as Vehicle) : null;
+  const trip = isTrip ? (selectedItem.data as Trip) : null;
+
+  return (
+    <div className="bg-white p-4 rounded-lg border border-gray-200">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-semibold text-gray-900">{selectedItem.title}</h3>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          Close
+        </button>
+      </div>
+      <div className="text-sm text-gray-600 space-y-1">
+        {vehicle && (
+          <div className="grid grid-cols-2 gap-2">
+            <p><strong>Type:</strong> {vehicle.truckType}</p>
+            <p><strong>Status:</strong> {vehicle.status}</p>
+            <p><strong>GPS:</strong> {vehicle.gpsStatus}</p>
+            <p><strong>Carrier:</strong> {vehicle.carrier.name}</p>
+            {vehicle.currentLocation?.updatedAt && (
+              <p className="col-span-2">
+                <strong>Last Update:</strong>{' '}
+                {new Date(vehicle.currentLocation.updatedAt).toLocaleString()}
+              </p>
+            )}
+          </div>
+        )}
+
+        {trip && (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <p><strong>Load ID:</strong> {trip.loadId.slice(0, 8)}...</p>
+              <p><strong>Status:</strong> {trip.status}</p>
+              <p><strong>Truck:</strong> {trip.truck.plateNumber}</p>
+              <p><strong>Carrier:</strong> {trip.carrier.name}</p>
+              <p><strong>Shipper:</strong> {trip.shipper.name}</p>
+              {trip.startedAt && (
+                <p><strong>Started:</strong> {new Date(trip.startedAt).toLocaleString()}</p>
+              )}
+              {trip.completedAt && (
+                <p><strong>Completed:</strong> {new Date(trip.completedAt).toLocaleString()}</p>
+              )}
+            </div>
+            {viewMode === 'historical' && (
+              <button
+                onClick={() => onViewPlayback(trip.id)}
+                className="mt-3 w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+              >
+                View Playback
+              </button>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
