@@ -301,6 +301,35 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
+// Phase 2 - Story 16.9B: Company Admin Tools - Team Invitations
+model Invitation {
+  id              String           @id @default(cuid())
+  email           String
+  role            UserRole
+  status          InvitationStatus @default(PENDING)
+  token           String           @unique @default(cuid())
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  createdAt       DateTime         @default(now())
+
+  // Relations
+  organizationId  String
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedById     String?
+
+  @@index([email])
+  @@index([token])
+  @@index([organizationId])
+  @@map("invitations")
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+}
+
 model Organization {
   id                String           @id @default(cuid())
   name              String
@@ -358,6 +387,9 @@ model Organization {
   // SPRINT 18: LoadRequest - Carrier requests loads
   carrierLoadRequests  LoadRequest[]   @relation("CarrierLoadRequests")
   shipperLoadRequests  LoadRequest[]   @relation("ShipperLoadRequests")
+
+  // Phase 2 - Story 16.9B: Company Admin Tools
+  invitations          Invitation[]
 
   @@index([type])
   @@index([isVerified])

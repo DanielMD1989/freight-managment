@@ -13,6 +13,7 @@ const updateOrganizationSchema = z.object({
   city: z.string().optional(),
   licenseNumber: z.string().optional(),
   taxId: z.string().optional(),
+  allowNameDisplay: z.boolean().optional(), // Phase 2: Privacy setting
 });
 
 // GET /api/organizations/[id]
