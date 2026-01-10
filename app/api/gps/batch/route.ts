@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { broadcastGpsPosition } from '@/lib/websocket-server';
 import { z } from 'zod';
 
 const positionSchema = z.object({
@@ -130,6 +131,22 @@ export async function POST(request: NextRequest) {
         gpsStatus: 'ACTIVE',
       },
     });
+
+    // Broadcast the latest position via WebSocket
+    await broadcastGpsPosition(
+      data.truckId,
+      activeLoad?.id || null,
+      user.organizationId,
+      {
+        truckId: data.truckId,
+        loadId: activeLoad?.id,
+        lat: latestPosition.latitude,
+        lng: latestPosition.longitude,
+        speed: latestPosition.speed,
+        heading: latestPosition.heading,
+        timestamp: latestPosition.timestamp,
+      }
+    );
 
     return NextResponse.json({
       success: true,

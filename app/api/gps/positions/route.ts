@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
+import { broadcastGpsPosition } from "@/lib/websocket-server";
 
 // GET /api/gps/positions - Get latest GPS positions
 export async function GET(request: NextRequest) {
@@ -99,10 +100,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find GPS device
+    // Find GPS device with truck and carrier info
     const device = await db.gpsDevice.findUnique({
       where: { imei },
-      select: { id: true, truck: { select: { id: true } } },
+      select: {
+        id: true,
+        truck: {
+          select: {
+            id: true,
+            carrierId: true,
+          },
+        },
+      },
     });
 
     if (!device) {
@@ -119,17 +128,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const truckId = device.truck.id;
+    const carrierId = device.truck.carrierId;
+    const positionTimestamp = timestamp ? new Date(timestamp) : new Date();
+
+    // Find active load for this truck
+    const activeLoad = await db.load.findFirst({
+      where: {
+        assignedTruckId: truckId,
+        status: "IN_TRANSIT",
+      },
+      select: { id: true },
+    });
+
     // Create GPS position
     const position = await db.gpsPosition.create({
       data: {
         deviceId: device.id,
-        truckId: device.truck.id,
+        truckId,
         latitude,
         longitude,
         speed: speed || null,
         heading: heading || null,
         altitude: altitude || null,
-        timestamp: timestamp ? new Date(timestamp) : new Date(),
+        timestamp: positionTimestamp,
+        loadId: activeLoad?.id || null,
       },
     });
 
@@ -137,6 +160,29 @@ export async function POST(request: NextRequest) {
     await db.gpsDevice.update({
       where: { id: device.id },
       data: { lastSeenAt: new Date() },
+    });
+
+    // Update truck's current location
+    await db.truck.update({
+      where: { id: truckId },
+      data: {
+        currentLocationLat: latitude,
+        currentLocationLon: longitude,
+        locationUpdatedAt: positionTimestamp,
+        gpsLastSeenAt: new Date(),
+        gpsStatus: "ACTIVE",
+      },
+    });
+
+    // Broadcast the position via WebSocket for real-time updates
+    await broadcastGpsPosition(truckId, activeLoad?.id || null, carrierId, {
+      truckId,
+      loadId: activeLoad?.id,
+      lat: latitude,
+      lng: longitude,
+      speed: speed || undefined,
+      heading: heading || undefined,
+      timestamp: positionTimestamp.toISOString(),
     });
 
     return NextResponse.json({ position }, { status: 201 });
