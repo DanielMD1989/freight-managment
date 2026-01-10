@@ -15,6 +15,7 @@ export { default as DatTableSkeleton } from './DatTableSkeleton';
 // Search & Filtering
 export { default as DatFilterPanel } from './DatFilterPanel';
 export { default as DatSavedSearches } from './DatSavedSearches';
+export { default as DatEditSearchModal } from './DatEditSearchModal';
 
 // Editing & Input
 export { default as DatInlineEdit } from './DatInlineEdit';

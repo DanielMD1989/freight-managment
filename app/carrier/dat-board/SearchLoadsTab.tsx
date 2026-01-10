@@ -8,8 +8,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { DatStatusTabs, DatAgeIndicator, DatSavedSearches } from '@/components/dat-ui';
-import { DatStatusTab } from '@/types/dat-ui';
+import { DatStatusTabs, DatAgeIndicator, DatSavedSearches, DatEditSearchModal } from '@/components/dat-ui';
+import { DatStatusTab, SavedSearch, SavedSearchCriteria } from '@/types/dat-ui';
 
 interface SearchLoadsTabProps {
   user: any;
@@ -31,6 +31,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
   const [savedSearches, setSavedSearches] = useState<any[]>([]);
   const [activeSavedSearchId, setActiveSavedSearchId] = useState<string | null>(null);
   const [loadingSavedSearches, setLoadingSavedSearches] = useState(false);
+  const [editingSearch, setEditingSearch] = useState<SavedSearch | null>(null);
 
   // Search form state
   const [filterValues, setFilterValues] = useState<Record<string, any>>({
@@ -155,16 +156,19 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
   };
 
   /**
-   * Edit a saved search (placeholder)
+   * Edit a saved search - open modal
    */
   const handleEditSavedSearch = (searchId: string) => {
     const search = savedSearches.find((s) => s.id === searchId);
     if (!search) return;
+    setEditingSearch(search);
+  };
 
-    const newName = prompt('Enter new name for this search:', search.name);
-    if (!newName || newName === search.name) return;
-
-    updateSavedSearch(searchId, { name: newName });
+  /**
+   * Handle saving edited search from modal
+   */
+  const handleSaveEditedSearch = async (id: string, updates: { name?: string; criteria?: SavedSearchCriteria }) => {
+    await updateSavedSearch(id, updates);
   };
 
   /**
@@ -686,6 +690,16 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
           )}
         </div>
       </div>
+
+      {/* Edit Search Modal */}
+      <DatEditSearchModal
+        search={editingSearch}
+        isOpen={!!editingSearch}
+        onClose={() => setEditingSearch(null)}
+        onSave={handleSaveEditedSearch}
+        cities={ethiopianCities.map((city) => ({ name: city.name, region: city.region }))}
+        type="LOADS"
+      />
     </div>
   );
 }

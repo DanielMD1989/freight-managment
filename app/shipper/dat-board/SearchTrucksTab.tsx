@@ -17,8 +17,9 @@ import {
   DatFilterPanel,
   DatCompanyLink,
   DatCompanyModal,
+  DatEditSearchModal,
 } from '@/components/dat-ui';
-import { DatColumn, DatStatusTab, DatFilter, DatRowAction } from '@/types/dat-ui';
+import { DatColumn, DatStatusTab, DatFilter, DatRowAction, SavedSearch, SavedSearchCriteria } from '@/types/dat-ui';
 import TruckBookingModal from './TruckBookingModal';
 
 interface SearchTrucksTabProps {
@@ -43,6 +44,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   const [loadingCities, setLoadingCities] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedTruckPosting, setSelectedTruckPosting] = useState<any>(null);
+  const [editingSearch, setEditingSearch] = useState<SavedSearch | null>(null);
 
   /**
    * Fetch trucks based on filters
@@ -184,10 +186,32 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   };
 
   /**
-   * Handle saved search edit
+   * Handle saved search edit - open modal
    */
   const handleEditSearch = (searchId: string) => {
-    alert(`Edit search modal coming soon for search ${searchId}`);
+    const search = savedSearches.find((s) => s.id === searchId);
+    if (!search) return;
+    setEditingSearch(search);
+  };
+
+  /**
+   * Handle saving edited search from modal
+   */
+  const handleSaveEditedSearch = async (id: string, updates: { name?: string; criteria?: SavedSearchCriteria }) => {
+    try {
+      const response = await fetch(`/api/saved-searches/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+
+      if (!response.ok) throw new Error('Failed to update search');
+
+      fetchSavedSearches();
+    } catch (error) {
+      console.error('Update search error:', error);
+      throw error;
+    }
   };
 
   /**
@@ -754,6 +778,16 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
           setSelectedTruckPosting(null);
         }}
         truckPosting={selectedTruckPosting}
+      />
+
+      {/* Edit Search Modal */}
+      <DatEditSearchModal
+        search={editingSearch}
+        isOpen={!!editingSearch}
+        onClose={() => setEditingSearch(null)}
+        onSave={handleSaveEditedSearch}
+        cities={ethiopianCities.map((city) => ({ name: city.name, region: city.region }))}
+        type="TRUCKS"
       />
     </div>
   );
