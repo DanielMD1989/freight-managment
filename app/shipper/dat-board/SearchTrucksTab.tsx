@@ -19,6 +19,7 @@ import {
   DatCompanyModal,
 } from '@/components/dat-ui';
 import { DatColumn, DatStatusTab, DatFilter, DatRowAction } from '@/types/dat-ui';
+import TruckBookingModal from './TruckBookingModal';
 
 interface SearchTrucksTabProps {
   user: any;
@@ -40,6 +41,8 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   const [showSearchForm, setShowSearchForm] = useState(false);
   const [ethiopianCities, setEthiopianCities] = useState<any[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [selectedTruckPosting, setSelectedTruckPosting] = useState<any>(null);
 
   /**
    * Fetch trucks based on filters
@@ -433,7 +436,10 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
       key: 'book',
       label: 'BOOK',
       variant: 'secondary',
-      onClick: (row) => alert(`Book truck ${row.id}`),
+      onClick: (row) => {
+        setSelectedTruckPosting(row);
+        setShowBookingModal(true);
+      },
     },
   ];
 
@@ -740,6 +746,15 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
         />
       )}
 
+      {/* Truck Booking Modal */}
+      <TruckBookingModal
+        isOpen={showBookingModal}
+        onClose={() => {
+          setShowBookingModal(false);
+          setSelectedTruckPosting(null);
+        }}
+        truckPosting={selectedTruckPosting}
+      />
     </div>
   );
 }
