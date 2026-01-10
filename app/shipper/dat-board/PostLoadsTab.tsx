@@ -545,13 +545,13 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
   ];
 
   return (
-    <div className="space-y-4 bg-gray-100 p-4">
+    <div className="space-y-4">
       {/* Header: NEW LOAD POST (left) and Status Tabs (right) */}
       <div className="flex items-center justify-between mb-4">
         {/* Left: NEW LOAD POST Button */}
         <button
           onClick={() => setShowNewLoadModal(!showNewLoadModal)}
-          className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors font-medium text-sm"
+          className="px-5 py-2.5 bg-[#064d51] text-white rounded-lg hover:bg-[#053d40] transition-colors font-semibold text-sm shadow-md"
         >
           + NEW LOAD POST
         </button>
@@ -562,10 +562,10 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
             <button
               key={tab.key}
               onClick={() => setActiveStatus(tab.key as LoadStatus)}
-              className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                 activeStatus === tab.key
-                  ? 'bg-gray-600 text-white'
-                  : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                  ? 'bg-[#064d51] text-white shadow-md'
+                  : 'bg-white text-[#064d51] hover:bg-[#064d51]/10 border border-[#064d51]/20'
               }`}
             >
               {tab.label.toUpperCase()} {tab.count !== undefined ? tab.count : ''}
@@ -575,13 +575,13 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       </div>
 
       {/* Table Structure */}
-      <div className="bg-white border border-gray-300 rounded overflow-visible relative">
-        {/* Table Header - Gray Background */}
-        <div className="bg-gray-300 grid grid-cols-12 gap-2 px-4 py-2 border-b border-gray-400 text-xs font-semibold text-gray-700 relative">
+      <div className="bg-white border border-[#064d51]/20 rounded-xl overflow-visible relative shadow-sm">
+        {/* Table Header - Teal Gradient */}
+        <div className="bg-gradient-to-r from-[#064d51] to-[#1e9c99] grid grid-cols-12 gap-2 px-4 py-3 rounded-t-xl text-xs font-semibold text-white relative">
           <div className="flex items-center gap-1 relative">
             <button
               onClick={() => setShowActionsMenu(!showActionsMenu)}
-              className="flex items-center gap-1 hover:bg-gray-400 px-1 py-0.5 rounded"
+              className="flex items-center gap-1 hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
             >
               <span>☐</span>
               <span>=</span>
@@ -599,7 +599,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
                 {/* Dropdown Menu */}
                 <div
-                  className="absolute top-full left-0 mt-1 bg-white border border-gray-400 rounded shadow-xl w-48"
+                  className="absolute top-full left-0 mt-1 bg-white border border-[#064d51]/20 rounded-lg shadow-xl w-48"
                   style={{ zIndex: 9999 }}
                 >
                   <button
@@ -607,7 +607,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       // Handle refresh action
                       setShowActionsMenu(false);
                     }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm border-b border-gray-200"
+                    className="w-full text-left px-4 py-2.5 hover:bg-[#064d51]/5 flex items-center gap-2 text-sm text-[#064d51] border-b border-[#064d51]/10 transition-colors"
                   >
                     <span>🔄</span> REFRESH
                   </button>
@@ -616,7 +616,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       // Handle rollover action
                       setShowActionsMenu(false);
                     }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm border-b border-gray-200"
+                    className="w-full text-left px-4 py-2.5 hover:bg-[#064d51]/5 flex items-center gap-2 text-sm text-[#064d51] border-b border-[#064d51]/10 transition-colors"
                   >
                     <span>📋</span> ROLLOVER
                   </button>
@@ -625,7 +625,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       // Handle cancel rollover action
                       setShowActionsMenu(false);
                     }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm border-b border-gray-200"
+                    className="w-full text-left px-4 py-2.5 hover:bg-[#064d51]/5 flex items-center gap-2 text-sm text-[#064d51] border-b border-[#064d51]/10 transition-colors"
                   >
                     CANCEL ROLLOVER
                   </button>
@@ -634,7 +634,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       // Handle delete action
                       setShowActionsMenu(false);
                     }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm border-b border-gray-200"
+                    className="w-full text-left px-4 py-2.5 hover:bg-red-50 flex items-center gap-2 text-sm text-red-600 border-b border-[#064d51]/10 transition-colors"
                   >
                     <span>🗑️</span> DELETE
                   </button>
@@ -643,7 +643,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       // Handle unpost action
                       setShowActionsMenu(false);
                     }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm border-b border-gray-200"
+                    className="w-full text-left px-4 py-2.5 hover:bg-[#064d51]/5 flex items-center gap-2 text-sm text-[#064d51] border-b border-[#064d51]/10 transition-colors"
                   >
                     UNPOST
                   </button>
@@ -652,7 +652,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       // Handle keep action
                       setShowActionsMenu(false);
                     }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm border-b border-gray-200"
+                    className="w-full text-left px-4 py-2.5 hover:bg-[#064d51]/5 flex items-center gap-2 text-sm text-[#064d51] border-b border-[#064d51]/10 transition-colors"
                   >
                     <span>⭐</span> KEEP
                   </button>
@@ -661,7 +661,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       // Handle unkeep action
                       setShowActionsMenu(false);
                     }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm"
+                    className="w-full text-left px-4 py-2.5 hover:bg-[#064d51]/5 flex items-center gap-2 text-sm text-[#064d51] transition-colors"
                   >
                     UNKEEP
                   </button>
@@ -670,67 +670,67 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
             )}
           </div>
           <div
-            className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
             onClick={() => handleHeaderClick('createdAt')}
           >
             Age {sortField === 'createdAt' && (sortOrder === 'asc' ? '↑' : '↓')}
           </div>
           <div
-            className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
             onClick={() => handleHeaderClick('status')}
           >
             Status {sortField === 'status' && (sortOrder === 'asc' ? '↑' : '↓')}
           </div>
           <div
-            className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
             onClick={() => handleHeaderClick('pickupDate')}
           >
             Pickup {sortField === 'pickupDate' && (sortOrder === 'asc' ? '↑' : '↓')}
           </div>
           <div
-            className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
             onClick={() => handleHeaderClick('pickupCity')}
           >
             Origin {sortField === 'pickupCity' && (sortOrder === 'asc' ? '↑' : '↓')}
           </div>
           <div
-            className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
             onClick={() => handleHeaderClick('deliveryCity')}
           >
             Destination {sortField === 'deliveryCity' && (sortOrder === 'asc' ? '↑' : '↓')}
           </div>
           <div
-            className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
             onClick={() => handleHeaderClick('pickupDockHours')}
           >
             Dock Hours {sortField === 'pickupDockHours' && (sortOrder === 'asc' ? '↑' : '↓')}
           </div>
           <div
-            className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
             onClick={() => handleHeaderClick('truckType')}
           >
             Truck {sortField === 'truckType' && (sortOrder === 'asc' ? '↑' : '↓')}
           </div>
           <div
-            className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
             onClick={() => handleHeaderClick('fullPartial')}
           >
             F/P {sortField === 'fullPartial' && (sortOrder === 'asc' ? '↑' : '↓')}
           </div>
           <div
-            className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
             onClick={() => handleHeaderClick('lengthM')}
           >
             Length {sortField === 'lengthM' && (sortOrder === 'asc' ? '↑' : '↓')}
           </div>
           <div
-            className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
             onClick={() => handleHeaderClick('weight')}
           >
             Weight {sortField === 'weight' && (sortOrder === 'asc' ? '↑' : '↓')}
           </div>
           <div
-            className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
             onClick={() => handleHeaderClick('shipperContactPhone')}
           >
             Contact {sortField === 'shipperContactPhone' && (sortOrder === 'asc' ? '↑' : '↓')}
@@ -740,7 +740,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
         {/* NEW POST FORM - Expands under header */}
         {showNewLoadModal && (
           <form onSubmit={handleSubmitNewLoad}>
-          <div className="border-b border-gray-400 p-4" style={{ backgroundColor: '#F3F2F2' }}>
+          <div className="border-b border-[#064d51]/20 p-4" style={{ backgroundColor: '#f0fdfa' }}>
             {/* Form Fields Row - Skip Age and Status columns */}
             <div className="grid grid-cols-12 gap-2 mb-4">
               <div className="flex items-center gap-1 pt-5">
@@ -972,14 +972,14 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="flex-1 px-6 py-2 bg-cyan-400 text-white font-medium rounded hover:bg-cyan-500 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    className="flex-1 px-6 py-2.5 bg-[#064d51] text-white font-semibold rounded-lg hover:bg-[#053d40] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed shadow-md"
                   >
                     {submitting ? 'POSTING...' : '+ POST'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowNewLoadModal(false)}
-                    className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800 transition-colors font-bold"
+                    className="px-4 py-2.5 bg-[#064d51]/10 text-[#064d51] rounded-lg hover:bg-[#064d51]/20 transition-colors font-bold border border-[#064d51]/20"
                   >
                     ✕
                   </button>
@@ -1000,7 +1000,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
             <div key={load.id}>
               {/* Load Row - Clickable */}
               <div
-                className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-gray-200 hover:bg-gray-50 cursor-pointer text-xs"
+                className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-[#064d51]/10 hover:bg-[#064d51]/5 cursor-pointer text-xs transition-colors"
                 style={{ color: '#2B2727' }}
                 onClick={() => {
                   if (expandedLoadId === load.id) {
@@ -1029,10 +1029,10 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                 <div><DatAgeIndicator date={load.createdAt} /></div>
                 <div>
                   <span className={`
-                    px-2 py-0.5 rounded text-xs font-bold uppercase
-                    ${load.status === 'POSTED' ? 'bg-green-500 text-white' : ''}
-                    ${load.status === 'UNPOSTED' ? 'bg-gray-300 text-gray-700' : ''}
-                    ${load.status === 'EXPIRED' ? 'bg-red-500 text-white' : ''}
+                    px-2.5 py-1 rounded-md text-xs font-bold uppercase
+                    ${load.status === 'POSTED' ? 'bg-emerald-500 text-white' : ''}
+                    ${load.status === 'UNPOSTED' ? 'bg-[#064d51]/10 text-[#064d51]' : ''}
+                    ${load.status === 'EXPIRED' ? 'bg-rose-500 text-white' : ''}
                   `}>
                     {load.status}
                   </span>
@@ -1052,7 +1052,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
               {expandedLoadId === load.id && editingLoad?.id === load.id && (
                 /* INLINE EDIT FORM - Exact copy of new load form */
                 <form onSubmit={handleSubmitEditLoad}>
-                  <div className="border border-gray-400 p-4" style={{ backgroundColor: '#F3F2F2' }}>
+                  <div className="border border-[#064d51]/20 p-4 rounded-b-lg" style={{ backgroundColor: '#f0fdfa' }}>
                     {/* Form Fields Row */}
                     <div className="grid grid-cols-12 gap-2 mb-4">
                       <div className="flex items-center gap-1 pt-5">
@@ -1214,7 +1214,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                           <button
                             type="submit"
                             disabled={submitting}
-                            className="flex-1 px-6 py-2 bg-cyan-400 text-white font-medium rounded hover:bg-cyan-500 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                            className="flex-1 px-6 py-2.5 bg-[#064d51] text-white font-semibold rounded-lg hover:bg-[#053d40] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed shadow-md"
                           >
                             {submitting ? 'SAVING...' : 'SAVE'}
                           </button>
@@ -1224,7 +1224,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                               setEditingLoad(null);
                               setExpandedLoadId(null);
                             }}
-                            className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800 transition-colors font-bold"
+                            className="px-4 py-2.5 bg-[#064d51]/10 text-[#064d51] rounded-lg hover:bg-[#064d51]/20 transition-colors font-bold border border-[#064d51]/20"
                           >
                             ✕
                           </button>
@@ -1237,7 +1237,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
               {/* Expanded Details - Shows when clicked but not editing */}
               {expandedLoadId === load.id && (!editingLoad || editingLoad.id !== load.id) && (
-                <div className="border border-gray-400 p-4" style={{ backgroundColor: '#F3F2F2' }}>
+                <div className="border border-[#064d51]/20 p-4 rounded-b-lg" style={{ backgroundColor: '#f0fdfa' }}>
                   <div className="grid grid-cols-2 gap-4 text-sm mb-4">
                     <div>
                       <div className="font-medium mb-1" style={{ color: '#2B2727' }}>Commodity</div>
@@ -1251,8 +1251,8 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
                   {/* Sprint 16: Pricing Breakdown */}
                   {load.baseFareEtb && load.perKmEtb && load.tripKm && (
-                    <div className="mb-4 p-3 bg-cyan-50 border-2 border-cyan-400 rounded">
-                      <div className="font-semibold mb-2 text-sm" style={{ color: '#00BCD4' }}>
+                    <div className="mb-4 p-3 bg-[#064d51]/5 border-2 border-[#1e9c99] rounded-lg">
+                      <div className="font-semibold mb-2 text-sm" style={{ color: '#1e9c99' }}>
                         💰 PRICING BREAKDOWN
                       </div>
                       <div className="grid grid-cols-4 gap-3 text-xs">
@@ -1276,12 +1276,12 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                         </div>
                         <div>
                           <div className="text-gray-600 mb-1">Total Fare</div>
-                          <div className="font-bold text-lg" style={{ color: '#00BCD4' }}>
+                          <div className="font-bold text-lg" style={{ color: '#1e9c99' }}>
                             {load.totalFareEtb?.toLocaleString() || load.rate?.toLocaleString()} ETB
                           </div>
                         </div>
                       </div>
-                      <div className="mt-2 pt-2 border-t border-cyan-300 grid grid-cols-2 gap-3 text-xs">
+                      <div className="mt-2 pt-2 border-t border-[#1e9c99]/30 grid grid-cols-2 gap-3 text-xs">
                         <div>
                           <span className="text-gray-600">Revenue Per KM (RPK):</span>
                           <span className="font-semibold ml-2" style={{ color: '#2B2727' }}>
@@ -1296,7 +1296,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                         </div>
                       </div>
                       {load.dhToOriginKm && load.dhAfterDeliveryKm && (
-                        <div className="mt-2 pt-2 border-t border-cyan-300 text-xs">
+                        <div className="mt-2 pt-2 border-t border-[#1e9c99]/30 text-xs">
                           <div className="text-gray-600 mb-1">Including Deadhead:</div>
                           <div className="grid grid-cols-3 gap-3">
                             <div>
@@ -1409,7 +1409,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                         e.stopPropagation();
                         handleCopy(load);
                       }}
-                      className="px-4 py-2 bg-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-400 transition-colors"
+                      className="px-4 py-2 bg-[#064d51]/10 text-[#064d51] text-sm font-semibold rounded-lg hover:bg-[#064d51]/20 transition-colors border border-[#064d51]/20"
                     >
                       COPY
                     </button>
@@ -1418,7 +1418,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                         e.stopPropagation();
                         handleEdit(load);
                       }}
-                      className="px-4 py-2 bg-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-400 transition-colors"
+                      className="px-4 py-2 bg-[#1e9c99] text-white text-sm font-semibold rounded-lg hover:bg-[#178f8c] transition-colors"
                     >
                       EDIT
                     </button>
@@ -1427,7 +1427,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                         e.stopPropagation();
                         handleDelete(load);
                       }}
-                      className="px-4 py-2 bg-red-500 text-white text-sm font-medium rounded hover:bg-red-600 transition-colors"
+                      className="px-4 py-2 bg-rose-500 text-white text-sm font-semibold rounded-lg hover:bg-rose-600 transition-colors"
                     >
                       DELETE
                     </button>
@@ -1436,11 +1436,11 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                         e.stopPropagation();
                         handleSearchTrucks(load);
                       }}
-                      className="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded hover:bg-gray-600 transition-colors flex items-center gap-2"
+                      className="px-4 py-2 bg-[#064d51] text-white text-sm font-semibold rounded-lg hover:bg-[#053d40] transition-colors flex items-center gap-2"
                       title="Search for matching trucks"
                     >
                       <span>🔍</span>
-                      <span className="bg-white text-blue-500 px-2 py-0.5 rounded-full text-xs font-bold">
+                      <span className="bg-white text-[#064d51] px-2 py-0.5 rounded-full text-xs font-bold">
                         {load.matchCount || 0}
                       </span>
                     </button>

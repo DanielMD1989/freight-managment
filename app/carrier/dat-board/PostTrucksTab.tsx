@@ -763,11 +763,11 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       width: '100px',
       render: (value) => (
         <span className={`
-          px-2 py-1 rounded text-xs font-medium
-          ${value === 'ACTIVE' ? 'bg-green-100 text-green-800' : ''}
-          ${value === 'POSTED' ? 'bg-green-100 text-green-800' : ''}
-          ${value === 'UNPOSTED' ? 'bg-gray-100 text-gray-800' : ''}
-          ${value === 'EXPIRED' ? 'bg-red-100 text-red-800' : ''}
+          px-2 py-1 rounded text-xs font-semibold
+          ${value === 'ACTIVE' ? 'bg-emerald-500 text-white' : ''}
+          ${value === 'POSTED' ? 'bg-emerald-500 text-white' : ''}
+          ${value === 'UNPOSTED' ? 'bg-[#064d51]/10 text-[#064d51]' : ''}
+          ${value === 'EXPIRED' ? 'bg-rose-500 text-white' : ''}
         `}>
           {value}
         </span>
@@ -902,7 +902,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       render: (value, row) => (
         <span className={`
           px-2 py-1 rounded text-xs font-bold
-          ${value > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}
+          ${value > 0 ? 'bg-emerald-500 text-white' : 'bg-[#064d51]/10 text-[#064d51]'}
         `}>
           {value || 0}
         </span>
@@ -928,27 +928,27 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                 e.stopPropagation();
                 handleEdit(row);
               }}
-              className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded hover:bg-blue-700 transition-all"
+              className="px-4 py-1.5 bg-[#1e9c99] text-white text-xs font-semibold rounded-lg hover:bg-[#178f8c] transition-all"
             >
-              ✏️ Edit
+              EDIT
             </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleCopy(row);
               }}
-              className="px-4 py-1.5 bg-slate-600 text-white text-xs font-semibold rounded hover:bg-slate-700 transition-all"
+              className="px-4 py-1.5 bg-[#064d51]/10 text-[#064d51] text-xs font-semibold rounded-lg hover:bg-[#064d51]/20 transition-all border border-[#064d51]/20"
             >
-              📋 Copy
+              COPY
             </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleDelete(row);
               }}
-              className="px-4 py-1.5 bg-red-600 text-white text-xs font-semibold rounded hover:bg-red-700 transition-all"
+              className="px-4 py-1.5 bg-rose-500 text-white text-xs font-semibold rounded-lg hover:bg-rose-600 transition-all"
             >
-              🗑️ Delete
+              DELETE
             </button>
           </div>
         );
@@ -1076,7 +1076,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
             e.stopPropagation();
             handleOpenRequestModal(row);
           }}
-          className="px-3 py-1.5 bg-lime-500 text-white text-xs font-bold rounded hover:bg-lime-600 transition-colors whitespace-nowrap"
+          className="px-3 py-1.5 bg-[#064d51] text-white text-xs font-bold rounded-lg hover:bg-[#053d40] transition-colors whitespace-nowrap"
         >
           REQUEST LOAD
         </button>
@@ -1279,15 +1279,15 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       <div className="flex items-center gap-2">
         <button
           onClick={() => setShowNewTruckForm(!showNewTruckForm)}
-          className="flex items-center gap-2 px-4 py-2 bg-lime-500 text-white text-sm font-bold rounded hover:bg-lime-600 transition-colors"
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#064d51] text-white text-sm font-bold rounded-lg hover:bg-[#053d40] transition-colors shadow-md"
         >
-          NEW TRUCK POST
+          + NEW TRUCK POST
         </button>
       </div>
 
       {/* New Truck Posting Form - Clean Organized Layout */}
       {showNewTruckForm && (
-        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg shadow-sm p-6 mb-4">
+        <div className="bg-white dark:bg-slate-900 border border-[#064d51]/20 rounded-xl shadow-sm p-6 mb-4" style={{ backgroundColor: '#f0fdfa' }}>
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               Create New Truck Posting
@@ -1557,14 +1557,14 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
               <div className="flex gap-3 justify-end">
                 <button
                   onClick={() => setShowNewTruckForm(false)}
-                  className="px-6 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 font-medium transition-colors"
+                  className="px-6 py-2 border border-[#064d51]/30 text-[#064d51] rounded-lg hover:bg-[#064d51]/5 font-medium transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handlePostTruck}
                   disabled={!newTruckForm.truckId || !newTruckForm.origin || !newTruckForm.availableFrom || !newTruckForm.contactPhone}
-                  className="px-6 py-2 bg-lime-500 text-white rounded-lg hover:bg-lime-600 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 bg-[#064d51] text-white rounded-lg hover:bg-[#053d40] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Post Truck
                 </button>
@@ -1582,10 +1582,10 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       />
 
       {/* Truck Posts Table */}
-      <div className="bg-white rounded-lg overflow-hidden mb-4">
+      <div className="bg-white rounded-xl overflow-hidden mb-4 border border-[#064d51]/20 shadow-sm">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-          <h3 className="text-lg font-bold text-gray-800">
+        <div className="px-4 py-3 bg-gradient-to-r from-[#064d51] to-[#1e9c99]">
+          <h3 className="text-lg font-bold text-white">
             {trucks.length} POSTED TRUCKS
           </h3>
         </div>
@@ -1855,11 +1855,11 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       </div>
 
       {/* Matching Loads Section */}
-      <div className="bg-white rounded-lg p-4 mt-32">
+      <div className="bg-white rounded-xl p-4 mt-32 border border-[#064d51]/20 shadow-sm">
         {/* Header with Total Count and Tabs */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <h3 className="text-lg font-bold text-lime-600">
+            <h3 className="text-lg font-bold text-[#064d51]">
               {filteredMatchingLoads.length} MATCHING LOADS
               {selectedTruckId && (
                 <span className="ml-2 text-blue-600 font-normal text-sm">
@@ -1885,30 +1885,30 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
           <div className="flex gap-2">
             <button
               onClick={() => setActiveLoadTab('all')}
-              className={`px-4 py-1.5 text-xs font-bold rounded transition-colors ${
+              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-colors ${
                 activeLoadTab === 'all'
-                  ? 'bg-gray-700 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  ? 'bg-[#064d51] text-white'
+                  : 'bg-white text-[#064d51] hover:bg-[#064d51]/10 border border-[#064d51]/20'
               }`}
             >
               ALL
             </button>
             <button
               onClick={() => setActiveLoadTab('preferred')}
-              className={`px-4 py-1.5 text-xs font-bold rounded transition-colors ${
+              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-colors ${
                 activeLoadTab === 'preferred'
-                  ? 'bg-gray-700 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  ? 'bg-[#064d51] text-white'
+                  : 'bg-white text-[#064d51] hover:bg-[#064d51]/10 border border-[#064d51]/20'
               }`}
             >
               PREFERRED
             </button>
             <button
               onClick={() => setActiveLoadTab('blocked')}
-              className={`px-4 py-1.5 text-xs font-bold rounded transition-colors ${
+              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-colors ${
                 activeLoadTab === 'blocked'
-                  ? 'bg-gray-700 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  ? 'bg-[#064d51] text-white'
+                  : 'bg-white text-[#064d51] hover:bg-[#064d51]/10 border border-[#064d51]/20'
               }`}
             >
               BLOCKED
@@ -1929,13 +1929,13 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       {/* Sprint 18: Load Request Modal */}
       {requestModalOpen && selectedLoadForRequest && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 border border-[#064d51]/20">
+            <h3 className="text-lg font-semibold text-[#064d51] mb-4">
               Request Load
             </h3>
 
             {/* Load Summary */}
-            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="bg-[#f0fdfa] rounded-lg p-4 mb-4 border border-[#064d51]/10">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <div className="text-gray-500">Route</div>
@@ -1966,13 +1966,13 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
             {/* Truck Selection */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#064d51] mb-2">
                 Select Truck *
               </label>
               <select
                 value={selectedTruckForRequest}
                 onChange={(e) => setSelectedTruckForRequest(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-transparent"
               >
                 <option value="">Select a truck...</option>
                 {getApprovedPostedTrucks().map((posting) => (
@@ -1990,7 +1990,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
             {/* Proposed Rate (Optional) */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#064d51] mb-2">
                 Proposed Rate (ETB) <span className="text-gray-400">(Optional)</span>
               </label>
               <input
@@ -1998,13 +1998,13 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                 value={requestProposedRate}
                 onChange={(e) => setRequestProposedRate(e.target.value)}
                 placeholder="Leave blank to accept posted rate"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-transparent"
               />
             </div>
 
             {/* Notes */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#064d51] mb-2">
                 Message to Shipper <span className="text-gray-400">(Optional)</span>
               </label>
               <textarea
@@ -2013,7 +2013,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                 placeholder="Add any notes or special requirements..."
                 rows={3}
                 maxLength={500}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-transparent resize-none"
+                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-transparent resize-none"
               />
               <p className="text-xs text-gray-500 mt-1">{requestNotes.length}/500</p>
             </div>
@@ -2026,14 +2026,14 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                   setSelectedLoadForRequest(null);
                 }}
                 disabled={submittingRequest}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium disabled:opacity-50"
+                className="flex-1 px-4 py-2 border border-[#064d51]/30 text-[#064d51] rounded-lg hover:bg-[#064d51]/5 font-medium disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmitLoadRequest}
                 disabled={submittingRequest || !selectedTruckForRequest}
-                className="flex-1 px-4 py-2 bg-lime-500 text-white rounded-lg hover:bg-lime-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 bg-[#064d51] text-white rounded-lg hover:bg-[#053d40] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submittingRequest ? 'Sending...' : 'Send Request'}
               </button>

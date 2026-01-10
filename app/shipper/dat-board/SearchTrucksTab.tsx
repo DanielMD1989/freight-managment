@@ -450,7 +450,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
         {/* NEW TRUCK SEARCH Button */}
         <button
           onClick={() => setShowSearchForm(!showSearchForm)}
-          className="px-6 py-3 bg-lime-500 text-white font-bold text-sm rounded hover:bg-lime-600 transition-colors shadow-md flex items-center gap-2"
+          className="px-6 py-3 bg-[#064d51] text-white font-bold text-sm rounded-lg hover:bg-[#053d40] transition-colors shadow-md flex items-center gap-2"
         >
           <span className="text-lg">🚛</span>
           {showSearchForm ? 'HIDE SEARCH' : 'NEW TRUCK SEARCH'}
@@ -458,9 +458,9 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
 
         {/* Inline Search Form - Only show when toggled */}
         {showSearchForm && (
-        <div className="bg-white border border-gray-400 rounded shadow-sm">
+        <div className="bg-white border border-[#064d51]/20 rounded-xl shadow-sm overflow-hidden">
           {/* Header Row - DH-O and DH-D hidden from shipper */}
-          <div className="grid grid-cols-10 gap-2 px-4 py-2 text-xs font-semibold text-gray-700 bg-gray-200 border-b border-gray-400">
+          <div className="grid grid-cols-10 gap-2 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#064d51] to-[#1e9c99]">
             <div>Truck</div>
             <div>Origin</div>
             <div>Destination</div>
@@ -473,7 +473,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
           </div>
 
           {/* Editable Search Row - DH-O and DH-D hidden from shipper */}
-          <div className="grid grid-cols-10 gap-2 px-4 py-3 text-xs items-center bg-gray-600">
+          <div className="grid grid-cols-10 gap-2 px-4 py-3 text-xs items-center bg-[#f0fdfa]">
             {/* Truck Type */}
             <div className="flex items-center gap-1">
               <select
@@ -589,13 +589,13 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
             <div className="col-span-2 flex gap-2 justify-end">
               <button
                 onClick={fetchTrucks}
-                className="px-3 py-1.5 bg-lime-500 text-white text-xs font-bold rounded hover:bg-lime-600 transition-colors"
+                className="px-4 py-1.5 bg-[#064d51] text-white text-xs font-bold rounded-lg hover:bg-[#053d40] transition-colors"
               >
                 🔍 SEARCH
               </button>
               <button
                 onClick={handleFilterReset}
-                className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded hover:bg-red-600 transition-colors"
+                className="px-4 py-1.5 bg-rose-500 text-white text-xs font-bold rounded-lg hover:bg-rose-600 transition-colors"
               >
                 🗑️ CLEAR
               </button>
@@ -607,7 +607,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
         {/* Results Summary */}
         <div className="mb-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-lime-600">
+            <h3 className="text-lg font-bold text-[#064d51]">
               {trucks.length} TOTAL RESULTS
             </h3>
             <DatStatusTabs
@@ -625,69 +625,69 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
           </h4>
 
           {/* Results Table - DH-O and DH-D hidden from shipper */}
-          <div className="bg-white border border-gray-300 rounded overflow-visible">
+          <div className="bg-white border border-[#064d51]/20 rounded-xl overflow-visible shadow-sm">
             {/* Table Header */}
-            <div className="bg-gray-300 grid grid-cols-11 gap-2 px-4 py-2 border-b border-gray-400 text-xs font-semibold text-gray-700">
+            <div className="bg-gradient-to-r from-[#064d51] to-[#1e9c99] grid grid-cols-11 gap-2 px-4 py-3 rounded-t-xl text-xs font-semibold text-white">
               <div
-                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
                 onClick={() => handleHeaderClick('createdAt')}
               >
                 Age {sortField === 'createdAt' && (sortOrder === 'asc' ? '↑' : '↓')}
               </div>
               <div
-                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
                 onClick={() => handleHeaderClick('availableDate')}
               >
                 Avail {sortField === 'availableDate' && (sortOrder === 'asc' ? '↑' : '↓')}
               </div>
               <div
-                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
                 onClick={() => handleHeaderClick('truckType')}
               >
                 Truck {sortField === 'truckType' && (sortOrder === 'asc' ? '↑' : '↓')}
               </div>
               <div
-                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
                 onClick={() => handleHeaderClick('fullPartial')}
               >
                 F/P {sortField === 'fullPartial' && (sortOrder === 'asc' ? '↑' : '↓')}
               </div>
               <div
-                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
                 onClick={() => handleHeaderClick('currentCity')}
               >
                 Origin {sortField === 'currentCity' && (sortOrder === 'asc' ? '↑' : '↓')}
               </div>
               <div
-                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
                 onClick={() => handleHeaderClick('tripKm')}
               >
                 Trip {sortField === 'tripKm' && (sortOrder === 'asc' ? '↑' : '↓')}
               </div>
               <div
-                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
                 onClick={() => handleHeaderClick('destinationCity')}
               >
                 Destination {sortField === 'destinationCity' && (sortOrder === 'asc' ? '↑' : '↓')}
               </div>
               <div
-                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
               >
                 Company
               </div>
               <div
-                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
               >
                 Contact
               </div>
               <div
-                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
                 onClick={() => handleHeaderClick('lengthM')}
               >
                 Length {sortField === 'lengthM' && (sortOrder === 'asc' ? '↑' : '↓')}
               </div>
               <div
-                className="cursor-pointer hover:bg-gray-400 px-1 py-0.5 rounded"
+                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
                 onClick={() => handleHeaderClick('maxWeight')}
               >
                 Weight {sortField === 'maxWeight' && (sortOrder === 'asc' ? '↑' : '↓')}
@@ -703,7 +703,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
               trucks.map((truck) => (
                 <div
                   key={truck.id}
-                  className="grid grid-cols-11 gap-2 px-4 py-2 border-b border-gray-200 hover:bg-gray-50 cursor-pointer text-xs"
+                  className="grid grid-cols-11 gap-2 px-4 py-3 border-b border-[#064d51]/10 hover:bg-[#064d51]/5 cursor-pointer text-xs transition-colors"
                   style={{ color: '#2B2727' }}
                 >
                   <div>{truck.age || '00:07'}</div>
@@ -713,7 +713,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
                   <div className="truncate">{truck.currentCity || 'Tacoma, WA'}</div>
                   <div>—</div>
                   <div className="truncate">{truck.destinationCity || 'Anywhere'}</div>
-                  <div className="truncate text-blue-600 hover:underline cursor-pointer">
+                  <div className="truncate text-[#1e9c99] hover:underline cursor-pointer font-medium">
                     {truck.carrier?.name || 'Land Lines Inc'}
                   </div>
                   <div>{truck.contactPhone || '(630) 410-8194'}</div>
