@@ -91,14 +91,14 @@ function StatCard({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-5 hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-5 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-500">{title}</h3>
+        <h3 className="text-sm font-medium text-[#064d51]/70">{title}</h3>
         <span className="text-xl">{icon}</span>
       </div>
-      <p className="text-2xl font-bold text-gray-900 mt-2">{value}</p>
+      <p className="text-2xl font-bold text-[#064d51] mt-2">{value}</p>
       {subtitle && (
-        <p className={`text-sm mt-1 ${trend ? trendColors[trend] : 'text-gray-500'}`}>
+        <p className={`text-sm mt-1 ${trend ? trendColors[trend] : 'text-[#064d51]/60'}`}>
           {subtitle}
         </p>
       )}
@@ -125,10 +125,11 @@ function MiniBarChart({
 
   const maxValue = Math.max(...data.map(d => Number(d[valueKey]) || 0));
   const colorClasses: Record<string, string> = {
-    blue: 'bg-blue-500',
-    green: 'bg-green-500',
-    yellow: 'bg-yellow-500',
-    red: 'bg-red-500',
+    blue: 'bg-[#1e9c99]',
+    green: 'bg-emerald-500',
+    yellow: 'bg-amber-500',
+    red: 'bg-rose-500',
+    teal: 'bg-[#064d51]',
   };
 
   return (
@@ -157,12 +158,12 @@ function StatusDistribution({ data }: { data: Array<{ status: string; count: num
   const total = data.reduce((sum, item) => sum + item.count, 0);
 
   const statusColors: Record<string, string> = {
-    POSTED: 'bg-blue-500',
-    ASSIGNED: 'bg-purple-500',
-    IN_TRANSIT: 'bg-yellow-500',
-    DELIVERED: 'bg-green-500',
-    COMPLETED: 'bg-gray-500',
-    CANCELLED: 'bg-red-500',
+    POSTED: 'bg-[#1e9c99]',
+    ASSIGNED: 'bg-indigo-500',
+    IN_TRANSIT: 'bg-amber-500',
+    DELIVERED: 'bg-emerald-500',
+    COMPLETED: 'bg-[#064d51]',
+    CANCELLED: 'bg-rose-500',
   };
 
   const statusLabels: Record<string, string> = {
@@ -181,10 +182,10 @@ function StatusDistribution({ data }: { data: Array<{ status: string; count: num
         return (
           <div key={item.status}>
             <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-600">{statusLabels[item.status] || item.status}</span>
-              <span className="font-medium">{item.count}</span>
+              <span className="text-[#064d51]/70">{statusLabels[item.status] || item.status}</span>
+              <span className="font-medium text-[#064d51]">{item.count}</span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-[#064d51]/10 rounded-full h-2">
               <div
                 className={`h-2 rounded-full ${statusColors[item.status] || 'bg-gray-500'}`}
                 style={{ width: `${percentage}%` }}
@@ -235,7 +236,7 @@ export default function AdminAnalyticsClient() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1e9c99]" />
       </div>
     );
   }
@@ -257,8 +258,8 @@ export default function AdminAnalyticsClient() {
       {/* Header with Period Selector */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Platform Analytics</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold text-[#064d51]">Platform Analytics</h1>
+          <p className="text-[#064d51]/70 mt-1">
             {periodLabels[period]} &bull;{' '}
             {new Date(data.dateRange.start).toLocaleDateString()} -{' '}
             {new Date(data.dateRange.end).toLocaleDateString()}
@@ -270,10 +271,10 @@ export default function AdminAnalyticsClient() {
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
                 period === p
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                  ? 'bg-[#064d51] text-white shadow-md'
+                  : 'bg-white text-[#064d51] hover:bg-[#064d51]/10 border border-[#064d51]/20'
               }`}
             >
               {p.charAt(0).toUpperCase() + p.slice(1)}
@@ -376,10 +377,10 @@ export default function AdminAnalyticsClient() {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Loads Over Time */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">New Loads</h3>
-          <MiniBarChart data={data.charts.loadsOverTime} valueKey="count" color="blue" />
-          <p className="text-sm text-gray-500 mt-2 text-center">
+        <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
+          <h3 className="text-lg font-semibold text-[#064d51] mb-4">New Loads</h3>
+          <MiniBarChart data={data.charts.loadsOverTime} valueKey="count" color="teal" />
+          <p className="text-sm text-[#064d51]/60 mt-2 text-center">
             {data.charts.loadsOverTime.length > 0
               ? `${formatDate(data.charts.loadsOverTime[0].date)} - ${formatDate(data.charts.loadsOverTime[data.charts.loadsOverTime.length - 1].date)}`
               : 'No data'}
@@ -387,48 +388,48 @@ export default function AdminAnalyticsClient() {
         </div>
 
         {/* Revenue Over Time */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue (Service Fees)</h3>
+        <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
+          <h3 className="text-lg font-semibold text-[#064d51] mb-4">Revenue (Service Fees)</h3>
           <MiniBarChart data={data.charts.revenueOverTime} valueKey="total" color="green" />
-          <p className="text-sm text-gray-500 mt-2 text-center">
+          <p className="text-sm text-[#064d51]/60 mt-2 text-center">
             Total: {formatCurrency(data.summary.revenue.serviceFeeCollected)}
           </p>
         </div>
 
         {/* Load Status Distribution */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Load Status Distribution</h3>
+        <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
+          <h3 className="text-lg font-semibold text-[#064d51] mb-4">Load Status Distribution</h3>
           <StatusDistribution data={data.charts.loadsByStatus} />
         </div>
 
         {/* Trips Summary */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Trip Performance</h3>
+        <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
+          <h3 className="text-lg font-semibold text-[#064d51] mb-4">Trip Performance</h3>
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg">
               <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-green-500 rounded-full" />
-                <span className="font-medium text-green-900">Completed</span>
+                <div className="w-3 h-3 bg-emerald-500 rounded-full" />
+                <span className="font-medium text-emerald-900">Completed</span>
               </div>
-              <span className="text-xl font-bold text-green-900">
+              <span className="text-xl font-bold text-emerald-900">
                 {data.summary.trips.completed}
               </span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg">
               <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-yellow-500 rounded-full" />
-                <span className="font-medium text-yellow-900">In Transit</span>
+                <div className="w-3 h-3 bg-amber-500 rounded-full" />
+                <span className="font-medium text-amber-900">In Transit</span>
               </div>
-              <span className="text-xl font-bold text-yellow-900">
+              <span className="text-xl font-bold text-amber-900">
                 {data.summary.trips.inTransit}
               </span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-rose-50 rounded-lg">
               <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-red-500 rounded-full" />
-                <span className="font-medium text-red-900">Cancelled</span>
+                <div className="w-3 h-3 bg-rose-500 rounded-full" />
+                <span className="font-medium text-rose-900">Cancelled</span>
               </div>
-              <span className="text-xl font-bold text-red-900">
+              <span className="text-xl font-bold text-rose-900">
                 {data.summary.trips.cancelled}
               </span>
             </div>

@@ -81,14 +81,14 @@ function StatCard({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-5 hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-5 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-500">{title}</h3>
+        <h3 className="text-sm font-medium text-[#064d51]/70">{title}</h3>
         <span className="text-xl">{icon}</span>
       </div>
-      <p className="text-2xl font-bold text-gray-900 mt-2">{value}</p>
+      <p className="text-2xl font-bold text-[#064d51] mt-2">{value}</p>
       {subtitle && (
-        <p className={`text-sm mt-1 ${trend ? trendColors[trend] : 'text-gray-500'}`}>
+        <p className={`text-sm mt-1 ${trend ? trendColors[trend] : 'text-[#064d51]/60'}`}>
           {subtitle}
         </p>
       )}
@@ -115,10 +115,11 @@ function MiniBarChart({
 
   const maxValue = Math.max(...data.map(d => Number(d[valueKey]) || 0));
   const colorClasses: Record<string, string> = {
-    blue: 'bg-blue-500',
-    green: 'bg-green-500',
-    yellow: 'bg-yellow-500',
-    red: 'bg-red-500',
+    blue: 'bg-[#1e9c99]',
+    green: 'bg-emerald-500',
+    yellow: 'bg-amber-500',
+    red: 'bg-rose-500',
+    teal: 'bg-[#064d51]',
   };
 
   return (
@@ -145,9 +146,10 @@ function MiniBarChart({
 
 function RateGauge({ rate, label, color }: { rate: number; label: string; color: string }) {
   const colorClasses: Record<string, { bg: string; text: string; fill: string }> = {
-    green: { bg: 'bg-green-100', text: 'text-green-700', fill: 'bg-green-500' },
-    red: { bg: 'bg-red-100', text: 'text-red-700', fill: 'bg-red-500' },
-    blue: { bg: 'bg-blue-100', text: 'text-blue-700', fill: 'bg-blue-500' },
+    green: { bg: 'bg-emerald-50', text: 'text-emerald-700', fill: 'bg-emerald-500' },
+    red: { bg: 'bg-rose-50', text: 'text-rose-700', fill: 'bg-rose-500' },
+    blue: { bg: 'bg-[#f0fdfa]', text: 'text-[#064d51]', fill: 'bg-[#1e9c99]' },
+    teal: { bg: 'bg-[#f0fdfa]', text: 'text-[#064d51]', fill: 'bg-[#1e9c99]' },
   };
 
   const colors = colorClasses[color] || colorClasses.blue;
@@ -172,12 +174,12 @@ function StatusDistribution({ data }: { data: Array<{ status: string; count: num
   const total = data.reduce((sum, item) => sum + item.count, 0);
 
   const statusColors: Record<string, string> = {
-    POSTED: 'bg-blue-500',
-    ASSIGNED: 'bg-purple-500',
-    IN_TRANSIT: 'bg-yellow-500',
-    DELIVERED: 'bg-green-500',
-    COMPLETED: 'bg-gray-500',
-    CANCELLED: 'bg-red-500',
+    POSTED: 'bg-[#1e9c99]',
+    ASSIGNED: 'bg-indigo-500',
+    IN_TRANSIT: 'bg-amber-500',
+    DELIVERED: 'bg-emerald-500',
+    COMPLETED: 'bg-[#064d51]',
+    CANCELLED: 'bg-rose-500',
   };
 
   const statusLabels: Record<string, string> = {
@@ -196,10 +198,10 @@ function StatusDistribution({ data }: { data: Array<{ status: string; count: num
         return (
           <div key={item.status}>
             <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-600">{statusLabels[item.status] || item.status}</span>
-              <span className="font-medium">{item.count}</span>
+              <span className="text-[#064d51]/70">{statusLabels[item.status] || item.status}</span>
+              <span className="font-medium text-[#064d51]">{item.count}</span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-[#064d51]/10 rounded-full h-2">
               <div
                 className={`h-2 rounded-full ${statusColors[item.status] || 'bg-gray-500'}`}
                 style={{ width: `${percentage}%` }}
@@ -250,7 +252,7 @@ export default function ShipperAnalyticsClient() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1e9c99]" />
       </div>
     );
   }
@@ -274,8 +276,8 @@ export default function ShipperAnalyticsClient() {
       {/* Header with Period Selector */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">My Analytics</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold text-[#064d51]">My Analytics</h1>
+          <p className="text-[#064d51]/70 mt-1">
             {periodLabels[period]} &bull;{' '}
             {new Date(data.dateRange.start).toLocaleDateString()} -{' '}
             {new Date(data.dateRange.end).toLocaleDateString()}
@@ -287,10 +289,10 @@ export default function ShipperAnalyticsClient() {
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
                 period === p
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                  ? 'bg-[#064d51] text-white shadow-md'
+                  : 'bg-white text-[#064d51] hover:bg-[#064d51]/10 border border-[#064d51]/20'
               }`}
             >
               {p.charAt(0).toUpperCase() + p.slice(1)}
@@ -374,10 +376,10 @@ export default function ShipperAnalyticsClient() {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Loads Over Time */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Loads Posted</h3>
-          <MiniBarChart data={data.charts.loadsOverTime} valueKey="count" color="blue" />
-          <p className="text-sm text-gray-500 mt-2 text-center">
+        <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
+          <h3 className="text-lg font-semibold text-[#064d51] mb-4">Loads Posted</h3>
+          <MiniBarChart data={data.charts.loadsOverTime} valueKey="count" color="teal" />
+          <p className="text-sm text-[#064d51]/60 mt-2 text-center">
             {data.charts.loadsOverTime.length > 0
               ? `${formatDate(data.charts.loadsOverTime[0].date)} - ${formatDate(data.charts.loadsOverTime[data.charts.loadsOverTime.length - 1].date)}`
               : 'No data'}
@@ -385,25 +387,25 @@ export default function ShipperAnalyticsClient() {
         </div>
 
         {/* Deliveries Over Time */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Deliveries Completed</h3>
+        <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
+          <h3 className="text-lg font-semibold text-[#064d51] mb-4">Deliveries Completed</h3>
           <MiniBarChart data={data.charts.deliveriesOverTime} valueKey="count" color="green" />
-          <p className="text-sm text-gray-500 mt-2 text-center">
+          <p className="text-sm text-[#064d51]/60 mt-2 text-center">
             Total: {data.summary.loads.deliveredInPeriod} {periodLabels[period].toLowerCase()}
           </p>
         </div>
 
         {/* Load Status Distribution */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Load Status Distribution</h3>
+        <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
+          <h3 className="text-lg font-semibold text-[#064d51] mb-4">Load Status Distribution</h3>
           <StatusDistribution data={data.charts.loadsByStatus} />
         </div>
 
         {/* Spending Over Time */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Service Fee Spending</h3>
+        <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
+          <h3 className="text-lg font-semibold text-[#064d51] mb-4">Service Fee Spending</h3>
           <MiniBarChart data={data.charts.spendingOverTime} valueKey="total" color="yellow" />
-          <p className="text-sm text-gray-500 mt-2 text-center">
+          <p className="text-sm text-[#064d51]/60 mt-2 text-center">
             Total: {formatCurrency(data.summary.financial.serviceFeesInPeriod, currency)}
           </p>
         </div>

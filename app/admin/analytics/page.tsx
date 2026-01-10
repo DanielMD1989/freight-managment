@@ -25,7 +25,7 @@ export default async function AdminAnalyticsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--bg-tinted)]">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <AdminAnalyticsClient />
       </div>

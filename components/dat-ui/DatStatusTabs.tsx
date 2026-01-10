@@ -25,21 +25,21 @@ export default function DatStatusTabs({
             onClick={() => onTabChange(tab.key)}
             className={`
               px-4 py-2
-              rounded-md
+              rounded-lg
               text-sm
-              font-medium
+              font-semibold
               transition-colors
               duration-150
               ${
                 isActive
-                  ? 'bg-gray-700 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-[#064d51] text-white shadow-md'
+                  : 'bg-white text-[#064d51] hover:bg-[#064d51]/10 border border-[#064d51]/20'
               }
             `}
           >
             <span>{tab.label}</span>
             {tab.count !== undefined && (
-              <span className={`ml-2 ${isActive ? 'text-gray-300' : 'text-gray-500'}`}>
+              <span className={`ml-2 ${isActive ? 'text-white/70' : 'text-[#064d51]/60'}`}>
                 {tab.count}
               </span>
             )}
