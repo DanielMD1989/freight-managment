@@ -87,7 +87,7 @@ async function getLoads(
 export default async function LoadsPage({
   searchParams,
 }: {
-  searchParams: { page?: string; status?: string };
+  searchParams: Promise<{ page?: string; status?: string }>;
 }) {
   // Verify authentication
   const cookieStore = await cookies();
@@ -104,8 +104,9 @@ export default async function LoadsPage({
   }
 
   // Get query parameters
-  const page = parseInt(searchParams.page || '1');
-  const status = searchParams.status || 'all';
+  const params = await searchParams;
+  const page = parseInt(params.page || '1');
+  const status = params.status || 'all';
 
   // Fetch loads
   const data = await getLoads(page, status);

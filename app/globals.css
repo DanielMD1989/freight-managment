@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 /* ========================================
-   FREIGHT MANAGEMENT - DESIGN SYSTEM
-   A2: Modern Navy Theme
+   FREIGHTET - DESIGN SYSTEM
+   Option B: Clean & Minimal
+   Teal + Indigo + Cyan + Emerald
    ======================================== */
 
 /* Tailwind v4: Enable class-based dark mode */
@@ -10,132 +11,206 @@
 
 :root {
   /* ========================================
-     PRIMARY COLORS (Ocean Blue)
+     PRIMARY COLORS (Teal)
      ======================================== */
-  --primary-900: #0c4a6e;
-  --primary-800: #075985;
-  --primary-700: #0369a1;
-  --primary-600: #0284c7;
-  --primary-500: #0ea5e9;
-  --primary-400: #38bdf8;
-  --primary-300: #7dd3fc;
-  --primary-200: #bae6fd;
-  --primary-100: #e0f2fe;
-  --primary-50: #f0f9ff;
+  --primary-900: #134e4a;
+  --primary-800: #115e59;
+  --primary-700: #0f766e;
+  --primary-600: #0d9488;
+  --primary-500: #14b8a6;
+  --primary-400: #2dd4bf;
+  --primary-300: #5eead4;
+  --primary-200: #99f6e4;
+  --primary-100: #ccfbf1;
+  --primary-50: #f0fdfa;
 
   /* ========================================
-     ACCENT COLORS (Burnt Orange)
+     SECONDARY COLORS (Indigo)
      ======================================== */
-  --accent-900: #7c2d12;
-  --accent-800: #9a3412;
-  --accent-700: #c2410c;
-  --accent-600: #ea580c;
-  --accent-500: #f97316;
-  --accent-400: #fb923c;
-  --accent-300: #fdba74;
-  --accent-200: #fed7aa;
-  --accent-100: #ffedd5;
-  --accent-50: #fff7ed;
+  --secondary-900: #312e81;
+  --secondary-800: #3730a3;
+  --secondary-700: #4338ca;
+  --secondary-600: #4f46e5;
+  --secondary-500: #6366f1;
+  --secondary-400: #818cf8;
+  --secondary-300: #a5b4fc;
+  --secondary-200: #c7d2fe;
+  --secondary-100: #e0e7ff;
+  --secondary-50: #eef2ff;
 
   /* ========================================
-     SUCCESS COLORS
+     ACCENT COLORS (Cyan)
      ======================================== */
+  --accent-900: #164e63;
+  --accent-800: #155e75;
+  --accent-700: #0e7490;
+  --accent-600: #0891b2;
+  --accent-500: #06b6d4;
+  --accent-400: #22d3ee;
+  --accent-300: #67e8f9;
+  --accent-200: #a5f3fc;
+  --accent-100: #cffafe;
+  --accent-50: #ecfeff;
+
+  /* ========================================
+     SUCCESS COLORS (Emerald)
+     ======================================== */
+  --success-900: #064e3b;
+  --success-800: #065f46;
   --success-700: #047857;
   --success-600: #059669;
   --success-500: #10b981;
   --success-400: #34d399;
+  --success-300: #6ee7b7;
+  --success-200: #a7f3d0;
   --success-100: #d1fae5;
   --success-50: #ecfdf5;
 
   /* ========================================
-     WARNING COLORS
+     WARNING COLORS (Amber)
      ======================================== */
+  --warning-900: #78350f;
+  --warning-800: #92400e;
   --warning-700: #b45309;
   --warning-600: #d97706;
   --warning-500: #f59e0b;
   --warning-400: #fbbf24;
+  --warning-300: #fcd34d;
+  --warning-200: #fde68a;
   --warning-100: #fef3c7;
   --warning-50: #fffbeb;
 
   /* ========================================
-     ERROR COLORS
+     ERROR COLORS (Rose)
      ======================================== */
-  --error-700: #b91c1c;
-  --error-600: #dc2626;
-  --error-500: #ef4444;
-  --error-400: #f87171;
-  --error-100: #fee2e2;
-  --error-50: #fef2f2;
+  --error-900: #881337;
+  --error-800: #9f1239;
+  --error-700: #be123c;
+  --error-600: #e11d48;
+  --error-500: #f43f5e;
+  --error-400: #fb7185;
+  --error-300: #fda4af;
+  --error-200: #fecdd3;
+  --error-100: #ffe4e6;
+  --error-50: #fff1f2;
 
   /* ========================================
-     NEUTRAL COLORS
+     NEUTRAL COLORS (Slate)
      ======================================== */
-  --neutral-950: #0a0a0a;
-  --neutral-900: #171717;
-  --neutral-800: #262626;
-  --neutral-700: #404040;
-  --neutral-600: #525252;
-  --neutral-500: #737373;
-  --neutral-400: #a3a3a3;
-  --neutral-300: #d4d4d4;
-  --neutral-200: #e5e5e5;
-  --neutral-100: #f5f5f5;
-  --neutral-50: #fafafa;
+  --neutral-950: #020617;
+  --neutral-900: #0f172a;
+  --neutral-800: #1e293b;
+  --neutral-700: #334155;
+  --neutral-600: #475569;
+  --neutral-500: #64748b;
+  --neutral-400: #94a3b8;
+  --neutral-300: #cbd5e1;
+  --neutral-200: #e2e8f0;
+  --neutral-100: #f1f5f9;
+  --neutral-50: #f8fafc;
 
   /* ========================================
-     SIDEBAR COLORS
+     SIDEBAR COLORS (Clean Light)
      ======================================== */
-  --sidebar-bg: #0f172a;
-  --sidebar-hover: #1e293b;
-  --sidebar-active: rgba(14, 165, 233, 0.15);
-  --sidebar-border: #1e293b;
-  --sidebar-text: #94a3b8;
-  --sidebar-text-active: #0ea5e9;
+  --sidebar-bg: #f8fafc;
+  --sidebar-hover: #f1f5f9;
+  --sidebar-active: #0f766e;
+  --sidebar-border: #e2e8f0;
+  --sidebar-text: #64748b;
+  --sidebar-text-active: #ffffff;
+  --sidebar-muted: #94a3b8;
 
   /* ========================================
      SEMANTIC COLORS
      ======================================== */
-  --background: #f5f5f5;
-  --foreground: #171717;
+  --background: #ffffff;
+  --background-secondary: #f8fafc;
+  --foreground: #0f172a;
+  --foreground-muted: #64748b;
   --card: #ffffff;
-  --card-foreground: #171717;
-  --border: #e5e5e5;
-  --input: #e5e5e5;
-  --ring: #0ea5e9;
+  --card-foreground: #0f172a;
+  --card-hover: #f8fafc;
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
+  --input: #f1f5f9;
+  --input-border: #e2e8f0;
+  --input-focus: #0f766e;
+  --ring: #14b8a6;
 
   /* ========================================
      TYPOGRAPHY
      ======================================== */
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+  --font-size-4xl: 2.25rem;
 
   /* ========================================
-     SHADOWS
+     SHADOWS (Softer for Clean look)
      ======================================== */
-  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
 
   /* ========================================
      BORDER RADIUS
      ======================================== */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
-  --radius-2xl: 1rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
   --radius-full: 9999px;
+
+  /* ========================================
+     SPACING
+     ======================================== */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* ========================================
+     TRANSITIONS
+     ======================================== */
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow: 300ms ease;
 }
 
 /* Dark mode overrides */
 :root.dark {
   --background: #0f172a;
+  --background-secondary: #1e293b;
   --foreground: #f1f5f9;
+  --foreground-muted: #94a3b8;
   --card: #1e293b;
   --card-foreground: #f1f5f9;
+  --card-hover: #334155;
   --border: #334155;
-  --input: #334155;
+  --border-light: #1e293b;
+  --input: #1e293b;
+  --input-border: #334155;
+
+  --sidebar-bg: #0f172a;
+  --sidebar-hover: #1e293b;
+  --sidebar-border: #1e293b;
+  --sidebar-text: #94a3b8;
 }
 
 @theme inline {

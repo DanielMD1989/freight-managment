@@ -156,9 +156,9 @@ export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientPro
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Header with DAT Power Branding */}
-      <div className="bg-gray-200 border-b border-gray-300 px-6 py-3 flex items-center justify-between">
+    <div className="min-h-screen bg-[var(--background-secondary)]">
+      {/* Header - Clean & Minimal Design */}
+      <div className="bg-white border-b border-[var(--border)] px-6 py-4 flex items-center justify-between shadow-sm">
         {/* Navigation Tabs */}
         <div className="flex-1">
           <DatNavTabs
@@ -180,25 +180,32 @@ export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientPro
           <NotificationBell />
 
           {/* User Info */}
-          <div className="flex items-center gap-2 text-sm text-gray-700">
-            <span className="font-medium">{user.firstName} {user.lastName}</span>
-            <span className="text-gray-500">|</span>
-            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded">
-              {user.role}
-            </span>
+          <div className="flex items-center gap-3 text-sm">
+            <div className="w-8 h-8 rounded-full bg-[var(--primary-100)] text-[var(--primary-700)] flex items-center justify-center font-semibold text-xs">
+              {user.firstName?.[0]}{user.lastName?.[0]}
+            </div>
+            <div className="hidden sm:block">
+              <div className="font-medium text-[var(--foreground)]">{user.firstName} {user.lastName}</div>
+              <div className="text-xs text-[var(--foreground-muted)]">{user.role}</div>
+            </div>
           </div>
 
           {/* Logout Button */}
           <button
             onClick={handleLogout}
-            className="px-4 py-1.5 bg-red-500 text-white text-sm font-bold rounded hover:bg-red-600 transition-colors"
+            className="px-4 py-2 bg-[var(--error-500)] text-white text-sm font-semibold rounded-lg hover:bg-[var(--error-600)] transition-colors shadow-sm"
           >
-            LOGOUT
+            Logout
           </button>
 
           {/* FreightET Branding */}
-          <div className="text-gray-700 font-bold text-lg tracking-wide">
-            FreightET
+          <div className="hidden md:flex items-center gap-2 pl-4 border-l border-[var(--border)]">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--primary-500)] to-[var(--primary-700)] flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 17h8M8 17a2 2 0 11-4 0 2 2 0 014 0zm8 0a2 2 0 104 0 2 2 0 00-4 0zM3 9h13a2 2 0 012 2v4H3V9zm13-4l4 4h-4V5z" />
+              </svg>
+            </div>
+            <span className="text-[var(--foreground)] font-bold">FreightET</span>
           </div>
         </div>
       </div>
@@ -207,12 +214,12 @@ export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientPro
       <div className="p-6">
         {isInitialLoad ? (
           /* Loading skeleton while restoring tab state */
-          <div className="bg-white rounded-lg shadow p-6 animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+          <div className="bg-white rounded-xl shadow-sm border border-[var(--border)] p-6 animate-pulse">
+            <div className="h-8 bg-[var(--neutral-100)] rounded-lg w-1/4 mb-6"></div>
             <div className="space-y-4">
-              <div className="h-4 bg-gray-200 rounded w-full"></div>
-              <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-              <div className="h-4 bg-gray-200 rounded w-4/6"></div>
+              <div className="h-4 bg-[var(--neutral-100)] rounded w-full"></div>
+              <div className="h-4 bg-[var(--neutral-100)] rounded w-5/6"></div>
+              <div className="h-4 bg-[var(--neutral-100)] rounded w-4/6"></div>
             </div>
           </div>
         ) : (

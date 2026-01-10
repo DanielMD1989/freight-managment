@@ -4,33 +4,66 @@
  * DAT Navigation Tabs Component
  *
  * Top-level navigation: POST LOADS | SEARCH TRUCKS | POST TRUCKS | SEARCH LOADS
- * Sprint 14 - DAT-Style UI Transformation
+ * Option B: Clean & Minimal Design System (Teal + Indigo)
  */
 
 import { DatNavTabsProps, DatNavTab } from '@/types/dat-ui';
 
+// SVG Icon Components
+const PackageIcon = () => (
+  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+  </svg>
+);
+
+const TruckIcon = () => (
+  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 17h8M8 17a2 2 0 11-4 0 2 2 0 014 0zm8 0a2 2 0 104 0 2 2 0 00-4 0zM3 9h13a2 2 0 012 2v4H3V9zm13-4l4 4h-4V5z" />
+  </svg>
+);
+
+const SearchIcon = () => (
+  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+  </svg>
+);
+
+const UploadIcon = () => (
+  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+  </svg>
+);
+
+// Icon mapping
+const iconComponents: Record<string, React.FC> = {
+  'POST_LOADS': PackageIcon,
+  'SEARCH_TRUCKS': TruckIcon,
+  'POST_TRUCKS': UploadIcon,
+  'SEARCH_LOADS': SearchIcon,
+};
+
 const ALL_TABS: DatNavTab[] = [
   {
     key: 'POST_LOADS',
-    label: 'POST LOADS',
+    label: 'Post Loads',
     icon: '📦',
     roles: ['SHIPPER', 'ADMIN'],
   },
   {
     key: 'SEARCH_TRUCKS',
-    label: 'SEARCH TRUCKS',
+    label: 'Search Trucks',
     icon: '🚛',
     roles: ['SHIPPER', 'ADMIN'],
   },
   {
     key: 'POST_TRUCKS',
-    label: 'POST TRUCKS',
+    label: 'Post Trucks',
     icon: '🚚',
     roles: ['CARRIER', 'ADMIN'],
   },
   {
     key: 'SEARCH_LOADS',
-    label: 'SEARCH LOADS',
+    label: 'Search Loads',
     icon: '🔍',
     roles: ['CARRIER', 'ADMIN'],
   },
@@ -61,34 +94,33 @@ export default function DatNavTabs({
   });
 
   return (
-    <div className="flex gap-1">
+    <div className="flex gap-2">
       {visibleTabs.map((tab) => {
         const isActive = activeTab === tab.key;
+        const IconComponent = iconComponents[tab.key];
 
         return (
           <button
             key={tab.key}
             onClick={() => onTabChange(tab.key)}
             className={`
-              px-5 py-2
-              text-xs
-              font-bold
-              uppercase
-              tracking-wide
-              rounded-t-md
-              transition-colors
-              duration-150
+              px-5 py-2.5
+              text-sm
+              font-semibold
+              rounded-lg
+              transition-all
+              duration-200
               flex
               items-center
               gap-2
               ${
                 isActive
-                  ? 'bg-gray-600 text-white'
-                  : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                  ? 'bg-[var(--primary-700)] text-white shadow-md'
+                  : 'bg-white text-[var(--neutral-600)] hover:bg-[var(--primary-50)] hover:text-[var(--primary-700)] border border-[var(--border)]'
               }
             `}
           >
-            {tab.icon && <span className="text-base">{tab.icon}</span>}
+            {IconComponent && <IconComponent />}
             {tab.label}
           </button>
         );
