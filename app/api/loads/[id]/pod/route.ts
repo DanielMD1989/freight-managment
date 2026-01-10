@@ -11,6 +11,7 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { createNotification, NotificationType } from '@/lib/notifications';
 import { releaseFundsFromEscrow } from '@/lib/escrowManagement'; // Sprint 8
+import { uploadPOD } from '@/lib/storage';
 
 /**
  * POST /api/loads/[id]/pod
@@ -114,15 +115,18 @@ export async function POST(
       );
     }
 
-    // TODO: Upload file to storage service (S3, Cloudinary, etc.)
-    // For now, we'll create a placeholder URL
-    // In production, replace this with actual file upload logic:
-    //
-    // const buffer = await file.arrayBuffer();
-    // const uploadResult = await uploadToS3(buffer, file.name, file.type);
-    // const podUrl = uploadResult.url;
+    // Upload file to storage service
+    const uploadResult = await uploadPOD(file, loadId);
 
-    const podUrl = `/uploads/pod/${loadId}_${Date.now()}_${file.name}`;
+    if (!uploadResult.success) {
+      console.error('POD upload failed:', uploadResult.error);
+      return NextResponse.json(
+        { error: 'Failed to upload POD file. Please try again.' },
+        { status: 500 }
+      );
+    }
+
+    const podUrl = uploadResult.url!;
 
     // Update load with POD information
     const updatedLoad = await db.load.update({

@@ -31,11 +31,7 @@ const CSRF_EXEMPT_ROUTES = [
   '/api/auth/reset-password',
   '/api/cron/',
   '/api/webhooks/',
-  '/api/tracking/ingest', // GPS data ingestion
-  '/api/truck-postings', // TODO: Fix CSRF cookie implementation
-  '/api/trucks', // TODO: Fix CSRF cookie implementation
-  '/api/load-requests', // TODO: Fix CSRF cookie implementation
-  '/api/saved-searches', // TODO: Fix CSRF cookie implementation
+  '/api/tracking/ingest', // GPS data ingestion (machine-to-machine)
 ];
 
 // State-changing HTTP methods that require CSRF protection
@@ -77,7 +73,7 @@ export async function middleware(request: NextRequest) {
 
     if (!isExempt) {
       const csrfToken = request.headers.get('x-csrf-token');
-      const csrfCookie = request.cookies.get('csrf-token')?.value;
+      const csrfCookie = request.cookies.get('csrf_token')?.value;
 
       if (!csrfToken || !csrfCookie || !verifyCSRFToken(csrfToken, csrfCookie)) {
         await logSecurityEvent({

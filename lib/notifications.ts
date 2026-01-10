@@ -270,3 +270,244 @@ export async function cleanupOldNotifications(daysToKeep: number = 90) {
     return 0;
   }
 }
+
+// ============================================================================
+// SPECIFIC NOTIFICATION HELPERS
+// ============================================================================
+
+/**
+ * Notify organization users about an event
+ */
+export async function notifyOrganization(params: {
+  organizationId: string;
+  type: string;
+  title: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+}) {
+  const { organizationId, type, title, message, metadata } = params;
+
+  try {
+    const users = await db.user.findMany({
+      where: { organizationId, status: 'ACTIVE' },
+      select: { id: true },
+    });
+
+    await Promise.all(
+      users.map((user) =>
+        createNotification({
+          userId: user.id,
+          type,
+          title,
+          message,
+          metadata,
+        })
+      )
+    );
+  } catch (error) {
+    console.error('Failed to notify organization:', error);
+  }
+}
+
+/**
+ * Notify carrier about a new truck request from shipper
+ */
+export async function notifyTruckRequest(params: {
+  carrierId: string;
+  shipperName: string;
+  loadReference: string;
+  truckPlate: string;
+  requestId: string;
+}) {
+  const { carrierId, shipperName, loadReference, truckPlate, requestId } = params;
+
+  await notifyOrganization({
+    organizationId: carrierId,
+    type: 'TRUCK_REQUEST_RECEIVED',
+    title: 'New Truck Request',
+    message: `${shipperName} has requested truck ${truckPlate} for load ${loadReference}. Please respond within 24 hours.`,
+    metadata: { requestId, shipperName, loadReference, truckPlate },
+  });
+}
+
+/**
+ * Notify shipper about truck request response
+ */
+export async function notifyTruckRequestResponse(params: {
+  shipperId: string;
+  carrierName: string;
+  truckPlate: string;
+  approved: boolean;
+  requestId: string;
+}) {
+  const { shipperId, carrierName, truckPlate, approved, requestId } = params;
+
+  await notifyOrganization({
+    organizationId: shipperId,
+    type: approved ? 'TRUCK_REQUEST_APPROVED' : 'TRUCK_REQUEST_REJECTED',
+    title: approved ? 'Truck Request Approved' : 'Truck Request Rejected',
+    message: approved
+      ? `${carrierName} has approved your request for truck ${truckPlate}. The truck is now booked for your load.`
+      : `${carrierName} has declined your request for truck ${truckPlate}.`,
+    metadata: { requestId, carrierName, truckPlate, approved },
+  });
+}
+
+/**
+ * Notify carrier about a new load match proposal
+ */
+export async function notifyMatchProposal(params: {
+  carrierId: string;
+  shipperName: string;
+  loadReference: string;
+  proposalId: string;
+  offeredRate?: number;
+}) {
+  const { carrierId, shipperName, loadReference, proposalId, offeredRate } = params;
+
+  await notifyOrganization({
+    organizationId: carrierId,
+    type: 'LOAD_MATCHED',
+    title: 'New Load Match Proposal',
+    message: offeredRate
+      ? `${shipperName} has proposed load ${loadReference} at ${offeredRate.toLocaleString()} ETB.`
+      : `${shipperName} has proposed load ${loadReference}.`,
+    metadata: { proposalId, shipperName, loadReference, offeredRate },
+  });
+}
+
+/**
+ * Notify about exception assignment
+ */
+export async function notifyExceptionAssigned(params: {
+  userId: string;
+  exceptionType: string;
+  loadReference: string;
+  exceptionId: string;
+}) {
+  const { userId, exceptionType, loadReference, exceptionId } = params;
+
+  await createNotification({
+    userId,
+    type: NotificationType.EXCEPTION_CREATED,
+    title: 'Exception Assigned to You',
+    message: `You have been assigned a ${exceptionType.replace(/_/g, ' ').toLowerCase()} exception for load ${loadReference}.`,
+    metadata: { exceptionId, exceptionType, loadReference },
+  });
+}
+
+/**
+ * Notify parties about exception resolution
+ */
+export async function notifyExceptionResolved(params: {
+  exceptionId: string;
+  loadId: string;
+  resolution: string;
+}) {
+  const { exceptionId, loadId, resolution } = params;
+
+  try {
+    const load = await db.load.findUnique({
+      where: { id: loadId },
+      select: {
+        shipperId: true,
+        assignedTruck: {
+          select: { carrierId: true },
+        },
+      },
+    });
+
+    if (!load) return;
+
+    const notifications = [];
+
+    if (load.shipperId) {
+      notifications.push(
+        notifyOrganization({
+          organizationId: load.shipperId,
+          type: 'EXCEPTION_RESOLVED',
+          title: 'Exception Resolved',
+          message: `An exception for your load has been resolved: ${resolution}`,
+          metadata: { exceptionId, loadId, resolution },
+        })
+      );
+    }
+
+    if (load.assignedTruck?.carrierId) {
+      notifications.push(
+        notifyOrganization({
+          organizationId: load.assignedTruck.carrierId,
+          type: 'EXCEPTION_RESOLVED',
+          title: 'Exception Resolved',
+          message: `An exception for your assigned load has been resolved: ${resolution}`,
+          metadata: { exceptionId, loadId, resolution },
+        })
+      );
+    }
+
+    await Promise.all(notifications);
+  } catch (error) {
+    console.error('Failed to notify exception resolution:', error);
+  }
+}
+
+/**
+ * Notify about load status change
+ */
+export async function notifyLoadStatusChange(params: {
+  loadId: string;
+  newStatus: string;
+  loadReference: string;
+}) {
+  const { loadId, newStatus, loadReference } = params;
+
+  await notifyLoadStakeholders(
+    loadId,
+    'LOAD_STATUS_CHANGED',
+    'Load Status Updated',
+    `Load ${loadReference} status changed to ${newStatus.replace(/_/g, ' ')}.`
+  );
+}
+
+/**
+ * Notify carrier about truck approval (admin action)
+ */
+export async function notifyTruckApproval(params: {
+  carrierId: string;
+  truckPlate: string;
+  approved: boolean;
+  reason?: string;
+}) {
+  const { carrierId, truckPlate, approved, reason } = params;
+
+  await notifyOrganization({
+    organizationId: carrierId,
+    type: approved ? 'TRUCK_APPROVED' : 'TRUCK_REJECTED',
+    title: approved ? 'Truck Approved' : 'Truck Registration Rejected',
+    message: approved
+      ? `Your truck ${truckPlate} has been approved and is now visible on the DAT board.`
+      : `Your truck ${truckPlate} registration was rejected. ${reason || 'Please contact support for details.'}`,
+    metadata: { truckPlate, approved, reason },
+  });
+}
+
+/**
+ * Notify user about verification status change
+ */
+export async function notifyUserVerification(params: {
+  userId: string;
+  verified: boolean;
+  reason?: string;
+}) {
+  const { userId, verified, reason } = params;
+
+  await createNotification({
+    userId,
+    type: NotificationType.USER_STATUS_CHANGED,
+    title: verified ? 'Account Verified' : 'Verification Update',
+    message: verified
+      ? 'Your account has been verified. You now have full access to the platform.'
+      : `Your verification status has been updated. ${reason || 'Please check your profile for details.'}`,
+    metadata: { verified, reason },
+  });
+}

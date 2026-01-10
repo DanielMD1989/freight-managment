@@ -17,6 +17,7 @@ import { requireAuth } from '@/lib/auth';
 import { canRequestTruck } from '@/lib/dispatcherPermissions';
 import { RULE_CARRIER_FINAL_AUTHORITY, RULE_SHIPPER_DEMAND_FOCUS } from '@/lib/foundation-rules';
 import { UserRole } from '@prisma/client';
+import { notifyTruckRequest } from '@/lib/notifications';
 
 // Validation schema for truck request
 const TruckRequestSchema = z.object({
@@ -70,6 +71,11 @@ export async function POST(request: NextRequest) {
         status: true,
         shipperId: true,
         assignedTruckId: true,
+        shipper: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
 
@@ -225,7 +231,14 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // TODO: Send notification to carrier about the request
+    // Send notification to carrier about the request
+    notifyTruckRequest({
+      carrierId: truck.carrierId,
+      shipperName: load.shipper?.name || 'Shipper',
+      loadReference: `LOAD-${data.loadId.slice(-8).toUpperCase()}`,
+      truckPlate: truck.licensePlate,
+      requestId: truckRequest.id,
+    }).catch((err) => console.error('Failed to send notification:', err));
 
     return NextResponse.json(
       {

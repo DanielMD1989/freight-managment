@@ -17,6 +17,7 @@ import { canApproveRequests } from '@/lib/dispatcherPermissions';
 import { RULE_CARRIER_FINAL_AUTHORITY } from '@/lib/foundation-rules';
 import { UserRole } from '@prisma/client';
 import { enableTrackingForLoad } from '@/lib/gpsTracking';
+import { notifyTruckRequestResponse } from '@/lib/notifications';
 
 // Validation schema for request response
 const RequestResponseSchema = z.object({
@@ -57,6 +58,11 @@ export async function POST(
             licensePlate: true,
             imei: true,
             gpsVerifiedAt: true,
+            carrier: {
+              select: {
+                name: true,
+              },
+            },
           },
         },
         load: {
@@ -68,6 +74,7 @@ export async function POST(
         },
         shipper: {
           select: {
+            id: true,
             name: true,
           },
         },
@@ -231,7 +238,16 @@ export async function POST(
         }
       }
 
-      // TODO: Send notification to shipper about approval
+      // Send notification to shipper about approval
+      if (truckRequest.shipper?.id) {
+        notifyTruckRequestResponse({
+          shipperId: truckRequest.shipper.id,
+          carrierName: truckRequest.truck.carrier?.name || 'Carrier',
+          truckPlate: truckRequest.truck.licensePlate,
+          approved: true,
+          requestId: requestId,
+        }).catch((err) => console.error('Failed to send notification:', err));
+      }
 
       return NextResponse.json({
         request: result.request,
@@ -266,7 +282,16 @@ export async function POST(
         },
       });
 
-      // TODO: Send notification to shipper about rejection
+      // Send notification to shipper about rejection
+      if (truckRequest.shipper?.id) {
+        notifyTruckRequestResponse({
+          shipperId: truckRequest.shipper.id,
+          carrierName: truckRequest.truck.carrier?.name || 'Carrier',
+          truckPlate: truckRequest.truck.licensePlate,
+          approved: false,
+          requestId: requestId,
+        }).catch((err) => console.error('Failed to send notification:', err));
+      }
 
       return NextResponse.json({
         request: updatedRequest,

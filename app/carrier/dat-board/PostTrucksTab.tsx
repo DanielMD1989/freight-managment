@@ -536,8 +536,6 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     }
 
     try {
-      // TODO: Fix CSRF token implementation - cookie not being set correctly
-      // For now, CSRF is disabled on server side, so we skip the token
       const csrfToken = await getCSRFToken();
 
       const selectedTruck = approvedTrucks.find(t => t.id === newTruckForm.truckId);
