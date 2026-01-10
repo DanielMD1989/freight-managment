@@ -83,7 +83,7 @@ class ProfileScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      user?.role.toUpperCase() ?? 'USER',
+                      user?.roleDisplayName ?? 'USER',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12,

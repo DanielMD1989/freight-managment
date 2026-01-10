@@ -5,6 +5,7 @@
  *
  * Unified sidebar navigation for all portal types (Admin, Carrier, Shipper)
  * Shows role-appropriate menu items based on user's role
+ * Uses A2 Modern Navy design system
  */
 
 import { ReactNode } from 'react';
@@ -493,15 +494,20 @@ export default function RoleAwareSidebar({
   };
 
   return (
-    <aside className="w-64 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-700 min-h-[calc(100vh-4rem)] flex flex-col">
+    <aside className="w-64 bg-slate-900 min-h-[calc(100vh-4rem)] flex flex-col shadow-xl">
       {/* Portal Header */}
-      <div className="flex items-center gap-2 px-4 py-4 border-b border-gray-200 dark:border-slate-700">
-        <span className="text-2xl">{config.icon}</span>
-        <span className="text-lg font-bold text-gray-900 dark:text-white">{config.title}</span>
+      <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-700/50">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center text-xl shadow-lg">
+          {config.icon}
+        </div>
+        <div>
+          <span className="text-base font-bold text-white block">{config.title}</span>
+          <span className="text-xs text-slate-400">Freight Platform</span>
+        </div>
       </div>
 
       {/* Navigation Sections */}
-      <nav className="flex-1 overflow-y-auto p-4 space-y-6">
+      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
         {sections.map((section, sectionIndex) => {
           const visibleItems = section.items.filter(hasAccess);
           if (visibleItems.length === 0) return null;
@@ -509,7 +515,7 @@ export default function RoleAwareSidebar({
           return (
             <div key={sectionIndex}>
               {section.title && (
-                <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <div className="px-3 py-2 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                   {section.title}
                 </div>
               )}
@@ -519,13 +525,13 @@ export default function RoleAwareSidebar({
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors',
+                      'flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
                       isActive(item.href)
-                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
-                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-slate-800 dark:hover:text-white'
+                        ? 'bg-primary-600/20 text-primary-400 border-l-2 border-primary-500 shadow-sm'
+                        : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
                     )}
                   >
-                    <span className="text-lg">{item.icon}</span>
+                    <span className="text-lg opacity-90">{item.icon}</span>
                     <span>{item.label}</span>
                   </Link>
                 ))}
@@ -536,14 +542,14 @@ export default function RoleAwareSidebar({
       </nav>
 
       {/* Footer - Theme Toggle & Back Link */}
-      <div className="border-t border-gray-200 dark:border-slate-700 p-4 space-y-2">
-        <div className="flex items-center justify-between px-3 py-2">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Theme</span>
+      <div className="border-t border-slate-700/50 p-4 space-y-2">
+        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-800/50">
+          <span className="text-sm font-medium text-slate-400">Theme</span>
           <ThemeToggle />
         </div>
         <Link
           href={config.backLink.href}
-          className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-slate-800"
+          className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 rounded-lg hover:bg-slate-800/60 hover:text-slate-200 transition-all duration-200"
         >
           <span className="text-lg">🏠</span>
           <span>{config.backLink.label}</span>

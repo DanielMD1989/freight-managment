@@ -1,11 +1,19 @@
 import * as React from 'react';
 
-interface CardProps extends React.HTMLAttributes<HTMLDivElement> {}
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  variant?: 'default' | 'elevated' | 'outlined';
+}
 
-export function Card({ className = '', children, ...props }: CardProps) {
+const cardVariants = {
+  default: 'bg-white border border-slate-200 shadow-sm dark:bg-slate-900 dark:border-slate-700',
+  elevated: 'bg-white shadow-lg hover:shadow-xl transition-shadow dark:bg-slate-900',
+  outlined: 'bg-transparent border-2 border-slate-200 dark:border-slate-700',
+};
+
+export function Card({ className = '', variant = 'default', children, ...props }: CardProps) {
   return (
     <div
-      className={`rounded-lg border border-gray-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 ${className}`}
+      className={`rounded-xl ${cardVariants[variant]} ${className}`}
       {...props}
     >
       {children}
@@ -28,7 +36,7 @@ interface CardTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {}
 export function CardTitle({ className = '', children, ...props }: CardTitleProps) {
   return (
     <h3
-      className={`text-lg font-semibold leading-none tracking-tight text-gray-900 dark:text-white ${className}`}
+      className={`text-lg font-semibold leading-none tracking-tight text-slate-900 dark:text-white ${className}`}
       {...props}
     >
       {children}
@@ -40,7 +48,7 @@ interface CardDescriptionProps extends React.HTMLAttributes<HTMLParagraphElement
 
 export function CardDescription({ className = '', children, ...props }: CardDescriptionProps) {
   return (
-    <p className={`text-sm text-gray-500 dark:text-gray-400 ${className}`} {...props}>
+    <p className={`text-sm text-slate-500 dark:text-slate-400 ${className}`} {...props}>
       {children}
     </p>
   );
