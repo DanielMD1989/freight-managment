@@ -107,31 +107,31 @@ export default function CompanySettingsClient({ organization }: Props) {
     <div className="space-y-6">
       {/* Messages */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4">
+          <p className="text-sm text-rose-800">{error}</p>
         </div>
       )}
 
       {success && (
-        <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-4">
-          <p className="text-sm text-green-800 dark:text-green-200">{success}</p>
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+          <p className="text-sm text-emerald-800">{success}</p>
         </div>
       )}
 
       {/* Verification Status */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-700 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-lg font-semibold text-[#064d51]">
               Verification Status
             </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-sm text-[#064d51]/70 mt-1">
               Verified organizations get priority matching and display a verified badge
             </p>
           </div>
           <div>
             {organization.isVerified ? (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-emerald-500 text-white">
                 <svg className="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
                   <path
                     fillRule="evenodd"
@@ -142,7 +142,7 @@ export default function CompanySettingsClient({ organization }: Props) {
                 Verified
               </span>
             ) : (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-amber-100 text-amber-800">
                 Pending Verification
               </span>
             )}
@@ -157,13 +157,13 @@ export default function CompanySettingsClient({ organization }: Props) {
 
       {/* Company Profile Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-700 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
+          <h2 className="text-lg font-semibold text-[#064d51] mb-4">
             Company Profile
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-[#064d51] mb-1">
                 Company Name *
               </label>
               <input
@@ -171,42 +171,42 @@ export default function CompanySettingsClient({ organization }: Props) {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
-                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                className="w-full px-3 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-[#064d51] mb-1">
                 Organization Type
               </label>
               <input
                 type="text"
                 value={organization.type}
                 disabled
-                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-100 dark:bg-slate-600 dark:text-gray-300"
+                className="w-full px-3 py-2 border border-[#064d51]/20 rounded-lg bg-[#064d51]/5 text-[#064d51]/70"
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-[#064d51] mb-1">
                 Description
               </label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                className="w-full px-3 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                 placeholder="Brief description of your company..."
               />
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-700 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
+          <h2 className="text-lg font-semibold text-[#064d51] mb-4">
             Contact Information
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-[#064d51] mb-1">
                 Contact Email *
               </label>
               <input
@@ -214,11 +214,11 @@ export default function CompanySettingsClient({ organization }: Props) {
                 value={formData.contactEmail}
                 onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
                 required
-                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                className="w-full px-3 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-[#064d51] mb-1">
                 Contact Phone *
               </label>
               <input
@@ -226,74 +226,74 @@ export default function CompanySettingsClient({ organization }: Props) {
                 value={formData.contactPhone}
                 onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
                 required
-                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                className="w-full px-3 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-[#064d51] mb-1">
                 Address
               </label>
               <input
                 type="text"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                className="w-full px-3 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-[#064d51] mb-1">
                 City
               </label>
               <input
                 type="text"
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                className="w-full px-3 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
               />
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-700 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
+          <h2 className="text-lg font-semibold text-[#064d51] mb-4">
             Legal Information
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-[#064d51] mb-1">
                 License Number
               </label>
               <input
                 type="text"
                 value={formData.licenseNumber}
                 onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                className="w-full px-3 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-[#064d51] mb-1">
                 Tax ID
               </label>
               <input
                 type="text"
                 value={formData.taxId}
                 onChange={(e) => setFormData({ ...formData, taxId: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                className="w-full px-3 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
               />
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-700 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
+          <h2 className="text-lg font-semibold text-[#064d51] mb-4">
             Privacy Settings
           </h2>
-          <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700 rounded-lg">
+          <div className="flex items-center justify-between p-4 bg-[#f0fdfa] rounded-lg">
             <div>
-              <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+              <h3 className="text-sm font-medium text-[#064d51]">
                 Display Company Name
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-[#064d51]/70">
                 Show your company name to other platform users
               </p>
             </div>
@@ -306,16 +306,16 @@ export default function CompanySettingsClient({ organization }: Props) {
                 }
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-[#064d51]/20 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#1e9c99]/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[#064d51]/20 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1e9c99]"></div>
             </label>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-900 p-4 rounded-lg border border-gray-200 dark:border-slate-700">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex items-center justify-between bg-[#f0fdfa] p-4 rounded-xl border border-[#064d51]/10">
+          <div className="text-sm text-[#064d51]/70">
             {hasChanges ? (
-              <span className="text-orange-600 font-medium">You have unsaved changes</span>
+              <span className="text-amber-600 font-medium">You have unsaved changes</span>
             ) : (
               <span>All changes saved</span>
             )}
@@ -325,14 +325,14 @@ export default function CompanySettingsClient({ organization }: Props) {
               type="button"
               onClick={handleReset}
               disabled={!hasChanges || loading}
-              className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="px-4 py-2 border border-[#064d51]/30 rounded-lg text-[#064d51] hover:bg-[#064d51]/5 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               Reset
             </button>
             <button
               type="submit"
               disabled={!hasChanges || loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="px-4 py-2 bg-[#064d51] text-white rounded-lg hover:bg-[#053d40] disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {loading ? 'Saving...' : 'Save Changes'}
             </button>
@@ -341,8 +341,8 @@ export default function CompanySettingsClient({ organization }: Props) {
       </form>
 
       {/* Account Info */}
-      <div className="bg-gray-50 dark:bg-slate-900 rounded-lg p-4 border border-gray-200 dark:border-slate-700">
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+      <div className="bg-[#064d51]/5 rounded-xl p-4 border border-[#064d51]/10">
+        <p className="text-xs text-[#064d51]/60">
           Organization created on {new Date(organization.createdAt).toLocaleDateString()}
         </p>
       </div>
