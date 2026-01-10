@@ -122,10 +122,10 @@
   --sidebar-muted: rgba(255, 255, 255, 0.5);
 
   /* ========================================
-     BOLD DESIGN - HEADER GRADIENTS (Light Cyan)
+     BOLD DESIGN - HEADER GRADIENTS (Medium Teal)
      ======================================== */
-  --header-gradient: #c0f2f3;
-  --header-gradient-dark: #a8e8e9;
+  --header-gradient: #1e9c99;
+  --header-gradient-dark: #178f8c;
 
   /* ========================================
      BOLD DESIGN - TINTED BACKGROUNDS
@@ -1051,17 +1051,16 @@ a:focus-visible {
 /* Page header bar (for carrier/shipper portals) */
 .portal-header {
   background: var(--header-gradient);
-  color: #064d51;
+  color: white;
   padding: 1rem 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 4px 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 4px 4px 20px rgba(0, 0, 0, 0.15);
   position: relative;
   /* Rounded corners to match sidebar */
   border-radius: 16px;
   margin: 12px 12px 0 0;
-  border: 1px solid rgba(6, 77, 81, 0.15);
 }
 
 .portal-header-logo {
@@ -1070,16 +1069,16 @@ a:focus-visible {
   gap: 0.75rem;
   font-size: 1.25rem;
   font-weight: 700;
-  color: #064d51;
+  color: white;
   padding-right: 1.5rem;
-  border-right: 1px solid rgba(6, 77, 81, 0.2);
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
   margin-right: 0.5rem;
 }
 
 .portal-header-logo svg {
   width: 2rem;
   height: 2rem;
-  color: #064d51;
+  color: white;
 }
 
 .portal-header-nav {
@@ -1093,22 +1092,22 @@ a:focus-visible {
   border-radius: 0.5rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: rgba(6, 77, 81, 0.7);
+  color: rgba(255, 255, 255, 0.8);
   text-decoration: none;
   transition: all 0.2s ease;
   border: 1px solid transparent;
 }
 
 .portal-header-link:hover {
-  background: rgba(6, 77, 81, 0.1);
-  color: #064d51;
-  border-color: rgba(6, 77, 81, 0.2);
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .portal-header-link.active {
-  background: #064d51;
-  color: white;
-  border-color: #064d51;
+  background: white;
+  color: #1e9c99;
+  border-color: white;
 }
 
 .portal-header-user {
@@ -1116,7 +1115,7 @@ a:focus-visible {
   align-items: center;
   gap: 0.75rem;
   padding-left: 1.5rem;
-  border-left: 1px solid rgba(6, 77, 81, 0.2);
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
   margin-left: 0.5rem;
 }
 
@@ -1124,25 +1123,25 @@ a:focus-visible {
   width: 2.25rem;
   height: 2.25rem;
   border-radius: 50%;
-  background: #064d51;
-  border: 2px solid rgba(6, 77, 81, 0.2);
+  background: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
   font-size: 0.875rem;
-  color: white;
+  color: #1e9c99;
 }
 
 .portal-header-name {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #064d51;
+  color: white;
 }
 
 .portal-header-role {
   font-size: 0.75rem;
-  color: rgba(6, 77, 81, 0.7);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 /* ========================================
