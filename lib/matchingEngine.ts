@@ -490,3 +490,71 @@ export async function findMatchingTrucksForLoad(
 
   return matches;
 }
+
+/**
+ * Enhance match results with accurate road distances
+ *
+ * Replaces Haversine (straight-line) deadhead distances with
+ * actual road distances from Google Routes API.
+ *
+ * @param matches - Array of truck matches (or load matches)
+ * @param load - The load being matched
+ * @returns Enhanced matches with road distances
+ */
+export async function enhanceMatchesWithRoadDistances<T extends TruckMatch | LoadMatch>(
+  matches: T[],
+  load: {
+    pickupLocation: { latitude: number | any; longitude: number | any };
+    deliveryLocation: { latitude: number | any; longitude: number | any };
+  }
+): Promise<T[]> {
+  // Dynamically import to avoid circular dependencies
+  const { calculateRoadDistance } = await import('@/lib/googleRoutes');
+
+  const enhanced = await Promise.all(
+    matches.map(async (match) => {
+      try {
+        // Get truck/posting origin location
+        let originLat: number;
+        let originLng: number;
+
+        if ('posting' in match) {
+          // TruckMatch
+          originLat = Number(match.posting.originCity.latitude);
+          originLng = Number(match.posting.originCity.longitude);
+        } else {
+          // LoadMatch - use load pickup as origin for now
+          originLat = Number(load.pickupLocation.latitude);
+          originLng = Number(load.pickupLocation.longitude);
+        }
+
+        // Calculate road distance from truck to pickup (DH-O)
+        const dhOrigin = await calculateRoadDistance(
+          { lat: originLat, lng: originLng },
+          {
+            lat: Number(load.pickupLocation.latitude),
+            lng: Number(load.pickupLocation.longitude),
+          }
+        );
+
+        // Update match with road distance
+        const updatedMatch = { ...match };
+        updatedMatch.matchScore = {
+          ...match.matchScore,
+          details: {
+            ...match.matchScore.details,
+            deadheadKm: dhOrigin.distanceKm,
+            roadDistanceSource: dhOrigin.source,
+          } as any,
+        };
+
+        return updatedMatch;
+      } catch (error) {
+        console.error('Error calculating road distance:', error);
+        return match; // Return original if calculation fails
+      }
+    })
+  );
+
+  return enhanced;
+}

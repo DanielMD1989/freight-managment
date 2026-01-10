@@ -14,7 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { findMatchingTrucksForLoad } from '@/lib/matchingEngine';
+import { findMatchingTrucksForLoad, enhanceMatchesWithRoadDistances } from '@/lib/matchingEngine';
 
 /**
  * GET /api/loads/[id]/matches
@@ -26,6 +26,7 @@ import { findMatchingTrucksForLoad } from '@/lib/matchingEngine';
  * Query parameters:
  * - minScore: Minimum match score (default: 40, range: 0-100)
  * - limit: Max results (default: 20, max: 50)
+ * - useRoadDistance: Calculate accurate road distances via Google Routes API (default: false)
  *
  * Returns:
  * {
@@ -99,6 +100,7 @@ export async function GET(
     // Parse query parameters
     const minScoreParam = searchParams.get('minScore');
     const limitParam = searchParams.get('limit');
+    const useRoadDistance = searchParams.get('useRoadDistance') === 'true';
 
     const minScore = minScoreParam
       ? Math.max(0, Math.min(100, parseInt(minScoreParam, 10)))
@@ -108,14 +110,33 @@ export async function GET(
       ? Math.max(1, Math.min(50, parseInt(limitParam, 10)))
       : 20;
 
-    // Find matching trucks
-    const matches = await findMatchingTrucksForLoad(id, minScore, limit);
+    // Find matching trucks (uses fast Haversine distance)
+    let matches = await findMatchingTrucksForLoad(id, minScore, limit);
+
+    // Optionally enhance with accurate road distances
+    if (useRoadDistance && matches.length > 0) {
+      const loadWithLocations = await db.load.findUnique({
+        where: { id },
+        include: {
+          pickupLocation: true,
+          deliveryLocation: true,
+        },
+      });
+
+      if (loadWithLocations?.pickupLocation && loadWithLocations?.deliveryLocation) {
+        matches = await enhanceMatchesWithRoadDistances(matches, {
+          pickupLocation: loadWithLocations.pickupLocation,
+          deliveryLocation: loadWithLocations.deliveryLocation,
+        });
+      }
+    }
 
     return NextResponse.json({
       loadId: id,
       matches,
       total: matches.length,
       minScore,
+      useRoadDistance,
     });
   } catch (error: any) {
     console.error('Error finding matching trucks:', error);
