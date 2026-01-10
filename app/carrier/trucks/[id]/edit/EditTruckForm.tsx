@@ -223,21 +223,21 @@ export default function EditTruckForm({ truck, isResubmit }: EditTruckFormProps)
     }
   };
 
-  // Standard input class for consistency
-  const inputClass = "w-full px-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 dark:bg-slate-800 dark:text-gray-100 dark:border-slate-600";
-  const selectClass = "w-full px-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-800 dark:text-gray-100 dark:border-slate-600";
-  const labelClass = "block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2";
-  const hintClass = "text-xs text-gray-500 dark:text-gray-400 mt-1";
+  // Standard input class for consistency - Teal design system
+  const inputClass = "w-full px-4 py-3 bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99] placeholder-[#064d51]/50 dark:bg-slate-800 dark:text-gray-100 dark:border-slate-600";
+  const selectClass = "w-full px-4 py-3 bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99] dark:bg-slate-800 dark:text-gray-100 dark:border-slate-600";
+  const labelClass = "block text-sm font-semibold text-[#064d51] dark:text-gray-200 mb-2";
+  const hintClass = "text-xs text-[#064d51]/60 dark:text-gray-400 mt-1";
 
   return (
     <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 rounded-lg shadow-lg p-6 md:p-8">
       <div className="space-y-6">
         {/* Form Header */}
-        <div className="border-b border-gray-200 dark:border-slate-700 pb-4">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <div className="border-b border-[#064d51]/10 dark:border-slate-700 pb-4">
+          <h2 className="text-2xl font-bold text-[#064d51] dark:text-white">
             {isResubmit ? 'Resubmit Truck' : 'Edit Truck'}
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-[#064d51]/70 dark:text-gray-400 mt-1">
             {isResubmit
               ? 'Update and resubmit your truck for admin approval'
               : 'Update your truck information'
@@ -371,25 +371,25 @@ export default function EditTruckForm({ truck, isResubmit }: EditTruckFormProps)
         </div>
 
         {/* Is Available */}
-        <div className="flex items-center bg-gray-50 dark:bg-slate-800 p-4 rounded-lg">
+        <div className="flex items-center bg-[#f0fdfa] dark:bg-slate-800 p-4 rounded-lg">
           <input
             type="checkbox"
             name="isAvailable"
             checked={formData.isAvailable}
             onChange={handleChange}
-            className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            className="h-5 w-5 text-[#1e9c99] border-[#064d51]/30 rounded focus:ring-[#1e9c99]"
           />
-          <label className="ml-3 block text-sm font-medium text-gray-800 dark:text-gray-200">
+          <label className="ml-3 block text-sm font-medium text-[#064d51] dark:text-gray-200">
             Mark truck as available for new loads
           </label>
         </div>
 
         {/* Submit Buttons */}
-        <div className="flex gap-4 pt-6 border-t border-gray-200 dark:border-slate-700">
+        <div className="flex gap-4 pt-6 border-t border-[#064d51]/10 dark:border-slate-700">
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+            className="flex-1 px-6 py-3 bg-[#064d51] text-white rounded-lg font-semibold hover:bg-[#053d40] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
           >
             {isSubmitting
               ? (isResubmit ? 'Resubmitting...' : 'Saving...')
@@ -400,7 +400,7 @@ export default function EditTruckForm({ truck, isResubmit }: EditTruckFormProps)
             type="button"
             onClick={() => router.back()}
             disabled={isSubmitting}
-            className="px-6 py-3 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors"
+            className="px-6 py-3 bg-white dark:bg-slate-800 border border-[#064d51]/20 dark:border-slate-600 text-[#064d51] dark:text-gray-300 rounded-lg font-semibold hover:bg-[#f0fdfa] dark:hover:bg-slate-700 disabled:opacity-50 transition-colors"
           >
             Cancel
           </button>

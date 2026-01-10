@@ -18,7 +18,7 @@ export function Select({ className = '', children, onValueChange, onChange, ...p
 
   return (
     <select
-      className={`flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-white ${className}`}
+      className={`flex h-10 w-full rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] focus:outline-none focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99] disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-white ${className}`}
       onChange={handleChange}
       {...props}
     >
@@ -32,7 +32,7 @@ interface SelectTriggerProps extends React.HTMLAttributes<HTMLDivElement> {}
 export function SelectTrigger({ className = '', children, ...props }: SelectTriggerProps) {
   return (
     <div
-      className={`flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 ${className}`}
+      className={`flex h-10 w-full items-center justify-between rounded-md border border-[#064d51]/20 bg-white px-3 py-2 text-sm text-[#064d51] dark:border-slate-600 dark:bg-slate-800 ${className}`}
       {...props}
     >
       {children}
@@ -45,7 +45,7 @@ interface SelectValueProps {
 }
 
 export function SelectValue({ placeholder }: SelectValueProps) {
-  return <span className="text-gray-500 dark:text-gray-400">{placeholder}</span>;
+  return <span className="text-[#064d51]/60 dark:text-gray-400">{placeholder}</span>;
 }
 
 interface SelectContentProps extends React.HTMLAttributes<HTMLDivElement> {}
@@ -53,7 +53,7 @@ interface SelectContentProps extends React.HTMLAttributes<HTMLDivElement> {}
 export function SelectContent({ className = '', children, ...props }: SelectContentProps) {
   return (
     <div
-      className={`absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800 ${className}`}
+      className={`absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-[#064d51]/20 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800 ${className}`}
       {...props}
     >
       {children}
@@ -66,7 +66,7 @@ interface SelectItemProps extends React.OptionHTMLAttributes<HTMLOptionElement> 
 export function SelectItem({ className = '', children, ...props }: SelectItemProps) {
   return (
     <option
-      className={`relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-gray-100 dark:hover:bg-slate-700 ${className}`}
+      className={`relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-[#064d51]/5 dark:hover:bg-slate-700 ${className}`}
       {...props}
     >
       {children}

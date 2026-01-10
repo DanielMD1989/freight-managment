@@ -318,10 +318,10 @@ export default function AddTruckForm() {
     }
   };
 
-  // Professional input styling
-  const inputClass = "w-full h-9 px-3 text-sm bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-700 placeholder-gray-400 transition-colors";
-  const selectClass = "w-full h-9 px-3 text-sm bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-700 transition-colors";
-  const labelClass = "block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide";
+  // Professional input styling - Teal design system
+  const inputClass = "w-full h-9 px-3 text-sm bg-[#f0fdfa] dark:bg-slate-800 text-[#064d51] dark:text-gray-100 border border-[#064d51]/20 dark:border-slate-600 rounded focus:ring-1 focus:ring-[#1e9c99] focus:border-[#1e9c99] focus:bg-white dark:focus:bg-slate-700 placeholder-[#064d51]/50 transition-colors";
+  const selectClass = "w-full h-9 px-3 text-sm bg-[#f0fdfa] dark:bg-slate-800 text-[#064d51] dark:text-gray-100 border border-[#064d51]/20 dark:border-slate-600 rounded focus:ring-1 focus:ring-[#1e9c99] focus:border-[#1e9c99] focus:bg-white dark:focus:bg-slate-700 transition-colors";
+  const labelClass = "block text-xs font-medium text-[#064d51] dark:text-gray-400 mb-1 uppercase tracking-wide";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -336,10 +336,10 @@ export default function AddTruckForm() {
       )}
 
       {/* Vehicle Information Section */}
-      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden">
-        <div className="px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
-          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="bg-white dark:bg-slate-900 border border-[#064d51]/20 dark:border-slate-700 rounded-lg overflow-hidden">
+        <div className="px-4 py-2.5 bg-[#f0fdfa] dark:bg-slate-800 border-b border-[#064d51]/10 dark:border-slate-700">
+          <h3 className="text-sm font-semibold text-[#064d51] dark:text-gray-200 flex items-center gap-2">
+            <svg className="w-4 h-4 text-[#1e9c99]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
             </svg>
@@ -375,10 +375,10 @@ export default function AddTruckForm() {
       </div>
 
       {/* Location Section */}
-      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden">
-        <div className="px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
-          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="bg-white dark:bg-slate-900 border border-[#064d51]/20 dark:border-slate-700 rounded-lg overflow-hidden">
+        <div className="px-4 py-2.5 bg-[#f0fdfa] dark:bg-slate-800 border-b border-[#064d51]/10 dark:border-slate-700">
+          <h3 className="text-sm font-semibold text-[#064d51] dark:text-gray-200 flex items-center gap-2">
+            <svg className="w-4 h-4 text-[#1e9c99]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
@@ -409,14 +409,14 @@ export default function AddTruckForm() {
       </div>
 
       {/* Documents Section */}
-      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden">
-        <div className="px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
-          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-            <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="bg-white dark:bg-slate-900 border border-[#064d51]/20 dark:border-slate-700 rounded-lg overflow-hidden">
+        <div className="px-4 py-2.5 bg-[#f0fdfa] dark:bg-slate-800 border-b border-[#064d51]/10 dark:border-slate-700">
+          <h3 className="text-sm font-semibold text-[#064d51] dark:text-gray-200 flex items-center gap-2">
+            <svg className="w-4 h-4 text-[#1e9c99]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             Documents
-            <span className="text-xs font-normal text-gray-500">(optional)</span>
+            <span className="text-xs font-normal text-[#064d51]/50">(optional)</span>
           </h3>
         </div>
         <div className="p-4 space-y-3">
@@ -431,19 +431,19 @@ export default function AddTruckForm() {
             </div>
             <div>
               <label className={labelClass}>File</label>
-              <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleFileSelect} className="w-full h-9 text-sm text-gray-500 file:mr-2 file:h-9 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer" />
+              <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleFileSelect} className="w-full h-9 text-sm text-[#064d51]/70 file:mr-2 file:h-9 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-[#064d51] file:text-white hover:file:bg-[#053d40] cursor-pointer" />
             </div>
           </div>
           {queuedDocuments.length > 0 && (
             <div className="space-y-1.5">
               {queuedDocuments.map((doc, index) => (
-                <div key={index} className="flex items-center justify-between bg-gray-50 dark:bg-slate-800 px-3 py-2 rounded text-sm">
+                <div key={index} className="flex items-center justify-between bg-[#f0fdfa] dark:bg-slate-800 px-3 py-2 rounded text-sm">
                   <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-[#1e9c99]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    <span className="text-gray-700 dark:text-gray-300">{doc.file.name}</span>
-                    <span className="text-xs text-gray-500">({doc.type.replace(/_/g, ' ')})</span>
+                    <span className="text-[#064d51] dark:text-gray-300">{doc.file.name}</span>
+                    <span className="text-xs text-[#064d51]/60">({doc.type.replace(/_/g, ' ')})</span>
                   </div>
                   <button type="button" onClick={() => removeQueuedDocument(index)} className="text-red-500 hover:text-red-700 p-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -458,17 +458,17 @@ export default function AddTruckForm() {
       </div>
 
       {/* Availability Toggle */}
-      <label className="flex items-center gap-3 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
-        <input type="checkbox" name="isAvailable" checked={formData.isAvailable} onChange={handleChange} className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+      <label className="flex items-center gap-3 bg-white dark:bg-slate-900 border border-[#064d51]/20 dark:border-slate-700 rounded-lg p-4 cursor-pointer hover:bg-[#f0fdfa] dark:hover:bg-slate-800 transition-colors">
+        <input type="checkbox" name="isAvailable" checked={formData.isAvailable} onChange={handleChange} className="h-4 w-4 text-[#1e9c99] border-[#064d51]/30 rounded focus:ring-[#1e9c99]" />
         <div>
-          <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Available for loads</p>
-          <p className="text-xs text-gray-500">This truck can be matched with available loads</p>
+          <p className="text-sm font-medium text-[#064d51] dark:text-gray-200">Available for loads</p>
+          <p className="text-xs text-[#064d51]/60">This truck can be matched with available loads</p>
         </div>
       </label>
 
       {/* Submit Buttons */}
       <div className="flex gap-3">
-        <button type="submit" disabled={isSubmitting || uploadingDocs} className="flex-1 h-10 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
+        <button type="submit" disabled={isSubmitting || uploadingDocs} className="flex-1 h-10 bg-[#064d51] text-white text-sm font-medium rounded-lg hover:bg-[#053d40] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
           {(isSubmitting || uploadingDocs) && (
             <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -477,7 +477,7 @@ export default function AddTruckForm() {
           )}
           {uploadingDocs ? 'Uploading...' : isSubmitting ? 'Submitting...' : 'Submit for Approval'}
         </button>
-        <button type="button" onClick={() => router.back()} disabled={isSubmitting || uploadingDocs} className="px-6 h-10 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors">
+        <button type="button" onClick={() => router.back()} disabled={isSubmitting || uploadingDocs} className="px-6 h-10 bg-white dark:bg-slate-800 border border-[#064d51]/20 dark:border-slate-600 text-[#064d51] dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-[#f0fdfa] dark:hover:bg-slate-700 disabled:opacity-50 transition-colors">
           Cancel
         </button>
       </div>

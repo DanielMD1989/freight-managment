@@ -235,7 +235,7 @@ export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
 
         {/* Truck Selection */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-[#064d51] mb-2">
             Select Truck *
           </label>
           <select
@@ -243,7 +243,7 @@ export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
             value={formData.truckId}
             onChange={handleChange}
             required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
           >
             <option value="">Choose a truck...</option>
             {trucks.map((truck) => (
@@ -256,13 +256,13 @@ export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
         </div>
 
         {/* Route Section */}
-        <div className="border-t border-gray-200 pt-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Route</h3>
+        <div className="border-t border-[#064d51]/10 pt-6">
+          <h3 className="text-lg font-semibold text-[#064d51] mb-4">Route</h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Origin City */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#064d51] mb-2">
                 Origin City *
               </label>
               <select
@@ -271,7 +271,7 @@ export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
                 onChange={handleChange}
                 required
                 disabled={isLoadingLocations}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99] disabled:opacity-50"
               >
                 <option value="">
                   {isLoadingLocations ? 'Loading...' : 'Select origin...'}
@@ -286,7 +286,7 @@ export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
 
             {/* Destination City */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#064d51] mb-2">
                 Destination City
               </label>
               <select
@@ -294,7 +294,7 @@ export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
                 value={formData.destinationCityId}
                 onChange={handleChange}
                 disabled={isLoadingLocations}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99] disabled:opacity-50"
               >
                 <option value="">Any destination</option>
                 {locations.map((location) => (
@@ -303,7 +303,7 @@ export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-[#064d51]/60 mt-1">
                 Leave empty if going to any destination
               </p>
             </div>
@@ -311,15 +311,15 @@ export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
         </div>
 
         {/* Availability Section */}
-        <div className="border-t border-gray-200 pt-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="border-t border-[#064d51]/10 pt-6">
+          <h3 className="text-lg font-semibold text-[#064d51] mb-4">
             Availability
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Available From */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#064d51] mb-2">
                 Available From *
               </label>
               <input
@@ -328,13 +328,13 @@ export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
                 value={formData.availableFrom}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
               />
             </div>
 
             {/* Available To */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#064d51] mb-2">
                 Available To
               </label>
               <input
@@ -342,9 +342,9 @@ export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
                 name="availableTo"
                 value={formData.availableTo}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-[#064d51]/60 mt-1">
                 Leave empty for indefinite availability
               </p>
             </div>
@@ -352,7 +352,7 @@ export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
 
           {/* Full/Partial Load */}
           <div className="mt-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-[#064d51] mb-2">
               Load Type *
             </label>
             <div className="flex gap-4">
@@ -365,7 +365,7 @@ export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
                   onChange={handleChange}
                   className="mr-2"
                 />
-                <span className="text-sm text-gray-700">Full Load Only</span>
+                <span className="text-sm text-[#064d51]">Full Load Only</span>
               </label>
               <label className="flex items-center">
                 <input
@@ -376,22 +376,22 @@ export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
                   onChange={handleChange}
                   className="mr-2"
                 />
-                <span className="text-sm text-gray-700">Partial Loads OK</span>
+                <span className="text-sm text-[#064d51]">Partial Loads OK</span>
               </label>
             </div>
           </div>
         </div>
 
         {/* Contact Information Section */}
-        <div className="border-t border-gray-200 pt-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="border-t border-[#064d51]/10 pt-6">
+          <h3 className="text-lg font-semibold text-[#064d51] mb-4">
             Contact Information
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Contact Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#064d51] mb-2">
                 Contact Name *
               </label>
               <input
@@ -401,13 +401,13 @@ export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
                 onChange={handleChange}
                 required
                 placeholder="e.g., John Doe"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
               />
             </div>
 
             {/* Contact Phone */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#064d51] mb-2">
                 Contact Phone *
               </label>
               <input
@@ -417,7 +417,7 @@ export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
                 onChange={handleChange}
                 required
                 placeholder="e.g., +251-911-123456"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
               />
             </div>
           </div>
@@ -425,7 +425,7 @@ export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
 
         {/* Notes */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-[#064d51] mb-2">
             Additional Notes
           </label>
           <textarea
@@ -435,19 +435,19 @@ export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
             rows={4}
             maxLength={500}
             placeholder="Any additional information about this posting..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
           />
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-[#064d51]/60 mt-1">
             {formData.notes.length}/500 characters
           </p>
         </div>
 
         {/* Submit Buttons */}
-        <div className="flex gap-4 pt-4 border-t border-gray-200">
+        <div className="flex gap-4 pt-4 border-t border-[#064d51]/10">
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex-1 px-6 py-3 bg-[#064d51] text-white rounded-lg font-medium hover:bg-[#053d40] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isSubmitting ? 'Creating Posting...' : 'Create Posting'}
           </button>
@@ -455,7 +455,7 @@ export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
             type="button"
             onClick={() => router.back()}
             disabled={isSubmitting}
-            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            className="px-6 py-3 border border-[#064d51]/20 text-[#064d51] rounded-lg font-medium hover:bg-[#f0fdfa] disabled:opacity-50 transition-colors"
           >
             Cancel
           </button>

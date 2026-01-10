@@ -5,9 +5,9 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const cardVariants = {
-  default: 'bg-white border border-slate-200 shadow-sm dark:bg-slate-900 dark:border-slate-700',
+  default: 'bg-white border border-[#064d51]/10 shadow-sm dark:bg-slate-900 dark:border-slate-700',
   elevated: 'bg-white shadow-lg hover:shadow-xl transition-shadow dark:bg-slate-900',
-  outlined: 'bg-transparent border-2 border-slate-200 dark:border-slate-700',
+  outlined: 'bg-transparent border-2 border-[#064d51]/20 dark:border-slate-700',
 };
 
 export function Card({ className = '', variant = 'default', children, ...props }: CardProps) {
@@ -36,7 +36,7 @@ interface CardTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {}
 export function CardTitle({ className = '', children, ...props }: CardTitleProps) {
   return (
     <h3
-      className={`text-lg font-semibold leading-none tracking-tight text-slate-900 dark:text-white ${className}`}
+      className={`text-lg font-semibold leading-none tracking-tight text-[#064d51] dark:text-white ${className}`}
       {...props}
     >
       {children}
@@ -48,7 +48,7 @@ interface CardDescriptionProps extends React.HTMLAttributes<HTMLParagraphElement
 
 export function CardDescription({ className = '', children, ...props }: CardDescriptionProps) {
   return (
-    <p className={`text-sm text-slate-500 dark:text-slate-400 ${className}`} {...props}>
+    <p className={`text-sm text-[#064d51]/70 dark:text-slate-400 ${className}`} {...props}>
       {children}
     </p>
   );
