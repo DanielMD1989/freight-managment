@@ -67,7 +67,7 @@ function LoginForm() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
               </svg>
             </div>
-            <span className="text-2xl font-bold text-white">FreightFlow</span>
+            <span className="text-2xl font-bold text-white">FreightET</span>
           </div>
 
           <h1 className="text-4xl font-bold text-white mb-6 leading-tight">
@@ -110,7 +110,7 @@ function LoginForm() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
               </svg>
             </div>
-            <span className="text-xl font-bold text-slate-900 dark:text-white">FreightFlow</span>
+            <span className="text-xl font-bold text-slate-900 dark:text-white">FreightET</span>
           </div>
 
           <div className="text-center lg:text-left mb-8">
@@ -186,7 +186,7 @@ function LoginForm() {
                 <div className="w-full border-t border-slate-200 dark:border-slate-700"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-slate-50 dark:bg-slate-950 text-slate-500">New to FreightFlow?</span>
+                <span className="px-4 bg-slate-50 dark:bg-slate-950 text-slate-500">New to FreightET?</span>
               </div>
             </div>
 

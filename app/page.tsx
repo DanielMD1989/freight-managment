@@ -23,7 +23,7 @@ export default async function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
                 </svg>
               </div>
-              <span className="text-xl font-bold text-slate-900">FreightFlow</span>
+              <span className="text-xl font-bold text-slate-900">FreightET</span>
             </div>
 
             {/* Nav Links */}
@@ -153,7 +153,7 @@ export default async function Home() {
                 Our Solution
               </div>
               <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-6">
-                FreightFlow makes it <span className="text-emerald-600">simple</span>
+                FreightET makes it <span className="text-emerald-600">simple</span>
               </h2>
               <div className="space-y-4">
                 {[
@@ -404,7 +404,7 @@ export default async function Home() {
               Trusted by leading companies
             </h2>
             <p className="text-lg text-slate-600">
-              Join hundreds of businesses who rely on FreightFlow for their logistics needs
+              Join hundreds of businesses who rely on FreightET for their logistics needs
             </p>
           </div>
 
@@ -412,13 +412,13 @@ export default async function Home() {
           <div className="grid md:grid-cols-3 gap-8 mb-16">
             {[
               {
-                quote: "FreightFlow cut our logistics costs by 30% and gave us complete visibility into our shipments. Game changer for our business.",
+                quote: "FreightET cut our logistics costs by 30% and gave us complete visibility into our shipments. Game changer for our business.",
                 author: "Abebe Tadesse",
                 role: "Logistics Manager",
                 company: "Ethiopian Imports PLC",
               },
               {
-                quote: "As a carrier, I've doubled my loads since joining FreightFlow. The platform makes it easy to find profitable routes.",
+                quote: "As a carrier, I've doubled my loads since joining FreightET. The platform makes it easy to find profitable routes.",
                 author: "Mulugeta Gebre",
                 role: "Fleet Owner",
                 company: "MG Transport",
@@ -485,7 +485,7 @@ export default async function Home() {
             Ready to transform your logistics?
           </h2>
           <p className="text-lg text-primary-100 mb-8 max-w-2xl mx-auto">
-            Join thousands of businesses already using FreightFlow. Start shipping smarter today.
+            Join thousands of businesses already using FreightET. Start shipping smarter today.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
@@ -519,10 +519,10 @@ export default async function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
                   </svg>
                 </div>
-                <span className="text-lg font-bold text-white">FreightFlow</span>
+                <span className="text-lg font-bold text-white">FreightET</span>
               </div>
               <p className="text-slate-400 text-sm">
-                Ethiopia&apos;s leading freight management platform connecting shippers with carriers.
+                Ethiopia&apos;s premier freight management platform connecting shippers with carriers.
               </p>
             </div>
 
@@ -550,7 +550,7 @@ export default async function Home() {
               <h4 className="text-white font-semibold mb-4">Contact</h4>
               <ul className="space-y-2 text-sm text-slate-400">
                 <li>Addis Ababa, Ethiopia</li>
-                <li>support@freightflow.et</li>
+                <li>support@freightet.com</li>
                 <li>+251 11 XXX XXXX</li>
               </ul>
             </div>
@@ -558,7 +558,7 @@ export default async function Home() {
 
           <div className="border-t border-slate-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-slate-500">
-              &copy; {new Date().getFullYear()} FreightFlow. All rights reserved.
+              &copy; {new Date().getFullYear()} FreightET. All rights reserved.
             </p>
             <div className="flex items-center gap-6 text-sm text-slate-500">
               <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>

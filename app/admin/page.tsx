@@ -87,23 +87,25 @@ function StatCard({
   trend?: 'up' | 'down' | 'neutral';
 }) {
   const trendColors = {
-    up: 'text-green-600',
-    down: 'text-red-600',
-    neutral: 'text-gray-600',
+    up: 'text-[var(--success-600)]',
+    down: 'text-[var(--error-600)]',
+    neutral: 'text-[var(--foreground-muted)]',
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-xl shadow-sm border border-[var(--border)] p-6 hover:shadow-md transition-all">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-medium text-gray-600">{title}</h3>
-        <span className="text-2xl">{icon}</span>
+        <h3 className="text-sm font-medium text-[var(--foreground-muted)]">{title}</h3>
+        <div className="w-10 h-10 rounded-lg bg-[var(--primary-50)] flex items-center justify-center text-xl">
+          {icon}
+        </div>
       </div>
       <div className="mt-2">
-        <p className="text-3xl font-bold text-gray-900">{value}</p>
+        <p className="text-3xl font-bold text-[var(--foreground)]">{value}</p>
         {subtitle && (
           <p
             className={`text-sm mt-1 ${
-              trend ? trendColors[trend] : 'text-gray-500'
+              trend ? trendColors[trend] : 'text-[var(--foreground-muted)]'
             }`}
           >
             {subtitle}
@@ -119,17 +121,17 @@ function StatCard({
  */
 function LoadStatusCard({ stats }: { stats: DashboardStats }) {
   const statusColors: Record<string, string> = {
-    POSTED: 'bg-blue-100 text-blue-800',
-    MATCHED: 'bg-purple-100 text-purple-800',
-    IN_TRANSIT: 'bg-yellow-100 text-yellow-800',
-    DELIVERED: 'bg-green-100 text-green-800',
-    COMPLETED: 'bg-gray-100 text-gray-800',
-    CANCELLED: 'bg-red-100 text-red-800',
+    POSTED: 'bg-[var(--primary-100)] text-[var(--primary-700)]',
+    MATCHED: 'bg-[var(--secondary-100)] text-[var(--secondary-700)]',
+    IN_TRANSIT: 'bg-[var(--warning-100)] text-[var(--warning-700)]',
+    DELIVERED: 'bg-[var(--success-100)] text-[var(--success-700)]',
+    COMPLETED: 'bg-[var(--neutral-100)] text-[var(--neutral-700)]',
+    CANCELLED: 'bg-[var(--error-100)] text-[var(--error-700)]',
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+    <div className="bg-white rounded-xl shadow-sm border border-[var(--border)] p-6">
+      <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">
         Loads by Status
       </h3>
       <div className="space-y-3">
@@ -137,18 +139,18 @@ function LoadStatusCard({ stats }: { stats: DashboardStats }) {
           <div key={item.status} className="flex items-center justify-between">
             <span
               className={`px-3 py-1 rounded-full text-xs font-medium ${
-                statusColors[item.status] || 'bg-gray-100 text-gray-800'
+                statusColors[item.status] || 'bg-[var(--neutral-100)] text-[var(--neutral-700)]'
               }`}
             >
               {item.status.replace(/_/g, ' ')}
             </span>
-            <span className="text-lg font-semibold text-gray-900">
+            <span className="text-lg font-semibold text-[var(--foreground)]">
               {item._count}
             </span>
           </div>
         ))}
         {stats.loadsByStatus.length === 0 && (
-          <p className="text-sm text-gray-500 text-center py-4">
+          <p className="text-sm text-[var(--foreground-muted)] text-center py-4">
             No loads yet
           </p>
         )}
@@ -182,13 +184,13 @@ export default async function AdminDashboard() {
     return (
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-3xl font-bold text-[var(--foreground)]">Dashboard</h1>
+          <p className="text-[var(--foreground-muted)] mt-2">
             Platform overview and key metrics
           </p>
         </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800">
+        <div className="bg-[var(--error-50)] border border-[var(--error-200)] rounded-xl p-4">
+          <p className="text-[var(--error-700)]">
             Failed to load dashboard statistics. Please try refreshing the page.
           </p>
         </div>
@@ -200,8 +202,8 @@ export default async function AdminDashboard() {
     <div className="max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-2">
+        <h1 className="text-3xl font-bold text-[var(--foreground)]">Dashboard</h1>
+        <p className="text-[var(--foreground-muted)] mt-2">
           Welcome back! Here's what's happening on the platform.
         </p>
       </div>
@@ -272,49 +274,49 @@ export default async function AdminDashboard() {
         <LoadStatusCard stats={stats} />
 
         {/* Quick Actions */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="bg-white rounded-xl shadow-sm border border-[var(--border)] p-6">
+          <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">
             Quick Actions
           </h3>
           <div className="space-y-3">
             <a
               href="/admin/users"
-              className="block px-4 py-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+              className="block px-4 py-3 bg-[var(--primary-50)] hover:bg-[var(--primary-100)] rounded-lg transition-colors"
             >
               <div className="flex items-center justify-between">
-                <span className="font-medium text-blue-900">Manage Users</span>
-                <span className="text-blue-600">→</span>
+                <span className="font-medium text-[var(--primary-700)]">Manage Users</span>
+                <span className="text-[var(--primary-600)]">→</span>
               </div>
             </a>
             <a
               href="/admin/verification"
-              className="block px-4 py-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+              className="block px-4 py-3 bg-[var(--secondary-50)] hover:bg-[var(--secondary-100)] rounded-lg transition-colors"
             >
               <div className="flex items-center justify-between">
-                <span className="font-medium text-purple-900">
+                <span className="font-medium text-[var(--secondary-700)]">
                   Document Verification
                 </span>
-                <span className="text-purple-600">→</span>
+                <span className="text-[var(--secondary-600)]">→</span>
               </div>
             </a>
             <a
               href="/admin/organizations"
-              className="block px-4 py-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+              className="block px-4 py-3 bg-[var(--success-50)] hover:bg-[var(--success-100)] rounded-lg transition-colors"
             >
               <div className="flex items-center justify-between">
-                <span className="font-medium text-green-900">
+                <span className="font-medium text-[var(--success-700)]">
                   Organizations
                 </span>
-                <span className="text-green-600">→</span>
+                <span className="text-[var(--success-600)]">→</span>
               </div>
             </a>
             <a
               href="/admin/audit-logs"
-              className="block px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+              className="block px-4 py-3 bg-[var(--neutral-50)] hover:bg-[var(--neutral-100)] rounded-lg transition-colors"
             >
               <div className="flex items-center justify-between">
-                <span className="font-medium text-gray-900">Audit Logs</span>
-                <span className="text-gray-600">→</span>
+                <span className="font-medium text-[var(--foreground)]">Audit Logs</span>
+                <span className="text-[var(--foreground-muted)]">→</span>
               </div>
             </a>
           </div>
@@ -322,24 +324,24 @@ export default async function AdminDashboard() {
       </div>
 
       {/* System Status */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+      <div className="bg-white rounded-xl shadow-sm border border-[var(--border)] p-6">
+        <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">
           System Status
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-            <span className="text-sm text-gray-700">API Status: Operational</span>
+            <div className="w-3 h-3 bg-[var(--success-500)] rounded-full animate-pulse"></div>
+            <span className="text-sm text-[var(--foreground-secondary)]">API Status: Operational</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-            <span className="text-sm text-gray-700">
+            <div className="w-3 h-3 bg-[var(--success-500)] rounded-full animate-pulse"></div>
+            <span className="text-sm text-[var(--foreground-secondary)]">
               Database: Connected
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-            <span className="text-sm text-gray-700">
+            <div className="w-3 h-3 bg-[var(--success-500)] rounded-full animate-pulse"></div>
+            <span className="text-sm text-[var(--foreground-secondary)]">
               Matching Engine: Active
             </span>
           </div>
