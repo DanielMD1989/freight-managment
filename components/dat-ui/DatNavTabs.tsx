@@ -115,8 +115,8 @@ export default function DatNavTabs({
               gap-2
               ${
                 isActive
-                  ? 'bg-[var(--primary-700)] text-white shadow-md'
-                  : 'bg-white text-[var(--neutral-600)] hover:bg-[var(--primary-50)] hover:text-[var(--primary-700)] border border-[var(--border)]'
+                  ? 'bg-white text-[var(--primary-700)] shadow-md'
+                  : 'bg-white/10 text-white/90 hover:bg-white/20 hover:text-white border border-white/20'
               }
             `}
           >

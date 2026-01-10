@@ -110,15 +110,36 @@
   --neutral-50: #f8fafc;
 
   /* ========================================
-     SIDEBAR COLORS (Clean Light)
+     SIDEBAR COLORS (Teal Gradient - Bold)
      ======================================== */
-  --sidebar-bg: #f8fafc;
-  --sidebar-hover: #f1f5f9;
-  --sidebar-active: #0f766e;
-  --sidebar-border: #e2e8f0;
-  --sidebar-text: #64748b;
+  --sidebar-bg: linear-gradient(180deg, #0f766e 0%, #134e4a 100%);
+  --sidebar-bg-solid: #0f766e;
+  --sidebar-hover: rgba(255, 255, 255, 0.1);
+  --sidebar-active: rgba(255, 255, 255, 0.15);
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-text: rgba(255, 255, 255, 0.7);
   --sidebar-text-active: #ffffff;
-  --sidebar-muted: #94a3b8;
+  --sidebar-muted: rgba(255, 255, 255, 0.5);
+
+  /* ========================================
+     BOLD DESIGN - HEADER GRADIENTS
+     ======================================== */
+  --header-gradient: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #06b6d4 100%);
+  --header-gradient-dark: linear-gradient(135deg, #115e59 0%, #0f766e 100%);
+
+  /* ========================================
+     BOLD DESIGN - TINTED BACKGROUNDS
+     ======================================== */
+  --bg-tinted: #f0fdfa;
+  --bg-tinted-hover: #ccfbf1;
+
+  /* ========================================
+     BOLD DESIGN - TABLE HEADERS
+     ======================================== */
+  --table-header-bg: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+  --table-header-text: #ffffff;
+  --table-row-alt: #f0fdfa;
+  --table-row-hover: #ccfbf1;
 
   /* ========================================
      SEMANTIC COLORS
@@ -193,7 +214,10 @@
   --transition-slow: 300ms ease;
 }
 
-/* Dark mode overrides */
+/* ========================================
+   DARK MODE - BOLD DESIGN
+   Teal accents throughout for cohesive look
+   ======================================== */
 :root.dark {
   --background: #0f172a;
   --background-secondary: #1e293b;
@@ -207,10 +231,26 @@
   --input: #1e293b;
   --input-border: #334155;
 
-  --sidebar-bg: #0f172a;
-  --sidebar-hover: #1e293b;
-  --sidebar-border: #1e293b;
-  --sidebar-text: #94a3b8;
+  /* Dark mode sidebar - still teal gradient */
+  --sidebar-bg: linear-gradient(180deg, #115e59 0%, #134e4a 100%);
+  --sidebar-bg-solid: #115e59;
+  --sidebar-hover: rgba(255, 255, 255, 0.08);
+  --sidebar-active: rgba(255, 255, 255, 0.12);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-text: rgba(255, 255, 255, 0.7);
+  --sidebar-text-active: #ffffff;
+
+  /* Dark mode header gradient */
+  --header-gradient: linear-gradient(135deg, #115e59 0%, #0f766e 50%, #0e7490 100%);
+  --header-gradient-dark: linear-gradient(135deg, #134e4a 0%, #115e59 100%);
+
+  /* Dark mode tinted backgrounds */
+  --bg-tinted: rgba(20, 184, 166, 0.08);
+  --bg-tinted-hover: rgba(20, 184, 166, 0.12);
+
+  /* Table header - teal tint in dark mode */
+  --table-header-bg: rgba(20, 184, 166, 0.15);
+  --table-row-alt: rgba(20, 184, 166, 0.05);
 }
 
 @theme inline {
@@ -468,10 +508,17 @@ a:focus-visible {
 }
 
 /* ========================================
-   STAT CARD STYLES
+   STAT CARD STYLES - BOLD DESIGN
+   Two options: Gradient cards or Tinted cards with accent border
    ======================================== */
+
+/* Option 1: Gradient stat cards (full color) */
 .stat-card {
-  @apply p-5 rounded-xl text-white relative overflow-hidden;
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  color: white;
+  position: relative;
+  overflow: hidden;
 }
 
 .stat-card::before {
@@ -501,16 +548,109 @@ a:focus-visible {
   background: linear-gradient(135deg, var(--warning-700), var(--warning-500));
 }
 
+.stat-card-error {
+  background: linear-gradient(135deg, var(--error-700), var(--error-500));
+}
+
+/* Option 2: Tinted stat cards with left accent border */
+.stat-card-tinted {
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  background: white;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary-500);
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.stat-card-tinted:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.stat-card-tinted.tinted-primary {
+  background: linear-gradient(135deg, var(--primary-50) 0%, white 100%);
+  border-left-color: var(--primary-500);
+}
+
+.stat-card-tinted.tinted-secondary {
+  background: linear-gradient(135deg, var(--accent-50) 0%, white 100%);
+  border-left-color: var(--accent-500);
+}
+
+.stat-card-tinted.tinted-success {
+  background: linear-gradient(135deg, var(--success-50) 0%, white 100%);
+  border-left-color: var(--success-500);
+}
+
+.stat-card-tinted.tinted-warning {
+  background: linear-gradient(135deg, var(--warning-50) 0%, white 100%);
+  border-left-color: var(--warning-500);
+}
+
+.stat-card-tinted.tinted-error {
+  background: linear-gradient(135deg, var(--error-50) 0%, white 100%);
+  border-left-color: var(--error-500);
+}
+
+/* Dark mode tinted cards */
+.dark .stat-card-tinted {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+.dark .stat-card-tinted.tinted-primary {
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.1) 0%, var(--card) 100%);
+}
+
+.dark .stat-card-tinted.tinted-secondary {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, var(--card) 100%);
+}
+
+.dark .stat-card-tinted.tinted-success {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, var(--card) 100%);
+}
+
+.dark .stat-card-tinted.tinted-warning {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, var(--card) 100%);
+}
+
+.dark .stat-card-tinted.tinted-error {
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.1) 0%, var(--card) 100%);
+}
+
 .stat-label {
-  @apply text-xs font-medium uppercase tracking-wide opacity-90 mb-1;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.9;
+  margin-bottom: 0.25rem;
 }
 
 .stat-value {
-  @apply text-3xl font-extrabold leading-none mb-1;
+  font-size: 1.875rem;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 0.25rem;
 }
 
 .stat-change {
-  @apply text-xs opacity-80;
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+/* Stat label/value colors for tinted cards */
+.stat-card-tinted .stat-label {
+  color: var(--foreground-muted);
+}
+
+.stat-card-tinted .stat-value {
+  color: var(--foreground);
+}
+
+.stat-card-tinted .stat-change {
+  color: var(--foreground-muted);
 }
 
 /* ========================================
@@ -567,7 +707,7 @@ a:focus-visible {
 .badge-cancelled .badge-dot { background-color: var(--neutral-500); }
 
 /* ========================================
-   SIDEBAR STYLES
+   SIDEBAR STYLES - BOLD TEAL GRADIENT
    ======================================== */
 .sidebar {
   width: 260px;
@@ -584,35 +724,58 @@ a:focus-visible {
 }
 
 .sidebar-logo {
-  @apply px-4 py-5 border-b border-slate-700;
+  padding: 1.25rem 1rem;
+  border-bottom: 1px solid var(--sidebar-border);
 }
 
 .sidebar-logo h1 {
-  @apply text-xl font-bold text-white flex items-center gap-2;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .sidebar-logo span {
-  @apply text-xs text-slate-400 block mt-1;
+  font-size: 0.75rem;
+  color: var(--sidebar-text);
+  display: block;
+  margin-top: 0.25rem;
 }
 
 .sidebar-nav {
-  @apply flex-1 p-4 overflow-y-auto;
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
 }
 
 .sidebar-section {
-  @apply text-xs font-semibold text-slate-500 uppercase tracking-widest;
-  @apply px-3 pt-4 pb-2;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--sidebar-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 1rem 0.75rem 0.5rem;
 }
 
 .sidebar-link {
-  @apply flex items-center gap-3 px-4 py-3 rounded-lg;
-  @apply text-sm font-medium text-slate-400;
-  @apply transition-all duration-200 mb-1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--sidebar-text);
+  transition: all 0.2s ease;
+  margin-bottom: 0.25rem;
   text-decoration: none;
 }
 
 .sidebar-link:hover {
-  @apply bg-slate-800 text-white;
+  background: var(--sidebar-hover);
+  color: white;
 }
 
 .sidebar-link.active {
@@ -621,11 +784,13 @@ a:focus-visible {
 }
 
 .sidebar-link svg {
-  @apply w-5 h-5 opacity-70;
+  width: 1.25rem;
+  height: 1.25rem;
+  opacity: 0.7;
 }
 
 .sidebar-link.active svg {
-  @apply opacity-100;
+  opacity: 1;
 }
 
 /* Main content offset */
@@ -635,28 +800,44 @@ a:focus-visible {
 }
 
 /* ========================================
-   TABLE STYLES
+   TABLE STYLES - BOLD TEAL HEADERS
    ======================================== */
 .table {
-  @apply w-full;
+  width: 100%;
   border-collapse: collapse;
 }
 
 .table th {
-  @apply px-4 py-3 text-left text-xs font-semibold text-neutral-500;
-  @apply uppercase tracking-wide bg-neutral-50 border-b border-neutral-200;
+  padding: 0.875rem 1rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--table-header-bg);
+  color: var(--table-header-text);
+  border-bottom: 1px solid var(--border);
 }
 
 .table td {
-  @apply px-4 py-4 text-sm text-neutral-700 border-b border-neutral-100;
+  padding: 1rem;
+  font-size: 0.875rem;
+  color: var(--foreground);
+  border-bottom: 1px solid var(--border);
 }
 
-.table tr:hover td {
-  @apply bg-neutral-50;
+/* Alternating row colors with teal tint */
+.table tbody tr:nth-child(even) {
+  background: var(--table-row-alt);
+}
+
+.table tbody tr:hover td {
+  background: var(--table-row-hover);
 }
 
 .table-cell-primary {
-  @apply font-medium text-neutral-900;
+  font-weight: 500;
+  color: var(--foreground);
 }
 
 /* ========================================
@@ -769,6 +950,170 @@ a:focus-visible {
 
 .gradient-hero {
   background: linear-gradient(135deg, var(--primary-900), var(--primary-700));
+}
+
+/* ========================================
+   BOLD HEADER STYLES
+   Gradient headers for dashboards
+   ======================================== */
+.header-gradient {
+  background: var(--header-gradient);
+  color: white;
+  padding: 1.5rem;
+  border-radius: 0 0 1rem 1rem;
+}
+
+.header-gradient h1 {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.header-gradient p {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.875rem;
+}
+
+/* Dashboard header with gradient */
+.dashboard-header {
+  background: var(--header-gradient);
+  color: white;
+  padding: 1.5rem 2rem;
+  margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+  border-radius: 0;
+}
+
+@media (min-width: 768px) {
+  .dashboard-header {
+    margin: -1.5rem -2rem 1.5rem -2rem;
+    padding: 2rem 2.5rem;
+  }
+}
+
+.dashboard-header-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 0.25rem;
+}
+
+.dashboard-header-subtitle {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Header with user info */
+.dashboard-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.dashboard-header .btn-outline {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.dashboard-header .btn-outline:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Card header with gradient */
+.card-header-gradient {
+  background: var(--header-gradient);
+  color: white;
+  padding: 1rem 1.25rem;
+  border-radius: 0.75rem 0.75rem 0 0;
+  margin: -1px -1px 0 -1px;
+}
+
+.card-header-gradient h3 {
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Page header bar (for carrier/shipper portals) */
+.portal-header {
+  background: var(--header-gradient);
+  color: white;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.portal-header-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: white;
+}
+
+.portal-header-logo svg {
+  width: 2rem;
+  height: 2rem;
+}
+
+.portal-header-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.portal-header-link {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.portal-header-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.portal-header-link.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+.portal-header-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.portal-header-avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: white;
+}
+
+.portal-header-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: white;
+}
+
+.portal-header-role {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 /* ========================================

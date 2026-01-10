@@ -156,11 +156,24 @@ export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientPro
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background-secondary)]">
-      {/* Header - Clean & Minimal Design */}
-      <div className="bg-white border-b border-[var(--border)] px-6 py-4 flex items-center justify-between shadow-sm">
+    <div className="min-h-screen bg-[var(--bg-tinted)]">
+      {/* Header - Bold Gradient Design */}
+      <div className="portal-header">
+        {/* Logo & Branding */}
+        <div className="portal-header-logo">
+          <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+            <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+          </div>
+          <div>
+            <span className="block">FreightET</span>
+            <span className="text-xs font-normal text-white/70">Shipper Portal</span>
+          </div>
+        </div>
+
         {/* Navigation Tabs */}
-        <div className="flex-1">
+        <div className="flex-1 flex justify-center">
           <DatNavTabs
             activeTab={activeTab}
             onTabChange={(tab) => setActiveTab(tab as ShipperTabKey)}
@@ -169,7 +182,7 @@ export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientPro
           />
         </div>
 
-        {/* User Info & Logout */}
+        {/* User Info & Actions */}
         <div className="flex items-center gap-4">
           {/* Commission Discount Badge - Sprint 16: Story 16.6 */}
           {!loading && completionRate > 0 && (
@@ -180,33 +193,23 @@ export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientPro
           <NotificationBell />
 
           {/* User Info */}
-          <div className="flex items-center gap-3 text-sm">
-            <div className="w-8 h-8 rounded-full bg-[var(--primary-100)] text-[var(--primary-700)] flex items-center justify-center font-semibold text-xs">
+          <div className="portal-header-user">
+            <div className="portal-header-avatar">
               {user.firstName?.[0]}{user.lastName?.[0]}
             </div>
             <div className="hidden sm:block">
-              <div className="font-medium text-[var(--foreground)]">{user.firstName} {user.lastName}</div>
-              <div className="text-xs text-[var(--foreground-muted)]">{user.role}</div>
+              <div className="portal-header-name">{user.firstName} {user.lastName}</div>
+              <div className="portal-header-role">{user.role}</div>
             </div>
           </div>
 
           {/* Logout Button */}
           <button
             onClick={handleLogout}
-            className="px-4 py-2 bg-[var(--error-500)] text-white text-sm font-semibold rounded-lg hover:bg-[var(--error-600)] transition-colors shadow-sm"
+            className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold rounded-lg transition-colors border border-white/20"
           >
             Logout
           </button>
-
-          {/* FreightET Branding */}
-          <div className="hidden md:flex items-center gap-2 pl-4 border-l border-[var(--border)]">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--primary-500)] to-[var(--primary-700)] flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 17h8M8 17a2 2 0 11-4 0 2 2 0 014 0zm8 0a2 2 0 104 0 2 2 0 00-4 0zM3 9h13a2 2 0 012 2v4H3V9zm13-4l4 4h-4V5z" />
-              </svg>
-            </div>
-            <span className="text-[var(--foreground)] font-bold">FreightET</span>
-          </div>
         </div>
       </div>
 
