@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FreightET - Bold Design Preview (Option B Colors)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f0fdfa;
+      min-height: 100vh;
+    }
+
+    /* Option B Colors - Teal + Indigo + Cyan + Emerald */
+    :root {
+      --teal-50: #f0fdfa;
+      --teal-100: #ccfbf1;
+      --teal-200: #99f6e4;
+      --teal-300: #5eead4;
+      --teal-400: #2dd4bf;
+      --teal-500: #14b8a6;
+      --teal-600: #0d9488;
+      --teal-700: #0f766e;
+      --teal-800: #115e59;
+      --teal-900: #134e4a;
+
+      --indigo-500: #6366f1;
+      --indigo-600: #4f46e5;
+
+      --cyan-400: #22d3ee;
+      --cyan-500: #06b6d4;
+
+      --emerald-500: #10b981;
+      --emerald-600: #059669;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--teal-800);
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--teal-600);
+      margin-bottom: 40px;
+      font-size: 16px;
+    }
+
+    .design-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 40px;
+    }
+
+    .design-card {
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(15, 118, 110, 0.1);
+      border: 1px solid var(--teal-200);
+    }
+
+    .design-card h3 {
+      padding: 16px 20px;
+      background: linear-gradient(135deg, var(--teal-600), var(--teal-700));
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .design-content {
+      padding: 20px;
+    }
+
+    /* ========== DESIGN OPTION 1: Teal Gradient Header ========== */
+    .dashboard-preview-1 {
+      background: var(--teal-50);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .gradient-header {
+      background: linear-gradient(135deg, var(--teal-700) 0%, var(--teal-600) 50%, var(--cyan-500) 100%);
+      padding: 20px;
+      color: white;
+    }
+
+    .gradient-header .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .gradient-header .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .gradient-header .nav-tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .gradient-header .nav-tab {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .gradient-header .nav-tab.active {
+      background: white;
+      color: var(--teal-700);
+    }
+
+    .gradient-header .nav-tab:not(.active) {
+      background: rgba(255,255,255,0.15);
+      color: white;
+    }
+
+    .content-area-1 {
+      padding: 16px;
+    }
+
+    .stat-cards-1 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .stat-card-1 {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      border-left: 4px solid var(--teal-500);
+      box-shadow: 0 2px 8px rgba(15, 118, 110, 0.08);
+    }
+
+    .stat-card-1 .label {
+      font-size: 11px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-card-1 .value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--teal-700);
+      margin-top: 4px;
+    }
+
+    /* ========== DESIGN OPTION 2: Colored Sidebar ========== */
+    .dashboard-preview-2 {
+      display: flex;
+      border-radius: 12px;
+      overflow: hidden;
+      height: 300px;
+    }
+
+    .colored-sidebar {
+      width: 200px;
+      background: linear-gradient(180deg, var(--teal-700) 0%, var(--teal-800) 100%);
+      padding: 16px;
+      color: white;
+    }
+
+    .colored-sidebar .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .colored-sidebar .nav-item {
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .colored-sidebar .nav-item.active {
+      background: rgba(255,255,255,0.15);
+    }
+
+    .colored-sidebar .nav-item:not(.active) {
+      opacity: 0.7;
+    }
+
+    .main-content-2 {
+      flex: 1;
+      background: var(--teal-50);
+      padding: 16px;
+    }
+
+    .main-content-2 .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .main-content-2 h4 {
+      color: var(--teal-800);
+      font-size: 18px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--teal-600), var(--teal-500));
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* ========== DESIGN OPTION 3: Tinted Cards ========== */
+    .dashboard-preview-3 {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .tinted-cards {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .tinted-card {
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .tinted-card.teal {
+      background: linear-gradient(135deg, var(--teal-50), var(--teal-100));
+      border: 1px solid var(--teal-200);
+    }
+
+    .tinted-card.indigo {
+      background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+      border: 1px solid #c7d2fe;
+    }
+
+    .tinted-card.cyan {
+      background: linear-gradient(135deg, #ecfeff, #cffafe);
+      border: 1px solid #a5f3fc;
+    }
+
+    .tinted-card.emerald {
+      background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+      border: 1px solid #a7f3d0;
+    }
+
+    .tinted-card .icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+      font-size: 18px;
+    }
+
+    .tinted-card.teal .icon { background: var(--teal-500); color: white; }
+    .tinted-card.indigo .icon { background: var(--indigo-500); color: white; }
+    .tinted-card.cyan .icon { background: var(--cyan-500); color: white; }
+    .tinted-card.emerald .icon { background: var(--emerald-500); color: white; }
+
+    .tinted-card .title {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+
+    .tinted-card .value {
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .tinted-card.teal .value { color: var(--teal-700); }
+    .tinted-card.indigo .value { color: var(--indigo-600); }
+    .tinted-card.cyan .value { color: #0891b2; }
+    .tinted-card.emerald .value { color: var(--emerald-600); }
+
+    /* ========== DESIGN OPTION 4: Colored Table ========== */
+    .dashboard-preview-4 {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--teal-200);
+    }
+
+    .table-header {
+      background: linear-gradient(135deg, var(--teal-600), var(--teal-700));
+      color: white;
+      padding: 12px 16px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .table-content {
+      font-size: 13px;
+    }
+
+    .table-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 80px;
+      padding: 12px 16px;
+      border-bottom: 1px solid #f1f5f9;
+      align-items: center;
+    }
+
+    .table-row:nth-child(odd) {
+      background: var(--teal-50);
+    }
+
+    .table-row:hover {
+      background: var(--teal-100);
+    }
+
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-badge.active {
+      background: var(--teal-100);
+      color: var(--teal-700);
+    }
+
+    .status-badge.pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .status-badge.complete {
+      background: #d1fae5;
+      color: var(--emerald-600);
+    }
+
+    /* ========== DARK MODE SECTION ========== */
+    .dark-mode-section {
+      margin-top: 40px;
+    }
+
+    .dark-mode-section h2 {
+      text-align: center;
+      color: var(--teal-800);
+      margin-bottom: 30px;
+    }
+
+    .dark-preview {
+      background: #0f172a;
+      border-radius: 16px;
+      overflow: hidden;
+      padding: 20px;
+    }
+
+    .dark-header {
+      background: linear-gradient(135deg, var(--teal-800), var(--teal-900));
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .dark-header .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: white;
+      font-weight: 700;
+    }
+
+    .dark-header .nav-tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .dark-header .nav-tab {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .dark-header .nav-tab.active {
+      background: var(--teal-500);
+      color: white;
+    }
+
+    .dark-header .nav-tab:not(.active) {
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.7);
+    }
+
+    .dark-cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .dark-card {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid #334155;
+    }
+
+    .dark-card .label {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 8px;
+    }
+
+    .dark-card .value {
+      font-size: 24px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .dark-card .trend {
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .dark-card .trend.up { color: var(--emerald-500); }
+    .dark-card .trend.down { color: #f87171; }
+
+    .dark-card:nth-child(1) { border-top: 3px solid var(--teal-500); }
+    .dark-card:nth-child(2) { border-top: 3px solid var(--indigo-500); }
+    .dark-card:nth-child(3) { border-top: 3px solid var(--cyan-500); }
+    .dark-card:nth-child(4) { border-top: 3px solid var(--emerald-500); }
+
+    .dark-table {
+      background: #1e293b;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #334155;
+    }
+
+    .dark-table-header {
+      background: linear-gradient(135deg, var(--teal-700), var(--teal-800));
+      color: white;
+      padding: 14px 20px;
+      font-weight: 600;
+      font-size: 14px;
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr 100px;
+    }
+
+    .dark-table-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr 100px;
+      padding: 14px 20px;
+      border-bottom: 1px solid #334155;
+      color: #e2e8f0;
+      font-size: 13px;
+      align-items: center;
+    }
+
+    .dark-table-row:nth-child(odd) {
+      background: rgba(15, 118, 110, 0.05);
+    }
+
+    .dark-table-row:hover {
+      background: rgba(15, 118, 110, 0.1);
+    }
+
+    .dark-status {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .dark-status.posted {
+      background: rgba(20, 184, 166, 0.2);
+      color: var(--teal-400);
+    }
+
+    .dark-status.transit {
+      background: rgba(99, 102, 241, 0.2);
+      color: #a5b4fc;
+    }
+
+    /* Full Width Dashboard Preview */
+    .full-preview {
+      margin-top: 40px;
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(15, 118, 110, 0.1);
+    }
+
+    .full-preview h2 {
+      padding: 20px;
+      background: linear-gradient(135deg, var(--teal-600), var(--teal-700));
+      color: white;
+      text-align: center;
+    }
+
+    .full-dashboard {
+      display: flex;
+      min-height: 500px;
+    }
+
+    .full-sidebar {
+      width: 240px;
+      background: linear-gradient(180deg, var(--teal-700) 0%, var(--teal-900) 100%);
+      padding: 20px;
+      color: white;
+    }
+
+    .full-sidebar .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .full-sidebar .brand-icon {
+      width: 40px;
+      height: 40px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .full-sidebar .brand-name {
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .full-sidebar .nav-section {
+      margin-bottom: 24px;
+    }
+
+    .full-sidebar .nav-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 12px;
+    }
+
+    .full-sidebar .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-bottom: 4px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .full-sidebar .nav-item:hover {
+      background: rgba(255,255,255,0.1);
+    }
+
+    .full-sidebar .nav-item.active {
+      background: rgba(255,255,255,0.15);
+      font-weight: 600;
+    }
+
+    .full-main {
+      flex: 1;
+      background: var(--teal-50);
+      padding: 24px;
+    }
+
+    .full-main .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .full-main .page-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--teal-800);
+    }
+
+    .full-main .top-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .full-main .search-box {
+      padding: 10px 16px;
+      border: 1px solid var(--teal-200);
+      border-radius: 8px;
+      background: white;
+      width: 250px;
+      font-size: 14px;
+    }
+
+    .full-main .btn-primary {
+      background: linear-gradient(135deg, var(--teal-600), var(--teal-500));
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .full-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .full-stat-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(15, 118, 110, 0.06);
+    }
+
+    .full-stat-card:nth-child(1) { border-left: 4px solid var(--teal-500); }
+    .full-stat-card:nth-child(2) { border-left: 4px solid var(--indigo-500); }
+    .full-stat-card:nth-child(3) { border-left: 4px solid var(--cyan-500); }
+    .full-stat-card:nth-child(4) { border-left: 4px solid var(--emerald-500); }
+
+    .full-stat-card .stat-label {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+
+    .full-stat-card .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--teal-800);
+    }
+
+    .full-table-container {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(15, 118, 110, 0.06);
+    }
+
+    .full-table-header {
+      background: linear-gradient(135deg, var(--teal-600), var(--teal-700));
+      color: white;
+      padding: 16px 20px;
+      display: grid;
+      grid-template-columns: 60px 1fr 1fr 1fr 1fr 100px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .full-table-row {
+      display: grid;
+      grid-template-columns: 60px 1fr 1fr 1fr 1fr 100px;
+      padding: 14px 20px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 13px;
+      align-items: center;
+    }
+
+    .full-table-row:nth-child(odd) {
+      background: var(--teal-50);
+    }
+
+    .full-table-row:hover {
+      background: var(--teal-100);
+      cursor: pointer;
+    }
+
+    .full-table-row .route {
+      font-weight: 600;
+      color: var(--teal-700);
+    }
+
+    .full-checkbox {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--teal-300);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .choice-section {
+      margin-top: 50px;
+      text-align: center;
+      padding: 30px;
+      background: linear-gradient(135deg, var(--teal-700), var(--teal-800));
+      border-radius: 16px;
+      color: white;
+    }
+
+    .choice-section h2 {
+      margin-bottom: 10px;
+    }
+
+    .choice-section p {
+      opacity: 0.8;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>FreightET - Bold Design Preview</h1>
+    <p class="subtitle">Option B Colors (Teal + Indigo + Cyan + Emerald) - Applied Throughout</p>
+
+    <div class="design-grid">
+      <!-- Design 1: Gradient Header -->
+      <div class="design-card">
+        <h3>1. Teal Gradient Header</h3>
+        <div class="design-content">
+          <div class="dashboard-preview-1">
+            <div class="gradient-header">
+              <div class="logo">
+                <div class="logo-icon">
+                  <svg width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M8 17h8M8 17a2 2 0 11-4 0 2 2 0 014 0zm8 0a2 2 0 104 0 2 2 0 00-4 0z"/></svg>
+                </div>
+                <span style="font-weight: 700;">FreightET</span>
+              </div>
+              <div class="nav-tabs">
+                <div class="nav-tab active">Post Loads</div>
+                <div class="nav-tab">Search Trucks</div>
+                <div class="nav-tab">My Loads</div>
+              </div>
+            </div>
+            <div class="content-area-1">
+              <div class="stat-cards-1">
+                <div class="stat-card-1">
+                  <div class="label">Active Loads</div>
+                  <div class="value">75</div>
+                </div>
+                <div class="stat-card-1">
+                  <div class="label">In Transit</div>
+                  <div class="value">23</div>
+                </div>
+                <div class="stat-card-1">
+                  <div class="label">Completed</div>
+                  <div class="value">156</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Design 2: Colored Sidebar -->
+      <div class="design-card">
+        <h3>2. Colored Sidebar</h3>
+        <div class="design-content">
+          <div class="dashboard-preview-2">
+            <div class="colored-sidebar">
+              <div class="logo">
+                <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M8 17h8M8 17a2 2 0 11-4 0 2 2 0 014 0zm8 0a2 2 0 104 0 2 2 0 00-4 0z"/></svg>
+                <span style="font-weight: 700; font-size: 16px;">FreightET</span>
+              </div>
+              <div class="nav-item active">Dashboard</div>
+              <div class="nav-item">Post Loads</div>
+              <div class="nav-item">My Loads</div>
+              <div class="nav-item">Analytics</div>
+              <div class="nav-item">Wallet</div>
+            </div>
+            <div class="main-content-2">
+              <div class="page-header">
+                <h4>Dashboard</h4>
+                <button class="btn-primary">+ New Load</button>
+              </div>
+              <p style="color: #64748b; font-size: 13px;">Tinted background with white cards</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Design 3: Tinted Cards -->
+      <div class="design-card">
+        <h3>3. Color-Tinted Stat Cards</h3>
+        <div class="design-content">
+          <div class="dashboard-preview-3">
+            <div class="tinted-cards">
+              <div class="tinted-card teal">
+                <div class="icon">📦</div>
+                <div class="title">Total Loads</div>
+                <div class="value">1,234</div>
+              </div>
+              <div class="tinted-card indigo">
+                <div class="icon">🚛</div>
+                <div class="title">Active Trucks</div>
+                <div class="value">567</div>
+              </div>
+              <div class="tinted-card cyan">
+                <div class="icon">📍</div>
+                <div class="title">In Transit</div>
+                <div class="value">89</div>
+              </div>
+              <div class="tinted-card emerald">
+                <div class="icon">✓</div>
+                <div class="title">Completed</div>
+                <div class="value">2,456</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Design 4: Colored Table -->
+      <div class="design-card">
+        <h3>4. Colored Table Headers & Rows</h3>
+        <div class="design-content">
+          <div class="dashboard-preview-4">
+            <div class="table-header">Recent Loads</div>
+            <div class="table-content">
+              <div class="table-row">
+                <span>Addis → Djibouti</span>
+                <span>Dry Van</span>
+                <span>15,000 kg</span>
+                <span class="status-badge active">Posted</span>
+              </div>
+              <div class="table-row">
+                <span>Mekelle → Hawassa</span>
+                <span>Flatbed</span>
+                <span>8,500 kg</span>
+                <span class="status-badge pending">Pending</span>
+              </div>
+              <div class="table-row">
+                <span>Dire Dawa → Jimma</span>
+                <span>Refrigerated</span>
+                <span>12,000 kg</span>
+                <span class="status-badge complete">Complete</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dark Mode Section -->
+    <div class="dark-mode-section">
+      <h2>Dark Mode - Full Color Implementation</h2>
+      <div class="dark-preview">
+        <div class="dark-header">
+          <div class="logo">
+            <svg width="28" height="28" fill="currentColor" viewBox="0 0 24 24" style="color: var(--teal-400)"><path d="M8 17h8M8 17a2 2 0 11-4 0 2 2 0 014 0zm8 0a2 2 0 104 0 2 2 0 00-4 0z"/></svg>
+            FreightET
+          </div>
+          <div class="nav-tabs">
+            <div class="nav-tab active">Post Loads</div>
+            <div class="nav-tab">Search Trucks</div>
+            <div class="nav-tab">My Loads</div>
+            <div class="nav-tab">Wallet</div>
+          </div>
+        </div>
+
+        <div class="dark-cards">
+          <div class="dark-card">
+            <div class="label">Active Loads</div>
+            <div class="value">75</div>
+            <div class="trend up">↑ 12% from last week</div>
+          </div>
+          <div class="dark-card">
+            <div class="label">Matched</div>
+            <div class="value">48</div>
+            <div class="trend up">↑ 8% from last week</div>
+          </div>
+          <div class="dark-card">
+            <div class="label">In Transit</div>
+            <div class="value">23</div>
+            <div class="trend down">↓ 3% from last week</div>
+          </div>
+          <div class="dark-card">
+            <div class="label">Revenue</div>
+            <div class="value">ETB 2.4M</div>
+            <div class="trend up">↑ 15% from last week</div>
+          </div>
+        </div>
+
+        <div class="dark-table">
+          <div class="dark-table-header">
+            <span>Route</span>
+            <span>Truck Type</span>
+            <span>Weight</span>
+            <span>Rate</span>
+            <span>Status</span>
+          </div>
+          <div class="dark-table-row">
+            <span>Addis Ababa → Djibouti</span>
+            <span>Dry Van</span>
+            <span>15,000 kg</span>
+            <span>ETB 45,000</span>
+            <span class="dark-status posted">Posted</span>
+          </div>
+          <div class="dark-table-row">
+            <span>Mekelle → Dire Dawa</span>
+            <span>Flatbed</span>
+            <span>8,500 kg</span>
+            <span>ETB 28,000</span>
+            <span class="dark-status transit">In Transit</span>
+          </div>
+          <div class="dark-table-row">
+            <span>Hawassa → Gondar</span>
+            <span>Refrigerated</span>
+            <span>12,000 kg</span>
+            <span>ETB 52,000</span>
+            <span class="dark-status posted">Posted</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full Dashboard Preview -->
+    <div class="full-preview">
+      <h2>Complete Dashboard - Light Mode</h2>
+      <div class="full-dashboard">
+        <div class="full-sidebar">
+          <div class="brand">
+            <div class="brand-icon">
+              <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M8 17h8M8 17a2 2 0 11-4 0 2 2 0 014 0zm8 0a2 2 0 104 0 2 2 0 00-4 0z"/></svg>
+            </div>
+            <span class="brand-name">FreightET</span>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-label">Main</div>
+            <div class="nav-item active">📊 Dashboard</div>
+            <div class="nav-item">🗺 Map</div>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-label">DAT Board</div>
+            <div class="nav-item">📦 Post Loads</div>
+            <div class="nav-item">🚛 Search Trucks</div>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-label">Loads</div>
+            <div class="nav-item">📋 My Loads</div>
+            <div class="nav-item">🤝 Matches</div>
+          </div>
+
+          <div class="nav-section">
+            <div class="nav-label">Financial</div>
+            <div class="nav-item">💰 Wallet</div>
+          </div>
+        </div>
+
+        <div class="full-main">
+          <div class="top-bar">
+            <div class="page-title">Post Loads</div>
+            <div class="top-actions">
+              <input type="text" class="search-box" placeholder="Search loads...">
+              <button class="btn-primary">+ New Load Post</button>
+            </div>
+          </div>
+
+          <div class="full-stats">
+            <div class="full-stat-card">
+              <div class="stat-label">All Loads</div>
+              <div class="stat-value">75</div>
+            </div>
+            <div class="full-stat-card">
+              <div class="stat-label">Posted</div>
+              <div class="stat-value">48</div>
+            </div>
+            <div class="full-stat-card">
+              <div class="stat-label">In Transit</div>
+              <div class="stat-value">18</div>
+            </div>
+            <div class="full-stat-card">
+              <div class="stat-label">Completed</div>
+              <div class="stat-value">156</div>
+            </div>
+          </div>
+
+          <div class="full-table-container">
+            <div class="full-table-header">
+              <span></span>
+              <span>Origin → Destination</span>
+              <span>Pickup Date</span>
+              <span>Truck Type</span>
+              <span>Weight</span>
+              <span>Status</span>
+            </div>
+            <div class="full-table-row">
+              <input type="checkbox" class="full-checkbox">
+              <span class="route">Addis Ababa → Djibouti</span>
+              <span>Jan 15, 2026</span>
+              <span>Dry Van</span>
+              <span>15,000 kg</span>
+              <span class="status-badge active">Posted</span>
+            </div>
+            <div class="full-table-row">
+              <input type="checkbox" class="full-checkbox">
+              <span class="route">Mekelle → Hawassa</span>
+              <span>Jan 17, 2026</span>
+              <span>Flatbed</span>
+              <span>8,500 kg</span>
+              <span class="status-badge active">Posted</span>
+            </div>
+            <div class="full-table-row">
+              <input type="checkbox" class="full-checkbox">
+              <span class="route">Dire Dawa → Jimma</span>
+              <span>Jan 19, 2026</span>
+              <span>Refrigerated</span>
+              <span>12,000 kg</span>
+              <span class="status-badge pending">Matched</span>
+            </div>
+            <div class="full-table-row">
+              <input type="checkbox" class="full-checkbox">
+              <span class="route">Gondar → Bahir Dar</span>
+              <span>Jan 20, 2026</span>
+              <span>Container</span>
+              <span>20,000 kg</span>
+              <span class="status-badge complete">Complete</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="choice-section">
+      <h2>What do you think?</h2>
+      <p>This design uses Option B colors (Teal, Indigo, Cyan, Emerald) throughout - not just on buttons!</p>
+      <p><strong>Key differences from current implementation:</strong></p>
+      <ul style="text-align: left; max-width: 500px; margin: 0 auto; line-height: 2;">
+        <li>Teal gradient header instead of white</li>
+        <li>Colored sidebar (teal gradient)</li>
+        <li>Tinted backgrounds (light teal) instead of gray</li>
+        <li>Color-accented stat cards with left borders</li>
+        <li>Teal table headers with tinted row alternation</li>
+        <li>Full dark mode with colored accents throughout</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
