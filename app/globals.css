@@ -110,22 +110,22 @@
   --neutral-50: #f8fafc;
 
   /* ========================================
-     SIDEBAR COLORS (Teal Gradient - Bold)
+     SIDEBAR COLORS (Dark Teal)
      ======================================== */
-  --sidebar-bg: linear-gradient(180deg, #0f766e 0%, #134e4a 100%);
-  --sidebar-bg-solid: #0f766e;
-  --sidebar-hover: rgba(255, 255, 255, 0.1);
-  --sidebar-active: rgba(255, 255, 255, 0.15);
-  --sidebar-border: rgba(255, 255, 255, 0.1);
-  --sidebar-text: rgba(255, 255, 255, 0.7);
-  --sidebar-text-active: #ffffff;
+  --sidebar-bg: #064d51;
+  --sidebar-bg-solid: #064d51;
+  --sidebar-hover: rgba(255, 255, 255, 0.12);
+  --sidebar-active: rgba(192, 242, 243, 0.25);
+  --sidebar-border: rgba(255, 255, 255, 0.15);
+  --sidebar-text: rgba(255, 255, 255, 0.85);
+  --sidebar-text-active: #c0f2f3;
   --sidebar-muted: rgba(255, 255, 255, 0.5);
 
   /* ========================================
-     BOLD DESIGN - HEADER GRADIENTS
+     BOLD DESIGN - HEADER GRADIENTS (Light Cyan)
      ======================================== */
-  --header-gradient: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #06b6d4 100%);
-  --header-gradient-dark: linear-gradient(135deg, #115e59 0%, #0f766e 100%);
+  --header-gradient: #c0f2f3;
+  --header-gradient-dark: #a8e8e9;
 
   /* ========================================
      BOLD DESIGN - TINTED BACKGROUNDS
@@ -231,18 +231,18 @@
   --input: #1e293b;
   --input-border: #334155;
 
-  /* Dark mode sidebar - still teal gradient */
-  --sidebar-bg: linear-gradient(180deg, #115e59 0%, #134e4a 100%);
-  --sidebar-bg-solid: #115e59;
+  /* Dark mode sidebar - Dark Teal */
+  --sidebar-bg: #043b3e;
+  --sidebar-bg-solid: #043b3e;
   --sidebar-hover: rgba(255, 255, 255, 0.08);
-  --sidebar-active: rgba(255, 255, 255, 0.12);
-  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-active: rgba(192, 242, 243, 0.2);
+  --sidebar-border: rgba(255, 255, 255, 0.1);
   --sidebar-text: rgba(255, 255, 255, 0.7);
-  --sidebar-text-active: #ffffff;
+  --sidebar-text-active: #c0f2f3;
 
-  /* Dark mode header gradient */
-  --header-gradient: linear-gradient(135deg, #115e59 0%, #0f766e 50%, #0e7490 100%);
-  --header-gradient-dark: linear-gradient(135deg, #134e4a 0%, #115e59 100%);
+  /* Dark mode header gradient (Light Cyan - darker variant) */
+  --header-gradient: #9ee0e1;
+  --header-gradient-dark: #8ad4d5;
 
   /* Dark mode tinted backgrounds */
   --bg-tinted: rgba(20, 184, 166, 0.08);
@@ -711,7 +711,8 @@ a:focus-visible {
    ======================================== */
 .sidebar {
   width: 260px;
-  height: 100vh;
+  height: calc(100vh - 24px);
+  margin: 12px 0 12px 12px;
   background: var(--sidebar-bg);
   color: white;
   position: fixed;
@@ -719,13 +720,15 @@ a:focus-visible {
   top: 0;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--sidebar-border);
+  border-right: none;
+  border-radius: 16px;
   z-index: 40;
+  box-shadow: 4px 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 .sidebar-logo {
   padding: 1.25rem 1rem;
-  border-bottom: 1px solid var(--sidebar-border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .sidebar-logo h1 {
@@ -757,6 +760,13 @@ a:focus-visible {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   padding: 1rem 0.75rem 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 0.5rem;
+}
+
+.sidebar-section:first-child {
+  border-top: none;
+  margin-top: 0;
 }
 
 .sidebar-link {
@@ -771,16 +781,19 @@ a:focus-visible {
   transition: all 0.2s ease;
   margin-bottom: 0.25rem;
   text-decoration: none;
+  border-left: 3px solid transparent;
 }
 
 .sidebar-link:hover {
   background: var(--sidebar-hover);
   color: white;
+  border-left-color: rgba(255, 255, 255, 0.3);
 }
 
 .sidebar-link.active {
   background: var(--sidebar-active);
   color: var(--sidebar-text-active);
+  border-left-color: white;
 }
 
 .sidebar-link svg {
@@ -1038,12 +1051,24 @@ a:focus-visible {
 /* Page header bar (for carrier/shipper portals) */
 .portal-header {
   background: var(--header-gradient);
-  color: white;
+  color: #064d51;
   padding: 1rem 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+  border-bottom: 2px solid rgba(6, 77, 81, 0.15);
+  position: relative;
+}
+
+.portal-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(6, 77, 81, 0.2), transparent);
 }
 
 .portal-header-logo {
@@ -1052,12 +1077,16 @@ a:focus-visible {
   gap: 0.75rem;
   font-size: 1.25rem;
   font-weight: 700;
-  color: white;
+  color: #064d51;
+  padding-right: 1.5rem;
+  border-right: 1px solid rgba(6, 77, 81, 0.2);
+  margin-right: 0.5rem;
 }
 
 .portal-header-logo svg {
   width: 2rem;
   height: 2rem;
+  color: #064d51;
 }
 
 .portal-header-nav {
@@ -1071,32 +1100,39 @@ a:focus-visible {
   border-radius: 0.5rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(6, 77, 81, 0.7);
   text-decoration: none;
   transition: all 0.2s ease;
+  border: 1px solid transparent;
 }
 
 .portal-header-link:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: rgba(6, 77, 81, 0.1);
+  color: #064d51;
+  border-color: rgba(6, 77, 81, 0.2);
 }
 
 .portal-header-link.active {
-  background: rgba(255, 255, 255, 0.15);
+  background: #064d51;
   color: white;
+  border-color: #064d51;
 }
 
 .portal-header-user {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  padding-left: 1.5rem;
+  border-left: 1px solid rgba(6, 77, 81, 0.2);
+  margin-left: 0.5rem;
 }
 
 .portal-header-avatar {
   width: 2.25rem;
   height: 2.25rem;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  background: #064d51;
+  border: 2px solid rgba(6, 77, 81, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1108,12 +1144,12 @@ a:focus-visible {
 .portal-header-name {
   font-size: 0.875rem;
   font-weight: 500;
-  color: white;
+  color: #064d51;
 }
 
 .portal-header-role {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(6, 77, 81, 0.6);
 }
 
 /* ========================================

@@ -157,18 +157,18 @@ export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientPro
 
   return (
     <div className="min-h-screen bg-[var(--bg-tinted)]">
-      {/* Header - Bold Gradient Design */}
+      {/* Header - Light Cyan Design */}
       <div className="portal-header">
         {/* Logo & Branding */}
-        <div className="portal-header-logo">
-          <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+        <div className="portal-header-logo pr-4 border-r border-[#064d51]/20">
+          <div className="w-10 h-10 rounded-lg bg-[#064d51] flex items-center justify-center border border-[#064d51]/30">
             <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
           </div>
           <div>
             <span className="block">FreightET</span>
-            <span className="text-xs font-normal text-white/70">Shipper Portal</span>
+            <span className="text-xs font-normal text-[#064d51]/70">Shipper Portal</span>
           </div>
         </div>
 
@@ -183,7 +183,7 @@ export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientPro
         </div>
 
         {/* User Info & Actions */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 pl-4 border-l border-[#064d51]/20">
           {/* Commission Discount Badge - Sprint 16: Story 16.6 */}
           {!loading && completionRate > 0 && (
             <CommissionDiscountBadge completionRate={completionRate} />
@@ -192,8 +192,11 @@ export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientPro
           {/* Notification Bell - Sprint 16: Story 16.10 */}
           <NotificationBell />
 
+          {/* Divider before user info */}
+          <div className="h-8 w-px bg-[#064d51]/20 hidden sm:block"></div>
+
           {/* User Info */}
-          <div className="portal-header-user">
+          <div className="portal-header-user" style={{ borderLeft: 'none', paddingLeft: 0, marginLeft: 0 }}>
             <div className="portal-header-avatar">
               {user.firstName?.[0]}{user.lastName?.[0]}
             </div>
@@ -206,7 +209,7 @@ export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientPro
           {/* Logout Button */}
           <button
             onClick={handleLogout}
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold rounded-lg transition-colors border border-white/20"
+            className="px-4 py-2 bg-[#064d51] hover:bg-[#053d40] text-white text-sm font-semibold rounded-lg transition-colors border border-[#064d51]"
           >
             Logout
           </button>

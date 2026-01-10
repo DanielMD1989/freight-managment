@@ -470,16 +470,18 @@ export default function RoleAwareSidebar({ userRole, portalType }: RoleAwareSide
 
   return (
     <aside
-      className="w-64 min-h-[calc(100vh-4rem)] flex flex-col border-r"
+      className="w-64 min-h-[calc(100vh-4rem)] flex flex-col"
       style={{
         background: 'var(--sidebar-bg)',
-        borderColor: 'var(--sidebar-border)'
+        borderRadius: '16px',
+        margin: '12px',
+        boxShadow: '4px 4px 20px rgba(0, 0, 0, 0.15)'
       }}
     >
       {/* Portal Header */}
       <div
         className="flex items-center gap-3 px-5 py-5"
-        style={{ borderBottom: '1px solid var(--sidebar-border)' }}
+        style={{ borderBottom: '2px solid rgba(255, 255, 255, 0.15)' }}
       >
         <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-white shadow-lg">
           <PortalIcon className="w-6 h-6" />
@@ -499,11 +501,14 @@ export default function RoleAwareSidebar({ userRole, portalType }: RoleAwareSide
           return (
             <div key={sectionIndex} className={sectionIndex > 0 ? 'pt-4' : ''}>
               {section.title && (
-                <div className="flex items-center gap-2 px-3 py-2 mb-1">
+                <div
+                  className="flex items-center gap-2 px-3 py-2 mb-1 mt-2"
+                  style={{ borderTop: sectionIndex > 0 ? '1px solid rgba(255, 255, 255, 0.12)' : 'none', paddingTop: sectionIndex > 0 ? '0.75rem' : '0.5rem' }}
+                >
                   <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">
                     {section.title}
                   </span>
-                  <div className="flex-1 h-px bg-white/10"></div>
+                  <div className="flex-1 h-px bg-white/15"></div>
                 </div>
               )}
               <div className="space-y-0.5">
@@ -516,20 +521,20 @@ export default function RoleAwareSidebar({ userRole, portalType }: RoleAwareSide
                       className={cn(
                         'group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
                         active
-                          ? 'bg-white/15 text-white shadow-md'
-                          : 'text-white/70 hover:bg-white/10 hover:text-white'
+                          ? 'bg-[#c0f2f3]/20 text-[#c0f2f3] shadow-md border-l-[3px] border-[#c0f2f3]'
+                          : 'text-white/70 hover:bg-white/10 hover:text-white border-l-[3px] border-transparent hover:border-white/30'
                       )}
                     >
                       <span className={cn(
                         'flex-shrink-0 transition-transform duration-200',
-                        active ? 'text-white' : 'text-white/60 group-hover:text-white',
+                        active ? 'text-[#c0f2f3]' : 'text-white/60 group-hover:text-white',
                         !active && 'group-hover:scale-110'
                       )}>
                         <IconComponent icon={item.icon} />
                       </span>
                       <span className="truncate">{item.label}</span>
                       {active && (
-                        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white"></span>
+                        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#c0f2f3]"></span>
                       )}
                     </Link>
                   );
@@ -541,7 +546,7 @@ export default function RoleAwareSidebar({ userRole, portalType }: RoleAwareSide
       </nav>
 
       {/* Footer */}
-      <div className="p-3 space-y-1" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
+      <div className="p-3 space-y-1" style={{ borderTop: '2px solid rgba(255, 255, 255, 0.15)' }}>
         {/* Theme Toggle */}
         <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-white/10">
           <div className="flex items-center gap-2.5">
