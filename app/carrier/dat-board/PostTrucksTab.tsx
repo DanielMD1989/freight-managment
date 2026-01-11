@@ -40,13 +40,13 @@ const getCSRFToken = async (): Promise<string | null> => {
   }
 };
 
-type TruckStatus = 'all' | 'mine' | 'group' | 'POSTED' | 'UNPOSTED' | 'EXPIRED' | 'KEPT';
+type TruckStatus = 'POSTED' | 'UNPOSTED' | 'EXPIRED';
 type LoadTab = 'all' | 'preferred' | 'blocked';
 
 export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   const [trucks, setTrucks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeStatus, setActiveStatus] = useState<TruckStatus>('all');
+  const [activeStatus, setActiveStatus] = useState<TruckStatus>('POSTED');
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const [selectedTruckId, setSelectedTruckId] = useState<string | null>(null);
   const [expandedTruckId, setExpandedTruckId] = useState<string | null>(null);
@@ -139,19 +139,14 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   const fetchTrucks = async () => {
     setLoading(true);
     try {
+      // Fetch trucks for the active status tab
       const params = new URLSearchParams();
       params.append('includeMatchCount', 'true');
+      params.append('organizationId', user.organizationId); // Only show user's truck postings
 
-      if (activeStatus === 'mine') {
-        params.append('organizationId', user.organizationId);
-      } else if (activeStatus === 'group') {
-        // TODO: Implement group filtering
-        params.append('groupId', 'placeholder');
-      } else if (activeStatus === 'KEPT') {
-        params.append('isKept', 'true');
-      } else if (activeStatus !== 'all') {
-        params.append('status', activeStatus);
-      }
+      // Map status - POSTED maps to ACTIVE in the API
+      const apiStatus = activeStatus === 'POSTED' ? 'ACTIVE' : activeStatus;
+      params.append('status', apiStatus);
 
       const response = await fetch(`/api/truck-postings?${params.toString()}`);
       const data = await response.json();
@@ -177,33 +172,22 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
       setTrucks(trucksWithMatchCounts);
 
-      // Calculate status counts
+      // Fetch counts for each status tab
       const counts: Record<string, number> = {
-        all: data.pagination?.total || 0,
-        mine: 0,
-        group: 0,
         POSTED: 0,
         UNPOSTED: 0,
         EXPIRED: 0,
-        KEPT: 0,
       };
 
-      // Fetch counts for each status
-      const statusPromises = ['POSTED', 'UNPOSTED', 'EXPIRED'].map(async (status) => {
-        const res = await fetch(`/api/truck-postings?status=${status}&limit=1`);
+      const statusPromises = [
+        { key: 'POSTED', apiStatus: 'ACTIVE' },
+        { key: 'UNPOSTED', apiStatus: 'UNPOSTED' },
+        { key: 'EXPIRED', apiStatus: 'EXPIRED' },
+      ].map(async ({ key, apiStatus }) => {
+        const res = await fetch(`/api/truck-postings?organizationId=${user.organizationId}&status=${apiStatus}&limit=1`);
         const json = await res.json();
-        counts[status] = json.pagination?.total || 0;
+        counts[key] = json.pagination?.total || 0;
       });
-
-      // Fetch MINE count
-      const mineRes = await fetch(`/api/truck-postings?organizationId=${user.organizationId}&limit=1`);
-      const mineData = await mineRes.json();
-      counts.mine = mineData.pagination?.total || 0;
-
-      // Fetch KEPT count
-      const keptRes = await fetch('/api/truck-postings?isKept=true&limit=1');
-      const keptData = await keptRes.json();
-      counts.KEPT = keptData.pagination?.total || 0;
 
       await Promise.all(statusPromises);
       setStatusCounts(counts);
@@ -631,16 +615,12 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   };
 
   /**
-   * Status tabs configuration
+   * Status tabs configuration - POSTED, UNPOSTED, EXPIRED only
    */
   const statusTabs: DatStatusTab[] = [
-    { key: 'group', label: 'GROUP', count: statusCounts.group },
-    { key: 'mine', label: 'MINE', count: statusCounts.mine },
-    { key: 'all', label: 'ALL', count: statusCounts.all },
     { key: 'POSTED', label: 'POSTED', count: statusCounts.POSTED },
     { key: 'UNPOSTED', label: 'UNPOSTED', count: statusCounts.UNPOSTED },
     { key: 'EXPIRED', label: 'EXPIRED', count: statusCounts.EXPIRED },
-    { key: 'KEPT', label: 'KEPT', count: statusCounts.KEPT },
   ];
 
   /**
@@ -1274,7 +1254,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     .map(match => match.load); // Return just the load object for the table
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pt-10">
       {/* Header Row - NEW TRUCK POST on left, Status Tabs on right */}
       <div className="flex items-center justify-between">
         <button

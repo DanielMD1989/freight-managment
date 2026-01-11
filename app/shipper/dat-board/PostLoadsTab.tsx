@@ -24,12 +24,12 @@ interface PostLoadsTabProps {
   onSwitchToSearchTrucks?: (filters: any) => void;
 }
 
-type LoadStatus = 'all' | 'POSTED' | 'UNPOSTED' | 'EXPIRED' | 'KEPT' | 'GROUP';
+type LoadStatus = 'POSTED' | 'UNPOSTED' | 'EXPIRED';
 
 export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoadsTabProps) {
   const [loads, setLoads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeStatus, setActiveStatus] = useState<LoadStatus>('all');
+  const [activeStatus, setActiveStatus] = useState<LoadStatus>('POSTED');
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const [editingLoad, setEditingLoad] = useState<any | null>(null);
   const [expandedLoadId, setExpandedLoadId] = useState<string | null>(null);
@@ -67,16 +67,10 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
   const fetchLoads = async () => {
     setLoading(true);
     try {
+      // Fetch loads for the active status tab (user's own loads only)
       const params = new URLSearchParams();
-      if (activeStatus !== 'all') {
-        if (activeStatus === 'KEPT') {
-          params.append('isKept', 'true');
-        } else if (activeStatus === 'GROUP') {
-          params.append('hasGroupId', 'true');
-        } else {
-          params.append('status', activeStatus);
-        }
-      }
+      params.append('status', activeStatus);
+      params.append('myLoads', 'true'); // Only fetch user's own loads
 
       const response = await fetch(`/api/loads?${params.toString()}`);
       const data = await response.json();
@@ -90,7 +84,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
             try {
               const matchResponse = await fetch(`/api/loads/${load.id}/matching-trucks?limit=1`);
               const matchData = await matchResponse.json();
-              return { ...load, matchCount: matchData.totalMatches || 0 };
+              return { ...load, matchCount: matchData.total || 0 };
             } catch (error) {
               console.error(`Failed to fetch matches for load ${load.id}:`, error);
               return { ...load, matchCount: 0 };
@@ -102,32 +96,18 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
       setLoads(loadsWithMatchCounts);
 
-      // Calculate status counts
+      // Fetch counts for each status tab
       const counts: Record<string, number> = {
-        all: data.pagination?.total || 0,
         POSTED: 0,
         UNPOSTED: 0,
         EXPIRED: 0,
-        KEPT: 0,
-        GROUP: 0,
       };
 
-      // Fetch counts for each status
       const statusPromises = ['POSTED', 'UNPOSTED', 'EXPIRED'].map(async (status) => {
-        const res = await fetch(`/api/loads?status=${status}&limit=1`);
+        const res = await fetch(`/api/loads?status=${status}&myLoads=true&limit=1`);
         const json = await res.json();
         counts[status] = json.pagination?.total || 0;
       });
-
-      // Fetch KEPT count
-      const keptRes = await fetch('/api/loads?isKept=true&limit=1');
-      const keptData = await keptRes.json();
-      counts.KEPT = keptData.pagination?.total || 0;
-
-      // Fetch GROUP count
-      const groupRes = await fetch('/api/loads?hasGroupId=true&limit=1');
-      const groupData = await groupRes.json();
-      counts.GROUP = groupData.pagination?.total || 0;
 
       await Promise.all(statusPromises);
       setStatusCounts(counts);
@@ -404,15 +384,12 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
 
   /**
-   * Status tabs configuration
+   * Status tabs configuration - POSTED, UNPOSTED, EXPIRED only
    */
   const statusTabs: DatStatusTab[] = [
-    { key: 'all', label: 'ALL', count: statusCounts.all },
     { key: 'POSTED', label: 'POSTED', count: statusCounts.POSTED },
     { key: 'UNPOSTED', label: 'UNPOSTED', count: statusCounts.UNPOSTED },
     { key: 'EXPIRED', label: 'EXPIRED', count: statusCounts.EXPIRED },
-    { key: 'KEPT', label: 'KEPT', count: statusCounts.KEPT },
-    { key: 'GROUP', label: 'GROUP', count: statusCounts.GROUP },
   ];
 
   /**
@@ -545,7 +522,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-10">
       {/* Header Row - NEW LOAD POST on left, Status Tabs on right */}
       <div className="flex items-center justify-between">
         <button
