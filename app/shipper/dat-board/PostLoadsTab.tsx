@@ -18,6 +18,7 @@ import {
 import { DatColumn, DatStatusTab, DatRowAction } from '@/types/dat-ui';
 import { ETHIOPIAN_LOCATIONS } from '@/lib/constants/ethiopian-locations';
 import PlacesAutocomplete, { PlaceResult } from '@/components/PlacesAutocomplete';
+import { useToast } from '@/components/Toast/ToastContext';
 
 interface PostLoadsTabProps {
   user: any;
@@ -45,6 +46,7 @@ const getCSRFToken = async (): Promise<string | null> => {
 type LoadStatus = 'POSTED' | 'UNPOSTED' | 'EXPIRED';
 
 export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoadsTabProps) {
+  const toast = useToast();
   const [loads, setLoads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeStatus, setActiveStatus] = useState<LoadStatus>('POSTED');
@@ -175,11 +177,11 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       if (!response.ok) throw new Error('Failed to duplicate load');
 
       const newLoad = await response.json();
-      alert(`Load copied successfully! New Load ID: ${newLoad.id}`);
+      toast.success('Load copied successfully!');
       fetchLoads();
     } catch (error) {
       console.error('Copy failed:', error);
-      alert('Failed to copy load');
+      toast.error('Failed to copy load');
     }
   };
 
@@ -206,11 +208,11 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
       if (!response.ok) throw new Error('Failed to delete load');
 
-      alert('Load deleted successfully');
+      toast.success('Load deleted successfully');
       fetchLoads();
     } catch (error) {
       console.error('Delete failed:', error);
-      alert('Failed to delete load');
+      toast.error('Failed to delete load');
     }
   };
 
@@ -281,7 +283,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       fetchLoads();
     } catch (error) {
       console.error('Toggle KEPT failed:', error);
-      alert('Failed to update load');
+      toast.error('Failed to update load');
     }
   };
 
@@ -293,13 +295,13 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
     // Validate required fields
     if (!newLoadForm.pickupCity || !newLoadForm.deliveryCity || !newLoadForm.pickupDate || !newLoadForm.truckType) {
-      alert('Please fill in all required fields: Origin, Destination, Pickup Date, and Truck Type');
+      toast.warning('Please fill in all required fields: Origin, Destination, Pickup Date, and Truck Type');
       return;
     }
 
     // Sprint 16: Validate pricing fields
     if (!newLoadForm.baseFareEtb || !newLoadForm.perKmEtb || !newLoadForm.tripKm) {
-      alert('Please fill in all pricing fields: Base Fare, Per-KM Rate, and Trip Distance');
+      toast.warning('Please fill in all pricing fields: Base Fare, Per-KM Rate, and Trip Distance');
       return;
     }
 
@@ -347,11 +349,11 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
         deliveryCoordinates: undefined,
       });
       setShowNewLoadModal(false);
-      alert('Load posted successfully!');
+      toast.success('Load posted successfully!');
       fetchLoads(); // Refresh the list
     } catch (error: any) {
       console.error('Submit load error:', error);
-      alert(error.message || 'Failed to post load');
+      toast.error(error.message || 'Failed to post load');
     } finally {
       setSubmitting(false);
     }
@@ -381,7 +383,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
     // Validate required fields
     if (!editingLoad.pickupCity || !editingLoad.deliveryCity || !editingLoad.pickupDate || !editingLoad.truckType) {
-      alert('Please fill in all required fields: Origin, Destination, Pickup Date, and Truck Type');
+      toast.warning('Please fill in all required fields: Origin, Destination, Pickup Date, and Truck Type');
       return;
     }
 
@@ -390,7 +392,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       // Get CSRF token for secure submission
       const csrfToken = await getCSRFToken();
       if (!csrfToken) {
-        alert('Failed to get security token. Please refresh and try again.');
+        toast.error('Failed to get security token. Please refresh and try again.');
         setSubmitting(false);
         return;
       }
@@ -424,11 +426,11 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       // Success! Clear editing state and refresh loads
       setEditingLoad(null);
       setExpandedLoadId(null);
-      alert('Load updated successfully!');
+      toast.success('Load updated successfully!');
       fetchLoads();
     } catch (error: any) {
       console.error('Update load error:', error);
-      alert(error.message || 'Failed to update load');
+      toast.error(error.message || 'Failed to update load');
     } finally {
       setSubmitting(false);
     }
@@ -1498,7 +1500,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                               onClick={(e) => {
                                 e.stopPropagation();
                                 navigator.clipboard.writeText(`${window.location.origin}${load.trackingUrl}`);
-                                alert('Tracking URL copied to clipboard!');
+                                toast.success('Tracking URL copied to clipboard!');
                               }}
                               className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
                               title="Copy tracking URL"
@@ -1528,7 +1530,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                           onClick={(e) => {
                             e.stopPropagation();
                             navigator.clipboard.writeText(`${window.location.origin}${load.trackingUrl}`);
-                            alert('Tracking URL copied! Share it with your customer.');
+                            toast.success('Tracking URL copied! Share it with your customer.');
                           }}
                           className="px-4 py-2 bg-green-500 text-white text-sm font-medium rounded hover:bg-green-600 transition-colors"
                         >

@@ -17,6 +17,7 @@ import {
 } from '@/components/dat-ui';
 import { DatColumn, DatStatusTab, DatRowAction } from '@/types/dat-ui';
 import PlacesAutocomplete, { PlaceResult } from '@/components/PlacesAutocomplete';
+import { useToast } from '@/components/Toast/ToastContext';
 
 interface PostTrucksTabProps {
   user: any;
@@ -44,6 +45,7 @@ type TruckStatus = 'POSTED' | 'UNPOSTED' | 'EXPIRED';
 type LoadTab = 'all' | 'preferred' | 'blocked';
 
 export default function PostTrucksTab({ user }: PostTrucksTabProps) {
+  const toast = useToast();
   const [trucks, setTrucks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeStatus, setActiveStatus] = useState<TruckStatus>('POSTED');
@@ -437,11 +439,11 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       if (!response.ok) throw new Error('Failed to duplicate truck');
 
       const newTruck = await response.json();
-      alert(`Truck posting copied successfully!`);
+      toast.success('Truck posting copied successfully!');
       fetchTrucks();
     } catch (error) {
       console.error('Copy failed:', error);
-      alert('Failed to copy truck posting');
+      toast.error('Failed to copy truck posting');
     }
   };
 
@@ -460,7 +462,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
       if (!response.ok) throw new Error('Failed to delete truck');
 
-      alert('Truck posting deleted successfully');
+      toast.success('Truck posting deleted successfully');
       fetchTrucks();
       if (selectedTruckId === truck.id) {
         setSelectedTruckId(null);
@@ -468,7 +470,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       }
     } catch (error) {
       console.error('Delete failed:', error);
-      alert('Failed to delete truck posting');
+      toast.error('Failed to delete truck posting');
     }
   };
 
@@ -511,11 +513,11 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   const handlePostTruck = async () => {
     // Validate required fields
     if (!newTruckForm.truckId) {
-      alert('Please select a truck from your fleet');
+      toast.warning('Please select a truck from your fleet');
       return;
     }
     if (!newTruckForm.origin || !newTruckForm.availableFrom || !newTruckForm.contactPhone) {
-      alert('Please fill in all required fields: Origin, Available Date, and Contact Phone');
+      toast.warning('Please fill in all required fields: Origin, Available Date, and Contact Phone');
       return;
     }
 
@@ -535,7 +537,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         : null;
 
       if (!originCity) {
-        alert('Origin city not found in Ethiopian locations. Please select a valid city.');
+        toast.warning('Origin city not found in Ethiopian locations. Please select a valid city.');
         return;
       }
 
@@ -583,7 +585,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         throw new Error(errorMessage);
       }
 
-      alert('Truck posting created successfully!');
+      toast.success('Truck posting created successfully!');
 
       // Reset form
       setNewTruckForm({
@@ -610,7 +612,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       await fetchTrucks();
     } catch (error: any) {
       console.error('Create truck posting error:', error);
-      alert(error.message || 'Failed to create truck posting');
+      toast.error(error.message || 'Failed to create truck posting');
     }
   };
 
@@ -628,7 +630,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
    */
   const handleToggleKeep = async (truck: any) => {
     // TODO: Implement keep/star toggle
-    alert('Keep/Star functionality coming soon');
+    toast.info('Keep/Star functionality coming soon');
   };
 
   /**
@@ -653,7 +655,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
    */
   const handleSubmitLoadRequest = async () => {
     if (!selectedLoadForRequest || !selectedTruckForRequest) {
-      alert('Please select a truck for this load request');
+      toast.warning('Please select a truck for this load request');
       return;
     }
 
@@ -662,7 +664,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       // Get CSRF token
       const csrfToken = await getCSRFToken();
       if (!csrfToken) {
-        alert('Failed to get security token. Please refresh and try again.');
+        toast.error('Failed to get security token. Please refresh and try again.');
         setSubmittingRequest(false);
         return;
       }
@@ -686,7 +688,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         throw new Error(error.error || 'Failed to submit load request');
       }
 
-      alert('Load request sent to shipper! You will be notified when they respond.');
+      toast.success('Load request sent to shipper! You will be notified when they respond.');
       setRequestModalOpen(false);
       setSelectedLoadForRequest(null);
       setSelectedTruckForRequest('');
@@ -694,7 +696,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       setRequestProposedRate('');
     } catch (error: any) {
       console.error('Load request error:', error);
-      alert(error.message || 'Failed to submit load request');
+      toast.error(error.message || 'Failed to submit load request');
     } finally {
       setSubmittingRequest(false);
     }
@@ -1057,7 +1059,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       // Get CSRF token for secure submission
       const csrfToken = await getCSRFToken();
       if (!csrfToken) {
-        alert('Failed to get security token. Please refresh and try again.');
+        toast.error('Failed to get security token. Please refresh and try again.');
         return;
       }
 
@@ -1086,13 +1088,13 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
       if (!response.ok) throw new Error('Failed to update truck posting');
 
-      alert('Truck posting updated successfully!');
+      toast.success('Truck posting updated successfully!');
       setEditingTruckId(null);
       setEditForm({});
       fetchTrucks();
     } catch (error: any) {
       console.error('Update failed:', error);
-      alert(error.message || 'Failed to update truck posting');
+      toast.error(error.message || 'Failed to update truck posting');
     }
   };
 
