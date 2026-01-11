@@ -234,7 +234,10 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
           'Content-Type': 'application/json',
           'X-CSRF-Token': csrfToken,
         },
-        body: JSON.stringify({ status: 'POSTED' }),
+        body: JSON.stringify({
+          status: 'POSTED',
+          createdAt: new Date().toISOString(), // Update timestamp to current time when posting
+        }),
       });
 
       if (!response.ok) {
@@ -446,9 +449,10 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
         specialInstructions: editingLoad.specialInstructions,
       };
 
-      // If currently UNPOSTED, change to POSTED when saving
+      // If currently UNPOSTED, change to POSTED when saving and update timestamp
       if (editingLoad.status === 'UNPOSTED') {
         updatePayload.status = 'POSTED';
+        updatePayload.createdAt = new Date().toISOString(); // Update timestamp to current time when posting
       }
 
       const response = await fetch(`/api/loads/${editingLoad.id}`, {
