@@ -267,7 +267,7 @@ export default function DatDataTable<T = any>({
                       group
                       transition-all duration-150
                       ${isSelected ? 'bg-teal-50/70' : 'hover:bg-slate-50/80'}
-                      ${onRowClick || expandable ? 'cursor-pointer' : ''}
+                      ${onRowClick || expandable ? 'cursor-default' : ''}
                     `}
                     onClick={() => {
                       if (onRowClick) onRowClick(row);

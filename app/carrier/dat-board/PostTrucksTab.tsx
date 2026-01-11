@@ -715,200 +715,141 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
    */
   const truckColumns: DatColumn[] = [
     {
-      key: 'isKept',
-      label: 'Keep',
-      width: '60px',
-      align: 'center' as const,
-      render: (value, row) => (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleToggleKeep(row);
-          }}
-          className="text-xl hover:scale-110 transition-transform"
-        >
-          {value ? '★' : '☆'}
-        </button>
-      ),
-    },
-    {
       key: 'age',
       label: 'Age',
-      width: '80px',
+      width: '50px',
       render: (_, row) => <DatAgeIndicator date={row.createdAt} />,
     },
     {
       key: 'status',
       label: 'Status',
-      width: '100px',
+      width: '70px',
       render: (value) => (
         <span className={`
-          px-2 py-1 rounded text-xs font-semibold
+          px-1.5 py-0.5 rounded text-xs font-semibold
           ${value === 'ACTIVE' ? 'bg-emerald-500 text-white' : ''}
           ${value === 'POSTED' ? 'bg-emerald-500 text-white' : ''}
           ${value === 'UNPOSTED' ? 'bg-[#064d51]/10 text-[#064d51]' : ''}
           ${value === 'EXPIRED' ? 'bg-rose-500 text-white' : ''}
         `}>
-          {value}
+          {value === 'ACTIVE' ? 'POSTED' : value}
         </span>
       ),
     },
     {
       key: 'availableFrom',
       label: 'Avail',
-      width: '120px',
+      width: '75px',
       render: (value, row) => {
-        const from = value ? new Date(value).toLocaleDateString() : 'Now';
-        const to = row.availableTo ? new Date(row.availableTo).toLocaleDateString() : '';
-        return to ? `${from}-${to}` : from;
+        const from = value ? new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Now';
+        return from;
       },
     },
     {
       key: 'ownerName',
       label: 'Owner',
-      width: '120px',
-      render: (value) => value || 'N/A',
+      width: '80px',
+      render: (value) => <span className="truncate">{value || '-'}</span>,
     },
     {
       key: 'currentCity',
       label: 'Origin',
-      sortable: true,
+      width: '90px',
       render: (value, row) => {
-        // Handle if value is an object with name property
-        if (typeof value === 'object' && value?.name) {
-          return value.name;
-        }
-        // Handle if originCity object exists
-        if (row.originCity?.name) {
-          return row.originCity.name;
-        }
+        if (typeof value === 'object' && value?.name) return value.name;
+        if (row.originCity?.name) return row.originCity.name;
         return value || 'N/A';
       },
     },
     {
       key: 'destinationCity',
-      label: 'Destination',
-      sortable: true,
+      label: 'Dest',
+      width: '90px',
       render: (value, row) => {
-        // Handle if value is an object with name property
-        if (typeof value === 'object' && value?.name) {
-          return value.name;
-        }
-        // Handle if destinationCity object exists
-        if (row.destinationCity?.name) {
-          return row.destinationCity.name;
-        }
-        return value || 'Anywhere';
+        if (typeof value === 'object' && value?.name) return value.name;
+        if (row.destinationCity?.name) return row.destinationCity.name;
+        return value || 'Any';
       },
     },
     {
       key: 'preferredDhToOriginKm',
       label: 'DH-O',
-      width: '65px',
+      width: '50px',
       align: 'right' as const,
-      render: (value) => value ? `${value} km` : '-',
+      render: (value) => value ? `${value}` : '-',
     },
     {
       key: 'preferredDhAfterDeliveryKm',
       label: 'DH-D',
-      width: '65px',
+      width: '50px',
       align: 'right' as const,
-      render: (value) => value ? `${value} km` : '-',
+      render: (value) => value ? `${value}` : '-',
     },
     {
       key: 'truckType',
-      label: 'Truck',
-      width: '100px',
+      label: 'Type',
+      width: '70px',
       render: (value) => value?.replace('_', ' ') || 'N/A',
     },
-    // Sprint 16: GPS Status Column
     {
       key: 'truck',
       label: 'GPS',
-      width: '80px',
+      width: '50px',
       align: 'center' as const,
       render: (_, row) => {
         const truck = row.truck;
         if (!truck || !truck.imei) {
           return <span className="text-gray-400 text-xs">-</span>;
         }
-
-        const statusColors = {
-          ACTIVE: 'bg-green-100 text-green-700 border-green-300',
-          SIGNAL_LOST: 'bg-yellow-100 text-yellow-700 border-yellow-300',
-          INACTIVE: 'bg-red-100 text-red-700 border-red-300',
-          MAINTENANCE: 'bg-gray-100 text-[#064d51]/80 border-gray-300',
-        };
-
-        const statusDots = {
+        const statusDots: Record<string, string> = {
           ACTIVE: '🟢',
           SIGNAL_LOST: '🟡',
           INACTIVE: '🔴',
           MAINTENANCE: '⚪',
         };
-
         const status = truck.gpsStatus || 'INACTIVE';
-        const validStatus = status as keyof typeof statusColors;
-
-        return (
-          <span className={`
-            px-2 py-1 rounded text-xs font-semibold border
-            ${statusColors[validStatus] || statusColors.INACTIVE}
-          `}>
-            {statusDots[validStatus] || '⚫'} GPS
-          </span>
-        );
+        return <span className="text-sm">{statusDots[status] || '⚫'}</span>;
       },
     },
     {
       key: 'availableLength',
-      label: 'Length',
-      width: '80px',
+      label: 'Len',
+      width: '45px',
       align: 'right' as const,
-      render: (value) => value ? `${value}m` : 'N/A',
+      render: (value) => value ? `${value}m` : '-',
     },
     {
       key: 'availableWeight',
-      label: 'Weight',
-      width: '100px',
+      label: 'Wt',
+      width: '55px',
       align: 'right' as const,
-      render: (value) => value ? `${value}kg` : 'N/A',
-    },
-    {
-      key: 'matchCount',
-      label: 'Loads',
-      width: '80px',
-      align: 'center' as const,
-      render: (value, row) => (
-        <span className={`
-          px-2 py-1 rounded text-xs font-bold
-          ${value > 0 ? 'bg-emerald-500 text-white' : 'bg-[#064d51]/10 text-[#064d51]'}
-        `}>
-          {value || 0}
-        </span>
-      ),
+      render: (value) => value ? `${value}` : '-',
     },
     {
       key: 'actions',
       label: 'Actions',
-      width: '280px',
+      width: '180px',
       align: 'center' as const,
       render: (_, row) => {
         const isExpanded = expandedTruckId === row.id;
         const isEditing = editingTruckId === row.id;
 
+        // Only show action buttons when row is expanded and not in editing mode
         if (!isExpanded || isEditing) {
           return null;
         }
 
         return (
-          <div className="flex items-center gap-2">
+          <div
+            className="flex items-center gap-1"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleEdit(row);
               }}
-              className="px-4 py-1.5 bg-[#1e9c99] text-white text-xs font-semibold rounded-lg hover:bg-[#178f8c] transition-all"
+              className="px-3 py-1.5 bg-teal-600 text-white text-xs font-semibold rounded-lg hover:bg-teal-700 transition-all cursor-pointer"
             >
               EDIT
             </button>
@@ -917,7 +858,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                 e.stopPropagation();
                 handleCopy(row);
               }}
-              className="px-4 py-1.5 bg-[#064d51]/10 text-[#064d51] text-xs font-semibold rounded-lg hover:bg-[#064d51]/20 transition-all border border-[#064d51]/20"
+              className="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg hover:bg-slate-200 transition-all border border-slate-200 cursor-pointer"
             >
               COPY
             </button>
@@ -926,7 +867,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                 e.stopPropagation();
                 handleDelete(row);
               }}
-              className="px-4 py-1.5 bg-rose-500 text-white text-xs font-semibold rounded-lg hover:bg-rose-600 transition-all"
+              className="px-3 py-1.5 bg-rose-500 text-white text-xs font-semibold rounded-lg hover:bg-rose-600 transition-all cursor-pointer"
             >
               DELETE
             </button>
@@ -934,7 +875,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         );
       },
     },
-      ];
+  ];
 
   /**
    * Matching loads table columns
@@ -1600,9 +1541,13 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
             if (expandedTruckId === truck.id) {
               setExpandedTruckId(null);
               setSelectedTruckId(null);
+              setEditingTruckId(null); // Reset editing state when collapsing
+              setEditForm({}); // Clear edit form data
               fetchAllMatchingLoads(); // Show all loads when deselected
             } else {
               setExpandedTruckId(truck.id);
+              setEditingTruckId(null); // Ensure editing is closed when expanding a new row
+              setEditForm({}); // Clear any previous edit form data
               handleTruckClick(truck); // Fetch loads for this specific truck
             }
           }}
