@@ -32,14 +32,14 @@ export default function GpsStatusBadge({
     GREEN: 'bg-green-100 text-green-800 border-green-300',
     YELLOW: 'bg-yellow-100 text-yellow-800 border-yellow-300',
     RED: 'bg-red-100 text-red-800 border-red-300',
-    GRAY: 'bg-gray-100 text-gray-600 border-gray-300',
+    GRAY: 'bg-[#064d51]/10 text-[#064d51]/70 border-[#064d51]/30',
   };
 
   const dotColorClasses = {
     GREEN: 'bg-green-500',
     YELLOW: 'bg-yellow-500',
     RED: 'bg-red-500',
-    GRAY: 'bg-gray-400',
+    GRAY: 'bg-[#064d51]/50',
   };
 
   const sizeClasses = {
@@ -93,7 +93,7 @@ export function GpsStatusBadgeWithIcon({
     GREEN: 'text-green-600',
     YELLOW: 'text-yellow-600',
     RED: 'text-red-600',
-    GRAY: 'text-gray-400',
+    GRAY: 'text-[#064d51]/50',
   };
 
   const iconSizeClasses = {

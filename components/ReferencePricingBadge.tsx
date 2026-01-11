@@ -20,7 +20,7 @@ export default function ReferencePricingBadge({
 }: ReferencePricingBadgeProps) {
   if (!marketRate) {
     return (
-      <span className={`text-sm text-gray-600 ${className}`}>
+      <span className={`text-sm text-[#064d51]/70 ${className}`}>
         {actualRate.toLocaleString()} ETB
       </span>
     );
@@ -34,7 +34,7 @@ export default function ReferencePricingBadge({
   const getVarianceColor = () => {
     if (isAboveMarket) return 'text-red-600';
     if (isBelowMarket) return 'text-green-600';
-    return 'text-gray-600';
+    return 'text-[#064d51]/70';
   };
 
   const getVarianceText = () => {
@@ -45,7 +45,7 @@ export default function ReferencePricingBadge({
 
   return (
     <div className={`inline-flex items-center gap-2 ${className}`}>
-      <span className="text-sm font-bold text-gray-900">
+      <span className="text-sm font-bold text-[#064d51]">
         {actualRate.toLocaleString()} ETB
       </span>
 
@@ -56,7 +56,7 @@ export default function ReferencePricingBadge({
             ? 'bg-green-100 text-green-800'
             : isAboveMarket
             ? 'bg-red-100 text-red-800'
-            : 'bg-blue-100 text-blue-800'
+            : 'bg-[#1e9c99]/10 text-[#1e9c99]'
         }`}
         title={`Market rate: ${marketRate.toLocaleString()} ETB`}
       >
@@ -83,7 +83,7 @@ export function PricingVarianceIndicator({
   }
 
   return (
-    <span className={`text-xs font-semibold ${variance > 0 ? 'text-red-600' : 'text-blue-600'}`}>
+    <span className={`text-xs font-semibold ${variance > 0 ? 'text-red-600' : 'text-[#1e9c99]'}`}>
       {variance > 0 ? '↑' : '↓'} {Math.abs(variance).toFixed(0)}%
     </span>
   );

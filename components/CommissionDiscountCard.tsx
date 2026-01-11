@@ -80,7 +80,7 @@ export default function CommissionDiscountCard({
     : 100;
 
   return (
-    <div className={`bg-white rounded-lg shadow border border-gray-200 overflow-hidden ${className}`}>
+    <div className={`bg-white rounded-lg shadow border border-[#064d51]/15 overflow-hidden ${className}`}>
       {/* Header */}
       <div className={`bg-gradient-to-r ${currentTier.color} px-6 py-4`}>
         <div className="flex items-center justify-between">
@@ -106,14 +106,14 @@ export default function CommissionDiscountCard({
         {/* Current Status */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-sm font-medium text-[#064d51]/80">
               Your Completion Rate
             </span>
-            <span className="text-lg font-bold text-gray-900">
+            <span className="text-lg font-bold text-[#064d51]">
               {completionRate.toFixed(1)}%
             </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-3">
+          <div className="w-full bg-[#064d51]/10 rounded-full h-3">
             <div
               className={`bg-gradient-to-r ${currentTier.color} h-3 rounded-full transition-all duration-500`}
               style={{ width: `${Math.min(completionRate, 100)}%` }}
@@ -136,10 +136,10 @@ export default function CommissionDiscountCard({
               />
             </svg>
             <div>
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-sm font-medium text-[#064d51]">
                 Save {currentTier.discount}% on all commissions
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-[#064d51]/60">
                 Applied automatically to every load
               </p>
             </div>
@@ -160,37 +160,37 @@ export default function CommissionDiscountCard({
 
         {/* Next Tier Progress */}
         {nextTier && (
-          <div className="border-t border-gray-200 pt-6">
+          <div className="border-t border-[#064d51]/15 pt-6">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h4 className="text-sm font-semibold text-gray-900">
+                <h4 className="text-sm font-semibold text-[#064d51]">
                   Next Tier: {nextTier.label}
                 </h4>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-[#064d51]/60">
                   {nextTier.discount}% discount
                 </p>
               </div>
-              <span className="text-sm font-medium text-blue-600">
+              <span className="text-sm font-medium text-[#1e9c99]">
                 {nextTier.minCompletionRate - completionRate >= 0
                   ? `${(nextTier.minCompletionRate - completionRate).toFixed(1)}% to go`
                   : 'Achieved!'}
               </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-[#064d51]/10 rounded-full h-2">
               <div
-                className="bg-gradient-to-r from-blue-500 to-blue-700 h-2 rounded-full transition-all duration-500"
+                className="bg-gradient-to-r from-[#1e9c99] to-[#064d51] h-2 rounded-full transition-all duration-500"
                 style={{ width: `${Math.min(progressToNext, 100)}%` }}
               />
             </div>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-[#064d51]/60 mt-2">
               Complete more loads to unlock the next discount tier
             </p>
           </div>
         )}
 
         {/* All Tiers */}
-        <div className="border-t border-gray-200 pt-6 mt-6">
-          <h4 className="text-sm font-semibold text-gray-900 mb-3">
+        <div className="border-t border-[#064d51]/15 pt-6 mt-6">
+          <h4 className="text-sm font-semibold text-[#064d51] mb-3">
             All Discount Tiers
           </h4>
           <div className="space-y-2">
@@ -203,10 +203,10 @@ export default function CommissionDiscountCard({
                   key={tier.label}
                   className={`flex items-center justify-between p-3 rounded-lg border ${
                     isCurrent
-                      ? 'bg-blue-50 border-blue-300'
+                      ? 'bg-[#1e9c99]/10 border-[#1e9c99]/30'
                       : isAchieved
                       ? 'bg-green-50 border-green-200'
-                      : 'bg-gray-50 border-gray-200'
+                      : 'bg-[#f0fdfa] border-[#064d51]/15'
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -238,23 +238,23 @@ export default function CommissionDiscountCard({
                     <div>
                       <p
                         className={`text-sm font-medium ${
-                          isCurrent ? 'text-blue-900' : 'text-gray-900'
+                          isCurrent ? 'text-[#064d51]' : 'text-[#064d51]'
                         }`}
                       >
                         {tier.label}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-[#064d51]/60">
                         {tier.minCompletionRate}%+ completion
                       </p>
                     </div>
                   </div>
                   <div
                     className={`text-right ${
-                      isCurrent ? 'text-blue-900' : 'text-gray-900'
+                      isCurrent ? 'text-[#064d51]' : 'text-[#064d51]'
                     }`}
                   >
                     <p className="text-lg font-bold">{tier.discount}%</p>
-                    <p className="text-xs text-gray-500">discount</p>
+                    <p className="text-xs text-[#064d51]/60">discount</p>
                   </div>
                 </div>
               );
@@ -264,9 +264,9 @@ export default function CommissionDiscountCard({
 
         {/* Call to Action */}
         {completionRate < 95 && (
-          <div className="mt-6 p-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg text-white">
+          <div className="mt-6 p-4 bg-gradient-to-r from-[#1e9c99] to-[#064d51] rounded-lg text-white">
             <p className="font-semibold mb-1">Keep completing loads!</p>
-            <p className="text-sm text-blue-100">
+            <p className="text-sm text-white/80">
               Every load you complete through the platform increases your
               completion rate and unlocks higher discount tiers.
             </p>

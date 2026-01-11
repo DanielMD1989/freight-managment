@@ -48,7 +48,7 @@ export default function FindLoadsTab() {
     <div className="space-y-6">
       {/* Filters */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <h2 className="text-lg font-semibold text-[#064d51] mb-4">
           Filter Loads
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -59,7 +59,7 @@ export default function FindLoadsTab() {
             onChange={(e) =>
               setFilters({ ...filters, originCity: e.target.value })
             }
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="block w-full rounded-md border-[#064d51]/20 shadow-sm focus:border-[#1e9c99] focus:ring-[#1e9c99]"
           />
           <input
             type="text"
@@ -68,7 +68,7 @@ export default function FindLoadsTab() {
             onChange={(e) =>
               setFilters({ ...filters, destinationCity: e.target.value })
             }
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="block w-full rounded-md border-[#064d51]/20 shadow-sm focus:border-[#1e9c99] focus:ring-[#1e9c99]"
           />
           <input
             type="number"
@@ -77,7 +77,7 @@ export default function FindLoadsTab() {
             onChange={(e) =>
               setFilters({ ...filters, minWeight: e.target.value })
             }
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="block w-full rounded-md border-[#064d51]/20 shadow-sm focus:border-[#1e9c99] focus:ring-[#1e9c99]"
           />
           <input
             type="number"
@@ -86,26 +86,26 @@ export default function FindLoadsTab() {
             onChange={(e) =>
               setFilters({ ...filters, maxWeight: e.target.value })
             }
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="block w-full rounded-md border-[#064d51]/20 shadow-sm focus:border-[#1e9c99] focus:ring-[#1e9c99]"
           />
         </div>
       </div>
 
       {/* Loads Grid */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <h2 className="text-lg font-semibold text-[#064d51] mb-4">
           Available Loads
         </h2>
 
         {loading ? (
           <div className="text-center py-12">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
-            <p className="mt-2 text-sm text-gray-600">Loading loads...</p>
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#1e9c99] border-r-transparent"></div>
+            <p className="mt-2 text-sm text-[#064d51]/70">Loading loads...</p>
           </div>
         ) : loads.length === 0 ? (
           <div className="text-center py-12">
             <svg
-              className="mx-auto h-12 w-12 text-gray-400"
+              className="mx-auto h-12 w-12 text-[#064d51]/40"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -117,14 +117,14 @@ export default function FindLoadsTab() {
                 d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
               />
             </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No loads found</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <h3 className="mt-2 text-sm font-medium text-[#064d51]">No loads found</h3>
+            <p className="mt-1 text-sm text-[#064d51]/60">
               Try adjusting your filters or check back later
             </p>
             <div className="mt-4">
               <a
                 href="/dashboard/loads/search"
-                className="text-sm text-blue-600 hover:text-blue-800 underline"
+                className="text-sm text-[#1e9c99] hover:text-[#064d51] underline"
               >
                 Use dedicated load search page →
               </a>
@@ -135,9 +135,9 @@ export default function FindLoadsTab() {
             {loads.map((load) => (
               <div
                 key={load.id}
-                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                className="border border-[#064d51]/10 rounded-lg p-4 hover:shadow-md transition-shadow"
               >
-                <div className="text-sm text-gray-900">{load.title}</div>
+                <div className="text-sm text-[#064d51]">{load.title}</div>
               </div>
             ))}
           </div>

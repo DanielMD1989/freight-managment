@@ -79,7 +79,7 @@ export default function DatInlineEdit({
               onChange={(e) => handleChange(field.key, e.target.value)}
               placeholder={field.placeholder}
               maxLength={field.maxLength}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1e9c99] focus:border-transparent"
             />
             {field.maxLength && (
               <DatCharacterCounter value={value} maxLength={field.maxLength} />
@@ -94,7 +94,7 @@ export default function DatInlineEdit({
             value={value}
             onChange={(e) => handleChange(field.key, e.target.value)}
             placeholder={field.placeholder}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1e9c99] focus:border-transparent"
           />
         );
 
@@ -103,7 +103,7 @@ export default function DatInlineEdit({
           <select
             value={value}
             onChange={(e) => handleChange(field.key, e.target.value)}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:ring-2 focus:ring-[#1e9c99] focus:border-transparent"
           >
             <option value="">Select...</option>
             {field.options?.map((option: any) => (
@@ -120,7 +120,7 @@ export default function DatInlineEdit({
             type="date"
             value={value}
             onChange={(e) => handleChange(field.key, e.target.value)}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:ring-2 focus:ring-[#1e9c99] focus:border-transparent"
           />
         );
 
@@ -133,7 +133,7 @@ export default function DatInlineEdit({
               placeholder={field.placeholder}
               maxLength={field.maxLength}
               rows={4}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1e9c99] focus:border-transparent"
             />
             {field.maxLength && (
               <DatCharacterCounter value={value} maxLength={field.maxLength} />

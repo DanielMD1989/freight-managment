@@ -111,11 +111,11 @@ export default function TruckPostingModal({
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="bg-gray-200 px-6 py-4 border-b border-gray-300 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">NEW TRUCK POST</h2>
+        <div className="bg-gray-200 px-6 py-4 border-b border-[#064d51]/20 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-[#064d51]">NEW TRUCK POST</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+            className="text-[#064d51]/60 hover:text-gray-700 text-2xl font-bold"
           >
             ×
           </button>
@@ -123,7 +123,7 @@ export default function TruckPostingModal({
 
         {/* Form - Matching LoadPostingModal design */}
         <form onSubmit={handleSubmit}>
-          <div className="border-b border-gray-400 p-4" style={{ backgroundColor: '#2B2727' }}>
+          <div className="border-b border-[#064d51]/30 p-4" style={{ backgroundColor: '#2B2727' }}>
             {/* Form Fields Row - Grid matching table columns */}
             <div className="grid grid-cols-12 gap-2 mb-4">
               <div className="flex items-center gap-1 pt-5">
@@ -139,7 +139,7 @@ export default function TruckPostingModal({
                   type="date"
                   value={formData.availableFrom}
                   onChange={(e) => handleChange('availableFrom', e.target.value)}
-                  className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs bg-white text-[#064d51] border border-[#064d51]/30 rounded"
                   required
                 />
               </div>
@@ -149,7 +149,7 @@ export default function TruckPostingModal({
                   type="text"
                   value={formData.owner}
                   onChange={(e) => handleChange('owner', e.target.value)}
-                  className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs bg-white text-[#064d51] border border-[#064d51]/30 rounded"
                   placeholder="Owner name"
                 />
               </div>
@@ -164,7 +164,7 @@ export default function TruckPostingModal({
                     }
                   }}
                   placeholder="Search city..."
-                  className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs bg-white text-[#064d51] border border-[#064d51]/30 rounded"
                   countryRestriction={['ET', 'DJ']}
                   types={['(cities)']}
                   required
@@ -181,7 +181,7 @@ export default function TruckPostingModal({
                     }
                   }}
                   placeholder="Anywhere"
-                  className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs bg-white text-[#064d51] border border-[#064d51]/30 rounded"
                   countryRestriction={['ET', 'DJ']}
                   types={['(cities)']}
                 />
@@ -191,7 +191,7 @@ export default function TruckPostingModal({
                 <select
                   value={formData.truckType}
                   onChange={(e) => handleChange('truckType', e.target.value)}
-                  className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs bg-white text-[#064d51] border border-[#064d51]/30 rounded"
                   required
                 >
                   <option value="DRY_VAN">Van</option>
@@ -206,7 +206,7 @@ export default function TruckPostingModal({
                 <select
                   value={formData.fullPartial}
                   onChange={(e) => handleChange('fullPartial', e.target.value)}
-                  className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs bg-white text-[#064d51] border border-[#064d51]/30 rounded"
                 >
                   <option value="FULL">Full</option>
                   <option value="PARTIAL">Partial</option>
@@ -218,7 +218,7 @@ export default function TruckPostingModal({
                   type="number"
                   value={formData.lengthM}
                   onChange={(e) => handleChange('lengthM', e.target.value)}
-                  className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs bg-white text-[#064d51] border border-[#064d51]/30 rounded"
                   placeholder="40"
                 />
               </div>
@@ -228,7 +228,7 @@ export default function TruckPostingModal({
                   type="number"
                   value={formData.weight}
                   onChange={(e) => handleChange('weight', e.target.value)}
-                  className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs bg-white text-[#064d51] border border-[#064d51]/30 rounded"
                   placeholder="40000"
                 />
               </div>
@@ -238,7 +238,7 @@ export default function TruckPostingModal({
                   type="tel"
                   value={formData.contactPhone}
                   onChange={(e) => handleChange('contactPhone', e.target.value)}
-                  className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs bg-white text-[#064d51] border border-[#064d51]/30 rounded"
                   placeholder="+251-9xx-xxx-xxx"
                   required
                 />
@@ -256,7 +256,7 @@ export default function TruckPostingModal({
                   type="text"
                   value={formData.refId}
                   onChange={(e) => handleChange('refId', e.target.value)}
-                  className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-400 rounded"
+                  className="w-full px-3 py-2 bg-white text-[#064d51] border border-[#064d51]/30 rounded"
                   placeholder="e.g. TRK-001"
                 />
               </div>
@@ -269,7 +269,7 @@ export default function TruckPostingModal({
                 <textarea
                   value={formData.comments1}
                   onChange={(e) => handleChange('comments1', e.target.value)}
-                  className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-400 rounded resize-none"
+                  className="w-full px-3 py-2 bg-white text-[#064d51] border border-[#064d51]/30 rounded resize-none"
                   rows={3}
                   maxLength={70}
                   placeholder="Additional notes..."
@@ -282,7 +282,7 @@ export default function TruckPostingModal({
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 px-6 py-2 bg-cyan-400 text-white font-medium rounded hover:bg-cyan-500 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    className="flex-1 px-6 py-2 bg-[#1e9c99] text-white font-medium rounded hover:bg-[#064d51] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
                     {loading ? 'POSTING...' : '+ POST'}
                   </button>

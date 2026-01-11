@@ -269,7 +269,6 @@ const navigationSections: Record<string, NavSection[]> = {
       title: 'Fleet',
       items: [
         { label: 'My Trucks', href: '/carrier/trucks', icon: '🚛', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
-        { label: 'Load Matches', href: '/carrier/matches', icon: '🎯', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
       ],
     },
     {
@@ -305,7 +304,6 @@ const navigationSections: Record<string, NavSection[]> = {
       title: 'Loads',
       items: [
         { label: 'My Loads', href: '/shipper/loads', icon: '📦', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
-        { label: 'Truck Matches', href: '/shipper/matches', icon: '🎯', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
       ],
     },
     {

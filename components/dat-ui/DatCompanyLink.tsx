@@ -36,8 +36,8 @@ export default function DatCompanyLink({
     <button
       onClick={() => onClick?.(companyId)}
       className={`
-        text-blue-600
-        hover:text-blue-800
+        text-[#1e9c99]
+        hover:text-[#064d51]
         hover:underline
         font-medium
         transition-colors

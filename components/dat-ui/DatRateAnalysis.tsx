@@ -59,17 +59,17 @@ export default function DatRateAnalysis({
   const metadata = getMetadata();
 
   return (
-    <div className={`bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-6 border border-blue-200 ${className}`}>
+    <div className={`bg-gradient-to-br from-[#f0fdfa] to-[#1e9c99]/10 rounded-lg p-6 border border-[#1e9c99]/20 ${className}`}>
       {/* Header with Badge */}
       <div className="flex items-center justify-between mb-4">
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-600 text-white">
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#1e9c99] text-white">
           {rateType}
         </span>
         <div className="flex gap-2">
           {onRateBias && (
             <button
               onClick={onRateBias}
-              className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+              className="text-xs text-[#1e9c99] hover:text-[#064d51] font-medium"
             >
               Rate Bias
             </button>
@@ -77,7 +77,7 @@ export default function DatRateAnalysis({
           {onEdit && (
             <button
               onClick={onEdit}
-              className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+              className="text-xs text-[#1e9c99] hover:text-[#064d51] font-medium"
             >
               Edit
             </button>
@@ -97,20 +97,20 @@ export default function DatRateAnalysis({
       <div className="grid grid-cols-2 gap-6 mb-4">
         {/* Rate per Mile */}
         <div>
-          <div className="text-sm text-gray-600 mb-1">Rate per Mile</div>
-          <div className="text-4xl font-bold text-blue-600">
+          <div className="text-sm text-[#064d51]/70 mb-1">Rate per Mile</div>
+          <div className="text-4xl font-bold text-[#1e9c99]">
             {formatCurrency(ratePerMile)}
           </div>
-          <div className="text-xs text-gray-500 mt-1">per mile</div>
+          <div className="text-xs text-[#064d51]/60 mt-1">per mile</div>
         </div>
 
         {/* Rate per Trip */}
         <div>
-          <div className="text-sm text-gray-600 mb-1">Rate per Trip</div>
-          <div className="text-2xl font-bold text-gray-900">
+          <div className="text-sm text-[#064d51]/70 mb-1">Rate per Trip</div>
+          <div className="text-2xl font-bold text-[#064d51]">
             {formatLargeCurrency(ratePerTrip)}
           </div>
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="text-xs text-[#064d51]/60 mt-1">
             {totalMiles ? `${totalMiles} miles total` : 'total trip'}
           </div>
         </div>
@@ -118,21 +118,21 @@ export default function DatRateAnalysis({
 
       {/* Metadata */}
       {metadata && (
-        <div className="text-xs text-gray-600 mb-4 italic">
+        <div className="text-xs text-[#064d51]/70 mb-4 italic">
           {metadata}
         </div>
       )}
 
       {/* Analysis Links */}
-      <div className="border-t border-blue-200 pt-4">
+      <div className="border-t border-[#1e9c99]/20 pt-4">
         <div className="flex flex-wrap gap-4 text-sm">
-          <button className="text-blue-600 hover:text-blue-800 hover:underline">
+          <button className="text-[#1e9c99] hover:text-[#064d51] hover:underline">
             📊 Utilizes Trip
           </button>
-          <button className="text-blue-600 hover:text-blue-800 hover:underline">
+          <button className="text-[#1e9c99] hover:text-[#064d51] hover:underline">
             🔥 Hot Analysis
           </button>
-          <button className="text-blue-600 hover:text-blue-800 hover:underline">
+          <button className="text-[#1e9c99] hover:text-[#064d51] hover:underline">
             🗺️ Route Builder
           </button>
         </div>
@@ -140,9 +140,9 @@ export default function DatRateAnalysis({
 
       {/* Calculation Details */}
       {ratePerMile && ratePerTrip && totalMiles && (
-        <div className="mt-4 pt-4 border-t border-blue-200">
-          <details className="text-xs text-gray-600">
-            <summary className="cursor-pointer font-medium hover:text-gray-800">
+        <div className="mt-4 pt-4 border-t border-[#1e9c99]/20">
+          <details className="text-xs text-[#064d51]/70">
+            <summary className="cursor-pointer font-medium hover:text-[#064d51]">
               Calculation Details
             </summary>
             <div className="mt-2 space-y-1 pl-4">

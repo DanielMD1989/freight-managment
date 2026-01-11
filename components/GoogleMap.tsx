@@ -421,12 +421,12 @@ export default function GoogleMap({
   if (isLoading) {
     return (
       <div
-        className="flex items-center justify-center bg-gray-100 dark:bg-slate-800 rounded-lg"
+        className="flex items-center justify-center bg-[#f0fdfa] dark:bg-slate-800 rounded-lg"
         style={{ height }}
       >
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading map...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1e9c99] mx-auto mb-4"></div>
+          <p className="text-[#064d51]/70 dark:text-gray-300">Loading map...</p>
         </div>
       </div>
     );
@@ -436,12 +436,12 @@ export default function GoogleMap({
   if (error) {
     return (
       <div
-        className="flex items-center justify-center bg-gray-100 dark:bg-slate-800 rounded-lg"
+        className="flex items-center justify-center bg-[#f0fdfa] dark:bg-slate-800 rounded-lg"
         style={{ height }}
       >
         <div className="text-center">
           <p className="text-red-500 mb-4">{error}</p>
-          <p className="text-gray-500 text-sm">
+          <p className="text-[#064d51]/60 text-sm">
             Please check that NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is configured.
           </p>
         </div>
@@ -454,10 +454,10 @@ export default function GoogleMap({
       <div ref={mapRef} className="w-full h-full rounded-lg" />
 
       {/* Status overlay */}
-      <div className="absolute top-4 right-4 bg-white dark:bg-slate-800 px-4 py-2 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700">
+      <div className="absolute top-4 right-4 bg-white dark:bg-slate-800 px-4 py-2 rounded-lg shadow-lg border border-[#064d51]/15 dark:border-slate-700">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          <span className="text-xs text-gray-600 dark:text-gray-300">
+          <span className="text-xs text-[#064d51]/70 dark:text-gray-300">
             {markers.length} marker{markers.length !== 1 ? 's' : ''} |
             Updated {Math.round((Date.now() - lastUpdate.getTime()) / 1000)}s ago
           </span>
@@ -465,24 +465,24 @@ export default function GoogleMap({
       </div>
 
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 bg-white dark:bg-slate-800 px-4 py-3 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700">
-        <div className="text-xs font-semibold text-gray-700 dark:text-gray-200 mb-2">Legend</div>
+      <div className="absolute bottom-4 left-4 bg-white dark:bg-slate-800 px-4 py-3 rounded-lg shadow-lg border border-[#064d51]/15 dark:border-slate-700">
+        <div className="text-xs font-semibold text-[#064d51] dark:text-gray-200 mb-2">Legend</div>
         <div className="space-y-1 text-xs">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-green-500"></div>
-            <span className="text-gray-600 dark:text-gray-300">Active / In Transit</span>
+            <span className="text-[#064d51]/70 dark:text-gray-300">Active / In Transit</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-            <span className="text-gray-600 dark:text-gray-300">Available</span>
+            <div className="w-3 h-3 rounded-full bg-[#1e9c99]"></div>
+            <span className="text-[#064d51]/70 dark:text-gray-300">Available</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-            <span className="text-gray-600 dark:text-gray-300">On Trip</span>
+            <span className="text-[#064d51]/70 dark:text-gray-300">On Trip</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-gray-500"></div>
-            <span className="text-gray-600 dark:text-gray-300">Offline</span>
+            <span className="text-[#064d51]/70 dark:text-gray-300">Offline</span>
           </div>
         </div>
       </div>

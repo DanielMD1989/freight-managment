@@ -83,9 +83,9 @@ export default function DocumentVerificationTable({
 
   if (documents.length === 0) {
     return (
-      <div className="text-center py-12 bg-gray-50">
+      <div className="text-center py-12 bg-[#f0fdfa]">
         <svg
-          className="mx-auto h-12 w-12 text-gray-400"
+          className="mx-auto h-12 w-12 text-[#064d51]/40"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -97,8 +97,8 @@ export default function DocumentVerificationTable({
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
-        <h3 className="mt-2 text-sm font-medium text-gray-900">No documents found</h3>
-        <p className="mt-1 text-sm text-gray-500">
+        <h3 className="mt-2 text-sm font-medium text-[#064d51]">No documents found</h3>
+        <p className="mt-1 text-sm text-[#064d51]/60">
           Try adjusting your filters or search query.
         </p>
       </div>
@@ -107,55 +107,55 @@ export default function DocumentVerificationTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+      <table className="min-w-full divide-y divide-[#064d51]/15">
+        <thead className="bg-[#f0fdfa]">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
               Organization
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
               Document
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
               Type
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
               Uploaded
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
               Status
             </th>
-            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-3 text-right text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
               Actions
             </th>
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-white divide-y divide-[#064d51]/10">
           {documents.map((doc) => (
-            <tr key={doc.id} className="hover:bg-gray-50">
+            <tr key={doc.id} className="hover:bg-[#f0fdfa]">
               {/* Organization */}
               <td className="px-6 py-4">
                 <div className="flex items-center">
                   <div>
                     <div className="flex items-center gap-2">
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-[#064d51]">
                         {doc.organization.name}
                       </div>
                       {doc.organization.isVerified && (
-                        <svg className="h-4 w-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="h-4 w-4 text-[#1e9c99]" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                         </svg>
                       )}
                     </div>
-                    <div className="text-xs text-gray-500">{doc.organization.contactEmail}</div>
+                    <div className="text-xs text-[#064d51]/60">{doc.organization.contactEmail}</div>
                   </div>
                 </div>
               </td>
 
               {/* Document */}
               <td className="px-6 py-4">
-                <div className="text-sm text-gray-900">{doc.entity.name}</div>
-                <div className="text-xs text-gray-500 flex items-center gap-1">
+                <div className="text-sm text-[#064d51]">{doc.entity.name}</div>
+                <div className="text-xs text-[#064d51]/60 flex items-center gap-1">
                   <span>{formatDocumentType(doc.type)}</span>
                   <span>•</span>
                   <span>{formatFileSize(doc.fileSize)}</span>
@@ -167,14 +167,14 @@ export default function DocumentVerificationTable({
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                   doc.entityType === "company"
                     ? "bg-purple-100 text-purple-800"
-                    : "bg-blue-100 text-blue-800"
+                    : "bg-[#1e9c99]/10 text-[#1e9c99]"
                 }`}>
                   {doc.entityType === "company" ? "Company" : "Truck"}
                 </span>
               </td>
 
               {/* Uploaded */}
-              <td className="px-6 py-4 text-sm text-gray-500">
+              <td className="px-6 py-4 text-sm text-[#064d51]/60">
                 {formatDate(doc.uploadedAt)}
               </td>
 
@@ -192,7 +192,7 @@ export default function DocumentVerificationTable({
               <td className="px-6 py-4 text-right text-sm font-medium space-x-2">
                 <button
                   onClick={() => onPreview(doc)}
-                  className="text-blue-600 hover:text-blue-900"
+                  className="text-[#1e9c99] hover:text-[#064d51]"
                   title="Preview document"
                 >
                   <svg className="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">

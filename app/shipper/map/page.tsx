@@ -244,10 +244,11 @@ export default function ShipperMapPage() {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-[600px] bg-gray-200 rounded"></div>
+      <div className="min-h-screen bg-slate-50 p-6">
+        <div className="max-w-7xl mx-auto animate-pulse">
+          <div className="h-8 bg-slate-200 rounded-lg w-1/4 mb-2"></div>
+          <div className="h-4 bg-slate-200 rounded w-1/3 mb-6"></div>
+          <div className="h-[600px] bg-white rounded-2xl border border-slate-200/60"></div>
         </div>
       </div>
     );
@@ -256,250 +257,275 @@ export default function ShipperMapPage() {
   // No active trips
   if (activeTrips.length === 0) {
     return (
-      <div className="p-6">
-        <div className="text-center py-12">
-          <div className="text-6xl mb-4">📦</div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            No Active Shipments
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-            You don&apos;t have any active shipments to track. Map tracking becomes available
-            when your load is approved and the carrier starts the trip.
-          </p>
+      <div className="min-h-screen bg-slate-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-6">
+            <h1 className="text-2xl font-semibold text-slate-800">Track Shipments</h1>
+            <p className="text-slate-500 mt-1">Real-time GPS tracking of your active shipments</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-12 text-center">
+            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold text-slate-800 mb-2">
+              No Active Shipments
+            </h2>
+            <p className="text-slate-500 max-w-md mx-auto mb-6">
+              You don&apos;t have any active shipments to track. Map tracking becomes available
+              when your load is approved and the carrier starts the trip.
+            </p>
+            <a
+              href="/shipper?tab=POST_LOADS"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-sm font-medium rounded-xl shadow-md shadow-teal-500/25 hover:shadow-lg hover:shadow-teal-500/30 transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Post a Load
+            </a>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Track Shipment</h1>
-          <p className="text-gray-500 dark:text-gray-400">
-            Real-time tracking of your active shipments
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {/* WebSocket Status */}
-          <div className="flex items-center gap-2 text-sm">
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-            <span className="text-gray-500 dark:text-gray-400">
-              {isConnected ? 'Live' : 'Offline'}
-            </span>
+    <div className="min-h-screen bg-slate-50 p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-800">Track Shipments</h1>
+            <p className="text-slate-500 mt-1">
+              Real-time GPS tracking of your active shipments
+            </p>
           </div>
-          <button
-            onClick={fetchMyTrips}
-            className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"
-          >
-            Refresh
-          </button>
-        </div>
-      </div>
-
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-          {error}
-        </div>
-      )}
-
-      {/* Trip Selector (if multiple trips) */}
-      {activeTrips.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {activeTrips.map((trip) => (
+          <div className="flex items-center gap-3">
+            {/* WebSocket Status */}
+            <div className="flex items-center gap-2 text-sm bg-white px-3 py-1.5 rounded-full border border-slate-200/60">
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+              <span className="text-slate-600">
+                {isConnected ? 'Live' : 'Offline'}
+              </span>
+            </div>
             <button
-              key={trip.id}
-              onClick={() => setSelectedTrip(trip)}
-              className={`px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
-                selectedTrip?.id === trip.id
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-slate-800 dark:text-gray-300'
-              }`}
+              onClick={fetchMyTrips}
+              className="px-4 py-2 text-sm font-medium text-teal-600 bg-white border border-slate-200/60 rounded-xl hover:bg-teal-50 transition-colors"
             >
-              Load #{trip.loadId.slice(-6)}
+              Refresh
             </button>
-          ))}
+          </div>
         </div>
-      )}
 
-      {/* Trip Progress Card */}
-      {selectedTrip && selectedTrip.status === 'IN_TRANSIT' && tripProgress && (
-        <div className="bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-gray-900 dark:text-white">Trip Progress</h3>
-            {progressLoading && (
-              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            )}
+        {error && (
+          <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-700">
+            {error}
           </div>
+        )}
 
-          {/* Progress Bar */}
-          <div className="mb-4">
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-600 dark:text-gray-400">
-                {tripProgress.travelledKm !== null
-                  ? `${tripProgress.travelledKm.toFixed(1)} km travelled`
-                  : 'In progress'}
-              </span>
-              <span className="font-medium text-gray-900 dark:text-white">
-                {tripProgress.percent}%
-              </span>
-            </div>
-            <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-blue-600 rounded-full transition-all duration-500"
-                style={{ width: `${tripProgress.percent}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>Pickup</span>
-              <span>
-                {tripProgress.remainingKm !== null
-                  ? `${tripProgress.remainingKm.toFixed(1)} km remaining`
-                  : ''}
-              </span>
-              <span>Delivery</span>
-            </div>
+        {/* Trip Selector (if multiple trips) */}
+        {activeTrips.length > 1 && (
+          <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-1.5 inline-flex gap-1 overflow-x-auto">
+            {activeTrips.map((trip) => (
+              <button
+                key={trip.id}
+                onClick={() => setSelectedTrip(trip)}
+                className={`px-4 py-2 text-sm font-medium rounded-xl whitespace-nowrap transition-all ${
+                  selectedTrip?.id === trip.id
+                    ? 'bg-gradient-to-r from-teal-600 to-teal-500 text-white shadow-md shadow-teal-500/25'
+                    : 'text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                Load #{trip.loadId.slice(-6)}
+              </button>
+            ))}
           </div>
+        )}
 
-          {/* Progress Stats */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{tripProgress.percent}%</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Complete</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {formatDistance(tripProgress.remainingKm)}
+        {/* Trip Progress Card */}
+        {selectedTrip && selectedTrip.status === 'IN_TRANSIT' && tripProgress && (
+          <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-teal-50/30 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-slate-800">Trip Progress</h3>
+                <p className="text-sm text-slate-500">Real-time journey tracking</p>
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Remaining</div>
+              {progressLoading && (
+                <div className="w-4 h-4 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+              )}
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {formatETA(tripProgress.estimatedArrival)}
+            <div className="p-6">
+              {/* Progress Bar */}
+              <div className="mb-6">
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-slate-500">
+                    {tripProgress.travelledKm !== null
+                      ? `${tripProgress.travelledKm.toFixed(1)} km travelled`
+                      : 'In progress'}
+                  </span>
+                  <span className="font-semibold text-slate-800">
+                    {tripProgress.percent}%
+                  </span>
+                </div>
+                <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-teal-600 to-teal-400 rounded-full transition-all duration-500"
+                    style={{ width: `${tripProgress.percent}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-slate-400 mt-2">
+                  <span>Pickup</span>
+                  <span>
+                    {tripProgress.remainingKm !== null
+                      ? `${tripProgress.remainingKm.toFixed(1)} km remaining`
+                      : ''}
+                  </span>
+                  <span>Delivery</span>
+                </div>
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">ETA</div>
+
+              {/* Progress Stats */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-4 bg-slate-50 rounded-xl">
+                  <div className="text-2xl font-bold text-teal-600">{tripProgress.percent}%</div>
+                  <div className="text-xs text-slate-500 mt-1">Complete</div>
+                </div>
+                <div className="text-center p-4 bg-slate-50 rounded-xl">
+                  <div className="text-2xl font-bold text-slate-800">
+                    {formatDistance(tripProgress.remainingKm)}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1">Remaining</div>
+                </div>
+                <div className="text-center p-4 bg-slate-50 rounded-xl">
+                  <div className="text-2xl font-bold text-emerald-600">
+                    {formatETA(tripProgress.estimatedArrival)}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1">ETA</div>
+                </div>
+              </div>
+
+              {/* Near Destination Alert */}
+              {tripProgress.isNearDestination && (
+                <div className="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                    <span className="text-sm font-medium text-emerald-700">
+                      Approaching destination!
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
+        )}
 
-          {/* Near Destination Alert */}
-          {tripProgress.isNearDestination && (
-            <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+        {/* Shipment Info Card */}
+        {selectedTrip && (
+          <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div>
+                <div className="text-sm text-slate-500 mb-1">Status</div>
+                <div className={`font-semibold ${
+                  selectedTrip.status === 'IN_TRANSIT' ? 'text-teal-600' :
+                  selectedTrip.status === 'DELIVERED' ? 'text-emerald-600' : 'text-slate-600'
+                }`}>
+                  {selectedTrip.status.replace('_', ' ')}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-slate-500 mb-1">Carrier</div>
+                <div className="font-semibold text-slate-800">
+                  {selectedTrip.carrier.name}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-slate-500 mb-1">Truck</div>
+                <div className="font-semibold text-slate-800">
+                  {selectedTrip.truck.plateNumber}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-slate-500 mb-1">ETA</div>
+                <div className="font-semibold text-slate-800">
+                  {tripProgress?.estimatedArrival
+                    ? formatETA(tripProgress.estimatedArrival)
+                    : selectedTrip.estimatedArrival || 'Calculating...'}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Map */}
+        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
+          <GoogleMap
+            markers={buildMarkers()}
+            routes={buildRoutes()}
+            height="500px"
+            autoFitBounds={true}
+            showTraffic={true}
+            refreshInterval={0} // Disabled - using WebSocket instead
+          />
+        </div>
+
+        {/* Location Details */}
+        {selectedTrip && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Pickup */}
+            <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+                <span className="font-semibold text-slate-800">Pickup</span>
+              </div>
+              <p className="text-slate-500 text-sm">
+                {selectedTrip.pickupLocation?.address || 'Address not available'}
+              </p>
+            </div>
+
+            {/* Delivery */}
+            <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-3 h-3 bg-rose-500 rounded-full"></div>
+                <span className="font-semibold text-slate-800">Delivery</span>
+              </div>
+              <p className="text-slate-500 text-sm">
+                {selectedTrip.deliveryLocation?.address || 'Address not available'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* GPS Status */}
+        {selectedTrip && selectedTrip.status === 'IN_TRANSIT' && (
+          <div className="bg-teal-50 p-4 rounded-xl border border-teal-200">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                  Approaching destination!
+                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-teal-500 animate-pulse' : 'bg-slate-400'}`}></div>
+                <span className="text-sm text-teal-700">
+                  {isConnected ? 'Live tracking active' : 'Connecting to live tracking...'}
+                  {selectedTrip.currentLocation?.updatedAt && (
+                    <span className="text-teal-600 ml-2">
+                      - Last update: {new Date(selectedTrip.currentLocation.updatedAt).toLocaleTimeString()}
+                    </span>
+                  )}
                 </span>
               </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Shipment Info Card */}
-      {selectedTrip && (
-        <div className="bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Status</div>
-              <div className={`font-semibold ${
-                selectedTrip.status === 'IN_TRANSIT' ? 'text-blue-600' :
-                selectedTrip.status === 'DELIVERED' ? 'text-green-600' : 'text-gray-600'
-              }`}>
-                {selectedTrip.status.replace('_', ' ')}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Carrier</div>
-              <div className="font-semibold text-gray-900 dark:text-white">
-                {selectedTrip.carrier.name}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Truck</div>
-              <div className="font-semibold text-gray-900 dark:text-white">
-                {selectedTrip.truck.plateNumber}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">ETA</div>
-              <div className="font-semibold text-gray-900 dark:text-white">
-                {tripProgress?.estimatedArrival
-                  ? formatETA(tripProgress.estimatedArrival)
-                  : selectedTrip.estimatedArrival || 'Calculating...'}
-              </div>
+              {tripProgress?.lastUpdate && (
+                <span className="text-xs text-teal-500">
+                  Progress updated: {new Date(tripProgress.lastUpdate).toLocaleTimeString()}
+                </span>
+              )}
             </div>
           </div>
+        )}
+
+        {/* Access Info */}
+        <div className="text-xs text-slate-400 text-center py-2">
+          Map tracking is only available for approved loads with active trips.
+          GPS data is provided by the carrier.
         </div>
-      )}
-
-      {/* Map */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
-        <GoogleMap
-          markers={buildMarkers()}
-          routes={buildRoutes()}
-          height="500px"
-          autoFitBounds={true}
-          showTraffic={true}
-          refreshInterval={0} // Disabled - using WebSocket instead
-        />
-      </div>
-
-      {/* Location Details */}
-      {selectedTrip && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Pickup */}
-          <div className="bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
-              <span className="font-semibold text-gray-900 dark:text-white">Pickup</span>
-            </div>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">
-              {selectedTrip.pickupLocation?.address || 'Address not available'}
-            </p>
-          </div>
-
-          {/* Delivery */}
-          <div className="bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <span className="font-semibold text-gray-900 dark:text-white">Delivery</span>
-            </div>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">
-              {selectedTrip.deliveryLocation?.address || 'Address not available'}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* GPS Status */}
-      {selectedTrip && selectedTrip.status === 'IN_TRANSIT' && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-blue-500 animate-pulse' : 'bg-gray-400'}`}></div>
-              <span className="text-sm text-blue-700 dark:text-blue-300">
-                {isConnected ? 'Live tracking active' : 'Connecting to live tracking...'}
-                {selectedTrip.currentLocation?.updatedAt && (
-                  <span className="text-blue-500 dark:text-blue-400 ml-2">
-                    - Last update: {new Date(selectedTrip.currentLocation.updatedAt).toLocaleTimeString()}
-                  </span>
-                )}
-              </span>
-            </div>
-            {tripProgress?.lastUpdate && (
-              <span className="text-xs text-blue-500 dark:text-blue-400">
-                Progress updated: {new Date(tripProgress.lastUpdate).toLocaleTimeString()}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Access Info */}
-      <div className="text-xs text-gray-400 dark:text-gray-500 text-center">
-        Map tracking is only available for approved loads with active trips.
-        GPS data is provided by the carrier.
       </div>
     </div>
   );

@@ -111,13 +111,13 @@ export default function LoadPostingModal({
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="bg-gray-200 px-6 py-4 border-b border-gray-300 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">
+        <div className="bg-gray-200 px-6 py-4 border-b border-[#064d51]/20 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-[#064d51]">
             {isEditMode ? 'EDIT LOAD' : 'NEW LOAD POST'}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+            className="text-[#064d51]/60 hover:text-gray-700 text-2xl font-bold"
           >
             ×
           </button>
@@ -125,7 +125,7 @@ export default function LoadPostingModal({
 
         {/* Form - Exact copy of inline new load form */}
         <form onSubmit={handleSubmit}>
-          <div className="border-b border-gray-400 p-4" style={{ backgroundColor: '#2B2727' }}>
+          <div className="border-b border-[#064d51]/30 p-4" style={{ backgroundColor: '#2B2727' }}>
             {/* Form Fields Row - Grid matching table columns */}
             <div className="grid grid-cols-12 gap-2 mb-4">
               <div className="flex items-center gap-1 pt-5">
@@ -141,7 +141,7 @@ export default function LoadPostingModal({
                   type="date"
                   value={formData.pickupDate}
                   onChange={(e) => handleChange('pickupDate', e.target.value)}
-                  className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs bg-white text-[#064d51] border border-[#064d51]/30 rounded"
                   required
                 />
               </div>
@@ -156,7 +156,7 @@ export default function LoadPostingModal({
                     }
                   }}
                   placeholder="Search city..."
-                  className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs bg-white text-[#064d51] border border-[#064d51]/30 rounded"
                   countryRestriction={['ET', 'DJ']}
                   types={['(cities)']}
                   required
@@ -173,7 +173,7 @@ export default function LoadPostingModal({
                     }
                   }}
                   placeholder="Search city..."
-                  className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs bg-white text-[#064d51] border border-[#064d51]/30 rounded"
                   countryRestriction={['ET', 'DJ']}
                   types={['(cities)']}
                   required
@@ -185,7 +185,7 @@ export default function LoadPostingModal({
                   type="text"
                   value={formData.pickupDockHours}
                   onChange={(e) => handleChange('pickupDockHours', e.target.value)}
-                  className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs bg-white text-[#064d51] border border-[#064d51]/30 rounded"
                   placeholder="9am-5pm"
                 />
               </div>
@@ -194,7 +194,7 @@ export default function LoadPostingModal({
                 <select
                   value={formData.truckType}
                   onChange={(e) => handleChange('truckType', e.target.value)}
-                  className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs bg-white text-[#064d51] border border-[#064d51]/30 rounded"
                   required
                 >
                   <option>Reefer</option>
@@ -208,7 +208,7 @@ export default function LoadPostingModal({
                 <select
                   value={formData.fullPartial}
                   onChange={(e) => handleChange('fullPartial', e.target.value)}
-                  className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs bg-white text-[#064d51] border border-[#064d51]/30 rounded"
                 >
                   <option>Full</option>
                   <option>Partial</option>
@@ -220,7 +220,7 @@ export default function LoadPostingModal({
                   type="number"
                   value={formData.lengthM}
                   onChange={(e) => handleChange('lengthM', e.target.value)}
-                  className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs bg-white text-[#064d51] border border-[#064d51]/30 rounded"
                   placeholder="53"
                 />
               </div>
@@ -230,7 +230,7 @@ export default function LoadPostingModal({
                   type="number"
                   value={formData.weight}
                   onChange={(e) => handleChange('weight', e.target.value)}
-                  className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs bg-white text-[#064d51] border border-[#064d51]/30 rounded"
                   placeholder="45000"
                 />
               </div>
@@ -240,7 +240,7 @@ export default function LoadPostingModal({
                   type="tel"
                   value={formData.shipperContactPhone}
                   onChange={(e) => handleChange('shipperContactPhone', e.target.value)}
-                  className="w-full px-2 py-1 text-xs bg-white text-gray-900 border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs bg-white text-[#064d51] border border-[#064d51]/30 rounded"
                   placeholder="+251-9xx"
                 />
               </div>
@@ -256,7 +256,7 @@ export default function LoadPostingModal({
                 <textarea
                   value={formData.cargoDescription}
                   onChange={(e) => handleChange('cargoDescription', e.target.value)}
-                  className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-400 rounded resize-none"
+                  className="w-full px-3 py-2 bg-white text-[#064d51] border border-[#064d51]/30 rounded resize-none"
                   rows={3}
                   maxLength={100}
                   placeholder="e.g. Steel Coils, Electronics..."
@@ -271,7 +271,7 @@ export default function LoadPostingModal({
                 <textarea
                   value={formData.specialInstructions}
                   onChange={(e) => handleChange('specialInstructions', e.target.value)}
-                  className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-400 rounded resize-none"
+                  className="w-full px-3 py-2 bg-white text-[#064d51] border border-[#064d51]/30 rounded resize-none"
                   rows={3}
                   maxLength={70}
                   placeholder="Additional notes..."
@@ -284,7 +284,7 @@ export default function LoadPostingModal({
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 px-6 py-2 bg-cyan-400 text-white font-medium rounded hover:bg-cyan-500 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    className="flex-1 px-6 py-2 bg-[#1e9c99] text-white font-medium rounded hover:bg-[#064d51] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
                     {loading
                       ? (isEditMode ? 'SAVING...' : 'POSTING...')

@@ -122,7 +122,7 @@ export default function LocationSelect({
   return (
     <div ref={wrapperRef} className="relative">
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-[#064d51]/80 mb-1">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
@@ -137,7 +137,7 @@ export default function LocationSelect({
         }}
         required={required}
         placeholder={placeholder}
-        className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+        className="block w-full rounded-md border border-[#064d51]/20 px-3 py-2 shadow-sm focus:border-[#1e9c99] focus:outline-none focus:ring-[#1e9c99]"
         autoComplete="off"
       />
 
@@ -167,16 +167,16 @@ export default function LocationSelect({
       )}
 
       {isOpen && locations.length > 0 && (
-        <div className="absolute z-10 mt-1 w-full max-h-60 overflow-auto rounded-md bg-white shadow-lg border border-gray-200">
+        <div className="absolute z-10 mt-1 w-full max-h-60 overflow-auto rounded-md bg-white shadow-lg border border-[#064d51]/15">
           {locations.map((location) => (
             <button
               key={location.id}
               type="button"
               onClick={() => handleSelectLocation(location)}
-              className="w-full text-left px-4 py-2 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none border-b border-gray-100 last:border-b-0"
+              className="w-full text-left px-4 py-2 hover:bg-[#f0fdfa] focus:bg-[#f0fdfa] focus:outline-none border-b border-[#064d51]/10 last:border-b-0"
             >
-              <div className="font-medium text-gray-900">{location.name}</div>
-              <div className="text-sm text-gray-500">
+              <div className="font-medium text-[#064d51]">{location.name}</div>
+              <div className="text-sm text-[#064d51]/60">
                 {location.nameEthiopic && (
                   <span className="mr-2">{location.nameEthiopic}</span>
                 )}
@@ -190,7 +190,7 @@ export default function LocationSelect({
       )}
 
       {isOpen && searchQuery.length >= 2 && locations.length === 0 && !loading && (
-        <div className="absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg border border-gray-200 p-4 text-center text-gray-500">
+        <div className="absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg border border-[#064d51]/15 p-4 text-center text-[#064d51]/60">
           No locations found for &quot;{searchQuery}&quot;
         </div>
       )}

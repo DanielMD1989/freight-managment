@@ -84,8 +84,8 @@ export default async function CarrierWalletPage() {
     <div className="max-w-5xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Wallet</h1>
-        <p className="text-gray-600 mt-2">
+        <h1 className="text-3xl font-bold text-[#064d51]">Wallet</h1>
+        <p className="text-[#064d51]/70 mt-2">
           Manage your earnings and account balance
         </p>
       </div>
@@ -119,41 +119,41 @@ export default async function CarrierWalletPage() {
       {/* Earnings Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm text-gray-600 mb-2">Total Earnings</div>
-          <div className="text-2xl font-bold text-gray-900">
+          <div className="text-sm text-[#064d51]/70 mb-2">Total Earnings</div>
+          <div className="text-2xl font-bold text-[#064d51]">
             {formatCurrency(Number(totalRevenue._sum.rate || 0))}
           </div>
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="text-xs text-[#064d51]/60 mt-1">
             {completedDeliveries} completed deliveries
           </div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm text-gray-600 mb-2">Available Balance</div>
+          <div className="text-sm text-[#064d51]/70 mb-2">Available Balance</div>
           <div className="text-2xl font-bold text-green-600">
             {formatCurrency(Number(walletAccount?.balance || 0))}
           </div>
-          <div className="text-xs text-gray-500 mt-1">Ready to withdraw</div>
+          <div className="text-xs text-[#064d51]/60 mt-1">Ready to withdraw</div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm text-gray-600 mb-2">
+          <div className="text-sm text-[#064d51]/70 mb-2">
             Average per Delivery
           </div>
-          <div className="text-2xl font-bold text-gray-900">
+          <div className="text-2xl font-bold text-[#064d51]">
             {completedDeliveries > 0
               ? formatCurrency(
                   Number(totalRevenue._sum.rate || 0) / completedDeliveries
                 )
               : formatCurrency(0)}
           </div>
-          <div className="text-xs text-gray-500 mt-1">Based on completed loads</div>
+          <div className="text-xs text-[#064d51]/60 mt-1">Based on completed loads</div>
         </div>
       </div>
 
       {/* Quick Actions */}
       <div className="bg-white rounded-lg shadow p-6 mb-8">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+        <h2 className="text-xl font-semibold text-[#064d51] mb-4">
           Quick Actions
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -162,10 +162,10 @@ export default async function CarrierWalletPage() {
             className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <div>
-              <div className="font-medium text-gray-900">View Transactions</div>
-              <div className="text-sm text-gray-600">See all account activity</div>
+              <div className="font-medium text-[#064d51]">View Transactions</div>
+              <div className="text-sm text-[#064d51]/70">See all account activity</div>
             </div>
-            <span className="text-gray-400">→</span>
+            <span className="text-[#064d51]/50">→</span>
           </Link>
 
           <Link
@@ -173,10 +173,10 @@ export default async function CarrierWalletPage() {
             className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <div>
-              <div className="font-medium text-gray-900">Request Withdrawal</div>
-              <div className="text-sm text-gray-600">Transfer funds to bank</div>
+              <div className="font-medium text-[#064d51]">Request Withdrawal</div>
+              <div className="text-sm text-[#064d51]/70">Transfer funds to bank</div>
             </div>
-            <span className="text-gray-400">→</span>
+            <span className="text-[#064d51]/50">→</span>
           </Link>
 
           <Link
@@ -184,10 +184,10 @@ export default async function CarrierWalletPage() {
             className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <div>
-              <div className="font-medium text-gray-900">View Dashboard</div>
-              <div className="text-sm text-gray-600">See fleet overview</div>
+              <div className="font-medium text-[#064d51]">View Dashboard</div>
+              <div className="text-sm text-[#064d51]/70">See fleet overview</div>
             </div>
-            <span className="text-gray-400">→</span>
+            <span className="text-[#064d51]/50">→</span>
           </Link>
 
           <Link
@@ -195,10 +195,10 @@ export default async function CarrierWalletPage() {
             className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <div>
-              <div className="font-medium text-gray-900">Find Loads</div>
-              <div className="text-sm text-gray-600">Browse available loads</div>
+              <div className="font-medium text-[#064d51]">Find Loads</div>
+              <div className="text-sm text-[#064d51]/70">Browse available loads</div>
             </div>
-            <span className="text-gray-400">→</span>
+            <span className="text-[#064d51]/50">→</span>
           </Link>
         </div>
       </div>

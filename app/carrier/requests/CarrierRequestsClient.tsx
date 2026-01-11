@@ -109,10 +109,10 @@ export default function CarrierRequestsClient({ requests: initialRequests }: Pro
       PENDING: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
       APPROVED: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
       REJECTED: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      EXPIRED: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
-      CANCELLED: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+      EXPIRED: 'bg-[#064d51]/10 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+      CANCELLED: 'bg-[#064d51]/10 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
     };
-    return styles[status] || 'bg-gray-100 text-gray-800';
+    return styles[status] || 'bg-[#064d51]/10 text-gray-800';
   };
 
   const formatDate = (date: string) => {
@@ -193,8 +193,8 @@ export default function CarrierRequestsClient({ requests: initialRequests }: Pro
             onClick={() => setStatusFilter(status)}
             className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
               statusFilter === status
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+                ? 'bg-[#1e9c99] text-white'
+                : 'bg-[#064d51]/10 dark:bg-slate-700 text-[#064d51]/80 dark:text-gray-300 hover:bg-[#064d51]/20 dark:hover:bg-slate-600'
             }`}
           >
             {status === 'all' ? 'All' : status} ({statusCounts[status]})
@@ -204,8 +204,8 @@ export default function CarrierRequestsClient({ requests: initialRequests }: Pro
 
       {/* Requests List */}
       {filteredRequests.length === 0 ? (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-700 p-8 text-center">
-          <p className="text-gray-500 dark:text-gray-400">
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-[#064d51]/15 dark:border-slate-700 p-8 text-center">
+          <p className="text-[#064d51]/60 dark:text-gray-400">
             {statusFilter === 'all'
               ? "You haven't received any truck requests yet."
               : `No ${statusFilter.toLowerCase()} requests.`}
@@ -219,7 +219,7 @@ export default function CarrierRequestsClient({ requests: initialRequests }: Pro
               className={`bg-white dark:bg-slate-800 rounded-lg shadow border ${
                 request.status === 'PENDING'
                   ? 'border-yellow-300 dark:border-yellow-700'
-                  : 'border-gray-200 dark:border-slate-700'
+                  : 'border-[#064d51]/15 dark:border-slate-700'
               } p-6`}
             >
               <div className="flex items-start justify-between mb-4">
@@ -238,7 +238,7 @@ export default function CarrierRequestsClient({ requests: initialRequests }: Pro
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-sm text-[#064d51]/60 dark:text-gray-400 mt-1">
                     Received {formatDate(request.createdAt)}
                   </p>
                 </div>
@@ -249,7 +249,7 @@ export default function CarrierRequestsClient({ requests: initialRequests }: Pro
                     {showResponseForm === request.id ? (
                       <button
                         onClick={() => setShowResponseForm(null)}
-                        className="px-3 py-1 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50"
+                        className="px-3 py-1 text-sm text-[#064d51]/70 border border-[#064d51]/15 rounded-lg hover:bg-[#f0fdfa]"
                       >
                         Cancel
                       </button>
@@ -277,8 +277,8 @@ export default function CarrierRequestsClient({ requests: initialRequests }: Pro
 
               {/* Response Form */}
               {showResponseForm === request.id && (
-                <div className="mb-4 p-4 bg-gray-50 dark:bg-slate-700 rounded-lg">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <div className="mb-4 p-4 bg-[#f0fdfa] dark:bg-slate-700 rounded-lg">
+                  <label className="block text-sm font-medium text-[#064d51]/80 dark:text-gray-300 mb-2">
                     Response Notes (Optional)
                   </label>
                   <textarea
@@ -288,7 +288,7 @@ export default function CarrierRequestsClient({ requests: initialRequests }: Pro
                     }
                     rows={2}
                     placeholder="Add any notes for the shipper..."
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-600 dark:text-white"
+                    className="w-full px-3 py-2 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99] dark:bg-slate-600 dark:text-white"
                   />
                   <div className="flex gap-2 mt-3">
                     <button
@@ -311,36 +311,36 @@ export default function CarrierRequestsClient({ requests: initialRequests }: Pro
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Load Info */}
-                <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <div className="bg-[#f0fdfa] dark:bg-slate-700 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-[#064d51]/80 dark:text-gray-300 mb-2">
                     Load Details
                   </h3>
                   <div className="space-y-1 text-sm">
-                    <p className="text-gray-900 dark:text-white font-medium">
+                    <p className="text-[#064d51] dark:text-white font-medium">
                       {request.load.referenceNumber || request.load.id.slice(-8)}
                     </p>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-[#064d51]/70 dark:text-gray-400">
                       {request.load.pickupCity} → {request.load.deliveryCity}
                     </p>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-[#064d51]/70 dark:text-gray-400">
                       {request.load.weight.toLocaleString()} kg • {request.load.truckType}
                     </p>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-[#064d51]/70 dark:text-gray-400">
                       Cargo: {request.load.cargoType || 'General'}
                     </p>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-[#064d51]/70 dark:text-gray-400">
                       Pickup: {new Date(request.load.pickupDate).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
 
                 {/* Shipper Info */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                <div className="bg-[#1e9c99]/10 dark:bg-blue-900/20 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-[#064d51] dark:text-blue-200 mb-2">
                     Shipper
                   </h3>
                   <div className="space-y-1 text-sm">
-                    <p className="text-gray-900 dark:text-white font-medium">
+                    <p className="text-[#064d51] dark:text-white font-medium">
                       {request.load.shipper?.name || 'Unknown'}
                       {request.load.shipper?.isVerified && (
                         <span className="ml-1 text-green-600">✓ Verified</span>
@@ -348,10 +348,10 @@ export default function CarrierRequestsClient({ requests: initialRequests }: Pro
                     </p>
                     {request.requestedBy && (
                       <>
-                        <p className="text-gray-600 dark:text-gray-400">
+                        <p className="text-[#064d51]/70 dark:text-gray-400">
                           Contact: {request.requestedBy.name}
                         </p>
-                        <p className="text-gray-600 dark:text-gray-400">
+                        <p className="text-[#064d51]/70 dark:text-gray-400">
                           {request.requestedBy.email}
                         </p>
                       </>
@@ -365,13 +365,13 @@ export default function CarrierRequestsClient({ requests: initialRequests }: Pro
                     Your Truck
                   </h3>
                   <div className="space-y-1 text-sm">
-                    <p className="text-gray-900 dark:text-white font-medium">
+                    <p className="text-[#064d51] dark:text-white font-medium">
                       {request.truck.plateNumber}
                     </p>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-[#064d51]/70 dark:text-gray-400">
                       {request.truck.truckType}
                     </p>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-[#064d51]/70 dark:text-gray-400">
                       Capacity: {request.truck.capacity.toLocaleString()} kg
                     </p>
                   </div>
@@ -380,7 +380,7 @@ export default function CarrierRequestsClient({ requests: initialRequests }: Pro
 
               {/* Rate and Notes */}
               {(request.offeredRate || request.notes) && (
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700">
+                <div className="mt-4 pt-4 border-t border-[#064d51]/15 dark:border-slate-700">
                   <div className="flex flex-wrap gap-4 text-sm">
                     {request.offeredRate && (
                       <div className="bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 rounded-lg">
@@ -391,8 +391,8 @@ export default function CarrierRequestsClient({ requests: initialRequests }: Pro
                     )}
                     {request.notes && (
                       <div className="flex-1">
-                        <span className="text-gray-500 dark:text-gray-400">Notes:</span>{' '}
-                        <span className="text-gray-900 dark:text-white">{request.notes}</span>
+                        <span className="text-[#064d51]/60 dark:text-gray-400">Notes:</span>{' '}
+                        <span className="text-[#064d51] dark:text-white">{request.notes}</span>
                       </div>
                     )}
                   </div>

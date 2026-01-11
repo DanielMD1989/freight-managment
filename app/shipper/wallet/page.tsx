@@ -94,8 +94,8 @@ export default async function WalletPage() {
     <div className="max-w-5xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Wallet</h1>
-        <p className="text-gray-600 mt-2">
+        <h1 className="text-3xl font-bold text-[#064d51]">Wallet</h1>
+        <p className="text-[#064d51]/70 mt-2">
           Manage your account balance and transactions
         </p>
       </div>
@@ -126,39 +126,39 @@ export default async function WalletPage() {
       {/* Financial Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm text-gray-600 mb-2">Total Spent</div>
-          <div className="text-2xl font-bold text-gray-900">
+          <div className="text-sm text-[#064d51]/70 mb-2">Total Spent</div>
+          <div className="text-2xl font-bold text-[#064d51]">
             {formatCurrency(Number(totalSpent._sum.rate || 0))}
           </div>
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="text-xs text-[#064d51]/60 mt-1">
             {completedLoads} completed shipments
           </div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm text-gray-600 mb-2">Pending Payments</div>
+          <div className="text-sm text-[#064d51]/70 mb-2">Pending Payments</div>
           <div className="text-2xl font-bold text-yellow-600">
             {formatCurrency(Number(pendingPayments._sum.rate || 0))}
           </div>
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="text-xs text-[#064d51]/60 mt-1">
             In escrow for active loads
           </div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm text-gray-600 mb-2">Average per Load</div>
-          <div className="text-2xl font-bold text-gray-900">
+          <div className="text-sm text-[#064d51]/70 mb-2">Average per Load</div>
+          <div className="text-2xl font-bold text-[#064d51]">
             {completedLoads > 0
               ? formatCurrency(Number(totalSpent._sum.rate || 0) / completedLoads)
               : formatCurrency(0)}
           </div>
-          <div className="text-xs text-gray-500 mt-1">Based on completed loads</div>
+          <div className="text-xs text-[#064d51]/60 mt-1">Based on completed loads</div>
         </div>
       </div>
 
       {/* Quick Actions */}
       <div className="bg-white rounded-lg shadow p-6 mb-8">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+        <h2 className="text-xl font-semibold text-[#064d51] mb-4">
           Quick Actions
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -167,8 +167,8 @@ export default async function WalletPage() {
             className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <div>
-              <div className="font-medium text-gray-900">View Transactions</div>
-              <div className="text-sm text-gray-600">See all account activity</div>
+              <div className="font-medium text-[#064d51]">View Transactions</div>
+              <div className="text-sm text-[#064d51]/70">See all account activity</div>
             </div>
             <span className="text-gray-400">→</span>
           </a>
@@ -178,8 +178,8 @@ export default async function WalletPage() {
             className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <div>
-              <div className="font-medium text-gray-900">Top Up Wallet</div>
-              <div className="text-sm text-gray-600">Add funds to your account</div>
+              <div className="font-medium text-[#064d51]">Top Up Wallet</div>
+              <div className="text-sm text-[#064d51]/70">Add funds to your account</div>
             </div>
             <span className="text-gray-400">→</span>
           </a>
@@ -189,8 +189,8 @@ export default async function WalletPage() {
             className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <div>
-              <div className="font-medium text-gray-900">Request Withdrawal</div>
-              <div className="text-sm text-gray-600">Transfer funds to bank</div>
+              <div className="font-medium text-[#064d51]">Request Withdrawal</div>
+              <div className="text-sm text-[#064d51]/70">Transfer funds to bank</div>
             </div>
             <span className="text-gray-400">→</span>
           </a>
@@ -200,8 +200,8 @@ export default async function WalletPage() {
             className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <div>
-              <div className="font-medium text-gray-900">View Load History</div>
-              <div className="text-sm text-gray-600">See all your shipments</div>
+              <div className="font-medium text-[#064d51]">View Load History</div>
+              <div className="text-sm text-[#064d51]/70">See all your shipments</div>
             </div>
             <span className="text-gray-400">→</span>
           </a>

@@ -102,7 +102,7 @@ export default function LoadSearchModal({
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="bg-lime-500 px-6 py-4 flex items-center justify-between rounded-t-lg">
+        <div className="bg-[#1e9c99] px-6 py-4 flex items-center justify-between rounded-t-lg">
           <h2 className="text-xl font-bold text-white">NEW LOAD SEARCH</h2>
           <button
             onClick={onClose}
@@ -124,7 +124,7 @@ export default function LoadSearchModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Search Name */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#064d51]/80 mb-1">
                 Search Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -132,7 +132,7 @@ export default function LoadSearchModal({
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className={`w-full px-3 py-2 border rounded-md ${
-                  errors.name ? 'border-red-500' : 'border-gray-300'
+                  errors.name ? 'border-red-500' : 'border-[#064d51]/20'
                 }`}
                 placeholder="e.g., Addis to Dire Dawa - High Value Cargo"
               />
@@ -140,26 +140,26 @@ export default function LoadSearchModal({
             </div>
 
             {/* Location */}
-            <div className="md:col-span-2 border-b border-gray-200 pb-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Location Criteria</h3>
+            <div className="md:col-span-2 border-b border-[#064d51]/15 pb-4">
+              <h3 className="text-lg font-semibold text-[#064d51] mb-4">Location Criteria</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Origin</label>
+                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Origin</label>
                   <input
                     type="text"
                     value={formData.origin}
                     onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
                     placeholder="e.g., Addis Ababa"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Destination</label>
+                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Destination</label>
                   <input
                     type="text"
                     value={formData.destination}
                     onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
                     placeholder="e.g., Dire Dawa"
                   />
                 </div>
@@ -167,15 +167,15 @@ export default function LoadSearchModal({
             </div>
 
             {/* Load Specifications */}
-            <div className="md:col-span-2 border-b border-gray-200 pb-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Load Specifications</h3>
+            <div className="md:col-span-2 border-b border-[#064d51]/15 pb-4">
+              <h3 className="text-lg font-semibold text-[#064d51] mb-4">Load Specifications</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Truck Type</label>
+                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Truck Type</label>
                   <select
                     value={formData.truckType}
                     onChange={(e) => setFormData({ ...formData, truckType: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
                   >
                     <option value="">Any</option>
                     <option value="VAN">VAN</option>
@@ -186,11 +186,11 @@ export default function LoadSearchModal({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Load Type</label>
+                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Load Type</label>
                   <select
                     value={formData.loadType}
                     onChange={(e) => setFormData({ ...formData, loadType: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
                   >
                     <option value="">Any</option>
                     <option value="FULL">FULL</option>
@@ -198,12 +198,12 @@ export default function LoadSearchModal({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Age (hours)</label>
+                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Max Age (hours)</label>
                   <input
                     type="number"
                     value={formData.ageHours}
                     onChange={(e) => setFormData({ ...formData, ageHours: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
                     min="0"
                     max="168"
                   />
@@ -212,33 +212,33 @@ export default function LoadSearchModal({
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Min Weight (kg)</label>
+                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Min Weight (kg)</label>
                   <input
                     type="number"
                     value={formData.minWeight}
                     onChange={(e) => setFormData({ ...formData, minWeight: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
                     placeholder="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Weight (kg)</label>
+                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Max Weight (kg)</label>
                   <input
                     type="number"
                     value={formData.maxWeight}
                     onChange={(e) => setFormData({ ...formData, maxWeight: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
                     placeholder="40000"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Min Length (m)</label>
+                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Min Length (m)</label>
                   <input
                     type="number"
                     step="0.1"
                     value={formData.minLength}
                     onChange={(e) => setFormData({ ...formData, minLength: parseFloat(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
                     placeholder="0"
                   />
                 </div>
@@ -246,26 +246,26 @@ export default function LoadSearchModal({
             </div>
 
             {/* Pricing & Timing */}
-            <div className="md:col-span-2 border-b border-gray-200 pb-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Pricing & Timing</h3>
+            <div className="md:col-span-2 border-b border-[#064d51]/15 pb-4">
+              <h3 className="text-lg font-semibold text-[#064d51] mb-4">Pricing & Timing</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Min Rate (ETB)</label>
+                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Min Rate (ETB)</label>
                   <input
                     type="number"
                     value={formData.minRate}
                     onChange={(e) => setFormData({ ...formData, minRate: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
                     placeholder="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Date</label>
+                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Pickup Date</label>
                   <input
                     type="date"
                     value={formData.pickupDate}
                     onChange={(e) => setFormData({ ...formData, pickupDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
                   />
                 </div>
               </div>
@@ -273,16 +273,16 @@ export default function LoadSearchModal({
 
             {/* Company Filters */}
             <div className="md:col-span-2">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Company Filters</h3>
+              <h3 className="text-lg font-semibold text-[#064d51] mb-4">Company Filters</h3>
               <div className="flex items-center">
                 <input
                   type="checkbox"
                   id="verifiedOnly"
                   checked={formData.showVerifiedOnly}
                   onChange={(e) => setFormData({ ...formData, showVerifiedOnly: e.target.checked })}
-                  className="h-4 w-4 rounded border-gray-300 text-lime-600"
+                  className="h-4 w-4 rounded border-[#064d51]/20 text-[#1e9c99]"
                 />
-                <label htmlFor="verifiedOnly" className="ml-2 text-sm text-gray-700">
+                <label htmlFor="verifiedOnly" className="ml-2 text-sm text-[#064d51]/80">
                   Show verified companies only
                 </label>
               </div>
@@ -290,11 +290,11 @@ export default function LoadSearchModal({
           </div>
 
           {/* Actions */}
-          <div className="flex gap-4 justify-end mt-6 pt-6 border-t border-gray-200">
+          <div className="flex gap-4 justify-end mt-6 pt-6 border-t border-[#064d51]/15">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              className="px-6 py-2 border border-[#064d51]/20 rounded-md text-[#064d51]/80 hover:bg-[#f0fdfa]"
               disabled={loading}
             >
               Cancel

@@ -143,43 +143,53 @@ export default function DatDataTable<T = any>({
     return <DatTableSkeleton rows={8} columns={columns.length + (selectable ? 1 : 0) + (actions?.length ? 1 : 0)} />;
   }
 
-  // Empty state
+  // Empty state with professional design
   if (data.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow p-12 text-center">
-        <div className="text-gray-400 text-4xl mb-4">📋</div>
-        <p className="text-gray-600 text-lg">{emptyMessage}</p>
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-16 text-center">
+        <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center">
+          <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-semibold text-slate-700 mb-2">No data available</h3>
+        <p className="text-slate-500 text-sm max-w-sm mx-auto">{emptyMessage}</p>
       </div>
     );
   }
 
   return (
-    <div className={`bg-white rounded-lg shadow overflow-hidden ${className}`}>
+    <div className={`bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden ${className}`}>
       {/* Mobile scroll hint */}
-      <div className="md:hidden bg-gray-100 px-4 py-2 text-xs text-gray-600 text-center border-b border-gray-200">
-        ← Scroll horizontally to see all columns →
+      <div className="md:hidden bg-gradient-to-r from-teal-50 to-cyan-50 px-4 py-2.5 text-xs text-teal-700 text-center border-b border-teal-100 flex items-center justify-center gap-2">
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+        </svg>
+        Scroll horizontally to see all columns
       </div>
 
-      <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100" role="region" aria-label="Data table">
+      <div className="overflow-x-auto" role="region" aria-label="Data table">
         <table className="w-full min-w-full" role="table" aria-label="Data table with sorting and selection">
-          {/* Header */}
-          <thead className="bg-gray-50 border-b border-gray-200" role="rowgroup">
-            <tr role="row">
+          {/* Header with gradient */}
+          <thead className="bg-gradient-to-r from-slate-50 via-slate-50 to-teal-50/30" role="rowgroup">
+            <tr role="row" className="border-b border-slate-200/80">
               {/* Selection checkbox */}
               {selectable && (
-                <th className="w-12 px-2 sm:px-4 py-2 sm:py-3" role="columnheader">
-                  <input
-                    type="checkbox"
-                    checked={selectedRows.length === data.length && data.length > 0}
-                    onChange={toggleSelectAll}
-                    className="h-4 w-4 rounded border-gray-300"
-                    aria-label="Select all rows"
-                  />
+                <th className="w-14 px-4 py-4" role="columnheader">
+                  <div className="flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedRows.length === data.length && data.length > 0}
+                      onChange={toggleSelectAll}
+                      className="h-4 w-4 rounded-md border-2 border-slate-300 text-teal-600 focus:ring-2 focus:ring-teal-500/20 focus:ring-offset-0 cursor-pointer transition-colors"
+                      aria-label="Select all rows"
+                    />
+                  </div>
                 </th>
               )}
 
               {/* Expandable icon column */}
-              {expandable && <th className="w-12" role="columnheader" aria-label="Expand"></th>}
+              {expandable && <th className="w-12 px-2" role="columnheader" aria-label="Expand"></th>}
 
               {/* Column headers */}
               {columns.map((column) => (
@@ -188,15 +198,15 @@ export default function DatDataTable<T = any>({
                   role="columnheader"
                   aria-sort={sortColumn === column.key ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
                   className={`
-                    px-2 sm:px-4 py-2 sm:py-3
+                    px-4 py-4
                     text-left
-                    text-xs
-                    font-semibold
-                    text-gray-600
+                    text-[11px]
+                    font-bold
+                    text-slate-500
                     uppercase
                     tracking-wider
                     whitespace-nowrap
-                    ${column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''}
+                    ${column.sortable ? 'cursor-pointer hover:text-teal-600 hover:bg-teal-50/50 transition-colors' : ''}
                     ${column.align === 'center' ? 'text-center' : ''}
                     ${column.align === 'right' ? 'text-right' : ''}
                   `}
@@ -212,11 +222,19 @@ export default function DatDataTable<T = any>({
                     }
                   })}
                 >
-                  <div className="flex items-center gap-1 sm:gap-2">
+                  <div className="flex items-center gap-2">
                     <span className="truncate">{column.label}</span>
-                    {column.sortable && sortColumn === column.key && (
-                      <span className="text-blue-600 flex-shrink-0" aria-hidden="true">
-                        {sortDirection === 'asc' ? '↑' : '↓'}
+                    {column.sortable && (
+                      <span className={`flex-shrink-0 transition-colors ${sortColumn === column.key ? 'text-teal-600' : 'text-slate-300'}`} aria-hidden="true">
+                        {sortColumn === column.key ? (
+                          sortDirection === 'asc' ? (
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                          )
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg>
+                        )}
                       </span>
                     )}
                   </div>
@@ -225,7 +243,7 @@ export default function DatDataTable<T = any>({
 
               {/* Actions column */}
               {actions && actions.length > 0 && (
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 py-4 text-right text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                   Actions
                 </th>
               )}
@@ -233,7 +251,7 @@ export default function DatDataTable<T = any>({
           </thead>
 
           {/* Body */}
-          <tbody className="divide-y divide-gray-200" role="rowgroup">
+          <tbody className="divide-y divide-slate-100" role="rowgroup">
             {sortedData.map((row, rowIndex) => {
               const rowId = getRowId(row);
               const isExpanded = expandedRows.has(rowId);
@@ -246,9 +264,9 @@ export default function DatDataTable<T = any>({
                     role="row"
                     aria-selected={isSelected}
                     className={`
-                      hover:bg-gray-50
-                      transition-colors
-                      ${isSelected ? 'bg-blue-50' : ''}
+                      group
+                      transition-all duration-150
+                      ${isSelected ? 'bg-teal-50/70' : 'hover:bg-slate-50/80'}
                       ${onRowClick || expandable ? 'cursor-pointer' : ''}
                     `}
                     onClick={() => {
@@ -258,37 +276,39 @@ export default function DatDataTable<T = any>({
                   >
                     {/* Selection checkbox */}
                     {selectable && (
-                      <td className="px-2 sm:px-4 py-2 sm:py-3" role="cell">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            toggleRowSelection(rowId);
-                          }}
-                          className="h-4 w-4 rounded border-gray-300"
-                          aria-label={`Select row ${rowIndex + 1}`}
-                        />
+                      <td className="px-4 py-4" role="cell">
+                        <div className="flex items-center justify-center">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              toggleRowSelection(rowId);
+                            }}
+                            className="h-4 w-4 rounded-md border-2 border-slate-300 text-teal-600 focus:ring-2 focus:ring-teal-500/20 focus:ring-offset-0 cursor-pointer transition-colors"
+                            aria-label={`Select row ${rowIndex + 1}`}
+                          />
+                        </div>
                       </td>
                     )}
 
                     {/* Expand/collapse icon */}
                     {expandable && (
-                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-center" role="cell">
+                      <td className="px-2 py-4 text-center" role="cell">
                         <button
                           onClick={(e) => {
-                            // If parent has onRowClick, don't stop propagation - let it bubble to row
                             if (!onRowClick) {
                               e.stopPropagation();
                               toggleRowExpansion(rowId);
                             }
-                            // Otherwise, let the click bubble up to the row's onClick
                           }}
-                          className="text-gray-400 hover:text-gray-600"
+                          className="w-6 h-6 rounded-md flex items-center justify-center text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-colors"
                           aria-label={isExpanded ? `Collapse row ${rowIndex + 1}` : `Expand row ${rowIndex + 1}`}
                           aria-expanded={isExpanded}
                         >
-                          {isExpanded ? '▼' : '▶'}
+                          <svg className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
                         </button>
                       </td>
                     )}
@@ -299,9 +319,9 @@ export default function DatDataTable<T = any>({
                         key={column.key}
                         role="cell"
                         className={`
-                          px-2 sm:px-4 py-2 sm:py-3
-                          text-xs sm:text-sm
-                          text-gray-900
+                          px-4 py-4
+                          text-sm
+                          text-slate-700
                           ${column.align === 'center' ? 'text-center' : ''}
                           ${column.align === 'right' ? 'text-right' : ''}
                         `}
@@ -312,11 +332,17 @@ export default function DatDataTable<T = any>({
 
                     {/* Actions */}
                     {actions && actions.length > 0 && (
-                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-right" role="cell">
-                        <div className="flex gap-2 justify-end">
+                      <td className="px-4 py-4 text-right" role="cell">
+                        <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                           {actions.map((action) => {
                             const show = action.show ? action.show(row) : true;
                             if (!show) return null;
+
+                            const actionStyles = {
+                              primary: 'bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white shadow-sm',
+                              secondary: 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300',
+                              destructive: 'bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-700 hover:to-rose-600 text-white shadow-sm',
+                            };
 
                             return (
                               <button
@@ -326,26 +352,18 @@ export default function DatDataTable<T = any>({
                                   action.onClick(row);
                                 }}
                                 className={`
-                                  px-2 sm:px-3 py-1 sm:py-1.5
-                                  text-xs sm:text-sm
-                                  font-medium
-                                  rounded-md
-                                  transition-colors
+                                  inline-flex items-center gap-1.5
+                                  px-3 py-1.5
+                                  text-xs
+                                  font-semibold
+                                  rounded-lg
+                                  transition-all duration-150
                                   whitespace-nowrap
-                                  ${
-                                    action.variant === 'primary'
-                                      ? 'bg-lime-500 hover:bg-lime-600 text-white'
-                                      : action.variant === 'secondary'
-                                      ? 'bg-cyan-500 hover:bg-cyan-600 text-white'
-                                      : action.variant === 'destructive'
-                                      ? 'bg-red-500 hover:bg-red-600 text-white'
-                                      : 'bg-blue-500 hover:bg-blue-600 text-white'
-                                  }
+                                  ${actionStyles[action.variant as keyof typeof actionStyles] || actionStyles.primary}
                                 `}
                               >
-                                {action.icon && <span className="mr-0.5 sm:mr-1">{action.icon}</span>}
-                                <span className="hidden sm:inline">{action.label}</span>
-                                {action.icon && <span className="sm:hidden">{action.icon}</span>}
+                                {action.icon && <span className="flex-shrink-0">{action.icon}</span>}
+                                <span>{action.label}</span>
                               </button>
                             );
                           })}
@@ -356,7 +374,7 @@ export default function DatDataTable<T = any>({
 
                   {/* Expanded Row */}
                   {expandable && isExpanded && renderExpandedRow && (
-                    <tr>
+                    <tr className="bg-slate-50/50">
                       <td
                         colSpan={
                           columns.length +
@@ -364,7 +382,7 @@ export default function DatDataTable<T = any>({
                           (expandable ? 1 : 0) +
                           (actions && actions.length > 0 ? 1 : 0)
                         }
-                        className="px-0"
+                        className="px-6 py-4 border-t border-slate-100"
                       >
                         {renderExpandedRow(row)}
                       </td>

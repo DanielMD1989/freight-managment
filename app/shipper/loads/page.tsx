@@ -99,7 +99,7 @@ export default async function LoadsPage({
 
   const session = await verifyToken(sessionCookie.value);
 
-  if (!session || (session.role !== 'SHIPPER' && session.role !== 'ADMIN')) {
+  if (!session || (session.role !== 'SHIPPER' && session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN')) {
     redirect('/unauthorized');
   }
 

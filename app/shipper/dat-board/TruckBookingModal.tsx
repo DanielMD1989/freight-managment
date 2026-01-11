@@ -135,9 +135,9 @@ export default function TruckBookingModal({ isOpen, onClose, truckPosting }: Pro
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700">
+        <div className="px-6 py-4 border-b border-[#064d51]/15 dark:border-slate-700">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-lg font-semibold text-[#064d51] dark:text-white">
               Request Truck
             </h2>
             <button
@@ -156,38 +156,38 @@ export default function TruckBookingModal({ isOpen, onClose, truckPosting }: Pro
         </div>
 
         {/* Truck Info */}
-        <div className="px-6 py-4 bg-blue-50 dark:bg-blue-900/20 border-b border-gray-200 dark:border-slate-700">
-          <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+        <div className="px-6 py-4 bg-[#1e9c99]/10 dark:bg-blue-900/20 border-b border-[#064d51]/15 dark:border-slate-700">
+          <h3 className="text-sm font-medium text-[#064d51] dark:text-blue-200 mb-2">
             Selected Truck
           </h3>
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div>
-              <span className="text-gray-500 dark:text-gray-400">Plate:</span>{' '}
-              <span className="font-medium text-gray-900 dark:text-white">
+              <span className="text-[#064d51]/60 dark:text-gray-400">Plate:</span>{' '}
+              <span className="font-medium text-[#064d51] dark:text-white">
                 {truckPosting.truck.plateNumber}
               </span>
             </div>
             <div>
-              <span className="text-gray-500 dark:text-gray-400">Type:</span>{' '}
-              <span className="font-medium text-gray-900 dark:text-white">
+              <span className="text-[#064d51]/60 dark:text-gray-400">Type:</span>{' '}
+              <span className="font-medium text-[#064d51] dark:text-white">
                 {truckPosting.truck.truckType}
               </span>
             </div>
             <div>
-              <span className="text-gray-500 dark:text-gray-400">Capacity:</span>{' '}
-              <span className="font-medium text-gray-900 dark:text-white">
+              <span className="text-[#064d51]/60 dark:text-gray-400">Capacity:</span>{' '}
+              <span className="font-medium text-[#064d51] dark:text-white">
                 {truckPosting.truck.capacity.toLocaleString()} kg
               </span>
             </div>
             <div>
-              <span className="text-gray-500 dark:text-gray-400">Carrier:</span>{' '}
-              <span className="font-medium text-gray-900 dark:text-white">
+              <span className="text-[#064d51]/60 dark:text-gray-400">Carrier:</span>{' '}
+              <span className="font-medium text-[#064d51] dark:text-white">
                 {truckPosting.truck.carrier.name}
               </span>
             </div>
             <div className="col-span-2">
-              <span className="text-gray-500 dark:text-gray-400">Route:</span>{' '}
-              <span className="font-medium text-gray-900 dark:text-white">
+              <span className="text-[#064d51]/60 dark:text-gray-400">Route:</span>{' '}
+              <span className="font-medium text-[#064d51] dark:text-white">
                 {truckPosting.originCity.name}
                 {truckPosting.destinationCity
                   ? ` → ${truckPosting.destinationCity.name}`
@@ -212,7 +212,7 @@ export default function TruckBookingModal({ isOpen, onClose, truckPosting }: Pro
                 />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[#064d51] dark:text-white mb-2">
               Request Sent!
             </h3>
             <p className="text-gray-600 dark:text-gray-400">
@@ -245,7 +245,7 @@ export default function TruckBookingModal({ isOpen, onClose, truckPosting }: Pro
                   value={selectedLoadId}
                   onChange={(e) => setSelectedLoadId(e.target.value)}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                  className="w-full px-3 py-2 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99] dark:bg-slate-700 dark:text-white"
                 >
                   <option value="">Select a load...</option>
                   {loads.map((load) => (
@@ -267,26 +267,26 @@ export default function TruckBookingModal({ isOpen, onClose, truckPosting }: Pro
                 </h4>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <span className="text-gray-500">Route:</span>{' '}
-                    <span className="text-gray-900 dark:text-white">
+                    <span className="text-[#064d51]/60">Route:</span>{' '}
+                    <span className="text-[#064d51] dark:text-white">
                       {selectedLoad.pickupCityName} → {selectedLoad.deliveryCityName}
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Pickup:</span>{' '}
-                    <span className="text-gray-900 dark:text-white">
+                    <span className="text-[#064d51]/60">Pickup:</span>{' '}
+                    <span className="text-[#064d51] dark:text-white">
                       {new Date(selectedLoad.pickupDate).toLocaleDateString()}
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Weight:</span>{' '}
-                    <span className="text-gray-900 dark:text-white">
+                    <span className="text-[#064d51]/60">Weight:</span>{' '}
+                    <span className="text-[#064d51] dark:text-white">
                       {selectedLoad.weight.toLocaleString()} kg
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Type:</span>{' '}
-                    <span className="text-gray-900 dark:text-white">
+                    <span className="text-[#064d51]/60">Type:</span>{' '}
+                    <span className="text-[#064d51] dark:text-white">
                       {selectedLoad.truckType}
                     </span>
                   </div>
@@ -306,9 +306,9 @@ export default function TruckBookingModal({ isOpen, onClose, truckPosting }: Pro
                 min="0"
                 step="0.01"
                 placeholder={selectedLoad?.offeredRate?.toString() || 'Optional'}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                className="w-full px-3 py-2 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99] dark:bg-slate-700 dark:text-white"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-[#064d51]/60 mt-1">
                 Leave empty to let carrier propose a rate
               </p>
             </div>
@@ -321,7 +321,7 @@ export default function TruckBookingModal({ isOpen, onClose, truckPosting }: Pro
               <select
                 value={expiryHours}
                 onChange={(e) => setExpiryHours(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                className="w-full px-3 py-2 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99] dark:bg-slate-700 dark:text-white"
               >
                 <option value="6">6 hours</option>
                 <option value="12">12 hours</option>
@@ -341,23 +341,23 @@ export default function TruckBookingModal({ isOpen, onClose, truckPosting }: Pro
                 onChange={(e) => setNotes(e.target.value)}
                 rows={2}
                 placeholder="Any special instructions or requirements..."
-                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                className="w-full px-3 py-2 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99] dark:bg-slate-700 dark:text-white"
               />
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
+            <div className="flex justify-end gap-3 pt-4 border-t border-[#064d51]/15 dark:border-slate-700">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700"
+                className="px-4 py-2 border border-[#064d51]/20 dark:border-slate-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading || !selectedLoadId || loads.length === 0}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-[#1e9c99] text-white rounded-lg hover:bg-[#064d51] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Sending...' : 'Send Request'}
               </button>

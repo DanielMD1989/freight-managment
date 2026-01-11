@@ -45,10 +45,10 @@ export default function DatSavedSearches({
   // Empty state
   if (searches.length === 0) {
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-        <div className="text-gray-400 text-4xl mb-2">🔍</div>
-        <p className="text-gray-600 text-sm">No saved searches yet</p>
-        <p className="text-gray-500 text-xs mt-1">
+      <div className="bg-[#f0fdfa] border border-[#064d51]/15 rounded-lg p-8 text-center">
+        <div className="text-[#064d51]/50 text-4xl mb-2">🔍</div>
+        <p className="text-[#064d51]/70 text-sm">No saved searches yet</p>
+        <p className="text-[#064d51]/60 text-xs mt-1">
           Create a search to save it for later
         </p>
       </div>
@@ -72,8 +72,8 @@ export default function DatSavedSearches({
               transition-all
               ${
                 isActive
-                  ? 'bg-gray-700 text-white border-gray-700 shadow-md'
-                  : 'bg-white text-gray-900 border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                  ? 'bg-[#064d51] text-white border-[#064d51] shadow-md'
+                  : 'bg-white text-[#064d51] border-[#064d51]/15 hover:border-[#064d51]/30 hover:shadow-sm'
               }
             `}
           >
@@ -83,7 +83,7 @@ export default function DatSavedSearches({
                 <h4
                   className={`
                     text-sm font-semibold
-                    ${isActive ? 'text-white' : 'text-gray-900'}
+                    ${isActive ? 'text-white' : 'text-[#064d51]'}
                   `}
                 >
                   {search.name}
@@ -91,7 +91,7 @@ export default function DatSavedSearches({
                 <p
                   className={`
                     text-xs mt-1
-                    ${isActive ? 'text-gray-300' : 'text-gray-600'}
+                    ${isActive ? 'text-[#1e9c99]' : 'text-[#064d51]/70'}
                   `}
                 >
                   {formatCriteria(search.criteria)}
@@ -112,8 +112,8 @@ export default function DatSavedSearches({
                     transition-colors
                     ${
                       isActive
-                        ? 'hover:bg-gray-600 text-gray-300'
-                        : 'hover:bg-gray-100 text-gray-600'
+                        ? 'hover:bg-[#1e9c99]/30 text-[#1e9c99]'
+                        : 'hover:bg-[#1e9c99]/10 text-[#064d51]/70'
                     }
                   `}
                   title="Edit"
@@ -132,7 +132,7 @@ export default function DatSavedSearches({
                     transition-colors
                     ${
                       isActive
-                        ? 'hover:bg-red-600 text-gray-300'
+                        ? 'hover:bg-red-600 text-[#1e9c99]'
                         : 'hover:bg-red-50 text-red-600'
                     }
                   `}
@@ -147,7 +147,7 @@ export default function DatSavedSearches({
             <div
               className={`
                 text-xs
-                ${isActive ? 'text-gray-400' : 'text-gray-500'}
+                ${isActive ? 'text-[#1e9c99]/70' : 'text-[#064d51]/60'}
               `}
             >
               Updated {new Date(search.updatedAt).toLocaleDateString()}

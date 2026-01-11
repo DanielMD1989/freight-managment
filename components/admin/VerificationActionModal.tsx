@@ -104,7 +104,7 @@ export default function VerificationActionModal({
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* Backdrop */}
         <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+          className="fixed inset-0 bg-[#064d51]/50 transition-opacity"
           onClick={onClose}
         ></div>
 
@@ -112,8 +112,8 @@ export default function VerificationActionModal({
         <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full">
           <form onSubmit={handleSubmit}>
             {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">
+            <div className="px-6 py-4 border-b border-[#064d51]/15">
+              <h3 className="text-lg font-medium text-[#064d51]">
                 {isApprove ? "Approve Document" : "Reject Document"}
               </h3>
             </div>
@@ -121,19 +121,19 @@ export default function VerificationActionModal({
             {/* Content */}
             <div className="px-6 py-4 space-y-4">
               {/* Document Info */}
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-[#f0fdfa] rounded-lg p-4">
                 <div className="text-sm space-y-1">
                   <div>
-                    <span className="font-medium text-gray-700">Organization:</span>
-                    <span className="ml-2 text-gray-900">{document.organization.name}</span>
+                    <span className="font-medium text-[#064d51]/80">Organization:</span>
+                    <span className="ml-2 text-[#064d51]">{document.organization.name}</span>
                   </div>
                   <div>
-                    <span className="font-medium text-gray-700">Document:</span>
-                    <span className="ml-2 text-gray-900">{formatDocumentType(document.type)}</span>
+                    <span className="font-medium text-[#064d51]/80">Document:</span>
+                    <span className="ml-2 text-[#064d51]">{formatDocumentType(document.type)}</span>
                   </div>
                   <div>
-                    <span className="font-medium text-gray-700">Entity:</span>
-                    <span className="ml-2 text-gray-900">{document.entity.name}</span>
+                    <span className="font-medium text-[#064d51]/80">Entity:</span>
+                    <span className="ml-2 text-[#064d51]">{document.entity.name}</span>
                   </div>
                 </div>
               </div>
@@ -170,18 +170,18 @@ export default function VerificationActionModal({
               {/* Rejection Reason */}
               {!isApprove && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-[#064d51]/80 mb-2">
                     Rejection Reason <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     value={rejectionReason}
                     onChange={(e) => setRejectionReason(e.target.value)}
                     rows={4}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500"
+                    className="block w-full rounded-md border-[#064d51]/20 shadow-sm focus:border-red-500 focus:ring-red-500"
                     placeholder="Explain why this document is being rejected..."
                     required
                   />
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-[#064d51]/60">
                     This reason will be visible to the organization.
                   </p>
                 </div>
@@ -190,17 +190,17 @@ export default function VerificationActionModal({
               {/* Expiration Date (Optional) */}
               {isApprove && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-[#064d51]/80 mb-2">
                     Expiration Date (Optional)
                   </label>
                   <input
                     type="date"
                     value={expiresAt}
                     onChange={(e) => setExpiresAt(e.target.value)}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="block w-full rounded-md border-[#064d51]/20 shadow-sm focus:border-[#1e9c99] focus:ring-[#1e9c99]"
                     min={new Date().toISOString().split("T")[0]}
                   />
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-[#064d51]/60">
                     Set an expiration date for documents that need periodic renewal.
                   </p>
                 </div>
@@ -215,12 +215,12 @@ export default function VerificationActionModal({
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
+            <div className="px-6 py-4 bg-[#f0fdfa] border-t border-[#064d51]/15 flex justify-end space-x-3">
               <button
                 type="button"
                 onClick={onClose}
                 disabled={loading}
-                className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                className="px-4 py-2 border border-[#064d51]/20 text-sm font-medium rounded-md text-[#064d51]/80 bg-white hover:bg-[#f0fdfa] disabled:opacity-50"
               >
                 Cancel
               </button>

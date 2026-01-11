@@ -857,7 +857,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
           ACTIVE: 'bg-green-100 text-green-700 border-green-300',
           SIGNAL_LOST: 'bg-yellow-100 text-yellow-700 border-yellow-300',
           INACTIVE: 'bg-red-100 text-red-700 border-red-300',
-          MAINTENANCE: 'bg-gray-100 text-gray-700 border-gray-300',
+          MAINTENANCE: 'bg-gray-100 text-[#064d51]/80 border-gray-300',
         };
 
         const statusDots = {
@@ -995,7 +995,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         // Show green if within declared limits, gray otherwise
         const withinLimits = row.withinDhLimits;
         return (
-          <span className={`font-medium ${withinLimits ? 'text-green-600' : 'text-gray-500'}`}>
+          <span className={`font-medium ${withinLimits ? 'text-green-600' : 'text-[#064d51]/60'}`}>
             {value} km
           </span>
         );
@@ -1028,7 +1028,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         // Show green if within declared limits, gray otherwise
         const withinLimits = row.withinDhLimits;
         return (
-          <span className={`font-medium ${withinLimits ? 'text-green-600' : 'text-gray-500'}`}>
+          <span className={`font-medium ${withinLimits ? 'text-green-600' : 'text-[#064d51]/60'}`}>
             {value} km
           </span>
         );
@@ -1039,7 +1039,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       label: 'Company',
       width: '140px',
       render: (_, row) => (
-        <span className="text-blue-600 hover:underline cursor-pointer">
+        <span className="text-[#1e9c99] hover:underline cursor-pointer">
           {row.shipper?.name || 'N/A'}
         </span>
       ),
@@ -1276,29 +1276,47 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   return (
     <div className="space-y-4">
       {/* Header with NEW TRUCK POST button */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <h2 className="text-xl font-bold text-slate-800">Post Trucks</h2>
+          <p className="text-sm text-slate-500">List your available trucks and find matching loads</p>
+        </div>
         <button
           onClick={() => setShowNewTruckForm(!showNewTruckForm)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#064d51] text-white text-sm font-bold rounded-lg hover:bg-[#053d40] transition-colors shadow-md"
+          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-sm font-bold rounded-xl hover:from-teal-700 hover:to-teal-600 transition-all shadow-md shadow-teal-500/25"
         >
-          + NEW TRUCK POST
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          NEW TRUCK POST
         </button>
       </div>
 
       {/* New Truck Posting Form - Clean Organized Layout */}
       {showNewTruckForm && (
-        <div className="bg-white dark:bg-slate-900 border border-[#064d51]/20 rounded-xl shadow-sm p-6 mb-4" style={{ backgroundColor: '#f0fdfa' }}>
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Create New Truck Posting
-            </h3>
+        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden mb-6">
+          <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-slate-50 to-teal-50/30 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-sm">
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-slate-800">Create New Truck Posting</h3>
+                <p className="text-xs text-slate-500">List your truck for available loads</p>
+              </div>
+            </div>
             <button
               onClick={() => setShowNewTruckForm(false)}
-              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors"
             >
-              ✕
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           </div>
+          <div className="p-6">
 
           {/* Step 1: Select Truck */}
           <div className="mb-6">
@@ -1306,7 +1324,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
               Step 1: Select Truck from Your Fleet <span className="text-red-500">*</span>
             </label>
             {loadingApprovedTrucks ? (
-              <div className="text-gray-500 dark:text-gray-400 py-4">Loading your trucks...</div>
+              <div className="text-[#064d51]/60 dark:text-gray-400 py-4">Loading your trucks...</div>
             ) : (() => {
               // Filter to only show unposted trucks
               const unpostedTrucks = approvedTrucks.filter(truck => !getActivePostingForTruck(truck.id));
@@ -1335,7 +1353,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                 <select
                   value={newTruckForm.truckId}
                   onChange={(e) => handleTruckSelection(e.target.value)}
-                  className="w-full max-w-md px-4 py-3 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full max-w-md px-4 py-3 text-sm bg-white dark:bg-slate-800 text-[#064d51] dark:text-gray-100 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99]"
                 >
                   <option value="">-- Select a truck to post --</option>
                   {unpostedTrucks.map((truck) => (
@@ -1361,7 +1379,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                   {/* Origin */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[#064d51]/80 dark:text-gray-300 mb-1">
                       Origin (Available At) <span className="text-red-500">*</span>
                     </label>
                     <PlacesAutocomplete
@@ -1374,7 +1392,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                         });
                       }}
                       placeholder="Where is truck available?"
-                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-[#064d51] dark:text-gray-100 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99]"
                       countryRestriction={['ET', 'DJ']}
                       types={['(cities)']}
                     />
@@ -1382,7 +1400,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
                   {/* Destination */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[#064d51]/80 dark:text-gray-300 mb-1">
                       Destination (Preferred)
                     </label>
                     <PlacesAutocomplete
@@ -1395,7 +1413,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                         });
                       }}
                       placeholder="Anywhere"
-                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-[#064d51] dark:text-gray-100 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99]"
                       countryRestriction={['ET', 'DJ']}
                       types={['(cities)']}
                     />
@@ -1403,28 +1421,28 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
                   {/* Available From */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[#064d51]/80 dark:text-gray-300 mb-1">
                       Available From <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="date"
                       value={newTruckForm.availableFrom}
                       onChange={(e) => setNewTruckForm({...newTruckForm, availableFrom: e.target.value})}
-                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-[#064d51] dark:text-gray-100 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99]"
                       min={new Date().toISOString().split('T')[0]}
                     />
                   </div>
 
                   {/* Available To */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[#064d51]/80 dark:text-gray-300 mb-1">
                       Available Until
                     </label>
                     <input
                       type="date"
                       value={newTruckForm.availableTo}
                       onChange={(e) => setNewTruckForm({...newTruckForm, availableTo: e.target.value})}
-                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-[#064d51] dark:text-gray-100 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99]"
                       min={newTruckForm.availableFrom || new Date().toISOString().split('T')[0]}
                     />
                   </div>
@@ -1434,7 +1452,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-4">
                   {/* DH-O (Declared Deadhead to Origin Limit) */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[#064d51]/80 dark:text-gray-300 mb-1">
                       DH-O Limit (km)
                     </label>
                     <input
@@ -1442,15 +1460,15 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                       value={newTruckForm.declaredDhO}
                       onChange={(e) => setNewTruckForm({...newTruckForm, declaredDhO: e.target.value})}
                       placeholder="e.g. 100"
-                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-[#064d51] dark:text-gray-100 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99]"
                       min="0"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Max distance to pickup</p>
+                    <p className="text-xs text-[#064d51]/60 mt-1">Max distance to pickup</p>
                   </div>
 
                   {/* DH-D (Declared Deadhead after Delivery Limit) */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[#064d51]/80 dark:text-gray-300 mb-1">
                       DH-D Limit (km)
                     </label>
                     <input
@@ -1458,21 +1476,21 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                       value={newTruckForm.declaredDhD}
                       onChange={(e) => setNewTruckForm({...newTruckForm, declaredDhD: e.target.value})}
                       placeholder="e.g. 100"
-                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-[#064d51] dark:text-gray-100 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99]"
                       min="0"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Max distance after delivery</p>
+                    <p className="text-xs text-[#064d51]/60 mt-1">Max distance after delivery</p>
                   </div>
 
                   {/* F/P */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[#064d51]/80 dark:text-gray-300 mb-1">
                       Full/Partial
                     </label>
                     <select
                       value={newTruckForm.fullPartial}
                       onChange={(e) => setNewTruckForm({...newTruckForm, fullPartial: e.target.value})}
-                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-[#064d51] dark:text-gray-100 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99]"
                     >
                       <option value="FULL">Full Load</option>
                       <option value="PARTIAL">Partial</option>
@@ -1481,7 +1499,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
                   {/* Length */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[#064d51]/80 dark:text-gray-300 mb-1">
                       Length (m)
                     </label>
                     <input
@@ -1489,13 +1507,13 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                       value={newTruckForm.lengthM}
                       onChange={(e) => setNewTruckForm({...newTruckForm, lengthM: e.target.value})}
                       placeholder="Available length"
-                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-[#064d51] dark:text-gray-100 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99]"
                     />
                   </div>
 
                   {/* Weight */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[#064d51]/80 dark:text-gray-300 mb-1">
                       Weight (kg)
                     </label>
                     <input
@@ -1503,13 +1521,13 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                       value={newTruckForm.weight}
                       onChange={(e) => setNewTruckForm({...newTruckForm, weight: e.target.value})}
                       placeholder="Max capacity"
-                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-[#064d51] dark:text-gray-100 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99]"
                     />
                   </div>
 
                   {/* Contact Phone */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[#064d51]/80 dark:text-gray-300 mb-1">
                       Contact Phone <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -1517,7 +1535,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                       value={newTruckForm.contactPhone}
                       onChange={(e) => setNewTruckForm({...newTruckForm, contactPhone: e.target.value})}
                       placeholder="+251-9xx-xxx-xxx"
-                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-[#064d51] dark:text-gray-100 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99]"
                     />
                   </div>
                 </div>
@@ -1525,7 +1543,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                 {/* Row 3: Comments */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[#064d51]/80 dark:text-gray-300 mb-1">
                       Comments <span className="text-gray-400">({newTruckForm.comments1.length}/70)</span>
                     </label>
                     <input
@@ -1534,11 +1552,11 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                       onChange={(e) => setNewTruckForm({...newTruckForm, comments1: e.target.value.slice(0, 70)})}
                       placeholder="Additional notes for shippers..."
                       maxLength={70}
-                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-[#064d51] dark:text-gray-100 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[#064d51]/80 dark:text-gray-300 mb-1">
                       Additional Comments <span className="text-gray-400">({newTruckForm.comments2.length}/70)</span>
                     </label>
                     <input
@@ -1547,7 +1565,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                       onChange={(e) => setNewTruckForm({...newTruckForm, comments2: e.target.value.slice(0, 70)})}
                       placeholder="Special equipment, requirements..."
                       maxLength={70}
-                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 text-[#064d51] dark:text-gray-100 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99]"
                     />
                   </div>
                 </div>
@@ -1571,6 +1589,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
               </div>
             </>
           )}
+          </div>
         </div>
       )}
 
@@ -1582,12 +1601,16 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       />
 
       {/* Truck Posts Table */}
-      <div className="bg-white rounded-xl overflow-hidden mb-4 border border-[#064d51]/20 shadow-sm">
+      <div className="bg-white rounded-2xl overflow-hidden border border-slate-200/60 shadow-sm">
         {/* Header */}
-        <div className="px-4 py-3 bg-gradient-to-r from-[#064d51] to-[#1e9c99]">
-          <h3 className="text-lg font-bold text-white">
-            {trucks.length} POSTED TRUCKS
+        <div className="px-6 py-4 bg-gradient-to-r from-slate-800 to-slate-700 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <svg className="w-5 h-5 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+            </svg>
+            {trucks.length} Posted Trucks
           </h3>
+          <span className="text-xs text-slate-300">Click a truck to see matching loads</span>
         </div>
         <DatDataTable
           columns={truckColumns}
@@ -1629,10 +1652,10 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                           <span className="text-xl">🚛</span>
                         </div>
                         <div>
-                          <h3 className="text-base font-bold text-gray-900">
+                          <h3 className="text-base font-bold text-[#064d51]">
                             Edit Truck Posting
                           </h3>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-[#064d51]/60">
                             {truck.truck?.licensePlate} • {(truck.truck?.truckType || 'N/A').replace('_', ' ')} • {truck.truck?.capacity ? `${truck.truck.capacity} kg` : 'N/A'}
                           </p>
                         </div>
@@ -1652,13 +1675,13 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                     <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-10 gap-3">
                       {/* Origin */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
                           Origin <span className="text-red-500">*</span>
                         </label>
                         <select
                           value={editForm.origin || ''}
                           onChange={(e) => setEditForm({...editForm, origin: e.target.value})}
-                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-md focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                         >
                           <option value="">Select city</option>
                           {ethiopianCities.map((city: any) => (
@@ -1669,13 +1692,13 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
                       {/* Destination */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
                           Destination
                         </label>
                         <select
                           value={editForm.destination || ''}
                           onChange={(e) => setEditForm({...editForm, destination: e.target.value})}
-                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-md focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                         >
                           <option value="">Anywhere</option>
                           {ethiopianCities.map((city: any) => (
@@ -1686,39 +1709,39 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
                       {/* Available From */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
                           From <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="date"
                           value={editForm.availableFrom || ''}
                           onChange={(e) => setEditForm({...editForm, availableFrom: e.target.value})}
-                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-md focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                         />
                       </div>
 
                       {/* Available To */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
                           Until
                         </label>
                         <input
                           type="date"
                           value={editForm.availableTo || ''}
                           onChange={(e) => setEditForm({...editForm, availableTo: e.target.value})}
-                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-md focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                         />
                       </div>
 
                       {/* Full/Partial */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
                           Load Type
                         </label>
                         <select
                           value={editForm.fullPartial || 'FULL'}
                           onChange={(e) => setEditForm({...editForm, fullPartial: e.target.value})}
-                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-md focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                         >
                           <option value="FULL">Full</option>
                           <option value="PARTIAL">Partial</option>
@@ -1727,7 +1750,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
                       {/* DH-O Limit */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
                           DH-O (km)
                         </label>
                         <input
@@ -1735,14 +1758,14 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                           value={editForm.declaredDhO || ''}
                           onChange={(e) => setEditForm({...editForm, declaredDhO: e.target.value})}
                           placeholder="100"
-                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-md focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                           min="0"
                         />
                       </div>
 
                       {/* DH-D Limit */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
                           DH-D (km)
                         </label>
                         <input
@@ -1750,14 +1773,14 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                           value={editForm.declaredDhD || ''}
                           onChange={(e) => setEditForm({...editForm, declaredDhD: e.target.value})}
                           placeholder="100"
-                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-md focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                           min="0"
                         />
                       </div>
 
                       {/* Length */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
                           Length (m)
                         </label>
                         <input
@@ -1765,13 +1788,13 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                           value={editForm.lengthM || ''}
                           onChange={(e) => setEditForm({...editForm, lengthM: e.target.value})}
                           placeholder="12"
-                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-md focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                         />
                       </div>
 
                       {/* Weight */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
                           Weight (kg)
                         </label>
                         <input
@@ -1779,13 +1802,13 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                           value={editForm.weight || ''}
                           onChange={(e) => setEditForm({...editForm, weight: e.target.value})}
                           placeholder="25000"
-                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-md focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                         />
                       </div>
 
                       {/* Contact Phone */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
                           Phone <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -1793,7 +1816,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                           value={editForm.contactPhone || ''}
                           onChange={(e) => setEditForm({...editForm, contactPhone: e.target.value})}
                           placeholder="+251 9XX"
-                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-md focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                         />
                       </div>
                     </div>
@@ -1801,7 +1824,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                     {/* Comments and Actions Row */}
                     <div className="flex items-end gap-4">
                       <div className="flex-1">
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
                           Comments <span className="text-gray-400">({editForm.comments1?.length || 0}/70)</span>
                         </label>
                         <input
@@ -1809,12 +1832,12 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                           value={editForm.comments1 || ''}
                           onChange={(e) => setEditForm({...editForm, comments1: e.target.value.slice(0, 70)})}
                           placeholder="Additional notes..."
-                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-md focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                           maxLength={70}
                         />
                       </div>
                       <div className="flex-1">
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
                           Additional <span className="text-gray-400">({editForm.comments2?.length || 0}/70)</span>
                         </label>
                         <input
@@ -1822,7 +1845,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                           value={editForm.comments2 || ''}
                           onChange={(e) => setEditForm({...editForm, comments2: e.target.value.slice(0, 70)})}
                           placeholder="Special requirements..."
-                          className="w-full px-3 py-2 text-sm bg-white text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-md focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                           maxLength={70}
                         />
                       </div>
@@ -1832,7 +1855,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                             e.stopPropagation();
                             handleCancelEdit();
                           }}
-                          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                          className="px-4 py-2 text-sm font-medium text-[#064d51]/80 bg-white border border-[#064d51]/20 rounded-md hover:bg-gray-50 transition-colors"
                         >
                           Cancel
                         </button>
@@ -1841,7 +1864,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                             e.stopPropagation();
                             handleSaveEdit();
                           }}
-                          className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+                          className="px-5 py-2 text-sm font-semibold text-white bg-[#1e9c99] rounded-md hover:bg-[#064d51] transition-colors"
                         >
                           Save
                         </button>
@@ -1855,14 +1878,17 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       </div>
 
       {/* Matching Loads Section */}
-      <div className="bg-white rounded-xl p-4 mt-32 border border-[#064d51]/20 shadow-sm">
+      <div className="bg-white rounded-2xl overflow-hidden mt-6 border border-slate-200/60 shadow-sm">
         {/* Header with Total Count and Tabs */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-teal-600 to-teal-500">
           <div className="flex items-center gap-4">
-            <h3 className="text-lg font-bold text-[#064d51]">
-              {filteredMatchingLoads.length} MATCHING LOADS
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+              {filteredMatchingLoads.length} Matching Loads
               {selectedTruckId && (
-                <span className="ml-2 text-blue-600 font-normal text-sm">
+                <span className="ml-2 font-normal text-sm text-teal-100">
                   (for selected truck)
                 </span>
               )}
@@ -1874,7 +1900,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                   setExpandedTruckId(null);
                   fetchAllMatchingLoads();
                 }}
-                className="text-xs text-blue-600 hover:text-blue-800 underline"
+                className="text-xs text-white/80 hover:text-white underline"
               >
                 Show all loads
               </button>
@@ -1887,8 +1913,8 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
               onClick={() => setActiveLoadTab('all')}
               className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-colors ${
                 activeLoadTab === 'all'
-                  ? 'bg-[#064d51] text-white'
-                  : 'bg-white text-[#064d51] hover:bg-[#064d51]/10 border border-[#064d51]/20'
+                  ? 'bg-white text-teal-700'
+                  : 'bg-white/20 text-white hover:bg-white/30'
               }`}
             >
               ALL
@@ -1897,8 +1923,8 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
               onClick={() => setActiveLoadTab('preferred')}
               className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-colors ${
                 activeLoadTab === 'preferred'
-                  ? 'bg-[#064d51] text-white'
-                  : 'bg-white text-[#064d51] hover:bg-[#064d51]/10 border border-[#064d51]/20'
+                  ? 'bg-white text-teal-700'
+                  : 'bg-white/20 text-white hover:bg-white/30'
               }`}
             >
               PREFERRED
@@ -1907,8 +1933,8 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
               onClick={() => setActiveLoadTab('blocked')}
               className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-colors ${
                 activeLoadTab === 'blocked'
-                  ? 'bg-[#064d51] text-white'
-                  : 'bg-white text-[#064d51] hover:bg-[#064d51]/10 border border-[#064d51]/20'
+                  ? 'bg-white text-teal-700'
+                  : 'bg-white/20 text-white hover:bg-white/30'
               }`}
             >
               BLOCKED
@@ -1917,47 +1943,63 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         </div>
 
         {/* Matching Loads Table */}
-        <DatDataTable
-          columns={loadColumns}
-          data={filteredMatchingLoads}
-          loading={loadingMatches}
-          emptyMessage="No matching loads found. Post a truck to see matching loads."
-          rowKey="id"
-        />
+        <div className="p-0">
+          <DatDataTable
+            columns={loadColumns}
+            data={filteredMatchingLoads}
+            loading={loadingMatches}
+            emptyMessage="No matching loads found. Post a truck to see matching loads."
+            rowKey="id"
+          />
+        </div>
       </div>
 
       {/* Sprint 18: Load Request Modal */}
       {requestModalOpen && selectedLoadForRequest && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 border border-[#064d51]/20">
-            <h3 className="text-lg font-semibold text-[#064d51] mb-4">
-              Request Load
-            </h3>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200/60">
+            <div className="px-6 py-4 bg-gradient-to-r from-slate-800 to-slate-700 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <svg className="w-5 h-5 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Request Load
+              </h3>
+              <button
+                onClick={() => setRequestModalOpen(false)}
+                className="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6">
 
             {/* Load Summary */}
-            <div className="bg-[#f0fdfa] rounded-lg p-4 mb-4 border border-[#064d51]/10">
-              <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="bg-gradient-to-br from-slate-50 to-teal-50/30 rounded-xl p-4 mb-4 border border-slate-200">
+              <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <div className="text-gray-500">Route</div>
-                  <div className="font-medium">
+                  <div className="text-xs font-medium text-slate-500 mb-1">Route</div>
+                  <div className="font-semibold text-slate-800">
                     {selectedLoadForRequest.pickupCity} → {selectedLoadForRequest.deliveryCity}
                   </div>
                 </div>
                 <div>
-                  <div className="text-gray-500">Shipper</div>
-                  <div className="font-medium">
+                  <div className="text-xs font-medium text-slate-500 mb-1">Shipper</div>
+                  <div className="font-semibold text-slate-800">
                     {selectedLoadForRequest.shipper?.name || 'N/A'}
                   </div>
                 </div>
                 <div>
-                  <div className="text-gray-500">Truck Type</div>
-                  <div className="font-medium">
+                  <div className="text-xs font-medium text-slate-500 mb-1">Truck Type</div>
+                  <div className="font-semibold text-slate-800">
                     {selectedLoadForRequest.truckType?.replace('_', ' ') || 'N/A'}
                   </div>
                 </div>
                 <div>
-                  <div className="text-gray-500">Rate</div>
-                  <div className="font-medium">
+                  <div className="text-xs font-medium text-slate-500 mb-1">Rate</div>
+                  <div className="font-semibold text-teal-600">
                     {selectedLoadForRequest.rate ? `${selectedLoadForRequest.rate} ETB` : 'Negotiable'}
                   </div>
                 </div>
@@ -1966,13 +2008,13 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
             {/* Truck Selection */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-[#064d51] mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Select Truck *
               </label>
               <select
                 value={selectedTruckForRequest}
                 onChange={(e) => setSelectedTruckForRequest(e.target.value)}
-                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-transparent"
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all"
               >
                 <option value="">Select a truck...</option>
                 {getApprovedPostedTrucks().map((posting) => (
@@ -1982,7 +2024,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                 ))}
               </select>
               {getApprovedPostedTrucks().length === 0 && (
-                <p className="text-xs text-red-500 mt-1">
+                <p className="text-xs text-rose-500 mt-1">
                   No approved trucks with active postings. Please post a truck first.
                 </p>
               )}
@@ -1990,22 +2032,22 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
             {/* Proposed Rate (Optional) */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-[#064d51] mb-2">
-                Proposed Rate (ETB) <span className="text-gray-400">(Optional)</span>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Proposed Rate (ETB) <span className="text-slate-400 font-normal">(Optional)</span>
               </label>
               <input
                 type="number"
                 value={requestProposedRate}
                 onChange={(e) => setRequestProposedRate(e.target.value)}
                 placeholder="Leave blank to accept posted rate"
-                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-transparent"
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all"
               />
             </div>
 
             {/* Notes */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-[#064d51] mb-2">
-                Message to Shipper <span className="text-gray-400">(Optional)</span>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Message to Shipper <span className="text-slate-400 font-normal">(Optional)</span>
               </label>
               <textarea
                 value={requestNotes}
@@ -2013,9 +2055,9 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                 placeholder="Add any notes or special requirements..."
                 rows={3}
                 maxLength={500}
-                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-transparent resize-none"
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all resize-none"
               />
-              <p className="text-xs text-gray-500 mt-1">{requestNotes.length}/500</p>
+              <p className="text-xs text-slate-400 mt-1">{requestNotes.length}/500</p>
             </div>
 
             {/* Actions */}
@@ -2026,22 +2068,23 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                   setSelectedLoadForRequest(null);
                 }}
                 disabled={submittingRequest}
-                className="flex-1 px-4 py-2 border border-[#064d51]/30 text-[#064d51] rounded-lg hover:bg-[#064d51]/5 font-medium disabled:opacity-50"
+                className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-medium disabled:opacity-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmitLoadRequest}
                 disabled={submittingRequest || !selectedTruckForRequest}
-                className="flex-1 px-4 py-2 bg-[#064d51] text-white rounded-lg hover:bg-[#053d40] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-teal-600 to-teal-500 text-white rounded-xl hover:from-teal-700 hover:to-teal-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-teal-500/25"
               >
                 {submittingRequest ? 'Sending...' : 'Send Request'}
               </button>
             </div>
 
-            <p className="text-xs text-gray-500 mt-4 text-center">
+            <p className="text-xs text-slate-400 mt-4 text-center">
               The shipper will review your request and can approve or reject it.
             </p>
+            </div>
           </div>
         </div>
       )}

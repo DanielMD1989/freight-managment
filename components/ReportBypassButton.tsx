@@ -91,17 +91,17 @@ export default function ReportBypassButton({
           <div className="flex min-h-screen items-center justify-center px-4">
             {/* Backdrop */}
             <div
-              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+              className="fixed inset-0 bg-[#064d51]/50 transition-opacity"
               onClick={() => !loading && setShowModal(false)}
             />
 
             {/* Modal */}
             <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
               <div className="mb-4">
-                <h2 className="text-xl font-bold text-gray-900">
+                <h2 className="text-xl font-bold text-[#064d51]">
                   Report Bypass Attempt
                 </h2>
-                <p className="text-sm text-gray-600 mt-2">
+                <p className="text-sm text-[#064d51]/70 mt-2">
                   If you believe this shipper is attempting to bypass the platform
                   by asking for direct contact after viewing contact information,
                   please report it here.
@@ -133,7 +133,7 @@ export default function ReportBypassButton({
               <div className="mb-4">
                 <label
                   htmlFor="reason"
-                  className="block text-sm font-medium text-gray-700 mb-2"
+                  className="block text-sm font-medium text-[#064d51]/80 mb-2"
                 >
                   Reason for reporting *
                 </label>
@@ -142,11 +142,11 @@ export default function ReportBypassButton({
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  className="w-full px-3 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                   placeholder="Please describe what happened... (e.g., 'Shipper asked me to complete delivery outside platform after I shared my contact details')"
                   disabled={loading}
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-[#064d51]/60 mt-1">
                   {reason.length}/500 characters
                 </p>
               </div>
@@ -164,7 +164,7 @@ export default function ReportBypassButton({
                   type="button"
                   onClick={() => setShowModal(false)}
                   disabled={loading}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                  className="px-4 py-2 text-sm font-medium text-[#064d51]/80 bg-white border border-[#064d51]/20 rounded-lg hover:bg-[#f0fdfa] disabled:opacity-50"
                 >
                   Cancel
                 </button>

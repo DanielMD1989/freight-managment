@@ -93,10 +93,10 @@ export default function TruckRequestsClient({ requests: initialRequests }: Props
       PENDING: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
       APPROVED: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
       REJECTED: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      EXPIRED: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
-      CANCELLED: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+      EXPIRED: 'bg-[#064d51]/10 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+      CANCELLED: 'bg-[#064d51]/10 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
     };
-    return styles[status] || 'bg-gray-100 text-gray-800';
+    return styles[status] || 'bg-[#064d51]/10 text-gray-800';
   };
 
   const formatDate = (date: string) => {
@@ -159,8 +159,8 @@ export default function TruckRequestsClient({ requests: initialRequests }: Props
               onClick={() => setStatusFilter(status)}
               className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
                 statusFilter === status
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+                  ? 'bg-[#1e9c99] text-white'
+                  : 'bg-[#064d51]/10 dark:bg-slate-700 text-[#064d51]/80 dark:text-gray-300 hover:bg-[#064d51]/20 dark:hover:bg-slate-600'
               }`}
             >
               {status === 'all' ? 'All' : status} ({statusCounts[status]})
@@ -171,8 +171,8 @@ export default function TruckRequestsClient({ requests: initialRequests }: Props
 
       {/* Requests List */}
       {filteredRequests.length === 0 ? (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-700 p-8 text-center">
-          <p className="text-gray-500 dark:text-gray-400">
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-[#064d51]/15 dark:border-slate-700 p-8 text-center">
+          <p className="text-[#064d51]/60 dark:text-gray-400">
             {statusFilter === 'all'
               ? "You haven't made any truck requests yet."
               : `No ${statusFilter.toLowerCase()} requests.`}
@@ -180,7 +180,7 @@ export default function TruckRequestsClient({ requests: initialRequests }: Props
           {statusFilter === 'all' && (
             <a
               href="/shipper/dat-board?tab=SEARCH_TRUCKS"
-              className="inline-block mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="inline-block mt-4 px-4 py-2 bg-[#1e9c99] text-white rounded-lg hover:bg-[#064d51]"
             >
               Search Trucks
             </a>
@@ -191,7 +191,7 @@ export default function TruckRequestsClient({ requests: initialRequests }: Props
           {filteredRequests.map((request) => (
             <div
               key={request.id}
-              className="bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-700 p-6"
+              className="bg-white dark:bg-slate-800 rounded-lg shadow border border-[#064d51]/15 dark:border-slate-700 p-6"
             >
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -209,7 +209,7 @@ export default function TruckRequestsClient({ requests: initialRequests }: Props
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-sm text-[#064d51]/60 dark:text-gray-400 mt-1">
                     Requested on {formatDate(request.createdAt)}
                   </p>
                 </div>
@@ -226,39 +226,39 @@ export default function TruckRequestsClient({ requests: initialRequests }: Props
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Load Info */}
-                <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <div className="bg-[#f0fdfa] dark:bg-slate-700 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-[#064d51]/80 dark:text-gray-300 mb-2">
                     Load
                   </h3>
                   <div className="space-y-1 text-sm">
-                    <p className="text-gray-900 dark:text-white font-medium">
+                    <p className="text-[#064d51] dark:text-white font-medium">
                       {request.load.referenceNumber || request.load.id.slice(-8)}
                     </p>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-[#064d51]/70 dark:text-gray-400">
                       {request.load.pickupCity} → {request.load.deliveryCity}
                     </p>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-[#064d51]/70 dark:text-gray-400">
                       {request.load.weight.toLocaleString()} kg • {request.load.truckType}
                     </p>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-[#064d51]/70 dark:text-gray-400">
                       Pickup: {new Date(request.load.pickupDate).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
 
                 {/* Truck Info */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                <div className="bg-[#1e9c99]/10 dark:bg-blue-900/20 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-[#064d51] dark:text-blue-200 mb-2">
                     Truck
                   </h3>
                   <div className="space-y-1 text-sm">
-                    <p className="text-gray-900 dark:text-white font-medium">
+                    <p className="text-[#064d51] dark:text-white font-medium">
                       {request.truck.plateNumber}
                     </p>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-[#064d51]/70 dark:text-gray-400">
                       {request.truck.truckType} • {request.truck.capacity.toLocaleString()} kg
                     </p>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-[#064d51]/70 dark:text-gray-400">
                       Carrier: {request.truck.carrier.name}
                       {request.truck.carrier.isVerified && (
                         <span className="ml-1 text-green-600">✓</span>
@@ -269,25 +269,25 @@ export default function TruckRequestsClient({ requests: initialRequests }: Props
               </div>
 
               {/* Additional Details */}
-              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700">
+              <div className="mt-4 pt-4 border-t border-[#064d51]/15 dark:border-slate-700">
                 <div className="flex flex-wrap gap-4 text-sm">
                   {request.offeredRate && (
                     <div>
-                      <span className="text-gray-500 dark:text-gray-400">Offered Rate:</span>{' '}
-                      <span className="text-gray-900 dark:text-white font-medium">
+                      <span className="text-[#064d51]/60 dark:text-gray-400">Offered Rate:</span>{' '}
+                      <span className="text-[#064d51] dark:text-white font-medium">
                         {request.offeredRate.toLocaleString()} ETB
                       </span>
                     </div>
                   )}
                   {request.notes && (
                     <div className="flex-1">
-                      <span className="text-gray-500 dark:text-gray-400">Notes:</span>{' '}
-                      <span className="text-gray-900 dark:text-white">{request.notes}</span>
+                      <span className="text-[#064d51]/60 dark:text-gray-400">Notes:</span>{' '}
+                      <span className="text-[#064d51] dark:text-white">{request.notes}</span>
                     </div>
                   )}
                 </div>
                 {request.respondedAt && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                  <p className="text-sm text-[#064d51]/60 dark:text-gray-400 mt-2">
                     Responded on {formatDate(request.respondedAt)}
                   </p>
                 )}

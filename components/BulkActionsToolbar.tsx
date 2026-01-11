@@ -70,7 +70,7 @@ export default function BulkActionsToolbar({
       case 'success':
         return 'bg-green-600 hover:bg-green-700 text-white';
       default:
-        return 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300';
+        return 'bg-white hover:bg-[#f0fdfa] text-[#064d51]/80 border border-[#064d51]/20';
     }
   };
 
@@ -78,30 +78,30 @@ export default function BulkActionsToolbar({
     <>
       {/* Toolbar */}
       <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40">
-        <div className="bg-gray-900 text-white rounded-lg shadow-2xl px-6 py-3 flex items-center gap-4">
+        <div className="bg-[#064d51] text-white rounded-lg shadow-2xl px-6 py-3 flex items-center gap-4">
           {/* Selection Count */}
-          <div className="flex items-center gap-3 pr-4 border-r border-gray-700">
-            <span className="bg-blue-600 text-white text-sm font-bold px-2 py-1 rounded">
+          <div className="flex items-center gap-3 pr-4 border-r border-[#1e9c99]/40">
+            <span className="bg-[#1e9c99] text-white text-sm font-bold px-2 py-1 rounded">
               {selectedCount}
             </span>
-            <span className="text-sm text-gray-300">
+            <span className="text-sm text-white/80">
               of {totalCount} {entityName} selected
             </span>
           </div>
 
           {/* Selection Actions */}
-          <div className="flex items-center gap-2 pr-4 border-r border-gray-700">
+          <div className="flex items-center gap-2 pr-4 border-r border-[#1e9c99]/40">
             {selectedCount < totalCount && (
               <button
                 onClick={onSelectAll}
-                className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                className="text-sm text-[#1e9c99] hover:text-white transition-colors"
               >
                 Select All
               </button>
             )}
             <button
               onClick={onDeselectAll}
-              className="text-sm text-gray-400 hover:text-gray-300 transition-colors"
+              className="text-sm text-white/60 hover:text-white transition-colors"
             >
               Clear Selection
             </button>
@@ -134,7 +134,7 @@ export default function BulkActionsToolbar({
           {/* Close Button */}
           <button
             onClick={onDeselectAll}
-            className="ml-2 p-2 text-gray-400 hover:text-white transition-colors"
+            className="ml-2 p-2 text-white/60 hover:text-white transition-colors"
             title="Close (Esc)"
           >
             ✕
@@ -146,17 +146,17 @@ export default function BulkActionsToolbar({
       {confirmingAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-[#064d51] mb-2">
               Confirm Action
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-[#064d51]/70 mb-6">
               {confirmingAction.confirmMessage ||
                 `Are you sure you want to ${confirmingAction.label.toLowerCase()} ${selectedCount} ${entityName}?`}
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setConfirmingAction(null)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-4 py-2 text-[#064d51]/80 bg-[#064d51]/10 rounded-lg hover:bg-[#064d51]/20 transition-colors"
               >
                 Cancel
               </button>

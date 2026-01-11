@@ -23,15 +23,15 @@ export default function PostLoadTab() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Left: Posting Form */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+        <h2 className="text-xl font-semibold text-[#064d51] mb-4">
           Post Your Load
         </h2>
-        <div className="rounded-md bg-yellow-50 p-4">
-          <p className="text-sm text-yellow-800">
+        <div className="rounded-md bg-[#1e9c99]/10 p-4 border border-[#1e9c99]/20">
+          <p className="text-sm text-[#064d51]">
             Load posting form will be integrated here. For now, use the dedicated{" "}
             <a
               href="/dashboard/loads/new"
-              className="font-medium underline hover:text-yellow-900"
+              className="font-medium underline text-[#1e9c99] hover:text-[#064d51]"
             >
               Post Load page
             </a>
@@ -42,13 +42,13 @@ export default function PostLoadTab() {
 
       {/* Right: Matching Trucks */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+        <h2 className="text-xl font-semibold text-[#064d51] mb-4">
           Matching Trucks
         </h2>
         {!posted ? (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-[#064d51]/60">
             <svg
-              className="mx-auto h-12 w-12 text-gray-400"
+              className="mx-auto h-12 w-12 text-[#064d51]/40"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -65,7 +65,7 @@ export default function PostLoadTab() {
             </p>
           </div>
         ) : (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-[#064d51]/60">
             <p className="text-sm">No matching trucks found</p>
           </div>
         )}

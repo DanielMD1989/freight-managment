@@ -27,8 +27,8 @@ export default async function WalletPage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Wallet & Commissions</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-3xl font-bold text-[#064d51]">Wallet & Commissions</h1>
+          <p className="text-[#064d51]/70 mt-2">
             Track your balance, commissions, and transaction history
           </p>
         </div>

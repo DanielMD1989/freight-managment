@@ -136,14 +136,14 @@ export default function ProfileCompletionDisplay({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+    <div className="bg-white rounded-lg shadow-sm border border-[#064d51]/15 p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-sm font-medium text-gray-900">Profile Completion</h3>
-          <p className="text-xs text-gray-500 mt-1">{getStatusLabel(completionPercentage)}</p>
+          <h3 className="text-sm font-medium text-[#064d51]">Profile Completion</h3>
+          <p className="text-xs text-[#064d51]/60 mt-1">{getStatusLabel(completionPercentage)}</p>
         </div>
-        <div className="text-2xl font-bold text-gray-900">{completionPercentage}%</div>
+        <div className="text-2xl font-bold text-[#064d51]">{completionPercentage}%</div>
       </div>
 
       {/* Progress Bar */}
@@ -155,7 +155,7 @@ export default function ProfileCompletionDisplay({
       </div>
 
       {/* Quick Stats */}
-      <div className="flex justify-between mt-3 text-xs text-gray-600">
+      <div className="flex justify-between mt-3 text-xs text-[#064d51]/70">
         <span>{completionItems.filter(i => i.completed).length} of {completionItems.length} items</span>
         {incompleteItems.length > 0 && (
           <span className="text-orange-600">{incompleteItems.length} remaining</span>
@@ -164,7 +164,7 @@ export default function ProfileCompletionDisplay({
 
       {/* Detailed Breakdown */}
       {showDetails && (
-        <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
+        <div className="mt-4 pt-4 border-t border-[#064d51]/15 space-y-4">
           {Object.keys(categoryGroups).map(category => {
             const items = categoryGroups[category];
             if (items.length === 0) return null;
@@ -174,10 +174,10 @@ export default function ProfileCompletionDisplay({
             return (
               <div key={category}>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-gray-700">
+                  <span className="text-xs font-medium text-[#064d51]/80">
                     {getCategoryLabel(category)}
                   </span>
-                  <span className="text-xs text-gray-500">{categoryCompletion}%</span>
+                  <span className="text-xs text-[#064d51]/60">{categoryCompletion}%</span>
                 </div>
 
                 <div className="space-y-1">
@@ -186,10 +186,10 @@ export default function ProfileCompletionDisplay({
                       key={item.field}
                       className="flex items-center gap-2 text-xs"
                     >
-                      <span className={item.completed ? 'text-green-500' : 'text-gray-300'}>
+                      <span className={item.completed ? 'text-green-500' : 'text-[#064d51]/30'}>
                         {item.completed ? '✓' : '○'}
                       </span>
-                      <span className={item.completed ? 'text-gray-600' : 'text-gray-400'}>
+                      <span className={item.completed ? 'text-[#064d51]/70' : 'text-[#064d51]/50'}>
                         {item.label}
                       </span>
                     </div>
@@ -201,18 +201,18 @@ export default function ProfileCompletionDisplay({
 
           {/* Suggestions */}
           {incompleteItems.length > 0 && (
-            <div className="bg-blue-50 rounded-lg p-3 mt-4">
-              <p className="text-xs font-medium text-blue-800 mb-2">
+            <div className="bg-[#1e9c99]/10 rounded-lg p-3 mt-4">
+              <p className="text-xs font-medium text-[#064d51] mb-2">
                 Complete these to improve your profile:
               </p>
               <ul className="space-y-1">
                 {incompleteItems.slice(0, 3).map(item => (
-                  <li key={item.field} className="text-xs text-blue-700 flex items-center gap-1">
+                  <li key={item.field} className="text-xs text-[#1e9c99] flex items-center gap-1">
                     <span>→</span> Add {item.label}
                   </li>
                 ))}
                 {incompleteItems.length > 3 && (
-                  <li className="text-xs text-blue-600">
+                  <li className="text-xs text-[#1e9c99]/80">
                     ...and {incompleteItems.length - 3} more
                   </li>
                 )}

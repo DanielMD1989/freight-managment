@@ -136,14 +136,14 @@ export default function QuickAssignModal({
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full">
           {/* Header */}
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-6 py-4 border-b border-[#064d51]/15">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-[#064d51]">
                 Quick Assign Load
               </h3>
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-[#064d51]/50 hover:text-[#064d51]"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -155,24 +155,24 @@ export default function QuickAssignModal({
           {/* Body */}
           <div className="px-6 py-4">
             {/* Load Details */}
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Load Details</h4>
+            <div className="mb-6 p-4 bg-[#f0fdfa] rounded-lg">
+              <h4 className="text-sm font-medium text-[#064d51]/80 mb-2">Load Details</h4>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-600">Route:</span>
-                  <span className="ml-2 font-medium text-gray-900">
+                  <span className="text-[#064d51]/70">Route:</span>
+                  <span className="ml-2 font-medium text-[#064d51]">
                     {loadDetails.pickupCity} → {loadDetails.deliveryCity}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-600">Truck Type:</span>
-                  <span className="ml-2 font-medium text-gray-900">
+                  <span className="text-[#064d51]/70">Truck Type:</span>
+                  <span className="ml-2 font-medium text-[#064d51]">
                     {loadDetails.truckType}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-600">Weight:</span>
-                  <span className="ml-2 font-medium text-gray-900">
+                  <span className="text-[#064d51]/70">Weight:</span>
+                  <span className="ml-2 font-medium text-[#064d51]">
                     {loadDetails.weight?.toLocaleString()} kg
                   </span>
                 </div>
@@ -188,26 +188,26 @@ export default function QuickAssignModal({
 
             {/* Truck Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#064d51]/80 mb-2">
                 Select Truck to Assign
               </label>
 
               {loading ? (
                 <div className="text-center py-8">
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <p className="mt-2 text-sm text-gray-600">Loading trucks...</p>
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#1e9c99]"></div>
+                  <p className="mt-2 text-sm text-[#064d51]/70">Loading trucks...</p>
                 </div>
               ) : trucks.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-[#064d51]/60">
                   No matching trucks found. Try posting a truck or adjusting the load details.
                 </div>
               ) : (
-                <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
+                <div className="max-h-64 overflow-y-auto border border-[#064d51]/15 rounded-lg">
                   {trucks.map((truck) => (
                     <label
                       key={truck.id}
-                      className={`flex items-center p-4 border-b border-gray-200 last:border-b-0 cursor-pointer hover:bg-gray-50 ${
-                        selectedTruckId === truck.id ? 'bg-blue-50' : ''
+                      className={`flex items-center p-4 border-b border-[#064d51]/15 last:border-b-0 cursor-pointer hover:bg-[#f0fdfa] ${
+                        selectedTruckId === truck.id ? 'bg-[#1e9c99]/10' : ''
                       }`}
                     >
                       <input
@@ -216,18 +216,18 @@ export default function QuickAssignModal({
                         value={truck.id}
                         checked={selectedTruckId === truck.id}
                         onChange={(e) => setSelectedTruckId(e.target.value)}
-                        className="mr-3"
+                        className="mr-3 accent-[#1e9c99]"
                       />
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <div>
-                            <div className="font-medium text-gray-900">
+                            <div className="font-medium text-[#064d51]">
                               {truck.licensePlate}
                             </div>
-                            <div className="text-sm text-gray-600">
+                            <div className="text-sm text-[#064d51]/70">
                               {truck.truckType} • {truck.carrier.name}
                             </div>
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-[#064d51]/60">
                               Current Location: {truck.originCity?.name || 'N/A'}
                             </div>
                           </div>
@@ -235,13 +235,13 @@ export default function QuickAssignModal({
                             <div className="text-right">
                               <div className={`text-lg font-bold ${
                                 truck.matchScore >= 80 ? 'text-green-600' :
-                                truck.matchScore >= 60 ? 'text-blue-600' :
+                                truck.matchScore >= 60 ? 'text-[#1e9c99]' :
                                 truck.matchScore >= 40 ? 'text-yellow-600' :
-                                'text-gray-600'
+                                'text-[#064d51]/70'
                               }`}>
                                 {Math.round(truck.matchScore)}%
                               </div>
-                              <div className="text-xs text-gray-500">Match</div>
+                              <div className="text-xs text-[#064d51]/60">Match</div>
                             </div>
                           )}
                         </div>
@@ -254,18 +254,18 @@ export default function QuickAssignModal({
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+          <div className="px-6 py-4 border-t border-[#064d51]/15 flex justify-end gap-3">
             <button
               onClick={onClose}
               disabled={assigning}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50"
+              className="px-4 py-2 border border-[#064d51]/20 text-[#064d51]/80 rounded-md hover:bg-[#f0fdfa] disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={handleAssign}
               disabled={assigning || !selectedTruckId || loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-[#1e9c99] text-white rounded-md hover:bg-[#064d51] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {assigning ? 'Assigning...' : 'Assign Load'}
             </button>

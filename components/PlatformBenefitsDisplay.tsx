@@ -70,10 +70,10 @@ export default function PlatformBenefitsDisplay({
 
   if (variant === 'compact') {
     return (
-      <div className={`bg-blue-50 border border-blue-200 rounded-lg p-4 ${className}`}>
+      <div className={`bg-[#1e9c99]/10 border border-[#1e9c99]/30 rounded-lg p-4 ${className}`}>
         <div className="flex items-start gap-3">
           <svg
-            className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5"
+            className="w-6 h-6 text-[#1e9c99] flex-shrink-0 mt-0.5"
             fill="currentColor"
             viewBox="0 0 20 20"
           >
@@ -84,10 +84,10 @@ export default function PlatformBenefitsDisplay({
             />
           </svg>
           <div className="flex-1">
-            <h3 className="text-sm font-semibold text-blue-900 mb-1">
+            <h3 className="text-sm font-semibold text-[#064d51] mb-1">
               Why Use Our Platform?
             </h3>
-            <p className="text-sm text-blue-800">
+            <p className="text-sm text-[#064d51]/80">
               Get GPS tracking, dispute support, payment protection, and earn
               commission discounts with high completion rates.
             </p>
@@ -98,11 +98,11 @@ export default function PlatformBenefitsDisplay({
   }
 
   return (
-    <div className={`bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg border border-blue-200 ${className}`}>
+    <div className={`bg-gradient-to-br from-[#f0fdfa] to-[#1e9c99]/10 rounded-xl shadow-lg border border-[#1e9c99]/30 ${className}`}>
       {/* Header */}
-      <div className="px-6 py-5 border-b border-blue-200 bg-white/50">
+      <div className="px-6 py-5 border-b border-[#1e9c99]/20 bg-white/50">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+          <div className="w-12 h-12 bg-[#1e9c99] rounded-lg flex items-center justify-center">
             <svg
               className="w-7 h-7 text-white"
               fill="none"
@@ -118,10 +118,10 @@ export default function PlatformBenefitsDisplay({
             </svg>
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-2xl font-bold text-[#064d51]">
               Platform Benefits
             </h2>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-[#064d51]/70">
               Why completing loads through our platform benefits you
             </p>
           </div>
@@ -134,15 +134,15 @@ export default function PlatformBenefitsDisplay({
           {benefits.map((benefit, index) => (
             <div
               key={index}
-              className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
+              className="bg-white rounded-lg p-4 shadow-sm border border-[#064d51]/15 hover:shadow-md transition-shadow"
             >
               <div className="flex items-start gap-3">
                 <div className="text-3xl flex-shrink-0">{benefit.icon}</div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 mb-1">
+                  <h3 className="font-semibold text-[#064d51] mb-1">
                     {benefit.title}
                   </h3>
-                  <p className="text-sm text-gray-600">{benefit.description}</p>
+                  <p className="text-sm text-[#064d51]/70">{benefit.description}</p>
                 </div>
               </div>
             </div>
@@ -150,13 +150,13 @@ export default function PlatformBenefitsDisplay({
         </div>
 
         {/* Call to Action */}
-        <div className="mt-6 p-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg text-white">
+        <div className="mt-6 p-4 bg-gradient-to-r from-[#1e9c99] to-[#064d51] rounded-lg text-white">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-semibold mb-1">
                 Start earning commission discounts today!
               </h3>
-              <p className="text-sm text-blue-100">
+              <p className="text-sm text-white/80">
                 Companies with 90%+ completion rate get up to 10% off commission
               </p>
             </div>
@@ -187,7 +187,7 @@ export default function PlatformBenefitsDisplay({
  */
 export function PlatformBenefitsBanner() {
   return (
-    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg shadow-md">
+    <div className="bg-gradient-to-r from-[#1e9c99] to-[#064d51] text-white px-6 py-3 rounded-lg shadow-md">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <svg
@@ -204,7 +204,7 @@ export function PlatformBenefitsBanner() {
             </p>
           </div>
         </div>
-        <button className="px-4 py-2 bg-white text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors">
+        <button className="px-4 py-2 bg-white text-[#1e9c99] text-sm font-medium rounded-lg hover:bg-[#f0fdfa] transition-colors">
           Learn More
         </button>
       </div>

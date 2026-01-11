@@ -150,7 +150,7 @@ export default function TeamManagementClient({
       SUSPENDED: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
       REGISTERED: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
     };
-    return styles[status] || 'bg-gray-100 text-gray-800';
+    return styles[status] || 'bg-[#064d51]/10 text-gray-800';
   };
 
   const formatDate = (date: string) => {
@@ -183,13 +183,13 @@ export default function TeamManagementClient({
       )}
 
       {/* Organization Info */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-700 p-6">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-[#064d51]/15 dark:border-slate-700 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-lg font-semibold text-[#064d51] dark:text-white">
               {organization.name}
             </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-[#064d51]/70 dark:text-gray-400">
               {organization.type} Organization
               {organization.isVerified && (
                 <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
@@ -200,7 +200,7 @@ export default function TeamManagementClient({
           </div>
           <button
             onClick={() => setShowInviteModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+            className="px-4 py-2 bg-[#1e9c99] text-white rounded-lg hover:bg-[#064d51] font-medium"
           >
             Invite Member
           </button>
@@ -208,54 +208,54 @@ export default function TeamManagementClient({
       </div>
 
       {/* Team Members */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-700">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-[#064d51]/15 dark:border-slate-700">
+        <div className="px-6 py-4 border-b border-[#064d51]/15 dark:border-slate-700">
+          <h3 className="text-lg font-semibold text-[#064d51] dark:text-white">
             Team Members ({members.length})
           </h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-slate-700">
+            <thead className="bg-[#f0fdfa] dark:bg-slate-700">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
                   Member
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
                   Role
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
                   Joined
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
                   Last Login
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
               {members.map((member) => (
-                <tr key={member.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
+                <tr key={member.id} className="hover:bg-[#f0fdfa] dark:hover:bg-slate-700/50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      <div className="text-sm font-medium text-[#064d51] dark:text-white">
                         {member.name}
                         {member.id === currentUserId && (
-                          <span className="ml-2 text-xs text-gray-500">(You)</span>
+                          <span className="ml-2 text-xs text-[#064d51]/60">(You)</span>
                         )}
                       </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                      <div className="text-sm text-[#064d51]/60 dark:text-gray-400">
                         {member.email}
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900 dark:text-white">
+                    <span className="text-sm text-[#064d51] dark:text-white">
                       {member.role}
                     </span>
                   </td>
@@ -268,10 +268,10 @@ export default function TeamManagementClient({
                       {member.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#064d51]/60 dark:text-gray-400">
                     {formatDate(member.createdAt)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#064d51]/60 dark:text-gray-400">
                     {member.lastLoginAt ? formatDate(member.lastLoginAt) : 'Never'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
@@ -293,29 +293,29 @@ export default function TeamManagementClient({
 
       {/* Pending Invitations */}
       {invitations.length > 0 && (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-700">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-[#064d51]/15 dark:border-slate-700">
+          <div className="px-6 py-4 border-b border-[#064d51]/15 dark:border-slate-700">
+            <h3 className="text-lg font-semibold text-[#064d51] dark:text-white">
               Pending Invitations ({invitations.length})
             </h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-slate-700">
+              <thead className="bg-[#f0fdfa] dark:bg-slate-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
                     Email
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
                     Role
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
                     Sent
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
                     Expires
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -324,18 +324,18 @@ export default function TeamManagementClient({
                 {invitations.map((invitation) => (
                   <tr
                     key={invitation.id}
-                    className="hover:bg-gray-50 dark:hover:bg-slate-700/50"
+                    className="hover:bg-[#f0fdfa] dark:hover:bg-slate-700/50"
                   >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#064d51] dark:text-white">
                       {invitation.email}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#064d51] dark:text-white">
                       {invitation.role}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#064d51]/60 dark:text-gray-400">
                       {formatDate(invitation.createdAt)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#064d51]/60 dark:text-gray-400">
                       {formatDate(invitation.expiresAt)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
@@ -358,14 +358,14 @@ export default function TeamManagementClient({
       {showInviteModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <div className="px-6 py-4 border-b border-[#064d51]/15 dark:border-slate-700">
+              <h3 className="text-lg font-semibold text-[#064d51] dark:text-white">
                 Invite Team Member
               </h3>
             </div>
             <form onSubmit={handleInvite} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-[#064d51]/80 dark:text-gray-300 mb-1">
                   Email Address
                 </label>
                 <input
@@ -373,22 +373,22 @@ export default function TeamManagementClient({
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                  className="w-full px-3 py-2 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99] dark:bg-slate-700 dark:text-white"
                   placeholder="colleague@example.com"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-[#064d51]/80 dark:text-gray-300 mb-1">
                   Role
                 </label>
                 <select
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                  className="w-full px-3 py-2 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99] dark:bg-slate-700 dark:text-white"
                 >
                   <option value="CARRIER">Carrier</option>
                 </select>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-[#064d51]/60 mt-1">
                   New members will have standard carrier permissions
                 </p>
               </div>
@@ -396,14 +396,14 @@ export default function TeamManagementClient({
                 <button
                   type="button"
                   onClick={() => setShowInviteModal(false)}
-                  className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700"
+                  className="px-4 py-2 border border-[#064d51]/20 dark:border-slate-600 rounded-lg text-[#064d51]/80 dark:text-gray-300 hover:bg-[#f0fdfa] dark:hover:bg-slate-700"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  className="px-4 py-2 bg-[#1e9c99] text-white rounded-lg hover:bg-[#064d51] disabled:opacity-50"
                 >
                   {loading ? 'Sending...' : 'Send Invitation'}
                 </button>

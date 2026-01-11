@@ -64,8 +64,8 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
 
       // Default fallback UI
       return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-2xl w-full">
+        <div className="min-h-screen bg-[#f0fdfa] flex items-center justify-center p-6">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-2xl w-full border border-[#064d51]/15">
             <div className="flex items-center mb-6">
               <div className="bg-red-100 rounded-full p-3 mr-4">
                 <svg
@@ -82,28 +82,28 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
                   />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900">
+              <h2 className="text-2xl font-bold text-[#064d51]">
                 Something went wrong
               </h2>
             </div>
 
-            <p className="text-gray-600 mb-6">
+            <p className="text-[#064d51]/70 mb-6">
               We apologize for the inconvenience. An unexpected error occurred while loading this page.
             </p>
 
             {/* Error details (only in development) */}
             {process.env.NODE_ENV === 'development' && this.state.error && (
-              <div className="bg-gray-100 rounded-lg p-4 mb-6 overflow-auto">
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Error Details:</h3>
+              <div className="bg-[#f0fdfa] rounded-lg p-4 mb-6 overflow-auto border border-[#064d51]/10">
+                <h3 className="text-sm font-semibold text-[#064d51] mb-2">Error Details:</h3>
                 <pre className="text-xs text-red-600 whitespace-pre-wrap">
                   {this.state.error.toString()}
                 </pre>
                 {this.state.errorInfo && (
                   <details className="mt-2">
-                    <summary className="text-xs font-medium text-gray-700 cursor-pointer hover:text-gray-900">
+                    <summary className="text-xs font-medium text-[#064d51]/80 cursor-pointer hover:text-[#064d51]">
                       Component Stack
                     </summary>
-                    <pre className="text-xs text-gray-600 mt-2 whitespace-pre-wrap">
+                    <pre className="text-xs text-[#064d51]/70 mt-2 whitespace-pre-wrap">
                       {this.state.errorInfo.componentStack}
                     </pre>
                   </details>
@@ -114,20 +114,20 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
             <div className="flex gap-4">
               <button
                 onClick={this.handleReset}
-                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+                className="px-6 py-2 bg-[#1e9c99] text-white rounded-md hover:bg-[#064d51] transition-colors font-medium"
               >
                 Try Again
               </button>
               <button
                 onClick={() => window.location.href = '/dashboard'}
-                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors font-medium"
+                className="px-6 py-2 bg-[#064d51]/10 text-[#064d51]/80 rounded-md hover:bg-[#064d51]/20 transition-colors font-medium"
               >
                 Go to Dashboard
               </button>
             </div>
 
             {/* Help text */}
-            <p className="mt-6 text-sm text-gray-500">
+            <p className="mt-6 text-sm text-[#064d51]/60">
               If this problem persists, please contact support or try refreshing the page.
             </p>
           </div>

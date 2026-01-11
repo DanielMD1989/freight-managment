@@ -121,15 +121,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-[#f0fdfa]">
       {/* Sidebar */}
-      <aside className="w-64 flex-shrink-0 border-r border-gray-200 bg-white">
+      <aside className="w-64 flex-shrink-0 border-r border-[#064d51]/15 bg-white">
         <div className="flex h-full flex-col">
           {/* Logo/Brand */}
-          <div className="flex h-16 items-center border-b border-gray-200 px-6">
+          <div className="flex h-16 items-center border-b border-[#064d51]/15 px-6">
             <Link href="/admin" className="flex items-center gap-2">
-              <Shield className="h-6 w-6 text-blue-600" />
-              <span className="text-lg font-bold">Admin Panel</span>
+              <Shield className="h-6 w-6 text-[#1e9c99]" />
+              <span className="text-lg font-bold text-[#064d51]">Admin Panel</span>
             </Link>
           </div>
 
@@ -147,8 +147,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   className={cn(
                     'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                     isActive
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                      ? 'bg-[#1e9c99]/10 text-[#1e9c99]'
+                      : 'text-[#064d51]/80 hover:bg-[#f0fdfa] hover:text-[#064d51]'
                   )}
                 >
                   <Icon className="h-5 w-5" />
@@ -164,10 +164,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </nav>
 
           {/* Footer */}
-          <div className="border-t border-gray-200 p-4">
+          <div className="border-t border-[#064d51]/15 p-4">
             <Link
               href="/dashboard"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[#064d51]/80 hover:bg-[#f0fdfa]"
             >
               <LayoutDashboard className="h-5 w-5" />
               <span>Back to Dashboard</span>

@@ -324,52 +324,71 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-slate-800">Search Loads</h2>
+          <p className="text-sm text-slate-500">Find available loads matching your trucks</p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowSearchForm(!showSearchForm)}
+            className={`flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl transition-all shadow-sm ${
+              showSearchForm
+                ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                : 'bg-gradient-to-r from-teal-600 to-teal-500 text-white hover:from-teal-700 hover:to-teal-600 shadow-md shadow-teal-500/25'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            {showSearchForm ? 'Hide Search' : 'New Load Search'}
+          </button>
+
+          {showSearchForm && (
+            <button
+              onClick={handleSaveSearch}
+              className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+              </svg>
+              Save Search
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Saved Searches Panel */}
       {savedSearches.length > 0 && (
-        <div className="bg-white border border-[#064d51]/20 rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-[#064d51] uppercase">
+        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-teal-50/30 border-b border-slate-100">
+            <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+              <svg className="w-4 h-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+              </svg>
               Saved Searches ({savedSearches.length})
             </h3>
           </div>
-          <DatSavedSearches
-            searches={savedSearches}
-            activeSearchId={activeSavedSearchId}
-            onSelect={handleSelectSavedSearch}
-            onDelete={handleDeleteSavedSearch}
-            onEdit={handleEditSavedSearch}
-            type="LOADS"
-          />
+          <div className="p-4">
+            <DatSavedSearches
+              searches={savedSearches}
+              activeSearchId={activeSavedSearchId}
+              onSelect={handleSelectSavedSearch}
+              onDelete={handleDeleteSavedSearch}
+              onEdit={handleEditSavedSearch}
+              type="LOADS"
+            />
+          </div>
         </div>
       )}
 
-      {/* Action Buttons */}
-      <div className="flex gap-3">
-        <button
-          onClick={() => setShowSearchForm(!showSearchForm)}
-          className="px-6 py-3 bg-[#064d51] text-white font-bold text-sm rounded-lg hover:bg-[#053d40] transition-colors shadow-md flex items-center gap-2"
-        >
-          <span className="text-lg">🔍</span>
-          {showSearchForm ? 'HIDE SEARCH' : 'NEW LOAD SEARCH'}
-        </button>
-
-        {showSearchForm && (
-          <button
-            onClick={handleSaveSearch}
-            className="px-6 py-3 bg-[#1e9c99] text-white font-bold text-sm rounded-lg hover:bg-[#178f8c] transition-colors shadow-md flex items-center gap-2"
-          >
-            <span className="text-lg">💾</span>
-            SAVE SEARCH
-          </button>
-        )}
-      </div>
-
       {/* Inline Search Form - Only show when toggled */}
       {showSearchForm && (
-        <div className="bg-white border border-[#064d51]/20 rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
           {/* Header Row */}
-          <div className="grid grid-cols-12 gap-2 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#064d51] to-[#1e9c99]">
+          <div className="grid grid-cols-12 gap-2 px-4 py-3 text-xs font-semibold text-white bg-gradient-to-r from-slate-800 to-slate-700">
             <div>Truck</div>
             <div>Origin</div>
             <div>Destination</div>
@@ -379,31 +398,31 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
             <div>F/P</div>
             <div>Length</div>
             <div>Weight</div>
-            <div>Search Back</div>
+            <div>Days Back</div>
             <div className="col-span-2"></div>
           </div>
 
           {/* Editable Search Row */}
-          <div className="grid grid-cols-12 gap-2 px-4 py-3 text-xs items-center bg-[#f0fdfa]">
+          <div className="grid grid-cols-12 gap-2 px-4 py-4 text-xs items-center bg-gradient-to-r from-slate-50 to-teal-50/30">
             {/* Truck Type with ANY/ONLY */}
             <div className="flex flex-col gap-1">
               <div className="flex gap-1">
                 <button
                   onClick={() => handleFilterChange('truckTypeMode', 'ANY')}
-                  className={`flex-1 px-2 py-0.5 text-xs font-bold rounded ${
+                  className={`flex-1 px-2 py-0.5 text-xs font-bold rounded-md transition-colors ${
                     filterValues.truckTypeMode === 'ANY'
-                      ? 'bg-[#064d51] text-white'
-                      : 'bg-white text-[#064d51] hover:bg-[#064d51]/10 border border-[#064d51]/20'
+                      ? 'bg-teal-600 text-white'
+                      : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                   }`}
                 >
                   ANY
                 </button>
                 <button
                   onClick={() => handleFilterChange('truckTypeMode', 'ONLY')}
-                  className={`flex-1 px-2 py-0.5 text-xs font-bold rounded ${
+                  className={`flex-1 px-2 py-0.5 text-xs font-bold rounded-md transition-colors ${
                     filterValues.truckTypeMode === 'ONLY'
-                      ? 'bg-[#064d51] text-white'
-                      : 'bg-white text-[#064d51] hover:bg-[#064d51]/10 border border-[#064d51]/20'
+                      ? 'bg-teal-600 text-white'
+                      : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                   }`}
                 >
                   ONLY
@@ -412,7 +431,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
               <select
                 value={filterValues.truckType || ''}
                 onChange={(e) => handleFilterChange('truckType', e.target.value)}
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white"
+                className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none"
               >
                 <option value="">Select Type</option>
                 {truckTypes.map((type) => (
@@ -429,7 +448,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
                 value={filterValues.origin || ''}
                 onChange={(e) => handleFilterChange('origin', e.target.value)}
                 disabled={loadingCities}
-                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded bg-white"
+                className="w-full px-2 py-1.5 text-xs border border-[#064d51]/20 rounded bg-white"
                 style={{ minHeight: '32px' }}
               >
                 <option value="">
@@ -449,7 +468,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
                 value={filterValues.destination || ''}
                 onChange={(e) => handleFilterChange('destination', e.target.value)}
                 disabled={loadingCities}
-                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded bg-white"
+                className="w-full px-2 py-1.5 text-xs border border-[#064d51]/20 rounded bg-white"
                 style={{ minHeight: '32px' }}
               >
                 <option value="">
@@ -469,7 +488,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
                 type="date"
                 value={filterValues.availDate || ''}
                 onChange={(e) => handleFilterChange('availDate', e.target.value)}
-                className="w-full px-2 py-1 text-xs bg-white border border-gray-300 rounded"
+                className="w-full px-2 py-1 text-xs bg-white border border-[#064d51]/20 rounded"
               />
             </div>
 
@@ -480,7 +499,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
                 value={filterValues.dhOrigin || ''}
                 onChange={(e) => handleFilterChange('dhOrigin', e.target.value)}
                 placeholder="km"
-                className="w-full px-2 py-1 text-xs bg-white border border-gray-300 rounded"
+                className="w-full px-2 py-1 text-xs bg-white border border-[#064d51]/20 rounded"
               />
             </div>
 
@@ -491,7 +510,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
                 value={filterValues.dhDestination || ''}
                 onChange={(e) => handleFilterChange('dhDestination', e.target.value)}
                 placeholder="km"
-                className="w-full px-2 py-1 text-xs bg-white border border-gray-300 rounded"
+                className="w-full px-2 py-1 text-xs bg-white border border-[#064d51]/20 rounded"
               />
             </div>
 
@@ -500,7 +519,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
               <select
                 value={filterValues.fullPartial || ''}
                 onChange={(e) => handleFilterChange('fullPartial', e.target.value)}
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white"
+                className="w-full px-2 py-1 text-xs border border-[#064d51]/20 rounded bg-white"
               >
                 <option value="">Both</option>
                 <option value="FULL">Full</option>
@@ -515,7 +534,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
                 value={filterValues.length || ''}
                 onChange={(e) => handleFilterChange('length', e.target.value)}
                 placeholder="m"
-                className="w-full px-2 py-1 text-xs bg-white border border-gray-300 rounded"
+                className="w-full px-2 py-1 text-xs bg-white border border-[#064d51]/20 rounded"
               />
             </div>
 
@@ -526,7 +545,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
                 value={filterValues.weight || ''}
                 onChange={(e) => handleFilterChange('weight', e.target.value)}
                 placeholder="kg"
-                className="w-full px-2 py-1 text-xs bg-white border border-gray-300 rounded"
+                className="w-full px-2 py-1 text-xs bg-white border border-[#064d51]/20 rounded"
               />
             </div>
 
@@ -537,7 +556,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
                 value={filterValues.searchBack || ''}
                 onChange={(e) => handleFilterChange('searchBack', e.target.value)}
                 placeholder="days"
-                className="w-full px-2 py-1 text-xs bg-white border border-gray-300 rounded"
+                className="w-full px-2 py-1 text-xs bg-white border border-[#064d51]/20 rounded"
               />
             </div>
 
@@ -545,45 +564,55 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
             <div className="col-span-2 flex gap-2 justify-end">
               <button
                 onClick={fetchLoads}
-                className="px-4 py-1.5 bg-[#064d51] text-white text-xs font-bold rounded-lg hover:bg-[#053d40] transition-colors"
+                className="px-4 py-2 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-xs font-bold rounded-lg hover:from-teal-700 hover:to-teal-600 transition-all shadow-sm flex items-center gap-1.5"
               >
-                🔍 SEARCH
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                Search
               </button>
               <button
                 onClick={handleFilterReset}
-                className="px-4 py-1.5 bg-rose-500 text-white text-xs font-bold rounded-lg hover:bg-rose-600 transition-colors"
+                className="px-4 py-2 bg-white text-slate-600 text-xs font-medium rounded-lg hover:bg-slate-100 transition-colors border border-slate-200"
               >
-                🗑️ CLEAR
+                Clear
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Results Summary */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-[#064d51]">
-            {loads.length} TOTAL RESULTS
-          </h3>
-          <DatStatusTabs
-            tabs={resultsTabs}
-            activeTab={activeFilter}
-            onTabChange={(key) => setActiveFilter(key as ResultsFilter)}
-          />
-        </div>
-      </div>
-
       {/* Results Section */}
-      <div>
-        <h4 className="text-sm font-bold text-gray-700 mb-2 uppercase">
-          {loads.length} {loads.length === 1 ? 'MATCH' : 'MATCHES'}
-        </h4>
+      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-teal-600 to-teal-500">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+            {loads.length} {loads.length === 1 ? 'Load' : 'Loads'} Found
+          </h3>
+          <div className="flex gap-2">
+            {resultsTabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveFilter(tab.key as ResultsFilter)}
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-colors ${
+                  activeFilter === tab.key
+                    ? 'bg-white text-teal-700'
+                    : 'bg-white/20 text-white hover:bg-white/30'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-        {/* Results Table - Matches SearchTrucksTab styling */}
-        <div className="bg-white border border-[#064d51]/20 rounded-xl overflow-visible shadow-sm">
+        {/* Results Table */}
+        <div className="overflow-x-auto">
           {/* Table Header */}
-          <div className="bg-gradient-to-r from-[#064d51] to-[#1e9c99] grid grid-cols-13 gap-2 px-4 py-3 rounded-t-xl text-xs font-semibold text-white">
+          <div className="bg-gradient-to-r from-slate-100 to-slate-50 grid grid-cols-13 gap-2 px-4 py-3 text-xs font-semibold text-slate-600 border-b border-slate-200">
             <div
               className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
               onClick={() => handleHeaderClick('createdAt')}
@@ -660,31 +689,41 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
 
           {/* Load Rows */}
           {loading ? (
-            <div className="p-8 text-center text-gray-500">Loading loads...</div>
+            <div className="p-12 text-center">
+              <div className="w-8 h-8 border-2 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+              <p className="text-sm text-slate-500">Loading loads...</p>
+            </div>
           ) : loads.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">No loads found. Try adjusting your filters.</div>
+            <div className="p-12 text-center">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+              </div>
+              <h3 className="text-sm font-medium text-slate-800 mb-1">No loads found</h3>
+              <p className="text-sm text-slate-500">Try adjusting your search filters</p>
+            </div>
           ) : (
             loads.map((load) => (
               <div
                 key={load.id}
-                className="grid grid-cols-13 gap-2 px-4 py-3 border-b border-[#064d51]/10 hover:bg-[#064d51]/5 cursor-pointer text-xs transition-colors"
-                style={{ color: '#2B2727' }}
+                className="grid grid-cols-13 gap-2 px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer text-xs transition-colors group"
               >
                 <div><DatAgeIndicator date={load.createdAt} /></div>
-                <div>{load.pickupDate ? new Date(load.pickupDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : 'N/A'}</div>
-                <div>{load.truckType || 'N/A'}</div>
-                <div>{load.fullPartial === 'FULL' ? 'F' : 'P'}</div>
-                <div>{load.dhToOriginKm || '—'}</div>
-                <div className="truncate">{load.pickupCity || 'N/A'}</div>
-                <div>{load.tripKm || '—'}</div>
-                <div className="truncate">{load.deliveryCity || 'N/A'}</div>
-                <div>{load.dhAfterDeliveryKm || '—'}</div>
-                <div className="truncate font-medium text-[#1e9c99] hover:underline cursor-pointer">
+                <div className="text-slate-700">{load.pickupDate ? new Date(load.pickupDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : 'N/A'}</div>
+                <div className="text-slate-700">{load.truckType || 'N/A'}</div>
+                <div className="text-slate-700">{load.fullPartial === 'FULL' ? 'F' : 'P'}</div>
+                <div className="text-slate-500">{load.dhToOriginKm || '—'}</div>
+                <div className="truncate font-medium text-slate-800">{load.pickupCity || 'N/A'}</div>
+                <div className="text-slate-500">{load.tripKm || '—'}</div>
+                <div className="truncate font-medium text-slate-800">{load.deliveryCity || 'N/A'}</div>
+                <div className="text-slate-500">{load.dhAfterDeliveryKm || '—'}</div>
+                <div className="truncate font-medium text-teal-600 hover:text-teal-700 hover:underline cursor-pointer">
                   {load.shipper?.name || 'Anonymous'}
                 </div>
-                <div>{load.shipperContactPhone || 'N/A'}</div>
-                <div>{load.lengthM ? `${load.lengthM}m` : 'N/A'}</div>
-                <div>{load.weight ? `${load.weight.toLocaleString()}kg` : 'N/A'}</div>
+                <div className="text-slate-600">{load.shipperContactPhone || 'N/A'}</div>
+                <div className="text-slate-600">{load.lengthM ? `${load.lengthM}m` : 'N/A'}</div>
+                <div className="text-slate-600">{load.weight ? `${load.weight.toLocaleString()}kg` : 'N/A'}</div>
               </div>
             ))
           )}

@@ -501,7 +501,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
               <div className="font-bold" style={{ color: '#00BCD4' }}>
                 {row.totalFareEtb?.toLocaleString() || value.toLocaleString()} ETB
               </div>
-              <div className="text-xs text-gray-600">
+              <div className="text-xs text-[#064d51]/70">
                 {row.baseFareEtb.toLocaleString()}+{row.perKmEtb.toLocaleString()}/km
               </div>
             </div>
@@ -545,39 +545,45 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
   ];
 
   return (
-    <div className="space-y-4">
-      {/* Header: NEW LOAD POST (left) and Status Tabs (right) */}
-      <div className="flex items-center justify-between mb-4">
-        {/* Left: NEW LOAD POST Button */}
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-slate-800">Post Loads</h2>
+          <p className="text-sm text-slate-500 mt-0.5">Create and manage your load postings</p>
+        </div>
         <button
           onClick={() => setShowNewLoadModal(!showNewLoadModal)}
-          className="px-5 py-2.5 bg-[#064d51] text-white rounded-lg hover:bg-[#053d40] transition-colors font-semibold text-sm shadow-md"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-teal-500 text-white rounded-xl hover:shadow-lg hover:shadow-teal-500/30 transition-all font-semibold text-sm shadow-md shadow-teal-500/25"
         >
-          + NEW LOAD POST
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          NEW LOAD POST
         </button>
+      </div>
 
-        {/* Right: Status Tabs */}
-        <div className="flex gap-2">
-          {statusTabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveStatus(tab.key as LoadStatus)}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                activeStatus === tab.key
-                  ? 'bg-[#064d51] text-white shadow-md'
-                  : 'bg-white text-[#064d51] hover:bg-[#064d51]/10 border border-[#064d51]/20'
-              }`}
-            >
-              {tab.label.toUpperCase()} {tab.count !== undefined ? tab.count : ''}
-            </button>
-          ))}
-        </div>
+      {/* Status Tabs */}
+      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-1.5 inline-flex gap-1">
+        {statusTabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveStatus(tab.key as LoadStatus)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+              activeStatus === tab.key
+                ? 'bg-gradient-to-r from-teal-600 to-teal-500 text-white shadow-md shadow-teal-500/25'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {tab.label} {tab.count !== undefined && <span className="ml-1 text-xs opacity-75">({tab.count})</span>}
+          </button>
+        ))}
       </div>
 
       {/* Table Structure */}
-      <div className="bg-white border border-[#064d51]/20 rounded-xl overflow-visible relative shadow-sm">
+      <div className="bg-white border border-slate-200/60 rounded-2xl overflow-visible relative shadow-sm">
         {/* Table Header - Teal Gradient */}
-        <div className="bg-gradient-to-r from-[#064d51] to-[#1e9c99] grid grid-cols-12 gap-2 px-4 py-3 rounded-t-xl text-xs font-semibold text-white relative">
+        <div className="bg-gradient-to-r from-teal-600 to-teal-500 grid grid-cols-12 gap-2 px-4 py-3 rounded-t-2xl text-xs font-semibold text-white relative">
           <div className="flex items-center gap-1 relative">
             <button
               onClick={() => setShowActionsMenu(!showActionsMenu)}
@@ -599,7 +605,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
                 {/* Dropdown Menu */}
                 <div
-                  className="absolute top-full left-0 mt-1 bg-white border border-[#064d51]/20 rounded-lg shadow-xl w-48"
+                  className="absolute top-full left-0 mt-1 bg-white border border-slate-200/60 rounded-xl shadow-xl w-48"
                   style={{ zIndex: 9999 }}
                 >
                   <button
@@ -607,7 +613,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       // Handle refresh action
                       setShowActionsMenu(false);
                     }}
-                    className="w-full text-left px-4 py-2.5 hover:bg-[#064d51]/5 flex items-center gap-2 text-sm text-[#064d51] border-b border-[#064d51]/10 transition-colors"
+                    className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2 text-sm text-slate-700 border-b border-slate-100 transition-colors rounded-t-xl"
                   >
                     <span>🔄</span> REFRESH
                   </button>
@@ -616,7 +622,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       // Handle rollover action
                       setShowActionsMenu(false);
                     }}
-                    className="w-full text-left px-4 py-2.5 hover:bg-[#064d51]/5 flex items-center gap-2 text-sm text-[#064d51] border-b border-[#064d51]/10 transition-colors"
+                    className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2 text-sm text-slate-700 border-b border-slate-100 transition-colors"
                   >
                     <span>📋</span> ROLLOVER
                   </button>
@@ -625,7 +631,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       // Handle cancel rollover action
                       setShowActionsMenu(false);
                     }}
-                    className="w-full text-left px-4 py-2.5 hover:bg-[#064d51]/5 flex items-center gap-2 text-sm text-[#064d51] border-b border-[#064d51]/10 transition-colors"
+                    className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2 text-sm text-slate-700 border-b border-slate-100 transition-colors"
                   >
                     CANCEL ROLLOVER
                   </button>
@@ -634,7 +640,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       // Handle delete action
                       setShowActionsMenu(false);
                     }}
-                    className="w-full text-left px-4 py-2.5 hover:bg-red-50 flex items-center gap-2 text-sm text-red-600 border-b border-[#064d51]/10 transition-colors"
+                    className="w-full text-left px-4 py-2.5 hover:bg-rose-50 flex items-center gap-2 text-sm text-rose-600 border-b border-slate-100 transition-colors"
                   >
                     <span>🗑️</span> DELETE
                   </button>
@@ -643,7 +649,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       // Handle unpost action
                       setShowActionsMenu(false);
                     }}
-                    className="w-full text-left px-4 py-2.5 hover:bg-[#064d51]/5 flex items-center gap-2 text-sm text-[#064d51] border-b border-[#064d51]/10 transition-colors"
+                    className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2 text-sm text-slate-700 border-b border-slate-100 transition-colors"
                   >
                     UNPOST
                   </button>
@@ -652,7 +658,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       // Handle keep action
                       setShowActionsMenu(false);
                     }}
-                    className="w-full text-left px-4 py-2.5 hover:bg-[#064d51]/5 flex items-center gap-2 text-sm text-[#064d51] border-b border-[#064d51]/10 transition-colors"
+                    className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2 text-sm text-slate-700 border-b border-slate-100 transition-colors"
                   >
                     <span>⭐</span> KEEP
                   </button>
@@ -661,7 +667,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       // Handle unkeep action
                       setShowActionsMenu(false);
                     }}
-                    className="w-full text-left px-4 py-2.5 hover:bg-[#064d51]/5 flex items-center gap-2 text-sm text-[#064d51] transition-colors"
+                    className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2 text-sm text-slate-700 transition-colors rounded-b-xl"
                   >
                     UNKEEP
                   </button>
@@ -740,7 +746,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
         {/* NEW POST FORM - Expands under header */}
         {showNewLoadModal && (
           <form onSubmit={handleSubmitNewLoad}>
-          <div className="border-b border-[#064d51]/20 p-4" style={{ backgroundColor: '#f0fdfa' }}>
+          <div className="border-b border-slate-100 p-6 bg-gradient-to-r from-slate-50 to-teal-50/30">
             {/* Form Fields Row - Skip Age and Status columns */}
             <div className="grid grid-cols-12 gap-2 mb-4">
               <div className="flex items-center gap-1 pt-5">
@@ -756,7 +762,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                   type="date"
                   value={newLoadForm.pickupDate}
                   onChange={(e) => handleFormChange('pickupDate', e.target.value)}
-                  className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                   style={{ color: '#2B2727' }}
                   required
                 />
@@ -773,7 +779,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                     }
                   }}
                   placeholder="Search city..."
-                  className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                   countryRestriction={['ET', 'DJ']}
                   types={['(cities)']}
                   required
@@ -791,7 +797,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                     }
                   }}
                   placeholder="Search city..."
-                  className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                   countryRestriction={['ET', 'DJ']}
                   types={['(cities)']}
                   required
@@ -803,7 +809,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                   type="text"
                   value={newLoadForm.pickupDockHours}
                   onChange={(e) => handleFormChange('pickupDockHours', e.target.value)}
-                  className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                   style={{ color: '#2B2727' }}
                   placeholder="9am-5pm"
                 />
@@ -813,7 +819,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                 <select
                   value={newLoadForm.truckType}
                   onChange={(e) => handleFormChange('truckType', e.target.value)}
-                  className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                   style={{ color: '#2B2727' }}
                   required
                 >
@@ -828,7 +834,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                 <select
                   value={newLoadForm.fullPartial}
                   onChange={(e) => handleFormChange('fullPartial', e.target.value)}
-                  className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                   style={{ color: '#2B2727' }}
                 >
                   <option>Full</option>
@@ -841,7 +847,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                   type="number"
                   value={newLoadForm.lengthM}
                   onChange={(e) => handleFormChange('lengthM', e.target.value)}
-                  className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                   style={{ color: '#2B2727' }}
                   placeholder="53"
                 />
@@ -852,7 +858,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                   type="number"
                   value={newLoadForm.weight}
                   onChange={(e) => handleFormChange('weight', e.target.value)}
-                  className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                   style={{ color: '#2B2727' }}
                   placeholder="45000"
                 />
@@ -863,7 +869,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                   type="tel"
                   value={newLoadForm.shipperContactPhone}
                   onChange={(e) => handleFormChange('shipperContactPhone', e.target.value)}
-                  className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                   style={{ color: '#2B2727' }}
                   placeholder="+251-9xx"
                 />
@@ -882,7 +888,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                   step="0.01"
                   value={newLoadForm.baseFareEtb}
                   onChange={(e) => handleFormChange('baseFareEtb', e.target.value)}
-                  className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                   style={{ color: '#2B2727' }}
                   placeholder="500"
                   required
@@ -896,7 +902,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                   step="0.01"
                   value={newLoadForm.perKmEtb}
                   onChange={(e) => handleFormChange('perKmEtb', e.target.value)}
-                  className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                   style={{ color: '#2B2727' }}
                   placeholder="15.50"
                   required
@@ -910,7 +916,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                   step="0.01"
                   value={newLoadForm.tripKm}
                   onChange={(e) => handleFormChange('tripKm', e.target.value)}
-                  className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                   style={{ color: '#2B2727' }}
                   placeholder="250"
                   required
@@ -925,7 +931,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                     : '0.00'}
                 </div>
                 {newLoadForm.baseFareEtb && newLoadForm.perKmEtb && newLoadForm.tripKm && (
-                  <div className="text-xs text-gray-600 mt-1">
+                  <div className="text-xs text-[#064d51]/70 mt-1">
                     RPK: {(parseFloat(newLoadForm.baseFareEtb) + (parseFloat(newLoadForm.perKmEtb) * parseFloat(newLoadForm.tripKm)) / parseFloat(newLoadForm.tripKm)).toFixed(2)} ETB/km
                   </div>
                 )}
@@ -937,12 +943,12 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
               {/* Commodity */}
               <div>
                 <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>
-                  Commodity <span className="text-gray-500">({newLoadForm.cargoDescription.length}/100 max char)</span>
+                  Commodity <span className="text-[#064d51]/60">({newLoadForm.cargoDescription.length}/100 max char)</span>
                 </label>
                 <textarea
                   value={newLoadForm.cargoDescription}
                   onChange={(e) => handleFormChange('cargoDescription', e.target.value)}
-                  className="w-full px-3 py-2 !bg-white border border-gray-400 rounded resize-none"
+                  className="w-full px-3 py-2 !bg-white border border-[#064d51]/30 rounded resize-none"
                   style={{ color: '#2B2727' }}
                   rows={3}
                   maxLength={100}
@@ -953,12 +959,12 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
               {/* Comments */}
               <div>
                 <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>
-                  Comments <span className="text-gray-500">({newLoadForm.specialInstructions.length}/70 max char)</span>
+                  Comments <span className="text-[#064d51]/60">({newLoadForm.specialInstructions.length}/70 max char)</span>
                 </label>
                 <textarea
                   value={newLoadForm.specialInstructions}
                   onChange={(e) => handleFormChange('specialInstructions', e.target.value)}
-                  className="w-full px-3 py-2 !bg-white border border-gray-400 rounded resize-none"
+                  className="w-full px-3 py-2 !bg-white border border-[#064d51]/30 rounded resize-none"
                   style={{ color: '#2B2727' }}
                   rows={3}
                   maxLength={70}
@@ -972,14 +978,14 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="flex-1 px-6 py-2.5 bg-[#064d51] text-white font-semibold rounded-lg hover:bg-[#053d40] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed shadow-md"
+                    className="flex-1 px-6 py-2.5 bg-gradient-to-r from-teal-600 to-teal-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-teal-500/30 transition-all disabled:from-slate-400 disabled:to-slate-400 disabled:shadow-none disabled:cursor-not-allowed shadow-md shadow-teal-500/25"
                   >
                     {submitting ? 'POSTING...' : '+ POST'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowNewLoadModal(false)}
-                    className="px-4 py-2.5 bg-[#064d51]/10 text-[#064d51] rounded-lg hover:bg-[#064d51]/20 transition-colors font-bold border border-[#064d51]/20"
+                    className="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-colors font-bold border border-slate-200"
                   >
                     ✕
                   </button>
@@ -992,16 +998,26 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
         {/* Load Rows */}
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading loads...</div>
+          <div className="p-12 text-center">
+            <div className="w-8 h-8 border-3 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-slate-500">Loading loads...</p>
+          </div>
         ) : loads.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">No loads found. Click NEW LOAD POST to create one.</div>
+          <div className="p-12 text-center">
+            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </div>
+            <h3 className="text-slate-700 font-medium mb-1">No loads found</h3>
+            <p className="text-slate-500 text-sm">Click NEW LOAD POST to create your first load</p>
+          </div>
         ) : (
           loads.map((load) => (
             <div key={load.id}>
               {/* Load Row - Clickable */}
               <div
-                className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-[#064d51]/10 hover:bg-[#064d51]/5 cursor-pointer text-xs transition-colors"
-                style={{ color: '#2B2727' }}
+                className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer text-xs transition-colors text-slate-700"
                 onClick={() => {
                   if (expandedLoadId === load.id) {
                     setExpandedLoadId(null);
@@ -1029,10 +1045,10 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                 <div><DatAgeIndicator date={load.createdAt} /></div>
                 <div>
                   <span className={`
-                    px-2.5 py-1 rounded-md text-xs font-bold uppercase
-                    ${load.status === 'POSTED' ? 'bg-emerald-500 text-white' : ''}
-                    ${load.status === 'UNPOSTED' ? 'bg-[#064d51]/10 text-[#064d51]' : ''}
-                    ${load.status === 'EXPIRED' ? 'bg-rose-500 text-white' : ''}
+                    px-2.5 py-1 rounded-full text-xs font-medium
+                    ${load.status === 'POSTED' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : ''}
+                    ${load.status === 'UNPOSTED' ? 'bg-slate-50 text-slate-600 border border-slate-200' : ''}
+                    ${load.status === 'EXPIRED' ? 'bg-rose-50 text-rose-700 border border-rose-200' : ''}
                   `}>
                     {load.status}
                   </span>
@@ -1067,7 +1083,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                           type="date"
                           value={editingLoad.pickupDate ? new Date(editingLoad.pickupDate).toISOString().split('T')[0] : ''}
                           onChange={(e) => handleEditFormChange('pickupDate', e.target.value)}
-                          className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                          className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                           style={{ color: '#2B2727' }}
                           required
                         />
@@ -1083,7 +1099,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                             }
                           }}
                           placeholder="Search city..."
-                          className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                          className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                           countryRestriction={['ET', 'DJ']}
                           types={['(cities)']}
                           required
@@ -1100,7 +1116,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                             }
                           }}
                           placeholder="Search city..."
-                          className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                          className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                           countryRestriction={['ET', 'DJ']}
                           types={['(cities)']}
                           required
@@ -1112,7 +1128,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                           type="text"
                           value={editingLoad.pickupDockHours || ''}
                           onChange={(e) => handleEditFormChange('pickupDockHours', e.target.value)}
-                          className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                          className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                           style={{ color: '#2B2727' }}
                           placeholder="9am-5pm"
                         />
@@ -1122,7 +1138,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                         <select
                           value={editingLoad.truckType || 'Reefer'}
                           onChange={(e) => handleEditFormChange('truckType', e.target.value)}
-                          className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                          className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                           style={{ color: '#2B2727' }}
                           required
                         >
@@ -1137,7 +1153,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                         <select
                           value={editingLoad.fullPartial || 'Full'}
                           onChange={(e) => handleEditFormChange('fullPartial', e.target.value)}
-                          className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                          className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                           style={{ color: '#2B2727' }}
                         >
                           <option>Full</option>
@@ -1150,7 +1166,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                           type="number"
                           value={editingLoad.lengthM || ''}
                           onChange={(e) => handleEditFormChange('lengthM', e.target.value)}
-                          className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                          className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                           style={{ color: '#2B2727' }}
                           placeholder="53"
                         />
@@ -1161,7 +1177,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                           type="number"
                           value={editingLoad.weight || ''}
                           onChange={(e) => handleEditFormChange('weight', e.target.value)}
-                          className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                          className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                           style={{ color: '#2B2727' }}
                           placeholder="45000"
                         />
@@ -1172,7 +1188,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                           type="tel"
                           value={editingLoad.shipperContactPhone || ''}
                           onChange={(e) => handleEditFormChange('shipperContactPhone', e.target.value)}
-                          className="w-full px-2 py-1 text-xs !bg-white border border-gray-400 rounded"
+                          className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                           style={{ color: '#2B2727' }}
                           placeholder="+251-9xx"
                         />
@@ -1183,12 +1199,12 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                     <div className="grid grid-cols-3 gap-4">
                       <div>
                         <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>
-                          Commodity <span className="text-gray-500">({(editingLoad.cargoDescription || '').length}/100 max char)</span>
+                          Commodity <span className="text-[#064d51]/60">({(editingLoad.cargoDescription || '').length}/100 max char)</span>
                         </label>
                         <textarea
                           value={editingLoad.cargoDescription || ''}
                           onChange={(e) => handleEditFormChange('cargoDescription', e.target.value)}
-                          className="w-full px-3 py-2 !bg-white border border-gray-400 rounded resize-none"
+                          className="w-full px-3 py-2 !bg-white border border-[#064d51]/30 rounded resize-none"
                           style={{ color: '#2B2727' }}
                           rows={3}
                           maxLength={100}
@@ -1197,12 +1213,12 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       </div>
                       <div>
                         <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>
-                          Comments <span className="text-gray-500">({(editingLoad.specialInstructions || '').length}/70 max char)</span>
+                          Comments <span className="text-[#064d51]/60">({(editingLoad.specialInstructions || '').length}/70 max char)</span>
                         </label>
                         <textarea
                           value={editingLoad.specialInstructions || ''}
                           onChange={(e) => handleEditFormChange('specialInstructions', e.target.value)}
-                          className="w-full px-3 py-2 !bg-white border border-gray-400 rounded resize-none"
+                          className="w-full px-3 py-2 !bg-white border border-[#064d51]/30 rounded resize-none"
                           style={{ color: '#2B2727' }}
                           rows={3}
                           maxLength={70}
@@ -1237,15 +1253,15 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
               {/* Expanded Details - Shows when clicked but not editing */}
               {expandedLoadId === load.id && (!editingLoad || editingLoad.id !== load.id) && (
-                <div className="border border-[#064d51]/20 p-4 rounded-b-lg" style={{ backgroundColor: '#f0fdfa' }}>
-                  <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                <div className="border-t border-slate-100 p-6 bg-gradient-to-r from-slate-50 to-teal-50/30">
+                  <div className="grid grid-cols-2 gap-6 text-sm mb-6">
                     <div>
-                      <div className="font-medium mb-1" style={{ color: '#2B2727' }}>Commodity</div>
-                      <div style={{ color: '#2B2727' }}>{load.cargoDescription || 'N/A'}</div>
+                      <div className="font-medium mb-1 text-slate-700">Commodity</div>
+                      <div className="text-slate-600">{load.cargoDescription || 'N/A'}</div>
                     </div>
                     <div>
-                      <div className="font-medium mb-1" style={{ color: '#2B2727' }}>Comments</div>
-                      <div style={{ color: '#2B2727' }}>{load.specialInstructions || 'N/A'}</div>
+                      <div className="font-medium mb-1 text-slate-700">Comments</div>
+                      <div className="text-slate-600">{load.specialInstructions || 'N/A'}</div>
                     </div>
                   </div>
 
@@ -1257,25 +1273,25 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       </div>
                       <div className="grid grid-cols-4 gap-3 text-xs">
                         <div>
-                          <div className="text-gray-600 mb-1">Base Fare</div>
+                          <div className="text-[#064d51]/70 mb-1">Base Fare</div>
                           <div className="font-bold" style={{ color: '#2B2727' }}>
                             {load.baseFareEtb?.toLocaleString()} ETB
                           </div>
                         </div>
                         <div>
-                          <div className="text-gray-600 mb-1">Per-KM Rate</div>
+                          <div className="text-[#064d51]/70 mb-1">Per-KM Rate</div>
                           <div className="font-bold" style={{ color: '#2B2727' }}>
                             {load.perKmEtb?.toLocaleString()} ETB/km
                           </div>
                         </div>
                         <div>
-                          <div className="text-gray-600 mb-1">Trip Distance</div>
+                          <div className="text-[#064d51]/70 mb-1">Trip Distance</div>
                           <div className="font-bold" style={{ color: '#2B2727' }}>
                             {load.tripKm?.toLocaleString()} km
                           </div>
                         </div>
                         <div>
-                          <div className="text-gray-600 mb-1">Total Fare</div>
+                          <div className="text-[#064d51]/70 mb-1">Total Fare</div>
                           <div className="font-bold text-lg" style={{ color: '#1e9c99' }}>
                             {load.totalFareEtb?.toLocaleString() || load.rate?.toLocaleString()} ETB
                           </div>
@@ -1283,13 +1299,13 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       </div>
                       <div className="mt-2 pt-2 border-t border-[#1e9c99]/30 grid grid-cols-2 gap-3 text-xs">
                         <div>
-                          <span className="text-gray-600">Revenue Per KM (RPK):</span>
+                          <span className="text-[#064d51]/70">Revenue Per KM (RPK):</span>
                           <span className="font-semibold ml-2" style={{ color: '#2B2727' }}>
                             {((load.totalFareEtb || load.rate) / load.tripKm).toFixed(2)} ETB/km
                           </span>
                         </div>
                         <div>
-                          <span className="text-gray-600">Revenue Per Mile (RPM):</span>
+                          <span className="text-[#064d51]/70">Revenue Per Mile (RPM):</span>
                           <span className="font-semibold ml-2" style={{ color: '#2B2727' }}>
                             {(((load.totalFareEtb || load.rate) / load.tripKm) * 0.621371).toFixed(2)} ETB/mi
                           </span>
@@ -1297,22 +1313,22 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       </div>
                       {load.dhToOriginKm && load.dhAfterDeliveryKm && (
                         <div className="mt-2 pt-2 border-t border-[#1e9c99]/30 text-xs">
-                          <div className="text-gray-600 mb-1">Including Deadhead:</div>
+                          <div className="text-[#064d51]/70 mb-1">Including Deadhead:</div>
                           <div className="grid grid-cols-3 gap-3">
                             <div>
-                              <span className="text-gray-600">DH Origin:</span>
+                              <span className="text-[#064d51]/70">DH Origin:</span>
                               <span className="font-semibold ml-2" style={{ color: '#2B2727' }}>
                                 {load.dhToOriginKm?.toLocaleString()} km
                               </span>
                             </div>
                             <div>
-                              <span className="text-gray-600">DH Destination:</span>
+                              <span className="text-[#064d51]/70">DH Destination:</span>
                               <span className="font-semibold ml-2" style={{ color: '#2B2727' }}>
                                 {load.dhAfterDeliveryKm?.toLocaleString()} km
                               </span>
                             </div>
                             <div>
-                              <span className="text-gray-600">True RPK:</span>
+                              <span className="text-[#064d51]/70">True RPK:</span>
                               <span className="font-semibold ml-2" style={{ color: '#2B2727' }}>
                                 {((load.totalFareEtb || load.rate) / (parseFloat(load.tripKm) + parseFloat(load.dhToOriginKm || 0) + parseFloat(load.dhAfterDeliveryKm || 0))).toFixed(2)} ETB/km
                               </span>
@@ -1337,7 +1353,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       </div>
                       <div className="grid grid-cols-2 gap-3 text-xs mb-3">
                         <div>
-                          <div className="text-gray-600 mb-1">Tracking URL</div>
+                          <div className="text-[#064d51]/70 mb-1">Tracking URL</div>
                           <div className="flex items-center gap-2">
                             <input
                               type="text"
@@ -1360,7 +1376,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                           </div>
                         </div>
                         <div>
-                          <div className="text-gray-600 mb-1">Started</div>
+                          <div className="text-[#064d51]/70 mb-1">Started</div>
                           <div className="font-semibold text-gray-800">
                             {load.trackingStartedAt ? new Date(load.trackingStartedAt).toLocaleString() : 'N/A'}
                           </div>
@@ -1403,13 +1419,13 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                   )}
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2 justify-end items-center">
+                  <div className="flex gap-2 justify-end items-center pt-4 border-t border-slate-100">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleCopy(load);
                       }}
-                      className="px-4 py-2 bg-[#064d51]/10 text-[#064d51] text-sm font-semibold rounded-lg hover:bg-[#064d51]/20 transition-colors border border-[#064d51]/20"
+                      className="px-4 py-2 bg-slate-100 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-200 transition-colors border border-slate-200"
                     >
                       COPY
                     </button>
@@ -1418,7 +1434,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                         e.stopPropagation();
                         handleEdit(load);
                       }}
-                      className="px-4 py-2 bg-[#1e9c99] text-white text-sm font-semibold rounded-lg hover:bg-[#178f8c] transition-colors"
+                      className="px-4 py-2 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-sm font-medium rounded-xl hover:shadow-lg hover:shadow-teal-500/30 transition-all shadow-md shadow-teal-500/25"
                     >
                       EDIT
                     </button>
@@ -1427,7 +1443,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                         e.stopPropagation();
                         handleDelete(load);
                       }}
-                      className="px-4 py-2 bg-rose-500 text-white text-sm font-semibold rounded-lg hover:bg-rose-600 transition-colors"
+                      className="px-4 py-2 bg-rose-50 text-rose-600 text-sm font-medium rounded-xl hover:bg-rose-100 transition-colors border border-rose-200"
                     >
                       DELETE
                     </button>
@@ -1436,11 +1452,13 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                         e.stopPropagation();
                         handleSearchTrucks(load);
                       }}
-                      className="px-4 py-2 bg-[#064d51] text-white text-sm font-semibold rounded-lg hover:bg-[#053d40] transition-colors flex items-center gap-2"
+                      className="px-4 py-2 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-xl hover:bg-indigo-100 transition-colors border border-indigo-200 flex items-center gap-2"
                       title="Search for matching trucks"
                     >
-                      <span>🔍</span>
-                      <span className="bg-white text-[#064d51] px-2 py-0.5 rounded-full text-xs font-bold">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      <span className="bg-indigo-600 text-white px-2 py-0.5 rounded-full text-xs font-bold">
                         {load.matchCount || 0}
                       </span>
                     </button>

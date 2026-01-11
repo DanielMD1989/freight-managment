@@ -186,7 +186,7 @@ export default function DocumentUpload({
     <div className="space-y-4">
       {/* Label */}
       {label && (
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="block text-sm font-medium text-[#064d51]/80">
           {label}
         </label>
       )}
@@ -201,10 +201,10 @@ export default function DocumentUpload({
           relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer
           transition-colors
           ${isDragging
-            ? "border-blue-500 bg-blue-50"
+            ? "border-[#1e9c99] bg-[#1e9c99]/10"
             : selectedFile
             ? "border-green-500 bg-green-50"
-            : "border-gray-300 bg-gray-50 hover:border-gray-400"
+            : "border-[#064d51]/30 bg-[#f0fdfa] hover:border-[#1e9c99]"
           }
         `}
       >
@@ -219,7 +219,7 @@ export default function DocumentUpload({
         <div className="space-y-2">
           {/* Icon */}
           <svg
-            className="mx-auto h-12 w-12 text-gray-400"
+            className="mx-auto h-12 w-12 text-[#064d51]/50"
             stroke="currentColor"
             fill="none"
             viewBox="0 0 48 48"
@@ -238,23 +238,23 @@ export default function DocumentUpload({
               <p className="text-sm font-medium text-green-600">
                 {selectedFile.name}
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-[#064d51]/60">
                 {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
               </p>
             </div>
           ) : (
             <div>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-[#064d51]/70">
                 <span className="font-semibold">Click to upload</span> or drag and drop
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-[#064d51]/60">
                 PDF, JPG, or PNG (max 10MB)
               </p>
             </div>
           )}
 
           {helperText && !selectedFile && (
-            <p className="text-xs text-gray-500 mt-2">{helperText}</p>
+            <p className="text-xs text-[#064d51]/60 mt-2">{helperText}</p>
           )}
         </div>
       </div>
@@ -263,12 +263,12 @@ export default function DocumentUpload({
       {uploading && (
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Uploading...</span>
-            <span className="text-gray-600">{uploadProgress}%</span>
+            <span className="text-[#064d51]/70">Uploading...</span>
+            <span className="text-[#064d51]/70">{uploadProgress}%</span>
           </div>
-          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div className="h-2 bg-[#064d51]/10 rounded-full overflow-hidden">
             <div
-              className="h-full bg-blue-600 transition-all duration-300"
+              className="h-full bg-[#1e9c99] transition-all duration-300"
               style={{ width: `${uploadProgress}%` }}
             />
           </div>
@@ -326,7 +326,7 @@ export default function DocumentUpload({
         <button
           onClick={handleUpload}
           disabled={uploading}
-          className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full rounded-md bg-[#1e9c99] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#064d51] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {uploading ? "Uploading..." : `Upload ${formatDocumentType(documentType)}`}
         </button>

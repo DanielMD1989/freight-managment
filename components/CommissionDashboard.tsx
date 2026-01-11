@@ -91,10 +91,10 @@ export default function CommissionDashboard() {
     return (
       <div className="bg-white rounded-lg shadow p-6">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-8 bg-[#064d51]/10 rounded w-1/4 mb-4"></div>
           <div className="space-y-3">
-            <div className="h-4 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+            <div className="h-4 bg-[#064d51]/10 rounded"></div>
+            <div className="h-4 bg-[#064d51]/10 rounded w-5/6"></div>
           </div>
         </div>
       </div>
@@ -159,7 +159,7 @@ export default function CommissionDashboard() {
       {/* Wallet Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Total Balance */}
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
+        <div className="bg-gradient-to-br from-[#1e9c99] to-[#064d51] rounded-lg shadow-lg p-6 text-white">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium opacity-90">Total Balance</h3>
             <svg
@@ -189,23 +189,23 @@ export default function CommissionDashboard() {
         {balance.wallets.map((wallet) => (
           <div
             key={wallet.id}
-            className="bg-white rounded-lg shadow border border-gray-200 p-6"
+            className="bg-white rounded-lg shadow border border-[#064d51]/15 p-6"
           >
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-600">
+              <h3 className="text-sm font-medium text-[#064d51]/70">
                 {wallet.type === 'SHIPPER_WALLET'
                   ? 'Shipper Wallet'
                   : 'Carrier Wallet'}
               </h3>
-              <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded">
+              <span className="px-2 py-1 bg-[#064d51]/10 text-[#064d51]/70 text-xs font-medium rounded">
                 {wallet.currency}
               </span>
             </div>
-            <p className="text-2xl font-bold text-gray-900">
+            <p className="text-2xl font-bold text-[#064d51]">
               {formatCurrency(wallet.balance)}
             </p>
             {wallet.lastTransactionAt && (
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-[#064d51]/60 mt-1">
                 Last transaction: {formatDate(wallet.lastTransactionAt)}
               </p>
             )}
@@ -213,13 +213,13 @@ export default function CommissionDashboard() {
         ))}
 
         {/* Recent Commissions */}
-        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow border border-[#064d51]/15 p-6">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-600">
+            <h3 className="text-sm font-medium text-[#064d51]/70">
               Recent Commissions
             </h3>
             <svg
-              className="w-8 h-8 text-gray-400"
+              className="w-8 h-8 text-[#064d51]/50"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -232,18 +232,18 @@ export default function CommissionDashboard() {
               />
             </svg>
           </div>
-          <p className="text-2xl font-bold text-gray-900">
+          <p className="text-2xl font-bold text-[#064d51]">
             {balance.recentCommissionsCount}
           </p>
-          <p className="text-xs text-gray-500 mt-1">Last 30 days</p>
+          <p className="text-xs text-[#064d51]/60 mt-1">Last 30 days</p>
         </div>
       </div>
 
       {/* Transaction History */}
-      <div className="bg-white rounded-lg shadow border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
+      <div className="bg-white rounded-lg shadow border border-[#064d51]/15">
+        <div className="px-6 py-4 border-b border-[#064d51]/15">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-lg font-semibold text-[#064d51]">
               Transaction History
             </h2>
 
@@ -256,8 +256,8 @@ export default function CommissionDashboard() {
                     onClick={() => setSelectedType(type)}
                     className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
                       selectedType === type
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'bg-[#1e9c99] text-white'
+                        : 'bg-[#064d51]/10 text-[#064d51]/70 hover:bg-[#064d51]/20'
                     }`}
                   >
                     {type === 'all' ? 'All' : type}
@@ -268,11 +268,11 @@ export default function CommissionDashboard() {
           </div>
         </div>
 
-        <div className="divide-y divide-gray-200">
+        <div className="divide-y divide-[#064d51]/10">
           {transactions.length === 0 ? (
             <div className="px-6 py-12 text-center">
               <svg
-                className="mx-auto h-12 w-12 text-gray-400"
+                className="mx-auto h-12 w-12 text-[#064d51]/40"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -284,13 +284,13 @@ export default function CommissionDashboard() {
                   d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                 />
               </svg>
-              <p className="mt-2 text-sm text-gray-500">No transactions found</p>
+              <p className="mt-2 text-sm text-[#064d51]/60">No transactions found</p>
             </div>
           ) : (
             transactions.map((tx) => (
               <div
                 key={tx.id}
-                className="px-6 py-4 hover:bg-gray-50 transition-colors"
+                className="px-6 py-4 hover:bg-[#f0fdfa] transition-colors"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
@@ -305,16 +305,16 @@ export default function CommissionDashboard() {
                       {tx.loadId && (
                         <a
                           href={`/shipper/loads/${tx.loadId}`}
-                          className="text-xs text-blue-600 hover:underline"
+                          className="text-xs text-[#1e9c99] hover:underline"
                         >
                           Load #{tx.loadId.slice(0, 8)}
                         </a>
                       )}
                     </div>
-                    <p className="text-sm text-gray-900 font-medium">
+                    <p className="text-sm text-[#064d51] font-medium">
                       {tx.description}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-[#064d51]/60 mt-1">
                       {formatDate(tx.createdAt)}
                       {tx.reference && ` • Ref: ${tx.reference}`}
                     </p>
