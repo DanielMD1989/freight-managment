@@ -114,6 +114,8 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       const params = new URLSearchParams();
       params.append('status', activeStatus);
       params.append('myLoads', 'true'); // Only fetch user's own loads
+      params.append('sortBy', 'postedAt'); // Sort by most recently posted
+      params.append('sortOrder', 'desc'); // Newest first
 
       const response = await fetch(`/api/loads?${params.toString()}`);
       const data = await response.json();
