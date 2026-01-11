@@ -675,7 +675,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
           {/* Results Table - DH-O and DH-D hidden from shipper */}
           <div className="bg-white border border-[#064d51]/20 rounded-xl overflow-visible shadow-sm">
             {/* Table Header */}
-            <div className="bg-gradient-to-r from-[#064d51] to-[#1e9c99] grid grid-cols-11 gap-2 px-4 py-3 rounded-t-xl text-xs font-semibold text-white">
+            <div className="bg-gradient-to-r from-[#064d51] to-[#1e9c99] grid grid-cols-12 gap-2 px-4 py-3 rounded-t-xl text-xs font-semibold text-white">
               <div
                 className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
                 onClick={() => handleHeaderClick('createdAt')}
@@ -740,6 +740,9 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
               >
                 Weight {sortField === 'maxWeight' && (sortOrder === 'asc' ? '↑' : '↓')}
               </div>
+              <div className="px-1 py-0.5">
+                Actions
+              </div>
             </div>
 
             {/* Truck Rows */}
@@ -751,22 +754,33 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
               trucks.map((truck) => (
                 <div
                   key={truck.id}
-                  className="grid grid-cols-11 gap-2 px-4 py-3 border-b border-[#064d51]/10 hover:bg-[#064d51]/5 cursor-default text-xs transition-colors"
+                  className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-[#064d51]/10 hover:bg-[#064d51]/5 cursor-default text-xs transition-colors"
                   style={{ color: '#2B2727' }}
                 >
-                  <div>{truck.age || '00:07'}</div>
+                  <div><DatAgeIndicator date={truck.postedAt || truck.createdAt} /></div>
                   <div>{truck.availableDate ? new Date(truck.availableDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : 'Now'}</div>
                   <div>{getTruckTypeLabel(truck.truckType)}</div>
                   <div>{truck.fullPartial || 'F'}</div>
-                  <div className="truncate">{truck.currentCity || 'Tacoma, WA'}</div>
-                  <div>—</div>
-                  <div className="truncate">{truck.destinationCity || 'Anywhere'}</div>
+                  <div className="truncate">{truck.currentCity || truck.originCity?.name || 'N/A'}</div>
+                  <div>→</div>
+                  <div className="truncate">{truck.destinationCity?.name || 'Anywhere'}</div>
                   <div className="truncate text-[#1e9c99] hover:underline cursor-pointer font-medium">
-                    {truck.carrier?.name || 'Land Lines Inc'}
+                    {truck.carrier?.name || 'Unknown'}
                   </div>
-                  <div>{truck.contactPhone || '(630) 410-8194'}</div>
-                  <div>{truck.lengthM ? `${truck.lengthM}ft` : '53 ft'}</div>
-                  <div>{truck.maxWeight ? `${truck.maxWeight.toLocaleString()}` : '50,000 lbs'}</div>
+                  <div>{truck.contactPhone || '-'}</div>
+                  <div>{truck.lengthM ? `${truck.lengthM}m` : '-'}</div>
+                  <div>{truck.maxWeight ? `${truck.maxWeight.toLocaleString()} kg` : '-'}</div>
+                  <div>
+                    <button
+                      onClick={() => {
+                        setSelectedTruckPosting(truck);
+                        setShowBookingModal(true);
+                      }}
+                      className="px-3 py-1 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-xs font-semibold rounded-lg hover:from-teal-700 hover:to-teal-600 transition-all shadow-sm"
+                    >
+                      BOOK
+                    </button>
+                  </div>
                 </div>
               ))
             )}

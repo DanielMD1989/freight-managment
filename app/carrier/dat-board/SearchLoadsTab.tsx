@@ -10,6 +10,7 @@
 import React, { useState, useEffect } from 'react';
 import { DatStatusTabs, DatAgeIndicator, DatSavedSearches, DatEditSearchModal } from '@/components/dat-ui';
 import { DatStatusTab, SavedSearch, SavedSearchCriteria } from '@/types/dat-ui';
+import LoadRequestModal from './LoadRequestModal';
 
 interface SearchLoadsTabProps {
   user: any;
@@ -51,6 +52,10 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
   const [activeSavedSearchId, setActiveSavedSearchId] = useState<string | null>(null);
   const [loadingSavedSearches, setLoadingSavedSearches] = useState(false);
   const [editingSearch, setEditingSearch] = useState<SavedSearch | null>(null);
+
+  // Load request modal state
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [selectedLoad, setSelectedLoad] = useState<any | null>(null);
 
   // Search form state
   const [filterValues, setFilterValues] = useState<Record<string, any>>({
@@ -754,7 +759,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
         {/* Results Table */}
         <div className="overflow-x-auto">
           {/* Table Header */}
-          <div className="bg-gradient-to-r from-slate-100 to-slate-50 grid grid-cols-13 gap-2 px-4 py-3 text-xs font-semibold text-slate-600 border-b border-slate-200">
+          <div className="bg-gradient-to-r from-slate-100 to-slate-50 grid grid-cols-14 gap-2 px-4 py-3 text-xs font-semibold text-slate-600 border-b border-slate-200">
             <div
               className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
               onClick={() => handleHeaderClick('createdAt')}
@@ -827,6 +832,9 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
             >
               Weight {sortField === 'weight' && (sortOrder === 'asc' ? '↑' : '↓')}
             </div>
+            <div className="px-1 py-0.5">
+              Action
+            </div>
           </div>
 
           {/* Load Rows */}
@@ -849,7 +857,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
             loads.map((load) => (
               <div
                 key={load.id}
-                className="grid grid-cols-13 gap-2 px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-default text-xs transition-colors group"
+                className="grid grid-cols-14 gap-2 px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-default text-xs transition-colors group"
               >
                 <div><DatAgeIndicator date={load.postedAt || load.createdAt} /></div>
                 <div className="text-slate-700">{load.pickupDate ? new Date(load.pickupDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : 'N/A'}</div>
@@ -866,6 +874,17 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
                 <div className="text-slate-600">{load.shipperContactPhone || 'N/A'}</div>
                 <div className="text-slate-600">{load.lengthM ? `${load.lengthM}m` : 'N/A'}</div>
                 <div className="text-slate-600">{load.weight ? `${load.weight.toLocaleString()}kg` : 'N/A'}</div>
+                <div>
+                  <button
+                    onClick={() => {
+                      setSelectedLoad(load);
+                      setShowRequestModal(true);
+                    }}
+                    className="px-3 py-1 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-xs font-semibold rounded-lg hover:from-teal-700 hover:to-teal-600 transition-all shadow-sm"
+                  >
+                    REQUEST
+                  </button>
+                </div>
               </div>
             ))
           )}
@@ -880,6 +899,16 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
         onSave={handleSaveEditedSearch}
         cities={ethiopianCities.map((city) => ({ name: city.name, region: city.region }))}
         type="LOADS"
+      />
+
+      {/* Load Request Modal */}
+      <LoadRequestModal
+        isOpen={showRequestModal}
+        onClose={() => {
+          setShowRequestModal(false);
+          setSelectedLoad(null);
+        }}
+        load={selectedLoad}
       />
     </div>
   );

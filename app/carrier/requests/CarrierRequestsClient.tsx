@@ -76,8 +76,8 @@ export default function CarrierRequestsClient({ requests: initialRequests }: Pro
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          approve,
-          notes: responseNotes[requestId] || undefined,
+          action: approve ? 'APPROVE' : 'REJECT',
+          responseNotes: responseNotes[requestId] || undefined,
         }),
         credentials: 'include',
       });
