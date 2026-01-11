@@ -266,7 +266,9 @@ export default function DatDataTable<T = any>({
                     className={`
                       group
                       transition-all duration-150
-                      ${isSelected ? 'bg-teal-50/70' : 'hover:bg-slate-50/80'}
+                      ${isExpanded ? 'bg-teal-50 border-l-4 border-l-teal-500' : ''}
+                      ${isSelected && !isExpanded ? 'bg-teal-50/70' : ''}
+                      ${!isSelected && !isExpanded ? 'hover:bg-slate-50/80' : ''}
                       ${onRowClick || expandable ? 'cursor-default' : ''}
                     `}
                     onClick={() => {

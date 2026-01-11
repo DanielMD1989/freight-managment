@@ -990,7 +990,11 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
             <div key={load.id}>
               {/* Load Row - Clickable */}
               <div
-                className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-default text-xs transition-colors text-slate-700"
+                className={`grid grid-cols-12 gap-2 px-4 py-3 border-b cursor-default text-xs transition-colors ${
+                  expandedLoadId === load.id
+                    ? 'bg-teal-50 border-l-4 border-l-teal-500 border-b-teal-200'
+                    : 'border-slate-100 hover:bg-slate-50 text-slate-700'
+                }`}
                 onClick={() => {
                   if (expandedLoadId === load.id) {
                     setExpandedLoadId(null);
