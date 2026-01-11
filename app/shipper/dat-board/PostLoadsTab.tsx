@@ -1229,14 +1229,45 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
               {/* Expanded Details - Shows when clicked but not editing */}
               {expandedLoadId === load.id && (!editingLoad || editingLoad.id !== load.id) && (
                 <div className="border-t border-slate-100 p-6 bg-gradient-to-r from-slate-50 to-teal-50/30">
-                  <div className="grid grid-cols-2 gap-6 text-sm mb-6">
-                    <div>
+                  {/* Row with Commodity, Comments, and Action Buttons */}
+                  <div className="flex items-start gap-6 text-sm mb-6">
+                    <div className="flex-1">
                       <div className="font-medium mb-1 text-slate-700">Commodity</div>
                       <div className="text-slate-600">{load.cargoDescription || 'N/A'}</div>
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <div className="font-medium mb-1 text-slate-700">Comments</div>
                       <div className="text-slate-600">{load.specialInstructions || 'N/A'}</div>
+                    </div>
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCopy(load);
+                        }}
+                        className="px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-200 transition-colors border border-slate-200 cursor-pointer"
+                      >
+                        COPY
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(load);
+                        }}
+                        className="px-3 py-1.5 bg-teal-600 text-white text-xs font-semibold rounded-lg hover:bg-teal-700 transition-all cursor-pointer"
+                      >
+                        EDIT
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(load);
+                        }}
+                        className="px-3 py-1.5 bg-rose-500 text-white text-xs font-semibold rounded-lg hover:bg-rose-600 transition-all cursor-pointer"
+                      >
+                        DELETE
+                      </button>
                     </div>
                   </div>
 
@@ -1393,35 +1424,8 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                     </div>
                   )}
 
-                  {/* Action Buttons - Right Side */}
+                  {/* Search Trucks Button */}
                   <div className="flex gap-2 justify-end items-center pt-4 border-t border-slate-100">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCopy(load);
-                      }}
-                      className="px-4 py-2 bg-slate-100 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-200 transition-colors border border-slate-200 cursor-pointer"
-                    >
-                      COPY
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(load);
-                      }}
-                      className="px-4 py-2 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-sm font-medium rounded-xl hover:shadow-lg hover:shadow-teal-500/30 transition-all shadow-md shadow-teal-500/25 cursor-pointer"
-                    >
-                      EDIT
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(load);
-                      }}
-                      className="px-4 py-2 bg-rose-50 text-rose-600 text-sm font-medium rounded-xl hover:bg-rose-100 transition-colors border border-rose-200 cursor-pointer"
-                    >
-                      DELETE
-                    </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
