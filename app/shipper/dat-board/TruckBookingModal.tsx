@@ -27,20 +27,20 @@ interface TruckPosting {
   id: string;
   truck: {
     id: string;
-    plateNumber: string;
+    licensePlate: string;
     truckType: string;
     capacity: number;
-    carrier: {
-      id: string;
-      name: string;
-    };
+  };
+  carrier: {
+    name: string;
+    isVerified?: boolean;
   };
   originCity: {
     name: string;
   };
   destinationCity?: {
     name: string;
-  };
+  } | null;
   availableFrom: string;
   availableTo?: string;
   contactName?: string;
@@ -164,32 +164,32 @@ export default function TruckBookingModal({ isOpen, onClose, truckPosting }: Pro
             <div>
               <span className="text-[#064d51]/60 dark:text-gray-400">Plate:</span>{' '}
               <span className="font-medium text-[#064d51] dark:text-white">
-                {truckPosting.truck.plateNumber}
+                {truckPosting.truck?.licensePlate || 'N/A'}
               </span>
             </div>
             <div>
               <span className="text-[#064d51]/60 dark:text-gray-400">Type:</span>{' '}
               <span className="font-medium text-[#064d51] dark:text-white">
-                {truckPosting.truck.truckType}
+                {truckPosting.truck?.truckType || 'N/A'}
               </span>
             </div>
             <div>
               <span className="text-[#064d51]/60 dark:text-gray-400">Capacity:</span>{' '}
               <span className="font-medium text-[#064d51] dark:text-white">
-                {truckPosting.truck.capacity.toLocaleString()} kg
+                {truckPosting.truck?.capacity?.toLocaleString() || 'N/A'} kg
               </span>
             </div>
             <div>
               <span className="text-[#064d51]/60 dark:text-gray-400">Carrier:</span>{' '}
               <span className="font-medium text-[#064d51] dark:text-white">
-                {truckPosting.truck.carrier.name}
+                {truckPosting.carrier?.name || 'Unknown'}
               </span>
             </div>
             <div className="col-span-2">
               <span className="text-[#064d51]/60 dark:text-gray-400">Route:</span>{' '}
               <span className="font-medium text-[#064d51] dark:text-white">
-                {truckPosting.originCity.name}
-                {truckPosting.destinationCity
+                {truckPosting.originCity?.name || 'N/A'}
+                {truckPosting.destinationCity?.name
                   ? ` → ${truckPosting.destinationCity.name}`
                   : ' (Anywhere)'}
               </span>
