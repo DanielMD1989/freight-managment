@@ -376,7 +376,7 @@ export default function DatDataTable<T = any>({
 
                   {/* Expanded Row */}
                   {expandable && isExpanded && renderExpandedRow && (
-                    <tr className="bg-slate-50/50">
+                    <tr className="bg-teal-50 border-l-4 border-l-teal-500">
                       <td
                         colSpan={
                           columns.length +
@@ -384,7 +384,7 @@ export default function DatDataTable<T = any>({
                           (expandable ? 1 : 0) +
                           (actions && actions.length > 0 ? 1 : 0)
                         }
-                        className="px-6 py-4 border-t border-slate-100"
+                        className="px-6 py-4 border-t border-teal-200"
                       >
                         {renderExpandedRow(row)}
                       </td>
