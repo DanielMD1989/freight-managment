@@ -27,7 +27,7 @@ export default async function ShipperPage() {
 
   const session = await verifyToken(sessionCookie.value);
 
-  if (!session || (session.role !== 'SHIPPER' && session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN')) {
+  if (!session || (session.role !== 'SHIPPER' && session.role !== 'ADMIN')) {
     redirect('/unauthorized');
   }
 

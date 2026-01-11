@@ -84,7 +84,7 @@ export default async function CarrierDashboardPage() {
 
   const session = await verifyToken(sessionCookie.value);
 
-  if (!session || (session.role !== 'CARRIER' && session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN')) {
+  if (!session || (session.role !== 'CARRIER' && session.role !== 'ADMIN')) {
     redirect('/unauthorized');
   }
 

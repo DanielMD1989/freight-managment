@@ -30,7 +30,7 @@ export default async function ShipperLayout({
   }
 
   // Check if user is a shipper or admin
-  if (session.role !== 'SHIPPER' && session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
+  if (session.role !== 'SHIPPER' && session.role !== 'ADMIN') {
     redirect('/unauthorized');
   }
 
