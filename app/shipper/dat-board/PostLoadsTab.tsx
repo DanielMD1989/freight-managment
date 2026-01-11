@@ -1229,7 +1229,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
               {/* Expanded Details - Shows when clicked but not editing */}
               {expandedLoadId === load.id && (!editingLoad || editingLoad.id !== load.id) && (
                 <div className="border-t border-slate-100 p-6 bg-gradient-to-r from-slate-50 to-teal-50/30">
-                  {/* Row with Commodity, Comments, and Action Buttons */}
+                  {/* Row with Commodity, Comments, Search, and Action Buttons */}
                   <div className="flex items-start gap-6 text-sm mb-6">
                     <div className="flex-1">
                       <div className="font-medium mb-1 text-slate-700">Commodity</div>
@@ -1239,8 +1239,24 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       <div className="font-medium mb-1 text-slate-700">Comments</div>
                       <div className="text-slate-600">{load.specialInstructions || 'N/A'}</div>
                     </div>
-                    {/* Action Buttons */}
+                    {/* Search and Action Buttons */}
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSearchTrucks(load);
+                        }}
+                        className="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200 flex items-center gap-1 cursor-pointer"
+                        title="Search for matching trucks"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        SEARCH
+                        <span className="bg-indigo-600 text-white px-1.5 py-0.5 rounded-full text-xs font-bold">
+                          {load.matchCount || 0}
+                        </span>
+                      </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1424,25 +1440,6 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                     </div>
                   )}
 
-                  {/* Search Trucks Button */}
-                  <div className="flex gap-2 justify-end items-center pt-4 border-t border-slate-100">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSearchTrucks(load);
-                      }}
-                      className="px-4 py-2 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-xl hover:bg-indigo-100 transition-colors border border-indigo-200 flex items-center gap-2 cursor-pointer"
-                      title="Search for matching trucks"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                      SEARCH TRUCKS
-                      <span className="bg-indigo-600 text-white px-2 py-0.5 rounded-full text-xs font-bold">
-                        {load.matchCount || 0}
-                      </span>
-                    </button>
-                  </div>
                 </div>
               )}
             </div>
