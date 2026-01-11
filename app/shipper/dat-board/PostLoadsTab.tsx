@@ -45,8 +45,8 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
     pickupCity: '',
     deliveryCity: '',
     pickupDockHours: '',
-    truckType: 'Reefer',
-    fullPartial: 'Full',
+    truckType: 'REFRIGERATED',
+    fullPartial: 'FULL',
     lengthM: '',
     weight: '',
     shipperContactPhone: '',
@@ -291,8 +291,8 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
         pickupCity: '',
         deliveryCity: '',
         pickupDockHours: '',
-        truckType: 'Reefer',
-        fullPartial: 'Full',
+        truckType: 'REFRIGERATED',
+        fullPartial: 'FULL',
         lengthM: '',
         weight: '',
         shipperContactPhone: '',
@@ -796,10 +796,12 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                   style={{ color: '#2B2727' }}
                   required
                 >
-                  <option>Reefer</option>
-                  <option>Van</option>
-                  <option>Flatbed</option>
-                  <option>Container</option>
+                  <option value="REFRIGERATED">Reefer</option>
+                  <option value="DRY_VAN">Van</option>
+                  <option value="FLATBED">Flatbed</option>
+                  <option value="CONTAINER">Container</option>
+                  <option value="TANKER">Tanker</option>
+                  <option value="BOX_TRUCK">Box Truck</option>
                 </select>
               </div>
               <div>
@@ -810,8 +812,8 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                   className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
                   style={{ color: '#2B2727' }}
                 >
-                  <option>Full</option>
-                  <option>Partial</option>
+                  <option value="FULL">Full</option>
+                  <option value="PARTIAL">Partial</option>
                 </select>
               </div>
               <div>
@@ -1153,15 +1155,17 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                           Truck Type <span className="text-red-500">*</span>
                         </label>
                         <select
-                          value={editingLoad.truckType || 'Reefer'}
+                          value={editingLoad.truckType || 'REFRIGERATED'}
                           onChange={(e) => handleEditFormChange('truckType', e.target.value)}
                           className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                           required
                         >
-                          <option>Reefer</option>
-                          <option>Van</option>
-                          <option>Flatbed</option>
-                          <option>Container</option>
+                          <option value="REFRIGERATED">Reefer</option>
+                          <option value="DRY_VAN">Van</option>
+                          <option value="FLATBED">Flatbed</option>
+                          <option value="CONTAINER">Container</option>
+                          <option value="TANKER">Tanker</option>
+                          <option value="BOX_TRUCK">Box Truck</option>
                         </select>
                       </div>
 
@@ -1171,12 +1175,12 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                           Load Type
                         </label>
                         <select
-                          value={editingLoad.fullPartial || 'Full'}
+                          value={editingLoad.fullPartial || 'FULL'}
                           onChange={(e) => handleEditFormChange('fullPartial', e.target.value)}
                           className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                         >
-                          <option>Full</option>
-                          <option>Partial</option>
+                          <option value="FULL">Full</option>
+                          <option value="PARTIAL">Partial</option>
                         </select>
                       </div>
 

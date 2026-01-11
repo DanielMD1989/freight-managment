@@ -1048,6 +1048,11 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   const handleSaveEdit = async () => {
     if (!editingTruckId) return;
 
+    // Build notes from comments, handling undefined values
+    const comment1 = editForm.comments1 || '';
+    const comment2 = editForm.comments2 || '';
+    const notes = [comment1, comment2].filter(Boolean).join('\n').trim() || null;
+
     try {
       const response = await fetch(`/api/truck-postings/${editingTruckId}`, {
         method: 'PATCH',
@@ -1055,16 +1060,16 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          availableFrom: editForm.availableFrom,
+          availableFrom: editForm.availableFrom || undefined,
           availableTo: editForm.availableTo || null,
-          originCityId: editForm.origin,
+          originCityId: editForm.origin || undefined,
           destinationCityId: editForm.destination || null,
-          fullPartial: editForm.fullPartial,
+          fullPartial: editForm.fullPartial || undefined,
           availableLength: editForm.lengthM ? parseFloat(editForm.lengthM) : null,
           availableWeight: editForm.weight ? parseFloat(editForm.weight) : null,
           ownerName: editForm.owner || null,
-          contactPhone: editForm.contactPhone,
-          notes: (editForm.comments1 + '\n' + editForm.comments2).trim() || null,
+          contactPhone: editForm.contactPhone || undefined,
+          notes,
           // Declared DH limits
           preferredDhToOriginKm: editForm.declaredDhO ? parseFloat(editForm.declaredDhO) : null,
           preferredDhAfterDeliveryKm: editForm.declaredDhD ? parseFloat(editForm.declaredDhD) : null,
