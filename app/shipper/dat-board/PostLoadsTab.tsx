@@ -236,7 +236,6 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
         },
         body: JSON.stringify({
           status: 'POSTED',
-          createdAt: new Date().toISOString(), // Update timestamp to current time when posting
         }),
       });
 
@@ -449,10 +448,9 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
         specialInstructions: editingLoad.specialInstructions,
       };
 
-      // If currently UNPOSTED, change to POSTED when saving and update timestamp
+      // If currently UNPOSTED, change to POSTED when saving (API will set postedAt automatically)
       if (editingLoad.status === 'UNPOSTED') {
         updatePayload.status = 'POSTED';
-        updatePayload.createdAt = new Date().toISOString(); // Update timestamp to current time when posting
       }
 
       const response = await fetch(`/api/loads/${editingLoad.id}`, {

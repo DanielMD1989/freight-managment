@@ -428,6 +428,42 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   };
 
   /**
+   * Handle POST action - Change unposted truck to posted/active
+   */
+  const handlePostTruckPosting = async (truck: any) => {
+    try {
+      // Get CSRF token for secure submission
+      const csrfToken = await getCSRFToken();
+      if (!csrfToken) {
+        toast.error('Failed to get security token. Please refresh and try again.');
+        return;
+      }
+
+      const response = await fetch(`/api/truck-postings/${truck.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
+        body: JSON.stringify({
+          status: 'ACTIVE',
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to post truck');
+      }
+
+      toast.success('Truck posted successfully!');
+      fetchTrucks(); // Refresh the list
+    } catch (error: any) {
+      console.error('Post truck error:', error);
+      toast.error(error.message || 'Failed to post truck');
+    }
+  };
+
+  /**
    * Handle COPY action
    */
   const handleCopy = async (truck: any) => {
@@ -846,6 +882,22 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
             className="flex items-center gap-1"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* POST button - only for unposted trucks */}
+            {row.status === 'UNPOSTED' && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePostTruckPosting(row);
+                }}
+                className="px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white text-xs font-semibold rounded-lg hover:from-emerald-700 hover:to-emerald-600 transition-all shadow-md shadow-emerald-500/25 cursor-pointer flex items-center gap-1"
+                title="Post this truck to make it visible to shippers"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                POST
+              </button>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -1050,6 +1102,10 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   const handleSaveEdit = async () => {
     if (!editingTruckId) return;
 
+    // Find the truck being edited to check its status
+    const editingTruck = trucks.find(t => t.id === editingTruckId);
+    const wasUnposted = editingTruck?.status === 'UNPOSTED';
+
     // Build notes from comments, handling undefined values
     const comment1 = editForm.comments1 || '';
     const comment2 = editForm.comments2 || '';
@@ -1063,32 +1119,40 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         return;
       }
 
+      // Build update payload
+      const updatePayload: any = {
+        availableFrom: editForm.availableFrom || undefined,
+        availableTo: editForm.availableTo || null,
+        originCityId: editForm.origin || undefined,
+        destinationCityId: editForm.destination || null,
+        fullPartial: editForm.fullPartial || undefined,
+        availableLength: editForm.lengthM ? parseFloat(editForm.lengthM) : null,
+        availableWeight: editForm.weight ? parseFloat(editForm.weight) : null,
+        ownerName: editForm.owner || null,
+        contactPhone: editForm.contactPhone || undefined,
+        notes,
+        // Declared DH limits
+        preferredDhToOriginKm: editForm.declaredDhO ? parseFloat(editForm.declaredDhO) : null,
+        preferredDhAfterDeliveryKm: editForm.declaredDhD ? parseFloat(editForm.declaredDhD) : null,
+      };
+
+      // If currently UNPOSTED, change to ACTIVE when saving
+      if (wasUnposted) {
+        updatePayload.status = 'ACTIVE';
+      }
+
       const response = await fetch(`/api/truck-postings/${editingTruckId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRF-Token': csrfToken,
         },
-        body: JSON.stringify({
-          availableFrom: editForm.availableFrom || undefined,
-          availableTo: editForm.availableTo || null,
-          originCityId: editForm.origin || undefined,
-          destinationCityId: editForm.destination || null,
-          fullPartial: editForm.fullPartial || undefined,
-          availableLength: editForm.lengthM ? parseFloat(editForm.lengthM) : null,
-          availableWeight: editForm.weight ? parseFloat(editForm.weight) : null,
-          ownerName: editForm.owner || null,
-          contactPhone: editForm.contactPhone || undefined,
-          notes,
-          // Declared DH limits
-          preferredDhToOriginKm: editForm.declaredDhO ? parseFloat(editForm.declaredDhO) : null,
-          preferredDhAfterDeliveryKm: editForm.declaredDhD ? parseFloat(editForm.declaredDhD) : null,
-        }),
+        body: JSON.stringify(updatePayload),
       });
 
       if (!response.ok) throw new Error('Failed to update truck posting');
 
-      toast.success('Truck posting updated successfully!');
+      toast.success(wasUnposted ? 'Truck updated and posted successfully!' : 'Truck posting updated successfully!');
       setEditingTruckId(null);
       setEditForm({});
       fetchTrucks();

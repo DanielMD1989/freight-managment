@@ -266,6 +266,9 @@ export async function PATCH(
 
     const data = validationResult.data;
 
+    // Update postedAt when status changes to ACTIVE (posted)
+    const shouldUpdatePostedAt = data.status === 'ACTIVE' && existing.status !== 'ACTIVE';
+
     // Update posting
     const updated = await db.truckPosting.update({
       where: { id },
@@ -292,6 +295,8 @@ export async function PATCH(
         ...(data.contactPhone && { contactPhone: data.contactPhone }),
         ...(data.notes !== undefined && { notes: data.notes }),
         ...(data.status && { status: data.status }),
+        // Update postedAt when posting (changing to ACTIVE)
+        ...(shouldUpdatePostedAt && { postedAt: new Date() }),
         // Additional fields from frontend
         ...(data.originCityId && { originCityId: data.originCityId }),
         ...(data.destinationCityId !== undefined && {

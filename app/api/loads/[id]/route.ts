@@ -224,6 +224,11 @@ export async function PATCH(
 
     // Sprint 16: Recalculate totalFareEtb if pricing fields changed
     let additionalData: any = {};
+
+    // Update postedAt when status changes to POSTED
+    if (validatedData.status === 'POSTED' && existingLoad.status !== 'POSTED') {
+      additionalData.postedAt = new Date();
+    }
     const pricingFieldsChanged =
       validatedData.baseFareEtb !== undefined ||
       validatedData.perKmEtb !== undefined ||
