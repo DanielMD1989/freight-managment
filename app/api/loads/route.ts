@@ -316,8 +316,11 @@ export async function GET(request: NextRequest) {
     switch (sortBy) {
       case "age":
       case "postedAt":
-        // Sort by postedAt first, then createdAt as fallback for null values
-        orderBy = [{ postedAt: sortOrder }, { createdAt: sortOrder }];
+        // Sort by postedAt desc with nulls last, then createdAt as fallback
+        orderBy = [
+          { postedAt: { sort: sortOrder as 'asc' | 'desc', nulls: 'last' } },
+          { createdAt: sortOrder }
+        ];
         break;
       case "tripKm":
         orderBy = { tripKm: sortOrder };
