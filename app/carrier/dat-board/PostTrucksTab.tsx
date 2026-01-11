@@ -756,7 +756,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       key: 'age',
       label: 'Age',
       width: '50px',
-      render: (_, row) => <DatAgeIndicator date={row.createdAt} />,
+      render: (_, row) => <DatAgeIndicator date={row.postedAt || row.createdAt} />,
     },
     {
       key: 'status',
@@ -939,7 +939,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       key: 'age',
       label: 'Age',
       width: '60px',
-      render: (_, row) => <DatAgeIndicator date={row.createdAt} />,
+      render: (_, row) => <DatAgeIndicator date={row.postedAt || row.createdAt} />,
     },
     {
       key: 'pickupDate',

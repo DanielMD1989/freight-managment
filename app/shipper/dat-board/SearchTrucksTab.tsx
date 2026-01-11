@@ -398,7 +398,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
       key: 'age',
       label: 'Age',
       width: '80px',
-      render: (_, row) => <DatAgeIndicator date={row.createdAt} />,
+      render: (_, row) => <DatAgeIndicator date={row.postedAt || row.createdAt} />,
     },
     {
       key: 'availableDate',

@@ -499,7 +499,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       key: 'age',
       label: 'Age',
       width: '80px',
-      render: (_, row) => <DatAgeIndicator date={row.createdAt} />,
+      render: (_, row) => <DatAgeIndicator date={row.postedAt || row.createdAt} />,
     },
     {
       key: 'status',
@@ -1122,7 +1122,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                     {load.isKept ? '★' : '☆'}
                   </span>
                 </div>
-                <div><DatAgeIndicator date={load.createdAt} /></div>
+                <div><DatAgeIndicator date={load.postedAt || load.createdAt} /></div>
                 <div>
                   <span className={`
                     px-2.5 py-1 rounded-full text-xs font-medium

@@ -851,7 +851,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
                 key={load.id}
                 className="grid grid-cols-13 gap-2 px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-default text-xs transition-colors group"
               >
-                <div><DatAgeIndicator date={load.createdAt} /></div>
+                <div><DatAgeIndicator date={load.postedAt || load.createdAt} /></div>
                 <div className="text-slate-700">{load.pickupDate ? new Date(load.pickupDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : 'N/A'}</div>
                 <div className="text-slate-700">{getTruckTypeLabel(load.truckType)}</div>
                 <div className="text-slate-700">{load.fullPartial === 'FULL' ? 'F' : 'P'}</div>
