@@ -1045,30 +1045,57 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
               {/* Expanded Section - Shows details or edit form */}
               {expandedLoadId === load.id && editingLoad?.id === load.id && (
-                /* INLINE EDIT FORM - Exact copy of new load form */
+                /* INLINE EDIT FORM - Professional Layout */
                 <form onSubmit={handleSubmitEditLoad}>
-                  <div className="border-l-4 border-l-teal-500 bg-teal-50 p-4 border-t border-teal-200">
-                    {/* Form Fields Row */}
-                    <div className="grid grid-cols-12 gap-2 mb-4">
-                      <div className="flex items-center gap-1 pt-5">
-                        <input type="checkbox" className="w-4 h-4" />
-                        <span className="text-lg cursor-pointer" style={{ color: '#2B2727' }}>☆</span>
+                  <div className="border-l-4 border-l-teal-500 bg-teal-50 p-6 border-t border-teal-200">
+                    {/* Header with load info */}
+                    <div className="flex items-center justify-between border-b border-teal-200 pb-4 mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center">
+                          <span className="text-xl">📦</span>
+                        </div>
+                        <div>
+                          <h3 className="text-base font-bold text-[#064d51]">
+                            Edit Load Posting
+                          </h3>
+                          <p className="text-xs text-[#064d51]/60">
+                            {load.pickupCity} → {load.deliveryCity} • {load.truckType || 'N/A'} • {load.weight ? `${load.weight.toLocaleString()} kg` : 'N/A'}
+                          </p>
+                        </div>
                       </div>
-                      <div></div>
-                      <div></div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingLoad(null);
+                          setExpandedLoadId(null);
+                        }}
+                        className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white/50 rounded-full transition-colors"
+                      >
+                        <span className="text-lg">✕</span>
+                      </button>
+                    </div>
+
+                    {/* Form Grid - Professional Layout */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-4">
+                      {/* Pickup Date */}
                       <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Pickup *</label>
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
+                          Pickup Date <span className="text-red-500">*</span>
+                        </label>
                         <input
                           type="date"
                           value={editingLoad.pickupDate ? new Date(editingLoad.pickupDate).toISOString().split('T')[0] : ''}
                           onChange={(e) => handleEditFormChange('pickupDate', e.target.value)}
-                          className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
-                          style={{ color: '#2B2727' }}
+                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                           required
                         />
                       </div>
+
+                      {/* Origin */}
                       <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Origin *</label>
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
+                          Origin <span className="text-red-500">*</span>
+                        </label>
                         <PlacesAutocomplete
                           value={editingLoad.pickupCity || ''}
                           onChange={(value, place) => {
@@ -1078,14 +1105,18 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                             }
                           }}
                           placeholder="Search city..."
-                          className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
+                          className="w-full px-3 py-2 text-sm bg-white border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500"
                           countryRestriction={['ET', 'DJ']}
                           types={['(cities)']}
                           required
                         />
                       </div>
+
+                      {/* Destination */}
                       <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Destination *</label>
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
+                          Destination <span className="text-red-500">*</span>
+                        </label>
                         <PlacesAutocomplete
                           value={editingLoad.deliveryCity || ''}
                           onChange={(value, place) => {
@@ -1095,30 +1126,36 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                             }
                           }}
                           placeholder="Search city..."
-                          className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
+                          className="w-full px-3 py-2 text-sm bg-white border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500"
                           countryRestriction={['ET', 'DJ']}
                           types={['(cities)']}
                           required
                         />
                       </div>
+
+                      {/* Dock Hours */}
                       <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Dock Hours</label>
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
+                          Dock Hours
+                        </label>
                         <input
                           type="text"
                           value={editingLoad.pickupDockHours || ''}
                           onChange={(e) => handleEditFormChange('pickupDockHours', e.target.value)}
-                          className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
-                          style={{ color: '#2B2727' }}
+                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                           placeholder="9am-5pm"
                         />
                       </div>
+
+                      {/* Truck Type */}
                       <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Truck *</label>
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
+                          Truck Type <span className="text-red-500">*</span>
+                        </label>
                         <select
                           value={editingLoad.truckType || 'Reefer'}
                           onChange={(e) => handleEditFormChange('truckType', e.target.value)}
-                          className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
-                          style={{ color: '#2B2727' }}
+                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                           required
                         >
                           <option>Reefer</option>
@@ -1127,103 +1164,116 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                           <option>Container</option>
                         </select>
                       </div>
+
+                      {/* Full/Partial */}
                       <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>F/P</label>
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
+                          Load Type
+                        </label>
                         <select
                           value={editingLoad.fullPartial || 'Full'}
                           onChange={(e) => handleEditFormChange('fullPartial', e.target.value)}
-                          className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
-                          style={{ color: '#2B2727' }}
+                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                         >
                           <option>Full</option>
                           <option>Partial</option>
                         </select>
                       </div>
+
+                      {/* Length */}
                       <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Length</label>
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
+                          Length (m)
+                        </label>
                         <input
                           type="number"
                           value={editingLoad.lengthM || ''}
                           onChange={(e) => handleEditFormChange('lengthM', e.target.value)}
-                          className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
-                          style={{ color: '#2B2727' }}
-                          placeholder="53"
+                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                          placeholder="12"
                         />
                       </div>
+
+                      {/* Weight */}
                       <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Weight</label>
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
+                          Weight (kg)
+                        </label>
                         <input
                           type="number"
                           value={editingLoad.weight || ''}
                           onChange={(e) => handleEditFormChange('weight', e.target.value)}
-                          className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
-                          style={{ color: '#2B2727' }}
-                          placeholder="45000"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Contact</label>
-                        <input
-                          type="tel"
-                          value={editingLoad.shipperContactPhone || ''}
-                          onChange={(e) => handleEditFormChange('shipperContactPhone', e.target.value)}
-                          className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
-                          style={{ color: '#2B2727' }}
-                          placeholder="+251-9xx"
+                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                          placeholder="25000"
                         />
                       </div>
                     </div>
 
-                    {/* Bottom Section: Commodity, Comments, and Actions */}
-                    <div className="grid grid-cols-3 gap-4">
+                    {/* Second Row: Contact, Commodity, Comments */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                      {/* Contact */}
                       <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>
-                          Commodity <span className="text-[#064d51]/60">({(editingLoad.cargoDescription || '').length}/100 max char)</span>
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
+                          Contact Phone
                         </label>
-                        <textarea
+                        <input
+                          type="tel"
+                          value={editingLoad.shipperContactPhone || ''}
+                          onChange={(e) => handleEditFormChange('shipperContactPhone', e.target.value)}
+                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                          placeholder="+251-9xx-xxx-xxx"
+                        />
+                      </div>
+
+                      {/* Commodity */}
+                      <div>
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
+                          Commodity <span className="text-[#064d51]/50">({(editingLoad.cargoDescription || '').length}/100)</span>
+                        </label>
+                        <input
+                          type="text"
                           value={editingLoad.cargoDescription || ''}
                           onChange={(e) => handleEditFormChange('cargoDescription', e.target.value)}
-                          className="w-full px-3 py-2 !bg-white border border-[#064d51]/30 rounded resize-none"
-                          style={{ color: '#2B2727' }}
-                          rows={3}
+                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                           maxLength={100}
                           placeholder="e.g. Steel Coils, Electronics..."
                         />
                       </div>
+
+                      {/* Comments */}
                       <div>
-                        <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>
-                          Comments <span className="text-[#064d51]/60">({(editingLoad.specialInstructions || '').length}/70 max char)</span>
+                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
+                          Comments <span className="text-[#064d51]/50">({(editingLoad.specialInstructions || '').length}/70)</span>
                         </label>
-                        <textarea
+                        <input
+                          type="text"
                           value={editingLoad.specialInstructions || ''}
                           onChange={(e) => handleEditFormChange('specialInstructions', e.target.value)}
-                          className="w-full px-3 py-2 !bg-white border border-[#064d51]/30 rounded resize-none"
-                          style={{ color: '#2B2727' }}
-                          rows={3}
+                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                           maxLength={70}
                           placeholder="Additional notes..."
                         />
                       </div>
-                      <div className="flex flex-col justify-end">
-                        <div className="flex gap-2">
-                          <button
-                            type="submit"
-                            disabled={submitting}
-                            className="flex-1 px-6 py-2.5 bg-[#064d51] text-white font-semibold rounded-lg hover:bg-[#053d40] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed shadow-md"
-                          >
-                            {submitting ? 'SAVING...' : 'SAVE'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingLoad(null);
-                              setExpandedLoadId(null);
-                            }}
-                            className="px-4 py-2.5 bg-[#064d51]/10 text-[#064d51] rounded-lg hover:bg-[#064d51]/20 transition-colors font-bold border border-[#064d51]/20"
-                          >
-                            ✕
-                          </button>
-                        </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-end gap-2">
+                        <button
+                          type="submit"
+                          disabled={submitting}
+                          className="flex-1 px-6 py-2 bg-gradient-to-r from-teal-600 to-teal-500 text-white font-semibold rounded-lg hover:from-teal-700 hover:to-teal-600 transition-all disabled:from-slate-400 disabled:to-slate-400 disabled:cursor-not-allowed shadow-md cursor-pointer"
+                        >
+                          {submitting ? 'SAVING...' : 'SAVE CHANGES'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingLoad(null);
+                            setExpandedLoadId(null);
+                          }}
+                          className="px-4 py-2 bg-white text-slate-600 rounded-lg hover:bg-slate-100 transition-colors font-semibold border border-slate-200 cursor-pointer"
+                        >
+                          CANCEL
+                        </button>
                       </div>
                     </div>
                   </div>
