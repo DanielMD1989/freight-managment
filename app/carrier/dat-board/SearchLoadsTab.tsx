@@ -289,7 +289,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
   };
 
   /**
-   * Truck types list
+   * Truck types list with enum values and display labels
    */
   const truckTypes = [
     { value: 'AUTO_CARRIER', label: 'Auto Carrier', code: 'AC' },
@@ -302,6 +302,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
     { value: 'DOUBLE_DROP', label: 'Double Drop', code: 'DD' },
     { value: 'DROP_DECK_LANDOLL', label: 'Drop Deck Landoll', code: 'LA' },
     { value: 'DUMP_TRAILER', label: 'Dump Trailer', code: 'DT' },
+    { value: 'DUMP_TRUCK', label: 'Dump Truck', code: 'DK' },
     { value: 'FLATBED', label: 'Flatbed', code: 'F' },
     { value: 'FLATBED_AIR_RIDE', label: 'Flatbed Air-Ride', code: 'FA' },
     { value: 'FLATBED_CONESTOGA', label: 'Flatbed Conestoga', code: 'FN' },
@@ -310,9 +311,20 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
     { value: 'FLATBED_HOTSHOT', label: 'Flatbed Hotshot', code: 'FH' },
     { value: 'FLATBED_MAXI', label: 'Flatbed Maxi', code: 'MX' },
     { value: 'DRY_VAN', label: 'Van', code: 'V' },
+    { value: 'BOX_TRUCK', label: 'Box Truck', code: 'BX' },
     { value: 'REFRIGERATED', label: 'Reefer', code: 'R' },
     { value: 'TANKER', label: 'Tanker', code: 'T' },
+    { value: 'LOWBOY', label: 'Lowboy', code: 'LB' },
   ];
+
+  /**
+   * Get display label for truck type enum value
+   */
+  const getTruckTypeLabel = (enumValue: string | null | undefined): string => {
+    if (!enumValue) return 'N/A';
+    const found = truckTypes.find(t => t.value === enumValue);
+    return found ? found.label : enumValue.replace('_', ' ');
+  };
 
   /**
    * Results tabs configuration
@@ -711,7 +723,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
               >
                 <div><DatAgeIndicator date={load.createdAt} /></div>
                 <div className="text-slate-700">{load.pickupDate ? new Date(load.pickupDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : 'N/A'}</div>
-                <div className="text-slate-700">{load.truckType || 'N/A'}</div>
+                <div className="text-slate-700">{getTruckTypeLabel(load.truckType)}</div>
                 <div className="text-slate-700">{load.fullPartial === 'FULL' ? 'F' : 'P'}</div>
                 <div className="text-slate-500">{load.dhToOriginKm || '—'}</div>
                 <div className="truncate font-medium text-slate-800">{load.pickupCity || 'N/A'}</div>

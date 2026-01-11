@@ -62,6 +62,29 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
   });
 
   /**
+   * Truck types list with enum values and display labels
+   */
+  const truckTypes = [
+    { value: 'REFRIGERATED', label: 'Reefer' },
+    { value: 'DRY_VAN', label: 'Van' },
+    { value: 'FLATBED', label: 'Flatbed' },
+    { value: 'CONTAINER', label: 'Container' },
+    { value: 'TANKER', label: 'Tanker' },
+    { value: 'BOX_TRUCK', label: 'Box Truck' },
+    { value: 'LOWBOY', label: 'Lowboy' },
+    { value: 'DUMP_TRUCK', label: 'Dump Truck' },
+  ];
+
+  /**
+   * Get display label for truck type enum value
+   */
+  const getTruckTypeLabel = (enumValue: string | null | undefined): string => {
+    if (!enumValue) return 'N/A';
+    const found = truckTypes.find(t => t.value === enumValue);
+    return found ? found.label : enumValue.replace('_', ' ');
+  };
+
+  /**
    * Fetch loads
    */
   const fetchLoads = async () => {
@@ -1038,7 +1061,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                 <div className="truncate">{load.pickupCity || 'N/A'}</div>
                 <div className="truncate">{load.deliveryCity || 'N/A'}</div>
                 <div>{load.pickupDockHours || 'N/A'}</div>
-                <div>{load.truckType || 'N/A'}</div>
+                <div>{getTruckTypeLabel(load.truckType)}</div>
                 <div>{load.fullPartial || 'N/A'}</div>
                 <div>{load.lengthM ? `${load.lengthM}ft` : 'N/A'}</div>
                 <div>{load.weight ? `${load.weight.toLocaleString()}` : 'N/A'}</div>
@@ -1061,7 +1084,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                             Edit Load Posting
                           </h3>
                           <p className="text-xs text-[#064d51]/60">
-                            {load.pickupCity} → {load.deliveryCity} • {load.truckType || 'N/A'} • {load.weight ? `${load.weight.toLocaleString()} kg` : 'N/A'}
+                            {load.pickupCity} → {load.deliveryCity} • {getTruckTypeLabel(load.truckType)} • {load.weight ? `${load.weight.toLocaleString()} kg` : 'N/A'}
                           </p>
                         </div>
                       </div>

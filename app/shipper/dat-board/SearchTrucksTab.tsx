@@ -275,6 +275,30 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   };
 
   /**
+   * Truck types list with enum values and display labels
+   */
+  const truckTypes = [
+    { value: 'AUTO_CARRIER', label: 'Auto Carrier', code: 'AC' },
+    { value: 'CONTAINER', label: 'Container', code: 'C' },
+    { value: 'DUMP_TRUCK', label: 'Dump Truck', code: 'DK' },
+    { value: 'FLATBED', label: 'Flatbed', code: 'F' },
+    { value: 'DRY_VAN', label: 'Van', code: 'V' },
+    { value: 'BOX_TRUCK', label: 'Box Truck', code: 'BX' },
+    { value: 'REFRIGERATED', label: 'Reefer', code: 'R' },
+    { value: 'TANKER', label: 'Tanker', code: 'T' },
+    { value: 'LOWBOY', label: 'Lowboy', code: 'LB' },
+  ];
+
+  /**
+   * Get display label for truck type enum value
+   */
+  const getTruckTypeLabel = (enumValue: string | null | undefined): string => {
+    if (!enumValue) return 'V';
+    const found = truckTypes.find(t => t.value === enumValue);
+    return found ? found.label : enumValue.replace('_', ' ');
+  };
+
+  /**
    * Results tabs configuration
    */
   const resultsTabs: DatStatusTab[] = [
@@ -732,7 +756,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
                 >
                   <div>{truck.age || '00:07'}</div>
                   <div>{truck.availableDate ? new Date(truck.availableDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : 'Now'}</div>
-                  <div>{truck.truckType || 'V'}</div>
+                  <div>{getTruckTypeLabel(truck.truckType)}</div>
                   <div>{truck.fullPartial || 'F'}</div>
                   <div className="truncate">{truck.currentCity || 'Tacoma, WA'}</div>
                   <div>—</div>
