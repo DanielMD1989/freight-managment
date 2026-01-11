@@ -727,7 +727,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
               trucks.map((truck) => (
                 <div
                   key={truck.id}
-                  className="grid grid-cols-11 gap-2 px-4 py-3 border-b border-[#064d51]/10 hover:bg-[#064d51]/5 cursor-pointer text-xs transition-colors"
+                  className="grid grid-cols-11 gap-2 px-4 py-3 border-b border-[#064d51]/10 hover:bg-[#064d51]/5 cursor-default text-xs transition-colors"
                   style={{ color: '#2B2727' }}
                 >
                   <div>{truck.age || '00:07'}</div>

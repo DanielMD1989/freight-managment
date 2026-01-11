@@ -707,7 +707,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
             loads.map((load) => (
               <div
                 key={load.id}
-                className="grid grid-cols-13 gap-2 px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer text-xs transition-colors group"
+                className="grid grid-cols-13 gap-2 px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-default text-xs transition-colors group"
               >
                 <div><DatAgeIndicator date={load.createdAt} /></div>
                 <div className="text-slate-700">{load.pickupDate ? new Date(load.pickupDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : 'N/A'}</div>
