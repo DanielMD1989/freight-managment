@@ -1047,7 +1047,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
               {expandedLoadId === load.id && editingLoad?.id === load.id && (
                 /* INLINE EDIT FORM - Exact copy of new load form */
                 <form onSubmit={handleSubmitEditLoad}>
-                  <div className="border border-[#064d51]/20 p-4 rounded-b-lg" style={{ backgroundColor: '#f0fdfa' }}>
+                  <div className="border-l-4 border-l-teal-500 bg-teal-50 p-4 border-t border-teal-200">
                     {/* Form Fields Row */}
                     <div className="grid grid-cols-12 gap-2 mb-4">
                       <div className="flex items-center gap-1 pt-5">
@@ -1232,7 +1232,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
               {/* Expanded Details - Shows when clicked but not editing */}
               {expandedLoadId === load.id && (!editingLoad || editingLoad.id !== load.id) && (
-                <div className="border-t border-slate-100 p-6 bg-gradient-to-r from-slate-50 to-teal-50/30">
+                <div className="border-l-4 border-l-teal-500 bg-teal-50 p-6 border-t border-teal-200">
                   {/* Row with Commodity, Comments, Search, and Action Buttons */}
                   <div className="flex items-start gap-6 text-sm mb-6">
                     <div className="flex-1">

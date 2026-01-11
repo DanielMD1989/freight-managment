@@ -1563,7 +1563,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
             }
 
             return (
-              <div id={`posting-${truck.id}`} className="p-4 bg-white border-t-2 border-blue-500 shadow-md rounded-b-lg">
+              <div id={`posting-${truck.id}`} className="p-4">
                 {/* Edit Mode - Professional Form Layout */}
                 <div className="space-y-4">
                     {/* Header with truck info */}
