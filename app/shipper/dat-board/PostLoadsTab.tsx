@@ -518,21 +518,6 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       render: (_, row) => <DatAgeIndicator date={row.postedAt || row.createdAt} />,
     },
     {
-      key: 'status',
-      label: 'Status',
-      width: '100px',
-      render: (value) => (
-        <span className={`
-          px-2 py-1 rounded text-xs font-medium
-          ${value === 'POSTED' ? 'bg-green-100 text-green-800' : ''}
-          ${value === 'UNPOSTED' ? 'bg-gray-100 text-gray-800' : ''}
-          ${value === 'EXPIRED' ? 'bg-red-100 text-red-800' : ''}
-        `}>
-          {value}
-        </span>
-      ),
-    },
-    {
       key: 'pickupDate',
       label: 'Pickup',
       width: '110px',
@@ -671,7 +656,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       {/* Table Structure */}
       <div className="bg-white border border-slate-200/60 rounded-2xl overflow-visible relative shadow-sm">
         {/* Table Header - Teal Gradient */}
-        <div className="bg-gradient-to-r from-teal-600 to-teal-500 grid grid-cols-12 gap-2 px-4 py-3 rounded-t-2xl text-xs font-semibold text-white relative">
+        <div className="bg-gradient-to-r from-teal-600 to-teal-500 grid grid-cols-11 gap-2 px-4 py-3 rounded-t-2xl text-xs font-semibold text-white relative">
           <div className="flex items-center gap-1 relative">
             <button
               onClick={() => setShowActionsMenu(!showActionsMenu)}
@@ -771,12 +756,6 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
           </div>
           <div
             className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
-            onClick={() => handleHeaderClick('status')}
-          >
-            Status {sortField === 'status' && (sortOrder === 'asc' ? '↑' : '↓')}
-          </div>
-          <div
-            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
             onClick={() => handleHeaderClick('pickupDate')}
           >
             Pickup {sortField === 'pickupDate' && (sortOrder === 'asc' ? '↑' : '↓')}
@@ -835,14 +814,13 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
         {showNewLoadModal && (
           <form onSubmit={handleSubmitNewLoad}>
           <div className="border-b border-slate-100 p-6 bg-gradient-to-r from-slate-50 to-teal-50/30">
-            {/* Form Fields Row - Skip Age and Status columns */}
-            <div className="grid grid-cols-12 gap-2 mb-4">
+            {/* Form Fields Row - Skip Age column */}
+            <div className="grid grid-cols-11 gap-2 mb-4">
               <div className="flex items-center gap-1 pt-5">
                 <input type="checkbox" className="w-4 h-4" />
                 <span className="text-lg cursor-pointer" style={{ color: '#2B2727' }}>☆</span>
               </div>
-              {/* Empty columns for Age and Status */}
-              <div></div>
+              {/* Empty column for Age */}
               <div></div>
               <div>
                 <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Pickup *</label>
@@ -967,7 +945,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
             </div>
 
             {/* Sprint 16: Pricing Row - Base + Per-KM Model */}
-            <div className="grid grid-cols-12 gap-2 mb-4 mt-2">
+            <div className="grid grid-cols-11 gap-2 mb-4 mt-2">
               {/* Empty columns for alignment */}
               <div></div><div></div><div></div>
 
@@ -1107,7 +1085,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
             <div key={load.id}>
               {/* Load Row - Clickable */}
               <div
-                className={`grid grid-cols-12 gap-2 px-4 py-3 border-b cursor-default text-xs transition-colors ${
+                className={`grid grid-cols-11 gap-2 px-4 py-3 border-b cursor-default text-xs transition-colors ${
                   expandedLoadId === load.id
                     ? 'bg-teal-50 border-l-4 border-l-teal-500 border-b-teal-200'
                     : 'border-slate-100 hover:bg-slate-50 text-slate-700'

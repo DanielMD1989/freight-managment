@@ -767,22 +767,6 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       render: (_, row) => <DatAgeIndicator date={row.postedAt || row.createdAt} />,
     },
     {
-      key: 'status',
-      label: 'Status',
-      width: '70px',
-      render: (value) => (
-        <span className={`
-          px-1.5 py-0.5 rounded text-xs font-semibold
-          ${value === 'ACTIVE' ? 'bg-emerald-500 text-white' : ''}
-          ${value === 'POSTED' ? 'bg-emerald-500 text-white' : ''}
-          ${value === 'UNPOSTED' ? 'bg-[#064d51]/10 text-[#064d51]' : ''}
-          ${value === 'EXPIRED' ? 'bg-rose-500 text-white' : ''}
-        `}>
-          {value === 'ACTIVE' ? 'POSTED' : value}
-        </span>
-      ),
-    },
-    {
       key: 'availableFrom',
       label: 'Avail',
       width: '75px',
