@@ -556,7 +556,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       {/* Table Structure */}
       <div className="bg-white border border-slate-200/60 rounded-2xl overflow-visible relative shadow-sm">
         {/* Table Header - Teal Gradient */}
-        <div className="bg-gradient-to-r from-teal-600 to-teal-500 grid grid-cols-12 gap-2 px-4 py-3 rounded-t-2xl text-xs font-semibold text-white relative">
+        <div className="bg-gradient-to-r from-teal-600 to-teal-500 grid grid-cols-13 gap-2 px-4 py-3 rounded-t-2xl text-xs font-semibold text-white relative">
           <div className="flex items-center gap-1 relative">
             <button
               onClick={() => setShowActionsMenu(!showActionsMenu)}
@@ -714,6 +714,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
           >
             Contact {sortField === 'shipperContactPhone' && (sortOrder === 'asc' ? '↑' : '↓')}
           </div>
+          <div className="text-center">Actions</div>
         </div>
 
         {/* NEW POST FORM - Expands under header */}
@@ -990,7 +991,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
             <div key={load.id}>
               {/* Load Row - Clickable */}
               <div
-                className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-default text-xs transition-colors text-slate-700"
+                className="grid grid-cols-13 gap-2 px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-default text-xs transition-colors text-slate-700"
                 onClick={() => {
                   if (expandedLoadId === load.id) {
                     setExpandedLoadId(null);
@@ -1037,6 +1038,40 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                 <div>{load.lengthM ? `${load.lengthM}ft` : 'N/A'}</div>
                 <div>{load.weight ? `${load.weight.toLocaleString()}` : 'N/A'}</div>
                 <div>{load.shipperContactPhone || 'N/A'}</div>
+                {/* Actions - Only show when expanded and not editing */}
+                <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  {expandedLoadId === load.id && (!editingLoad || editingLoad.id !== load.id) && (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(load);
+                        }}
+                        className="px-3 py-1.5 bg-teal-600 text-white text-xs font-semibold rounded-lg hover:bg-teal-700 transition-all cursor-pointer"
+                      >
+                        EDIT
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCopy(load);
+                        }}
+                        className="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg hover:bg-slate-200 transition-all border border-slate-200 cursor-pointer"
+                      >
+                        COPY
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(load);
+                        }}
+                        className="px-3 py-1.5 bg-rose-500 text-white text-xs font-semibold rounded-lg hover:bg-rose-600 transition-all cursor-pointer"
+                      >
+                        DELETE
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* Expanded Section - Shows details or edit form */}
@@ -1393,35 +1428,8 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                     </div>
                   )}
 
-                  {/* Action Buttons */}
+                  {/* Search Trucks Button */}
                   <div className="flex gap-2 justify-end items-center pt-4 border-t border-slate-100">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCopy(load);
-                      }}
-                      className="px-4 py-2 bg-slate-100 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-200 transition-colors border border-slate-200 cursor-pointer"
-                    >
-                      COPY
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(load);
-                      }}
-                      className="px-4 py-2 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-sm font-medium rounded-xl hover:shadow-lg hover:shadow-teal-500/30 transition-all shadow-md shadow-teal-500/25 cursor-pointer"
-                    >
-                      EDIT
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(load);
-                      }}
-                      className="px-4 py-2 bg-rose-50 text-rose-600 text-sm font-medium rounded-xl hover:bg-rose-100 transition-colors border border-rose-200 cursor-pointer"
-                    >
-                      DELETE
-                    </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1433,6 +1441,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                       </svg>
+                      SEARCH TRUCKS
                       <span className="bg-indigo-600 text-white px-2 py-0.5 rounded-full text-xs font-bold">
                         {load.matchCount || 0}
                       </span>
