@@ -990,12 +990,14 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
             <div key={load.id}>
               {/* Load Row - Clickable */}
               <div
-                className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer text-xs transition-colors text-slate-700"
+                className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-default text-xs transition-colors text-slate-700"
                 onClick={() => {
                   if (expandedLoadId === load.id) {
                     setExpandedLoadId(null);
+                    setEditingLoad(null); // Reset editing state when collapsing
                   } else {
                     setExpandedLoadId(load.id);
+                    setEditingLoad(null); // Ensure editing is closed when expanding a new row
                   }
                 }}
               >
@@ -1398,7 +1400,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                         e.stopPropagation();
                         handleCopy(load);
                       }}
-                      className="px-4 py-2 bg-slate-100 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-200 transition-colors border border-slate-200"
+                      className="px-4 py-2 bg-slate-100 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-200 transition-colors border border-slate-200 cursor-pointer"
                     >
                       COPY
                     </button>
@@ -1407,7 +1409,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                         e.stopPropagation();
                         handleEdit(load);
                       }}
-                      className="px-4 py-2 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-sm font-medium rounded-xl hover:shadow-lg hover:shadow-teal-500/30 transition-all shadow-md shadow-teal-500/25"
+                      className="px-4 py-2 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-sm font-medium rounded-xl hover:shadow-lg hover:shadow-teal-500/30 transition-all shadow-md shadow-teal-500/25 cursor-pointer"
                     >
                       EDIT
                     </button>
@@ -1416,7 +1418,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                         e.stopPropagation();
                         handleDelete(load);
                       }}
-                      className="px-4 py-2 bg-rose-50 text-rose-600 text-sm font-medium rounded-xl hover:bg-rose-100 transition-colors border border-rose-200"
+                      className="px-4 py-2 bg-rose-50 text-rose-600 text-sm font-medium rounded-xl hover:bg-rose-100 transition-colors border border-rose-200 cursor-pointer"
                     >
                       DELETE
                     </button>
@@ -1425,7 +1427,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                         e.stopPropagation();
                         handleSearchTrucks(load);
                       }}
-                      className="px-4 py-2 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-xl hover:bg-indigo-100 transition-colors border border-indigo-200 flex items-center gap-2"
+                      className="px-4 py-2 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-xl hover:bg-indigo-100 transition-colors border border-indigo-200 flex items-center gap-2 cursor-pointer"
                       title="Search for matching trucks"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
