@@ -55,7 +55,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
   const [expandedLoadId, setExpandedLoadId] = useState<string | null>(null);
   const [showNewLoadModal, setShowNewLoadModal] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
-  const [sortField, setSortField] = useState<string>('createdAt');
+  const [sortField, setSortField] = useState<string>('postedAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [submitting, setSubmitting] = useState(false);
 
@@ -137,7 +137,14 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
         })
       );
 
-      setLoads(loadsWithMatchCounts);
+      // Sort by most recently posted first (smallest age at top)
+      const sortedLoads = loadsWithMatchCounts.sort((a: any, b: any) => {
+        const dateA = new Date(a.postedAt || a.createdAt || 0).getTime();
+        const dateB = new Date(b.postedAt || b.createdAt || 0).getTime();
+        return dateB - dateA; // Newest first
+      });
+
+      setLoads(sortedLoads);
 
       // Fetch counts for each status tab
       const counts: Record<string, number> = {
@@ -749,9 +756,9 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
           </div>
           <div
             className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
-            onClick={() => handleHeaderClick('createdAt')}
+            onClick={() => handleHeaderClick('postedAt')}
           >
-            Age {sortField === 'createdAt' && (sortOrder === 'asc' ? '↑' : '↓')}
+            Age {sortField === 'postedAt' && (sortOrder === 'asc' ? '↑' : '↓')}
           </div>
           <div
             className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"

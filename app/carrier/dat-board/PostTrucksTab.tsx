@@ -172,7 +172,14 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         })
       );
 
-      setTrucks(trucksWithMatchCounts);
+      // Sort by most recently posted first (smallest age at top)
+      const sortedTrucks = trucksWithMatchCounts.sort((a: any, b: any) => {
+        const dateA = new Date(a.postedAt || a.createdAt || 0).getTime();
+        const dateB = new Date(b.postedAt || b.createdAt || 0).getTime();
+        return dateB - dateA; // Newest first
+      });
+
+      setTrucks(sortedTrucks);
 
       // Fetch counts for each status tab
       const counts: Record<string, number> = {
@@ -1250,9 +1257,9 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         if (dhDA !== dhDB) return dhDA - dhDB;
       } else {
         // No truck selected: sort by recency first, then by location
-        // First: by most recent (newest first)
-        const dateA = new Date(a.load?.createdAt || 0).getTime();
-        const dateB = new Date(b.load?.createdAt || 0).getTime();
+        // First: by most recent posted (newest first)
+        const dateA = new Date(a.load?.postedAt || a.load?.createdAt || 0).getTime();
+        const dateB = new Date(b.load?.postedAt || b.load?.createdAt || 0).getTime();
         if (dateA !== dateB) return dateB - dateA;
 
         // Second: by pickup city (alphabetically for easier scanning)
@@ -1266,9 +1273,9 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         return destA.localeCompare(destB);
       }
 
-      // Fallback: sort by most recent first
-      const dateA = new Date(a.load?.createdAt || 0).getTime();
-      const dateB = new Date(b.load?.createdAt || 0).getTime();
+      // Fallback: sort by most recent posted first
+      const dateA = new Date(a.load?.postedAt || a.load?.createdAt || 0).getTime();
+      const dateB = new Date(b.load?.postedAt || b.load?.createdAt || 0).getTime();
       return dateB - dateA;
     })
     .map(match => match.load); // Return just the load object for the table
