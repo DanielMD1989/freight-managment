@@ -406,23 +406,23 @@ const navigationSections: Record<string, NavSection[]> = {
  */
 const portalConfig: Record<string, { title: string; subtitle: string; backLink: { href: string; label: string } }> = {
   admin: {
-    title: 'Admin',
-    subtitle: 'Management Portal',
+    title: 'FreightET',
+    subtitle: 'Admin',
     backLink: { href: '/', label: 'Back to Platform' },
   },
   carrier: {
-    title: 'Carrier',
-    subtitle: 'Fleet Portal',
+    title: 'FreightET',
+    subtitle: 'Carrier',
     backLink: { href: '/', label: 'Back to Home' },
   },
   shipper: {
-    title: 'Shipper',
-    subtitle: 'Load Portal',
+    title: 'FreightET',
+    subtitle: 'Shipper',
     backLink: { href: '/', label: 'Back to Home' },
   },
   dispatcher: {
-    title: 'Dispatcher',
-    subtitle: 'Operations Portal',
+    title: 'FreightET',
+    subtitle: 'Dispatcher',
     backLink: { href: '/', label: 'Back to Home' },
   },
 };

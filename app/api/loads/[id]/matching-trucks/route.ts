@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
-import { findMatchingTrucks } from '@/lib/matchCalculation';
+import { findMatchingTrucks } from '@/lib/matchingEngine';
 
 /**
  * GET /api/loads/[id]/matching-trucks

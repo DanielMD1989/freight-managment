@@ -558,3 +558,287 @@ export async function enhanceMatchesWithRoadDistances<T extends TruckMatch | Loa
 
   return enhanced;
 }
+
+// ============================================================================
+// In-Memory Matching Functions (Compatible with matchCalculation.ts interface)
+// ============================================================================
+
+/**
+ * Criteria interface for in-memory load matching
+ */
+interface LoadMatchCriteria {
+  id?: string;
+  pickupCity: string;
+  deliveryCity: string;
+  pickupDate?: Date | string | null;
+  truckType: string;
+  weight?: number | null;
+  lengthM?: number | null;
+  fullPartial?: string | null;
+  [key: string]: any; // Allow additional fields to pass through
+}
+
+/**
+ * Criteria interface for in-memory truck matching
+ */
+interface TruckMatchCriteria {
+  id?: string;
+  currentCity: string;
+  destinationCity?: string | null;
+  availableDate?: Date | string | null;
+  truckType: string;
+  maxWeight?: number | null;
+  lengthM?: number | null;
+  fullPartial?: string | null;
+  [key: string]: any; // Allow additional fields to pass through
+}
+
+/**
+ * Simple match result for in-memory matching
+ */
+interface SimpleMatchResult {
+  score: number; // 0-100
+  matchReasons: string[];
+  isExactMatch: boolean;
+}
+
+/**
+ * Calculate distance match score using city name comparison
+ * Used when GPS coordinates are not available
+ */
+function calculateCityDistanceScore(city1: string, city2: string): number {
+  if (!city1 || !city2) return 0;
+
+  const c1 = city1.toLowerCase().trim();
+  const c2 = city2.toLowerCase().trim();
+
+  // Exact match
+  if (c1 === c2) return 100;
+
+  // Partial match (same region/area)
+  if (c1.includes(c2) || c2.includes(c1)) return 70;
+
+  // Handle spelling variations (e.g., Mekelle/Mekele)
+  const simplify = (s: string) => s.replace(/(.)\1+/g, '$1');
+  if (simplify(c1) === simplify(c2)) return 90;
+
+  return 0;
+}
+
+/**
+ * Calculate date match score
+ */
+function calculateSimpleDateScore(
+  loadDate: Date | string | null | undefined,
+  truckDate: Date | string | null | undefined
+): number {
+  if (!loadDate || !truckDate) return 50; // Neutral if not specified
+
+  const load = new Date(loadDate);
+  const truck = new Date(truckDate);
+
+  // Same day
+  if (load.toDateString() === truck.toDateString()) return 100;
+
+  const diffDays = Math.abs(load.getTime() - truck.getTime()) / (1000 * 60 * 60 * 24);
+
+  if (diffDays <= 1) return 90;
+  if (diffDays <= 3) return 70;
+  if (diffDays <= 7) return 50;
+
+  return 20;
+}
+
+/**
+ * Calculate truck type match score
+ */
+function calculateTruckTypeScore(loadType: string, truckType: string): number {
+  const loadNorm = loadType?.toUpperCase() || '';
+  const truckNorm = truckType?.toUpperCase() || '';
+
+  if (loadNorm === truckNorm) return 100;
+
+  // Compatible types
+  const compatiblePairs: Record<string, string[]> = {
+    'DRY_VAN': ['VAN', 'FLATBED', 'CONTAINER'],
+    'VAN': ['DRY_VAN', 'CONTAINER'],
+    'FLATBED': ['DRY_VAN', 'CONTAINER'],
+    'REFRIGERATED': ['REEFER'],
+    'REEFER': ['REFRIGERATED'],
+  };
+
+  const compatible = compatiblePairs[loadNorm] || [];
+  if (compatible.includes(truckNorm)) return 70;
+
+  return 0;
+}
+
+/**
+ * Calculate weight capacity score
+ */
+function calculateSimpleWeightScore(
+  loadWeight: number | null | undefined,
+  truckMaxWeight: number | null | undefined
+): number {
+  if (!loadWeight || !truckMaxWeight) return 50;
+
+  if (truckMaxWeight >= loadWeight) {
+    const utilization = (loadWeight / truckMaxWeight) * 100;
+    if (utilization >= 90) return 100;
+    if (utilization >= 70) return 90;
+    if (utilization >= 50) return 70;
+    return 50;
+  }
+
+  return 0; // Truck cannot handle the load
+}
+
+/**
+ * Calculate length match score
+ */
+function calculateSimpleLengthScore(
+  loadLength: number | null | undefined,
+  truckLength: number | null | undefined
+): number {
+  if (!loadLength || !truckLength) return 50;
+  return truckLength >= loadLength ? 100 : 0;
+}
+
+/**
+ * Calculate full/partial match score
+ */
+function calculateFullPartialScore(
+  loadType: string | null | undefined,
+  truckType: string | null | undefined
+): number {
+  if (!loadType || !truckType) return 50;
+
+  const loadNorm = loadType.toUpperCase();
+  const truckNorm = truckType.toUpperCase();
+
+  if (loadNorm === truckNorm) return 100;
+  if (truckNorm === 'FULL' && loadNorm === 'PARTIAL') return 70;
+  if (truckNorm === 'PARTIAL' && loadNorm === 'FULL') return 30;
+
+  return 50;
+}
+
+/**
+ * Calculate match score between a load and a truck (in-memory version)
+ * Uses weighted scoring: Route 40%, Time 30%, Capacity 20%, Type 10%
+ */
+function calculateSimpleMatchScore(
+  load: LoadMatchCriteria,
+  truck: TruckMatchCriteria
+): SimpleMatchResult {
+  const reasons: string[] = [];
+
+  // Route score (40% weight) - using city name comparison
+  const originScore = calculateCityDistanceScore(load.pickupCity, truck.currentCity);
+  const destScore = truck.destinationCity
+    ? calculateCityDistanceScore(load.deliveryCity, truck.destinationCity)
+    : 70; // Flexible destination gets 70%
+  const routeScore = (originScore * 0.6 + destScore * 0.4); // Origin more important
+
+  if (originScore === 100) reasons.push('Exact origin match');
+  else if (originScore >= 70) reasons.push('Nearby origin');
+
+  if (destScore === 100) reasons.push('Exact destination match');
+  else if (destScore >= 70 && truck.destinationCity) reasons.push('Nearby destination');
+
+  // Time score (30% weight)
+  const timeScore = calculateSimpleDateScore(load.pickupDate, truck.availableDate);
+  if (timeScore >= 90) reasons.push('Perfect timing');
+  else if (timeScore >= 70) reasons.push('Good timing');
+
+  // Capacity score (20% weight)
+  const weightScore = calculateSimpleWeightScore(load.weight, truck.maxWeight);
+  const lengthScore = calculateSimpleLengthScore(load.lengthM, truck.lengthM);
+  const fpScore = calculateFullPartialScore(load.fullPartial, truck.fullPartial);
+  const capacityScore = (weightScore * 0.5 + lengthScore * 0.25 + fpScore * 0.25);
+
+  if (weightScore === 100) reasons.push('Optimal weight utilization');
+  else if (weightScore === 0) reasons.push('Insufficient weight capacity');
+  if (lengthScore === 0 && load.lengthM && truck.lengthM) reasons.push('Insufficient length');
+
+  // Type score (10% weight)
+  const typeScore = calculateTruckTypeScore(load.truckType, truck.truckType);
+  if (typeScore === 100) reasons.push('Perfect truck type match');
+  else if (typeScore === 0) reasons.push('Incompatible truck type');
+
+  // Calculate final weighted score (matching matchingEngine weights: Route 40%, Time 30%, Capacity 20%, Type 10%)
+  const finalScore = Math.round(
+    routeScore * 0.40 +
+    timeScore * 0.30 +
+    capacityScore * 0.20 +
+    typeScore * 0.10
+  );
+
+  const isExactMatch = finalScore >= 85 && typeScore === 100 && originScore >= 70;
+
+  if (isExactMatch) {
+    reasons.unshift('Exact Match');
+  }
+
+  return {
+    score: finalScore,
+    matchReasons: reasons,
+    isExactMatch,
+  };
+}
+
+/**
+ * Find matching loads for a truck (in-memory version)
+ * Compatible with matchCalculation.ts interface
+ *
+ * @param truck - Truck criteria
+ * @param loads - Array of load criteria
+ * @param minScore - Minimum match score (default: 50)
+ * @returns Array of loads with match scores
+ */
+export function findMatchingLoads<T extends LoadMatchCriteria>(
+  truck: TruckMatchCriteria,
+  loads: T[],
+  minScore: number = 50
+): Array<T & { matchScore: number; matchReasons: string[]; isExactMatch: boolean }> {
+  return loads
+    .map(load => {
+      const match = calculateSimpleMatchScore(load, truck);
+      return {
+        ...load,
+        matchScore: match.score,
+        matchReasons: match.matchReasons,
+        isExactMatch: match.isExactMatch,
+      };
+    })
+    .filter(load => load.matchScore >= minScore)
+    .sort((a, b) => b.matchScore - a.matchScore);
+}
+
+/**
+ * Find matching trucks for a load (in-memory version)
+ * Compatible with matchCalculation.ts interface
+ *
+ * @param load - Load criteria
+ * @param trucks - Array of truck criteria
+ * @param minScore - Minimum match score (default: 50)
+ * @returns Array of trucks with match scores
+ */
+export function findMatchingTrucks<T extends TruckMatchCriteria>(
+  load: LoadMatchCriteria,
+  trucks: T[],
+  minScore: number = 50
+): Array<T & { matchScore: number; matchReasons: string[]; isExactMatch: boolean }> {
+  return trucks
+    .map(truck => {
+      const match = calculateSimpleMatchScore(load, truck);
+      return {
+        ...truck,
+        matchScore: match.score,
+        matchReasons: match.matchReasons,
+        isExactMatch: match.isExactMatch,
+      };
+    })
+    .filter(truck => truck.matchScore >= minScore)
+    .sort((a, b) => b.matchScore - a.matchScore);
+}

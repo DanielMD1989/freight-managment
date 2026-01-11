@@ -546,12 +546,8 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
   return (
     <div className="space-y-6">
-      {/* Header Section */}
+      {/* Header Row - NEW LOAD POST on left, Status Tabs on right */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-slate-800">Post Loads</h2>
-          <p className="text-sm text-slate-500 mt-0.5">Create and manage your load postings</p>
-        </div>
         <button
           onClick={() => setShowNewLoadModal(!showNewLoadModal)}
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-teal-500 text-white rounded-xl hover:shadow-lg hover:shadow-teal-500/30 transition-all font-semibold text-sm shadow-md shadow-teal-500/25"
@@ -561,23 +557,23 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
           </svg>
           NEW LOAD POST
         </button>
-      </div>
 
-      {/* Status Tabs */}
-      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-1.5 inline-flex gap-1">
-        {statusTabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveStatus(tab.key as LoadStatus)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-              activeStatus === tab.key
-                ? 'bg-gradient-to-r from-teal-600 to-teal-500 text-white shadow-md shadow-teal-500/25'
-                : 'text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            {tab.label} {tab.count !== undefined && <span className="ml-1 text-xs opacity-75">({tab.count})</span>}
-          </button>
-        ))}
+        {/* Status Tabs - Right Side */}
+        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-1.5 inline-flex gap-1">
+          {statusTabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveStatus(tab.key as LoadStatus)}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                activeStatus === tab.key
+                  ? 'bg-gradient-to-r from-teal-600 to-teal-500 text-white shadow-md shadow-teal-500/25'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              {tab.label} {tab.count !== undefined && <span className="ml-1 text-xs opacity-75">({tab.count})</span>}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Table Structure */}

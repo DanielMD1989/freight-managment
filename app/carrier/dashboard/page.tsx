@@ -108,23 +108,39 @@ export default async function CarrierDashboardPage() {
 
 function DashboardSkeleton() {
   return (
-    <div className="min-h-screen bg-slate-50 p-6 animate-pulse">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-slate-50 animate-pulse">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
         {/* Header skeleton */}
-        <div className="h-8 w-48 bg-slate-200 rounded-lg mb-2" />
-        <div className="h-4 w-64 bg-slate-200 rounded mb-8" />
+        <div className="h-6 w-40 bg-slate-200 rounded mb-6" />
 
-        {/* Stats grid skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* KPI Cards skeleton */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white rounded-2xl p-6 h-32 border border-slate-200/60" />
+            <div key={i} className="bg-white rounded-xl p-4 h-20 border border-slate-200/60" />
           ))}
         </div>
 
-        {/* Content skeleton */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-white rounded-2xl p-6 h-96 border border-slate-200/60" />
-          <div className="bg-white rounded-2xl p-6 h-96 border border-slate-200/60" />
+        {/* Quick Actions skeleton */}
+        <div className="flex gap-4 mb-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="w-14 h-14 bg-slate-200 rounded-xl" />
+          ))}
+        </div>
+
+        {/* Active Load skeleton */}
+        <div className="mb-6">
+          <div className="h-4 w-24 bg-slate-200 rounded mb-3" />
+          <div className="bg-white rounded-xl p-4 h-24 border border-slate-200/60" />
+        </div>
+
+        {/* Recommended Loads skeleton */}
+        <div className="mb-8">
+          <div className="h-4 w-36 bg-slate-200 rounded mb-3" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="bg-white rounded-xl p-4 h-28 border border-slate-200/60" />
+            ))}
+          </div>
         </div>
       </div>
     </div>

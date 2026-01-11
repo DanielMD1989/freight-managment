@@ -159,21 +159,8 @@ export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientPro
     <div className="min-h-screen bg-[var(--bg-tinted)]">
       {/* Header - Medium Teal Design */}
       <div className="portal-header">
-        {/* Logo & Branding */}
-        <div className="portal-header-logo pr-4 border-r border-white/20">
-          <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center border border-white/30">
-            <svg className="w-6 h-6 text-[#1e9c99]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-          </div>
-          <div>
-            <span className="block">FreightET</span>
-            <span className="text-xs font-normal text-white/70">Shipper Portal</span>
-          </div>
-        </div>
-
         {/* Navigation Tabs */}
-        <div className="flex-1 flex justify-center">
+        <div className="flex-1 flex justify-start">
           <DatNavTabs
             activeTab={activeTab}
             onTabChange={(tab) => setActiveTab(tab as ShipperTabKey)}

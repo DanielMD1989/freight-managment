@@ -1275,12 +1275,8 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* Header with NEW TRUCK POST button */}
-      <div className="flex items-center justify-between mb-2">
-        <div>
-          <h2 className="text-xl font-bold text-slate-800">Post Trucks</h2>
-          <p className="text-sm text-slate-500">List your available trucks and find matching loads</p>
-        </div>
+      {/* Header Row - NEW TRUCK POST on left, Status Tabs on right */}
+      <div className="flex items-center justify-between">
         <button
           onClick={() => setShowNewTruckForm(!showNewTruckForm)}
           className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-sm font-bold rounded-xl hover:from-teal-700 hover:to-teal-600 transition-all shadow-md shadow-teal-500/25"
@@ -1290,6 +1286,13 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
           </svg>
           NEW TRUCK POST
         </button>
+
+        {/* Status Filter Tabs - Right Side */}
+        <DatStatusTabs
+          tabs={statusTabs}
+          activeTab={activeStatus}
+          onTabChange={(tab) => setActiveStatus(tab as TruckStatus)}
+        />
       </div>
 
       {/* New Truck Posting Form - Clean Organized Layout */}
@@ -1592,13 +1595,6 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
           </div>
         </div>
       )}
-
-      {/* Status Filter Tabs */}
-      <DatStatusTabs
-        tabs={statusTabs}
-        activeTab={activeStatus}
-        onTabChange={(tab) => setActiveStatus(tab as TruckStatus)}
-      />
 
       {/* Truck Posts Table */}
       <div className="bg-white rounded-2xl overflow-hidden border border-slate-200/60 shadow-sm">

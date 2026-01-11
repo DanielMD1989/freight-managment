@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import { findMatchingLoads } from '@/lib/matchCalculation';
+import { findMatchingLoads } from '@/lib/matchingEngine';
 import { db } from '@/lib/db';
 
 /**
@@ -124,15 +124,16 @@ export async function GET(
       );
     }
 
-    // Verify ownership or admin/carrier access
+    // Verify ownership - only the carrier who owns this truck posting can see matches
+    // Per RULE_CARRIER_OWNS_TRUCKS: Carrier is sole owner of trucks
     const hasAccess =
       truckPosting.carrierId === session.organizationId ||
       session.role === 'ADMIN' ||
-      session.role === 'CARRIER';
+      session.role === 'SUPER_ADMIN';
 
     if (!hasAccess) {
       return NextResponse.json(
-        { error: 'Forbidden: You do not have access to this truck posting' },
+        { error: 'Forbidden: You can only view matches for your own truck postings' },
         { status: 403 }
       );
     }
