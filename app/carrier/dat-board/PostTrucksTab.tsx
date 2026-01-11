@@ -1054,10 +1054,18 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     const notes = [comment1, comment2].filter(Boolean).join('\n').trim() || null;
 
     try {
+      // Get CSRF token for secure submission
+      const csrfToken = await getCSRFToken();
+      if (!csrfToken) {
+        alert('Failed to get security token. Please refresh and try again.');
+        return;
+      }
+
       const response = await fetch(`/api/truck-postings/${editingTruckId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify({
           availableFrom: editForm.availableFrom || undefined,

@@ -24,6 +24,24 @@ interface PostLoadsTabProps {
   onSwitchToSearchTrucks?: (filters: any) => void;
 }
 
+/**
+ * Get CSRF token for secure form submissions
+ */
+const getCSRFToken = async (): Promise<string | null> => {
+  try {
+    const response = await fetch('/api/csrf-token');
+    if (!response.ok) {
+      console.error('CSRF token request failed:', response.status);
+      return null;
+    }
+    const data = await response.json();
+    return data.csrfToken;
+  } catch (error) {
+    console.error('Failed to get CSRF token:', error);
+    return null;
+  }
+};
+
 type LoadStatus = 'POSTED' | 'UNPOSTED' | 'EXPIRED';
 
 export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoadsTabProps) {
@@ -369,9 +387,20 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
     setSubmitting(true);
     try {
+      // Get CSRF token for secure submission
+      const csrfToken = await getCSRFToken();
+      if (!csrfToken) {
+        alert('Failed to get security token. Please refresh and try again.');
+        setSubmitting(false);
+        return;
+      }
+
       const response = await fetch(`/api/loads/${editingLoad.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify({
           pickupCity: editingLoad.pickupCity,
           deliveryCity: editingLoad.deliveryCity,
