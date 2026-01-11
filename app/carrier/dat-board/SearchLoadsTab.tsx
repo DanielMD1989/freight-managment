@@ -17,6 +17,25 @@ interface SearchLoadsTabProps {
 
 type ResultsFilter = 'all' | 'PREFERRED' | 'BLOCKED';
 
+/**
+ * Calculate distance between two coordinates using Haversine formula
+ * Returns distance in kilometers
+ */
+function haversineDistance(
+  lat1: number, lon1: number,
+  lat2: number, lon2: number
+): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+}
+
 export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
   const [loads, setLoads] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -220,7 +239,34 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
   };
 
   /**
-   * Fetch loads based on filters
+   * Helper to get city coordinates by name
+   */
+  const getCityCoords = (cityName: string | null): { lat: number; lon: number } | null => {
+    if (!cityName || ethiopianCities.length === 0) return null;
+    const searchName = cityName.toLowerCase().trim();
+
+    // Try exact match first
+    let city = ethiopianCities.find((c: any) => c.name?.toLowerCase().trim() === searchName);
+
+    // Fuzzy match for spelling variations
+    if (!city) {
+      city = ethiopianCities.find((c: any) => {
+        const name = c.name?.toLowerCase().trim() || '';
+        if (name.includes(searchName) || searchName.includes(name)) return true;
+        // Handle double letters (Mekelle/Mekele, Jimma/Jima)
+        const simplify = (s: string) => s.replace(/(.)\1+/g, '$1');
+        return simplify(name) === simplify(searchName);
+      });
+    }
+
+    if (city?.latitude && city?.longitude) {
+      return { lat: Number(city.latitude), lon: Number(city.longitude) };
+    }
+    return null;
+  };
+
+  /**
+   * Fetch loads based on filters and calculate DH-O/DH-D dynamically
    */
   const fetchLoads = async () => {
     setLoading(true);
@@ -231,12 +277,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
       if (filterValues.truckType) {
         params.append('truckType', filterValues.truckType);
       }
-      if (filterValues.origin) {
-        params.append('pickupCity', filterValues.origin);
-      }
-      if (filterValues.destination) {
-        params.append('deliveryCity', filterValues.destination);
-      }
+      // Don't filter by exact city match - we want to calculate distances
       if (filterValues.availDate) {
         params.append('pickupFrom', filterValues.availDate);
       }
@@ -252,7 +293,96 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
 
       const response = await fetch(`/api/loads?${params.toString()}`);
       const data = await response.json();
-      setLoads(data.loads || []);
+      let fetchedLoads = data.loads || [];
+
+      // Get carrier's origin and destination coordinates
+      const carrierOriginCoords = getCityCoords(filterValues.origin);
+      const carrierDestCoords = getCityCoords(filterValues.destination);
+
+      // Calculate DH-O and DH-D for each load
+      const loadsWithDH = fetchedLoads.map((load: any) => {
+        const pickupCoords = getCityCoords(load.pickupCity);
+        const deliveryCoords = getCityCoords(load.deliveryCity);
+
+        // Calculate DH-O: distance from carrier's origin to load's pickup
+        let calculatedDhO: number | null = null;
+        if (carrierOriginCoords && pickupCoords) {
+          calculatedDhO = haversineDistance(
+            carrierOriginCoords.lat, carrierOriginCoords.lon,
+            pickupCoords.lat, pickupCoords.lon
+          );
+        }
+
+        // Calculate DH-D: distance from load's delivery to carrier's destination
+        let calculatedDhD: number | null = null;
+        if (carrierDestCoords && deliveryCoords) {
+          calculatedDhD = haversineDistance(
+            deliveryCoords.lat, deliveryCoords.lon,
+            carrierDestCoords.lat, carrierDestCoords.lon
+          );
+        }
+
+        return {
+          ...load,
+          // Use calculated values, fall back to stored values if no carrier origin/dest entered
+          dhToOriginKm: calculatedDhO !== null ? calculatedDhO : load.dhToOriginKm,
+          dhAfterDeliveryKm: calculatedDhD !== null ? calculatedDhD : load.dhAfterDeliveryKm,
+          // Store whether these are calculated (for UI indicator)
+          dhCalculated: calculatedDhO !== null || calculatedDhD !== null,
+        };
+      });
+
+      // Filter by DH limits if specified
+      const dhOriginLimit = filterValues.dhOrigin ? parseInt(filterValues.dhOrigin) : null;
+      const dhDestLimit = filterValues.dhDestination ? parseInt(filterValues.dhDestination) : null;
+
+      let filteredLoads = loadsWithDH;
+
+      if (dhOriginLimit !== null) {
+        filteredLoads = filteredLoads.filter((load: any) => {
+          // If no DH-O calculated (carrier didn't enter origin), skip filtering
+          if (load.dhToOriginKm === null || load.dhToOriginKm === undefined) return true;
+          return load.dhToOriginKm <= dhOriginLimit;
+        });
+      }
+
+      if (dhDestLimit !== null) {
+        filteredLoads = filteredLoads.filter((load: any) => {
+          // If no DH-D calculated (carrier didn't enter destination), skip filtering
+          if (load.dhAfterDeliveryKm === null || load.dhAfterDeliveryKm === undefined) return true;
+          return load.dhAfterDeliveryKm <= dhDestLimit;
+        });
+      }
+
+      // Sort by DH-O (smaller is better), then DH-D, then by date
+      filteredLoads.sort((a: any, b: any) => {
+        // Loads with calculated DH first
+        const aHasDH = a.dhToOriginKm !== null && a.dhToOriginKm !== undefined;
+        const bHasDH = b.dhToOriginKm !== null && b.dhToOriginKm !== undefined;
+
+        if (aHasDH && !bHasDH) return -1;
+        if (!aHasDH && bHasDH) return 1;
+
+        // Sort by DH-O (smaller is better)
+        if (aHasDH && bHasDH) {
+          if (a.dhToOriginKm !== b.dhToOriginKm) {
+            return a.dhToOriginKm - b.dhToOriginKm;
+          }
+        }
+
+        // Then by DH-D (smaller is better)
+        const aHasDhD = a.dhAfterDeliveryKm !== null && a.dhAfterDeliveryKm !== undefined;
+        const bHasDhD = b.dhAfterDeliveryKm !== null && b.dhAfterDeliveryKm !== undefined;
+
+        if (aHasDhD && bHasDhD && a.dhAfterDeliveryKm !== b.dhAfterDeliveryKm) {
+          return a.dhAfterDeliveryKm - b.dhAfterDeliveryKm;
+        }
+
+        // Finally by creation date (newest first)
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+
+      setLoads(filteredLoads);
     } catch (error) {
       console.error('Failed to fetch loads:', error);
     } finally {
