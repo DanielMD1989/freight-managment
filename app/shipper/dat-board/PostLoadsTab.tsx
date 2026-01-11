@@ -217,6 +217,40 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
   };
 
   /**
+   * Handle POST action - Change unposted load to posted
+   */
+  const handlePostLoad = async (load: any) => {
+    try {
+      // Get CSRF token for secure submission
+      const csrfToken = await getCSRFToken();
+      if (!csrfToken) {
+        toast.error('Failed to get security token. Please refresh and try again.');
+        return;
+      }
+
+      const response = await fetch(`/api/loads/${load.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
+        body: JSON.stringify({ status: 'POSTED' }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to post load');
+      }
+
+      toast.success('Load posted successfully!');
+      fetchLoads(); // Refresh the list
+    } catch (error: any) {
+      console.error('Post load error:', error);
+      toast.error(error.message || 'Failed to post load');
+    }
+  };
+
+  /**
    * Handle SEARCH TRUCKS action
    */
   const handleSearchTrucks = (load: any) => {
@@ -397,25 +431,33 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
         return;
       }
 
+      // Build update payload - auto-post unposted loads when saving
+      const updatePayload: any = {
+        pickupCity: editingLoad.pickupCity,
+        deliveryCity: editingLoad.deliveryCity,
+        pickupDate: editingLoad.pickupDate,
+        pickupDockHours: editingLoad.pickupDockHours,
+        truckType: editingLoad.truckType,
+        fullPartial: editingLoad.fullPartial,
+        lengthM: editingLoad.lengthM ? parseFloat(editingLoad.lengthM) : null,
+        weight: editingLoad.weight ? parseFloat(editingLoad.weight) : null,
+        shipperContactPhone: editingLoad.shipperContactPhone,
+        cargoDescription: editingLoad.cargoDescription,
+        specialInstructions: editingLoad.specialInstructions,
+      };
+
+      // If currently UNPOSTED, change to POSTED when saving
+      if (editingLoad.status === 'UNPOSTED') {
+        updatePayload.status = 'POSTED';
+      }
+
       const response = await fetch(`/api/loads/${editingLoad.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRF-Token': csrfToken,
         },
-        body: JSON.stringify({
-          pickupCity: editingLoad.pickupCity,
-          deliveryCity: editingLoad.deliveryCity,
-          pickupDate: editingLoad.pickupDate,
-          pickupDockHours: editingLoad.pickupDockHours,
-          truckType: editingLoad.truckType,
-          fullPartial: editingLoad.fullPartial,
-          lengthM: editingLoad.lengthM ? parseFloat(editingLoad.lengthM) : null,
-          weight: editingLoad.weight ? parseFloat(editingLoad.weight) : null,
-          shipperContactPhone: editingLoad.shipperContactPhone,
-          cargoDescription: editingLoad.cargoDescription,
-          specialInstructions: editingLoad.specialInstructions,
-        }),
+        body: JSON.stringify(updatePayload),
       });
 
       if (!response.ok) {
@@ -424,9 +466,10 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       }
 
       // Success! Clear editing state and refresh loads
+      const wasUnposted = editingLoad.status === 'UNPOSTED';
       setEditingLoad(null);
       setExpandedLoadId(null);
-      toast.success('Load updated successfully!');
+      toast.success(wasUnposted ? 'Load updated and posted successfully!' : 'Load updated successfully!');
       fetchLoads();
     } catch (error: any) {
       console.error('Update load error:', error);
@@ -1353,6 +1396,22 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                     </div>
                     {/* Search and Action Buttons */}
                     <div className="flex items-center gap-2">
+                      {/* POST button - only for unposted loads */}
+                      {load.status === 'UNPOSTED' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePostLoad(load);
+                          }}
+                          className="px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white text-xs font-semibold rounded-lg hover:from-emerald-700 hover:to-emerald-600 transition-all shadow-md shadow-emerald-500/25 cursor-pointer flex items-center gap-1"
+                          title="Post this load to make it visible to carriers"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          POST
+                        </button>
+                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
