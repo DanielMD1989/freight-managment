@@ -252,7 +252,8 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       }
 
       toast.success('Load posted successfully!');
-      fetchLoads(); // Refresh the list
+      // Switch to POSTED tab and refresh
+      setActiveStatus('POSTED');
     } catch (error: any) {
       console.error('Post load error:', error);
       toast.error(error.message || 'Failed to post load');
@@ -479,7 +480,13 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       setEditingLoad(null);
       setExpandedLoadId(null);
       toast.success(wasUnposted ? 'Load updated and posted successfully!' : 'Load updated successfully!');
-      fetchLoads();
+
+      // If was unposted, switch to POSTED tab (useEffect will fetch)
+      if (wasUnposted) {
+        setActiveStatus('POSTED');
+      } else {
+        fetchLoads();
+      }
     } catch (error: any) {
       console.error('Update load error:', error);
       toast.error(error.message || 'Failed to update load');

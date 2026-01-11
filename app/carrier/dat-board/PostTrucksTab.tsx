@@ -463,7 +463,8 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       }
 
       toast.success('Truck posted successfully!');
-      fetchTrucks(); // Refresh the list
+      // Switch to POSTED tab and refresh (useEffect will fetch)
+      setActiveStatus('POSTED');
     } catch (error: any) {
       console.error('Post truck error:', error);
       toast.error(error.message || 'Failed to post truck');
@@ -1162,7 +1163,13 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       toast.success(wasUnposted ? 'Truck updated and posted successfully!' : 'Truck posting updated successfully!');
       setEditingTruckId(null);
       setEditForm({});
-      fetchTrucks();
+
+      // If was unposted, switch to POSTED tab (useEffect will fetch)
+      if (wasUnposted) {
+        setActiveStatus('POSTED');
+      } else {
+        fetchTrucks();
+      }
     } catch (error: any) {
       console.error('Update failed:', error);
       toast.error(error.message || 'Failed to update truck posting');
