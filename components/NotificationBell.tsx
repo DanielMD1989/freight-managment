@@ -8,6 +8,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { csrfFetch } from '@/lib/csrfFetch';
 
 interface Notification {
@@ -17,10 +18,11 @@ interface Notification {
   message: string;
   read: boolean;
   createdAt: string;
-  metadata?: any;
+  metadata?: Record<string, string>;
 }
 
 export default function NotificationBell() {
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -135,6 +137,64 @@ export default function NotificationBell() {
     return date.toLocaleDateString();
   };
 
+  const getNotificationRoute = (notification: Notification): string | null => {
+    const { type, metadata } = notification;
+
+    // Carrier-side notifications
+    if (type === 'LOAD_REQUEST_APPROVED' && metadata?.loadId) {
+      return `/carrier/trips/${metadata.loadId}`;
+    }
+    if (type === 'LOAD_REQUEST_REJECTED' && metadata?.loadRequestId) {
+      return `/carrier/load-requests?highlight=${metadata.loadRequestId}`;
+    }
+
+    // Shipper-side notifications
+    if (type === 'LOAD_REQUEST_RECEIVED' && metadata?.loadRequestId) {
+      return `/shipper/requests?highlight=${metadata.loadRequestId}`;
+    }
+
+    // Trip-related notifications
+    if (type === 'TRIP_STARTED' && metadata?.loadId) {
+      return `/carrier/trips/${metadata.loadId}`;
+    }
+    if (type === 'TRIP_COMPLETED' && metadata?.loadId) {
+      return `/carrier/trips/${metadata.loadId}`;
+    }
+    if (type === 'POD_UPLOADED' && metadata?.loadId) {
+      return `/shipper/loads/${metadata.loadId}`;
+    }
+
+    // GPS and tracking notifications
+    if (type.includes('GPS') && metadata?.loadId) {
+      return `/carrier/trips/${metadata.loadId}`;
+    }
+
+    // Settlement notifications
+    if (type.includes('SETTLEMENT') && metadata?.settlementId) {
+      return `/carrier/wallet?settlement=${metadata.settlementId}`;
+    }
+
+    // User/verification notifications
+    if (type.includes('USER') || type.includes('VERIFICATION')) {
+      return '/settings';
+    }
+
+    // Default: no navigation
+    return null;
+  };
+
+  const handleNotificationClick = async (notification: Notification) => {
+    // Mark as read
+    await handleMarkAsRead(notification.id);
+
+    // Navigate to relevant page
+    const route = getNotificationRoute(notification);
+    if (route) {
+      setIsOpen(false);
+      router.push(route);
+    }
+  };
+
   if (!isAuthenticated) return null;
 
   return (
@@ -208,7 +268,7 @@ export default function NotificationBell() {
                     className={`px-5 py-4 border-b border-slate-100 last:border-0 hover:bg-slate-50 cursor-pointer transition-colors ${
                       !notification.read ? 'bg-teal-50/50' : ''
                     }`}
-                    onClick={() => handleMarkAsRead(notification.id)}
+                    onClick={() => handleNotificationClick(notification)}
                   >
                     <div className="flex items-start gap-3">
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${getIconBgColor(notification.type)}`}>

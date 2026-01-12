@@ -264,6 +264,7 @@ const navigationSections: Record<string, NavSection[]> = {
         { label: 'Post Trucks', href: '/carrier?tab=POST_TRUCKS', icon: '📤', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
         { label: 'Search Loads', href: '/carrier?tab=SEARCH_LOADS', icon: '🔍', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
         { label: 'Requests', href: '/carrier/requests', icon: '📋', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
+        { label: 'My Load Requests', href: '/carrier/load-requests', icon: '📨', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
       ],
     },
     {
@@ -279,9 +280,16 @@ const navigationSections: Record<string, NavSection[]> = {
       ],
     },
     {
+      title: 'Trips',
+      items: [
+        { label: 'Approved Loads', href: '/carrier/trips?tab=approved', icon: '✅', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Active Trips', href: '/carrier/trips?tab=active', icon: '🚚', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Completed Trips', href: '/carrier/trips?tab=completed', icon: '📜', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
+      ],
+    },
+    {
       title: 'Operations',
       items: [
-        { label: 'Trip History', href: '/carrier/trips', icon: '📜', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
         { label: 'GPS Tracking', href: '/carrier/gps', icon: '📍', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
         { label: 'Documents', href: '/carrier/documents', icon: '📁', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
       ],

@@ -178,7 +178,7 @@ export default async function ShipperRequestsPage() {
       pickupCity: req.load.pickupLocation?.name || 'Unknown',
       deliveryCity: req.load.deliveryLocation?.name || 'Unknown',
       pickupDate: req.load.pickupDate.toISOString(),
-      rate: req.load.offeredRate ? Number(req.load.offeredRate) : null,
+      rate: req.load.totalFareEtb ? Number(req.load.totalFareEtb) : (req.load.rate ? Number(req.load.rate) : null),
     },
     truck: {
       id: req.truck.id,

@@ -5504,6 +5504,145 @@ Post Load → Search Trucks → Send Request → Wait for Carrier Approval → T
 
 ---
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+              SPRINT 18: CARRIER TRIP MANAGEMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Sprint 18: Carrier Trip Flow              [🔄] 33/38 tasks (87%) - IN PROGRESS
+
+---
+
+### **Story 18.1: As a carrier, I can view my outgoing load requests**
+**Priority:** P0 (Blocker)
+**Effort:** 2 days
+
+#### Tasks:
+- [x] 18.1.1: Create carrier load requests page at /carrier/load-requests
+- [x] 18.1.2: Create LoadRequestsClient.tsx with status filter tabs (PENDING/APPROVED/REJECTED/ALL)
+- [x] 18.1.3: Display request cards with load info, shipper info, truck info
+- [x] 18.1.4: Show expiration countdown for pending requests
+- [x] 18.1.5: Add "View Trip" button for approved requests → navigates to trip detail
+- [x] 18.1.6: Add sidebar navigation link for "My Load Requests"
+
+#### Acceptance Criteria:
+- Carrier can see all load requests they've sent
+- Requests are filterable by status
+- Pending requests show time remaining
+- Approved requests link to trip management
+
+---
+
+### **Story 18.2: As a carrier, I can manage my trips by status**
+**Priority:** P0 (Blocker)
+**Effort:** 3 days
+
+#### Tasks:
+- [x] 18.2.1: Enhance /carrier/trips page with tabs: Approved Loads | Active Trips | Completed Trips
+- [x] 18.2.2: Create trip tabs component with URL query param sync
+- [x] 18.2.3: "Approved Loads" tab shows loads with status=ASSIGNED
+- [x] 18.2.4: "Active Trips" tab shows loads with status=PICKUP_PENDING or IN_TRANSIT
+- [x] 18.2.5: "Completed Trips" tab shows loads with status=DELIVERED or COMPLETED
+- [x] 18.2.6: Add trip cards with action buttons based on status
+- [x] 18.2.7: Update sidebar with new trip tab navigation
+
+#### Acceptance Criteria:
+- Carrier can see trips organized by status
+- Each tab shows relevant loads only
+- Trip cards display route, dates, shipper info
+- Appropriate action buttons appear per status
+
+---
+
+### **Story 18.3: As a carrier, I can start and manage a trip**
+**Priority:** P0 (Blocker)
+**Effort:** 3 days
+
+#### Tasks:
+- [x] 18.3.1: Create trip detail page at /carrier/trips/[id]
+- [x] 18.3.2: Create TripDetailClient.tsx with status-based actions
+- [x] 18.3.3: "Start Trip" button: changes status ASSIGNED → PICKUP_PENDING
+- [x] 18.3.4: "Confirm Pickup" button: changes status PICKUP_PENDING → IN_TRANSIT
+- [x] 18.3.5: "End Trip" button: changes status IN_TRANSIT → DELIVERED
+- [x] 18.3.6: Show trip progress and timeline
+- [x] 18.3.7: Display shipper contact info after assignment
+
+#### Acceptance Criteria:
+- Carrier can view full trip details
+- Status transitions work correctly
+- Shipper contact visible after assignment
+
+---
+
+### **Story 18.4: As a carrier, I can upload POD and complete trip**
+**Priority:** P0 (Blocker)
+**Effort:** 2 days
+
+#### Tasks:
+- [x] 18.4.1: Add POD upload section to trip detail (DELIVERED status)
+- [x] 18.4.2: Create POD upload modal/form
+- [x] 18.4.3: Show completion confirmation
+- [x] 18.4.4: Trip moves to Completed Trips tab
+- [x] 18.4.5: Display POD documents on completed trip
+
+#### Acceptance Criteria:
+- Carrier can upload POD when trip is DELIVERED
+- Completed trips show in history with POD
+
+---
+
+### **Story 18.5: As a carrier, I get routed correctly from notifications**
+**Priority:** P1 (High)
+**Effort:** 1 day
+
+#### Tasks:
+- [x] 18.5.1: Add click handler to NotificationBell.tsx for routing
+- [x] 18.5.2: LOAD_REQUEST_APPROVED → /carrier/trips/[loadId] (approved load detail)
+- [x] 18.5.3: LOAD_REQUEST_REJECTED → /carrier/load-requests (with highlight)
+- [x] 18.5.4: Handle unknown notification types gracefully
+
+#### Acceptance Criteria:
+- Clicking notification navigates to correct page
+- Notification marks as read on click
+- Correct context is shown based on notification type
+
+---
+
+### **Story 18.6: As a shipper, I can view request details**
+**Priority:** P1 (High)
+**Effort:** 1 day
+
+#### Tasks:
+- [x] 18.6.1: Create request detail page at /shipper/requests/[id]
+- [x] 18.6.2: Show full request info: carrier, truck, load, proposed rate
+- [x] 18.6.3: For approved: link to track load/trip
+- [x] 18.6.4: For rejected: show rejection notes
+- [ ] 18.6.5: E2E test the complete carrier trip flow
+- [ ] 18.6.6: Test notification routing for all notification types
+- [ ] 18.6.7: Test shipper request detail page approve/reject actions
+- [ ] 18.6.8: Test trip status transitions and POD upload
+- [ ] 18.6.9: Update dashboard percentages
+
+#### Acceptance Criteria:
+- Shipper can view full request details
+- Approved requests link to load tracking
+- Rejection reason is displayed
+
+---
+
+### **SPRINT 18 SUMMARY**
+
+| Story | Tasks | Status |
+|-------|-------|--------|
+| 18.1: Load Requests View | 6 | ✅ |
+| 18.2: Trip Management Tabs | 7 | ✅ |
+| 18.3: Trip Lifecycle | 7 | ✅ |
+| 18.4: POD Upload | 5 | ✅ |
+| 18.5: Notification Routing | 4 | ✅ |
+| 18.6: Shipper Request Detail | 9 | 🔄 4/9 |
+| **TOTAL** | **38** | **87%** 🔄 |
+
+---
+
 ## **DEFERRED TO PHASE 3:**
 
 ### **Story 16.11: Driver Mobile App**
