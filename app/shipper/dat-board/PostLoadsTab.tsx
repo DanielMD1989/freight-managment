@@ -8,16 +8,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import {
-  DatStatusTabs,
-  DatDataTable,
-  DatActionButton,
-  DatAgeIndicator,
-  DatReferencePricing,
-} from '@/components/dat-ui';
+import { useRouter } from 'next/navigation';
+import { DatAgeIndicator } from '@/components/dat-ui';
 import { DatColumn, DatStatusTab, DatRowAction } from '@/types/dat-ui';
-import { ETHIOPIAN_LOCATIONS } from '@/lib/constants/ethiopian-locations';
-import PlacesAutocomplete, { PlaceResult } from '@/components/PlacesAutocomplete';
+import PlacesAutocomplete from '@/components/PlacesAutocomplete';
 import { useToast } from '@/components/Toast/ToastContext';
 
 interface PostLoadsTabProps {
@@ -47,39 +41,17 @@ type LoadStatus = 'POSTED' | 'UNPOSTED' | 'EXPIRED';
 
 export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoadsTabProps) {
   const toast = useToast();
+  const router = useRouter();
   const [loads, setLoads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeStatus, setActiveStatus] = useState<LoadStatus>('POSTED');
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const [editingLoad, setEditingLoad] = useState<any | null>(null);
   const [expandedLoadId, setExpandedLoadId] = useState<string | null>(null);
-  const [showNewLoadModal, setShowNewLoadModal] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [sortField, setSortField] = useState<string>('postedAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [submitting, setSubmitting] = useState(false);
-
-  // New load form state
-  const [newLoadForm, setNewLoadForm] = useState({
-    pickupDate: '',
-    pickupCity: '',
-    deliveryCity: '',
-    pickupDockHours: '',
-    truckType: 'REFRIGERATED',
-    fullPartial: 'FULL',
-    lengthM: '',
-    weight: '',
-    shipperContactPhone: '',
-    cargoDescription: '',
-    specialInstructions: '',
-    // Sprint 16: Base + Per-KM Pricing
-    baseFareEtb: '',
-    perKmEtb: '',
-    tripKm: '',
-    // Sprint 15: Google Places coordinates
-    pickupCoordinates: undefined as { lat: number; lng: number } | undefined,
-    deliveryCoordinates: undefined as { lat: number; lng: number } | undefined,
-  });
 
   /**
    * Truck types list with enum values and display labels
@@ -334,85 +306,6 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
   };
 
   /**
-   * Handle new load form submission
-   */
-  const handleSubmitNewLoad = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Validate required fields
-    if (!newLoadForm.pickupCity || !newLoadForm.deliveryCity || !newLoadForm.pickupDate || !newLoadForm.truckType) {
-      toast.warning('Please fill in all required fields: Origin, Destination, Pickup Date, and Truck Type');
-      return;
-    }
-
-    // Sprint 16: Validate pricing fields
-    if (!newLoadForm.baseFareEtb || !newLoadForm.perKmEtb || !newLoadForm.tripKm) {
-      toast.warning('Please fill in all pricing fields: Base Fare, Per-KM Rate, and Trip Distance');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const response = await fetch('/api/loads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...newLoadForm,
-          lengthM: newLoadForm.lengthM ? parseFloat(newLoadForm.lengthM) : null,
-          weight: newLoadForm.weight ? parseFloat(newLoadForm.weight) : null,
-          // Sprint 16: Parse pricing fields
-          baseFareEtb: parseFloat(newLoadForm.baseFareEtb),
-          perKmEtb: parseFloat(newLoadForm.perKmEtb),
-          tripKm: parseFloat(newLoadForm.tripKm),
-          status: 'POSTED', // Default to POSTED
-          deliveryDate: newLoadForm.pickupDate, // Use same date for now
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create load');
-      }
-
-      // Success! Clear form and refresh loads
-      setNewLoadForm({
-        pickupDate: '',
-        pickupCity: '',
-        deliveryCity: '',
-        pickupDockHours: '',
-        truckType: 'REFRIGERATED',
-        fullPartial: 'FULL',
-        lengthM: '',
-        weight: '',
-        shipperContactPhone: '',
-        cargoDescription: '',
-        specialInstructions: '',
-        baseFareEtb: '',
-        perKmEtb: '',
-        tripKm: '',
-        // Sprint 15: Google Places coordinates
-        pickupCoordinates: undefined,
-        deliveryCoordinates: undefined,
-      });
-      setShowNewLoadModal(false);
-      toast.success('Load posted successfully!');
-      fetchLoads(); // Refresh the list
-    } catch (error: any) {
-      console.error('Submit load error:', error);
-      toast.error(error.message || 'Failed to post load');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  /**
-   * Handle form input change
-   */
-  const handleFormChange = (field: string, value: any) => {
-    setNewLoadForm({ ...newLoadForm, [field]: value });
-  };
-
-  /**
    * Handle edit form input change
    */
   const handleEditFormChange = (field: string, value: any) => {
@@ -626,13 +519,13 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       {/* Header Row - NEW LOAD POST on left, Status Tabs on right */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => setShowNewLoadModal(!showNewLoadModal)}
+          onClick={() => router.push('/shipper/loads/create')}
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-teal-500 text-white rounded-xl hover:shadow-lg hover:shadow-teal-500/30 transition-all font-semibold text-sm shadow-md shadow-teal-500/25"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          NEW LOAD POST
+          POST NEW LOAD
         </button>
 
         {/* Status Tabs - Right Side */}
@@ -810,260 +703,6 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
           </div>
         </div>
 
-        {/* NEW POST FORM - Expands under header */}
-        {showNewLoadModal && (
-          <form onSubmit={handleSubmitNewLoad}>
-          <div className="border-b border-slate-100 p-6 bg-gradient-to-r from-slate-50 to-teal-50/30">
-            {/* Form Fields Row - Skip Age column */}
-            <div className="grid grid-cols-11 gap-2 mb-4">
-              <div className="flex items-center gap-1 pt-5">
-                <input type="checkbox" className="w-4 h-4" />
-                <span className="text-lg cursor-pointer" style={{ color: '#2B2727' }}>☆</span>
-              </div>
-              {/* Empty column for Age */}
-              <div></div>
-              <div>
-                <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Pickup *</label>
-                <input
-                  type="date"
-                  value={newLoadForm.pickupDate}
-                  onChange={(e) => handleFormChange('pickupDate', e.target.value)}
-                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
-                  style={{ color: '#2B2727' }}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Origin *</label>
-                <PlacesAutocomplete
-                  value={newLoadForm.pickupCity}
-                  onChange={(value, place) => {
-                    handleFormChange('pickupCity', value);
-                    // Store coordinates if available for distance calculation
-                    if (place?.coordinates) {
-                      handleFormChange('pickupCoordinates', place.coordinates);
-                    }
-                  }}
-                  placeholder="Search city..."
-                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
-                  countryRestriction={['ET', 'DJ']}
-                  types={['(cities)']}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Destination *</label>
-                <PlacesAutocomplete
-                  value={newLoadForm.deliveryCity}
-                  onChange={(value, place) => {
-                    handleFormChange('deliveryCity', value);
-                    // Store coordinates if available for distance calculation
-                    if (place?.coordinates) {
-                      handleFormChange('deliveryCoordinates', place.coordinates);
-                    }
-                  }}
-                  placeholder="Search city..."
-                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
-                  countryRestriction={['ET', 'DJ']}
-                  types={['(cities)']}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Dock Hours</label>
-                <input
-                  type="text"
-                  value={newLoadForm.pickupDockHours}
-                  onChange={(e) => handleFormChange('pickupDockHours', e.target.value)}
-                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
-                  style={{ color: '#2B2727' }}
-                  placeholder="9am-5pm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Truck *</label>
-                <select
-                  value={newLoadForm.truckType}
-                  onChange={(e) => handleFormChange('truckType', e.target.value)}
-                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
-                  style={{ color: '#2B2727' }}
-                  required
-                >
-                  <option value="REFRIGERATED">Reefer</option>
-                  <option value="DRY_VAN">Van</option>
-                  <option value="FLATBED">Flatbed</option>
-                  <option value="CONTAINER">Container</option>
-                  <option value="TANKER">Tanker</option>
-                  <option value="BOX_TRUCK">Box Truck</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>F/P</label>
-                <select
-                  value={newLoadForm.fullPartial}
-                  onChange={(e) => handleFormChange('fullPartial', e.target.value)}
-                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
-                  style={{ color: '#2B2727' }}
-                >
-                  <option value="FULL">Full</option>
-                  <option value="PARTIAL">Partial</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Length</label>
-                <input
-                  type="number"
-                  value={newLoadForm.lengthM}
-                  onChange={(e) => handleFormChange('lengthM', e.target.value)}
-                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
-                  style={{ color: '#2B2727' }}
-                  placeholder="53"
-                />
-              </div>
-              <div>
-                <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Weight</label>
-                <input
-                  type="number"
-                  value={newLoadForm.weight}
-                  onChange={(e) => handleFormChange('weight', e.target.value)}
-                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
-                  style={{ color: '#2B2727' }}
-                  placeholder="45000"
-                />
-              </div>
-              <div>
-                <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>Contact</label>
-                <input
-                  type="tel"
-                  value={newLoadForm.shipperContactPhone}
-                  onChange={(e) => handleFormChange('shipperContactPhone', e.target.value)}
-                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
-                  style={{ color: '#2B2727' }}
-                  placeholder="+251-9xx"
-                />
-              </div>
-            </div>
-
-            {/* Sprint 16: Pricing Row - Base + Per-KM Model */}
-            <div className="grid grid-cols-11 gap-2 mb-4 mt-2">
-              {/* Empty columns for alignment */}
-              <div></div><div></div><div></div>
-
-              <div>
-                <label className="block text-xs mb-1 font-semibold" style={{ color: '#2B2727' }}>Base Fare (ETB) *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={newLoadForm.baseFareEtb}
-                  onChange={(e) => handleFormChange('baseFareEtb', e.target.value)}
-                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
-                  style={{ color: '#2B2727' }}
-                  placeholder="500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs mb-1 font-semibold" style={{ color: '#2B2727' }}>Per-KM (ETB) *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={newLoadForm.perKmEtb}
-                  onChange={(e) => handleFormChange('perKmEtb', e.target.value)}
-                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
-                  style={{ color: '#2B2727' }}
-                  placeholder="15.50"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs mb-1 font-semibold" style={{ color: '#2B2727' }}>Trip KM *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={newLoadForm.tripKm}
-                  onChange={(e) => handleFormChange('tripKm', e.target.value)}
-                  className="w-full px-2 py-1 text-xs !bg-white border border-[#064d51]/30 rounded"
-                  style={{ color: '#2B2727' }}
-                  placeholder="250"
-                  required
-                />
-              </div>
-
-              <div className="col-span-3">
-                <label className="block text-xs mb-1 font-semibold" style={{ color: '#00BCD4' }}>Total Fare (Calculated)</label>
-                <div className="px-2 py-1 text-sm font-bold bg-cyan-50 border-2 border-cyan-400 rounded" style={{ color: '#00BCD4' }}>
-                  ETB {newLoadForm.baseFareEtb && newLoadForm.perKmEtb && newLoadForm.tripKm
-                    ? (parseFloat(newLoadForm.baseFareEtb) + (parseFloat(newLoadForm.perKmEtb) * parseFloat(newLoadForm.tripKm))).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})
-                    : '0.00'}
-                </div>
-                {newLoadForm.baseFareEtb && newLoadForm.perKmEtb && newLoadForm.tripKm && (
-                  <div className="text-xs text-[#064d51]/70 mt-1">
-                    RPK: {(parseFloat(newLoadForm.baseFareEtb) + (parseFloat(newLoadForm.perKmEtb) * parseFloat(newLoadForm.tripKm)) / parseFloat(newLoadForm.tripKm)).toFixed(2)} ETB/km
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Bottom Section: Commodity, Comments, and Actions */}
-            <div className="grid grid-cols-3 gap-4">
-              {/* Commodity */}
-              <div>
-                <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>
-                  Commodity <span className="text-[#064d51]/60">({newLoadForm.cargoDescription.length}/100 max char)</span>
-                </label>
-                <textarea
-                  value={newLoadForm.cargoDescription}
-                  onChange={(e) => handleFormChange('cargoDescription', e.target.value)}
-                  className="w-full px-3 py-2 !bg-white border border-[#064d51]/30 rounded resize-none"
-                  style={{ color: '#2B2727' }}
-                  rows={3}
-                  maxLength={100}
-                  placeholder="e.g. Steel Coils, Electronics..."
-                />
-              </div>
-
-              {/* Comments */}
-              <div>
-                <label className="block text-xs mb-1" style={{ color: '#2B2727' }}>
-                  Comments <span className="text-[#064d51]/60">({newLoadForm.specialInstructions.length}/70 max char)</span>
-                </label>
-                <textarea
-                  value={newLoadForm.specialInstructions}
-                  onChange={(e) => handleFormChange('specialInstructions', e.target.value)}
-                  className="w-full px-3 py-2 !bg-white border border-[#064d51]/30 rounded resize-none"
-                  style={{ color: '#2B2727' }}
-                  rows={3}
-                  maxLength={70}
-                  placeholder="Additional notes..."
-                />
-              </div>
-
-              {/* Actions */}
-              <div className="flex flex-col justify-end">
-                <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="flex-1 px-6 py-2.5 bg-gradient-to-r from-teal-600 to-teal-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-teal-500/30 transition-all disabled:from-slate-400 disabled:to-slate-400 disabled:shadow-none disabled:cursor-not-allowed shadow-md shadow-teal-500/25"
-                  >
-                    {submitting ? 'POSTING...' : '+ POST'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowNewLoadModal(false)}
-                    className="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-colors font-bold border border-slate-200"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          </form>
-        )}
-
         {/* Load Rows */}
         {loading ? (
           <div className="p-12 text-center">
@@ -1078,7 +717,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
               </svg>
             </div>
             <h3 className="text-slate-700 font-medium mb-1">No loads found</h3>
-            <p className="text-slate-500 text-sm">Click NEW LOAD POST to create your first load</p>
+            <p className="text-slate-500 text-sm">Click POST NEW LOAD to create your first load</p>
           </div>
         ) : (
           loads.map((load) => (
