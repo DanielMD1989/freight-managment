@@ -325,7 +325,7 @@ const navigationSections: Record<string, NavSection[]> = {
     {
       title: 'Operations',
       items: [
-        { label: 'Completed Trips', href: '/shipper/trips', icon: '📜', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Trip History', href: '/shipper/trips', icon: '📜', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
         { label: 'Documents', href: '/shipper/documents', icon: '📁', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
       ],
     },
