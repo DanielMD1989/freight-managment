@@ -267,7 +267,12 @@ export async function GET(request: NextRequest) {
     }
 
     if (status) {
-      where.status = status;
+      // Handle comma-separated statuses (e.g., "PICKUP_PENDING,IN_TRANSIT")
+      if (status.includes(',')) {
+        where.status = { in: status.split(',') };
+      } else {
+        where.status = status;
+      }
     }
 
     if (pickupCity) {

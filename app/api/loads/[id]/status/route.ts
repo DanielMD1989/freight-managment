@@ -87,9 +87,15 @@ export async function PATCH(
       );
     }
 
+    // Get user's organization for ownership check
+    const user = await db.user.findUnique({
+      where: { id: session.userId },
+      select: { organizationId: true },
+    });
+
     // Check ownership permissions
-    const isShipper = session.role === 'SHIPPER' && load.shipperId === session.userId;
-    const isCarrier = session.role === 'CARRIER' && load.assignedTruck?.carrierId === session.userId;
+    const isShipper = session.role === 'SHIPPER' && load.shipperId === user?.organizationId;
+    const isCarrier = session.role === 'CARRIER' && load.assignedTruck?.carrierId === user?.organizationId;
     const isDispatcher = session.role === 'DISPATCHER';
     const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
 
