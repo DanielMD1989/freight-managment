@@ -226,7 +226,7 @@ export default function ShipperTripsClient({
                     </Link>
                   )}
                   <Link
-                    href={`/shipper/loads/${trip.loadId}`}
+                    href={`/shipper/trips/${trip.loadId}`}
                     className="px-4 py-2 text-sm bg-[#064d51]/10 text-[#064d51] rounded-lg hover:bg-[#064d51]/20 transition-colors"
                   >
                     View Details
