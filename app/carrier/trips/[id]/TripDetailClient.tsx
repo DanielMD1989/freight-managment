@@ -139,6 +139,10 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
         throw new Error(data.error || 'Failed to upload POD');
       }
 
+      // Close modal and clear file state BEFORE navigation
+      setShowPodUpload(false);
+      setPodFile(null);
+
       // After POD upload, complete the trip
       await handleStatusChange('COMPLETED');
     } catch (err: any) {
