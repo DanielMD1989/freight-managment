@@ -305,8 +305,8 @@ const navigationSections: Record<string, NavSection[]> = {
     {
       title: 'DAT Board',
       items: [
-        { label: 'Post Loads', href: '/shipper?tab=POST_LOADS', icon: '📤', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
-        { label: 'Search Trucks', href: '/shipper?tab=SEARCH_TRUCKS', icon: '🔍', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Post Loads', href: '/shipper/dat-board?tab=POST_LOADS', icon: '📤', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Search Trucks', href: '/shipper/dat-board?tab=SEARCH_TRUCKS', icon: '🔍', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
         { label: 'Requests', href: '/shipper/requests', icon: '📋', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
       ],
     },
