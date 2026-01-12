@@ -13,8 +13,6 @@ import { DatNavTabs } from '@/components/dat-ui';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import PostLoadsTab from './PostLoadsTab';
 import SearchTrucksTab from './SearchTrucksTab';
-import { CommissionDiscountBadge } from '@/components/CommissionDiscountCard';
-import NotificationBell from '@/components/NotificationBell';
 
 interface ShipperDatBoardClientProps {
   user: any;
@@ -26,8 +24,6 @@ export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientPro
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<ShipperTabKey>('POST_LOADS');
   const [searchFilters, setSearchFilters] = useState<any>(null);
-  const [completionRate, setCompletionRate] = useState<number>(0);
-  const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Story 15.11: Task 15.11.1-15.11.6 - Tab State Management with URL persistence
@@ -107,46 +103,6 @@ export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientPro
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Fetch organization completion rate - Sprint 16: Story 16.6
-  useEffect(() => {
-    const fetchCompletionRate = async () => {
-      try {
-        const response = await fetch('/api/organizations/me');
-        if (response.ok) {
-          const data = await response.json();
-          setCompletionRate(data.completionRate ? Number(data.completionRate) : 0);
-        }
-      } catch (error) {
-        console.error('Failed to fetch completion rate:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCompletionRate();
-  }, []);
-
-  /**
-   * Handle logout
-   */
-  const handleLogout = async () => {
-    try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-      });
-
-      if (response.ok) {
-        // Redirect to login page
-        window.location.href = '/login';
-      } else {
-        alert('Logout failed. Please try again.');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-      alert('Logout failed. Please try again.');
-    }
-  };
-
   /**
    * Handle switching to SEARCH TRUCKS tab with filters
    */
@@ -156,55 +112,19 @@ export default function ShipperDatBoardClient({ user }: ShipperDatBoardClientPro
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-tinted)]">
-      {/* Header - Medium Teal Design */}
-      <div className="portal-header">
-        {/* Navigation Tabs */}
-        <div className="flex-1 flex justify-start">
-          <DatNavTabs
-            activeTab={activeTab}
-            onTabChange={(tab) => setActiveTab(tab as ShipperTabKey)}
-            userRole={user.role}
-            portalType="shipper"
-          />
-        </div>
-
-        {/* User Info & Actions */}
-        <div className="flex items-center gap-4 pl-4 border-l border-white/20">
-          {/* Commission Discount Badge - Sprint 16: Story 16.6 */}
-          {!loading && completionRate > 0 && (
-            <CommissionDiscountBadge completionRate={completionRate} />
-          )}
-
-          {/* Notification Bell - Sprint 16: Story 16.10 */}
-          <NotificationBell />
-
-          {/* Divider before user info */}
-          <div className="h-8 w-px bg-white/20 hidden sm:block"></div>
-
-          {/* User Info */}
-          <div className="portal-header-user" style={{ borderLeft: 'none', paddingLeft: 0, marginLeft: 0 }}>
-            <div className="portal-header-avatar">
-              {user.firstName?.[0]}{user.lastName?.[0]}
-            </div>
-            <div className="hidden sm:block">
-              <div className="portal-header-name">{user.firstName} {user.lastName}</div>
-              <div className="portal-header-role">{user.role}</div>
-            </div>
-          </div>
-
-          {/* Logout Button */}
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 bg-white hover:bg-white/90 text-[#1e9c99] text-sm font-semibold rounded-lg transition-colors border border-white"
-          >
-            Logout
-          </button>
-        </div>
+    <div className="p-6">
+      {/* DAT Board Tab Navigation */}
+      <div className="mb-6">
+        <DatNavTabs
+          activeTab={activeTab}
+          onTabChange={(tab) => setActiveTab(tab as ShipperTabKey)}
+          userRole={user.role}
+          portalType="shipper"
+        />
       </div>
 
       {/* Tab Content */}
-      <div className="p-6">
+      <div>
         {isInitialLoad ? (
           /* Loading skeleton while restoring tab state */
           <div className="bg-white rounded-xl shadow-sm border border-[var(--border)] p-6 animate-pulse">

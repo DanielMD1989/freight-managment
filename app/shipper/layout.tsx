@@ -8,7 +8,9 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth';
+import { db } from '@/lib/db';
 import RoleAwareSidebar from '@/components/RoleAwareSidebar';
+import ShipperHeader from '@/components/ShipperHeader';
 
 export default async function ShipperLayout({
   children,
@@ -34,13 +36,28 @@ export default async function ShipperLayout({
     redirect('/unauthorized');
   }
 
-  // Layout with sidebar
+  // Fetch user data for header
+  const user = await db.user.findUnique({
+    where: { id: session.userId },
+    select: { firstName: true, lastName: true },
+  });
+
+  // Layout with sidebar and header
   return (
     <div className="flex min-h-screen bg-gray-50">
       <RoleAwareSidebar userRole={session.role} portalType="shipper" />
-      <main className="flex-1 overflow-auto">
-        {children}
-      </main>
+      <div className="flex-1 flex flex-col overflow-auto">
+        <ShipperHeader
+          user={{
+            firstName: user?.firstName || '',
+            lastName: user?.lastName || '',
+            role: session.role,
+          }}
+        />
+        <main className="flex-1 overflow-auto">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
