@@ -67,11 +67,18 @@ function getStatusColor(status: string): string {
   const colors: Record<string, string> = {
     DRAFT: 'bg-slate-50 text-slate-600 border border-slate-200',
     POSTED: 'bg-teal-50 text-teal-700 border border-teal-200',
-    MATCHED: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
+    // "Matched" statuses (loads assigned to carriers)
+    OFFERED: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
+    ASSIGNED: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
+    PICKUP_PENDING: 'bg-purple-50 text-purple-700 border border-purple-200',
+    // Active trip statuses
     IN_TRANSIT: 'bg-amber-50 text-amber-700 border border-amber-200',
     DELIVERED: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
     COMPLETED: 'bg-slate-50 text-slate-600 border border-slate-200',
     CANCELLED: 'bg-rose-50 text-rose-700 border border-rose-200',
+    EXCEPTION: 'bg-orange-50 text-orange-700 border border-orange-200',
+    EXPIRED: 'bg-gray-50 text-gray-700 border border-gray-200',
+    SEARCHING: 'bg-cyan-50 text-cyan-700 border border-cyan-200',
   };
   return colors[status] || 'bg-slate-50 text-slate-600 border border-slate-200';
 }

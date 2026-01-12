@@ -39,6 +39,17 @@ interface LoadsResponse {
 /**
  * Fetch loads from API
  */
+// Map UI status filters to actual database statuses
+const STATUS_MAP: Record<string, string> = {
+  'matched': 'ASSIGNED,OFFERED,PICKUP_PENDING',  // "Matched" = loads assigned to carriers
+  'in_transit': 'IN_TRANSIT',
+  'delivered': 'DELIVERED',
+  'completed': 'COMPLETED',
+  'cancelled': 'CANCELLED',
+  'draft': 'DRAFT',
+  'posted': 'POSTED',
+};
+
 async function getLoads(
   page: number = 1,
   status?: string
@@ -59,7 +70,9 @@ async function getLoads(
     });
 
     if (status && status !== 'all') {
-      params.append('status', status.toUpperCase());
+      // Map UI status to database status(es)
+      const dbStatus = STATUS_MAP[status.toLowerCase()] || status.toUpperCase();
+      params.append('status', dbStatus);
     }
 
     const response = await fetch(`${baseUrl}/api/loads?${params}`, {
