@@ -55,11 +55,7 @@ interface StatusOption {
 }
 
 const STATUS_OPTIONS: StatusOption[] = [
-  { value: 'all', label: 'All Trips', statuses: ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED'] },
-  { value: 'active', label: 'Active', statuses: ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT'] },
-  { value: 'ASSIGNED', label: 'Assigned' },
-  { value: 'PICKUP_PENDING', label: 'Pickup Pending' },
-  { value: 'IN_TRANSIT', label: 'In Transit' },
+  { value: 'all', label: 'All', statuses: ['DELIVERED', 'COMPLETED'] },
   { value: 'DELIVERED', label: 'Delivered' },
   { value: 'COMPLETED', label: 'Completed' },
 ];
@@ -174,13 +170,13 @@ export default function ShipperTripsClient({
             </svg>
           </div>
           <p className="text-[#064d51]/60">
-            No trips found. Loads will appear here once they are assigned to carriers.
+            No completed trips yet. Trips will appear here after delivery.
           </p>
           <Link
             href="/shipper/loads"
             className="inline-block mt-4 px-4 py-2 bg-[#1e9c99] text-white rounded-lg hover:bg-[#064d51] transition-colors"
           >
-            View My Loads
+            View Active Loads
           </Link>
         </div>
       ) : (
@@ -200,31 +196,16 @@ export default function ShipperTripsClient({
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  {/* Track Live button for IN_TRANSIT */}
-                  {trip.status === 'IN_TRANSIT' && (
-                    <Link
-                      href={`/shipper/map?loadId=${trip.loadId}`}
-                      className="px-4 py-2 text-sm bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors flex items-center gap-2 font-medium"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      Track Live
-                    </Link>
-                  )}
-                  {/* View History button for DELIVERED/COMPLETED */}
-                  {(trip.status === 'DELIVERED' || trip.status === 'COMPLETED') && (
-                    <Link
-                      href={`/shipper/map?loadId=${trip.loadId}&history=true`}
-                      className="px-4 py-2 text-sm bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-2 font-medium"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                      </svg>
-                      View Route
-                    </Link>
-                  )}
+                  {/* View Route button for completed trips */}
+                  <Link
+                    href={`/shipper/map?loadId=${trip.loadId}&history=true`}
+                    className="px-4 py-2 text-sm bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-2 font-medium"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    </svg>
+                    View Route
+                  </Link>
                   <Link
                     href={`/shipper/trips/${trip.loadId}`}
                     className="px-4 py-2 text-sm bg-[#064d51]/10 text-[#064d51] rounded-lg hover:bg-[#064d51]/20 transition-colors"

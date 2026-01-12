@@ -46,8 +46,7 @@ const STATUS_OPTIONS = [
   { value: 'draft', label: 'Drafts' },
   { value: 'unposted', label: 'Unposted' },
   { value: 'posted', label: 'Posted' },
-  { value: 'matched', label: 'Matched' },
-  { value: 'in_transit', label: 'In Transit' },
+  { value: 'active', label: 'Active Trips' },  // ASSIGNED, PICKUP_PENDING, IN_TRANSIT
   { value: 'delivered', label: 'Delivered' },
   { value: 'completed', label: 'Completed' },
   { value: 'cancelled', label: 'Cancelled' },
@@ -427,6 +426,15 @@ export default function LoadManagementClient({
                           >
                             View
                           </Link>
+                          {/* Track button for active trips */}
+                          {(load.status === 'ASSIGNED' || load.status === 'PICKUP_PENDING' || load.status === 'IN_TRANSIT') && (
+                            <Link
+                              href={load.status === 'IN_TRANSIT' ? `/shipper/map?loadId=${load.id}` : `/shipper/trips/${load.id}`}
+                              className="text-amber-600 hover:text-amber-700 font-semibold"
+                            >
+                              {load.status === 'IN_TRANSIT' ? 'Track' : 'Status'}
+                            </Link>
+                          )}
                           {(load.status === 'DRAFT' || load.status === 'UNPOSTED') && (
                             <>
                               <Link

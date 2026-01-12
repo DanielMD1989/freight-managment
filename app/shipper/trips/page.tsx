@@ -1,8 +1,8 @@
 /**
- * Shipper Trips Page
+ * Shipper Trip History Page
  *
- * View and track loads that have been assigned to carriers.
- * Shows load trips in various stages: Assigned, In Transit, Delivered, Completed
+ * View completed and delivered trips only.
+ * Active trips (ASSIGNED, PICKUP_PENDING, IN_TRANSIT) are shown in My Loads.
  */
 
 import { cookies } from 'next/headers';
@@ -45,8 +45,8 @@ interface TripsResponse {
   };
 }
 
-// Statuses that represent "trip" states
-const TRIP_STATUSES = ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED'];
+// Only completed trip statuses - active trips are in My Loads
+const TRIP_STATUSES = ['DELIVERED', 'COMPLETED'];
 
 /**
  * Fetch trips from API
@@ -158,7 +158,7 @@ export default async function ShipperTripsPage({
       <div className="max-w-7xl mx-auto p-6">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[#064d51]">Trip History</h1>
-          <p className="text-[#064d51]/70 mt-2">Track your loads in transit</p>
+          <p className="text-[#064d51]/70 mt-2">View delivered and completed trips</p>
         </div>
         <div className="bg-rose-50 border border-rose-200 rounded-xl p-4">
           <p className="text-rose-800">
@@ -175,7 +175,7 @@ export default async function ShipperTripsPage({
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#064d51]">Trip History</h1>
         <p className="text-[#064d51]/70 mt-2">
-          Track your loads assigned to carriers ({data.pagination.total} total)
+          View delivered and completed trips ({data.pagination.total} total)
         </p>
       </div>
 

@@ -47,8 +47,7 @@ interface LoadsResponse {
  */
 // Map UI status filters to actual database statuses
 const STATUS_MAP: Record<string, string> = {
-  'matched': 'ASSIGNED,OFFERED,PICKUP_PENDING',  // "Matched" = loads assigned to carriers
-  'in_transit': 'IN_TRANSIT',
+  'active': 'ASSIGNED,PICKUP_PENDING,IN_TRANSIT',  // Active trips in progress
   'delivered': 'DELIVERED',
   'completed': 'COMPLETED',
   'cancelled': 'CANCELLED',
