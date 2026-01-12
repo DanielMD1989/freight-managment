@@ -15,10 +15,10 @@
 
 **Last Updated:** 2026-01-12
 **Current Sprint:** Sprint 18 - Carrier Trip Management ✅ COMPLETE
-**Overall Progress:** 1600/1600 tasks (100%) 🎯 Phase 1, Phase 2 & Sprint 18 Complete
+**Overall Progress:** 1606/1606 tasks (100%) 🎯 Phase 1, Phase 2 & Sprint 18 Complete
 **Phase 1 Status:** ✅ 100% Complete (1482/1482 tasks) - All 16 Sprints Done ✅
 **Phase 2 Status:** ✅ 100% Complete (80/80 tasks) - All 10 Task Groups Done ✅
-**Sprint 18 Status:** ✅ 100% Complete (38/38 tasks) - Carrier Trip Management Done ✅
+**Sprint 18 Status:** ✅ 100% Complete (44/44 tasks) - Carrier Trip Management Done ✅
 **Build Status:** ✅ PASSING - All TypeScript errors resolved, production build successful
 **Test Suite:** 171/181 passing (94% pass rate) - All 8 test suites green ✅
 **Code Cleanup:** ✅ Duplicate files removed, unused code cleaned
@@ -94,18 +94,19 @@ PHASE 2 SUBTOTAL:                       [✅] 80/80 tasks (100%) ✅ COMPLETE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
               SPRINT 18: CARRIER TRIP MANAGEMENT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Sprint 18: Carrier Trip Flow           [✅] 38/38 tasks (100%) - ✅ COMPLETE
+Sprint 18: Carrier Trip Flow           [✅] 44/44 tasks (100%) - ✅ COMPLETE
   Story 18.1: Load Requests View       [✅] 6/6 tasks - Carrier load requests page
   Story 18.2: Trip Management Tabs     [✅] 7/7 tasks - Approved/Active/Completed tabs
   Story 18.3: Trip Lifecycle           [✅] 7/7 tasks - Start/Pickup/End Trip actions
   Story 18.4: POD Upload               [✅] 5/5 tasks - Proof of delivery upload
   Story 18.5: Notification Routing     [✅] 4/4 tasks - Click-to-navigate notifications
   Story 18.6: Shipper Request Detail   [✅] 9/9 tasks - Request detail with approve/reject
+  Story 18.7: E2E Testing Bug Fixes    [✅] 6/6 tasks - API and permission bug fixes
 ─────────────────────────────────────────────────────────────
-SPRINT 18 SUBTOTAL:                    [✅] 38/38 tasks (100%) ✅ COMPLETE
+SPRINT 18 SUBTOTAL:                    [✅] 44/44 tasks (100%) ✅ COMPLETE
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-TOTAL ALL PHASES:                       [✅] 1600/1600 tasks (100%) 🎉
+TOTAL ALL PHASES:                       [✅] 1606/1606 tasks (100%) 🎉
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
                     🎉 ALL PHASES COMPLETE 🎉
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -5643,6 +5644,30 @@ Sprint 18: Carrier Trip Flow              [✅] 38/38 tasks (100%) - COMPLETE
 
 ---
 
+### **Story 18.7: Bug Fixes from E2E Testing**
+**Priority:** P0 (Blocker)
+**Effort:** 1 day
+
+#### Tasks:
+- [x] 18.7.1: Fix myTrips API filter - Add carrier filtering by organizationId in /api/loads
+- [x] 18.7.2: Fix Next.js 15 async params in /carrier/trips/[id]/page.tsx (params is a Promise)
+- [x] 18.7.3: Fix Next.js 15 async params in /shipper/requests/[id]/page.tsx (params is a Promise)
+- [x] 18.7.4: Fix carrier permission check in /api/loads/[id]/status (compare carrierId with organizationId, not userId)
+- [x] 18.7.5: Add comma-separated status filter support in /api/loads (e.g., status=PICKUP_PENDING,IN_TRANSIT)
+- [x] 18.7.6: Add assignedTruck relation to loads API response for trip display
+
+#### Acceptance Criteria:
+- Carrier trips page only shows trips belonging to the carrier's organization
+- Trip detail pages load correctly without params errors
+- Carrier can update trip status (Start Trip, Confirm Pickup, End Trip)
+- Active trips tab correctly filters by multiple statuses
+
+#### Commits:
+- `4a42f54`: Fix carrier trips filtering and Next.js 15 params handling
+- `84d7c9a`: Fix carrier permission check and comma-separated status filter
+
+---
+
 ### **SPRINT 18 SUMMARY**
 
 | Story | Tasks | Status |
@@ -5653,7 +5678,8 @@ Sprint 18: Carrier Trip Flow              [✅] 38/38 tasks (100%) - COMPLETE
 | 18.4: POD Upload | 5 | ✅ |
 | 18.5: Notification Routing | 4 | ✅ |
 | 18.6: Shipper Request Detail | 9 | ✅ |
-| **TOTAL** | **38** | **100%** ✅ |
+| 18.7: E2E Testing Bug Fixes | 6 | ✅ |
+| **TOTAL** | **44** | **100%** ✅ |
 
 ---
 
