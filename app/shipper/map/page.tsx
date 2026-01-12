@@ -16,8 +16,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import GoogleMap, { MapMarker, MapRoute } from '@/components/GoogleMap';
 import { useGpsRealtime, GpsPosition } from '@/hooks/useGpsRealtime';
+import TripHistoryPlayback from '@/components/TripHistoryPlayback';
 
 interface TripProgress {
   percent: number;
@@ -63,12 +65,17 @@ interface ShipmentTrip {
 }
 
 export default function ShipperMapPage() {
+  const searchParams = useSearchParams();
+  const loadIdParam = searchParams.get('loadId');
+  const showHistory = searchParams.get('history') === 'true';
+
   const [activeTrips, setActiveTrips] = useState<ShipmentTrip[]>([]);
   const [selectedTrip, setSelectedTrip] = useState<ShipmentTrip | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tripProgress, setTripProgress] = useState<TripProgress | null>(null);
   const [progressLoading, setProgressLoading] = useState(false);
+  const [showHistoryPlayback, setShowHistoryPlayback] = useState(showHistory);
 
   // Real-time GPS updates
   const { isConnected, positions, subscribeToTrip, unsubscribeFromTrip } = useGpsRealtime({
@@ -107,7 +114,7 @@ export default function ShipperMapPage() {
 
   useEffect(() => {
     fetchMyTrips();
-  }, []);
+  }, [loadIdParam, showHistory]);
 
   // Subscribe to selected trip's GPS updates
   useEffect(() => {
@@ -138,6 +145,22 @@ export default function ShipperMapPage() {
       setLoading(true);
       setError(null);
 
+      // If loadId is specified and we want history, fetch that specific load
+      if (loadIdParam && showHistory) {
+        const response = await fetch(`/api/map/trips?role=shipper&loadId=${loadIdParam}&includeCompleted=true`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch trip');
+        }
+        const data = await response.json();
+        const trips = data.trips || [];
+        setActiveTrips(trips);
+        if (trips.length > 0) {
+          setSelectedTrip(trips[0]);
+          setShowHistoryPlayback(true);
+        }
+        return;
+      }
+
       const response = await fetch('/api/map/trips?role=shipper');
 
       if (!response.ok) {
@@ -148,9 +171,18 @@ export default function ShipperMapPage() {
       const trips = data.trips || [];
       setActiveTrips(trips);
 
-      // Auto-select first trip if available
-      if (trips.length > 0 && !selectedTrip) {
-        setSelectedTrip(trips[0]);
+      // Auto-select trip based on loadId param or first trip
+      if (trips.length > 0) {
+        if (loadIdParam) {
+          const targetTrip = trips.find((t: ShipmentTrip) => t.loadId === loadIdParam);
+          if (targetTrip) {
+            setSelectedTrip(targetTrip);
+          } else {
+            setSelectedTrip(trips[0]);
+          }
+        } else if (!selectedTrip) {
+          setSelectedTrip(trips[0]);
+        }
       }
     } catch (err) {
       setError('Failed to load shipment data');
@@ -526,7 +558,62 @@ export default function ShipperMapPage() {
           Map tracking is only available for approved loads with active trips.
           GPS data is provided by the carrier.
         </div>
+
+        {/* View History Button for completed trips */}
+        {selectedTrip && (selectedTrip.status === 'DELIVERED' || selectedTrip.status === 'COMPLETED') && (
+          <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-6 text-center">
+            <div className="mb-4">
+              <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                <svg className="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-slate-800">Trip Completed</h3>
+              <p className="text-sm text-slate-500 mt-1">This shipment has been delivered. View the route history below.</p>
+            </div>
+            <button
+              onClick={() => setShowHistoryPlayback(true)}
+              className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-emerald-500/30 transition-all flex items-center gap-2 mx-auto"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Replay Route History
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* History Playback Modal */}
+      {showHistoryPlayback && selectedTrip && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-slate-50 to-emerald-50/30">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-800">Route History Playback</h2>
+                <p className="text-sm text-slate-500">
+                  {selectedTrip.pickupLocation?.address} → {selectedTrip.deliveryLocation?.address}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowHistoryPlayback(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4">
+              <TripHistoryPlayback
+                tripId={selectedTrip.loadId}
+                onClose={() => setShowHistoryPlayback(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
