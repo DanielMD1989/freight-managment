@@ -80,15 +80,16 @@ async function getTripDetails(loadId: string, userId: string) {
 export default async function TripDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const session = await requireAuth();
 
   if (session.role !== 'CARRIER' && session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
     redirect('/carrier');
   }
 
-  const load = await getTripDetails(params.id, session.userId);
+  const load = await getTripDetails(id, session.userId);
 
   if (!load) {
     notFound();

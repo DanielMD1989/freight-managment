@@ -88,15 +88,16 @@ async function getRequestDetails(requestId: string, userId: string) {
 export default async function RequestDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const session = await requireAuth();
 
   if (session.role !== 'SHIPPER' && session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
     redirect('/shipper');
   }
 
-  const request = await getRequestDetails(params.id, session.userId);
+  const request = await getRequestDetails(id, session.userId);
 
   if (!request) {
     notFound();

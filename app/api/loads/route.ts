@@ -225,6 +225,7 @@ export async function GET(request: NextRequest) {
     const deliveryCity = searchParams.get("deliveryCity");
     const truckType = searchParams.get("truckType");
     const myLoads = searchParams.get("myLoads") === "true";
+    const myTrips = searchParams.get("myTrips") === "true"; // For carriers - loads assigned to their trucks
 
     // [NEW] Additional filters
     const tripKmMin = searchParams.get("tripKmMin");
@@ -248,8 +249,15 @@ export async function GET(request: NextRequest) {
     if (isDispatcher) {
       // Dispatcher/Admin: See all loads (no organization filter)
       // Optional status filter will be applied below if provided
+    } else if (myTrips) {
+      // Carrier: Filter loads where assigned truck belongs to their organization
+      if (user?.organizationId) {
+        where.assignedTruck = {
+          carrierId: user.organizationId,
+        };
+      }
     } else if (myLoads) {
-      // Filter by current user's organization
+      // Shipper: Filter by current user's organization
       if (user?.organizationId) {
         where.shipperId = user.organizationId;
       }
@@ -398,6 +406,21 @@ export async function GET(request: NextRequest) {
               id: true,
               name: true,
               isVerified: true,
+            },
+          },
+          assignedTruck: {
+            select: {
+              id: true,
+              licensePlate: true,
+              truckType: true,
+              capacity: true,
+              carrierId: true,
+              carrier: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
             },
           },
         },

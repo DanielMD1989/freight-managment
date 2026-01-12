@@ -112,9 +112,18 @@ export default function CarrierTripsPage() {
 
       const data = await response.json();
       // Filter by exact statuses in case API doesn't support comma-separated
-      const filteredTrips = (data.loads || []).filter((t: Trip) =>
-        statuses.includes(t.status)
-      );
+      const filteredTrips = (data.loads || [])
+        .filter((load: any) => statuses.includes(load.status))
+        .map((load: any) => ({
+          ...load,
+          loadId: load.id, // Use load.id as loadId for trip context
+          referenceNumber: `LOAD-${load.id.slice(-8).toUpperCase()}`,
+          // Map assignedTruck to truck for Trip interface
+          truck: load.assignedTruck ? {
+            id: load.assignedTruck.id,
+            licensePlate: load.assignedTruck.licensePlate,
+          } : null,
+        }));
       setTrips(filteredTrips);
     } catch (err) {
       console.error('Error fetching trips:', err);
@@ -264,7 +273,16 @@ export default function CarrierTripsPage() {
         const response = await fetch('/api/loads?myTrips=true');
         if (response.ok) {
           const data = await response.json();
-          setAllTrips(data.loads || []);
+          const transformedTrips = (data.loads || []).map((load: any) => ({
+            ...load,
+            loadId: load.id,
+            referenceNumber: `LOAD-${load.id.slice(-8).toUpperCase()}`,
+            truck: load.assignedTruck ? {
+              id: load.assignedTruck.id,
+              licensePlate: load.assignedTruck.licensePlate,
+            } : null,
+          }));
+          setAllTrips(transformedTrips);
         }
       } catch (err) {
         console.error('Error fetching counts:', err);
