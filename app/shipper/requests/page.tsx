@@ -139,8 +139,9 @@ export default async function ShipperRequestsPage() {
       status: req.load.status,
       weight: Number(req.load.weight),
       truckType: req.load.truckType,
-      pickupCity: req.load.pickupLocation?.name || 'Unknown',
-      deliveryCity: req.load.deliveryLocation?.name || 'Unknown',
+      // Use location relation name OR direct city string field as fallback
+      pickupCity: req.load.pickupLocation?.name || req.load.pickupCity || 'Unknown',
+      deliveryCity: req.load.deliveryLocation?.name || req.load.deliveryCity || 'Unknown',
       pickupDate: req.load.pickupDate.toISOString(),
     },
     truck: {
@@ -175,8 +176,9 @@ export default async function ShipperRequestsPage() {
       status: req.load.status,
       weight: Number(req.load.weight),
       truckType: req.load.truckType,
-      pickupCity: req.load.pickupLocation?.name || 'Unknown',
-      deliveryCity: req.load.deliveryLocation?.name || 'Unknown',
+      // Use location relation name OR direct city string field as fallback
+      pickupCity: req.load.pickupLocation?.name || req.load.pickupCity || 'Unknown',
+      deliveryCity: req.load.deliveryLocation?.name || req.load.deliveryCity || 'Unknown',
       pickupDate: req.load.pickupDate.toISOString(),
       rate: req.load.totalFareEtb ? Number(req.load.totalFareEtb) : (req.load.rate ? Number(req.load.rate) : null),
     },

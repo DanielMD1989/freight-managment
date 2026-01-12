@@ -52,31 +52,50 @@ export default function NotificationBell() {
   };
 
   const handleMarkAsRead = async (notificationId: string) => {
+    // Optimistically update local state immediately for better UX
+    const notification = notifications.find(n => n.id === notificationId);
+    if (notification && !notification.read) {
+      setNotifications(prev =>
+        prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    }
+
     try {
       const response = await csrfFetch(`/api/notifications/${notificationId}/read`, {
         method: 'PUT',
       });
-      if (response.ok) {
+      if (!response.ok) {
+        // Revert on failure
         fetchNotifications();
       }
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
+      // Revert on error
+      fetchNotifications();
     }
   };
 
   const handleMarkAllAsRead = async () => {
     if (unreadCount === 0) return;
 
+    // Optimistically update local state
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setUnreadCount(0);
     setIsLoading(true);
+
     try {
       const response = await csrfFetch('/api/notifications/mark-all-read', {
         method: 'PUT',
       });
-      if (response.ok) {
+      if (!response.ok) {
+        // Revert on failure
         fetchNotifications();
       }
     } catch (error) {
       console.error('Failed to mark all as read:', error);
+      // Revert on error
+      fetchNotifications();
     } finally {
       setIsLoading(false);
     }
