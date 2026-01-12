@@ -263,6 +263,7 @@ const navigationSections: Record<string, NavSection[]> = {
       items: [
         { label: 'Post Trucks', href: '/carrier?tab=POST_TRUCKS', icon: '📤', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
         { label: 'Search Loads', href: '/carrier?tab=SEARCH_LOADS', icon: '🔍', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Requests', href: '/carrier/requests', icon: '📋', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
       ],
     },
     {
@@ -298,6 +299,7 @@ const navigationSections: Record<string, NavSection[]> = {
       items: [
         { label: 'Post Loads', href: '/shipper?tab=POST_LOADS', icon: '📤', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
         { label: 'Search Trucks', href: '/shipper?tab=SEARCH_TRUCKS', icon: '🔍', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Requests', href: '/shipper/requests', icon: '📋', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
       ],
     },
     {

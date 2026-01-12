@@ -1,17 +1,19 @@
 /**
- * Shipper Truck Requests Page
+ * Shipper Requests Page
  *
  * Phase 2 - Story 16.15: Shipper-Led Truck Matching
  * Task 16.15.4: Booking History
  *
- * View and manage truck booking requests
+ * View and manage:
+ * - Truck requests (outgoing - shipper requested trucks)
+ * - Load requests (incoming - carriers requesting shipper's loads)
  */
 
 import { Suspense } from 'react';
 import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { redirect } from 'next/navigation';
-import TruckRequestsClient from './TruckRequestsClient';
+import RequestsTabs from './RequestsTabs';
 
 async function getTruckRequests(userId: string) {
   const user = await db.user.findUnique({
@@ -59,6 +61,56 @@ async function getTruckRequests(userId: string) {
   return requests;
 }
 
+async function getLoadRequests(userId: string) {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { organizationId: true },
+  });
+
+  if (!user?.organizationId) {
+    return [];
+  }
+
+  // Get incoming load requests from carriers for this shipper's loads
+  const requests = await db.loadRequest.findMany({
+    where: {
+      load: {
+        shipperId: user.organizationId,
+      },
+    },
+    include: {
+      load: {
+        include: {
+          pickupLocation: true,
+          deliveryLocation: true,
+        },
+      },
+      truck: {
+        include: {
+          carrier: {
+            select: {
+              id: true,
+              name: true,
+              isVerified: true,
+            },
+          },
+        },
+      },
+      requestedBy: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return requests;
+}
+
 export default async function ShipperRequestsPage() {
   const session = await requireAuth();
 
@@ -66,10 +118,14 @@ export default async function ShipperRequestsPage() {
     redirect('/shipper');
   }
 
-  const requests = await getTruckRequests(session.userId);
+  // Fetch both types of requests in parallel
+  const [truckRequests, loadRequests] = await Promise.all([
+    getTruckRequests(session.userId),
+    getLoadRequests(session.userId),
+  ]);
 
-  // Transform dates for client
-  const transformedRequests = requests.map((req) => ({
+  // Transform truck requests (outgoing - shipper requested trucks)
+  const transformedTruckRequests = truckRequests.map((req) => ({
     id: req.id,
     status: req.status,
     notes: req.notes,
@@ -104,19 +160,63 @@ export default async function ShipperRequestsPage() {
       : null,
   }));
 
+  // Transform load requests (incoming - carriers requesting shipper's loads)
+  const transformedLoadRequests = loadRequests.map((req) => ({
+    id: req.id,
+    status: req.status,
+    notes: req.notes,
+    proposedRate: req.proposedRate ? Number(req.proposedRate) : null,
+    expiresAt: req.expiresAt.toISOString(),
+    createdAt: req.createdAt.toISOString(),
+    respondedAt: req.respondedAt?.toISOString() || null,
+    load: {
+      id: req.load.id,
+      referenceNumber: `LOAD-${req.load.id.slice(-8).toUpperCase()}`,
+      status: req.load.status,
+      weight: Number(req.load.weight),
+      truckType: req.load.truckType,
+      pickupCity: req.load.pickupLocation?.name || 'Unknown',
+      deliveryCity: req.load.deliveryLocation?.name || 'Unknown',
+      pickupDate: req.load.pickupDate.toISOString(),
+      rate: req.load.offeredRate ? Number(req.load.offeredRate) : null,
+    },
+    truck: {
+      id: req.truck.id,
+      plateNumber: req.truck.licensePlate,
+      truckType: req.truck.truckType,
+      capacity: Number(req.truck.capacity),
+    },
+    carrier: req.truck.carrier,
+    requestedBy: req.requestedBy
+      ? {
+          id: req.requestedBy.id,
+          name: [req.requestedBy.firstName, req.requestedBy.lastName]
+            .filter(Boolean)
+            .join(' '),
+          email: req.requestedBy.email,
+        }
+      : null,
+  }));
+
+  const pendingLoadRequests = transformedLoadRequests.filter(r => r.status === 'PENDING').length;
+
   return (
     <div className="p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Truck Requests
+          Requests
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mt-1">
-          View and manage your truck booking requests
+          Manage truck booking requests and carrier load requests
         </p>
       </div>
 
       <Suspense fallback={<RequestsSkeleton />}>
-        <TruckRequestsClient requests={transformedRequests} />
+        <RequestsTabs
+          truckRequests={transformedTruckRequests}
+          loadRequests={transformedLoadRequests}
+          pendingLoadRequests={pendingLoadRequests}
+        />
       </Suspense>
     </div>
   );

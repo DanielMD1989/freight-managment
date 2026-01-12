@@ -9,6 +9,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { csrfFetch } from '@/lib/csrfFetch';
 
 interface Truck {
   id: string;
@@ -84,7 +85,7 @@ export default function LoadRequestModal({ isOpen, onClose, load }: Props) {
     setError(null);
 
     try {
-      const response = await fetch('/api/load-requests', {
+      const response = await csrfFetch('/api/load-requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -94,7 +95,6 @@ export default function LoadRequestModal({ isOpen, onClose, load }: Props) {
           proposedRate: proposedRate ? parseFloat(proposedRate) : undefined,
           expiresInHours: parseInt(expiryHours, 10),
         }),
-        credentials: 'include',
       });
 
       if (!response.ok) {
