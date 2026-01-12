@@ -1,13 +1,14 @@
+import bcrypt from 'bcryptjs';
 import { db } from '../lib/db';
-import * as bcrypt from 'bcryptjs';
 
 async function main() {
-  const newPassword = await bcrypt.hash('test123', 10);
-  const user = await db.user.update({
+  const hash = await bcrypt.hash('shipper123', 12);
+  const result = await db.user.updateMany({
     where: { email: 'shipper1@testfreightet.com' },
-    data: { passwordHash: newPassword },
+    data: { passwordHash: hash }
   });
-  console.log('Password reset for:', user.email);
-  console.log('New password: test123');
+  console.log('Updated', result.count, 'user(s)');
+  console.log('Password reset to: shipper123');
 }
+
 main().catch(console.error).finally(() => db.$disconnect());
