@@ -26,6 +26,12 @@ interface Load {
   fullPartial: string;
   createdAt: string;
   updatedAt: string;
+  postedAt: string | null;
+  assignedTruck?: {
+    id: string;
+    licensePlate: string;
+    truckType: string;
+  } | null;
 }
 
 interface Pagination {
@@ -38,6 +44,7 @@ interface Pagination {
 const STATUS_OPTIONS = [
   { value: 'all', label: 'All Loads' },
   { value: 'draft', label: 'Drafts' },
+  { value: 'unposted', label: 'Unposted' },
   { value: 'posted', label: 'Posted' },
   { value: 'matched', label: 'Matched' },
   { value: 'in_transit', label: 'In Transit' },
@@ -53,6 +60,42 @@ function formatDate(dateString: string): string {
     day: 'numeric',
     year: 'numeric',
   }).format(date);
+}
+
+/**
+ * Calculate age since a date (e.g., "2h", "3d", "1w")
+ */
+function calculateAge(dateString: string | null): string {
+  if (!dateString) return '-';
+
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const diffWeeks = Math.floor(diffDays / 7);
+
+  if (diffMins < 60) return `${diffMins}m`;
+  if (diffHours < 24) return `${diffHours}h`;
+  if (diffDays < 7) return `${diffDays}d`;
+  return `${diffWeeks}w`;
+}
+
+/**
+ * Get age color based on freshness
+ */
+function getAgeColor(dateString: string | null): string {
+  if (!dateString) return 'text-slate-400';
+
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+
+  if (diffHours < 2) return 'text-emerald-600 bg-emerald-50';
+  if (diffHours < 24) return 'text-teal-600 bg-teal-50';
+  if (diffHours < 72) return 'text-amber-600 bg-amber-50';
+  return 'text-slate-500 bg-slate-50';
 }
 
 function formatCurrency(amount: number): string {
@@ -98,6 +141,7 @@ export default function LoadManagementClient({
   const [statusFilter, setStatusFilter] = useState(initialStatus || 'all');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [copyingLoadId, setCopyingLoadId] = useState<string | null>(null);
+  const [postingLoadId, setPostingLoadId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   /**
@@ -154,6 +198,35 @@ export default function LoadManagementClient({
       toast.error('An unexpected error occurred. Please try again.');
     } finally {
       setCopyingLoadId(null);
+    }
+  };
+
+  /**
+   * Handle posting a DRAFT or UNPOSTED load
+   */
+  const handlePostLoad = async (loadId: string) => {
+    setPostingLoadId(loadId);
+    try {
+      const response = await fetch(`/api/loads/${loadId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status: 'POSTED' }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        toast.error(error.message || 'Failed to post load');
+        return;
+      }
+
+      toast.success('Load posted successfully!');
+      router.refresh();
+    } catch (error) {
+      console.error('Error posting load:', error);
+      toast.error('An unexpected error occurred. Please try again.');
+    } finally {
+      setPostingLoadId(null);
     }
   };
 
@@ -236,22 +309,28 @@ export default function LoadManagementClient({
               <table className="min-w-full divide-y divide-slate-100">
                 <thead className="bg-gradient-to-r from-teal-600 to-teal-500">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                      Age
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
                       Route
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
                       Dates
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
                       Details
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
                       Rate
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                      Truck
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -259,8 +338,15 @@ export default function LoadManagementClient({
                 <tbody className="bg-white divide-y divide-slate-100">
                   {initialLoads.map((load) => (
                     <tr key={load.id} className="hover:bg-slate-50 transition-colors">
+                      {/* Age */}
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs font-semibold rounded ${getAgeColor(load.postedAt || load.createdAt)}`}>
+                          {calculateAge(load.postedAt || load.createdAt)}
+                        </span>
+                      </td>
+
                       {/* Route */}
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4">
                         <div className="flex items-center gap-2 text-sm">
                           <span className="font-medium text-slate-800">{load.pickupCity}</span>
                           <svg className="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -271,7 +357,7 @@ export default function LoadManagementClient({
                       </td>
 
                       {/* Dates */}
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4">
                         <div className="flex flex-col text-sm">
                           <div className="text-slate-700">
                             {formatDate(load.pickupDate)}
@@ -284,7 +370,7 @@ export default function LoadManagementClient({
                       </td>
 
                       {/* Details */}
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4">
                         <div className="flex flex-col text-sm">
                           <div className="text-slate-700 font-medium">
                             {load.truckType.replace(/_/g, ' ')}
@@ -299,14 +385,14 @@ export default function LoadManagementClient({
                       </td>
 
                       {/* Rate */}
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-4 whitespace-nowrap">
                         <div className="text-lg font-bold text-slate-800">
                           {formatCurrency(load.rate)}
                         </div>
                       </td>
 
                       {/* Status */}
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-4 whitespace-nowrap">
                         <span
                           className={`px-3 py-1 inline-flex text-xs leading-5 font-medium rounded-full ${getStatusColor(
                             load.status
@@ -316,29 +402,54 @@ export default function LoadManagementClient({
                         </span>
                       </td>
 
+                      {/* Truck */}
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        {load.assignedTruck ? (
+                          <div className="text-sm">
+                            <div className="font-medium text-slate-800">
+                              {load.assignedTruck.licensePlate}
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              {load.assignedTruck.truckType.replace(/_/g, ' ')}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-sm">-</span>
+                        )}
+                      </td>
+
                       {/* Actions */}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex gap-3">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex gap-2 flex-wrap">
                           <Link
                             href={`/shipper/loads/${load.id}`}
                             className="text-teal-600 hover:text-teal-700 font-medium"
                           >
                             View
                           </Link>
-                          {load.status === 'DRAFT' && (
-                            <Link
-                              href={`/shipper/loads/${load.id}/edit`}
-                              className="text-slate-600 hover:text-slate-700"
-                            >
-                              Edit
-                            </Link>
+                          {(load.status === 'DRAFT' || load.status === 'UNPOSTED') && (
+                            <>
+                              <Link
+                                href={`/shipper/loads/${load.id}/edit`}
+                                className="text-slate-600 hover:text-slate-700"
+                              >
+                                Edit
+                              </Link>
+                              <button
+                                onClick={() => handlePostLoad(load.id)}
+                                disabled={postingLoadId === load.id}
+                                className="text-emerald-600 hover:text-emerald-700 disabled:opacity-50 font-semibold"
+                              >
+                                {postingLoadId === load.id ? 'Posting...' : 'Post'}
+                              </button>
+                            </>
                           )}
                           {load.status === 'POSTED' && (
                             <Link
-                              href={`/shipper/matches?loadId=${load.id}`}
-                              className="text-emerald-600 hover:text-emerald-700"
+                              href={`/shipper/dat-board?tab=search-trucks&loadId=${load.id}`}
+                              className="text-indigo-600 hover:text-indigo-700"
                             >
-                              Matches
+                              Find Trucks
                             </Link>
                           )}
                           <button
@@ -346,9 +457,9 @@ export default function LoadManagementClient({
                             disabled={copyingLoadId === load.id}
                             className="text-indigo-600 hover:text-indigo-700 disabled:opacity-50"
                           >
-                            {copyingLoadId === load.id ? 'Copying...' : 'Copy'}
+                            {copyingLoadId === load.id ? '...' : 'Copy'}
                           </button>
-                          {(load.status === 'DRAFT' || load.status === 'POSTED') && (
+                          {(load.status === 'DRAFT' || load.status === 'POSTED' || load.status === 'UNPOSTED') && (
                             <button
                               onClick={() => setDeleteConfirmId(load.id)}
                               className="text-rose-600 hover:text-rose-700"

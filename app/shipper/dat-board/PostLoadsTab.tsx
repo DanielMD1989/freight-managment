@@ -1,17 +1,17 @@
 'use client';
 
 /**
- * POST LOADS Tab Component
+ * POST LOADS Tab Component (Marketplace View)
  *
- * Main shipper interface for managing posted loads with DAT-style features
+ * Shows POSTED loads with truck matching features
+ * For full load management, use My Loads page
  * Sprint 14 - DAT-Style UI Transformation
  */
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { DatAgeIndicator } from '@/components/dat-ui';
-import { DatColumn, DatStatusTab, DatRowAction } from '@/types/dat-ui';
-import PlacesAutocomplete from '@/components/PlacesAutocomplete';
 import { useToast } from '@/components/Toast/ToastContext';
 
 interface PostLoadsTabProps {
@@ -19,122 +19,60 @@ interface PostLoadsTabProps {
   onSwitchToSearchTrucks?: (filters: any) => void;
 }
 
-/**
- * Get CSRF token for secure form submissions
- */
-const getCSRFToken = async (): Promise<string | null> => {
-  try {
-    const response = await fetch('/api/csrf-token');
-    if (!response.ok) {
-      console.error('CSRF token request failed:', response.status);
-      return null;
-    }
-    const data = await response.json();
-    return data.csrfToken;
-  } catch (error) {
-    console.error('Failed to get CSRF token:', error);
-    return null;
-  }
-};
+const truckTypes = [
+  { value: 'REFRIGERATED', label: 'Reefer' },
+  { value: 'DRY_VAN', label: 'Van' },
+  { value: 'FLATBED', label: 'Flatbed' },
+  { value: 'CONTAINER', label: 'Container' },
+  { value: 'TANKER', label: 'Tanker' },
+  { value: 'BOX_TRUCK', label: 'Box Truck' },
+  { value: 'LOWBOY', label: 'Lowboy' },
+  { value: 'DUMP_TRUCK', label: 'Dump Truck' },
+];
 
-type LoadStatus = 'POSTED' | 'UNPOSTED' | 'EXPIRED';
+const getTruckTypeLabel = (enumValue: string | null | undefined): string => {
+  if (!enumValue) return 'N/A';
+  const found = truckTypes.find(t => t.value === enumValue);
+  return found ? found.label : enumValue.replace('_', ' ');
+};
 
 export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoadsTabProps) {
   const toast = useToast();
   const router = useRouter();
   const [loads, setLoads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeStatus, setActiveStatus] = useState<LoadStatus>('POSTED');
-  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
-  const [editingLoad, setEditingLoad] = useState<any | null>(null);
   const [expandedLoadId, setExpandedLoadId] = useState<string | null>(null);
-  const [showActionsMenu, setShowActionsMenu] = useState(false);
-  const [sortField, setSortField] = useState<string>('postedAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [submitting, setSubmitting] = useState(false);
 
   /**
-   * Truck types list with enum values and display labels
-   */
-  const truckTypes = [
-    { value: 'REFRIGERATED', label: 'Reefer' },
-    { value: 'DRY_VAN', label: 'Van' },
-    { value: 'FLATBED', label: 'Flatbed' },
-    { value: 'CONTAINER', label: 'Container' },
-    { value: 'TANKER', label: 'Tanker' },
-    { value: 'BOX_TRUCK', label: 'Box Truck' },
-    { value: 'LOWBOY', label: 'Lowboy' },
-    { value: 'DUMP_TRUCK', label: 'Dump Truck' },
-  ];
-
-  /**
-   * Get display label for truck type enum value
-   */
-  const getTruckTypeLabel = (enumValue: string | null | undefined): string => {
-    if (!enumValue) return 'N/A';
-    const found = truckTypes.find(t => t.value === enumValue);
-    return found ? found.label : enumValue.replace('_', ' ');
-  };
-
-  /**
-   * Fetch loads
+   * Fetch POSTED loads only (marketplace view)
    */
   const fetchLoads = async () => {
     setLoading(true);
     try {
-      // Fetch loads for the active status tab (user's own loads only)
       const params = new URLSearchParams();
-      params.append('status', activeStatus);
-      params.append('myLoads', 'true'); // Only fetch user's own loads
-      params.append('sortBy', 'postedAt'); // Sort by most recently posted
-      params.append('sortOrder', 'desc'); // Newest first
+      params.append('status', 'POSTED');
+      params.append('myLoads', 'true');
+      params.append('sortBy', 'postedAt');
+      params.append('sortOrder', 'desc');
 
       const response = await fetch(`/api/loads?${params.toString()}`);
       const data = await response.json();
-
       const loadsData = data.loads || [];
 
-      // Fetch match counts for POSTED loads in parallel
+      // Fetch match counts for each load
       const loadsWithMatchCounts = await Promise.all(
         loadsData.map(async (load: any) => {
-          if (load.status === 'POSTED') {
-            try {
-              const matchResponse = await fetch(`/api/loads/${load.id}/matching-trucks?limit=1`);
-              const matchData = await matchResponse.json();
-              return { ...load, matchCount: matchData.total || 0 };
-            } catch (error) {
-              console.error(`Failed to fetch matches for load ${load.id}:`, error);
-              return { ...load, matchCount: 0 };
-            }
+          try {
+            const matchResponse = await fetch(`/api/loads/${load.id}/matching-trucks?limit=1`);
+            const matchData = await matchResponse.json();
+            return { ...load, matchCount: matchData.total || 0 };
+          } catch (error) {
+            return { ...load, matchCount: 0 };
           }
-          return { ...load, matchCount: 0 };
         })
       );
 
-      // Sort by most recently posted first (smallest age at top)
-      const sortedLoads = loadsWithMatchCounts.sort((a: any, b: any) => {
-        const dateA = new Date(a.postedAt || a.createdAt || 0).getTime();
-        const dateB = new Date(b.postedAt || b.createdAt || 0).getTime();
-        return dateB - dateA; // Newest first
-      });
-
-      setLoads(sortedLoads);
-
-      // Fetch counts for each status tab
-      const counts: Record<string, number> = {
-        POSTED: 0,
-        UNPOSTED: 0,
-        EXPIRED: 0,
-      };
-
-      const statusPromises = ['POSTED', 'UNPOSTED', 'EXPIRED'].map(async (status) => {
-        const res = await fetch(`/api/loads?status=${status}&myLoads=true&limit=1`);
-        const json = await res.json();
-        counts[status] = json.pagination?.total || 0;
-      });
-
-      await Promise.all(statusPromises);
-      setStatusCounts(counts);
+      setLoads(loadsWithMatchCounts);
     } catch (error) {
       console.error('Failed to fetch loads:', error);
     } finally {
@@ -144,101 +82,12 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
   useEffect(() => {
     fetchLoads();
-  }, [activeStatus]);
-
-  /**
-   * Handle COPY action
-   */
-  const handleCopy = async (load: any) => {
-    try {
-      const response = await fetch(`/api/loads/${load.id}/duplicate`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) throw new Error('Failed to duplicate load');
-
-      const newLoad = await response.json();
-      toast.success('Load copied successfully!');
-      fetchLoads();
-    } catch (error) {
-      console.error('Copy failed:', error);
-      toast.error('Failed to copy load');
-    }
-  };
-
-  /**
-   * Handle EDIT action - Show inline edit form
-   */
-  const handleEdit = (load: any) => {
-    setEditingLoad(load);
-    setExpandedLoadId(load.id);
-  };
-
-  /**
-   * Handle DELETE action
-   */
-  const handleDelete = async (load: any) => {
-    if (!confirm(`Are you sure you want to delete this load from ${load.pickupCity} to ${load.deliveryCity}?`)) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/loads/${load.id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) throw new Error('Failed to delete load');
-
-      toast.success('Load deleted successfully');
-      fetchLoads();
-    } catch (error) {
-      console.error('Delete failed:', error);
-      toast.error('Failed to delete load');
-    }
-  };
-
-  /**
-   * Handle POST action - Change unposted load to posted
-   */
-  const handlePostLoad = async (load: any) => {
-    try {
-      // Get CSRF token for secure submission
-      const csrfToken = await getCSRFToken();
-      if (!csrfToken) {
-        toast.error('Failed to get security token. Please refresh and try again.');
-        return;
-      }
-
-      const response = await fetch(`/api/loads/${load.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
-        },
-        body: JSON.stringify({
-          status: 'POSTED',
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to post load');
-      }
-
-      toast.success('Load posted successfully!');
-      // Switch to POSTED tab and refresh
-      setActiveStatus('POSTED');
-    } catch (error: any) {
-      console.error('Post load error:', error);
-      toast.error(error.message || 'Failed to post load');
-    }
-  };
+  }, []);
 
   /**
    * Handle SEARCH TRUCKS action
    */
   const handleSearchTrucks = (load: any) => {
-    // Build filters from the load data
     const filters = {
       origin: load.pickupCity || '',
       destination: load.deliveryCity || '',
@@ -248,276 +97,41 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       weight: load.weight?.toString() || '',
     };
 
-    // Call the parent callback to switch to SEARCH TRUCKS tab with filters
     if (onSwitchToSearchTrucks) {
       onSwitchToSearchTrucks(filters);
     }
   };
 
   /**
-   * Handle header column click for sorting
+   * Handle unpost action
    */
-  const handleHeaderClick = (field: string) => {
-    if (sortField === field) {
-      // Toggle sort order if same field
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      // Set new field and default to ascending
-      setSortField(field);
-      setSortOrder('asc');
-    }
+  const handleUnpost = async (load: any) => {
+    if (!confirm('Remove this load from the marketplace?')) return;
 
-    // Sort the loads array
-    const sorted = [...loads].sort((a, b) => {
-      const aVal = a[field];
-      const bVal = b[field];
-
-      if (aVal === null || aVal === undefined) return 1;
-      if (bVal === null || bVal === undefined) return -1;
-
-      if (sortOrder === 'asc') {
-        return aVal > bVal ? 1 : -1;
-      } else {
-        return aVal < bVal ? 1 : -1;
-      }
-    });
-
-    setLoads(sorted);
-  };
-
-  /**
-   * Handle KEPT toggle
-   */
-  const handleToggleKept = async (load: any) => {
     try {
       const response = await fetch(`/api/loads/${load.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isKept: !load.isKept }),
+        body: JSON.stringify({ status: 'UNPOSTED' }),
       });
 
-      if (!response.ok) throw new Error('Failed to update load');
+      if (!response.ok) throw new Error('Failed to unpost load');
 
+      toast.success('Load removed from marketplace');
       fetchLoads();
     } catch (error) {
-      console.error('Toggle KEPT failed:', error);
-      toast.error('Failed to update load');
+      toast.error('Failed to unpost load');
     }
   };
-
-  /**
-   * Handle edit form input change
-   */
-  const handleEditFormChange = (field: string, value: any) => {
-    setEditingLoad({ ...editingLoad, [field]: value });
-  };
-
-  /**
-   * Handle edit form submission
-   */
-  const handleSubmitEditLoad = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!editingLoad) return;
-
-    // Validate required fields
-    if (!editingLoad.pickupCity || !editingLoad.deliveryCity || !editingLoad.pickupDate || !editingLoad.truckType) {
-      toast.warning('Please fill in all required fields: Origin, Destination, Pickup Date, and Truck Type');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      // Get CSRF token for secure submission
-      const csrfToken = await getCSRFToken();
-      if (!csrfToken) {
-        toast.error('Failed to get security token. Please refresh and try again.');
-        setSubmitting(false);
-        return;
-      }
-
-      // Build update payload - auto-post unposted loads when saving
-      const updatePayload: any = {
-        pickupCity: editingLoad.pickupCity,
-        deliveryCity: editingLoad.deliveryCity,
-        pickupDate: editingLoad.pickupDate,
-        pickupDockHours: editingLoad.pickupDockHours,
-        truckType: editingLoad.truckType,
-        fullPartial: editingLoad.fullPartial,
-        lengthM: editingLoad.lengthM ? parseFloat(editingLoad.lengthM) : null,
-        weight: editingLoad.weight ? parseFloat(editingLoad.weight) : null,
-        shipperContactPhone: editingLoad.shipperContactPhone,
-        cargoDescription: editingLoad.cargoDescription,
-        specialInstructions: editingLoad.specialInstructions,
-      };
-
-      // If currently UNPOSTED, change to POSTED when saving (API will set postedAt automatically)
-      if (editingLoad.status === 'UNPOSTED') {
-        updatePayload.status = 'POSTED';
-      }
-
-      const response = await fetch(`/api/loads/${editingLoad.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
-        },
-        body: JSON.stringify(updatePayload),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to update load');
-      }
-
-      // Success! Clear editing state and refresh loads
-      const wasUnposted = editingLoad.status === 'UNPOSTED';
-      setEditingLoad(null);
-      setExpandedLoadId(null);
-      toast.success(wasUnposted ? 'Load updated and posted successfully!' : 'Load updated successfully!');
-
-      // If was unposted, switch to POSTED tab (useEffect will fetch)
-      if (wasUnposted) {
-        setActiveStatus('POSTED');
-      } else {
-        fetchLoads();
-      }
-    } catch (error: any) {
-      console.error('Update load error:', error);
-      toast.error(error.message || 'Failed to update load');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-
-  /**
-   * Status tabs configuration - POSTED, UNPOSTED, EXPIRED only
-   */
-  const statusTabs: DatStatusTab[] = [
-    { key: 'POSTED', label: 'POSTED', count: statusCounts.POSTED },
-    { key: 'UNPOSTED', label: 'UNPOSTED', count: statusCounts.UNPOSTED },
-    { key: 'EXPIRED', label: 'EXPIRED', count: statusCounts.EXPIRED },
-  ];
-
-  /**
-   * Table columns configuration
-   */
-  const columns: DatColumn[] = [
-    {
-      key: 'age',
-      label: 'Age',
-      width: '80px',
-      render: (_, row) => <DatAgeIndicator date={row.postedAt || row.createdAt} />,
-    },
-    {
-      key: 'pickupDate',
-      label: 'Pickup',
-      width: '110px',
-      render: (value) => value ? new Date(value).toLocaleDateString() : 'N/A',
-    },
-    {
-      key: 'pickupCity',
-      label: 'Origin',
-      sortable: true,
-    },
-    {
-      key: 'deliveryCity',
-      label: 'Destination',
-      sortable: true,
-    },
-    {
-      key: 'pickupDockHours',
-      label: 'Dock Hours',
-      width: '120px',
-      render: (value) => value || 'N/A',
-    },
-    {
-      key: 'truckType',
-      label: 'Truck',
-      width: '100px',
-    },
-    {
-      key: 'fullPartial',
-      label: 'F/P',
-      width: '60px',
-      align: 'center' as const,
-    },
-    {
-      key: 'lengthM',
-      label: 'Length',
-      width: '80px',
-      align: 'right' as const,
-      render: (value) => value ? `${value}m` : 'N/A',
-    },
-    {
-      key: 'weight',
-      label: 'Weight',
-      width: '90px',
-      align: 'right' as const,
-      render: (value) => value ? `${value}kg` : 'N/A',
-    },
-    {
-      key: 'rate',
-      label: 'Offer Rate',
-      width: '130px',
-      align: 'right' as const,
-      sortable: true,
-      render: (value, row) => {
-        // Sprint 16: Show detailed pricing if available
-        if (row.baseFareEtb && row.perKmEtb) {
-          return (
-            <div className="text-right">
-              <div className="font-bold" style={{ color: '#00BCD4' }}>
-                {row.totalFareEtb?.toLocaleString() || value.toLocaleString()} ETB
-              </div>
-              <div className="text-xs text-[#064d51]/70">
-                {row.baseFareEtb.toLocaleString()}+{row.perKmEtb.toLocaleString()}/km
-              </div>
-            </div>
-          );
-        }
-        // Legacy: Show simple rate
-        return value ? `${row.currency} ${value.toLocaleString()}` : 'N/A';
-      },
-    },
-  ];
-
-  /**
-   * Row actions configuration
-   */
-  const rowActions: DatRowAction[] = [
-    {
-      key: 'copy',
-      label: 'COPY',
-      variant: 'secondary',
-      onClick: handleCopy,
-    },
-    {
-      key: 'edit',
-      label: 'EDIT',
-      variant: 'primary',
-      onClick: handleEdit,
-    },
-    {
-      key: 'delete',
-      label: 'DELETE',
-      variant: 'destructive',
-      onClick: handleDelete,
-    },
-    {
-      key: 'search',
-      label: 'TRUCKS',
-      variant: 'search',
-      onClick: handleSearchTrucks,
-      render: (row) => `${row.matchCount || 0} TRUCKS`,
-    },
-  ];
 
   return (
     <div className="space-y-6 pt-10">
-      {/* Header Row - NEW LOAD POST on left, Status Tabs on right */}
+      {/* Header */}
       <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-800">Posted Loads</h2>
+          <p className="text-sm text-slate-500">Find trucks for your posted loads</p>
+        </div>
         <button
           onClick={() => router.push('/shipper/loads/create')}
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-teal-500 text-white rounded-xl hover:shadow-lg hover:shadow-teal-500/30 transition-all font-semibold text-sm shadow-md shadow-teal-500/25"
@@ -527,731 +141,137 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
           </svg>
           POST NEW LOAD
         </button>
-
-        {/* Status Tabs - Right Side */}
-        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-1.5 inline-flex gap-1">
-          {statusTabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveStatus(tab.key as LoadStatus)}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                activeStatus === tab.key
-                  ? 'bg-gradient-to-r from-teal-600 to-teal-500 text-white shadow-md shadow-teal-500/25'
-                  : 'text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              {tab.label} {tab.count !== undefined && <span className="ml-1 text-xs opacity-75">({tab.count})</span>}
-            </button>
-          ))}
-        </div>
       </div>
 
-      {/* Table Structure */}
-      <div className="bg-white border border-slate-200/60 rounded-2xl overflow-visible relative shadow-sm">
-        {/* Table Header - Teal Gradient */}
-        <div className="bg-gradient-to-r from-teal-600 to-teal-500 grid grid-cols-11 gap-2 px-4 py-3 rounded-t-2xl text-xs font-semibold text-white relative">
-          <div className="flex items-center gap-1 relative">
-            <button
-              onClick={() => setShowActionsMenu(!showActionsMenu)}
-              className="flex items-center gap-1 hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
-            >
-              <span>☐</span>
-              <span>=</span>
-            </button>
+      {/* Info banner */}
+      <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 flex items-center gap-3">
+        <svg className="w-5 h-5 text-teal-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p className="text-sm text-teal-800">
+          This shows only your <strong>Posted</strong> loads. For full load management (drafts, editing, all statuses), go to{' '}
+          <Link href="/shipper/loads" className="underline font-medium hover:text-teal-900">My Loads</Link>.
+        </p>
+      </div>
 
-            {/* Actions Dropdown Menu */}
-            {showActionsMenu && (
-              <>
-                {/* Invisible overlay to close menu when clicking outside */}
-                <div
-                  className="fixed inset-0"
-                  style={{ zIndex: 9998 }}
-                  onClick={() => setShowActionsMenu(false)}
-                />
-
-                {/* Dropdown Menu */}
-                <div
-                  className="absolute top-full left-0 mt-1 bg-white border border-slate-200/60 rounded-xl shadow-xl w-48"
-                  style={{ zIndex: 9999 }}
-                >
-                  <button
-                    onClick={() => {
-                      // Handle refresh action
-                      setShowActionsMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2 text-sm text-slate-700 border-b border-slate-100 transition-colors rounded-t-xl"
-                  >
-                    <span>🔄</span> REFRESH
-                  </button>
-                  <button
-                    onClick={() => {
-                      // Handle rollover action
-                      setShowActionsMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2 text-sm text-slate-700 border-b border-slate-100 transition-colors"
-                  >
-                    <span>📋</span> ROLLOVER
-                  </button>
-                  <button
-                    onClick={() => {
-                      // Handle cancel rollover action
-                      setShowActionsMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2 text-sm text-slate-700 border-b border-slate-100 transition-colors"
-                  >
-                    CANCEL ROLLOVER
-                  </button>
-                  <button
-                    onClick={() => {
-                      // Handle delete action
-                      setShowActionsMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-2.5 hover:bg-rose-50 flex items-center gap-2 text-sm text-rose-600 border-b border-slate-100 transition-colors"
-                  >
-                    <span>🗑️</span> DELETE
-                  </button>
-                  <button
-                    onClick={() => {
-                      // Handle unpost action
-                      setShowActionsMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2 text-sm text-slate-700 border-b border-slate-100 transition-colors"
-                  >
-                    UNPOST
-                  </button>
-                  <button
-                    onClick={() => {
-                      // Handle keep action
-                      setShowActionsMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2 text-sm text-slate-700 border-b border-slate-100 transition-colors"
-                  >
-                    <span>⭐</span> KEEP
-                  </button>
-                  <button
-                    onClick={() => {
-                      // Handle unkeep action
-                      setShowActionsMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2 text-sm text-slate-700 transition-colors rounded-b-xl"
-                  >
-                    UNKEEP
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-          <div
-            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
-            onClick={() => handleHeaderClick('postedAt')}
-          >
-            Age {sortField === 'postedAt' && (sortOrder === 'asc' ? '↑' : '↓')}
-          </div>
-          <div
-            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
-            onClick={() => handleHeaderClick('pickupDate')}
-          >
-            Pickup {sortField === 'pickupDate' && (sortOrder === 'asc' ? '↑' : '↓')}
-          </div>
-          <div
-            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
-            onClick={() => handleHeaderClick('pickupCity')}
-          >
-            Origin {sortField === 'pickupCity' && (sortOrder === 'asc' ? '↑' : '↓')}
-          </div>
-          <div
-            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
-            onClick={() => handleHeaderClick('deliveryCity')}
-          >
-            Destination {sortField === 'deliveryCity' && (sortOrder === 'asc' ? '↑' : '↓')}
-          </div>
-          <div
-            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
-            onClick={() => handleHeaderClick('pickupDockHours')}
-          >
-            Dock Hours {sortField === 'pickupDockHours' && (sortOrder === 'asc' ? '↑' : '↓')}
-          </div>
-          <div
-            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
-            onClick={() => handleHeaderClick('truckType')}
-          >
-            Truck {sortField === 'truckType' && (sortOrder === 'asc' ? '↑' : '↓')}
-          </div>
-          <div
-            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
-            onClick={() => handleHeaderClick('fullPartial')}
-          >
-            F/P {sortField === 'fullPartial' && (sortOrder === 'asc' ? '↑' : '↓')}
-          </div>
-          <div
-            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
-            onClick={() => handleHeaderClick('lengthM')}
-          >
-            Length {sortField === 'lengthM' && (sortOrder === 'asc' ? '↑' : '↓')}
-          </div>
-          <div
-            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
-            onClick={() => handleHeaderClick('weight')}
-          >
-            Weight {sortField === 'weight' && (sortOrder === 'asc' ? '↑' : '↓')}
-          </div>
-          <div
-            className="cursor-pointer hover:bg-white/20 px-1.5 py-1 rounded transition-colors"
-            onClick={() => handleHeaderClick('shipperContactPhone')}
-          >
-            Contact {sortField === 'shipperContactPhone' && (sortOrder === 'asc' ? '↑' : '↓')}
-          </div>
+      {/* Loads Table */}
+      <div className="bg-white border border-slate-200/60 rounded-2xl overflow-hidden shadow-sm">
+        {/* Table Header */}
+        <div className="bg-gradient-to-r from-teal-600 to-teal-500 grid grid-cols-7 gap-2 px-4 py-3 text-xs font-semibold text-white">
+          <div>Age</div>
+          <div>Pickup</div>
+          <div>Origin</div>
+          <div>Destination</div>
+          <div>Truck</div>
+          <div>Weight</div>
+          <div className="text-center">Matches</div>
         </div>
 
-        {/* Load Rows */}
+        {/* Loading */}
         {loading ? (
           <div className="p-12 text-center">
             <div className="w-8 h-8 border-3 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-slate-500">Loading loads...</p>
+            <p className="text-slate-500">Loading posted loads...</p>
           </div>
         ) : loads.length === 0 ? (
+          /* Empty State */
           <div className="p-12 text-center">
             <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
               </svg>
             </div>
-            <h3 className="text-slate-700 font-medium mb-1">No loads found</h3>
-            <p className="text-slate-500 text-sm">Click POST NEW LOAD to create your first load</p>
+            <h3 className="text-slate-700 font-medium mb-1">No posted loads</h3>
+            <p className="text-slate-500 text-sm mb-4">Post a load to start finding trucks</p>
+            <button
+              onClick={() => router.push('/shipper/loads/create')}
+              className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium"
+            >
+              Post New Load
+            </button>
           </div>
         ) : (
+          /* Load Rows */
           loads.map((load) => (
             <div key={load.id}>
-              {/* Load Row - Clickable */}
               <div
-                className={`grid grid-cols-11 gap-2 px-4 py-3 border-b cursor-default text-xs transition-colors ${
+                className={`grid grid-cols-7 gap-2 px-4 py-3 border-b text-sm cursor-pointer transition-colors ${
                   expandedLoadId === load.id
-                    ? 'bg-teal-50 border-l-4 border-l-teal-500 border-b-teal-200'
-                    : 'border-slate-100 hover:bg-slate-50 text-slate-700'
+                    ? 'bg-teal-50 border-l-4 border-l-teal-500'
+                    : 'border-slate-100 hover:bg-slate-50'
                 }`}
-                onClick={() => {
-                  if (expandedLoadId === load.id) {
-                    setExpandedLoadId(null);
-                    setEditingLoad(null); // Reset editing state when collapsing
-                  } else {
-                    setExpandedLoadId(load.id);
-                    setEditingLoad(null); // Ensure editing is closed when expanding a new row
-                  }
-                }}
+                onClick={() => setExpandedLoadId(expandedLoadId === load.id ? null : load.id)}
               >
-                <div className="flex items-center gap-1">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4"
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <span
-                    className="text-lg cursor-pointer hover:text-yellow-500"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleToggleKept(load);
-                    }}
-                  >
-                    {load.isKept ? '★' : '☆'}
-                  </span>
-                </div>
                 <div><DatAgeIndicator date={load.postedAt || load.createdAt} /></div>
-                <div>
-                  <span className={`
-                    px-2.5 py-1 rounded-full text-xs font-medium
-                    ${load.status === 'POSTED' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : ''}
-                    ${load.status === 'UNPOSTED' ? 'bg-slate-50 text-slate-600 border border-slate-200' : ''}
-                    ${load.status === 'EXPIRED' ? 'bg-rose-50 text-rose-700 border border-rose-200' : ''}
-                  `}>
-                    {load.status}
+                <div className="text-slate-700">
+                  {load.pickupDate ? new Date(load.pickupDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
+                </div>
+                <div className="font-medium text-slate-800 truncate">{load.pickupCity || 'N/A'}</div>
+                <div className="font-medium text-slate-800 truncate">{load.deliveryCity || 'N/A'}</div>
+                <div className="text-slate-600">{getTruckTypeLabel(load.truckType)}</div>
+                <div className="text-slate-600">{load.weight ? `${load.weight.toLocaleString()} kg` : 'N/A'}</div>
+                <div className="text-center">
+                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                    load.matchCount > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                  }`}>
+                    {load.matchCount || 0} trucks
                   </span>
                 </div>
-                <div>{load.pickupDate ? new Date(load.pickupDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : 'N/A'}</div>
-                <div className="truncate">{load.pickupCity || 'N/A'}</div>
-                <div className="truncate">{load.deliveryCity || 'N/A'}</div>
-                <div>{load.pickupDockHours || 'N/A'}</div>
-                <div>{getTruckTypeLabel(load.truckType)}</div>
-                <div>{load.fullPartial || 'N/A'}</div>
-                <div>{load.lengthM ? `${load.lengthM}ft` : 'N/A'}</div>
-                <div>{load.weight ? `${load.weight.toLocaleString()}` : 'N/A'}</div>
-                <div>{load.shipperContactPhone || 'N/A'}</div>
               </div>
 
-              {/* Expanded Section - Shows details or edit form */}
-              {expandedLoadId === load.id && editingLoad?.id === load.id && (
-                /* INLINE EDIT FORM - Professional Layout */
-                <form onSubmit={handleSubmitEditLoad}>
-                  <div className="border-l-4 border-l-teal-500 bg-teal-50 p-6 border-t border-teal-200">
-                    {/* Header with load info */}
-                    <div className="flex items-center justify-between border-b border-teal-200 pb-4 mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center">
-                          <span className="text-xl">📦</span>
-                        </div>
-                        <div>
-                          <h3 className="text-base font-bold text-[#064d51]">
-                            Edit Load Posting
-                          </h3>
-                          <p className="text-xs text-[#064d51]/60">
-                            {load.pickupCity} → {load.deliveryCity} • {getTruckTypeLabel(load.truckType)} • {load.weight ? `${load.weight.toLocaleString()} kg` : 'N/A'}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingLoad(null);
-                          setExpandedLoadId(null);
-                        }}
-                        className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white/50 rounded-full transition-colors"
-                      >
-                        <span className="text-lg">✕</span>
-                      </button>
+              {/* Expanded Actions */}
+              {expandedLoadId === load.id && (
+                <div className="bg-teal-50 px-6 py-4 border-b border-teal-200 border-l-4 border-l-teal-500">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-slate-600">
+                      <strong>Rate:</strong> {load.rate ? `ETB ${load.rate.toLocaleString()}` : 'Not set'} •{' '}
+                      <strong>Cargo:</strong> {load.cargoDescription || 'Not specified'}
                     </div>
-
-                    {/* Form Grid - Professional Layout */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-4">
-                      {/* Pickup Date */}
-                      <div>
-                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
-                          Pickup Date <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="date"
-                          value={editingLoad.pickupDate ? new Date(editingLoad.pickupDate).toISOString().split('T')[0] : ''}
-                          onChange={(e) => handleEditFormChange('pickupDate', e.target.value)}
-                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                          required
-                        />
-                      </div>
-
-                      {/* Origin */}
-                      <div>
-                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
-                          Origin <span className="text-red-500">*</span>
-                        </label>
-                        <PlacesAutocomplete
-                          value={editingLoad.pickupCity || ''}
-                          onChange={(value, place) => {
-                            handleEditFormChange('pickupCity', value);
-                            if (place?.coordinates) {
-                              handleEditFormChange('pickupCoordinates', place.coordinates);
-                            }
-                          }}
-                          placeholder="Search city..."
-                          className="w-full px-3 py-2 text-sm bg-white border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500"
-                          countryRestriction={['ET', 'DJ']}
-                          types={['(cities)']}
-                          required
-                        />
-                      </div>
-
-                      {/* Destination */}
-                      <div>
-                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
-                          Destination <span className="text-red-500">*</span>
-                        </label>
-                        <PlacesAutocomplete
-                          value={editingLoad.deliveryCity || ''}
-                          onChange={(value, place) => {
-                            handleEditFormChange('deliveryCity', value);
-                            if (place?.coordinates) {
-                              handleEditFormChange('deliveryCoordinates', place.coordinates);
-                            }
-                          }}
-                          placeholder="Search city..."
-                          className="w-full px-3 py-2 text-sm bg-white border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500"
-                          countryRestriction={['ET', 'DJ']}
-                          types={['(cities)']}
-                          required
-                        />
-                      </div>
-
-                      {/* Dock Hours */}
-                      <div>
-                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
-                          Dock Hours
-                        </label>
-                        <input
-                          type="text"
-                          value={editingLoad.pickupDockHours || ''}
-                          onChange={(e) => handleEditFormChange('pickupDockHours', e.target.value)}
-                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                          placeholder="9am-5pm"
-                        />
-                      </div>
-
-                      {/* Truck Type */}
-                      <div>
-                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
-                          Truck Type <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                          value={editingLoad.truckType || 'REFRIGERATED'}
-                          onChange={(e) => handleEditFormChange('truckType', e.target.value)}
-                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                          required
-                        >
-                          <option value="REFRIGERATED">Reefer</option>
-                          <option value="DRY_VAN">Van</option>
-                          <option value="FLATBED">Flatbed</option>
-                          <option value="CONTAINER">Container</option>
-                          <option value="TANKER">Tanker</option>
-                          <option value="BOX_TRUCK">Box Truck</option>
-                        </select>
-                      </div>
-
-                      {/* Full/Partial */}
-                      <div>
-                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
-                          Load Type
-                        </label>
-                        <select
-                          value={editingLoad.fullPartial || 'FULL'}
-                          onChange={(e) => handleEditFormChange('fullPartial', e.target.value)}
-                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                        >
-                          <option value="FULL">Full</option>
-                          <option value="PARTIAL">Partial</option>
-                        </select>
-                      </div>
-
-                      {/* Length */}
-                      <div>
-                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
-                          Length (m)
-                        </label>
-                        <input
-                          type="number"
-                          value={editingLoad.lengthM || ''}
-                          onChange={(e) => handleEditFormChange('lengthM', e.target.value)}
-                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                          placeholder="12"
-                        />
-                      </div>
-
-                      {/* Weight */}
-                      <div>
-                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
-                          Weight (kg)
-                        </label>
-                        <input
-                          type="number"
-                          value={editingLoad.weight || ''}
-                          onChange={(e) => handleEditFormChange('weight', e.target.value)}
-                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                          placeholder="25000"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Second Row: Contact, Commodity, Comments */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                      {/* Contact */}
-                      <div>
-                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
-                          Contact Phone
-                        </label>
-                        <input
-                          type="tel"
-                          value={editingLoad.shipperContactPhone || ''}
-                          onChange={(e) => handleEditFormChange('shipperContactPhone', e.target.value)}
-                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                          placeholder="+251-9xx-xxx-xxx"
-                        />
-                      </div>
-
-                      {/* Commodity */}
-                      <div>
-                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
-                          Commodity <span className="text-[#064d51]/50">({(editingLoad.cargoDescription || '').length}/100)</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={editingLoad.cargoDescription || ''}
-                          onChange={(e) => handleEditFormChange('cargoDescription', e.target.value)}
-                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                          maxLength={100}
-                          placeholder="e.g. Steel Coils, Electronics..."
-                        />
-                      </div>
-
-                      {/* Comments */}
-                      <div>
-                        <label className="block text-xs font-medium text-[#064d51]/80 mb-1">
-                          Comments <span className="text-[#064d51]/50">({(editingLoad.specialInstructions || '').length}/70)</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={editingLoad.specialInstructions || ''}
-                          onChange={(e) => handleEditFormChange('specialInstructions', e.target.value)}
-                          className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                          maxLength={70}
-                          placeholder="Additional notes..."
-                        />
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex items-end gap-2">
-                        <button
-                          type="submit"
-                          disabled={submitting}
-                          className="flex-1 px-6 py-2 bg-gradient-to-r from-teal-600 to-teal-500 text-white font-semibold rounded-lg hover:from-teal-700 hover:to-teal-600 transition-all disabled:from-slate-400 disabled:to-slate-400 disabled:cursor-not-allowed shadow-md cursor-pointer"
-                        >
-                          {submitting ? 'SAVING...' : 'SAVE CHANGES'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingLoad(null);
-                            setExpandedLoadId(null);
-                          }}
-                          className="px-4 py-2 bg-white text-slate-600 rounded-lg hover:bg-slate-100 transition-colors font-semibold border border-slate-200 cursor-pointer"
-                        >
-                          CANCEL
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </form>
-              )}
-
-              {/* Expanded Details - Shows when clicked but not editing */}
-              {expandedLoadId === load.id && (!editingLoad || editingLoad.id !== load.id) && (
-                <div className="border-l-4 border-l-teal-500 bg-teal-50 p-6 border-t border-teal-200">
-                  {/* Row with Commodity, Comments, Search, and Action Buttons */}
-                  <div className="flex items-start gap-6 text-sm mb-6">
-                    <div className="flex-1">
-                      <div className="font-medium mb-1 text-slate-700">Commodity</div>
-                      <div className="text-slate-600">{load.cargoDescription || 'N/A'}</div>
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-medium mb-1 text-slate-700">Comments</div>
-                      <div className="text-slate-600">{load.specialInstructions || 'N/A'}</div>
-                    </div>
-                    {/* Search and Action Buttons */}
-                    <div className="flex items-center gap-2">
-                      {/* POST button - only for unposted loads */}
-                      {load.status === 'UNPOSTED' && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handlePostLoad(load);
-                          }}
-                          className="px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white text-xs font-semibold rounded-lg hover:from-emerald-700 hover:to-emerald-600 transition-all shadow-md shadow-emerald-500/25 cursor-pointer flex items-center gap-1"
-                          title="Post this load to make it visible to carriers"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          POST
-                        </button>
-                      )}
+                    <div className="flex gap-2">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleSearchTrucks(load);
                         }}
-                        className="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200 flex items-center gap-1 cursor-pointer"
-                        title="Search for matching trucks"
+                        className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
                       >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
-                        SEARCH
-                        <span className="bg-indigo-600 text-white px-1.5 py-0.5 rounded-full text-xs font-bold">
-                          {load.matchCount || 0}
-                        </span>
+                        Find Trucks ({load.matchCount || 0})
                       </button>
+                      <Link
+                        href={`/shipper/loads/${load.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-4 py-2 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors"
+                      >
+                        View Details
+                      </Link>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleCopy(load);
+                          handleUnpost(load);
                         }}
-                        className="px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-200 transition-colors border border-slate-200 cursor-pointer"
+                        className="px-4 py-2 bg-rose-100 text-rose-700 text-sm font-medium rounded-lg hover:bg-rose-200 transition-colors"
                       >
-                        COPY
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(load);
-                        }}
-                        className="px-3 py-1.5 bg-teal-600 text-white text-xs font-semibold rounded-lg hover:bg-teal-700 transition-all cursor-pointer"
-                      >
-                        EDIT
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(load);
-                        }}
-                        className="px-3 py-1.5 bg-rose-500 text-white text-xs font-semibold rounded-lg hover:bg-rose-600 transition-all cursor-pointer"
-                      >
-                        DELETE
+                        Unpost
                       </button>
                     </div>
                   </div>
-
-                  {/* Sprint 16: Pricing Breakdown */}
-                  {load.baseFareEtb && load.perKmEtb && load.tripKm && (
-                    <div className="mb-4 p-3 bg-[#064d51]/5 border-2 border-[#1e9c99] rounded-lg">
-                      <div className="font-semibold mb-2 text-sm" style={{ color: '#1e9c99' }}>
-                        💰 PRICING BREAKDOWN
-                      </div>
-                      <div className="grid grid-cols-4 gap-3 text-xs">
-                        <div>
-                          <div className="text-[#064d51]/70 mb-1">Base Fare</div>
-                          <div className="font-bold" style={{ color: '#2B2727' }}>
-                            {load.baseFareEtb?.toLocaleString()} ETB
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-[#064d51]/70 mb-1">Per-KM Rate</div>
-                          <div className="font-bold" style={{ color: '#2B2727' }}>
-                            {load.perKmEtb?.toLocaleString()} ETB/km
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-[#064d51]/70 mb-1">Trip Distance</div>
-                          <div className="font-bold" style={{ color: '#2B2727' }}>
-                            {load.tripKm?.toLocaleString()} km
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-[#064d51]/70 mb-1">Total Fare</div>
-                          <div className="font-bold text-lg" style={{ color: '#1e9c99' }}>
-                            {load.totalFareEtb?.toLocaleString() || load.rate?.toLocaleString()} ETB
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-2 pt-2 border-t border-[#1e9c99]/30 grid grid-cols-2 gap-3 text-xs">
-                        <div>
-                          <span className="text-[#064d51]/70">Revenue Per KM (RPK):</span>
-                          <span className="font-semibold ml-2" style={{ color: '#2B2727' }}>
-                            {((load.totalFareEtb || load.rate) / load.tripKm).toFixed(2)} ETB/km
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[#064d51]/70">Revenue Per Mile (RPM):</span>
-                          <span className="font-semibold ml-2" style={{ color: '#2B2727' }}>
-                            {(((load.totalFareEtb || load.rate) / load.tripKm) * 0.621371).toFixed(2)} ETB/mi
-                          </span>
-                        </div>
-                      </div>
-                      {load.dhToOriginKm && load.dhAfterDeliveryKm && (
-                        <div className="mt-2 pt-2 border-t border-[#1e9c99]/30 text-xs">
-                          <div className="text-[#064d51]/70 mb-1">Including Deadhead:</div>
-                          <div className="grid grid-cols-3 gap-3">
-                            <div>
-                              <span className="text-[#064d51]/70">DH Origin:</span>
-                              <span className="font-semibold ml-2" style={{ color: '#2B2727' }}>
-                                {load.dhToOriginKm?.toLocaleString()} km
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-[#064d51]/70">DH Destination:</span>
-                              <span className="font-semibold ml-2" style={{ color: '#2B2727' }}>
-                                {load.dhAfterDeliveryKm?.toLocaleString()} km
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-[#064d51]/70">True RPK:</span>
-                              <span className="font-semibold ml-2" style={{ color: '#2B2727' }}>
-                                {((load.totalFareEtb || load.rate) / (parseFloat(load.tripKm) + parseFloat(load.dhToOriginKm || 0) + parseFloat(load.dhAfterDeliveryKm || 0))).toFixed(2)} ETB/km
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Sprint 16: GPS Tracking Section */}
-                  {load.trackingEnabled && load.trackingUrl && (
-                    <div className="mb-4 p-3 bg-green-50 border-2 border-green-400 rounded">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="font-semibold text-sm text-green-700 flex items-center gap-2">
-                          <span>📍</span> GPS LIVE TRACKING ACTIVE
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                          <span className="text-xs text-green-700">Live</span>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3 text-xs mb-3">
-                        <div>
-                          <div className="text-[#064d51]/70 mb-1">Tracking URL</div>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="text"
-                              readOnly
-                              value={`${window.location.origin}${load.trackingUrl}`}
-                              className="flex-1 px-2 py-1 text-xs bg-white border border-gray-300 rounded font-mono"
-                              onClick={(e) => e.currentTarget.select()}
-                            />
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigator.clipboard.writeText(`${window.location.origin}${load.trackingUrl}`);
-                                toast.success('Tracking URL copied to clipboard!');
-                              }}
-                              className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
-                              title="Copy tracking URL"
-                            >
-                              📋 Copy
-                            </button>
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-[#064d51]/70 mb-1">Started</div>
-                          <div className="font-semibold text-gray-800">
-                            {load.trackingStartedAt ? new Date(load.trackingStartedAt).toLocaleString() : 'N/A'}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <a
-                          href={load.trackingUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex-1 px-4 py-2 bg-green-600 text-white text-sm font-bold rounded hover:bg-green-700 transition-colors text-center"
-                        >
-                          🗺️ VIEW LIVE TRACKING
-                        </a>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigator.clipboard.writeText(`${window.location.origin}${load.trackingUrl}`);
-                            toast.success('Tracking URL copied! Share it with your customer.');
-                          }}
-                          className="px-4 py-2 bg-green-500 text-white text-sm font-medium rounded hover:bg-green-600 transition-colors"
-                        >
-                          SHARE
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* GPS Tracking Not Available */}
-                  {load.status === 'ASSIGNED' && !load.trackingEnabled && (
-                    <div className="mb-4 p-3 bg-yellow-50 border-2 border-yellow-400 rounded">
-                      <div className="font-semibold text-sm text-yellow-700 mb-1">
-                        ⚠️ GPS Tracking Not Available
-                      </div>
-                      <p className="text-xs text-yellow-800">
-                        This load is assigned but GPS tracking is not enabled. The assigned truck may not have a GPS device registered.
-                      </p>
-                    </div>
-                  )}
-
                 </div>
               )}
             </div>
           ))
         )}
       </div>
+
+      {/* Footer note */}
+      {loads.length > 0 && (
+        <p className="text-center text-sm text-slate-500">
+          Showing {loads.length} posted load{loads.length !== 1 ? 's' : ''} •{' '}
+          <Link href="/shipper/loads" className="text-teal-600 hover:underline">View all loads</Link>
+        </p>
+      )}
     </div>
   );
 }

@@ -24,6 +24,12 @@ interface Load {
   fullPartial: string;
   createdAt: string;
   updatedAt: string;
+  postedAt: string | null;
+  assignedTruck?: {
+    id: string;
+    licensePlate: string;
+    truckType: string;
+  } | null;
 }
 
 interface LoadsResponse {
@@ -48,6 +54,7 @@ const STATUS_MAP: Record<string, string> = {
   'cancelled': 'CANCELLED',
   'draft': 'DRAFT',
   'posted': 'POSTED',
+  'unposted': 'UNPOSTED',
 };
 
 async function getLoads(
