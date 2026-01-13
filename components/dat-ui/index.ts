@@ -1,8 +1,16 @@
 /**
  * DAT-Style UI Component Library
  *
- * Export all DAT UI components
- * Sprint 14 - DAT-Style UI Transformation
+ * @deprecated This module is deprecated. Import from '@/components/loadboard-ui' instead.
+ *
+ * All exports in this file are maintained for backward compatibility.
+ * They will be removed in a future version.
+ *
+ * Migration guide:
+ * - DatActionButton -> ActionButton (from loadboard-ui)
+ * - DatNavTabs -> NavTabs (from loadboard-ui)
+ * - DatDataTable -> DataTable (from loadboard-ui)
+ * - etc.
  */
 
 // Core Navigation & Structure
@@ -31,3 +39,6 @@ export { default as DatCompanyModal } from './DatCompanyModal';
 
 // Indicators & Badges
 export { default as DatAgeIndicator } from './DatAgeIndicator';
+
+// Re-export types (deprecated)
+export * from '@/types/dat-ui';

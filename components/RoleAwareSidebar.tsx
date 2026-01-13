@@ -259,10 +259,10 @@ const navigationSections: Record<string, NavSection[]> = {
       ],
     },
     {
-      title: 'DAT Board',
+      title: 'Load Board',
       items: [
-        { label: 'Post Trucks', href: '/carrier?tab=POST_TRUCKS', icon: '📤', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
-        { label: 'Search Loads', href: '/carrier?tab=SEARCH_LOADS', icon: '🔍', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Post Trucks', href: '/carrier/loadboard?tab=POST_TRUCKS', icon: '📤', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Search Loads', href: '/carrier/loadboard?tab=SEARCH_LOADS', icon: '🔍', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
         { label: 'Requests', href: '/carrier/requests', icon: '📋', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
         { label: 'My Load Requests', href: '/carrier/load-requests', icon: '📨', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
       ],
@@ -303,10 +303,10 @@ const navigationSections: Record<string, NavSection[]> = {
       ],
     },
     {
-      title: 'DAT Board',
+      title: 'Load Board',
       items: [
-        { label: 'Post Loads', href: '/shipper/dat-board?tab=POST_LOADS', icon: '📤', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
-        { label: 'Search Trucks', href: '/shipper/dat-board?tab=SEARCH_TRUCKS', icon: '🔍', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Post Loads', href: '/shipper/loadboard?tab=POST_LOADS', icon: '📤', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Search Trucks', href: '/shipper/loadboard?tab=SEARCH_TRUCKS', icon: '🔍', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
         { label: 'Requests', href: '/shipper/requests', icon: '📋', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
       ],
     },
