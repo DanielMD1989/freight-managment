@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { clearCSRFToken } from "@/lib/csrfFetch";
 
 export default function LogoutButton() {
   const router = useRouter();
@@ -12,7 +13,10 @@ export default function LogoutButton() {
     try {
       await fetch("/api/auth/logout", {
         method: "POST",
+        credentials: "include",
       });
+      // Clear CSRF token cache on logout
+      clearCSRFToken();
       router.push("/login");
       router.refresh();
     } catch (error) {

@@ -13,6 +13,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import PostTrucksTab from './PostTrucksTab';
 import SearchLoadsTab from './SearchLoadsTab';
 import NotificationBell from '@/components/NotificationBell';
+import { clearCSRFToken } from '@/lib/csrfFetch';
 
 interface CarrierLoadboardClientProps {
   user: any;
@@ -79,9 +80,12 @@ export default function CarrierLoadboardClient({ user }: CarrierLoadboardClientP
     try {
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
+        credentials: 'include',
       });
 
       if (response.ok) {
+        // Clear CSRF token cache on logout
+        clearCSRFToken();
         // Redirect to login page
         window.location.href = '/login';
       } else {

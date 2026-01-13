@@ -10,6 +10,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/Toast';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 const TRUCK_TYPES = [
   { value: 'FLATBED', label: 'Flatbed' },
@@ -138,20 +139,6 @@ export default function LoadCreationForm() {
   const prevStep = () => {
     setStep((prev) => Math.max(prev - 1, 1));
     setError('');
-  };
-
-  /**
-   * Get CSRF token
-   */
-  const getCSRFToken = async (): Promise<string | null> => {
-    try {
-      const response = await fetch('/api/auth/csrf');
-      const data = await response.json();
-      return data.csrfToken;
-    } catch (error) {
-      console.error('Failed to get CSRF token:', error);
-      return null;
-    }
   };
 
   /**

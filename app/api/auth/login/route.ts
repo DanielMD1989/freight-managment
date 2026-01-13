@@ -4,7 +4,7 @@ import { verifyPassword, setSession, isLoginAllowed } from "@/lib/auth";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { logAuthFailure, logAuthSuccess } from "@/lib/auditLog";
-import { generateAndSetCSRFToken } from "@/lib/csrf";
+// CSRF token generated inline - generateCSRFToken imported dynamically
 import {
   getClientIP,
   isIPBlocked,
@@ -216,6 +216,10 @@ export async function POST(request: NextRequest) {
     await logAuthSuccess(user.id, user.email, request);
 
     // Generate CSRF token for the session
+    // We need to generate token first, then build response with it
+    const { generateCSRFToken } = await import('@/lib/csrf');
+    const csrfToken = generateCSRFToken();
+
     const response = NextResponse.json({
       message: isLimitedAccess
         ? "Login successful. Please complete your registration."
@@ -229,17 +233,22 @@ export async function POST(request: NextRequest) {
         status: user.status,
         organizationId: user.organizationId,
       },
-      // Indicate if user has limited access (pending verification)
       limitedAccess: isLimitedAccess,
-      // If limited, tell frontend what actions are allowed
       ...(isLimitedAccess && {
         allowedActions: ['view_profile', 'upload_documents', 'complete_registration'],
         restrictedMessage: 'Your account is pending verification. Some features are restricted.',
       }),
+      csrfToken, // Include token for client-side caching
     });
 
-    // Set CSRF token cookie
-    const csrfToken = generateAndSetCSRFToken(response);
+    // Set CSRF cookie
+    response.cookies.set('csrf_token', csrfToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24, // 24 hours
+    });
 
     return response;
   } catch (error) {

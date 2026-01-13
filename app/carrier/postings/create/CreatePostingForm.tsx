@@ -10,6 +10,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/Toast';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface Truck {
   id: string;
@@ -68,20 +69,6 @@ export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
       console.error('Error fetching locations:', error);
     } finally {
       setIsLoadingLocations(false);
-    }
-  };
-
-  /**
-   * Get CSRF token
-   */
-  const getCSRFToken = async (): Promise<string | null> => {
-    try {
-      const response = await fetch('/api/auth/csrf');
-      const data = await response.json();
-      return data.csrfToken;
-    } catch (error) {
-      console.error('Failed to get CSRF token:', error);
-      return null;
     }
   };
 

@@ -4,6 +4,7 @@ import { useState, FormEvent, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useToast } from "@/components/Toast";
+import { setCSRFToken } from "@/lib/csrfFetch";
 
 function LoginForm() {
   const router = useRouter();
@@ -34,6 +35,11 @@ function LoginForm() {
 
       if (!response.ok) {
         throw new Error(data.error || "Login failed");
+      }
+
+      // Cache CSRF token from login response for subsequent requests
+      if (data.csrfToken) {
+        setCSRFToken(data.csrfToken);
       }
 
       toast.success("Login successful! Redirecting...");

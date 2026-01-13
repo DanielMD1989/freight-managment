@@ -22,7 +22,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import {
-  generateAndSetCSRFToken,
   getCSRFTokenFromCookie,
   CSRF_COOKIE_NAME,
 } from '@/lib/csrf';
@@ -34,7 +33,8 @@ import {
  *
  * Returns:
  * {
- *   csrfToken: string
+ *   csrfToken: string,
+ *   expiresIn: number (seconds until expiry)
  * }
  *
  * Also sets csrf_token cookie (httpOnly, sameSite: lax)
@@ -48,26 +48,28 @@ export async function GET(request: NextRequest) {
     const existingToken = getCSRFTokenFromCookie(request);
 
     if (existingToken) {
-      // Return existing token
+      // Return existing token with approximate expiry
+      // We don't know exact expiry, so estimate 23 hours remaining
       return NextResponse.json({
         csrfToken: existingToken,
+        expiresIn: 23 * 60 * 60, // 23 hours in seconds
+        fresh: false,
       });
     }
 
-    // Generate new token and set cookie
+    // Generate new token
+    const { generateCSRFToken } = await import('@/lib/csrf');
+    const newToken = generateCSRFToken();
+
+    // Create response with the token
     const response = NextResponse.json({
-      csrfToken: '', // Will be replaced
-    });
-
-    const newToken = generateAndSetCSRFToken(response);
-
-    // Create new response with the token and copy cookies
-    const finalResponse = NextResponse.json({
       csrfToken: newToken,
+      expiresIn: 24 * 60 * 60, // 24 hours in seconds
+      fresh: true,
     });
 
-    // Copy the CSRF cookie to the final response
-    finalResponse.cookies.set(CSRF_COOKIE_NAME, newToken, {
+    // Set the CSRF cookie
+    response.cookies.set(CSRF_COOKIE_NAME, newToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -75,9 +77,17 @@ export async function GET(request: NextRequest) {
       maxAge: 60 * 60 * 24, // 24 hours
     });
 
-    return finalResponse;
+    return response;
   } catch (error: any) {
     console.error('Error generating CSRF token:', error);
+
+    // Check if it's an auth error
+    if (error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
 
     return NextResponse.json(
       { error: 'Failed to generate CSRF token' },

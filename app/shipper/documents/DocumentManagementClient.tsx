@@ -9,6 +9,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface Document {
   id: string;
@@ -74,20 +75,6 @@ export default function DocumentManagementClient({
   // Upload form state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [documentType, setDocumentType] = useState('BUSINESS_LICENSE');
-
-  /**
-   * Get CSRF token
-   */
-  const getCSRFToken = async (): Promise<string | null> => {
-    try {
-      const response = await fetch('/api/auth/csrf');
-      const data = await response.json();
-      return data.csrfToken;
-    } catch (error) {
-      console.error('Failed to get CSRF token:', error);
-      return null;
-    }
-  };
 
   /**
    * Handle file selection

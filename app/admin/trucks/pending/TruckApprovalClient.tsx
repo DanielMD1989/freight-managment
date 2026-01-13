@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface Truck {
   id: string;
@@ -111,20 +112,6 @@ export default function TruckApprovalClient({
     const params = new URLSearchParams(searchParams.toString());
     params.set('page', newPage.toString());
     router.push(`/admin/trucks/pending?${params.toString()}`);
-  };
-
-  /**
-   * Get CSRF token
-   */
-  const getCSRFToken = async (): Promise<string | null> => {
-    try {
-      const response = await fetch('/api/auth/csrf');
-      const data = await response.json();
-      return data.csrfToken;
-    } catch (error) {
-      console.error('Failed to get CSRF token:', error);
-      return null;
-    }
   };
 
   /**

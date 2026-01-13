@@ -9,6 +9,7 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface Document {
   id: string;
@@ -147,20 +148,6 @@ export default function VerificationQueueClient({
     const params = new URLSearchParams(searchParams.toString());
     params.set('page', newPage.toString());
     router.push(`/admin/verification?${params.toString()}`);
-  };
-
-  /**
-   * Get CSRF token
-   */
-  const getCSRFToken = async (): Promise<string | null> => {
-    try {
-      const response = await fetch('/api/auth/csrf');
-      const data = await response.json();
-      return data.csrfToken;
-    } catch (error) {
-      console.error('Failed to get CSRF token:', error);
-      return null;
-    }
   };
 
   /**
