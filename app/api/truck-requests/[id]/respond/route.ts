@@ -246,6 +246,7 @@ export async function POST(
           truckPlate: truckRequest.truck.licensePlate,
           approved: true,
           requestId: requestId,
+          loadId: truckRequest.loadId, // Include loadId for navigation
         }).catch((err) => console.error('Failed to send notification:', err));
       }
 
@@ -290,6 +291,7 @@ export async function POST(
           truckPlate: truckRequest.truck.licensePlate,
           approved: false,
           requestId: requestId,
+          loadId: truckRequest.loadId, // Include loadId for context
         }).catch((err) => console.error('Failed to send notification:', err));
       }
 

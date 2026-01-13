@@ -40,11 +40,20 @@ const updateCorridorSchema = z.object({
     message: 'Invalid destination region',
   }).optional(),
   distanceKm: z.number().positive().max(5000).optional(),
+  // Legacy pricing (kept for backward compatibility)
   pricePerKm: z.number().positive().max(100).optional(),
   direction: z.nativeEnum(CorridorDirection).optional(),
   promoFlag: z.boolean().optional(),
   promoDiscountPct: z.number().min(0).max(100).nullable().optional(),
   isActive: z.boolean().optional(),
+  // Dual-party pricing - shipper
+  shipperPricePerKm: z.number().min(0).max(100).optional(),
+  shipperPromoFlag: z.boolean().optional(),
+  shipperPromoPct: z.number().min(0).max(100).nullable().optional(),
+  // Dual-party pricing - carrier
+  carrierPricePerKm: z.number().min(0).max(100).optional(),
+  carrierPromoFlag: z.boolean().optional(),
+  carrierPromoPct: z.number().min(0).max(100).nullable().optional(),
 });
 
 /**
@@ -132,6 +141,14 @@ export async function GET(
         promoFlag: corridor.promoFlag,
         promoDiscountPct: corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null,
         isActive: corridor.isActive,
+        // Dual-party pricing - shipper
+        shipperPricePerKm: corridor.shipperPricePerKm ? Number(corridor.shipperPricePerKm) : null,
+        shipperPromoFlag: corridor.shipperPromoFlag,
+        shipperPromoPct: corridor.shipperPromoPct ? Number(corridor.shipperPromoPct) : null,
+        // Dual-party pricing - carrier
+        carrierPricePerKm: corridor.carrierPricePerKm ? Number(corridor.carrierPricePerKm) : null,
+        carrierPromoFlag: corridor.carrierPromoFlag,
+        carrierPromoPct: corridor.carrierPromoPct ? Number(corridor.carrierPromoPct) : null,
         createdAt: corridor.createdAt,
         updatedAt: corridor.updatedAt,
         createdBy: corridor.createdBy,
@@ -150,11 +167,14 @@ export async function GET(
             : 0,
           completedCount: serviceFeeStats._count,
         },
-        serviceFeePreview: calculateServiceFeePreview(
+        serviceFeePreview: calculateDualPartyFeePreview(
           Number(corridor.distanceKm),
-          Number(corridor.pricePerKm),
-          corridor.promoFlag,
-          corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null
+          corridor.shipperPricePerKm ? Number(corridor.shipperPricePerKm) : Number(corridor.pricePerKm),
+          corridor.shipperPromoFlag || corridor.promoFlag,
+          corridor.shipperPromoPct ? Number(corridor.shipperPromoPct) : (corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null),
+          corridor.carrierPricePerKm ? Number(corridor.carrierPricePerKm) : 0,
+          corridor.carrierPromoFlag || false,
+          corridor.carrierPromoPct ? Number(corridor.carrierPromoPct) : null
         ),
       },
     });
@@ -250,6 +270,32 @@ export async function PATCH(
     }
     if (validatedData.isActive !== undefined) updateData.isActive = validatedData.isActive;
 
+    // Dual-party pricing - shipper
+    if (validatedData.shipperPricePerKm !== undefined) {
+      updateData.shipperPricePerKm = new Decimal(validatedData.shipperPricePerKm);
+    }
+    if (validatedData.shipperPromoFlag !== undefined) {
+      updateData.shipperPromoFlag = validatedData.shipperPromoFlag;
+    }
+    if (validatedData.shipperPromoPct !== undefined) {
+      updateData.shipperPromoPct = validatedData.shipperPromoPct !== null
+        ? new Decimal(validatedData.shipperPromoPct)
+        : null;
+    }
+
+    // Dual-party pricing - carrier
+    if (validatedData.carrierPricePerKm !== undefined) {
+      updateData.carrierPricePerKm = new Decimal(validatedData.carrierPricePerKm);
+    }
+    if (validatedData.carrierPromoFlag !== undefined) {
+      updateData.carrierPromoFlag = validatedData.carrierPromoFlag;
+    }
+    if (validatedData.carrierPromoPct !== undefined) {
+      updateData.carrierPromoPct = validatedData.carrierPromoPct !== null
+        ? new Decimal(validatedData.carrierPromoPct)
+        : null;
+    }
+
     const corridor = await db.corridor.update({
       where: { id },
       data: updateData,
@@ -268,11 +314,23 @@ export async function PATCH(
         promoFlag: corridor.promoFlag,
         promoDiscountPct: corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null,
         isActive: corridor.isActive,
-        serviceFeePreview: calculateServiceFeePreview(
+        // Dual-party pricing - shipper
+        shipperPricePerKm: corridor.shipperPricePerKm ? Number(corridor.shipperPricePerKm) : null,
+        shipperPromoFlag: corridor.shipperPromoFlag,
+        shipperPromoPct: corridor.shipperPromoPct ? Number(corridor.shipperPromoPct) : null,
+        // Dual-party pricing - carrier
+        carrierPricePerKm: corridor.carrierPricePerKm ? Number(corridor.carrierPricePerKm) : null,
+        carrierPromoFlag: corridor.carrierPromoFlag,
+        carrierPromoPct: corridor.carrierPromoPct ? Number(corridor.carrierPromoPct) : null,
+        // Fee previews for both parties
+        serviceFeePreview: calculateDualPartyFeePreview(
           Number(corridor.distanceKm),
-          Number(corridor.pricePerKm),
-          corridor.promoFlag,
-          corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null
+          corridor.shipperPricePerKm ? Number(corridor.shipperPricePerKm) : Number(corridor.pricePerKm),
+          corridor.shipperPromoFlag || corridor.promoFlag,
+          corridor.shipperPromoPct ? Number(corridor.shipperPromoPct) : (corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null),
+          corridor.carrierPricePerKm ? Number(corridor.carrierPricePerKm) : 0,
+          corridor.carrierPromoFlag || false,
+          corridor.carrierPromoPct ? Number(corridor.carrierPromoPct) : null
         ),
       },
     });
@@ -361,9 +419,9 @@ export async function DELETE(
 }
 
 /**
- * Calculate service fee preview
+ * Calculate service fee preview for one party
  */
-function calculateServiceFeePreview(
+function calculatePartyFeePreview(
   distanceKm: number,
   pricePerKm: number,
   promoFlag: boolean,
@@ -385,4 +443,46 @@ function calculateServiceFeePreview(
     discount: Math.round(discount * 100) / 100,
     finalFee: Math.round((baseFee - discount) * 100) / 100,
   };
+}
+
+/**
+ * Calculate dual-party service fee preview (shipper + carrier)
+ */
+function calculateDualPartyFeePreview(
+  distanceKm: number,
+  shipperPricePerKm: number,
+  shipperPromoFlag: boolean,
+  shipperPromoPct: number | null,
+  carrierPricePerKm: number,
+  carrierPromoFlag: boolean,
+  carrierPromoPct: number | null
+): {
+  shipper: { baseFee: number; discount: number; finalFee: number };
+  carrier: { baseFee: number; discount: number; finalFee: number };
+  totalPlatformFee: number;
+} {
+  const shipper = calculatePartyFeePreview(distanceKm, shipperPricePerKm, shipperPromoFlag, shipperPromoPct);
+  const carrier = calculatePartyFeePreview(distanceKm, carrierPricePerKm, carrierPromoFlag, carrierPromoPct);
+
+  return {
+    shipper,
+    carrier,
+    totalPlatformFee: Math.round((shipper.finalFee + carrier.finalFee) * 100) / 100,
+  };
+}
+
+/**
+ * Legacy: Calculate service fee preview (kept for backward compatibility)
+ */
+function calculateServiceFeePreview(
+  distanceKm: number,
+  pricePerKm: number,
+  promoFlag: boolean,
+  promoDiscountPct: number | null
+): {
+  baseFee: number;
+  discount: number;
+  finalFee: number;
+} {
+  return calculatePartyFeePreview(distanceKm, pricePerKm, promoFlag, promoDiscountPct);
 }

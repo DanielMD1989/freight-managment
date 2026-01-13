@@ -358,7 +358,8 @@ const navigationSections: Record<string, NavSection[]> = {
       title: 'Financial',
       items: [
         { label: 'Wallets', href: '/admin/wallets', icon: '💰', roles: ['ADMIN', 'SUPER_ADMIN'] },
-        { label: 'Commission', href: '/admin/commission', icon: '💵', roles: ['ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Service Fees', href: '/admin/service-fees', icon: '💵', roles: ['ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Corridors', href: '/admin/corridors', icon: '🛤️', roles: ['ADMIN', 'SUPER_ADMIN'] },
         { label: 'Settlement', href: '/admin/settlement', icon: '💳', roles: ['ADMIN', 'SUPER_ADMIN'] },
       ],
     },

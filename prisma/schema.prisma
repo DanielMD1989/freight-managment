@@ -508,7 +508,19 @@ model Load {
   // Corridor & Service Fee
   corridorId            String?
   corridor              Corridor?         @relation("LoadCorridor", fields: [corridorId], references: [id])
-  serviceFeeEtb         Decimal?          @db.Decimal(10, 2)   // Calculated service fee
+
+  // Shipper service fee
+  serviceFeeEtb         Decimal?          @db.Decimal(10, 2)   // Shipper service fee (legacy field)
+  shipperServiceFee     Decimal?          @db.Decimal(10, 2)   // Shipper service fee amount
+  shipperFeeStatus      ServiceFeeStatus  @default(PENDING)
+  shipperFeeDeductedAt  DateTime?                              // When shipper fee was deducted
+
+  // Carrier service fee
+  carrierServiceFee     Decimal?          @db.Decimal(10, 2)   // Carrier service fee amount
+  carrierFeeStatus      ServiceFeeStatus  @default(PENDING)
+  carrierFeeDeductedAt  DateTime?                              // When carrier fee was deducted
+
+  // Legacy fields (keep for backward compatibility)
   serviceFeeStatus      ServiceFeeStatus  @default(PENDING)
   serviceFeeReservedAt  DateTime?                              // When fee was reserved
   serviceFeeDeductedAt  DateTime?                              // When fee was deducted
@@ -1499,10 +1511,21 @@ model Corridor {
   originRegion      String            // Ethiopian region name
   destinationRegion String            // Ethiopian region name
   distanceKm        Decimal           @db.Decimal(10, 2)
-  pricePerKm        Decimal           @db.Decimal(10, 4) // ETB per km for service fee
+
+  // Shipper pricing
+  pricePerKm        Decimal           @db.Decimal(10, 4) // ETB per km for shipper service fee (legacy, use shipperPricePerKm)
+  shipperPricePerKm Decimal?          @db.Decimal(10, 4) // ETB per km for shipper (if null, use pricePerKm)
+  shipperPromoFlag  Boolean           @default(false)
+  shipperPromoPct   Decimal?          @db.Decimal(5, 2)  // Shipper promo discount %
+
+  // Carrier pricing
+  carrierPricePerKm Decimal?          @db.Decimal(10, 4) // ETB per km for carrier service fee
+  carrierPromoFlag  Boolean           @default(false)
+  carrierPromoPct   Decimal?          @db.Decimal(5, 2)  // Carrier promo discount %
+
   direction         CorridorDirection @default(ONE_WAY)
-  promoFlag         Boolean           @default(false)
-  promoDiscountPct  Decimal?          @db.Decimal(5, 2) // e.g., 10.00 for 10%
+  promoFlag         Boolean           @default(false)    // Legacy - use shipperPromoFlag/carrierPromoFlag
+  promoDiscountPct  Decimal?          @db.Decimal(5, 2)  // Legacy - use shipperPromoPct/carrierPromoPct
   isActive          Boolean           @default(true)
 
   createdAt         DateTime          @default(now())

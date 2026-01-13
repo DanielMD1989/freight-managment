@@ -5,7 +5,7 @@
  *
  * Service Fee Implementation - Task 3: Admin UI
  *
- * CRUD operations for corridor pricing
+ * CRUD operations for corridor pricing with separate shipper/carrier rates
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -17,18 +17,28 @@ interface Corridor {
   originRegion: string;
   destinationRegion: string;
   distanceKm: number;
-  pricePerKm: number;
   direction: 'ONE_WAY' | 'ROUND_TRIP' | 'BIDIRECTIONAL';
-  promoFlag: boolean;
-  promoDiscountPct: number | null;
   isActive: boolean;
   createdAt: string;
   loadsCount: number;
-  serviceFeePreview: {
-    baseFee: number;
-    discount: number;
-    finalFee: number;
+  // Shipper pricing
+  shipperPricePerKm: number;
+  shipperPromoFlag: boolean;
+  shipperPromoPct: number | null;
+  // Carrier pricing
+  carrierPricePerKm: number;
+  carrierPromoFlag: boolean;
+  carrierPromoPct: number | null;
+  // Fee preview
+  feePreview: {
+    shipper: { baseFee: number; discount: number; finalFee: number };
+    carrier: { baseFee: number; discount: number; finalFee: number };
+    totalPlatformFee: number;
   };
+  // Legacy
+  pricePerKm: number;
+  promoFlag: boolean;
+  promoDiscountPct: number | null;
 }
 
 interface CorridorFormData {
@@ -36,10 +46,15 @@ interface CorridorFormData {
   originRegion: string;
   destinationRegion: string;
   distanceKm: string;
-  pricePerKm: string;
   direction: 'ONE_WAY' | 'ROUND_TRIP' | 'BIDIRECTIONAL';
-  promoFlag: boolean;
-  promoDiscountPct: string;
+  // Shipper pricing
+  shipperPricePerKm: string;
+  shipperPromoFlag: boolean;
+  shipperPromoPct: string;
+  // Carrier pricing
+  carrierPricePerKm: string;
+  carrierPromoFlag: boolean;
+  carrierPromoPct: string;
   isActive: boolean;
 }
 
@@ -71,10 +86,13 @@ const initialFormData: CorridorFormData = {
   originRegion: '',
   destinationRegion: '',
   distanceKm: '',
-  pricePerKm: '2.50',
   direction: 'ONE_WAY',
-  promoFlag: false,
-  promoDiscountPct: '',
+  shipperPricePerKm: '2.50',
+  shipperPromoFlag: false,
+  shipperPromoPct: '',
+  carrierPricePerKm: '1.50',
+  carrierPromoFlag: false,
+  carrierPromoPct: '',
   isActive: true,
 };
 
@@ -134,13 +152,13 @@ export default function CorridorManagementClient() {
     }
   }, [formData.originRegion, formData.destinationRegion, editingCorridor]);
 
-  // Calculate preview fee
-  const calculatePreviewFee = () => {
+  // Calculate preview fee for a single party
+  const calculatePartyFee = (pricePerKm: string, promoFlag: boolean, promoPct: string) => {
     const distance = parseFloat(formData.distanceKm) || 0;
-    const price = parseFloat(formData.pricePerKm) || 0;
+    const price = parseFloat(pricePerKm) || 0;
     const baseFee = distance * price;
-    const discount = formData.promoFlag && formData.promoDiscountPct
-      ? baseFee * (parseFloat(formData.promoDiscountPct) / 100)
+    const discount = promoFlag && promoPct
+      ? baseFee * (parseFloat(promoPct) / 100)
       : 0;
     return {
       baseFee: baseFee.toFixed(2),
@@ -164,10 +182,13 @@ export default function CorridorManagementClient() {
       originRegion: corridor.originRegion,
       destinationRegion: corridor.destinationRegion,
       distanceKm: corridor.distanceKm.toString(),
-      pricePerKm: corridor.pricePerKm.toString(),
       direction: corridor.direction,
-      promoFlag: corridor.promoFlag,
-      promoDiscountPct: corridor.promoDiscountPct?.toString() || '',
+      shipperPricePerKm: corridor.shipperPricePerKm.toString(),
+      shipperPromoFlag: corridor.shipperPromoFlag,
+      shipperPromoPct: corridor.shipperPromoPct?.toString() || '',
+      carrierPricePerKm: corridor.carrierPricePerKm.toString(),
+      carrierPromoFlag: corridor.carrierPromoFlag,
+      carrierPromoPct: corridor.carrierPromoPct?.toString() || '',
       isActive: corridor.isActive,
     });
     setShowModal(true);
@@ -184,10 +205,15 @@ export default function CorridorManagementClient() {
         originRegion: formData.originRegion,
         destinationRegion: formData.destinationRegion,
         distanceKm: parseFloat(formData.distanceKm),
-        pricePerKm: parseFloat(formData.pricePerKm),
         direction: formData.direction,
-        promoFlag: formData.promoFlag,
-        promoDiscountPct: formData.promoDiscountPct ? parseFloat(formData.promoDiscountPct) : null,
+        // Shipper pricing
+        shipperPricePerKm: parseFloat(formData.shipperPricePerKm),
+        shipperPromoFlag: formData.shipperPromoFlag,
+        shipperPromoPct: formData.shipperPromoPct ? parseFloat(formData.shipperPromoPct) : null,
+        // Carrier pricing
+        carrierPricePerKm: parseFloat(formData.carrierPricePerKm),
+        carrierPromoFlag: formData.carrierPromoFlag,
+        carrierPromoPct: formData.carrierPromoPct ? parseFloat(formData.carrierPromoPct) : null,
         isActive: formData.isActive,
       };
 
@@ -236,26 +262,28 @@ export default function CorridorManagementClient() {
     }
   };
 
-  const preview = calculatePreviewFee();
+  const shipperPreview = calculatePartyFee(formData.shipperPricePerKm, formData.shipperPromoFlag, formData.shipperPromoPct);
+  const carrierPreview = calculatePartyFee(formData.carrierPricePerKm, formData.carrierPromoFlag, formData.carrierPromoPct);
+  const totalPlatformFee = (parseFloat(shipperPreview.finalFee) + parseFloat(carrierPreview.finalFee)).toFixed(2);
 
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Total Corridors</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{corridors.length}</p>
+        <div className="bg-white rounded-lg shadow border border-[#064d51]/10 p-4">
+          <p className="text-sm text-[#064d51]/70">Total Corridors</p>
+          <p className="text-2xl font-bold text-[#064d51]">{corridors.length}</p>
         </div>
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Active</p>
-          <p className="text-2xl font-bold text-green-600">{corridors.filter(c => c.isActive).length}</p>
+        <div className="bg-white rounded-lg shadow border border-[#064d51]/10 p-4">
+          <p className="text-sm text-[#064d51]/70">Active</p>
+          <p className="text-2xl font-bold text-[#1e9c99]">{corridors.filter(c => c.isActive).length}</p>
         </div>
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">With Promo</p>
-          <p className="text-2xl font-bold text-blue-600">{corridors.filter(c => c.promoFlag).length}</p>
+        <div className="bg-white rounded-lg shadow border border-[#064d51]/10 p-4">
+          <p className="text-sm text-[#064d51]/70">With Promo</p>
+          <p className="text-2xl font-bold text-blue-600">{corridors.filter(c => c.shipperPromoFlag || c.carrierPromoFlag).length}</p>
         </div>
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Total Loads</p>
+        <div className="bg-white rounded-lg shadow border border-[#064d51]/10 p-4">
+          <p className="text-sm text-[#064d51]/70">Total Loads</p>
           <p className="text-2xl font-bold text-purple-600">{corridors.reduce((sum, c) => sum + c.loadsCount, 0)}</p>
         </div>
       </div>
@@ -266,7 +294,7 @@ export default function CorridorManagementClient() {
           <select
             value={filterActive}
             onChange={(e) => setFilterActive(e.target.value as 'all' | 'active' | 'inactive')}
-            className="px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+            className="px-3 py-2 border border-[#064d51]/20 rounded-lg bg-white text-[#064d51]"
           >
             <option value="all">All Status</option>
             <option value="active">Active Only</option>
@@ -275,82 +303,94 @@ export default function CorridorManagementClient() {
         </div>
         <button
           onClick={handleCreate}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+          className="px-4 py-2 bg-[#1e9c99] text-white rounded-lg hover:bg-[#178784] font-medium"
         >
           + Add Corridor
         </button>
       </div>
 
       {/* Corridors Table */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow border border-[#064d51]/10 overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading corridors...</div>
+          <div className="p-8 text-center text-[#064d51]/60">Loading corridors...</div>
         ) : corridors.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center text-[#064d51]/60">
             No corridors found. Create your first corridor to start charging service fees.
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
-              <thead className="bg-gray-50 dark:bg-slate-700">
+            <table className="min-w-full divide-y divide-[#064d51]/10">
+              <thead className="bg-[#f0fdfa]">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Corridor</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Distance</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Rate/KM</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Service Fee</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Direction</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Loads</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase">Corridor</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase">Distance</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase">Shipper Fee</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase">Carrier Fee</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase">Total Platform</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase">Status</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-[#064d51]/70 uppercase">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
+              <tbody className="divide-y divide-[#064d51]/10">
                 {corridors.map((corridor) => (
-                  <tr key={corridor.id} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                  <tr key={corridor.id} className="hover:bg-[#f0fdfa]/50">
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900 dark:text-white">{corridor.name}</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                      <div className="font-medium text-[#064d51]">{corridor.name}</div>
+                      <div className="text-sm text-[#064d51]/60">
                         {corridor.originRegion} → {corridor.destinationRegion}
                       </div>
+                      <div className="text-xs text-[#064d51]/50 mt-1">
+                        {DIRECTION_LABELS[corridor.direction]} | {corridor.loadsCount} loads
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-900 dark:text-white">
+                    <td className="px-4 py-3 text-[#064d51]">
                       {corridor.distanceKm.toLocaleString()} km
                     </td>
-                    <td className="px-4 py-3 text-gray-900 dark:text-white">
-                      {corridor.pricePerKm.toFixed(2)} ETB
-                    </td>
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900 dark:text-white">
-                        {corridor.serviceFeePreview.finalFee.toLocaleString()} ETB
+                      <div className="font-medium text-[#064d51]">
+                        {corridor.feePreview.shipper.finalFee.toLocaleString()} ETB
                       </div>
-                      {corridor.promoFlag && corridor.promoDiscountPct && (
+                      <div className="text-xs text-[#064d51]/60">
+                        {corridor.shipperPricePerKm.toFixed(2)} ETB/km
+                      </div>
+                      {corridor.shipperPromoFlag && corridor.shipperPromoPct && (
                         <div className="text-xs text-green-600">
-                          -{corridor.promoDiscountPct}% promo
+                          -{corridor.shipperPromoPct}% promo
                         </div>
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-slate-600 text-gray-700 dark:text-gray-300">
-                        {DIRECTION_LABELS[corridor.direction]}
-                      </span>
+                      <div className="font-medium text-[#064d51]">
+                        {corridor.feePreview.carrier.finalFee.toLocaleString()} ETB
+                      </div>
+                      <div className="text-xs text-[#064d51]/60">
+                        {corridor.carrierPricePerKm.toFixed(2)} ETB/km
+                      </div>
+                      {corridor.carrierPromoFlag && corridor.carrierPromoPct && (
+                        <div className="text-xs text-green-600">
+                          -{corridor.carrierPromoPct}% promo
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-bold text-[#1e9c99]">
+                        {corridor.feePreview.totalPlatformFee.toLocaleString()} ETB
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-1 text-xs rounded-full ${
                         corridor.isActive
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-800'
                       }`}>
                         {corridor.isActive ? 'Active' : 'Inactive'}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-900 dark:text-white">
-                      {corridor.loadsCount}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
                         <button
                           onClick={() => handleEdit(corridor)}
-                          className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300"
+                          className="px-3 py-1 text-sm bg-[#1e9c99]/10 text-[#1e9c99] rounded hover:bg-[#1e9c99]/20"
                         >
                           Edit
                         </button>
@@ -358,8 +398,8 @@ export default function CorridorManagementClient() {
                           onClick={() => handleToggleActive(corridor)}
                           className={`px-3 py-1 text-sm rounded ${
                             corridor.isActive
-                              ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'
-                              : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900 dark:text-green-300'
+                              ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              : 'bg-green-100 text-green-700 hover:bg-green-200'
                           }`}
                         >
                           {corridor.isActive ? 'Deactivate' : 'Activate'}
@@ -377,9 +417,9 @@ export default function CorridorManagementClient() {
       {/* Create/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200 dark:border-slate-700">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-[#064d51]/10">
+              <h2 className="text-xl font-bold text-[#064d51]">
                 {editingCorridor ? 'Edit Corridor' : 'Create Corridor'}
               </h2>
             </div>
@@ -388,7 +428,7 @@ export default function CorridorManagementClient() {
               {/* Route */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-[#064d51] mb-1">
                     Origin Region *
                   </label>
                   <select
@@ -396,7 +436,7 @@ export default function CorridorManagementClient() {
                     value={formData.originRegion}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-lg bg-white text-[#064d51]"
                   >
                     <option value="">Select origin...</option>
                     {ETHIOPIAN_REGIONS.map((region) => (
@@ -405,7 +445,7 @@ export default function CorridorManagementClient() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-[#064d51] mb-1">
                     Destination Region *
                   </label>
                   <select
@@ -413,7 +453,7 @@ export default function CorridorManagementClient() {
                     value={formData.destinationRegion}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-lg bg-white text-[#064d51]"
                   >
                     <option value="">Select destination...</option>
                     {ETHIOPIAN_REGIONS.map((region) => (
@@ -423,10 +463,10 @@ export default function CorridorManagementClient() {
                 </div>
               </div>
 
-              {/* Name & Direction */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Name & Direction & Distance */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-[#064d51] mb-1">
                     Corridor Name *
                   </label>
                   <input
@@ -436,11 +476,11 @@ export default function CorridorManagementClient() {
                     onChange={handleInputChange}
                     required
                     placeholder="e.g., Addis Ababa - Dire Dawa"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-lg bg-white text-[#064d51]"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-[#064d51] mb-1">
                     Direction *
                   </label>
                   <select
@@ -448,19 +488,15 @@ export default function CorridorManagementClient() {
                     value={formData.direction}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-lg bg-white text-[#064d51]"
                   >
-                    <option value="ONE_WAY">One Way (A → B)</option>
-                    <option value="ROUND_TRIP">Round Trip (A → B → A)</option>
-                    <option value="BIDIRECTIONAL">Bidirectional (A ↔ B)</option>
+                    <option value="ONE_WAY">One Way</option>
+                    <option value="ROUND_TRIP">Round Trip</option>
+                    <option value="BIDIRECTIONAL">Bidirectional</option>
                   </select>
                 </div>
-              </div>
-
-              {/* Pricing */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-[#064d51] mb-1">
                     Distance (km) *
                   </label>
                   <input
@@ -472,62 +508,113 @@ export default function CorridorManagementClient() {
                     min="1"
                     step="0.1"
                     placeholder="e.g., 453"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Price per KM (ETB) *
-                  </label>
-                  <input
-                    type="number"
-                    name="pricePerKm"
-                    value={formData.pricePerKm}
-                    onChange={handleInputChange}
-                    required
-                    min="0.01"
-                    step="0.01"
-                    placeholder="e.g., 2.50"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-lg bg-white text-[#064d51]"
                   />
                 </div>
               </div>
 
-              {/* Promo */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="promoFlag"
-                    name="promoFlag"
-                    checked={formData.promoFlag}
-                    onChange={handleInputChange}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded"
-                  />
-                  <label htmlFor="promoFlag" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Enable promotional discount
-                  </label>
-                </div>
-
-                {formData.promoFlag && (
-                  <div className="ml-7">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Discount Percentage
+              {/* Shipper Pricing */}
+              <div className="bg-blue-50 rounded-lg p-4 space-y-4">
+                <h3 className="font-semibold text-[#064d51] flex items-center gap-2">
+                  <span className="w-6 h-6 bg-blue-500 text-white rounded flex items-center justify-center text-xs">S</span>
+                  Shipper Service Fee
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[#064d51] mb-1">
+                      Price per KM (ETB) *
                     </label>
                     <input
                       type="number"
-                      name="promoDiscountPct"
-                      value={formData.promoDiscountPct}
+                      name="shipperPricePerKm"
+                      value={formData.shipperPricePerKm}
                       onChange={handleInputChange}
+                      required
                       min="0"
-                      max="100"
-                      step="0.1"
-                      placeholder="e.g., 10"
-                      className="w-32 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                      step="0.01"
+                      placeholder="e.g., 2.50"
+                      className="w-full px-3 py-2 border border-[#064d51]/20 rounded-lg bg-white text-[#064d51]"
                     />
-                    <span className="ml-2 text-gray-500">%</span>
                   </div>
-                )}
+                  <div className="flex items-center gap-3 md:col-span-2">
+                    <input
+                      type="checkbox"
+                      id="shipperPromoFlag"
+                      name="shipperPromoFlag"
+                      checked={formData.shipperPromoFlag}
+                      onChange={handleInputChange}
+                      className="w-4 h-4 text-[#1e9c99] border-[#064d51]/30 rounded"
+                    />
+                    <label htmlFor="shipperPromoFlag" className="text-sm font-medium text-[#064d51]">
+                      Promo discount
+                    </label>
+                    {formData.shipperPromoFlag && (
+                      <input
+                        type="number"
+                        name="shipperPromoPct"
+                        value={formData.shipperPromoPct}
+                        onChange={handleInputChange}
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        placeholder="%"
+                        className="w-20 px-2 py-1 border border-[#064d51]/20 rounded-lg bg-white text-[#064d51] text-sm"
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Carrier Pricing */}
+              <div className="bg-purple-50 rounded-lg p-4 space-y-4">
+                <h3 className="font-semibold text-[#064d51] flex items-center gap-2">
+                  <span className="w-6 h-6 bg-purple-500 text-white rounded flex items-center justify-center text-xs">C</span>
+                  Carrier Service Fee
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[#064d51] mb-1">
+                      Price per KM (ETB) *
+                    </label>
+                    <input
+                      type="number"
+                      name="carrierPricePerKm"
+                      value={formData.carrierPricePerKm}
+                      onChange={handleInputChange}
+                      required
+                      min="0"
+                      step="0.01"
+                      placeholder="e.g., 1.50"
+                      className="w-full px-3 py-2 border border-[#064d51]/20 rounded-lg bg-white text-[#064d51]"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3 md:col-span-2">
+                    <input
+                      type="checkbox"
+                      id="carrierPromoFlag"
+                      name="carrierPromoFlag"
+                      checked={formData.carrierPromoFlag}
+                      onChange={handleInputChange}
+                      className="w-4 h-4 text-[#1e9c99] border-[#064d51]/30 rounded"
+                    />
+                    <label htmlFor="carrierPromoFlag" className="text-sm font-medium text-[#064d51]">
+                      Promo discount
+                    </label>
+                    {formData.carrierPromoFlag && (
+                      <input
+                        type="number"
+                        name="carrierPromoPct"
+                        value={formData.carrierPromoPct}
+                        onChange={handleInputChange}
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        placeholder="%"
+                        className="w-20 px-2 py-1 border border-[#064d51]/20 rounded-lg bg-white text-[#064d51] text-sm"
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Active */}
@@ -538,47 +625,57 @@ export default function CorridorManagementClient() {
                   name="isActive"
                   checked={formData.isActive}
                   onChange={handleInputChange}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                  className="w-4 h-4 text-[#1e9c99] border-[#064d51]/30 rounded"
                 />
-                <label htmlFor="isActive" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label htmlFor="isActive" className="text-sm font-medium text-[#064d51]">
                   Corridor is active
                 </label>
               </div>
 
               {/* Fee Preview */}
-              {formData.distanceKm && formData.pricePerKm && (
-                <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-4">
-                  <h3 className="font-medium text-blue-800 dark:text-blue-200 mb-2">Service Fee Preview</h3>
-                  <div className="grid grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-500 dark:text-gray-400">Base Fee:</span>
-                      <div className="font-medium text-gray-900 dark:text-white">{preview.baseFee} ETB</div>
+              {formData.distanceKm && (formData.shipperPricePerKm || formData.carrierPricePerKm) && (
+                <div className="bg-[#f0fdfa] rounded-lg p-4 border border-[#1e9c99]/20">
+                  <h3 className="font-medium text-[#064d51] mb-3">Service Fee Preview</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Shipper Fee */}
+                    <div className="bg-white rounded-lg p-3 border border-blue-200">
+                      <div className="text-xs text-blue-600 font-medium mb-1">Shipper Fee</div>
+                      <div className="text-lg font-bold text-[#064d51]">{shipperPreview.finalFee} ETB</div>
+                      {formData.shipperPromoFlag && parseFloat(shipperPreview.discount) > 0 && (
+                        <div className="text-xs text-green-600">-{shipperPreview.discount} ETB discount</div>
+                      )}
                     </div>
-                    <div>
-                      <span className="text-gray-500 dark:text-gray-400">Discount:</span>
-                      <div className="font-medium text-green-600">-{preview.discount} ETB</div>
+                    {/* Carrier Fee */}
+                    <div className="bg-white rounded-lg p-3 border border-purple-200">
+                      <div className="text-xs text-purple-600 font-medium mb-1">Carrier Fee</div>
+                      <div className="text-lg font-bold text-[#064d51]">{carrierPreview.finalFee} ETB</div>
+                      {formData.carrierPromoFlag && parseFloat(carrierPreview.discount) > 0 && (
+                        <div className="text-xs text-green-600">-{carrierPreview.discount} ETB discount</div>
+                      )}
                     </div>
-                    <div>
-                      <span className="text-gray-500 dark:text-gray-400">Final Fee:</span>
-                      <div className="font-bold text-blue-600">{preview.finalFee} ETB</div>
+                    {/* Total Platform */}
+                    <div className="bg-[#1e9c99]/10 rounded-lg p-3 border border-[#1e9c99]/30">
+                      <div className="text-xs text-[#1e9c99] font-medium mb-1">Total Platform Revenue</div>
+                      <div className="text-xl font-bold text-[#1e9c99]">{totalPlatformFee} ETB</div>
+                      <div className="text-xs text-[#064d51]/60">per trip</div>
                     </div>
                   </div>
                 </div>
               )}
 
               {/* Actions */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
+              <div className="flex justify-end gap-3 pt-4 border-t border-[#064d51]/10">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600"
+                  className="px-4 py-2 text-[#064d51] bg-gray-100 rounded-lg hover:bg-gray-200"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  className="px-4 py-2 bg-[#1e9c99] text-white rounded-lg hover:bg-[#178784] disabled:opacity-50"
                 >
                   {submitting ? 'Saving...' : editingCorridor ? 'Update Corridor' : 'Create Corridor'}
                 </button>

@@ -1,14 +1,22 @@
 /**
  * Service Fee Calculation Module
  *
- * Service Fee Implementation - Task 2
- *
  * Calculates service fees based on corridor pricing
+ * Supports separate rates for shipper and carrier
  */
 
 import { db } from '@/lib/db';
 import { CorridorDirection } from '@prisma/client';
 import { Decimal } from 'decimal.js';
+
+export interface PartyFeeCalculation {
+  baseFee: number;
+  promoDiscount: number;
+  finalFee: number;
+  promoApplied: boolean;
+  promoDiscountPct: number | null;
+  pricePerKm: number;
+}
 
 export interface ServiceFeeCalculation {
   corridorId: string;
@@ -16,8 +24,19 @@ export interface ServiceFeeCalculation {
   originRegion: string;
   destinationRegion: string;
   distanceKm: number;
-  pricePerKm: number;
   direction: CorridorDirection;
+
+  // Shipper fee details
+  shipper: PartyFeeCalculation;
+
+  // Carrier fee details
+  carrier: PartyFeeCalculation;
+
+  // Total platform revenue
+  totalPlatformFee: number;
+
+  // Legacy fields for backward compatibility
+  pricePerKm: number;
   baseFee: number;
   promoDiscount: number;
   finalFee: number;
@@ -32,13 +51,72 @@ export interface CorridorMatch {
     originRegion: string;
     destinationRegion: string;
     distanceKm: number;
-    pricePerKm: number;
     direction: CorridorDirection;
+    isActive: boolean;
+
+    // Shipper pricing
+    shipperPricePerKm: number;
+    shipperPromoFlag: boolean;
+    shipperPromoPct: number | null;
+
+    // Carrier pricing
+    carrierPricePerKm: number;
+    carrierPromoFlag: boolean;
+    carrierPromoPct: number | null;
+
+    // Legacy fields
+    pricePerKm: number;
     promoFlag: boolean;
     promoDiscountPct: number | null;
-    isActive: boolean;
   };
   matchType: 'exact' | 'bidirectional' | 'none';
+}
+
+/**
+ * Helper to map corridor from DB to CorridorMatch format
+ */
+function mapCorridorToMatch(corridor: any, matchType: 'exact' | 'bidirectional'): CorridorMatch {
+  // Get shipper price (use new field or fall back to legacy)
+  const shipperPricePerKm = corridor.shipperPricePerKm
+    ? Number(corridor.shipperPricePerKm)
+    : Number(corridor.pricePerKm);
+
+  // Get carrier price (default to 0 if not set)
+  const carrierPricePerKm = corridor.carrierPricePerKm
+    ? Number(corridor.carrierPricePerKm)
+    : 0;
+
+  return {
+    corridor: {
+      id: corridor.id,
+      name: corridor.name,
+      originRegion: corridor.originRegion,
+      destinationRegion: corridor.destinationRegion,
+      distanceKm: Number(corridor.distanceKm),
+      direction: corridor.direction,
+      isActive: corridor.isActive,
+
+      // Shipper pricing
+      shipperPricePerKm,
+      shipperPromoFlag: corridor.shipperPromoFlag || corridor.promoFlag || false,
+      shipperPromoPct: corridor.shipperPromoPct
+        ? Number(corridor.shipperPromoPct)
+        : corridor.promoDiscountPct
+          ? Number(corridor.promoDiscountPct)
+          : null,
+
+      // Carrier pricing
+      carrierPricePerKm,
+      carrierPromoFlag: corridor.carrierPromoFlag || false,
+      carrierPromoPct: corridor.carrierPromoPct ? Number(corridor.carrierPromoPct) : null,
+
+      // Legacy fields
+      pricePerKm: Number(corridor.pricePerKm),
+      promoFlag: corridor.promoFlag,
+      promoDiscountPct: corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null,
+    },
+    matchType,
+  };
 }
 
 /**
@@ -59,21 +137,7 @@ export async function findMatchingCorridor(
   });
 
   if (exactMatch) {
-    return {
-      corridor: {
-        id: exactMatch.id,
-        name: exactMatch.name,
-        originRegion: exactMatch.originRegion,
-        destinationRegion: exactMatch.destinationRegion,
-        distanceKm: Number(exactMatch.distanceKm),
-        pricePerKm: Number(exactMatch.pricePerKm),
-        direction: exactMatch.direction,
-        promoFlag: exactMatch.promoFlag,
-        promoDiscountPct: exactMatch.promoDiscountPct ? Number(exactMatch.promoDiscountPct) : null,
-        isActive: exactMatch.isActive,
-      },
-      matchType: 'exact',
-    };
+    return mapCorridorToMatch(exactMatch, 'exact');
   }
 
   // Try bidirectional match (reverse direction)
@@ -96,40 +160,32 @@ export async function findMatchingCorridor(
   });
 
   if (bidirectionalMatch) {
-    return {
-      corridor: {
-        id: bidirectionalMatch.id,
-        name: bidirectionalMatch.name,
-        originRegion: bidirectionalMatch.originRegion,
-        destinationRegion: bidirectionalMatch.destinationRegion,
-        distanceKm: Number(bidirectionalMatch.distanceKm),
-        pricePerKm: Number(bidirectionalMatch.pricePerKm),
-        direction: bidirectionalMatch.direction,
-        promoFlag: bidirectionalMatch.promoFlag,
-        promoDiscountPct: bidirectionalMatch.promoDiscountPct ? Number(bidirectionalMatch.promoDiscountPct) : null,
-        isActive: bidirectionalMatch.isActive,
-      },
-      matchType: 'bidirectional',
-    };
+    return mapCorridorToMatch(bidirectionalMatch, 'bidirectional');
   }
 
   return null;
 }
 
 /**
- * Calculate service fee for a given corridor
+ * Calculate fee for a single party (shipper or carrier)
  */
-export function calculateFeeFromCorridor(
+export function calculatePartyFee(
   distanceKm: number,
   pricePerKm: number,
   promoFlag: boolean,
   promoDiscountPct: number | null
-): {
-  baseFee: number;
-  promoDiscount: number;
-  finalFee: number;
-  promoApplied: boolean;
-} {
+): PartyFeeCalculation {
+  if (pricePerKm <= 0) {
+    return {
+      baseFee: 0,
+      promoDiscount: 0,
+      finalFee: 0,
+      promoApplied: false,
+      promoDiscountPct: null,
+      pricePerKm: 0,
+    };
+  }
+
   const baseFee = new Decimal(distanceKm).mul(new Decimal(pricePerKm));
   let promoDiscount = new Decimal(0);
   let promoApplied = false;
@@ -146,11 +202,67 @@ export function calculateFeeFromCorridor(
     promoDiscount: promoDiscount.toDecimalPlaces(2).toNumber(),
     finalFee: finalFee.toDecimalPlaces(2).toNumber(),
     promoApplied,
+    promoDiscountPct,
+    pricePerKm,
   };
 }
 
 /**
- * Calculate service fee for a load based on its route
+ * Calculate service fees for both shipper and carrier from corridor
+ */
+export function calculateFeesFromCorridor(corridor: CorridorMatch['corridor']): {
+  shipper: PartyFeeCalculation;
+  carrier: PartyFeeCalculation;
+  totalPlatformFee: number;
+} {
+  const shipper = calculatePartyFee(
+    corridor.distanceKm,
+    corridor.shipperPricePerKm,
+    corridor.shipperPromoFlag,
+    corridor.shipperPromoPct
+  );
+
+  const carrier = calculatePartyFee(
+    corridor.distanceKm,
+    corridor.carrierPricePerKm,
+    corridor.carrierPromoFlag,
+    corridor.carrierPromoPct
+  );
+
+  return {
+    shipper,
+    carrier,
+    totalPlatformFee: shipper.finalFee + carrier.finalFee,
+  };
+}
+
+/**
+ * Legacy: Calculate service fee for a given corridor (shipper only)
+ * @deprecated Use calculateFeesFromCorridor for both parties
+ */
+export function calculateFeeFromCorridor(
+  distanceKm: number,
+  pricePerKm: number,
+  promoFlag: boolean,
+  promoDiscountPct: number | null
+): {
+  baseFee: number;
+  promoDiscount: number;
+  finalFee: number;
+  promoApplied: boolean;
+} {
+  const result = calculatePartyFee(distanceKm, pricePerKm, promoFlag, promoDiscountPct);
+  return {
+    baseFee: result.baseFee,
+    promoDiscount: result.promoDiscount,
+    finalFee: result.finalFee,
+    promoApplied: result.promoApplied,
+  };
+}
+
+/**
+ * Calculate service fees for a load based on its route
+ * Returns fees for both shipper and carrier
  */
 export async function calculateServiceFee(
   loadId: string
@@ -170,7 +282,11 @@ export async function calculateServiceFee(
 
   // If load already has a corridor assigned, use it
   if (load.corridor) {
-    const feeCalc = calculateFeeFromCorridor(
+    const corridorData = mapCorridorToMatch(load.corridor, 'exact').corridor;
+    const fees = calculateFeesFromCorridor(corridorData);
+
+    // Legacy fee calculation for backward compatibility
+    const legacyFee = calculateFeeFromCorridor(
       Number(load.corridor.distanceKm),
       Number(load.corridor.pricePerKm),
       load.corridor.promoFlag,
@@ -183,9 +299,16 @@ export async function calculateServiceFee(
       originRegion: load.corridor.originRegion,
       destinationRegion: load.corridor.destinationRegion,
       distanceKm: Number(load.corridor.distanceKm),
-      pricePerKm: Number(load.corridor.pricePerKm),
       direction: load.corridor.direction,
-      ...feeCalc,
+
+      // New: separate fees
+      shipper: fees.shipper,
+      carrier: fees.carrier,
+      totalPlatformFee: fees.totalPlatformFee,
+
+      // Legacy fields
+      pricePerKm: Number(load.corridor.pricePerKm),
+      ...legacyFee,
       promoDiscountPct: load.corridor.promoDiscountPct ? Number(load.corridor.promoDiscountPct) : null,
     };
   }
@@ -205,7 +328,10 @@ export async function calculateServiceFee(
     return null;
   }
 
-  const feeCalc = calculateFeeFromCorridor(
+  const fees = calculateFeesFromCorridor(match.corridor);
+
+  // Legacy fee calculation
+  const legacyFee = calculateFeeFromCorridor(
     match.corridor.distanceKm,
     match.corridor.pricePerKm,
     match.corridor.promoFlag,
@@ -218,28 +344,31 @@ export async function calculateServiceFee(
     originRegion: match.corridor.originRegion,
     destinationRegion: match.corridor.destinationRegion,
     distanceKm: match.corridor.distanceKm,
-    pricePerKm: match.corridor.pricePerKm,
     direction: match.corridor.direction,
-    ...feeCalc,
+
+    // New: separate fees
+    shipper: fees.shipper,
+    carrier: fees.carrier,
+    totalPlatformFee: fees.totalPlatformFee,
+
+    // Legacy fields
+    pricePerKm: match.corridor.pricePerKm,
+    ...legacyFee,
     promoDiscountPct: match.corridor.promoDiscountPct,
   };
 }
 
 /**
- * Get all active corridors with calculated fees
+ * Get all active corridors with calculated fees for both parties
  */
 export async function getAllCorridorsWithFees(): Promise<Array<{
-  corridor: {
-    id: string;
-    name: string;
-    originRegion: string;
-    destinationRegion: string;
-    distanceKm: number;
-    pricePerKm: number;
-    direction: CorridorDirection;
-    promoFlag: boolean;
-    promoDiscountPct: number | null;
+  corridor: CorridorMatch['corridor'];
+  fees: {
+    shipper: PartyFeeCalculation;
+    carrier: PartyFeeCalculation;
+    totalPlatformFee: number;
   };
+  // Legacy format
   fee: {
     baseFee: number;
     promoDiscount: number;
@@ -255,23 +384,20 @@ export async function getAllCorridorsWithFees(): Promise<Array<{
     ],
   });
 
-  return corridors.map((corridor) => ({
-    corridor: {
-      id: corridor.id,
-      name: corridor.name,
-      originRegion: corridor.originRegion,
-      destinationRegion: corridor.destinationRegion,
-      distanceKm: Number(corridor.distanceKm),
-      pricePerKm: Number(corridor.pricePerKm),
-      direction: corridor.direction,
-      promoFlag: corridor.promoFlag,
-      promoDiscountPct: corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null,
-    },
-    fee: calculateFeeFromCorridor(
-      Number(corridor.distanceKm),
-      Number(corridor.pricePerKm),
-      corridor.promoFlag,
-      corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null
-    ),
-  }));
+  return corridors.map((corridor) => {
+    const corridorData = mapCorridorToMatch(corridor, 'exact').corridor;
+    const fees = calculateFeesFromCorridor(corridorData);
+
+    return {
+      corridor: corridorData,
+      fees,
+      // Legacy format
+      fee: calculateFeeFromCorridor(
+        Number(corridor.distanceKm),
+        Number(corridor.pricePerKm),
+        corridor.promoFlag,
+        corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null
+      ),
+    };
+  });
 }

@@ -168,6 +168,7 @@ export async function middleware(request: NextRequest) {
 
     const response = NextResponse.next();
     response.headers.set('x-request-id', requestId);
+
     return addSecurityHeaders(response);
   } catch (error) {
     console.error("Token verification failed:", error);

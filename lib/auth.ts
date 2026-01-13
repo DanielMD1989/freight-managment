@@ -1,18 +1,49 @@
 import bcrypt from "bcryptjs";
-import { SignJWT, jwtVerify, type JWTPayload } from "jose";
+import { SignJWT, jwtVerify, EncryptJWT, jwtDecrypt, type JWTPayload } from "jose";
 import { cookies } from "next/headers";
 
+/**
+ * Production-Ready JWT Authentication
+ *
+ * Features:
+ * - Signed JWT (HS256) - Ensures integrity (can't be tampered)
+ * - Encrypted JWT (A256GCM) - Ensures confidentiality (payload hidden)
+ * - HttpOnly + Secure + SameSite cookies
+ * - Configurable expiration
+ *
+ * Security: Even if cookie is intercepted, payload cannot be read without secret
+ */
+
+// Signing key (32+ bytes recommended for HS256)
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "development-jwt-secret"
+  process.env.JWT_SECRET || "development-jwt-secret-min-32-chars!"
 );
+
+// Encryption key (must be exactly 32 bytes for A256GCM)
+// Pad or truncate to ensure exactly 32 bytes
+function getEncryptionKey(): Uint8Array {
+  const keyString = process.env.JWT_ENCRYPTION_KEY || "dev-encrypt-key-32bytes-padding!";
+  const encoded = new TextEncoder().encode(keyString);
+  const key = new Uint8Array(32);
+  key.set(encoded.slice(0, 32));
+  // If key is shorter than 32 bytes, remaining bytes are 0 (padded)
+  return key;
+}
+const JWT_ENCRYPTION_KEY = getEncryptionKey();
+
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
+
+// Feature flag: Enable encryption (disable for debugging if needed)
+const ENABLE_ENCRYPTION = process.env.JWT_ENABLE_ENCRYPTION !== "false";
 
 export interface SessionPayload extends JWTPayload {
   userId: string;
   email: string;
   role: string;
-  status?: string; // Sprint 2: User verification workflow
+  status?: string;
   organizationId?: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -26,21 +57,63 @@ export async function verifyPassword(
   return await bcrypt.compare(password, hash);
 }
 
+/**
+ * Create a signed and optionally encrypted JWT token
+ *
+ * When encrypted (production):
+ * - Payload is completely hidden from inspection
+ * - Even base64 decoding reveals nothing
+ * - Only server with encryption key can read contents
+ */
 export async function createToken(payload: SessionPayload): Promise<string> {
-  const token = await new SignJWT(payload)
+  // First, create a signed JWT
+  const signedToken = await new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(JWT_EXPIRES_IN)
     .sign(JWT_SECRET);
 
-  return token;
+  // In production, encrypt the signed token
+  if (ENABLE_ENCRYPTION) {
+    const encryptedToken = await new EncryptJWT({ token: signedToken })
+      .setProtectedHeader({ alg: "dir", enc: "A256GCM" })
+      .setIssuedAt()
+      .setExpirationTime(JWT_EXPIRES_IN)
+      .encrypt(JWT_ENCRYPTION_KEY);
+
+    return encryptedToken;
+  }
+
+  return signedToken;
 }
 
+/**
+ * Verify and decrypt JWT token
+ *
+ * Process:
+ * 1. Decrypt outer JWE layer (if encrypted)
+ * 2. Verify inner JWS signature
+ * 3. Return payload if valid
+ */
 export async function verifyToken(
   token: string
 ): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    let signedToken = token;
+
+    // If encryption is enabled, decrypt first
+    if (ENABLE_ENCRYPTION) {
+      try {
+        const { payload: encryptedPayload } = await jwtDecrypt(token, JWT_ENCRYPTION_KEY);
+        signedToken = encryptedPayload.token as string;
+      } catch {
+        // Fallback: Try as unencrypted token (migration support)
+        signedToken = token;
+      }
+    }
+
+    // Verify the signed token
+    const { payload } = await jwtVerify(signedToken, JWT_SECRET);
     return payload as SessionPayload;
   } catch (error) {
     console.error("Token verification failed:", error);

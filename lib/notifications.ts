@@ -339,8 +339,9 @@ export async function notifyTruckRequestResponse(params: {
   truckPlate: string;
   approved: boolean;
   requestId: string;
+  loadId?: string; // Include loadId for navigation to trip/load page
 }) {
-  const { shipperId, carrierName, truckPlate, approved, requestId } = params;
+  const { shipperId, carrierName, truckPlate, approved, requestId, loadId } = params;
 
   await notifyOrganization({
     organizationId: shipperId,
@@ -349,7 +350,7 @@ export async function notifyTruckRequestResponse(params: {
     message: approved
       ? `${carrierName} has approved your request for truck ${truckPlate}. The truck is now booked for your load.`
       : `${carrierName} has declined your request for truck ${truckPlate}.`,
-    metadata: { requestId, carrierName, truckPlate, approved },
+    metadata: { requestId, carrierName, truckPlate, approved, loadId },
   });
 }
 

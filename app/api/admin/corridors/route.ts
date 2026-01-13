@@ -44,11 +44,23 @@ const createCorridorSchema = z.object({
     message: 'Invalid destination region',
   }),
   distanceKm: z.number().positive().max(5000),
-  pricePerKm: z.number().positive().max(100),
   direction: z.enum(CORRIDOR_DIRECTIONS).default('ONE_WAY'),
+  isActive: z.boolean().default(true),
+
+  // Shipper pricing
+  shipperPricePerKm: z.number().min(0).max(100).optional(),
+  shipperPromoFlag: z.boolean().default(false),
+  shipperPromoPct: z.number().min(0).max(100).nullable().optional(),
+
+  // Carrier pricing
+  carrierPricePerKm: z.number().min(0).max(100).optional(),
+  carrierPromoFlag: z.boolean().default(false),
+  carrierPromoPct: z.number().min(0).max(100).nullable().optional(),
+
+  // Legacy fields (for backward compatibility)
+  pricePerKm: z.number().min(0).max(100).optional(),
   promoFlag: z.boolean().default(false),
   promoDiscountPct: z.number().min(0).max(100).nullable().optional(),
-  isActive: z.boolean().default(true),
 });
 
 /**
@@ -122,28 +134,78 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
-      corridors: corridors.map((corridor) => ({
-        id: corridor.id,
-        name: corridor.name,
-        originRegion: corridor.originRegion,
-        destinationRegion: corridor.destinationRegion,
-        distanceKm: Number(corridor.distanceKm),
-        pricePerKm: Number(corridor.pricePerKm),
-        direction: corridor.direction,
-        promoFlag: corridor.promoFlag,
-        promoDiscountPct: corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null,
-        isActive: corridor.isActive,
-        createdAt: corridor.createdAt,
-        updatedAt: corridor.updatedAt,
-        createdBy: corridor.createdBy,
-        loadsCount: corridor._count.loads,
-        // Calculate service fee preview
-        serviceFeePreview: calculateServiceFeePreview(
-          Number(corridor.distanceKm),
-          Number(corridor.pricePerKm),
-          corridor.promoFlag,
-          corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null
-        ),
+      corridors: corridors.map((corridor) => {
+        // Get shipper and carrier prices (with fallback to legacy fields)
+        const shipperPricePerKm = corridor.shipperPricePerKm
+          ? Number(corridor.shipperPricePerKm)
+          : Number(corridor.pricePerKm);
+        const carrierPricePerKm = corridor.carrierPricePerKm
+          ? Number(corridor.carrierPricePerKm)
+          : 0;
+
+        return {
+          id: corridor.id,
+          name: corridor.name,
+          originRegion: corridor.originRegion,
+          destinationRegion: corridor.destinationRegion,
+          distanceKm: Number(corridor.distanceKm),
+          direction: corridor.direction,
+          isActive: corridor.isActive,
+          createdAt: corridor.createdAt,
+          updatedAt: corridor.updatedAt,
+          createdBy: corridor.createdBy,
+          loadsCount: corridor._count.loads,
+
+          // Shipper pricing
+          shipperPricePerKm,
+          shipperPromoFlag: corridor.shipperPromoFlag || corridor.promoFlag,
+          shipperPromoPct: corridor.shipperPromoPct
+            ? Number(corridor.shipperPromoPct)
+            : corridor.promoDiscountPct
+              ? Number(corridor.promoDiscountPct)
+              : null,
+
+          // Carrier pricing
+          carrierPricePerKm,
+          carrierPromoFlag: corridor.carrierPromoFlag,
+          carrierPromoPct: corridor.carrierPromoPct ? Number(corridor.carrierPromoPct) : null,
+
+          // Legacy fields
+          pricePerKm: Number(corridor.pricePerKm),
+          promoFlag: corridor.promoFlag,
+          promoDiscountPct: corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null,
+
+          // Fee previews for both parties
+          feePreview: {
+            shipper: calculatePartyFeePreview(
+              Number(corridor.distanceKm),
+              shipperPricePerKm,
+              corridor.shipperPromoFlag || corridor.promoFlag,
+              corridor.shipperPromoPct ? Number(corridor.shipperPromoPct) : corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null
+            ),
+            carrier: calculatePartyFeePreview(
+              Number(corridor.distanceKm),
+              carrierPricePerKm,
+              corridor.carrierPromoFlag,
+              corridor.carrierPromoPct ? Number(corridor.carrierPromoPct) : null
+            ),
+            totalPlatformFee: 0, // Will be calculated below
+          },
+
+          // Legacy preview
+          serviceFeePreview: calculateServiceFeePreview(
+            Number(corridor.distanceKm),
+            Number(corridor.pricePerKm),
+            corridor.promoFlag,
+            corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null
+          ),
+        };
+      }).map(c => ({
+        ...c,
+        feePreview: {
+          ...c.feePreview,
+          totalPlatformFee: c.feePreview.shipper.finalFee + c.feePreview.carrier.finalFee,
+        },
       })),
       pagination: {
         page,
@@ -203,6 +265,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Determine shipper price (use new field or legacy)
+    const shipperPrice = validatedData.shipperPricePerKm ?? validatedData.pricePerKm ?? 0;
+    const carrierPrice = validatedData.carrierPricePerKm ?? 0;
+
     // Create corridor
     const corridor = await db.corridor.create({
       data: {
@@ -210,16 +276,48 @@ export async function POST(request: NextRequest) {
         originRegion: validatedData.originRegion,
         destinationRegion: validatedData.destinationRegion,
         distanceKm: new Decimal(validatedData.distanceKm),
-        pricePerKm: new Decimal(validatedData.pricePerKm),
         direction: validatedData.direction,
+        isActive: validatedData.isActive,
+        createdById: session.userId,
+
+        // Shipper pricing
+        pricePerKm: new Decimal(shipperPrice), // Legacy field
+        shipperPricePerKm: new Decimal(shipperPrice),
+        shipperPromoFlag: validatedData.shipperPromoFlag || validatedData.promoFlag,
+        shipperPromoPct: validatedData.shipperPromoPct
+          ? new Decimal(validatedData.shipperPromoPct)
+          : validatedData.promoDiscountPct
+            ? new Decimal(validatedData.promoDiscountPct)
+            : null,
+
+        // Carrier pricing
+        carrierPricePerKm: new Decimal(carrierPrice),
+        carrierPromoFlag: validatedData.carrierPromoFlag,
+        carrierPromoPct: validatedData.carrierPromoPct
+          ? new Decimal(validatedData.carrierPromoPct)
+          : null,
+
+        // Legacy fields
         promoFlag: validatedData.promoFlag,
         promoDiscountPct: validatedData.promoDiscountPct
           ? new Decimal(validatedData.promoDiscountPct)
           : null,
-        isActive: validatedData.isActive,
-        createdById: session.userId,
       },
     });
+
+    const shipperFee = calculatePartyFeePreview(
+      Number(corridor.distanceKm),
+      shipperPrice,
+      validatedData.shipperPromoFlag || validatedData.promoFlag,
+      validatedData.shipperPromoPct ?? validatedData.promoDiscountPct ?? null
+    );
+
+    const carrierFee = calculatePartyFeePreview(
+      Number(corridor.distanceKm),
+      carrierPrice,
+      validatedData.carrierPromoFlag,
+      validatedData.carrierPromoPct ?? null
+    );
 
     return NextResponse.json({
       message: 'Corridor created successfully',
@@ -229,17 +327,31 @@ export async function POST(request: NextRequest) {
         originRegion: corridor.originRegion,
         destinationRegion: corridor.destinationRegion,
         distanceKm: Number(corridor.distanceKm),
-        pricePerKm: Number(corridor.pricePerKm),
         direction: corridor.direction,
-        promoFlag: corridor.promoFlag,
-        promoDiscountPct: corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null,
         isActive: corridor.isActive,
-        serviceFeePreview: calculateServiceFeePreview(
-          Number(corridor.distanceKm),
-          Number(corridor.pricePerKm),
-          corridor.promoFlag,
-          corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null
-        ),
+
+        // Shipper pricing
+        shipperPricePerKm: shipperPrice,
+        shipperPromoFlag: validatedData.shipperPromoFlag || validatedData.promoFlag,
+        shipperPromoPct: validatedData.shipperPromoPct ?? validatedData.promoDiscountPct ?? null,
+
+        // Carrier pricing
+        carrierPricePerKm: carrierPrice,
+        carrierPromoFlag: validatedData.carrierPromoFlag,
+        carrierPromoPct: validatedData.carrierPromoPct ?? null,
+
+        // Fee preview
+        feePreview: {
+          shipper: shipperFee,
+          carrier: carrierFee,
+          totalPlatformFee: shipperFee.finalFee + carrierFee.finalFee,
+        },
+
+        // Legacy fields
+        pricePerKm: shipperPrice,
+        promoFlag: validatedData.promoFlag,
+        promoDiscountPct: validatedData.promoDiscountPct ?? null,
+        serviceFeePreview: shipperFee,
       },
     }, { status: 201 });
   } catch (error) {
@@ -260,7 +372,39 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Calculate service fee preview
+ * Calculate fee preview for a single party (shipper or carrier)
+ */
+function calculatePartyFeePreview(
+  distanceKm: number,
+  pricePerKm: number,
+  promoFlag: boolean,
+  promoDiscountPct: number | null
+): {
+  baseFee: number;
+  discount: number;
+  finalFee: number;
+} {
+  if (pricePerKm <= 0) {
+    return { baseFee: 0, discount: 0, finalFee: 0 };
+  }
+
+  const baseFee = distanceKm * pricePerKm;
+  let discount = 0;
+
+  if (promoFlag && promoDiscountPct && promoDiscountPct > 0) {
+    discount = baseFee * (promoDiscountPct / 100);
+  }
+
+  return {
+    baseFee: Math.round(baseFee * 100) / 100,
+    discount: Math.round(discount * 100) / 100,
+    finalFee: Math.round((baseFee - discount) * 100) / 100,
+  };
+}
+
+/**
+ * Calculate service fee preview (legacy - shipper only)
+ * @deprecated Use calculatePartyFeePreview for both parties
  */
 function calculateServiceFeePreview(
   distanceKm: number,

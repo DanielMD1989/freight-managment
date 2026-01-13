@@ -13,7 +13,6 @@ import { DatNavTabs } from '@/components/dat-ui';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import PostTrucksTab from './PostTrucksTab';
 import SearchLoadsTab from './SearchLoadsTab';
-import { CommissionDiscountBadge } from '@/components/CommissionDiscountCard';
 import NotificationBell from '@/components/NotificationBell';
 
 interface CarrierDatBoardClientProps {
@@ -25,8 +24,6 @@ type CarrierTabKey = 'POST_TRUCKS' | 'SEARCH_LOADS';
 export default function CarrierDatBoardClient({ user }: CarrierDatBoardClientProps) {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<CarrierTabKey>('POST_TRUCKS');
-  const [completionRate, setCompletionRate] = useState<number>(0);
-  const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Story 15.11: Task 15.11.1-15.11.6 - Tab State Management with URL persistence
@@ -77,25 +74,6 @@ export default function CarrierDatBoardClient({ user }: CarrierDatBoardClientPro
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Fetch organization completion rate - Sprint 16: Story 16.6
-  useEffect(() => {
-    const fetchCompletionRate = async () => {
-      try {
-        const response = await fetch('/api/organizations/me');
-        if (response.ok) {
-          const data = await response.json();
-          setCompletionRate(data.completionRate ? Number(data.completionRate) : 0);
-        }
-      } catch (error) {
-        console.error('Failed to fetch completion rate:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCompletionRate();
-  }, []);
-
   /**
    * Handle logout
    */
@@ -133,11 +111,6 @@ export default function CarrierDatBoardClient({ user }: CarrierDatBoardClientPro
 
         {/* User Info & Actions */}
         <div className="flex items-center gap-4 pl-4 border-l border-white/20">
-          {/* Commission Discount Badge - Sprint 16: Story 16.6 */}
-          {!loading && completionRate > 0 && (
-            <CommissionDiscountBadge completionRate={completionRate} />
-          )}
-
           {/* Notification Bell - Sprint 16: Story 16.10 */}
           <NotificationBell />
 

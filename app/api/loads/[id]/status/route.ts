@@ -165,7 +165,7 @@ export async function PATCH(
     // Service Fee Implementation: Handle service fee based on new status
     let serviceFeeResult = null;
     if (newStatus === 'COMPLETED') {
-      // Deduct service fee to platform on completion
+      // Deduct service fees from both shipper and carrier on completion
       try {
         serviceFeeResult = await deductServiceFee(loadId);
 
@@ -174,11 +174,14 @@ export async function PATCH(
             data: {
               loadId,
               eventType: 'SERVICE_FEE_DEDUCTED',
-              description: `Service fee deducted: ${serviceFeeResult.serviceFee.toFixed(2)} ETB`,
+              description: `Service fees deducted - Shipper: ${serviceFeeResult.shipperFee.toFixed(2)} ETB, Carrier: ${serviceFeeResult.carrierFee.toFixed(2)} ETB, Total: ${serviceFeeResult.totalPlatformFee.toFixed(2)} ETB`,
               userId: session.userId,
               metadata: {
-                serviceFee: serviceFeeResult.serviceFee.toFixed(2),
+                shipperFee: serviceFeeResult.shipperFee.toFixed(2),
+                carrierFee: serviceFeeResult.carrierFee.toFixed(2),
+                totalPlatformFee: serviceFeeResult.totalPlatformFee.toFixed(2),
                 transactionId: serviceFeeResult.transactionId,
+                details: serviceFeeResult.details,
               },
             },
           });
@@ -214,18 +217,36 @@ export async function PATCH(
     // TODO: Trigger notifications to relevant parties
     // TODO: Trigger automation rules based on new status
 
+    // Build service fee response based on action type
+    let serviceFeeResponse = null;
+    if (serviceFeeResult) {
+      if (newStatus === 'COMPLETED' && 'shipperFee' in serviceFeeResult) {
+        // Deduction result with dual-party fees
+        serviceFeeResponse = {
+          success: serviceFeeResult.success,
+          shipperFee: serviceFeeResult.shipperFee.toFixed(2),
+          carrierFee: serviceFeeResult.carrierFee.toFixed(2),
+          totalPlatformFee: serviceFeeResult.totalPlatformFee.toFixed(2),
+          action: 'deducted',
+          error: serviceFeeResult.error,
+          details: serviceFeeResult.details,
+        };
+      } else {
+        // Refund result (legacy format)
+        serviceFeeResponse = {
+          success: serviceFeeResult.success,
+          amount: serviceFeeResult.serviceFee.toFixed(2),
+          action: newStatus === 'CANCELLED' ? 'refunded' : null,
+          error: serviceFeeResult.error,
+        };
+      }
+    }
+
     return NextResponse.json({
       message: `Load status updated to ${newStatus}`,
       description: getStatusDescription(newStatus as LoadStatus),
       load: updatedLoad,
-      serviceFee: serviceFeeResult
-        ? {
-            success: serviceFeeResult.success,
-            amount: serviceFeeResult.serviceFee.toFixed(2),
-            action: newStatus === 'COMPLETED' ? 'deducted' : newStatus === 'CANCELLED' ? 'refunded' : null,
-            error: serviceFeeResult.error,
-          }
-        : null,
+      serviceFee: serviceFeeResponse,
     });
 
   } catch (error) {

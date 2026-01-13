@@ -6,7 +6,7 @@
  */
 
 import { redirect } from 'next/navigation';
-import { headers } from 'next/headers';
+import { getSession } from '@/lib/auth';
 import CarrierDatBoardClient from './CarrierDatBoardClient';
 
 export const metadata = {
@@ -15,22 +15,27 @@ export const metadata = {
 };
 
 export default async function CarrierDatBoardPage() {
-  // Get auth from headers (set by middleware)
-  const headersList = await headers();
-  const userHeader = headersList.get('x-user-data');
+  // Get session directly from cookie (robust approach)
+  const session = await getSession();
 
   // Redirect if not authenticated
-  if (!userHeader) {
+  if (!session) {
     redirect('/login');
   }
 
-  // Parse user data
-  const user = JSON.parse(userHeader);
-
   // Verify carrier role
-  if (user.role !== 'CARRIER' && user.role !== 'ADMIN') {
+  if (session.role !== 'CARRIER' && session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
     redirect('/dashboard');
   }
+
+  // Pass user data to client component
+  const user = {
+    userId: session.userId,
+    email: session.email,
+    role: session.role,
+    status: session.status,
+    organizationId: session.organizationId,
+  };
 
   return <CarrierDatBoardClient user={user} />;
 }

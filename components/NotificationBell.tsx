@@ -159,17 +159,34 @@ export default function NotificationBell() {
   const getNotificationRoute = (notification: Notification): string | null => {
     const { type, metadata } = notification;
 
-    // Carrier-side notifications
+    // ========== CARRIER-SIDE NOTIFICATIONS ==========
+
+    // Carrier's outgoing load request was approved by shipper
     if (type === 'LOAD_REQUEST_APPROVED' && metadata?.loadId) {
       return `/carrier/trips/${metadata.loadId}`;
     }
+    // Carrier's outgoing load request was rejected by shipper
     if (type === 'LOAD_REQUEST_REJECTED' && metadata?.loadRequestId) {
       return `/carrier/load-requests?highlight=${metadata.loadRequestId}`;
     }
+    // Carrier received incoming truck request from shipper
+    if (type === 'TRUCK_REQUEST_RECEIVED' && metadata?.requestId) {
+      return `/carrier/requests?highlight=${metadata.requestId}`;
+    }
 
-    // Shipper-side notifications
+    // ========== SHIPPER-SIDE NOTIFICATIONS ==========
+
+    // Shipper received incoming load request from carrier
     if (type === 'LOAD_REQUEST_RECEIVED' && metadata?.loadRequestId) {
       return `/shipper/requests?highlight=${metadata.loadRequestId}`;
+    }
+    // Shipper's outgoing truck request was approved by carrier
+    if (type === 'TRUCK_REQUEST_APPROVED' && metadata?.loadId) {
+      return `/shipper/trips/${metadata.loadId}`;
+    }
+    // Shipper's outgoing truck request was rejected by carrier
+    if (type === 'TRUCK_REQUEST_REJECTED' && metadata?.requestId) {
+      return `/shipper/requests?tab=my-requests&highlight=${metadata.requestId}`;
     }
 
     // Trip-related notifications
