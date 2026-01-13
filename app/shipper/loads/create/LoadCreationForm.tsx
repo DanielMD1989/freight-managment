@@ -23,13 +23,58 @@ const TRUCK_TYPES = [
   { value: 'BOX_TRUCK', label: 'Box Truck' },
 ];
 
-const ETHIOPIAN_CITIES = [
-  'Addis Ababa', 'Dire Dawa', 'Mekelle', 'Gondar', 'Bahir Dar',
-  'Hawassa', 'Awasa', 'Jimma', 'Jijiga', 'Shashamane',
-  'Bishoftu', 'Arba Minch', 'Hosaena', 'Harar', 'Dilla',
-  'Nekemte', 'Debre Birhan', 'Asella', 'Debre Markos', 'Kombolcha',
-  'Debre Tabor', 'Adigrat', 'Woldiya', 'Sodo', 'Gambela',
-];
+// Ethiopian cities with coordinates for distance calculation
+const ETHIOPIAN_CITIES_DATA: Record<string, { lat: number; lon: number }> = {
+  'Addis Ababa': { lat: 9.0054, lon: 38.7636 },
+  'Dire Dawa': { lat: 9.6009, lon: 41.8501 },
+  'Mekelle': { lat: 13.4967, lon: 39.4767 },
+  'Gondar': { lat: 12.6000, lon: 37.4667 },
+  'Bahir Dar': { lat: 11.5742, lon: 37.3614 },
+  'Hawassa': { lat: 7.0500, lon: 38.4833 },
+  'Awasa': { lat: 7.0500, lon: 38.4833 },
+  'Jimma': { lat: 7.6667, lon: 36.8333 },
+  'Jijiga': { lat: 9.3500, lon: 42.8000 },
+  'Shashamane': { lat: 7.2000, lon: 38.6000 },
+  'Bishoftu': { lat: 8.7500, lon: 38.9833 },
+  'Arba Minch': { lat: 6.0333, lon: 37.5500 },
+  'Hosaena': { lat: 7.5500, lon: 37.8500 },
+  'Harar': { lat: 9.3100, lon: 42.1200 },
+  'Dilla': { lat: 6.4167, lon: 38.3000 },
+  'Nekemte': { lat: 9.0833, lon: 36.5333 },
+  'Debre Birhan': { lat: 9.6833, lon: 39.5333 },
+  'Asella': { lat: 7.9500, lon: 39.1333 },
+  'Debre Markos': { lat: 10.3333, lon: 37.7333 },
+  'Kombolcha': { lat: 11.0833, lon: 39.7333 },
+  'Debre Tabor': { lat: 11.8500, lon: 38.0167 },
+  'Adigrat': { lat: 14.2833, lon: 39.4667 },
+  'Woldiya': { lat: 11.8333, lon: 39.6000 },
+  'Sodo': { lat: 6.8500, lon: 37.7500 },
+  'Gambela': { lat: 8.2500, lon: 34.5833 },
+};
+
+const ETHIOPIAN_CITIES = Object.keys(ETHIOPIAN_CITIES_DATA);
+
+/**
+ * Calculate Haversine distance between two coordinates
+ */
+function calculateHaversineDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c * 10) / 10; // Round to 1 decimal
+}
 
 export default function LoadCreationForm() {
   const router = useRouter();
@@ -160,12 +205,37 @@ export default function LoadCreationForm() {
         return;
       }
 
+      // Calculate trip distance using API (Google Maps if available, Haversine fallback)
+      let tripKm: number | undefined;
+      const pickupCoords = ETHIOPIAN_CITIES_DATA[formData.pickupCity];
+      const deliveryCoords = ETHIOPIAN_CITIES_DATA[formData.deliveryCity];
+      if (pickupCoords && deliveryCoords) {
+        try {
+          const distanceRes = await fetch(
+            `/api/distance/road?origin=${pickupCoords.lat},${pickupCoords.lon}&destination=${deliveryCoords.lat},${deliveryCoords.lon}`
+          );
+          if (distanceRes.ok) {
+            const distanceData = await distanceRes.json();
+            tripKm = distanceData.distanceKm;
+          }
+        } catch {
+          // Fallback to local Haversine calculation if API fails
+          tripKm = calculateHaversineDistance(
+            pickupCoords.lat,
+            pickupCoords.lon,
+            deliveryCoords.lat,
+            deliveryCoords.lon
+          );
+        }
+      }
+
       // Prepare submission data
       const submitData = {
         ...formData,
         weight: parseFloat(formData.weight),
         rate: parseFloat(formData.rate),
         status: isDraft ? 'DRAFT' : 'POSTED',
+        tripKm,
       };
 
       const response = await fetch('/api/loads', {

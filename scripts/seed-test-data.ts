@@ -149,6 +149,7 @@ async function main() {
       role: 'ADMIN',
       phone: '+251911000000',
       isActive: true,
+      status: 'ACTIVE', // Set ACTIVE status for admin
     },
   });
   console.log(`✅ Created admin: ${adminUser.email} / password: admin123\n`);
@@ -174,6 +175,7 @@ async function main() {
             role: 'SHIPPER',
             phone: randomPhone(),
             isActive: true,
+            status: 'ACTIVE', // Set ACTIVE status for test users
           },
         },
       },
@@ -207,6 +209,7 @@ async function main() {
             role: 'CARRIER',
             phone: randomPhone(),
             isActive: true,
+            status: 'ACTIVE', // Set ACTIVE status for test users
           },
         },
       },
