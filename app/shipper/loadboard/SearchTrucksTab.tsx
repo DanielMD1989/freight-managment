@@ -9,17 +9,17 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  DatStatusTabs,
-  DatDataTable,
-  DatActionButton,
-  DatAgeIndicator,
-  DatSavedSearches,
-  DatFilterPanel,
-  DatCompanyLink,
-  DatCompanyModal,
-  DatEditSearchModal,
-} from '@/components/dat-ui';
-import { DatColumn, DatStatusTab, DatFilter, DatRowAction, SavedSearch, SavedSearchCriteria } from '@/types/dat-ui';
+  StatusTabs,
+  DataTable,
+  ActionButton,
+  AgeIndicator,
+  SavedSearches,
+  FilterPanel,
+  CompanyLink,
+  CompanyModal,
+  EditSearchModal,
+} from '@/components/loadboard-ui';
+import { TableColumn, StatusTab, Filter, RowAction, SavedSearch, SavedSearchCriteria } from '@/types/loadboard-ui';
 import TruckBookingModal from './TruckBookingModal';
 
 interface SearchTrucksTabProps {
@@ -301,7 +301,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   /**
    * Results tabs configuration
    */
-  const resultsTabs: DatStatusTab[] = [
+  const resultsTabs: StatusTab[] = [
     { key: 'all', label: 'ALL' },
     { key: 'PREFERRED', label: 'PREFERRED' },
     { key: 'BLOCKED', label: 'BLOCKED' },
@@ -315,7 +315,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
     label: city.name,
   }));
 
-  const filters: DatFilter[] = [
+  const filters: Filter[] = [
     {
       key: 'ageHours',
       label: 'AGE (hours)',
@@ -393,12 +393,12 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   /**
    * Table columns configuration
    */
-  const columns: DatColumn[] = [
+  const columns: TableColumn[] = [
     {
       key: 'age',
       label: 'Age',
       width: '80px',
-      render: (_, row) => <DatAgeIndicator date={row.postedAt || row.createdAt} />,
+      render: (_, row) => <AgeIndicator date={row.postedAt || row.createdAt} />,
     },
     {
       key: 'availableDate',
@@ -440,7 +440,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
       key: 'company',
       label: 'Company',
       render: (_, row) => (
-        <DatCompanyLink
+        <CompanyLink
           companyId={row.carrierId}
           companyName={row.carrier?.name || 'Unknown'}
           isMasked={!row.carrier?.allowNameDisplay}
@@ -473,7 +473,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   /**
    * Row actions configuration
    */
-  const rowActions: DatRowAction[] = [
+  const rowActions: RowAction[] = [
     {
       key: 'contact',
       label: 'CONTACT',
@@ -658,7 +658,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
             <h3 className="text-lg font-bold text-[#064d51]">
               {trucks.length} TOTAL RESULTS
             </h3>
-            <DatStatusTabs
+            <StatusTabs
               tabs={resultsTabs}
               activeTab={activeFilter}
               onTabChange={(key) => setActiveFilter(key as ResultsFilter)}
@@ -757,7 +757,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
                   className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-[#064d51]/10 hover:bg-[#064d51]/5 cursor-default text-xs transition-colors"
                   style={{ color: '#2B2727' }}
                 >
-                  <div><DatAgeIndicator date={truck.postedAt || truck.createdAt} /></div>
+                  <div><AgeIndicator date={truck.postedAt || truck.createdAt} /></div>
                   <div>{truck.availableDate ? new Date(truck.availableDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : 'Now'}</div>
                   <div>{getTruckTypeLabel(truck.truckType)}</div>
                   <div>{truck.fullPartial || 'F'}</div>
@@ -790,7 +790,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
 
       {/* Right Sidebar - Filters */}
       <div className="w-56 flex-shrink-0">
-        <DatFilterPanel
+        <FilterPanel
           title="REFINE YOUR SEARCH:"
           filters={filters}
           values={filterValues}
@@ -801,7 +801,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
 
       {/* Company Modal */}
       {selectedCompany && (
-        <DatCompanyModal
+        <CompanyModal
           isOpen={!!selectedCompany}
           onClose={() => setSelectedCompany(null)}
           company={selectedCompany}
@@ -819,7 +819,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
       />
 
       {/* Edit Search Modal */}
-      <DatEditSearchModal
+      <EditSearchModal
         search={editingSearch}
         isOpen={!!editingSearch}
         onClose={() => setEditingSearch(null)}

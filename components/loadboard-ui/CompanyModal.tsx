@@ -1,22 +1,22 @@
 'use client';
 
 /**
- * DAT Company Modal Component
+ * Company Modal Component
  *
  * Professional company details modal with modern design and animations
- * Design System: Clean & Minimal with Teal accent
+ * Load Board UI Component Library
  */
 
 import React, { useEffect } from 'react';
-import { DatCompanyModalProps } from '@/types/dat-ui';
+import { CompanyModalProps } from '@/types/loadboard-ui';
 
-export default function DatCompanyModal({
+export default function CompanyModal({
   isOpen,
   onClose,
   company,
   onMarkPreferred,
   onMarkBlocked,
-}: DatCompanyModalProps) {
+}: CompanyModalProps) {
   // Close on escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -122,7 +122,7 @@ export default function DatCompanyModal({
                   <span className="font-semibold text-slate-800">{company.contactName}</span>
                 </div>
               )}
-              {company.phone && (
+              {(company.phone || company.contactPhone) && (
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-slate-500 flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -130,10 +130,10 @@ export default function DatCompanyModal({
                     </svg>
                     Phone
                   </span>
-                  <a href={`tel:${company.phone}`} className="font-semibold text-teal-600 hover:text-teal-700">{company.phone}</a>
+                  <a href={`tel:${company.phone || company.contactPhone}`} className="font-semibold text-teal-600 hover:text-teal-700">{company.phone || company.contactPhone}</a>
                 </div>
               )}
-              {company.email && (
+              {(company.email || company.contactEmail) && (
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-slate-500 flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -141,10 +141,10 @@ export default function DatCompanyModal({
                     </svg>
                     Email
                   </span>
-                  <a href={`mailto:${company.email}`} className="font-semibold text-teal-600 hover:text-teal-700">{company.email}</a>
+                  <a href={`mailto:${company.email || company.contactEmail}`} className="font-semibold text-teal-600 hover:text-teal-700">{company.email || company.contactEmail}</a>
                 </div>
               )}
-              {company.location && (
+              {(company.location || company.address) && (
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-slate-500 flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -153,7 +153,7 @@ export default function DatCompanyModal({
                     </svg>
                     Location
                   </span>
-                  <span className="font-semibold text-slate-800">{company.location}</span>
+                  <span className="font-semibold text-slate-800">{company.location || company.address}</span>
                 </div>
               )}
             </div>

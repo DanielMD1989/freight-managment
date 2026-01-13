@@ -1,16 +1,16 @@
 'use client';
 
 /**
- * DAT Edit Search Modal Component
+ * Edit Search Modal Component
  *
  * Modal for editing saved searches (name and criteria)
- * Sprint 16 - Edit Saved Search Feature
+ * Load Board UI Component Library
  */
 
 import React, { useState, useEffect } from 'react';
-import { SavedSearch, SavedSearchCriteria, SavedSearchType } from '@/types/dat-ui';
+import { SavedSearch, SavedSearchCriteria, SavedSearchType } from '@/types/loadboard-ui';
 
-interface DatEditSearchModalProps {
+interface EditSearchModalProps {
   search: SavedSearch | null;
   isOpen: boolean;
   onClose: () => void;
@@ -30,14 +30,14 @@ const TRUCK_TYPES = [
   { value: 'BOX_TRUCK', label: 'Box Truck' },
 ];
 
-export default function DatEditSearchModal({
+export default function EditSearchModal({
   search,
   isOpen,
   onClose,
   onSave,
   cities = [],
   type,
-}: DatEditSearchModalProps) {
+}: EditSearchModalProps) {
   const [name, setName] = useState('');
   const [criteria, setCriteria] = useState<SavedSearchCriteria>({});
   const [saving, setSaving] = useState(false);
@@ -180,9 +180,9 @@ export default function DatEditSearchModal({
                   className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                 >
                   <option value="">Any type</option>
-                  {TRUCK_TYPES.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
+                  {TRUCK_TYPES.map((truckType) => (
+                    <option key={truckType.value} value={truckType.value}>
+                      {truckType.label}
                     </option>
                   ))}
                 </select>

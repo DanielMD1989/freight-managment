@@ -11,7 +11,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { DatAgeIndicator } from '@/components/dat-ui';
+import { AgeIndicator } from '@/components/loadboard-ui';
 import { useToast } from '@/components/Toast/ToastContext';
 
 interface PostLoadsTabProps {
@@ -202,7 +202,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                 }`}
                 onClick={() => setExpandedLoadId(expandedLoadId === load.id ? null : load.id)}
               >
-                <div><DatAgeIndicator date={load.postedAt || load.createdAt} /></div>
+                <div><AgeIndicator date={load.postedAt || load.createdAt} /></div>
                 <div className="text-slate-700">
                   {load.pickupDate ? new Date(load.pickupDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
                 </div>

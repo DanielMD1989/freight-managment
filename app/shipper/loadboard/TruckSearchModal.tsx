@@ -8,7 +8,7 @@
  */
 
 import React, { useState } from 'react';
-import { DatActionButton } from '@/components/dat-ui';
+import { ActionButton } from '@/components/loadboard-ui';
 import { ETHIOPIAN_LOCATIONS } from '@/lib/constants/ethiopian-locations';
 
 interface TruckSearchModalProps {
@@ -375,7 +375,7 @@ export default function TruckSearchModal({
             >
               Cancel
             </button>
-            <DatActionButton
+            <ActionButton
               variant="primary"
               onClick={() => {
                 const form = document.querySelector('form');
@@ -387,7 +387,7 @@ export default function TruckSearchModal({
               disabled={loading}
             >
               {loading ? 'Creating...' : 'Create Search'}
-            </DatActionButton>
+            </ActionButton>
           </div>
         </form>
       </div>

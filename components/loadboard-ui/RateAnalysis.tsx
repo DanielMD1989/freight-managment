@@ -1,17 +1,16 @@
 'use client';
 
 /**
- * DAT Rate Analysis Component
+ * Rate Analysis Component
  *
  * Rate analysis panel for carrier load search showing rate per mile/trip
- * Sprint 14 - DAT-Style UI Transformation
+ * Load Board UI Component Library
  */
 
 import React from 'react';
-import { DatRateAnalysisProps } from '@/types/dat-ui';
-import DatActionButton from './DatActionButton';
+import { RateAnalysisProps } from '@/types/loadboard-ui';
 
-export default function DatRateAnalysis({
+export default function RateAnalysis({
   rateType = 'SHIPPER-TO-CARRIER SPOT',
   ratePerMile,
   ratePerTrip,
@@ -22,7 +21,7 @@ export default function DatRateAnalysis({
   onEdit,
   onDelete,
   className = '',
-}: DatRateAnalysisProps) {
+}: RateAnalysisProps) {
   /**
    * Format currency
    */

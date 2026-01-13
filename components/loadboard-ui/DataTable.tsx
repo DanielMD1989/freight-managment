@@ -1,10 +1,10 @@
 'use client';
 
 /**
- * DAT Data Table Component
+ * Data Table Component
  *
  * Reusable data-dense table with expandable rows, sorting, inline editing, and selection
- * Sprint 14 - DAT-Style UI Transformation (Phase 6: Enhanced Loading States)
+ * Load Board UI Component Library
  *
  * FEATURES:
  * - Expandable rows (click to show details)
@@ -17,10 +17,10 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { DatDataTableProps, DatColumn } from '@/types/dat-ui';
-import DatTableSkeleton from './DatTableSkeleton';
+import { DataTableProps, TableColumn } from '@/types/loadboard-ui';
+import TableSkeleton from './TableSkeleton';
 
-export default function DatDataTable<T = any>({
+export default function DataTable<T = any>({
   columns,
   data,
   expandable = false,
@@ -34,7 +34,7 @@ export default function DatDataTable<T = any>({
   emptyMessage = 'No data available',
   className = '',
   rowKey = 'id',
-}: DatDataTableProps<T>) {
+}: DataTableProps<T>) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -83,7 +83,7 @@ export default function DatDataTable<T = any>({
   /**
    * Handle column sort
    */
-  const handleSort = (column: DatColumn) => {
+  const handleSort = (column: TableColumn) => {
     if (!column.sortable) return;
 
     if (sortColumn === column.key) {
@@ -124,7 +124,7 @@ export default function DatDataTable<T = any>({
   /**
    * Render cell value
    */
-  const renderCell = (column: DatColumn, row: T) => {
+  const renderCell = (column: TableColumn, row: T) => {
     if (column.render) {
       return column.render((row as any)[column.key], row);
     }
@@ -140,7 +140,7 @@ export default function DatDataTable<T = any>({
 
   // Loading state with enhanced skeleton
   if (loading) {
-    return <DatTableSkeleton rows={8} columns={columns.length + (selectable ? 1 : 0) + (actions?.length ? 1 : 0)} />;
+    return <TableSkeleton rows={8} columns={columns.length + (selectable ? 1 : 0) + (actions?.length ? 1 : 0)} />;
   }
 
   // Empty state with professional design

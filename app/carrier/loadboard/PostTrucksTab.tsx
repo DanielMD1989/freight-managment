@@ -10,12 +10,12 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  DatStatusTabs,
-  DatDataTable,
-  DatActionButton,
-  DatAgeIndicator,
-} from '@/components/dat-ui';
-import { DatColumn, DatStatusTab, DatRowAction } from '@/types/dat-ui';
+  StatusTabs,
+  DataTable,
+  ActionButton,
+  AgeIndicator,
+} from '@/components/loadboard-ui';
+import { TableColumn, StatusTab, RowAction } from '@/types/loadboard-ui';
 import PlacesAutocomplete, { PlaceResult } from '@/components/PlacesAutocomplete';
 import { useToast } from '@/components/Toast/ToastContext';
 
@@ -663,7 +663,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   /**
    * Status tabs configuration - POSTED, UNPOSTED, EXPIRED only
    */
-  const statusTabs: DatStatusTab[] = [
+  const statusTabs: StatusTab[] = [
     { key: 'POSTED', label: 'POSTED', count: statusCounts.POSTED },
     { key: 'UNPOSTED', label: 'UNPOSTED', count: statusCounts.UNPOSTED },
     { key: 'EXPIRED', label: 'EXPIRED', count: statusCounts.EXPIRED },
@@ -759,12 +759,12 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   /**
    * Truck table columns
    */
-  const truckColumns: DatColumn[] = [
+  const truckColumns: TableColumn[] = [
     {
       key: 'age',
       label: 'Age',
       width: '50px',
-      render: (_, row) => <DatAgeIndicator date={row.postedAt || row.createdAt} />,
+      render: (_, row) => <AgeIndicator date={row.postedAt || row.createdAt} />,
     },
     {
       key: 'availableFrom',
@@ -926,12 +926,12 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   /**
    * Matching loads table columns
    */
-  const loadColumns: DatColumn[] = [
+  const loadColumns: TableColumn[] = [
     {
       key: 'age',
       label: 'Age',
       width: '60px',
-      render: (_, row) => <DatAgeIndicator date={row.postedAt || row.createdAt} />,
+      render: (_, row) => <AgeIndicator date={row.postedAt || row.createdAt} />,
     },
     {
       key: 'pickupDate',
@@ -1286,7 +1286,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         </button>
 
         {/* Status Filter Tabs - Right Side */}
-        <DatStatusTabs
+        <StatusTabs
           tabs={statusTabs}
           activeTab={activeStatus}
           onTabChange={(tab) => setActiveStatus(tab as TruckStatus)}
@@ -1606,7 +1606,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
           </h3>
           <span className="text-xs text-slate-300">Click a truck to see matching loads</span>
         </div>
-        <DatDataTable
+        <DataTable
           columns={truckColumns}
           data={trucks}
           loading={loading}
@@ -1942,7 +1942,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
         {/* Matching Loads Table */}
         <div className="p-0">
-          <DatDataTable
+          <DataTable
             columns={loadColumns}
             data={filteredMatchingLoads}
             loading={loadingMatches}

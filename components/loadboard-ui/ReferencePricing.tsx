@@ -1,21 +1,25 @@
 'use client';
 
 /**
- * DAT Reference Pricing Component
+ * Reference Pricing Component
  *
  * Display market reference rates (TriHaul, Broker Spot) in cyan text
- * Sprint 14 - DAT-Style UI Transformation
+ * Load Board UI Component Library
  */
 
 import React from 'react';
-import { DatReferencePricingProps } from '@/types/dat-ui';
+import { ReferencePricingProps } from '@/types/loadboard-ui';
 
-export default function DatReferencePricing({
+export default function ReferencePricing({
   trihaulRate,
+  triHaulRate,
   brokerSpotRate,
   loading = false,
   className = '',
-}: DatReferencePricingProps) {
+}: ReferencePricingProps) {
+  // Support both naming conventions
+  const effectiveTrihaulRate = trihaulRate ?? triHaulRate;
+
   /**
    * Format currency
    */
@@ -34,7 +38,7 @@ export default function DatReferencePricing({
   }
 
   // No rates available
-  if (!trihaulRate && !brokerSpotRate) {
+  if (!effectiveTrihaulRate && !brokerSpotRate) {
     return (
       <div className={`text-sm text-gray-400 ${className}`}>
         <span>No reference pricing available</span>
@@ -44,9 +48,9 @@ export default function DatReferencePricing({
 
   return (
     <div className={`text-sm font-medium text-cyan-600 ${className}`}>
-      {trihaulRate && (
+      {effectiveTrihaulRate && (
         <span className="mr-4">
-          Best TriHaul: <span className="font-semibold">{formatCurrency(trihaulRate)}</span>
+          Best TriHaul: <span className="font-semibold">{formatCurrency(effectiveTrihaulRate)}</span>
         </span>
       )}
       {brokerSpotRate && (

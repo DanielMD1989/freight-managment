@@ -1,13 +1,13 @@
 'use client';
 
 /**
- * DAT Navigation Tabs Component
+ * Navigation Tabs Component
  *
  * Top-level navigation: POST LOADS | SEARCH TRUCKS | POST TRUCKS | SEARCH LOADS
- * Option B: Clean & Minimal Design System (Teal + Indigo)
+ * Load Board UI Component Library
  */
 
-import { DatNavTabsProps, DatNavTab } from '@/types/dat-ui';
+import { NavTabsProps, NavTab } from '@/types/loadboard-ui';
 
 // SVG Icon Components
 const PackageIcon = () => (
@@ -42,39 +42,35 @@ const iconComponents: Record<string, React.FC> = {
   'SEARCH_LOADS': SearchIcon,
 };
 
-const ALL_TABS: DatNavTab[] = [
+const ALL_TABS: NavTab[] = [
   {
     key: 'POST_LOADS',
     label: 'Post Loads',
-    icon: '📦',
     roles: ['SHIPPER', 'ADMIN'],
   },
   {
     key: 'SEARCH_TRUCKS',
     label: 'Search Trucks',
-    icon: '🚛',
     roles: ['SHIPPER', 'ADMIN'],
   },
   {
     key: 'POST_TRUCKS',
     label: 'Post Trucks',
-    icon: '🚚',
     roles: ['CARRIER', 'ADMIN'],
   },
   {
     key: 'SEARCH_LOADS',
     label: 'Search Loads',
-    icon: '🔍',
     roles: ['CARRIER', 'ADMIN'],
   },
 ];
 
-export default function DatNavTabs({
+export default function NavTabs({
   userRole,
   activeTab,
   onTabChange,
   portalType,
-}: DatNavTabsProps) {
+}: NavTabsProps) {
   // Filter tabs based on portal type (role-based filtering happens via tab.roles)
   const visibleTabs = ALL_TABS.filter((tab) => {
     // First check if user role is allowed for this tab

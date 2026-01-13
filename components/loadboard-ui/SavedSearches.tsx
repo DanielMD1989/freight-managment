@@ -1,23 +1,23 @@
 'use client';
 
 /**
- * DAT Saved Searches Component
+ * Saved Searches Component
  *
  * Saved searches panel (stacked, selectable with dark gray highlight)
- * Sprint 14 - DAT-Style UI Transformation
+ * Load Board UI Component Library
  */
 
 import React from 'react';
-import { DatSavedSearchesProps } from '@/types/dat-ui';
+import { SavedSearchesProps } from '@/types/loadboard-ui';
 
-export default function DatSavedSearches({
+export default function SavedSearches({
   searches,
   activeSearchId,
   onSelect,
   onDelete,
   onEdit,
   type,
-}: DatSavedSearchesProps) {
+}: SavedSearchesProps) {
   /**
    * Format criteria for display
    */

@@ -1,24 +1,24 @@
 'use client';
 
 /**
- * DAT Inline Edit Component
+ * Inline Edit Component
  *
  * Inline editing panel with dark gray overlay
- * Sprint 14 - DAT-Style UI Transformation
+ * Load Board UI Component Library
  */
 
 import React, { useState } from 'react';
-import { DatInlineEditProps } from '@/types/dat-ui';
-import DatActionButton from './DatActionButton';
-import DatCharacterCounter from './DatCharacterCounter';
+import { InlineEditProps } from '@/types/loadboard-ui';
+import ActionButton from './ActionButton';
+import CharacterCounter from './CharacterCounter';
 
-export default function DatInlineEdit({
+export default function InlineEdit({
   data,
   fields,
   onSave,
   onCancel,
   saving = false,
-}: DatInlineEditProps) {
+}: InlineEditProps) {
   const [formData, setFormData] = useState(data);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -82,7 +82,7 @@ export default function DatInlineEdit({
               className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1e9c99] focus:border-transparent"
             />
             {field.maxLength && (
-              <DatCharacterCounter value={value} maxLength={field.maxLength} />
+              <CharacterCounter value={value} maxLength={field.maxLength} />
             )}
           </div>
         );
@@ -136,7 +136,7 @@ export default function DatInlineEdit({
               className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1e9c99] focus:border-transparent"
             />
             {field.maxLength && (
-              <DatCharacterCounter value={value} maxLength={field.maxLength} />
+              <CharacterCounter value={value} maxLength={field.maxLength} />
             )}
           </div>
         );
@@ -168,14 +168,14 @@ export default function DatInlineEdit({
 
       {/* Actions */}
       <div className="flex gap-3 mt-6 pt-4 border-t border-gray-600">
-        <DatActionButton
+        <ActionButton
           variant="secondary"
           size="md"
           onClick={handleSave}
           disabled={saving}
         >
           {saving ? 'Saving...' : 'Save Changes'}
-        </DatActionButton>
+        </ActionButton>
         <button
           onClick={onCancel}
           disabled={saving}

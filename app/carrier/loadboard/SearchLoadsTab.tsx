@@ -8,8 +8,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { DatStatusTabs, DatAgeIndicator, DatSavedSearches, DatEditSearchModal } from '@/components/dat-ui';
-import { DatStatusTab, SavedSearch, SavedSearchCriteria } from '@/types/dat-ui';
+import { StatusTabs, AgeIndicator, SavedSearches, EditSearchModal } from '@/components/loadboard-ui';
+import { StatusTab, SavedSearch, SavedSearchCriteria } from '@/types/loadboard-ui';
 import LoadRequestModal from './LoadRequestModal';
 
 interface SearchLoadsTabProps {
@@ -464,7 +464,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
   /**
    * Results tabs configuration
    */
-  const resultsTabs: DatStatusTab[] = [
+  const resultsTabs: StatusTab[] = [
     { key: 'all', label: 'ALL' },
     { key: 'PREFERRED', label: 'PREFERRED' },
     { key: 'BLOCKED', label: 'BLOCKED' },
@@ -519,7 +519,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
             </h3>
           </div>
           <div className="p-4">
-            <DatSavedSearches
+            <SavedSearches
               searches={savedSearches}
               activeSearchId={activeSavedSearchId}
               onSelect={handleSelectSavedSearch}
@@ -859,7 +859,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
                 key={load.id}
                 className="grid grid-cols-14 gap-2 px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-default text-xs transition-colors group"
               >
-                <div><DatAgeIndicator date={load.postedAt || load.createdAt} /></div>
+                <div><AgeIndicator date={load.postedAt || load.createdAt} /></div>
                 <div className="text-slate-700">{load.pickupDate ? new Date(load.pickupDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : 'N/A'}</div>
                 <div className="text-slate-700">{getTruckTypeLabel(load.truckType)}</div>
                 <div className="text-slate-700">{load.fullPartial === 'FULL' ? 'F' : 'P'}</div>
@@ -892,7 +892,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
       </div>
 
       {/* Edit Search Modal */}
-      <DatEditSearchModal
+      <EditSearchModal
         search={editingSearch}
         isOpen={!!editingSearch}
         onClose={() => setEditingSearch(null)}

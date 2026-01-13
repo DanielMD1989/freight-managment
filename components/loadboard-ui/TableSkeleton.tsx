@@ -1,18 +1,18 @@
 /**
- * DAT Table Skeleton Component
+ * Table Skeleton Component
  *
  * Loading skeleton for data tables
- * Sprint 14 - Phase 6: Polish & Optimization
+ * Load Board UI Component Library
  */
 
 import React from 'react';
 
-interface DatTableSkeletonProps {
+interface TableSkeletonProps {
   rows?: number;
   columns?: number;
 }
 
-export default function DatTableSkeleton({ rows = 5, columns = 8 }: DatTableSkeletonProps) {
+export default function TableSkeleton({ rows = 5, columns = 8 }: TableSkeletonProps) {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-[#064d51]/15 overflow-hidden">
       {/* Table Header Skeleton */}

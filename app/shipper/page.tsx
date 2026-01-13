@@ -9,10 +9,10 @@ import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth';
-import ShipperDatBoardClient from './dat-board/ShipperDatBoardClient';
+import ShipperLoadboardClient from './loadboard/ShipperLoadboardClient';
 
 export const metadata = {
-  title: 'FreightET Power - Shipper Portal',
+  title: 'FreightET - Shipper Portal',
   description: 'Professional freight load board for shippers',
 };
 
@@ -31,10 +31,10 @@ export default async function ShipperPage() {
     redirect('/unauthorized');
   }
 
-  // Return DAT Power interface wrapped in Suspense for useSearchParams
+  // Return load board interface wrapped in Suspense for useSearchParams
   return (
     <Suspense fallback={<div className="min-h-screen bg-gray-100 animate-pulse" />}>
-      <ShipperDatBoardClient user={session} />
+      <ShipperLoadboardClient user={session} />
     </Suspense>
   );
 }

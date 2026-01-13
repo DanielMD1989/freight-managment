@@ -1,19 +1,19 @@
 'use client';
 
 /**
- * DAT Status Tabs Component
+ * Status Tabs Component
  *
  * Status filter tabs with counts (ALL: 6, POSTED: 4, KEPT: 2, etc.)
- * Sprint 14 - DAT-Style UI Transformation
+ * Load Board UI Component Library
  */
 
-import { DatStatusTabsProps } from '@/types/dat-ui';
+import { StatusTabsProps } from '@/types/loadboard-ui';
 
-export default function DatStatusTabs({
+export default function StatusTabs({
   tabs,
   activeTab,
   onTabChange,
-}: DatStatusTabsProps) {
+}: StatusTabsProps) {
   return (
     <div className="flex gap-2 flex-wrap mb-4">
       {tabs.map((tab) => {

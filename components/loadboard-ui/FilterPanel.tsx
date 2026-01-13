@@ -1,22 +1,22 @@
 'use client';
 
 /**
- * DAT Filter Panel Component
+ * Filter Panel Component
  *
  * Professional filter panel with modern inputs, toggles, and clean design
- * Design System: Clean & Minimal with Teal accent
+ * Load Board UI Component Library
  */
 
 import React, { useState } from 'react';
-import { DatFilterPanelProps, DatFilter } from '@/types/dat-ui';
+import { FilterPanelProps, Filter } from '@/types/loadboard-ui';
 
-export default function DatFilterPanel({
+export default function FilterPanel({
   title,
   filters,
   values,
   onChange,
   onReset,
-}: DatFilterPanelProps) {
+}: FilterPanelProps) {
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
 
   const toggleSection = (key: string) => {
@@ -29,7 +29,7 @@ export default function DatFilterPanel({
     setCollapsedSections(newCollapsed);
   };
 
-  const renderFilter = (filter: DatFilter) => {
+  const renderFilter = (filter: Filter) => {
     const value = values[filter.key];
 
     switch (filter.type) {
