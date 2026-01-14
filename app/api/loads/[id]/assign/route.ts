@@ -303,13 +303,28 @@ export async function POST(
         ? 'Load assigned successfully. GPS tracking enabled.'
         : 'Load assigned successfully. GPS tracking not available for this truck.',
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Assign load error:', error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Validation error', details: error.issues },
         { status: 400 }
+      );
+    }
+
+    // Handle unique constraint violation (race condition)
+    if (error?.code === 'P2002') {
+      const field = error?.meta?.target?.[0] || 'field';
+      if (field === 'assignedTruckId') {
+        return NextResponse.json(
+          { error: 'This truck is already assigned to another load. Please refresh and try again.' },
+          { status: 409 }
+        );
+      }
+      return NextResponse.json(
+        { error: 'A conflict occurred. Please refresh and try again.' },
+        { status: 409 }
       );
     }
 
