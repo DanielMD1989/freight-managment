@@ -81,7 +81,8 @@ export default function TruckBookingModal({ isOpen, onClose, truckPosting, onReq
   const fetchLoads = async () => {
     setLoadingLoads(true);
     try {
-      const response = await fetch('/api/loads?status=POSTED,SEARCHING,OFFERED&limit=100');
+      // Include myLoads=true to only fetch loads belonging to the current user's organization
+      const response = await fetch('/api/loads?status=POSTED,SEARCHING,OFFERED&myLoads=true&limit=100');
       if (response.ok) {
         const data = await response.json();
         setLoads(data.loads || []);
