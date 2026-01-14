@@ -46,6 +46,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedTruckPosting, setSelectedTruckPosting] = useState<any>(null);
   const [editingSearch, setEditingSearch] = useState<SavedSearch | null>(null);
+  const [pendingRequestTruckIds, setPendingRequestTruckIds] = useState<Set<string>>(new Set());
 
   /**
    * Fetch trucks based on filters
@@ -119,6 +120,24 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   };
 
   /**
+   * Fetch pending truck requests to track button states
+   */
+  const fetchPendingTruckRequests = async () => {
+    try {
+      const response = await fetch('/api/truck-requests?status=PENDING');
+      if (response.ok) {
+        const data = await response.json();
+        const truckIds = new Set<string>(
+          (data.requests || []).map((req: any) => req.truckId)
+        );
+        setPendingRequestTruckIds(truckIds);
+      }
+    } catch (error) {
+      console.error('Failed to fetch pending truck requests:', error);
+    }
+  };
+
+  /**
    * Fetch Ethiopian cities for dropdowns
    */
   const fetchEthiopianCities = async () => {
@@ -149,6 +168,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   useEffect(() => {
     fetchSavedSearches();
     fetchEthiopianCities();
+    fetchPendingTruckRequests();
   }, []);
 
   /**
@@ -237,6 +257,13 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   const handleFilterReset = () => {
     setFilterValues({});
     setActiveSearchId(null);
+  };
+
+  /**
+   * Handle successful truck request sent
+   */
+  const handleTruckRequestSent = (truckId: string) => {
+    setPendingRequestTruckIds(prev => new Set([...prev, truckId]));
   };
 
   /**
@@ -780,15 +807,21 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
                   <div>{truck.lengthM ? `${truck.lengthM}m` : '-'}</div>
                   <div>{truck.maxWeight ? `${truck.maxWeight.toLocaleString()} kg` : '-'}</div>
                   <div>
-                    <button
-                      onClick={() => {
-                        setSelectedTruckPosting(truck);
-                        setShowBookingModal(true);
-                      }}
-                      className="px-3 py-1 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-xs font-semibold rounded-lg hover:from-teal-700 hover:to-teal-600 transition-all shadow-sm"
-                    >
-                      BOOK
-                    </button>
+                    {pendingRequestTruckIds.has(truck.truck?.id || truck.truckId) ? (
+                      <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-lg">
+                        REQUEST SENT
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setSelectedTruckPosting(truck);
+                          setShowBookingModal(true);
+                        }}
+                        className="px-3 py-1 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-xs font-semibold rounded-lg hover:from-teal-700 hover:to-teal-600 transition-all shadow-sm"
+                      >
+                        BOOK
+                      </button>
+                    )}
                   </div>
                 </div>
               ))
@@ -825,6 +858,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
           setSelectedTruckPosting(null);
         }}
         truckPosting={selectedTruckPosting}
+        onRequestSent={handleTruckRequestSent}
       />
 
       {/* Edit Search Modal */}

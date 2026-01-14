@@ -57,6 +57,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
   // Load request modal state
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [selectedLoad, setSelectedLoad] = useState<any | null>(null);
+  const [pendingRequestLoadIds, setPendingRequestLoadIds] = useState<Set<string>>(new Set());
 
   // Search form state
   const [filterValues, setFilterValues] = useState<Record<string, any>>({
@@ -72,6 +73,24 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
     weight: '',
     searchBack: '',
   });
+
+  /**
+   * Fetch pending load requests to track button states
+   */
+  const fetchPendingLoadRequests = async () => {
+    try {
+      const response = await fetch('/api/load-requests?status=PENDING');
+      if (response.ok) {
+        const data = await response.json();
+        const loadIds = new Set<string>(
+          (data.requests || []).map((req: any) => req.loadId)
+        );
+        setPendingRequestLoadIds(loadIds);
+      }
+    } catch (error) {
+      console.error('Failed to fetch pending load requests:', error);
+    }
+  };
 
   /**
    * Fetch Ethiopian cities
@@ -92,6 +111,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
   useEffect(() => {
     fetchEthiopianCities();
     fetchSavedSearches();
+    fetchPendingLoadRequests();
   }, []);
 
   /**
@@ -246,6 +266,13 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
       weight: '',
       searchBack: '',
     });
+  };
+
+  /**
+   * Handle successful load request sent
+   */
+  const handleLoadRequestSent = (loadId: string) => {
+    setPendingRequestLoadIds(prev => new Set([...prev, loadId]));
   };
 
   /**
@@ -880,15 +907,21 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
                 <div className="text-slate-600">{load.lengthM ? `${load.lengthM}m` : 'N/A'}</div>
                 <div className="text-slate-600">{load.weight ? `${load.weight.toLocaleString()}kg` : 'N/A'}</div>
                 <div>
-                  <button
-                    onClick={() => {
-                      setSelectedLoad(load);
-                      setShowRequestModal(true);
-                    }}
-                    className="px-3 py-1 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-xs font-semibold rounded-lg hover:from-teal-700 hover:to-teal-600 transition-all shadow-sm"
-                  >
-                    REQUEST
-                  </button>
+                  {pendingRequestLoadIds.has(load.id) ? (
+                    <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-lg">
+                      REQUEST SENT
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setSelectedLoad(load);
+                        setShowRequestModal(true);
+                      }}
+                      className="px-3 py-1 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-xs font-semibold rounded-lg hover:from-teal-700 hover:to-teal-600 transition-all shadow-sm"
+                    >
+                      REQUEST
+                    </button>
+                  )}
                 </div>
               </div>
             ))
@@ -914,6 +947,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
           setSelectedLoad(null);
         }}
         load={selectedLoad}
+        onRequestSent={handleLoadRequestSent}
       />
     </div>
   );

@@ -52,9 +52,10 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   truckPosting: TruckPosting | null;
+  onRequestSent?: (truckId: string) => void;
 }
 
-export default function TruckBookingModal({ isOpen, onClose, truckPosting }: Props) {
+export default function TruckBookingModal({ isOpen, onClose, truckPosting, onRequestSent }: Props) {
   const [loads, setLoads] = useState<Load[]>([]);
   const [selectedLoadId, setSelectedLoadId] = useState<string>('');
   const [offeredRate, setOfferedRate] = useState<string>('');
@@ -127,6 +128,10 @@ export default function TruckBookingModal({ isOpen, onClose, truckPosting }: Pro
       }
 
       setSuccess(true);
+      // Notify parent that request was sent for this truck
+      if (onRequestSent && truckPosting?.truck?.id) {
+        onRequestSent(truckPosting.truck.id);
+      }
       setTimeout(() => {
         onClose();
       }, 2000);

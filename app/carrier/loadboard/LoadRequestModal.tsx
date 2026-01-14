@@ -36,9 +36,10 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   load: Load | null;
+  onRequestSent?: (loadId: string) => void;
 }
 
-export default function LoadRequestModal({ isOpen, onClose, load }: Props) {
+export default function LoadRequestModal({ isOpen, onClose, load, onRequestSent }: Props) {
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [selectedTruckId, setSelectedTruckId] = useState<string>('');
   const [proposedRate, setProposedRate] = useState<string>('');
@@ -103,6 +104,10 @@ export default function LoadRequestModal({ isOpen, onClose, load }: Props) {
       }
 
       setSuccess(true);
+      // Notify parent that request was sent for this load
+      if (onRequestSent && load?.id) {
+        onRequestSent(load.id);
+      }
       setTimeout(() => {
         onClose();
       }, 2000);
