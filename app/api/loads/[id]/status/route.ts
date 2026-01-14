@@ -132,12 +132,21 @@ export async function PATCH(
       }
     }
 
+    // Determine if truck should be unassigned (terminal states)
+    const terminalStatuses = ['COMPLETED', 'DELIVERED', 'CANCELLED', 'EXPIRED'];
+    const shouldUnassignTruck = terminalStatuses.includes(newStatus) && load.assignedTruckId;
+
     // Update load status
     const updatedLoad = await db.load.update({
       where: { id: loadId },
       data: {
         status: newStatus,
         updatedAt: new Date(),
+        // Unassign truck when load reaches terminal state
+        ...(shouldUnassignTruck && {
+          assignedTruckId: null,
+          trackingEnabled: false,
+        }),
       },
       select: {
         id: true,
@@ -149,6 +158,18 @@ export async function PATCH(
         updatedAt: true,
       },
     });
+
+    // Log truck unassignment if it happened
+    if (shouldUnassignTruck) {
+      await db.loadEvent.create({
+        data: {
+          loadId,
+          eventType: 'UNASSIGNED',
+          description: `Truck automatically unassigned - load status changed to ${newStatus}`,
+          userId: session.userId,
+        },
+      });
+    }
 
     // Log the status change
     console.log(`Load ${loadId} status updated: ${load.status} → ${newStatus}`, {
