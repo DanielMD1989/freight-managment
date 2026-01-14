@@ -164,13 +164,10 @@ export async function POST(
         );
       }
 
-      // Check if truck is already assigned to another active load
+      // Check if truck is already assigned to another load (unique constraint on assignedTruckId)
       const existingAssignment = await db.load.findFirst({
         where: {
           assignedTruckId: truckRequest.truckId,
-          status: {
-            in: ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT'],
-          },
         },
         select: {
           id: true,
@@ -181,14 +178,24 @@ export async function POST(
       });
 
       if (existingAssignment) {
-        return NextResponse.json(
-          {
-            error: `This truck is already assigned to an active load (${existingAssignment.pickupCity} → ${existingAssignment.deliveryCity})`,
-            existingLoadId: existingAssignment.id,
-            existingLoadStatus: existingAssignment.status,
-          },
-          { status: 400 }
-        );
+        // If the existing load is completed/delivered/cancelled, unassign it first
+        const inactiveStatuses = ['DELIVERED', 'COMPLETED', 'CANCELLED', 'EXPIRED'];
+        if (inactiveStatuses.includes(existingAssignment.status)) {
+          // Unassign truck from completed load
+          await db.load.update({
+            where: { id: existingAssignment.id },
+            data: { assignedTruckId: null },
+          });
+        } else {
+          return NextResponse.json(
+            {
+              error: `This truck is already assigned to an active load (${existingAssignment.pickupCity} → ${existingAssignment.deliveryCity})`,
+              existingLoadId: existingAssignment.id,
+              existingLoadStatus: existingAssignment.status,
+            },
+            { status: 400 }
+          );
+        }
       }
 
       // Transaction: Update request and assign load
