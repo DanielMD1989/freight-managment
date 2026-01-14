@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Bell, BellOff, Check, X } from 'lucide-react';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface NotificationPreference {
   type: string;
@@ -98,9 +99,10 @@ export default function NotificationPreferences() {
     setIsLoading(true);
     try {
       // TODO: Save preferences to backend API
+      const csrfToken = await getCSRFToken();
       const response = await fetch('/api/user/notification-preferences', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         body: JSON.stringify({ preferences }),
       });
 

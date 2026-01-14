@@ -10,6 +10,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 // Simple time-ago utility function
 function getTimeAgo(date: Date): string {
@@ -143,8 +144,10 @@ export default function SettlementReviewClient() {
     setApprovalSuccess(null);
 
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/admin/settlements/${loadId}/approve`, {
         method: 'POST',
+        headers: { 'X-CSRF-Token': csrfToken },
         credentials: 'include',
       });
 

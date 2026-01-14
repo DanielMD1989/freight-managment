@@ -10,6 +10,7 @@
 import React, { useState } from 'react';
 import { ActionButton } from '@/components/loadboard-ui';
 import { ETHIOPIAN_LOCATIONS } from '@/lib/constants/ethiopian-locations';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface TruckSearchModalProps {
   isOpen: boolean;
@@ -87,9 +88,10 @@ export default function TruckSearchModal({
       if (formData.showVerifiedOnly) criteria.verifiedOnly = true;
 
       // Save search
+      const csrfToken = await getCSRFToken();
       const response = await fetch('/api/saved-searches', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         body: JSON.stringify({
           name: formData.name,
           type: 'TRUCKS',

@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AgeIndicator } from '@/components/loadboard-ui';
 import { useToast } from '@/components/Toast/ToastContext';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface PostLoadsTabProps {
   user: any;
@@ -109,9 +110,13 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
     if (!confirm('Remove this load from the marketplace?')) return;
 
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/loads/${load.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify({ status: 'UNPOSTED' }),
       });
 

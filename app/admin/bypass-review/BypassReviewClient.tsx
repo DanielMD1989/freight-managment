@@ -10,6 +10,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface FlaggedOrganization {
   id: string;
@@ -64,9 +65,13 @@ export default function BypassReviewClient() {
     }
 
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch('/api/admin/bypass-warnings/organizations', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify({
           organizationId: orgId,
           isFlagged: false,

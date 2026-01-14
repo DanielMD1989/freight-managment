@@ -11,6 +11,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface AutomationSettings {
   settlementAutomationEnabled: boolean;
@@ -93,9 +94,13 @@ export default function AutomationRulesClient({
       setSuccessMessage('');
       setErrorMessage('');
 
+      const csrfToken = await getCSRFToken();
       const response = await fetch('/api/admin/settings', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify(settings),
         credentials: 'include',
       });

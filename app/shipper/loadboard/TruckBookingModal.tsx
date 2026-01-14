@@ -10,6 +10,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface Load {
   id: string;
@@ -99,9 +100,17 @@ export default function TruckBookingModal({ isOpen, onClose, truckPosting }: Pro
     setError(null);
 
     try {
+      const csrfToken = await getCSRFToken();
+      if (!csrfToken) {
+        throw new Error('Failed to get security token. Please try again.');
+      }
+
       const response = await fetch('/api/truck-requests', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify({
           loadId: selectedLoadId,
           truckId: truckPosting.truck.id,

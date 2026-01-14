@@ -9,6 +9,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface QuickAssignModalProps {
   isOpen: boolean;
@@ -96,10 +97,12 @@ export default function QuickAssignModal({
     setError(null);
 
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/loads/${loadId}/assign`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify({
           truckPostingId: selectedTruckId,

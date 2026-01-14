@@ -12,6 +12,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { VerifiedBadgeWithLabel } from '@/components/VerifiedBadge';
 import { toast } from 'react-hot-toast';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface Load {
   id: string;
@@ -154,10 +155,12 @@ export default function TruckMatchesClient({
     setShowConfirmModal(null);
 
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/loads/${currentLoadId}/assign`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify({ truckId }),
         credentials: 'include',

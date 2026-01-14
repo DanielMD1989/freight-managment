@@ -11,6 +11,7 @@ import React, { useState, useEffect } from 'react';
 import { StatusTabs, AgeIndicator, SavedSearches, EditSearchModal } from '@/components/loadboard-ui';
 import { StatusTab, SavedSearch, SavedSearchCriteria } from '@/types/loadboard-ui';
 import LoadRequestModal from './LoadRequestModal';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface SearchLoadsTabProps {
   user: any;
@@ -117,9 +118,10 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
     if (!name) return;
 
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch('/api/saved-searches', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         body: JSON.stringify({
           name,
           type: 'LOADS',
@@ -161,8 +163,10 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
     if (!confirm('Are you sure you want to delete this saved search?')) return;
 
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/saved-searches/${searchId}`, {
         method: 'DELETE',
+        headers: { 'X-CSRF-Token': csrfToken },
       });
 
       if (response.ok) {
@@ -200,9 +204,10 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
    */
   const updateSavedSearch = async (searchId: string, updates: any) => {
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/saved-searches/${searchId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         body: JSON.stringify(updates),
       });
 

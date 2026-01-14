@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface Load {
   id: string;
@@ -176,8 +177,12 @@ export default function LoadManagementClient({
   const handleCopyLoad = async (loadId: string) => {
     setCopyingLoadId(loadId);
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/loads/${loadId}/duplicate`, {
         method: 'POST',
+        headers: {
+          'X-CSRF-Token': csrfToken,
+        },
         credentials: 'include',
       });
 
@@ -206,9 +211,10 @@ export default function LoadManagementClient({
   const handlePostLoad = async (loadId: string) => {
     setPostingLoadId(loadId);
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/loads/${loadId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         credentials: 'include',
         body: JSON.stringify({ status: 'POSTED' }),
       });
@@ -236,8 +242,12 @@ export default function LoadManagementClient({
   const handleDeleteLoad = async (loadId: string) => {
     setIsDeleting(true);
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/loads/${loadId}`, {
         method: 'DELETE',
+        headers: {
+          'X-CSRF-Token': csrfToken,
+        },
         credentials: 'include',
       });
 

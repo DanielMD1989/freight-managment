@@ -21,6 +21,7 @@ import {
 } from '@/components/loadboard-ui';
 import { TableColumn, StatusTab, Filter, RowAction, SavedSearch, SavedSearchCriteria } from '@/types/loadboard-ui';
 import TruckBookingModal from './TruckBookingModal';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface SearchTrucksTabProps {
   user: any;
@@ -168,8 +169,12 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
     if (!confirm('Delete this saved search?')) return;
 
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/saved-searches/${searchId}`, {
         method: 'DELETE',
+        headers: {
+          'X-CSRF-Token': csrfToken,
+        },
       });
 
       if (!response.ok) throw new Error('Failed to delete search');
@@ -199,9 +204,13 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
    */
   const handleSaveEditedSearch = async (id: string, updates: { name?: string; criteria?: SavedSearchCriteria }) => {
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/saved-searches/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify(updates),
       });
 

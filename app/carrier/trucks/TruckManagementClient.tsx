@@ -12,6 +12,7 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface Truck {
   id: string;
@@ -206,9 +207,13 @@ export default function TruckManagementClient({
   const handleDelete = async (truckId: string) => {
     setIsDeleting(true);
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/trucks/${truckId}`, {
         method: 'DELETE',
         credentials: 'include',
+        headers: {
+          'X-CSRF-Token': csrfToken,
+        },
       });
 
       if (!response.ok) {

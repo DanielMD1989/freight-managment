@@ -190,6 +190,14 @@ export default function AddTruckForm() {
     setUploadingDocs(true);
     let allSuccessful = true;
 
+    // Get CSRF token for uploads
+    const csrfToken = await getCSRFToken();
+    if (!csrfToken) {
+      console.error('Failed to get CSRF token for document upload');
+      setUploadingDocs(false);
+      return false;
+    }
+
     for (const doc of queuedDocuments) {
       try {
         const formData = new FormData();
@@ -200,6 +208,9 @@ export default function AddTruckForm() {
 
         const response = await fetch('/api/documents/upload', {
           method: 'POST',
+          headers: {
+            'X-CSRF-Token': csrfToken,
+          },
           body: formData,
         });
 

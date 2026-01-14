@@ -9,6 +9,7 @@
 
 import React, { useState } from 'react';
 import { ActionButton } from '@/components/loadboard-ui';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface LoadSearchModalProps {
   isOpen: boolean;
@@ -73,9 +74,10 @@ export default function LoadSearchModal({
       if (formData.showVerifiedOnly) criteria.verifiedOnly = true;
 
       // Save search
+      const csrfToken = await getCSRFToken();
       const response = await fetch('/api/saved-searches', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         body: JSON.stringify({
           name: formData.name,
           type: 'LOADS',

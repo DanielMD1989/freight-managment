@@ -9,6 +9,7 @@
 'use client';
 
 import { useState } from 'react';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface ReportBypassButtonProps {
   loadId: string;
@@ -34,10 +35,12 @@ export default function ReportBypassButton({
       setLoading(true);
       setError(null);
 
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/loads/${loadId}/report-bypass`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify({ reason }),
       });

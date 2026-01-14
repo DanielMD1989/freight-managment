@@ -18,6 +18,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import GoogleMap, { MapMarker, MapRoute } from '@/components/GoogleMap';
 import { useGpsRealtime, GpsPosition } from '@/hooks/useGpsRealtime';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface Truck {
   id: string;
@@ -229,9 +230,10 @@ export default function DispatcherMapPage() {
       .slice(0, 10);
 
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch('/api/routes/distance', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         body: JSON.stringify({
           pairs: availableTrucks.map(truck => ({
             origin: { lat: truck.currentLocation!.lat, lng: truck.currentLocation!.lng },

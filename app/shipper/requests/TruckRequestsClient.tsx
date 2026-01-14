@@ -8,6 +8,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface TruckRequest {
   id: string;
@@ -69,9 +70,13 @@ export default function TruckRequestsClient({ requests: initialRequests }: Props
     setError(null);
 
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/truck-requests/${requestId}`, {
         method: 'DELETE',
         credentials: 'include',
+        headers: {
+          'X-CSRF-Token': csrfToken,
+        },
       });
 
       if (!response.ok) {

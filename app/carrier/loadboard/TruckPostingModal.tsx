@@ -8,6 +8,7 @@
 
 import React, { useState } from 'react';
 import PlacesAutocomplete, { PlaceResult } from '@/components/PlacesAutocomplete';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface TruckPostingModalProps {
   isOpen: boolean;
@@ -56,6 +57,14 @@ export default function TruckPostingModal({
 
     setLoading(true);
     try {
+      // Get CSRF token for secure submission
+      const csrfToken = await getCSRFToken();
+      if (!csrfToken) {
+        alert('Failed to get security token. Please refresh and try again.');
+        setLoading(false);
+        return;
+      }
+
       // Find first truck from user's organization
       const trucksResponse = await fetch(`/api/trucks?organizationId=${user.organizationId}&limit=1`);
       const trucksData = await trucksResponse.json();
@@ -71,7 +80,7 @@ export default function TruckPostingModal({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': 'temp-token',
+          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify({
           truckId: userTruck.id,

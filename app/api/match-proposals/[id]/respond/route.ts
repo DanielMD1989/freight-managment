@@ -153,6 +153,32 @@ export async function POST(
         );
       }
 
+      // Check if truck is already assigned to another active load
+      const existingAssignment = await db.load.findFirst({
+        where: {
+          assignedTruckId: proposal.truckId,
+          status: {
+            in: ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT'],
+          },
+        },
+        select: {
+          id: true,
+          referenceNumber: true,
+          status: true,
+        },
+      });
+
+      if (existingAssignment) {
+        return NextResponse.json(
+          {
+            error: `This truck is already assigned to an active load (${existingAssignment.referenceNumber || existingAssignment.id.slice(-8)})`,
+            existingLoadId: existingAssignment.id,
+            existingLoadStatus: existingAssignment.status,
+          },
+          { status: 400 }
+        );
+      }
+
       // Transaction: Update proposal and assign load
       const result = await db.$transaction(async (tx) => {
         // Update proposal to accepted
@@ -286,8 +312,23 @@ export async function POST(
         message: 'Proposal rejected.',
       });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error responding to match proposal:', error);
+
+    // Handle unique constraint violation (race condition)
+    if (error?.code === 'P2002') {
+      const field = error?.meta?.target?.[0] || 'field';
+      if (field === 'assignedTruckId') {
+        return NextResponse.json(
+          { error: 'This truck is already assigned to another load. Please refresh and try again.' },
+          { status: 409 }
+        );
+      }
+      return NextResponse.json(
+        { error: 'A conflict occurred. Please refresh and try again.' },
+        { status: 409 }
+      );
+    }
 
     return NextResponse.json(
       { error: 'Failed to respond to match proposal' },

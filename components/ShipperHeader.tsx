@@ -8,7 +8,7 @@
  */
 
 import NotificationBell from '@/components/NotificationBell';
-import { clearCSRFToken } from '@/lib/csrfFetch';
+import { clearCSRFToken, getCSRFToken } from '@/lib/csrfFetch';
 
 interface ShipperHeaderProps {
   user: {
@@ -21,8 +21,10 @@ interface ShipperHeaderProps {
 export default function ShipperHeader({ user }: ShipperHeaderProps) {
   const handleLogout = async () => {
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
+        headers: { 'X-CSRF-Token': csrfToken },
         credentials: 'include',
       });
       if (response.ok) {

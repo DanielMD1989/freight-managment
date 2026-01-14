@@ -9,6 +9,7 @@
 'use client';
 
 import { useState } from 'react';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface StatusUpdateModalProps {
   isOpen: boolean;
@@ -53,10 +54,12 @@ export default function StatusUpdateModal({
     setError(null);
 
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/loads/${loadId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify({
           status: selectedStatus,

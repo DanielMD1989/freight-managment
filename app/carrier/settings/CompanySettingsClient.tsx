@@ -9,6 +9,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface Organization {
   id: string;
@@ -66,9 +67,13 @@ export default function CompanySettingsClient({ organization }: Props) {
     setError(null);
 
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/organizations/${organization.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify(formData),
         credentials: 'include',
       });

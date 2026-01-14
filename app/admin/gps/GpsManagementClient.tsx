@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import GpsStatusBadge from '@/components/GpsStatusBadge';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface GpsDevice {
   id: string;
@@ -57,8 +58,10 @@ export default function GpsManagementClient() {
 
   const handleVerifyGps = async (deviceId: string) => {
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/gps/devices/${deviceId}/verify`, {
         method: 'POST',
+        headers: { 'X-CSRF-Token': csrfToken },
       });
 
       if (!response.ok) {
@@ -77,8 +80,10 @@ export default function GpsManagementClient() {
     }
 
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/gps/devices/${deviceId}`, {
         method: 'DELETE',
+        headers: { 'X-CSRF-Token': csrfToken },
       });
 
       if (!response.ok) {

@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/Toast';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface Corridor {
   id: string;
@@ -221,9 +222,13 @@ export default function CorridorManagementClient() {
         ? `/api/admin/corridors/${editingCorridor.id}`
         : '/api/admin/corridors';
 
+      const csrfToken = await getCSRFToken();
       const response = await fetch(url, {
         method: editingCorridor ? 'PATCH' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify(payload),
       });
 
@@ -246,9 +251,13 @@ export default function CorridorManagementClient() {
   // Toggle corridor active status
   const handleToggleActive = async (corridor: Corridor) => {
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/admin/corridors/${corridor.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify({ isActive: !corridor.isActive }),
       });
 

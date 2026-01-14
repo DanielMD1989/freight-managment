@@ -476,8 +476,17 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
    */
   const handleCopy = async (truck: any) => {
     try {
+      const csrfToken = await getCSRFToken();
+      if (!csrfToken) {
+        toast.error('Failed to get security token. Please refresh and try again.');
+        return;
+      }
+
       const response = await fetch(`/api/truck-postings/${truck.id}/duplicate`, {
         method: 'POST',
+        headers: {
+          'X-CSRF-Token': csrfToken,
+        },
       });
 
       if (!response.ok) throw new Error('Failed to duplicate truck');
@@ -500,8 +509,17 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     }
 
     try {
+      const csrfToken = await getCSRFToken();
+      if (!csrfToken) {
+        toast.error('Failed to get security token. Please refresh and try again.');
+        return;
+      }
+
       const response = await fetch(`/api/truck-postings/${truck.id}`, {
         method: 'DELETE',
+        headers: {
+          'X-CSRF-Token': csrfToken,
+        },
       });
 
       if (!response.ok) throw new Error('Failed to delete truck');

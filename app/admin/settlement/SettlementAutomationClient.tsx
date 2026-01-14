@@ -9,6 +9,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface SettlementStats {
   pendingPODSubmission: number;
@@ -62,9 +63,10 @@ export default function SettlementAutomationClient() {
       setRunning(true);
       setResult(null);
 
+      const csrfToken = await getCSRFToken();
       const response = await fetch(
         `/api/admin/settlement-automation?action=${action}`,
-        { method: 'POST' }
+        { method: 'POST', headers: { 'X-CSRF-Token': csrfToken } }
       );
 
       if (response.ok) {

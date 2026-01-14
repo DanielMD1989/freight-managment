@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface CommissionRates {
   current: {
@@ -60,10 +61,12 @@ export default function CommissionSettingsClient() {
       setSaving(true);
       setError(null);
 
+      const csrfToken = await getCSRFToken();
       const response = await fetch('/api/admin/commission-rates', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify({
           shipperRate: parseFloat(shipperRate),

@@ -9,6 +9,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface Member {
   id: string;
@@ -64,9 +65,10 @@ export default function TeamManagementClient({
     setError(null);
 
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch('/api/organizations/invitations', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         body: JSON.stringify({
           email: inviteEmail,
           role: inviteRole,
@@ -97,8 +99,10 @@ export default function TeamManagementClient({
     if (!confirm('Are you sure you want to cancel this invitation?')) return;
 
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/organizations/invitations/${invitationId}`, {
         method: 'DELETE',
+        headers: { 'X-CSRF-Token': csrfToken },
         credentials: 'include',
       });
 
@@ -125,8 +129,10 @@ export default function TeamManagementClient({
     }
 
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/organizations/members/${memberId}`, {
         method: 'DELETE',
+        headers: { 'X-CSRF-Token': csrfToken },
         credentials: 'include',
       });
 

@@ -8,6 +8,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface TruckRequest {
   id: string;
@@ -72,9 +73,10 @@ export default function CarrierRequestsClient({ requests: initialRequests }: Pro
     setError(null);
 
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/truck-requests/${requestId}/respond`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         body: JSON.stringify({
           action: approve ? 'APPROVE' : 'REJECT',
           responseNotes: responseNotes[requestId] || undefined,

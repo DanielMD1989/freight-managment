@@ -9,6 +9,7 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface Organization {
   id: string;
@@ -144,8 +145,10 @@ export default function OrganizationManagementClient({
     }
 
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/admin/organizations/${orgId}/verify`, {
         method: 'POST',
+        headers: { 'X-CSRF-Token': csrfToken },
       });
 
       if (response.ok) {
@@ -173,8 +176,10 @@ export default function OrganizationManagementClient({
     }
 
     try {
+      const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/admin/organizations/${orgId}/verify`, {
         method: 'DELETE',
+        headers: { 'X-CSRF-Token': csrfToken },
       });
 
       if (response.ok) {
