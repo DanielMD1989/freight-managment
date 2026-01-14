@@ -181,7 +181,7 @@ export default function LoadManagementClient({
       const response = await fetch(`/api/loads/${loadId}/duplicate`, {
         method: 'POST',
         headers: {
-          'X-CSRF-Token': csrfToken,
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         credentials: 'include',
       });
@@ -214,7 +214,7 @@ export default function LoadManagementClient({
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/loads/${loadId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        headers: { 'Content-Type': 'application/json', ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
         credentials: 'include',
         body: JSON.stringify({ status: 'POSTED' }),
       });
@@ -246,7 +246,7 @@ export default function LoadManagementClient({
       const response = await fetch(`/api/loads/${loadId}`, {
         method: 'DELETE',
         headers: {
-          'X-CSRF-Token': csrfToken,
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         credentials: 'include',
       });

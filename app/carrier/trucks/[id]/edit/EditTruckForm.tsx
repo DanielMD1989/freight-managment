@@ -192,7 +192,7 @@ export default function EditTruckForm({ truck, isResubmit }: EditTruckFormProps)
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         body: JSON.stringify(updateData),
         credentials: 'include',

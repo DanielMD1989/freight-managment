@@ -61,7 +61,7 @@ export default function GpsManagementClient() {
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/gps/devices/${deviceId}/verify`, {
         method: 'POST',
-        headers: { 'X-CSRF-Token': csrfToken },
+        headers: { ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
       });
 
       if (!response.ok) {
@@ -83,7 +83,7 @@ export default function GpsManagementClient() {
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/gps/devices/${deviceId}`, {
         method: 'DELETE',
-        headers: { 'X-CSRF-Token': csrfToken },
+        headers: { ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
       });
 
       if (!response.ok) {

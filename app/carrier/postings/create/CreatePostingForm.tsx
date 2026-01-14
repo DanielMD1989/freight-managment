@@ -183,7 +183,7 @@ export default function CreatePostingForm({ trucks }: { trucks: Truck[] }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         body: JSON.stringify(postingData),
         credentials: 'include',

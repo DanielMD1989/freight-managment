@@ -148,7 +148,7 @@ export default function OrganizationManagementClient({
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/admin/organizations/${orgId}/verify`, {
         method: 'POST',
-        headers: { 'X-CSRF-Token': csrfToken },
+        headers: { ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
       });
 
       if (response.ok) {
@@ -179,7 +179,7 @@ export default function OrganizationManagementClient({
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/admin/organizations/${orgId}/verify`, {
         method: 'DELETE',
-        headers: { 'X-CSRF-Token': csrfToken },
+        headers: { ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
       });
 
       if (response.ok) {

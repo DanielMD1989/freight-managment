@@ -136,7 +136,7 @@ export default function DocumentManagementClient({
       const response = await fetch('/api/documents/upload', {
         method: 'POST',
         headers: {
-          'X-CSRF-Token': csrfToken,
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         body: formData,
         credentials: 'include',
@@ -179,7 +179,7 @@ export default function DocumentManagementClient({
         {
           method: 'DELETE',
           headers: {
-            'X-CSRF-Token': csrfToken,
+            ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
           },
           credentials: 'include',
         }

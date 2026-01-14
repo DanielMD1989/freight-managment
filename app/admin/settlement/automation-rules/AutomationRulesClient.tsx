@@ -99,7 +99,7 @@ export default function AutomationRulesClient({
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         body: JSON.stringify(settings),
         credentials: 'include',

@@ -75,7 +75,7 @@ export default function TruckRequestsClient({ requests: initialRequests }: Props
         method: 'DELETE',
         credentials: 'include',
         headers: {
-          'X-CSRF-Token': csrfToken,
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
       });
 

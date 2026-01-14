@@ -80,7 +80,7 @@ export default function TruckPostingModal({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         body: JSON.stringify({
           truckId: userTruck.id,

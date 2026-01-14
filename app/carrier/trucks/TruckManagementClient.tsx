@@ -212,7 +212,7 @@ export default function TruckManagementClient({
         method: 'DELETE',
         credentials: 'include',
         headers: {
-          'X-CSRF-Token': csrfToken,
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
       });
 

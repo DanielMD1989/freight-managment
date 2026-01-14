@@ -81,7 +81,7 @@ export default function CarrierLoadboardClient({ user }: CarrierLoadboardClientP
       const csrfToken = await getCSRFToken();
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
-        headers: { 'X-CSRF-Token': csrfToken },
+        headers: { ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
         credentials: 'include',
       });
 

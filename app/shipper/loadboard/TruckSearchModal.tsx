@@ -91,7 +91,7 @@ export default function TruckSearchModal({
       const csrfToken = await getCSRFToken();
       const response = await fetch('/api/saved-searches', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        headers: { 'Content-Type': 'application/json', ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
         body: JSON.stringify({
           name: formData.name,
           type: 'TRUCKS',

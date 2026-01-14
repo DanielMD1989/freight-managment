@@ -66,7 +66,7 @@ export default function SettlementAutomationClient() {
       const csrfToken = await getCSRFToken();
       const response = await fetch(
         `/api/admin/settlement-automation?action=${action}`,
-        { method: 'POST', headers: { 'X-CSRF-Token': csrfToken } }
+        { method: 'POST', headers: { ...(csrfToken && { 'X-CSRF-Token': csrfToken }) } }
       );
 
       if (response.ok) {

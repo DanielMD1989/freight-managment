@@ -173,7 +173,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
       const response = await fetch(`/api/saved-searches/${searchId}`, {
         method: 'DELETE',
         headers: {
-          'X-CSRF-Token': csrfToken,
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
       });
 
@@ -209,7 +209,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         body: JSON.stringify(updates),
       });

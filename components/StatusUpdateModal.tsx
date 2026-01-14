@@ -59,7 +59,7 @@ export default function StatusUpdateModal({
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         body: JSON.stringify({
           status: selectedStatus,

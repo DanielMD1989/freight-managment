@@ -450,7 +450,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         body: JSON.stringify({
           status: 'ACTIVE',
@@ -485,7 +485,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       const response = await fetch(`/api/truck-postings/${truck.id}/duplicate`, {
         method: 'POST',
         headers: {
-          'X-CSRF-Token': csrfToken,
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
       });
 
@@ -518,7 +518,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       const response = await fetch(`/api/truck-postings/${truck.id}`, {
         method: 'DELETE',
         headers: {
-          'X-CSRF-Token': csrfToken,
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
       });
 
@@ -735,7 +735,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         body: JSON.stringify({
           loadId: selectedLoadForRequest.id,
@@ -1155,7 +1155,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         body: JSON.stringify(updatePayload),
       });

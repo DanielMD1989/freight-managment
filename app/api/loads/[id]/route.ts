@@ -18,6 +18,7 @@ import {
   incrementCancelledLoads,
 } from "@/lib/trustMetrics";
 import { checkSuspiciousCancellation } from "@/lib/bypassDetection";
+import { validateStateTransition, LoadStatus } from "@/lib/loadStateMachine";
 
 const updateLoadSchema = z.object({
   status: z.enum(["DRAFT", "POSTED", "UNPOSTED", "ASSIGNED", "IN_TRANSIT", "DELIVERED", "CANCELLED", "EXPIRED"]).optional(),
@@ -178,6 +179,7 @@ export async function PATCH(
         shipperId: true,
         status: true,
         createdById: true,
+        assignedTruckId: true,
       },
     });
 
@@ -275,6 +277,29 @@ export async function PATCH(
       }
     }
 
+    // Validate state transition if status is changing
+    if (validatedData.status && validatedData.status !== existingLoad.status) {
+      const stateValidation = validateStateTransition(
+        existingLoad.status,
+        validatedData.status as LoadStatus,
+        session.role
+      );
+
+      if (!stateValidation.valid) {
+        return NextResponse.json(
+          { error: stateValidation.error },
+          { status: 400 }
+        );
+      }
+
+      // Auto-unassign truck when status changes to terminal states
+      const terminalStatuses = ['DELIVERED', 'COMPLETED', 'CANCELLED', 'EXPIRED'];
+      if (terminalStatuses.includes(validatedData.status) && existingLoad.assignedTruckId) {
+        additionalData.assignedTruckId = null;
+        additionalData.trackingEnabled = false;
+      }
+    }
+
     const load = await db.load.update({
       where: { id },
       data: {
@@ -282,6 +307,23 @@ export async function PATCH(
         ...additionalData,
       },
     });
+
+    // Log truck unassignment if it happened
+    const terminalStatuses = ['DELIVERED', 'COMPLETED', 'CANCELLED', 'EXPIRED'];
+    if (
+      validatedData.status &&
+      terminalStatuses.includes(validatedData.status) &&
+      existingLoad.assignedTruckId
+    ) {
+      await db.loadEvent.create({
+        data: {
+          loadId: id,
+          eventType: 'UNASSIGNED',
+          description: `Truck automatically unassigned - load status changed to ${validatedData.status}`,
+          userId: session.userId,
+        },
+      });
+    }
 
     // Sprint 16: Update trust metrics on status change
     if (validatedData.status === "DELIVERED") {

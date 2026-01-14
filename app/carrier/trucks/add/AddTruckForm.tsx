@@ -209,7 +209,7 @@ export default function AddTruckForm() {
         const response = await fetch('/api/documents/upload', {
           method: 'POST',
           headers: {
-            'X-CSRF-Token': csrfToken,
+            ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
           },
           body: formData,
         });
@@ -288,7 +288,7 @@ export default function AddTruckForm() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         body: JSON.stringify(truckData),
         credentials: 'include',

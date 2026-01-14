@@ -121,7 +121,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
       const csrfToken = await getCSRFToken();
       const response = await fetch('/api/saved-searches', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        headers: { 'Content-Type': 'application/json', ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
         body: JSON.stringify({
           name,
           type: 'LOADS',
@@ -166,7 +166,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/saved-searches/${searchId}`, {
         method: 'DELETE',
-        headers: { 'X-CSRF-Token': csrfToken },
+        headers: { ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
       });
 
       if (response.ok) {
@@ -207,7 +207,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/saved-searches/${searchId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        headers: { 'Content-Type': 'application/json', ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
         body: JSON.stringify(updates),
       });
 

@@ -68,7 +68,7 @@ export default function TeamManagementClient({
       const csrfToken = await getCSRFToken();
       const response = await fetch('/api/organizations/invitations', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        headers: { 'Content-Type': 'application/json', ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
         body: JSON.stringify({
           email: inviteEmail,
           role: inviteRole,
@@ -102,7 +102,7 @@ export default function TeamManagementClient({
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/organizations/invitations/${invitationId}`, {
         method: 'DELETE',
-        headers: { 'X-CSRF-Token': csrfToken },
+        headers: { ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
         credentials: 'include',
       });
 
@@ -132,7 +132,7 @@ export default function TeamManagementClient({
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/organizations/members/${memberId}`, {
         method: 'DELETE',
-        headers: { 'X-CSRF-Token': csrfToken },
+        headers: { ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
         credentials: 'include',
       });
 

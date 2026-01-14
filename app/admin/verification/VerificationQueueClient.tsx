@@ -175,7 +175,7 @@ export default function VerificationQueueClient({
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         body: JSON.stringify({
           entityType: doc.entityType,
@@ -231,7 +231,7 @@ export default function VerificationQueueClient({
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         body: JSON.stringify({
           entityType: selectedDocument.entityType,

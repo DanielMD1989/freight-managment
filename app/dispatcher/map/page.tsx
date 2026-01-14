@@ -233,7 +233,7 @@ export default function DispatcherMapPage() {
       const csrfToken = await getCSRFToken();
       const response = await fetch('/api/routes/distance', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        headers: { 'Content-Type': 'application/json', ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
         body: JSON.stringify({
           pairs: availableTrucks.map(truck => ({
             origin: { lat: truck.currentLocation!.lat, lng: truck.currentLocation!.lng },

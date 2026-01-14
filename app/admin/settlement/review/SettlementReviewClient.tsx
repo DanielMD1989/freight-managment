@@ -147,7 +147,7 @@ export default function SettlementReviewClient() {
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/admin/settlements/${loadId}/approve`, {
         method: 'POST',
-        headers: { 'X-CSRF-Token': csrfToken },
+        headers: { ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
         credentials: 'include',
       });
 

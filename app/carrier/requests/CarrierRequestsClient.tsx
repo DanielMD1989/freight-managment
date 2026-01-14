@@ -76,7 +76,7 @@ export default function CarrierRequestsClient({ requests: initialRequests }: Pro
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/truck-requests/${requestId}/respond`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        headers: { 'Content-Type': 'application/json', ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
         body: JSON.stringify({
           action: approve ? 'APPROVE' : 'REJECT',
           responseNotes: responseNotes[requestId] || undefined,

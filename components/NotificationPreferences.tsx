@@ -102,7 +102,7 @@ export default function NotificationPreferences() {
       const csrfToken = await getCSRFToken();
       const response = await fetch('/api/user/notification-preferences', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        headers: { 'Content-Type': 'application/json', ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
         body: JSON.stringify({ preferences }),
       });
 
