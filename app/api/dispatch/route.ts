@@ -140,15 +140,16 @@ export async function POST(request: NextRequest) {
       },
       select: {
         id: true,
-        referenceNumber: true,
         status: true,
+        pickupCity: true,
+        deliveryCity: true,
       },
     });
 
     if (existingAssignment) {
       return NextResponse.json(
         {
-          error: `This truck is already assigned to an active load (${existingAssignment.referenceNumber || existingAssignment.id.slice(-8)})`,
+          error: `This truck is already assigned to an active load (${existingAssignment.pickupCity} → ${existingAssignment.deliveryCity})`,
           existingLoadId: existingAssignment.id,
           existingLoadStatus: existingAssignment.status,
         },
