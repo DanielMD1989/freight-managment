@@ -2407,3 +2407,164 @@ a:focus-visible {
 .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: var(--neutral-500);
 }
+
+/* ========================================
+   LANDING PAGE ANIMATIONS
+   ======================================== */
+
+/* Floating animation for elements */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Route dash animation for map */
+@keyframes route-dash {
+  0% {
+    stroke-dashoffset: 36;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-route-dash {
+  animation: route-dash 1.5s linear infinite;
+}
+
+/* Truck movement animation */
+@keyframes truck-move {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-truck-move {
+  animation: truck-move 6s linear infinite;
+}
+
+/* Pulse animation for city markers */
+@keyframes ping {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.animate-ping {
+  animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Gradient text animation */
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient-text {
+  background-size: 200% auto;
+  animation: gradient-shift 3s ease infinite;
+}
+
+/* Scale up animation on hover */
+.hover-scale {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.02);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Slide up animation for reveal */
+@keyframes slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.5s ease-out forwards;
+}
+
+/* Fade in animation */
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+/* Glassmorphism effect */
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .glass {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Hero section truck background */
+.hero-truck-bg {
+  background: linear-gradient(
+    135deg,
+    rgba(15, 118, 110, 0.95) 0%,
+    rgba(13, 148, 136, 0.9) 50%,
+    rgba(6, 77, 81, 0.95) 100%
+  );
+  position: relative;
+}
+
+.hero-truck-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('/images/trucks/hero-truck.svg');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.2;
+  z-index: 0;
+}
+
+/* Glow effect for buttons */
+.glow-amber {
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+}
+
+.glow-teal {
+  box-shadow: 0 0 20px rgba(15, 118, 110, 0.4);
+}

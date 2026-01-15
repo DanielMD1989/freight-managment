@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import EthiopiaMap from "@/components/landing/EthiopiaMap";
+import PhoneMockup from "@/components/landing/PhoneMockup";
 
 export default async function Home() {
   const session = await getSession();
@@ -54,18 +56,18 @@ export default async function Home() {
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 lg:pt-40 lg:pb-32 overflow-hidden">
-        {/* Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-primary-900 to-slate-900">
-          <div className="absolute top-0 left-0 w-[600px] h-[600px] bg-primary-600/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-          <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-accent-600/20 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
+        {/* Background with truck image */}
+        <div className="absolute inset-0 hero-truck-bg">
+          <div className="absolute top-0 left-0 w-[600px] h-[600px] bg-primary-600/30 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+          <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-amber-500/20 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
           {/* Grid pattern */}
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAgTSAwIDIwIEwgNDAgMjAgTSAyMCAwIEwgMjAgNDAgTSAwIDMwIEwgNDAgMzAgTSAzMCAwIEwgMzAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-40"></div>
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAgTSAwIDIwIEwgNDAgMjAgTSAyMCAwIEwgMjAgNDAgTSAwIDMwIEwgNDAgMzAgTSAzMCAwIEwgMzAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-60 z-10"></div>
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 mb-8">
+            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 mb-8 animate-fade-in">
               <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
               <span className="text-sm font-medium text-primary-200">Ethiopia&apos;s #1 Freight Platform</span>
             </div>
@@ -272,6 +274,102 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Mobile App Section */}
+      <section className="py-20 bg-gradient-to-br from-slate-100 to-slate-50 relative overflow-hidden">
+        {/* Background decoration */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-primary-500/5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl"></div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Phone Mockup */}
+            <div className="order-2 lg:order-1">
+              <PhoneMockup />
+            </div>
+
+            {/* Content */}
+            <div className="order-1 lg:order-2">
+              <div className="inline-flex items-center gap-2 bg-amber-100 text-amber-700 rounded-full px-4 py-1.5 text-sm font-medium mb-6">
+                <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
+                Coming Soon
+              </div>
+
+              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-6">
+                FreightET in your pocket
+              </h2>
+              <p className="text-lg text-slate-600 mb-8">
+                Manage your entire logistics operation from anywhere. Our mobile app gives you full control over loads, tracking, and payments - all from your smartphone.
+              </p>
+
+              <div className="space-y-4 mb-8">
+                {[
+                  {
+                    icon: (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    ),
+                    title: "Live GPS Tracking",
+                    description: "Track every shipment in real-time with instant notifications",
+                  },
+                  {
+                    icon: (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                    ),
+                    title: "Instant Notifications",
+                    description: "Get alerts for new loads, status updates, and payments",
+                  },
+                  {
+                    icon: (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                    ),
+                    title: "Digital Documents",
+                    description: "Upload PODs, invoices, and documents on the go",
+                  },
+                ].map((feature, i) => (
+                  <div key={i} className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center flex-shrink-0">
+                      {feature.icon}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900 mb-1">{feature.title}</h3>
+                      <p className="text-slate-600 text-sm">{feature.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* App Store Buttons */}
+              <div className="flex flex-wrap gap-4">
+                <button className="inline-flex items-center gap-3 bg-slate-900 text-white px-6 py-3 rounded-xl hover:bg-slate-800 transition-colors">
+                  <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                  </svg>
+                  <div className="text-left">
+                    <div className="text-xs text-slate-400">Download on the</div>
+                    <div className="font-semibold">App Store</div>
+                  </div>
+                </button>
+                <button className="inline-flex items-center gap-3 bg-slate-900 text-white px-6 py-3 rounded-xl hover:bg-slate-800 transition-colors">
+                  <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 20.5v-17c0-.83.67-1.5 1.5-1.5.31 0 .61.1.86.28l12.5 8.5c.54.37.54 1.08 0 1.45l-12.5 8.5c-.25.18-.55.28-.86.28-.83 0-1.5-.67-1.5-1.5z"/>
+                  </svg>
+                  <div className="text-left">
+                    <div className="text-xs text-slate-400">Get it on</div>
+                    <div className="font-semibold">Google Play</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* How It Works */}
       <section id="how-it-works" className="py-20 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -361,36 +459,25 @@ export default async function Home() {
               </div>
             </div>
 
-            {/* Ethiopia Map Illustration */}
+            {/* Ethiopia Map - Interactive Component */}
             <div className="relative">
-              <div className="aspect-square max-w-md mx-auto">
-                <div className="w-full h-full rounded-3xl bg-gradient-to-br from-primary-800/50 to-slate-800/50 border border-white/10 backdrop-blur-sm flex items-center justify-center">
-                  <div className="text-center p-8">
-                    <div className="text-6xl mb-4">🇪🇹</div>
-                    <div className="text-2xl font-bold text-white mb-2">Ethiopia</div>
-                    <div className="text-primary-300">Full National Coverage</div>
-                    <div className="mt-6 grid grid-cols-3 gap-4 text-center">
-                      <div>
-                        <div className="text-2xl font-bold text-white">11</div>
-                        <div className="text-xs text-slate-400">Regions</div>
-                      </div>
-                      <div>
-                        <div className="text-2xl font-bold text-white">50+</div>
-                        <div className="text-xs text-slate-400">Cities</div>
-                      </div>
-                      <div>
-                        <div className="text-2xl font-bold text-white">100+</div>
-                        <div className="text-xs text-slate-400">Routes</div>
-                      </div>
-                    </div>
-                  </div>
+              <EthiopiaMap />
+
+              {/* Stats overlay */}
+              <div className="mt-8 grid grid-cols-3 gap-4 text-center">
+                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
+                  <div className="text-2xl font-bold text-white">11</div>
+                  <div className="text-xs text-slate-400">Regions</div>
+                </div>
+                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
+                  <div className="text-2xl font-bold text-white">50+</div>
+                  <div className="text-xs text-slate-400">Cities</div>
+                </div>
+                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
+                  <div className="text-2xl font-bold text-white">100+</div>
+                  <div className="text-xs text-slate-400">Routes</div>
                 </div>
               </div>
-
-              {/* Animated dots for routes */}
-              <div className="absolute top-1/4 left-1/4 w-3 h-3 bg-accent-400 rounded-full animate-ping"></div>
-              <div className="absolute top-1/3 right-1/4 w-3 h-3 bg-primary-400 rounded-full animate-ping" style={{ animationDelay: '0.5s' }}></div>
-              <div className="absolute bottom-1/3 left-1/3 w-3 h-3 bg-emerald-400 rounded-full animate-ping" style={{ animationDelay: '1s' }}></div>
             </div>
           </div>
         </div>
