@@ -83,7 +83,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
       if (response.ok) {
         const data = await response.json();
         const loadIds = new Set<string>(
-          (data.requests || []).map((req: any) => req.loadId)
+          (data.loadRequests || []).map((req: any) => req.loadId)
         );
         setPendingRequestLoadIds(loadIds);
       }

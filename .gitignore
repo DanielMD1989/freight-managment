@@ -51,3 +51,6 @@ next-env.d.ts
 /public/uploads
 .claude/
 .playwright-mcp/
+
+# Development database
+prisma/dev.db
