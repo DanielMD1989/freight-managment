@@ -101,7 +101,6 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       // Don't pass truckType - let user see all available trucks on route
     };
 
-    console.log('[PostLoads] Find Trucks filters:', filters);
     if (onSwitchToSearchTrucks) {
       onSwitchToSearchTrucks(filters);
     }

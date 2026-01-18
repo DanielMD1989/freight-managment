@@ -143,8 +143,8 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         );
       }
-    } else {
-      // Development mode: Log OTP to console
+    } else if (process.env.NODE_ENV !== 'production') {
+      // Development only: Log OTP (NEVER in production)
       console.log(`[MFA DEV] OTP for ${session.userId}: ${otp}`);
     }
 

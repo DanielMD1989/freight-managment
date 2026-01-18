@@ -60,9 +60,6 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
       const currentFilters = overrideFilters || filterValues;
       const params = new URLSearchParams();
 
-      // DEBUG: Log filter values
-      console.log('[SearchTrucks] fetchTrucks called with filters:', currentFilters);
-
       // Apply filters
       if (currentFilters.ageHours) {
         params.append('ageHours', currentFilters.ageHours.toString());
@@ -103,14 +100,9 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
       }
 
       const url = `/api/truck-postings?${params.toString()}`;
-      console.log('[SearchTrucks] Fetching URL:', url);
-
       const response = await fetch(url);
       const data = await response.json();
-
-      console.log('[SearchTrucks] API response:', { total: data.total, count: data.truckPostings?.length, trucks: data.truckPostings });
       setTrucks(data.truckPostings || []);
-      console.log('[SearchTrucks] setTrucks called with', data.truckPostings?.length, 'trucks');
     } catch (error) {
       console.error('Failed to fetch trucks:', error);
     } finally {
@@ -158,7 +150,6 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
       const response = await fetch('/api/ethiopian-locations');
       const data = await response.json();
       setEthiopianCities(data.locations || []);
-      console.log('Loaded cities:', data.locations?.length || 0);
     } catch (error) {
       console.error('Failed to fetch Ethiopian cities:', error);
     } finally {
@@ -174,7 +165,6 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
 
     // Initial fetch with initialFilters or empty
     const filters = initialFilters && Object.keys(initialFilters).length > 0 ? initialFilters : {};
-    console.log('[SearchTrucks] Mount fetch:', filters);
     fetchTrucks(filters);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -267,7 +257,6 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
    * Handle search button click - uses ref to get latest filter values
    */
   const handleSearchClick = () => {
-    console.log('[SearchTrucks] SEARCH clicked, filters:', filterValuesRef.current);
     fetchTrucks(filterValuesRef.current);
   };
 
@@ -277,7 +266,6 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   const handleFilterReset = () => {
     setFilterValues({});
     setActiveSearchId(null);
-    console.log('[SearchTrucks] RESET clicked, fetching all');
     fetchTrucks({});
   };
 

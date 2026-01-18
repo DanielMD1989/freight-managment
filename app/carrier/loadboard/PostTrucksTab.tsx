@@ -18,28 +18,11 @@ import {
 import { TableColumn, StatusTab, RowAction } from '@/types/loadboard-ui';
 import PlacesAutocomplete, { PlaceResult } from '@/components/PlacesAutocomplete';
 import { useToast } from '@/components/Toast/ToastContext';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface PostTrucksTabProps {
   user: any;
 }
-
-/**
- * Get CSRF token for secure form submissions
- */
-const getCSRFToken = async (): Promise<string | null> => {
-  try {
-    const response = await fetch('/api/csrf-token');
-    if (!response.ok) {
-      console.error('CSRF token request failed:', response.status);
-      return null;
-    }
-    const data = await response.json();
-    return data.csrfToken;
-  } catch (error) {
-    console.error('Failed to get CSRF token:', error);
-    return null;
-  }
-};
 
 type TruckStatus = 'POSTED' | 'UNPOSTED' | 'EXPIRED';
 type LoadTab = 'all' | 'preferred' | 'blocked';
