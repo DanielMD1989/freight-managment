@@ -29,6 +29,7 @@ const CSRF_EXEMPT_ROUTES = [
   '/api/auth/logout',
   '/api/auth/forgot-password',
   '/api/auth/reset-password',
+  '/api/auth/verify-mfa', // MFA verification during login (pre-auth)
   '/api/cron/',
   '/api/webhooks/',
   '/api/tracking/ingest', // GPS data ingestion (machine-to-machine)

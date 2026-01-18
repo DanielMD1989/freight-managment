@@ -1,48 +1,36 @@
-'use client';
-
-import { useState } from 'react';
+// Static Ethiopia map - no client-side JavaScript for better performance
 
 interface City {
   name: string;
   x: number;
   y: number;
   isMainRoute?: boolean;
-  info?: string;
 }
 
 const cities: City[] = [
-  { name: 'Addis Ababa', x: 180, y: 230, isMainRoute: true, info: 'Capital - Major Hub' },
-  { name: 'Dire Dawa', x: 280, y: 200, isMainRoute: true, info: 'Industrial Center' },
-  { name: 'Djibouti', x: 360, y: 165, isMainRoute: true, info: 'Main Port Access' },
-  { name: 'Mekelle', x: 195, y: 100, info: 'Northern Hub' },
-  { name: 'Bahir Dar', x: 130, y: 140, info: 'Lake Tana Region' },
-  { name: 'Gondar', x: 130, y: 100, info: 'Historic City' },
-  { name: 'Hawassa', x: 165, y: 300, info: 'Southern Industrial Zone' },
-  { name: 'Jimma', x: 100, y: 260, info: 'Coffee Region' },
-  { name: 'Harar', x: 300, y: 220, isMainRoute: true, info: 'Eastern Gateway' },
+  { name: 'Addis Ababa', x: 180, y: 230, isMainRoute: true },
+  { name: 'Dire Dawa', x: 280, y: 200, isMainRoute: true },
+  { name: 'Djibouti', x: 360, y: 165, isMainRoute: true },
+  { name: 'Mekelle', x: 195, y: 100 },
+  { name: 'Bahir Dar', x: 130, y: 140 },
+  { name: 'Gondar', x: 130, y: 100 },
+  { name: 'Hawassa', x: 165, y: 300 },
+  { name: 'Jimma', x: 100, y: 260 },
+  { name: 'Harar', x: 300, y: 220, isMainRoute: true },
 ];
 
 // Main route path from Addis to Djibouti (simplified waypoints)
 const mainRoutePath = 'M180,230 Q230,215 280,200 L300,220 Q330,190 360,165';
 
 export default function EthiopiaMap() {
-  const [hoveredCity, setHoveredCity] = useState<City | null>(null);
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
-
-  const handleCityHover = (city: City, e: React.MouseEvent) => {
-    setHoveredCity(city);
-    const rect = e.currentTarget.getBoundingClientRect();
-    setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top - 10 });
-  };
 
   return (
     <div className="relative w-full max-w-xl mx-auto">
-      {/* Map Container with glow effect */}
+      {/* Map Container */}
       <div className="relative">
         <svg
           viewBox="0 0 450 400"
-          className="w-full h-auto drop-shadow-2xl"
-          style={{ filter: 'drop-shadow(0 0 20px rgba(15, 118, 110, 0.3))' }}
+          className="w-full h-auto"
         >
           {/* Background gradient */}
           <defs>
@@ -55,32 +43,6 @@ export default function EthiopiaMap() {
               <stop offset="50%" stopColor="#fbbf24" />
               <stop offset="100%" stopColor="#f59e0b" />
             </linearGradient>
-            <filter id="glow">
-              <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-              <feMerge>
-                <feMergeNode in="coloredBlur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-            {/* Animated dash pattern */}
-            <pattern id="movingDash" width="20" height="1" patternUnits="userSpaceOnUse">
-              <line x1="0" y1="0" x2="10" y2="0" stroke="#fbbf24" strokeWidth="3">
-                <animate
-                  attributeName="x1"
-                  from="0"
-                  to="20"
-                  dur="1s"
-                  repeatCount="indefinite"
-                />
-                <animate
-                  attributeName="x2"
-                  from="10"
-                  to="30"
-                  dur="1s"
-                  repeatCount="indefinite"
-                />
-              </line>
-            </pattern>
           </defs>
 
           {/* Ethiopia outline (simplified) */}
@@ -122,7 +84,6 @@ export default function EthiopiaMap() {
             strokeWidth="8"
             strokeOpacity="0.3"
             strokeLinecap="round"
-            filter="url(#glow)"
           />
 
           {/* Main route - animated dashed line */}
@@ -133,51 +94,29 @@ export default function EthiopiaMap() {
             strokeWidth="4"
             strokeLinecap="round"
             strokeDasharray="12,6"
-            className="animate-route-dash"
           />
 
-          {/* Moving truck on main route */}
-          <g className="animate-truck-move">
+          {/* Static truck icon on route */}
+          <g transform="translate(270, 195)">
             <circle cx="0" cy="0" r="12" fill="#f59e0b" fillOpacity="0.3" />
             <circle cx="0" cy="0" r="8" fill="#f59e0b" />
             <text x="0" y="4" textAnchor="middle" fontSize="10" fill="white">
               🚚
             </text>
-            {/* Animate along path */}
-            <animateMotion
-              dur="6s"
-              repeatCount="indefinite"
-              path={mainRoutePath}
-            />
           </g>
 
           {/* City markers */}
           {cities.map((city) => (
-            <g
-              key={city.name}
-              onMouseEnter={(e) => handleCityHover(city, e)}
-              onMouseLeave={() => setHoveredCity(null)}
-              className="cursor-pointer"
-            >
-              {/* Pulse effect for main route cities */}
+            <g key={city.name}>
+              {/* Glow effect for main route cities */}
               {city.isMainRoute && (
-                <>
-                  <circle
-                    cx={city.x}
-                    cy={city.y}
-                    r="15"
-                    fill="#f59e0b"
-                    fillOpacity="0.2"
-                    className="animate-ping"
-                  />
-                  <circle
-                    cx={city.x}
-                    cy={city.y}
-                    r="10"
-                    fill="#f59e0b"
-                    fillOpacity="0.3"
-                  />
-                </>
+                <circle
+                  cx={city.x}
+                  cy={city.y}
+                  r="12"
+                  fill="#f59e0b"
+                  fillOpacity="0.3"
+                />
               )}
 
               {/* City dot */}
@@ -188,7 +127,6 @@ export default function EthiopiaMap() {
                 fill={city.isMainRoute ? '#f59e0b' : '#0f766e'}
                 stroke="white"
                 strokeWidth="2"
-                className="transition-all duration-200 hover:scale-150"
               />
 
               {/* City label */}
@@ -199,7 +137,6 @@ export default function EthiopiaMap() {
                 fontSize={city.isMainRoute ? '11' : '9'}
                 fontWeight={city.isMainRoute ? 'bold' : 'normal'}
                 fill={city.isMainRoute ? '#f59e0b' : '#0f766e'}
-                className="pointer-events-none"
               >
                 {city.name}
               </text>
@@ -252,29 +189,6 @@ export default function EthiopiaMap() {
           </g>
         </svg>
 
-        {/* Tooltip */}
-        {hoveredCity && (
-          <div
-            className="absolute bg-slate-900 text-white px-3 py-2 rounded-lg text-sm shadow-xl pointer-events-none z-10 transform -translate-x-1/2 -translate-y-full"
-            style={{
-              left: `${(hoveredCity.x / 450) * 100}%`,
-              top: `${(hoveredCity.y / 400) * 100 - 5}%`,
-            }}
-          >
-            <div className="font-semibold">{hoveredCity.name}</div>
-            {hoveredCity.info && (
-              <div className="text-xs text-gray-300">{hoveredCity.info}</div>
-            )}
-            <div
-              className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0"
-              style={{
-                borderLeft: '6px solid transparent',
-                borderRight: '6px solid transparent',
-                borderTop: '6px solid #0f172a',
-              }}
-            />
-          </div>
-        )}
       </div>
 
       {/* Legend */}

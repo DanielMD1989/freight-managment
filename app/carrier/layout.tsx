@@ -1,14 +1,17 @@
 /**
  * Carrier Portal Layout
  *
- * Layout with role-aware sidebar navigation
- * Sprint 14 - Professional UI Transformation
+ * Sprint 19 - Profile Menu + Settings Navigation
+ *
+ * Layout with role-aware sidebar navigation and portal header
  */
 
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth';
+import { db } from '@/lib/db';
 import RoleAwareSidebar from '@/components/RoleAwareSidebar';
+import PortalHeader from '@/components/PortalHeader';
 
 export default async function CarrierLayout({
   children,
@@ -34,13 +37,30 @@ export default async function CarrierLayout({
     redirect('/unauthorized');
   }
 
-  // Layout with sidebar
+  // Fetch user data for header
+  const user = await db.user.findUnique({
+    where: { id: session.userId },
+    select: { firstName: true, lastName: true, email: true },
+  });
+
+  // Layout with sidebar and header
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-slate-950">
+    <div className="flex min-h-screen" style={{ background: 'var(--background)' }}>
       <RoleAwareSidebar userRole={session.role} portalType="carrier" />
-      <main className="flex-1 overflow-auto">
-        {children}
-      </main>
+      <div className="flex-1 flex flex-col overflow-auto">
+        <PortalHeader
+          user={{
+            firstName: user?.firstName || '',
+            lastName: user?.lastName || '',
+            email: user?.email || '',
+            role: session.role,
+          }}
+          portalPrefix="/carrier"
+        />
+        <main className="flex-1 overflow-auto" style={{ color: 'var(--foreground)' }}>
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

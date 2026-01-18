@@ -5,12 +5,12 @@
  *
  * Advanced truck search with saved searches and filtering
  * Sprint 14 - DAT-Style UI Transformation (Phase 3)
+ * Updated: Sprint 19 - Responsive DataTable integration
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StatusTabs,
-  DataTable,
   ActionButton,
   AgeIndicator,
   SavedSearches,
@@ -19,6 +19,7 @@ import {
   CompanyModal,
   EditSearchModal,
 } from '@/components/loadboard-ui';
+import DataTable from '@/components/loadboard-ui/DataTable';
 import { TableColumn, StatusTab, Filter, RowAction, SavedSearch, SavedSearchCriteria } from '@/types/loadboard-ui';
 import TruckBookingModal from './TruckBookingModal';
 import { getCSRFToken } from '@/lib/csrfFetch';
@@ -427,25 +428,28 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   ];
 
   /**
-   * Table columns configuration
+   * Table columns configuration (memoized)
    */
-  const columns: TableColumn[] = [
+  const columns: TableColumn[] = useMemo(() => [
     {
       key: 'age',
       label: 'Age',
       width: '80px',
-      render: (_, row) => <AgeIndicator date={row.postedAt || row.createdAt} />,
+      render: (_: any, row: any) => <AgeIndicator date={row.postedAt || row.createdAt} />,
     },
     {
       key: 'availableDate',
       label: 'Avail',
       width: '110px',
-      render: (value) => value ? new Date(value).toLocaleDateString() : 'Now',
+      sortable: true,
+      render: (value: string) => value ? new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Now',
     },
     {
       key: 'truckType',
       label: 'Truck',
       width: '100px',
+      sortable: true,
+      render: (value: string) => getTruckTypeLabel(value),
     },
     {
       key: 'fullPartial',
@@ -453,29 +457,30 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
       width: '60px',
       align: 'center' as const,
     },
-    // DH-O column hidden from shipper (carrier-only metric)
     {
       key: 'currentCity',
       label: 'Origin',
       sortable: true,
-    },
-    {
-      key: 'tripKm',
-      label: 'Trip',
-      width: '90px',
-      align: 'right' as const,
-      render: (value) => value ? `${value}km` : 'N/A',
+      render: (value: string, row: any) => (
+        <span className="font-medium text-slate-800 dark:text-slate-100">
+          {value || row.originCity?.name || 'N/A'}
+        </span>
+      ),
     },
     {
       key: 'destinationCity',
       label: 'Destination',
       sortable: true,
+      render: (_: any, row: any) => (
+        <span className="font-medium text-slate-800 dark:text-slate-100">
+          {row.destinationCity?.name || 'Anywhere'}
+        </span>
+      ),
     },
-    // DH-D column hidden from shipper (carrier-only metric)
     {
       key: 'company',
       label: 'Company',
-      render: (_, row) => (
+      render: (_: any, row: any) => (
         <CompanyLink
           companyId={row.carrierId}
           companyName={row.carrier?.name || 'Unknown'}
@@ -485,47 +490,50 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
       ),
     },
     {
-      key: 'contact',
-      label: 'Contact',
-      width: '120px',
-      render: (_, row) => row.carrierContactPhone || 'N/A',
-    },
-    {
       key: 'lengthM',
       label: 'Length',
       width: '80px',
       align: 'right' as const,
-      render: (value) => value ? `${value}m` : 'N/A',
+      sortable: true,
+      render: (value: number) => value ? `${value}m` : 'N/A',
     },
     {
       key: 'maxWeight',
       label: 'Weight',
       width: '90px',
       align: 'right' as const,
-      render: (value) => value ? `${value}kg` : 'N/A',
+      sortable: true,
+      render: (value: number) => value ? `${value.toLocaleString()}kg` : 'N/A',
     },
-  ];
+  ], []);
 
   /**
-   * Row actions configuration
+   * Table actions configuration (memoized)
    */
-  const rowActions: RowAction[] = [
-    {
-      key: 'contact',
-      label: 'CONTACT',
-      variant: 'primary',
-      onClick: (row) => alert(`Contact carrier: ${row.carrier?.name}`),
-    },
+  const tableActions: RowAction[] = useMemo(() => [
     {
       key: 'book',
-      label: 'BOOK',
-      variant: 'secondary',
-      onClick: (row) => {
+      label: 'Book',
+      variant: 'primary',
+      icon: (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      ),
+      onClick: (row: any) => {
         setSelectedTruckPosting(row);
         setShowBookingModal(true);
       },
+      show: (row: any) => !pendingRequestTruckIds.has(row.truck?.id || row.truckId),
     },
-  ];
+    {
+      key: 'pending',
+      label: 'Pending',
+      variant: 'secondary',
+      onClick: () => {},
+      show: (row: any) => pendingRequestTruckIds.has(row.truck?.id || row.truckId),
+    },
+  ], [pendingRequestTruckIds]);
 
   return (
     <div className="flex gap-4">
@@ -534,7 +542,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
         {/* NEW TRUCK SEARCH Button */}
         <button
           onClick={() => setShowSearchForm(!showSearchForm)}
-          className="px-6 py-3 bg-[#064d51] text-white font-bold text-sm rounded-lg hover:bg-[#053d40] transition-colors shadow-md flex items-center gap-2"
+          className="px-6 py-3 bg-teal-700 dark:bg-teal-600 text-white font-bold text-sm rounded-lg hover:bg-teal-800 dark:hover:bg-teal-700 transition-colors shadow-md flex items-center gap-2"
         >
           <span className="text-lg">🚛</span>
           {showSearchForm ? 'HIDE SEARCH' : 'NEW TRUCK SEARCH'}
@@ -542,9 +550,9 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
 
         {/* Inline Search Form - Only show when toggled */}
         {showSearchForm && (
-        <div className="bg-white border border-[#064d51]/20 rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 border border-teal-200 dark:border-teal-800 rounded-xl shadow-sm overflow-hidden">
           {/* Header Row - DH-O and DH-D hidden from shipper */}
-          <div className="grid grid-cols-10 gap-2 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#064d51] to-[#1e9c99]">
+          <div className="grid grid-cols-10 gap-2 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-teal-700 to-teal-600 dark:from-teal-800 dark:to-teal-700">
             <div>Truck</div>
             <div>Origin</div>
             <div>Destination</div>
@@ -557,13 +565,13 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
           </div>
 
           {/* Editable Search Row - DH-O and DH-D hidden from shipper */}
-          <div className="grid grid-cols-10 gap-2 px-4 py-3 text-xs items-center bg-[#f0fdfa]">
+          <div className="grid grid-cols-10 gap-2 px-4 py-3 text-xs items-center bg-teal-50 dark:bg-slate-700/50">
             {/* Truck Type */}
             <div className="flex items-center gap-1">
               <select
                 value={filterValues.truckType || ''}
                 onChange={(e) => handleFilterChange('truckType', e.target.value)}
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white"
+                className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 dark:text-slate-200"
               >
                 <option value="">ANY</option>
                 <option value="DRY_VAN">Van</option>
@@ -579,7 +587,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
                 value={filterValues.origin || ''}
                 onChange={(e) => handleFilterChange('origin', e.target.value)}
                 disabled={loadingCities}
-                className="w-full px-2 py-1.5 text-xs border-2 border-gray-400 rounded bg-white cursor-pointer hover:border-blue-500 focus:border-blue-600 focus:ring-2 focus:ring-blue-200 transition-colors"
+                className="w-full px-2 py-1.5 text-xs border-2 border-slate-400 dark:border-slate-600 rounded bg-white dark:bg-slate-800 dark:text-slate-200 cursor-pointer hover:border-teal-500 focus:border-teal-600 focus:ring-2 focus:ring-teal-200 dark:focus:ring-teal-800 transition-colors"
                 style={{ minHeight: '32px' }}
               >
                 <option value="">
@@ -599,7 +607,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
                 value={filterValues.destination || ''}
                 onChange={(e) => handleFilterChange('destination', e.target.value || undefined)}
                 disabled={loadingCities}
-                className="w-full px-2 py-1.5 text-xs border-2 border-gray-400 rounded bg-white cursor-pointer hover:border-blue-500 focus:border-blue-600 focus:ring-2 focus:ring-blue-200 transition-colors"
+                className="w-full px-2 py-1.5 text-xs border-2 border-slate-400 dark:border-slate-600 rounded bg-white dark:bg-slate-800 dark:text-slate-200 cursor-pointer hover:border-teal-500 focus:border-teal-600 focus:ring-2 focus:ring-teal-200 dark:focus:ring-teal-800 transition-colors"
                 style={{ minHeight: '32px' }}
               >
                 <option value="">
@@ -619,7 +627,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
                 type="date"
                 value={filterValues.availableFrom || ''}
                 onChange={(e) => handleFilterChange('availableFrom', e.target.value)}
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+                className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 dark:text-slate-200"
               />
             </div>
 
@@ -628,7 +636,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
               <select
                 value={filterValues.fullPartial || ''}
                 onChange={(e) => handleFilterChange('fullPartial', e.target.value)}
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white"
+                className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 dark:text-slate-200"
               >
                 <option value="">Any</option>
                 <option value="FULL">Full</option>
@@ -643,7 +651,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
                 value={filterValues.minLength || ''}
                 onChange={(e) => handleFilterChange('minLength', e.target.value ? parseFloat(e.target.value) : undefined)}
                 placeholder="m"
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+                className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 dark:text-slate-200"
               />
             </div>
 
@@ -654,7 +662,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
                 value={filterValues.maxWeight || ''}
                 onChange={(e) => handleFilterChange('maxWeight', e.target.value ? parseInt(e.target.value) : undefined)}
                 placeholder="kg"
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+                className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 dark:text-slate-200"
               />
             </div>
 
@@ -665,7 +673,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
                 value={filterValues.ageHours || ''}
                 onChange={(e) => handleFilterChange('ageHours', e.target.value ? parseInt(e.target.value) : undefined)}
                 placeholder="hrs"
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+                className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 dark:text-slate-200"
               />
             </div>
 
@@ -673,7 +681,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
             <div className="col-span-2 flex gap-2 justify-end">
               <button
                 onClick={fetchTrucks}
-                className="px-4 py-1.5 bg-[#064d51] text-white text-xs font-bold rounded-lg hover:bg-[#053d40] transition-colors"
+                className="px-4 py-1.5 bg-teal-700 dark:bg-teal-600 text-white text-xs font-bold rounded-lg hover:bg-teal-800 dark:hover:bg-teal-700 transition-colors"
               >
                 🔍 SEARCH
               </button>
@@ -691,7 +699,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
         {/* Results Summary */}
         <div className="mb-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-[#064d51]">
+            <h3 className="text-lg font-bold text-teal-700 dark:text-teal-400">
               {trucks.length} TOTAL RESULTS
             </h3>
             <StatusTabs
@@ -702,132 +710,18 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
           </div>
         </div>
 
-        {/* Results Section */}
-        <div>
-          <h4 className="text-sm font-bold text-gray-700 mb-2 uppercase">
-            {trucks.length} {trucks.length === 1 ? 'MATCH' : 'MATCHES'}
-          </h4>
-
-          {/* Results Table - DH-O and DH-D hidden from shipper */}
-          <div className="bg-white border border-[#064d51]/20 rounded-xl overflow-visible shadow-sm">
-            {/* Table Header */}
-            <div className="bg-gradient-to-r from-[#064d51] to-[#1e9c99] grid grid-cols-12 gap-2 px-4 py-3 rounded-t-xl text-xs font-semibold text-white">
-              <div
-                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-                onClick={() => handleHeaderClick('createdAt')}
-              >
-                Age {sortField === 'createdAt' && (sortOrder === 'asc' ? '↑' : '↓')}
-              </div>
-              <div
-                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-                onClick={() => handleHeaderClick('availableDate')}
-              >
-                Avail {sortField === 'availableDate' && (sortOrder === 'asc' ? '↑' : '↓')}
-              </div>
-              <div
-                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-                onClick={() => handleHeaderClick('truckType')}
-              >
-                Truck {sortField === 'truckType' && (sortOrder === 'asc' ? '↑' : '↓')}
-              </div>
-              <div
-                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-                onClick={() => handleHeaderClick('fullPartial')}
-              >
-                F/P {sortField === 'fullPartial' && (sortOrder === 'asc' ? '↑' : '↓')}
-              </div>
-              <div
-                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-                onClick={() => handleHeaderClick('currentCity')}
-              >
-                Origin {sortField === 'currentCity' && (sortOrder === 'asc' ? '↑' : '↓')}
-              </div>
-              <div
-                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-                onClick={() => handleHeaderClick('tripKm')}
-              >
-                Trip {sortField === 'tripKm' && (sortOrder === 'asc' ? '↑' : '↓')}
-              </div>
-              <div
-                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-                onClick={() => handleHeaderClick('destinationCity')}
-              >
-                Destination {sortField === 'destinationCity' && (sortOrder === 'asc' ? '↑' : '↓')}
-              </div>
-              <div
-                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-              >
-                Company
-              </div>
-              <div
-                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-              >
-                Contact
-              </div>
-              <div
-                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-                onClick={() => handleHeaderClick('lengthM')}
-              >
-                Length {sortField === 'lengthM' && (sortOrder === 'asc' ? '↑' : '↓')}
-              </div>
-              <div
-                className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-                onClick={() => handleHeaderClick('maxWeight')}
-              >
-                Weight {sortField === 'maxWeight' && (sortOrder === 'asc' ? '↑' : '↓')}
-              </div>
-              <div className="px-1 py-0.5">
-                Actions
-              </div>
-            </div>
-
-            {/* Truck Rows */}
-            {loading ? (
-              <div className="p-8 text-center text-gray-500">Loading trucks...</div>
-            ) : trucks.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">No trucks found. Try adjusting your filters.</div>
-            ) : (
-              trucks.map((truck) => (
-                <div
-                  key={truck.id}
-                  className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-[#064d51]/10 hover:bg-[#064d51]/5 cursor-default text-xs transition-colors"
-                  style={{ color: '#2B2727' }}
-                >
-                  <div><AgeIndicator date={truck.postedAt || truck.createdAt} /></div>
-                  <div>{truck.availableDate ? new Date(truck.availableDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : 'Now'}</div>
-                  <div>{getTruckTypeLabel(truck.truckType)}</div>
-                  <div>{truck.fullPartial || 'F'}</div>
-                  <div className="truncate">{truck.currentCity || truck.originCity?.name || 'N/A'}</div>
-                  <div>→</div>
-                  <div className="truncate">{truck.destinationCity?.name || 'Anywhere'}</div>
-                  <div className="truncate text-[#1e9c99] hover:underline cursor-pointer font-medium">
-                    {truck.carrier?.name || 'Unknown'}
-                  </div>
-                  <div>{truck.contactPhone || '-'}</div>
-                  <div>{truck.lengthM ? `${truck.lengthM}m` : '-'}</div>
-                  <div>{truck.maxWeight ? `${truck.maxWeight.toLocaleString()} kg` : '-'}</div>
-                  <div>
-                    {pendingRequestTruckIds.has(truck.truck?.id || truck.truckId) ? (
-                      <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-lg">
-                        REQUEST SENT
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          setSelectedTruckPosting(truck);
-                          setShowBookingModal(true);
-                        }}
-                        className="px-3 py-1 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-xs font-semibold rounded-lg hover:from-teal-700 hover:to-teal-600 transition-all shadow-sm"
-                      >
-                        BOOK
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        {/* Results Section - Responsive DataTable */}
+        <DataTable
+          columns={columns}
+          data={trucks}
+          loading={loading}
+          actions={tableActions}
+          rowKey="id"
+          responsiveCardView={true}
+          cardTitleColumn="currentCity"
+          cardSubtitleColumn="destinationCity"
+          emptyMessage="No trucks found. Try adjusting your filters."
+        />
       </div>
 
       {/* Right Sidebar - Filters */}

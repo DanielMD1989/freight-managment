@@ -41,6 +41,10 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/user/notification-preferences
  * Update user's notification preferences
+ *
+ * Accepts two formats:
+ * 1. Array format: { preferences: [{ type: 'LOAD_ASSIGNED', enabled: true }, ...] }
+ * 2. Object format: { preferences: { LOAD_ASSIGNED: true, ... } }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -49,18 +53,31 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { preferences } = body;
 
-    if (!preferences || !Array.isArray(preferences)) {
+    if (!preferences) {
+      return NextResponse.json(
+        { error: 'Preferences are required' },
+        { status: 400 }
+      );
+    }
+
+    let preferencesObj: Record<string, boolean>;
+
+    // Handle array format (legacy)
+    if (Array.isArray(preferences)) {
+      preferencesObj = preferences.reduce((acc: Record<string, boolean>, pref: { type: string; enabled: boolean }) => {
+        acc[pref.type] = pref.enabled;
+        return acc;
+      }, {} as Record<string, boolean>);
+    }
+    // Handle object format (new settings page)
+    else if (typeof preferences === 'object') {
+      preferencesObj = preferences;
+    } else {
       return NextResponse.json(
         { error: 'Invalid preferences format' },
         { status: 400 }
       );
     }
-
-    // Convert preferences array to object
-    const preferencesObj = preferences.reduce((acc: Record<string, boolean>, pref: { type: string; enabled: boolean }) => {
-      acc[pref.type] = pref.enabled;
-      return acc;
-    }, {} as Record<string, boolean>);
 
     // Update user preferences
     await db.user.update({

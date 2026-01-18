@@ -39,22 +39,23 @@ export default async function ShipperLayout({
   // Fetch user data for header
   const user = await db.user.findUnique({
     where: { id: session.userId },
-    select: { firstName: true, lastName: true },
+    select: { firstName: true, lastName: true, email: true },
   });
 
   // Layout with sidebar and header
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen" style={{ background: 'var(--background)' }}>
       <RoleAwareSidebar userRole={session.role} portalType="shipper" />
       <div className="flex-1 flex flex-col overflow-auto">
         <ShipperHeader
           user={{
             firstName: user?.firstName || '',
             lastName: user?.lastName || '',
+            email: user?.email || '',
             role: session.role,
           }}
         />
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto" style={{ color: 'var(--foreground)' }}>
           {children}
         </main>
       </div>

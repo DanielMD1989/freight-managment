@@ -280,6 +280,11 @@ model User {
   // Service Fee Implementation: Corridors created by admin
   corridorsCreated      Corridor[]       @relation("CorridorCreatedBy")
 
+  // SPRINT 19: Session Management & Security
+  sessions              Session[]
+  mfa                   UserMFA?
+  securityEvents        SecurityEvent[]
+
   @@index([email])
   @@index([organizationId])
   @@map("users")
@@ -287,19 +292,98 @@ model User {
 
 model PasswordResetToken {
   id          String   @id @default(cuid())
-  token       String   @unique
+  token       String   // Bcrypt hash of OTP (not unique since hashes vary)
   expiresAt   DateTime
   usedAt      DateTime?
+  attempts    Int      @default(0) // Track failed OTP attempts for brute force protection
   createdAt   DateTime @default(now())
 
   // Relations
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([token])
   @@index([userId])
+  @@index([userId, expiresAt]) // For finding valid tokens per user
   @@map("password_reset_tokens")
 }
+
+// ============================================================================
+// SPRINT 19: SESSION MANAGEMENT & SECURITY
+// ============================================================================
+
+// Server-side session tracking for secure session management
+model Session {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash     String    @unique  // SHA-256 hash of session token
+  deviceInfo    String?   // Browser/OS info (best-effort parsing)
+  ipAddress     String?
+  userAgent     String?   @db.Text
+  lastSeenAt    DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  expiresAt     DateTime
+  revokedAt     DateTime?
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@index([userId, revokedAt, expiresAt]) // Composite index for finding active sessions per user
+  @@map("sessions")
+}
+
+// MFA configuration for users
+model UserMFA {
+  id                        String    @id @default(cuid())
+  userId                    String    @unique
+  user                      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enabled                   Boolean   @default(false)
+  phone                     String?   // Phone number for SMS OTP
+  recoveryCodes             String[]  // Hashed recovery codes (bcrypt)
+  recoveryCodesGeneratedAt  DateTime?
+  recoveryCodesUsedCount    Int       @default(0)
+  lastMfaVerifiedAt         DateTime?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  @@map("user_mfa")
+}
+
+// Security events for activity logging and audit trail
+model SecurityEvent {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventType     String    // LOGIN_SUCCESS, LOGIN_FAILURE, PASSWORD_CHANGE, MFA_ENABLE, etc.
+  ipAddress     String?
+  userAgent     String?   @db.Text
+  deviceInfo    String?
+  success       Boolean   @default(true)
+  metadata      Json?     // Additional event-specific data
+  createdAt     DateTime  @default(now())
+
+  @@index([userId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([userId, createdAt]) // Composite index for user security history queries
+  @@map("security_events")
+}
+
+// Security Event Types (documented here for reference, not an enum to allow flexibility)
+// LOGIN_SUCCESS       - Successful login
+// LOGIN_FAILURE       - Failed login attempt
+// LOGOUT              - User logged out
+// PASSWORD_CHANGE     - Password changed
+// PASSWORD_RESET      - Password reset via forgot password
+// MFA_ENABLE          - MFA enabled
+// MFA_DISABLE         - MFA disabled
+// MFA_VERIFY_SUCCESS  - MFA verification successful
+// MFA_VERIFY_FAILURE  - MFA verification failed
+// RECOVERY_CODE_USED  - Recovery code used for login
+// RECOVERY_CODES_REGEN- Recovery codes regenerated
+// SESSION_REVOKE      - Single session revoked
+// SESSION_REVOKE_ALL  - All sessions revoked
+// PROFILE_UPDATE      - Profile information updated
 
 // Phase 2 - Story 16.9B: Company Admin Tools - Team Invitations
 model Invitation {

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import EthiopiaMap from "@/components/landing/EthiopiaMap";
 import PhoneMockup from "@/components/landing/PhoneMockup";
 
 export default async function Home() {
@@ -56,28 +55,32 @@ export default async function Home() {
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 lg:pt-40 lg:pb-32 overflow-hidden">
-        {/* Background with truck image */}
-        <div className="absolute inset-0 hero-truck-bg">
-          <div className="absolute top-0 left-0 w-[600px] h-[600px] bg-primary-600/30 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-          <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-amber-500/20 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
-          {/* Grid pattern */}
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAgTSAwIDIwIEwgNDAgMjAgTSAyMCAwIEwgMjAgNDAgTSAwIDMwIEwgNDAgMzAgTSAzMCAwIEwgMzAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-60 z-10"></div>
+        {/* Background with realistic Ethiopian imagery */}
+        <div className="absolute inset-0">
+          <img
+            src="/images/hero/ethiopia-caravan.jpg"
+            alt="Ethiopian salt caravan in Danakil Depression"
+            className="absolute inset-0 w-full h-full object-cover object-center"
+          />
+          {/* Multi-layer overlay for optimal text readability while showing image */}
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/50 to-slate-900/80"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-primary-900/60 via-transparent to-primary-900/60"></div>
         </div>
 
         <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 mb-8 animate-fade-in">
-              <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
-              <span className="text-sm font-medium text-primary-200">Ethiopia&apos;s #1 Freight Platform</span>
+            <div className="inline-flex items-center gap-2 bg-slate-900/60 backdrop-blur-md border border-white/30 rounded-full px-5 py-2 mb-8 shadow-lg">
+              <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse"></span>
+              <span className="text-sm font-semibold text-white">Ethiopia&apos;s #1 Freight Platform</span>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
-              Move Freight Across Ethiopia<br/>
-              <span className="bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent">Faster & Smarter</span>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6 drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]">
+              <span className="text-white">Move Freight Across Ethiopia</span><br/>
+              <span className="text-amber-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">Faster & Smarter</span>
             </h1>
 
-            <p className="text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto mb-10">
+            <p className="text-lg sm:text-xl text-white/90 max-w-2xl mx-auto mb-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
               Connect with verified carriers, track shipments in real-time, and streamline your logistics operations with Ethiopia&apos;s most trusted freight platform.
             </p>
 
@@ -108,9 +111,9 @@ export default async function Home() {
                 { value: "50K+", label: "Loads Delivered" },
                 { value: "98%", label: "On-Time Delivery" },
               ].map((stat, i) => (
-                <div key={i} className="text-center">
-                  <div className="text-2xl sm:text-3xl font-bold text-white mb-1">{stat.value}</div>
-                  <div className="text-sm text-slate-400">{stat.label}</div>
+                <div key={i} className="text-center bg-slate-900/40 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+                  <div className="text-2xl sm:text-3xl font-bold text-white mb-1 drop-shadow-lg">{stat.value}</div>
+                  <div className="text-sm text-white/80 font-medium">{stat.label}</div>
                 </div>
               ))}
             </div>
@@ -119,16 +122,16 @@ export default async function Home() {
       </section>
 
       {/* Problem/Solution Section */}
-      <section className="py-20 bg-slate-50">
+      <section className="py-20 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Problem */}
             <div>
-              <div className="inline-flex items-center gap-2 bg-red-100 text-red-700 rounded-full px-4 py-1.5 text-sm font-medium mb-6">
+              <div className="inline-flex items-center gap-2 bg-red-500/20 text-red-400 rounded-full px-4 py-1.5 text-sm font-medium mb-6">
                 The Challenge
               </div>
-              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-6">
-                Traditional freight in Ethiopia is <span className="text-red-600">broken</span>
+              <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6">
+                Traditional freight in Ethiopia is <span className="text-red-400">broken</span>
               </h2>
               <div className="space-y-4">
                 {[
@@ -138,12 +141,12 @@ export default async function Home() {
                   "Payment disputes and delayed settlements",
                 ].map((problem, i) => (
                   <div key={i} className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <svg className="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </div>
-                    <span className="text-slate-600">{problem}</span>
+                    <span className="text-slate-300">{problem}</span>
                   </div>
                 ))}
               </div>
@@ -151,11 +154,11 @@ export default async function Home() {
 
             {/* Solution */}
             <div>
-              <div className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-700 rounded-full px-4 py-1.5 text-sm font-medium mb-6">
+              <div className="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-400 rounded-full px-4 py-1.5 text-sm font-medium mb-6">
                 Our Solution
               </div>
-              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-6">
-                FreightET makes it <span className="text-emerald-600">simple</span>
+              <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6">
+                FreightET makes it <span className="text-emerald-400">simple</span>
               </h2>
               <div className="space-y-4">
                 {[
@@ -165,12 +168,12 @@ export default async function Home() {
                   "Secure digital payments with instant settlement",
                 ].map((solution, i) => (
                   <div key={i} className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                     </div>
-                    <span className="text-slate-600">{solution}</span>
+                    <span className="text-slate-300">{solution}</span>
                   </div>
                 ))}
               </div>
@@ -180,13 +183,13 @@ export default async function Home() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section id="features" className="py-20 bg-gradient-to-br from-primary-900 via-slate-900 to-primary-900 relative overflow-hidden">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
               Everything you need to move freight
             </h2>
-            <p className="text-lg text-slate-600">
+            <p className="text-lg text-slate-300">
               Powerful features designed for Ethiopian logistics companies of all sizes
             </p>
           </div>
@@ -257,17 +260,17 @@ export default async function Home() {
             ].map((feature, i) => (
               <div
                 key={i}
-                className="group p-6 bg-white rounded-2xl border border-slate-200 hover:border-primary-200 hover:shadow-xl hover:shadow-primary-500/5 transition-all duration-300"
+                className="group p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:border-primary-500/30 hover:bg-white/10 transition-all duration-300"
               >
                 <div className={`w-12 h-12 rounded-xl mb-5 flex items-center justify-center ${
-                  feature.color === 'primary' ? 'bg-primary-100 text-primary-600' :
-                  feature.color === 'accent' ? 'bg-accent-100 text-accent-600' :
-                  'bg-emerald-100 text-emerald-600'
+                  feature.color === 'primary' ? 'bg-primary-500/20 text-primary-400' :
+                  feature.color === 'accent' ? 'bg-accent-500/20 text-accent-400' :
+                  'bg-emerald-500/20 text-emerald-400'
                 }`}>
                   {feature.icon}
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-2">{feature.title}</h3>
-                <p className="text-slate-600">{feature.description}</p>
+                <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
+                <p className="text-slate-400">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -275,10 +278,7 @@ export default async function Home() {
       </section>
 
       {/* Mobile App Section */}
-      <section className="py-20 bg-gradient-to-br from-slate-100 to-slate-50 relative overflow-hidden">
-        {/* Background decoration */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-primary-500/5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl"></div>
+      <section className="py-20 bg-gradient-to-br from-slate-900 via-primary-950 to-slate-900 relative overflow-hidden">
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -289,15 +289,15 @@ export default async function Home() {
 
             {/* Content */}
             <div className="order-1 lg:order-2">
-              <div className="inline-flex items-center gap-2 bg-amber-100 text-amber-700 rounded-full px-4 py-1.5 text-sm font-medium mb-6">
-                <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
+              <div className="inline-flex items-center gap-2 bg-amber-500/20 text-amber-400 rounded-full px-4 py-1.5 text-sm font-medium mb-6">
+                <span className="w-2 h-2 bg-amber-500 rounded-full"></span>
                 Coming Soon
               </div>
 
-              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-6">
+              <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6">
                 FreightET in your pocket
               </h2>
-              <p className="text-lg text-slate-600 mb-8">
+              <p className="text-lg text-slate-300 mb-8">
                 Manage your entire logistics operation from anywhere. Our mobile app gives you full control over loads, tracking, and payments - all from your smartphone.
               </p>
 
@@ -333,12 +333,12 @@ export default async function Home() {
                   },
                 ].map((feature, i) => (
                   <div key={i} className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-primary-500/20 text-primary-400 flex items-center justify-center flex-shrink-0">
                       {feature.icon}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-slate-900 mb-1">{feature.title}</h3>
-                      <p className="text-slate-600 text-sm">{feature.description}</p>
+                      <h3 className="font-semibold text-white mb-1">{feature.title}</h3>
+                      <p className="text-slate-400 text-sm">{feature.description}</p>
                     </div>
                   </div>
                 ))}
@@ -346,21 +346,21 @@ export default async function Home() {
 
               {/* App Store Buttons */}
               <div className="flex flex-wrap gap-4">
-                <button className="inline-flex items-center gap-3 bg-slate-900 text-white px-6 py-3 rounded-xl hover:bg-slate-800 transition-colors">
+                <button className="inline-flex items-center gap-3 bg-white/10 backdrop-blur-sm border border-white/20 text-white px-6 py-3 rounded-xl hover:bg-white/20 transition-colors">
                   <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
                   </svg>
                   <div className="text-left">
-                    <div className="text-xs text-slate-400">Download on the</div>
+                    <div className="text-xs text-slate-300">Download on the</div>
                     <div className="font-semibold">App Store</div>
                   </div>
                 </button>
-                <button className="inline-flex items-center gap-3 bg-slate-900 text-white px-6 py-3 rounded-xl hover:bg-slate-800 transition-colors">
+                <button className="inline-flex items-center gap-3 bg-white/10 backdrop-blur-sm border border-white/20 text-white px-6 py-3 rounded-xl hover:bg-white/20 transition-colors">
                   <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M3 20.5v-17c0-.83.67-1.5 1.5-1.5.31 0 .61.1.86.28l12.5 8.5c.54.37.54 1.08 0 1.45l-12.5 8.5c-.25.18-.55.28-.86.28-.83 0-1.5-.67-1.5-1.5z"/>
                   </svg>
                   <div className="text-left">
-                    <div className="text-xs text-slate-400">Get it on</div>
+                    <div className="text-xs text-slate-300">Get it on</div>
                     <div className="font-semibold">Google Play</div>
                   </div>
                 </button>
@@ -371,13 +371,13 @@ export default async function Home() {
       </section>
 
       {/* How It Works */}
-      <section id="how-it-works" className="py-20 bg-slate-50">
+      <section id="how-it-works" className="py-20 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
               Get started in 3 simple steps
             </h2>
-            <p className="text-lg text-slate-600">
+            <p className="text-lg text-slate-300">
               Whether you&apos;re a shipper or carrier, getting started takes just minutes
             </p>
           </div>
@@ -407,17 +407,17 @@ export default async function Home() {
               },
             ].map((item, i) => (
               <div key={i} className="relative">
-                <div className="text-6xl font-bold text-primary-100 mb-4">{item.step}</div>
-                <h3 className="text-xl font-semibold text-slate-900 mb-3">{item.title}</h3>
-                <p className="text-slate-600 mb-4">{item.description}</p>
+                <div className="text-6xl font-bold text-primary-500/30 mb-4">{item.step}</div>
+                <h3 className="text-xl font-semibold text-white mb-3">{item.title}</h3>
+                <p className="text-slate-400 mb-4">{item.description}</p>
                 <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2 text-primary-700">
+                  <div className="flex items-center gap-2 text-primary-400">
                     <span className="font-medium">Shipper:</span>
-                    <span className="text-slate-600">{item.forShipper}</span>
+                    <span className="text-slate-400">{item.forShipper}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-accent-700">
+                  <div className="flex items-center gap-2 text-amber-400">
                     <span className="font-medium">Carrier:</span>
-                    <span className="text-slate-600">{item.forCarrier}</span>
+                    <span className="text-slate-400">{item.forCarrier}</span>
                   </div>
                 </div>
               </div>
@@ -428,9 +428,6 @@ export default async function Home() {
 
       {/* Ethiopia Coverage Section */}
       <section id="coverage" className="py-20 bg-gradient-to-br from-primary-900 via-slate-900 to-primary-900 relative overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary-600/10 rounded-full blur-3xl"></div>
-        </div>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -459,9 +456,20 @@ export default async function Home() {
               </div>
             </div>
 
-            {/* Ethiopia Map - Interactive Component */}
+            {/* Ethiopia Map - Realistic Route Map */}
             <div className="relative">
-              <EthiopiaMap />
+              <div className="rounded-2xl overflow-hidden border border-white/20 shadow-2xl">
+                <img
+                  src="/images/hero/ethiopia-routes-map.jpg"
+                  alt="Ethiopian National Transportation Route Map showing Addis Ababa to Djibouti corridor"
+                  className="w-full h-auto"
+                />
+              </div>
+
+              {/* Djibouti highlight badge */}
+              <div className="absolute top-4 right-4 bg-amber-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
+                Addis ↔ Djibouti Corridor
+              </div>
 
               {/* Stats overlay */}
               <div className="mt-8 grid grid-cols-3 gap-4 text-center">
@@ -484,13 +492,13 @@ export default async function Home() {
       </section>
 
       {/* Trust Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-20 bg-gradient-to-br from-primary-900 via-slate-900 to-primary-900 relative overflow-hidden">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
               Trusted by leading companies
             </h2>
-            <p className="text-lg text-slate-600">
+            <p className="text-lg text-slate-300">
               Join hundreds of businesses who rely on FreightET for their logistics needs
             </p>
           </div>
@@ -517,45 +525,45 @@ export default async function Home() {
                 company: "Ethio Cargo Solutions",
               },
             ].map((testimonial, i) => (
-              <div key={i} className="bg-slate-50 rounded-2xl p-6">
+              <div key={i} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
                 <div className="flex gap-1 mb-4">
                   {[...Array(5)].map((_, j) => (
-                    <svg key={j} className="w-5 h-5 text-accent-500" fill="currentColor" viewBox="0 0 20 20">
+                    <svg key={j} className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                     </svg>
                   ))}
                 </div>
-                <p className="text-slate-600 mb-4">&ldquo;{testimonial.quote}&rdquo;</p>
+                <p className="text-slate-300 mb-4">&ldquo;{testimonial.quote}&rdquo;</p>
                 <div>
-                  <div className="font-semibold text-slate-900">{testimonial.author}</div>
-                  <div className="text-sm text-slate-500">{testimonial.role}, {testimonial.company}</div>
+                  <div className="font-semibold text-white">{testimonial.author}</div>
+                  <div className="text-sm text-slate-400">{testimonial.role}, {testimonial.company}</div>
                 </div>
               </div>
             ))}
           </div>
 
           {/* Trust badges */}
-          <div className="flex flex-wrap items-center justify-center gap-8 pt-8 border-t border-slate-200">
-            <div className="flex items-center gap-2 text-slate-500">
-              <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="flex flex-wrap items-center justify-center gap-8 pt-8 border-t border-white/10">
+            <div className="flex items-center gap-2 text-slate-300">
+              <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
               <span className="text-sm font-medium">Verified Carriers</span>
             </div>
-            <div className="flex items-center gap-2 text-slate-500">
-              <svg className="w-5 h-5 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="flex items-center gap-2 text-slate-300">
+              <svg className="w-5 h-5 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
               <span className="text-sm font-medium">Secure Payments</span>
             </div>
-            <div className="flex items-center gap-2 text-slate-500">
-              <svg className="w-5 h-5 text-accent-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="flex items-center gap-2 text-slate-300">
+              <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
               <span className="text-sm font-medium">24/7 Support</span>
             </div>
-            <div className="flex items-center gap-2 text-slate-500">
-              <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="flex items-center gap-2 text-slate-300">
+              <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>

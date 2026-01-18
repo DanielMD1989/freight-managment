@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { verifyPassword, setSession, isLoginAllowed } from "@/lib/auth";
+import { verifyPassword, setSession, isLoginAllowed, createSessionRecord, generateOTP, hashPassword } from "@/lib/auth";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { logAuthFailure, logAuthSuccess } from "@/lib/auditLog";
@@ -15,6 +15,13 @@ import {
   blockIP,
   logSecurityEvent,
 } from "@/lib/security";
+import { sendMFAOTP, isAfroMessageConfigured } from "@/lib/sms/afromessage";
+import { SignJWT } from "jose";
+
+// MFA temporary token secret (for pre-auth tokens)
+const MFA_TOKEN_SECRET = new TextEncoder().encode(
+  process.env.MFA_TOKEN_SECRET || process.env.JWT_SECRET || "mfa-temp-token-secret-32chars!"
+);
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -197,19 +204,74 @@ export async function POST(request: NextRequest) {
     resetFailedAttempts(bruteForceKey);
     resetFailedAttempts(`login:ip:${clientIp}`);
 
+    // Check if user has MFA enabled
+    const userMFA = await db.userMFA.findUnique({
+      where: { userId: user.id },
+      select: { enabled: true, phone: true },
+    });
+
+    if (userMFA?.enabled && userMFA.phone) {
+      // MFA is enabled - send OTP and return mfaRequired response
+      const otp = generateOTP();
+      const hashedOTP = await hashPassword(otp);
+
+      // Create temporary MFA token (valid for 5 minutes)
+      const mfaToken = await new SignJWT({
+        userId: user.id,
+        email: user.email,
+        purpose: 'mfa_verification',
+        otpHash: hashedOTP,
+      })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('5m')
+        .sign(MFA_TOKEN_SECRET);
+
+      // Send OTP via SMS
+      if (isAfroMessageConfigured()) {
+        const result = await sendMFAOTP(userMFA.phone, otp);
+        if (!result.success) {
+          console.error('[Login MFA] Failed to send OTP:', result.error);
+          // Still allow login if SMS fails - fallback to recovery codes
+        }
+      } else {
+        // Development mode: Log OTP
+        console.log(`[LOGIN MFA DEV] OTP for ${user.email}: ${otp}`);
+      }
+
+      return NextResponse.json({
+        mfaRequired: true,
+        message: 'Two-factor authentication required',
+        mfaToken: mfaToken,
+        phoneLastFour: userMFA.phone.slice(-4),
+        expiresIn: 300, // 5 minutes
+      });
+    }
+
+    // No MFA - proceed with normal login
+
     // Update last login
     await db.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
 
-    // Create session
+    // Create server-side session record for session management
+    const userAgent = request.headers.get('user-agent');
+    const { sessionId } = await createSessionRecord(
+      user.id,
+      clientIp,
+      userAgent
+    );
+
+    // Create JWT session with sessionId for session validation
     await setSession({
       userId: user.id,
       email: user.email,
       role: user.role,
       status: user.status, // Sprint 2: Include status in session
       organizationId: user.organizationId || undefined,
+      sessionId, // Sprint 19: Include sessionId for session management
     });
 
     // Log successful login

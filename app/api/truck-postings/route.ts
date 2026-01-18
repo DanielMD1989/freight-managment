@@ -353,6 +353,12 @@ export async function GET(request: NextRequest) {
     const offsetParam = searchParams.get('offset');
     const includeMatchCount = searchParams.get('includeMatchCount') === 'true';
 
+    // Valid PostingStatus values
+    const validStatuses = ['ACTIVE', 'EXPIRED', 'CANCELLED', 'MATCHED'];
+
+    // Validate status parameter - if invalid, default to ACTIVE
+    const validatedStatus = validStatuses.includes(status) ? status : 'ACTIVE';
+
     // If filtering by specific organization (for "my postings"), verify user has access
     if (organizationId) {
       const session = await requireAuth();
@@ -418,9 +424,8 @@ export async function GET(request: NextRequest) {
     if (organizationId) {
       // If filtering by organization, show all statuses for that org
       where.carrierId = organizationId;
-      if (status) {
-        where.status = status;
-      }
+      // Use validated status to prevent invalid enum errors
+      where.status = validatedStatus;
     } else {
       // Public view: only ACTIVE postings
       where.status = 'ACTIVE';

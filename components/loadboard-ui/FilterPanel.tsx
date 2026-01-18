@@ -43,7 +43,7 @@ export default function FilterPanel({
               step={filter.step || 1}
               value={value || filter.min}
               onChange={(e) => onChange(filter.key, parseFloat(e.target.value))}
-              className="w-full h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer accent-teal-600
+              className="w-full h-1.5 bg-slate-200 dark:bg-slate-600 rounded-full appearance-none cursor-pointer accent-teal-600
                          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
                          [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-teal-600 [&::-webkit-slider-thumb]:shadow-md
                          [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:transition-transform
@@ -51,7 +51,7 @@ export default function FilterPanel({
             />
             <div className="flex justify-between text-[10px] text-slate-400 mt-1.5 font-medium">
               <span>{filter.min}{filter.unit}</span>
-              <span className="text-xs font-semibold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-semibold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/40 px-2 py-0.5 rounded-full">
                 {value || filter.min}{filter.unit}
               </span>
               <span>{filter.max}{filter.unit}</span>
@@ -66,7 +66,7 @@ export default function FilterPanel({
             <div>
               <div className="flex justify-between items-center mb-1">
                 <label className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Min</label>
-                <span className="text-xs font-semibold text-slate-700">{rangeValue.min}{filter.unit}</span>
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">{rangeValue.min}{filter.unit}</span>
               </div>
               <input
                 type="range"
@@ -77,7 +77,7 @@ export default function FilterPanel({
                 onChange={(e) =>
                   onChange(filter.key, { ...rangeValue, min: parseFloat(e.target.value) })
                 }
-                className="w-full h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer accent-teal-600
+                className="w-full h-1.5 bg-slate-200 dark:bg-slate-600 rounded-full appearance-none cursor-pointer accent-teal-600
                            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
                            [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-teal-600 [&::-webkit-slider-thumb]:shadow-md"
               />
@@ -85,7 +85,7 @@ export default function FilterPanel({
             <div>
               <div className="flex justify-between items-center mb-1">
                 <label className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Max</label>
-                <span className="text-xs font-semibold text-slate-700">{rangeValue.max}{filter.unit}</span>
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">{rangeValue.max}{filter.unit}</span>
               </div>
               <input
                 type="range"
@@ -96,7 +96,7 @@ export default function FilterPanel({
                 onChange={(e) =>
                   onChange(filter.key, { ...rangeValue, max: parseFloat(e.target.value) })
                 }
-                className="w-full h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer accent-teal-600
+                className="w-full h-1.5 bg-slate-200 dark:bg-slate-600 rounded-full appearance-none cursor-pointer accent-teal-600
                            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
                            [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-teal-600 [&::-webkit-slider-thumb]:shadow-md"
               />
@@ -110,10 +110,10 @@ export default function FilterPanel({
             <select
               value={value || ''}
               onChange={(e) => onChange(filter.key, e.target.value)}
-              className="w-full px-3 py-2 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg
+              className="w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg
                          appearance-none cursor-pointer transition-all
                          focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500
-                         hover:border-slate-300"
+                         hover:border-slate-300 dark:hover:border-slate-500"
             >
               <option value="">All</option>
               {filter.options.map((option) => (
@@ -136,17 +136,17 @@ export default function FilterPanel({
             min={filter.minDate?.toISOString().split('T')[0]}
             max={filter.maxDate?.toISOString().split('T')[0]}
             onChange={(e) => onChange(filter.key, e.target.value)}
-            className="w-full px-3 py-2 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg
+            className="w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg
                        transition-all cursor-pointer
                        focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500
-                       hover:border-slate-300"
+                       hover:border-slate-300 dark:hover:border-slate-500"
           />
         );
 
       case 'toggle':
         return (
           <label className="flex items-center justify-between cursor-pointer group">
-            <span className="text-sm text-slate-600 group-hover:text-slate-800 transition-colors">
+            <span className="text-sm text-slate-600 dark:text-slate-300 group-hover:text-slate-800 dark:group-hover:text-slate-100 transition-colors">
               {value ? 'Enabled' : 'Disabled'}
             </span>
             <div className="relative">
@@ -160,7 +160,7 @@ export default function FilterPanel({
                 w-11 h-6 rounded-full transition-all duration-200
                 ${value
                   ? 'bg-gradient-to-r from-teal-600 to-teal-500 shadow-inner'
-                  : 'bg-slate-200'
+                  : 'bg-slate-200 dark:bg-slate-600'
                 }
               `}>
                 <div className={`
@@ -179,10 +179,10 @@ export default function FilterPanel({
             value={value || ''}
             placeholder={filter.placeholder}
             onChange={(e) => onChange(filter.key, e.target.value)}
-            className="w-full px-3 py-2 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg
+            className="w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg
                        placeholder:text-slate-400 transition-all
                        focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500
-                       hover:border-slate-300"
+                       hover:border-slate-300 dark:hover:border-slate-500"
           />
         );
 
@@ -192,20 +192,20 @@ export default function FilterPanel({
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-700 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-slate-50 to-teal-50/30 border-b border-slate-200/80">
+      <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-slate-50 to-teal-50/30 dark:from-slate-800 dark:to-teal-900/20 border-b border-slate-200/80 dark:border-slate-700">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-600 to-teal-500 flex items-center justify-center shadow-sm">
             <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
           </div>
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">{title}</h3>
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wide">{title}</h3>
         </div>
         <button
           onClick={onReset}
-          className="text-xs font-semibold text-teal-600 hover:text-teal-700 px-3 py-1.5 rounded-lg hover:bg-teal-50 transition-colors"
+          className="text-xs font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 px-3 py-1.5 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-900/40 transition-colors"
         >
           Reset All
         </button>
@@ -217,13 +217,13 @@ export default function FilterPanel({
           const isCollapsed = collapsedSections.has(filter.key);
 
           return (
-            <div key={filter.key} className="border-b border-slate-100 last:border-0">
+            <div key={filter.key} className="border-b border-slate-100 dark:border-slate-700 last:border-0">
               {/* Filter Label */}
               <button
                 onClick={() => toggleSection(filter.key)}
                 className="w-full flex items-center justify-between py-3 text-left group"
               >
-                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider group-hover:text-slate-800 transition-colors">
+                <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider group-hover:text-slate-800 dark:group-hover:text-slate-100 transition-colors">
                   {filter.label}
                 </span>
                 <svg

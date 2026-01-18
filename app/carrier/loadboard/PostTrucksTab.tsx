@@ -98,6 +98,9 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   const [requestProposedRate, setRequestProposedRate] = useState('');
   const [submittingRequest, setSubmittingRequest] = useState(false);
 
+  // Track which loads have already been requested by this carrier
+  const [requestedLoadIds, setRequestedLoadIds] = useState<Set<string>>(new Set());
+
   /**
    * Fetch Ethiopian cities
    */
@@ -130,9 +133,28 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     }
   };
 
+  /**
+   * Fetch existing load requests to track which loads have already been requested
+   */
+  const fetchExistingRequests = async () => {
+    try {
+      const response = await fetch('/api/load-requests?status=PENDING');
+      if (response.ok) {
+        const data = await response.json();
+        const requestedIds = new Set<string>(
+          (data.loadRequests || []).map((req: any) => req.loadId)
+        );
+        setRequestedLoadIds(requestedIds);
+      }
+    } catch (error) {
+      console.error('Failed to fetch existing load requests:', error);
+    }
+  };
+
   useEffect(() => {
     fetchEthiopianCities();
     fetchApprovedTrucks();
+    fetchExistingRequests();
   }, []);
 
   /**
@@ -751,6 +773,10 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       }
 
       toast.success('Load request sent to shipper! You will be notified when they respond.');
+
+      // Add to requested loads to update button state
+      setRequestedLoadIds(prev => new Set([...prev, selectedLoadForRequest.id]));
+
       setRequestModalOpen(false);
       setSelectedLoadForRequest(null);
       setSelectedTruckForRequest('');
@@ -1055,17 +1081,27 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       label: 'Action',
       width: '120px',
       align: 'center' as const,
-      render: (_, row) => (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleOpenRequestModal(row);
-          }}
-          className="px-3 py-1.5 bg-[#064d51] text-white text-xs font-bold rounded-lg hover:bg-[#053d40] transition-colors whitespace-nowrap"
-        >
-          REQUEST LOAD
-        </button>
-      ),
+      render: (_, row) => {
+        const isRequested = requestedLoadIds.has(row.id);
+        return (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!isRequested) {
+                handleOpenRequestModal(row);
+              }
+            }}
+            disabled={isRequested}
+            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap ${
+              isRequested
+                ? 'bg-amber-500 text-white cursor-not-allowed'
+                : 'bg-[#064d51] text-white hover:bg-[#053d40]'
+            }`}
+          >
+            {isRequested ? 'REQUESTED' : 'REQUEST LOAD'}
+          </button>
+        );
+      },
     },
   ];
 

@@ -490,14 +490,17 @@ export default function RoleAwareSidebar({ userRole, portalType }: RoleAwareSide
       {/* Portal Header */}
       <div
         className="flex items-center gap-3 px-5 py-5"
-        style={{ borderBottom: '2px solid rgba(255, 255, 255, 0.15)' }}
+        style={{ borderBottom: '1px solid var(--sidebar-border)' }}
       >
-        <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-white shadow-lg">
-          <PortalIcon className="w-6 h-6" />
+        <div
+          className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg"
+          style={{ background: 'var(--primary-600)' }}
+        >
+          <PortalIcon className="w-6 h-6 text-white" />
         </div>
         <div>
-          <span className="text-base font-bold text-white block">{config.title}</span>
-          <span className="text-xs text-white/60">{config.subtitle}</span>
+          <span className="text-base font-bold block" style={{ color: 'var(--sidebar-text-active)' }}>{config.title}</span>
+          <span className="text-xs" style={{ color: 'var(--sidebar-muted)' }}>{config.subtitle}</span>
         </div>
       </div>
 
@@ -512,12 +515,12 @@ export default function RoleAwareSidebar({ userRole, portalType }: RoleAwareSide
               {section.title && (
                 <div
                   className="flex items-center gap-2 px-3 py-2 mb-1 mt-2"
-                  style={{ borderTop: sectionIndex > 0 ? '1px solid rgba(255, 255, 255, 0.12)' : 'none', paddingTop: sectionIndex > 0 ? '0.75rem' : '0.5rem' }}
+                  style={{ borderTop: sectionIndex > 0 ? '1px solid var(--sidebar-border)' : 'none', paddingTop: sectionIndex > 0 ? '0.75rem' : '0.5rem' }}
                 >
-                  <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">
+                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--sidebar-muted)' }}>
                     {section.title}
                   </span>
-                  <div className="flex-1 h-px bg-white/15"></div>
+                  <div className="flex-1 h-px" style={{ background: 'var(--sidebar-border)' }}></div>
                 </div>
               )}
               <div className="space-y-0.5">
@@ -527,23 +530,22 @@ export default function RoleAwareSidebar({ userRole, portalType }: RoleAwareSide
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={cn(
-                        'group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
-                        active
-                          ? 'bg-[#c0f2f3]/20 text-[#c0f2f3] shadow-md border-l-[3px] border-[#c0f2f3]'
-                          : 'text-white/70 hover:bg-white/10 hover:text-white border-l-[3px] border-transparent hover:border-white/30'
-                      )}
+                      className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 border-l-[3px]"
+                      style={{
+                        background: active ? 'var(--sidebar-active)' : 'transparent',
+                        color: active ? 'var(--sidebar-text-active)' : 'var(--sidebar-text)',
+                        borderColor: active ? 'var(--primary-500)' : 'transparent',
+                      }}
                     >
-                      <span className={cn(
-                        'flex-shrink-0 transition-transform duration-200',
-                        active ? 'text-[#c0f2f3]' : 'text-white/60 group-hover:text-white',
-                        !active && 'group-hover:scale-110'
-                      )}>
+                      <span
+                        className="flex-shrink-0 transition-transform duration-200 group-hover:scale-110"
+                        style={{ color: active ? 'var(--primary-400)' : 'var(--sidebar-text)' }}
+                      >
                         <IconComponent icon={item.icon} />
                       </span>
                       <span className="truncate">{item.label}</span>
                       {active && (
-                        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#c0f2f3]"></span>
+                        <span className="ml-auto w-1.5 h-1.5 rounded-full" style={{ background: 'var(--primary-400)' }}></span>
                       )}
                     </Link>
                   );
@@ -555,14 +557,14 @@ export default function RoleAwareSidebar({ userRole, portalType }: RoleAwareSide
       </nav>
 
       {/* Footer */}
-      <div className="p-3 space-y-1" style={{ borderTop: '2px solid rgba(255, 255, 255, 0.15)' }}>
+      <div className="p-3 space-y-1" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
         {/* Theme Toggle */}
-        <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-white/10">
+        <div className="flex items-center justify-between px-3 py-2.5 rounded-lg" style={{ background: 'var(--sidebar-hover)' }}>
           <div className="flex items-center gap-2.5">
-            <svg className="w-5 h-5 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5" style={{ color: 'var(--sidebar-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
             </svg>
-            <span className="text-sm font-medium text-white/80">Theme</span>
+            <span className="text-sm font-medium" style={{ color: 'var(--sidebar-text)' }}>Theme</span>
           </div>
           <ThemeToggle />
         </div>
@@ -570,7 +572,8 @@ export default function RoleAwareSidebar({ userRole, portalType }: RoleAwareSide
         {/* Back Link */}
         <Link
           href={config.backLink.href}
-          className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-white/60 rounded-lg hover:bg-white/10 hover:text-white transition-all duration-200"
+          className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200"
+          style={{ color: 'var(--sidebar-muted)' }}
         >
           <HomeIcon />
           <span>{config.backLink.label}</span>

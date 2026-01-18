@@ -5,11 +5,13 @@
  *
  * Carrier interface for searching available loads
  * Sprint 14 - DAT-Style UI Transformation
+ * Updated: Sprint 19 - Responsive DataTable integration
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { StatusTabs, AgeIndicator, SavedSearches, EditSearchModal } from '@/components/loadboard-ui';
-import { StatusTab, SavedSearch, SavedSearchCriteria } from '@/types/loadboard-ui';
+import DataTable from '@/components/loadboard-ui/DataTable';
+import { TableColumn, RowAction, StatusTab, SavedSearch, SavedSearchCriteria } from '@/types/loadboard-ui';
 import LoadRequestModal from './LoadRequestModal';
 import { getCSRFToken } from '@/lib/csrfFetch';
 
@@ -494,6 +496,122 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
   };
 
   /**
+   * Table columns configuration (memoized)
+   */
+  const columns: TableColumn[] = useMemo(() => [
+    {
+      key: 'age',
+      label: 'Age',
+      width: '80px',
+      render: (_: any, row: any) => <AgeIndicator date={row.postedAt || row.createdAt} />,
+    },
+    {
+      key: 'pickupDate',
+      label: 'Pickup',
+      sortable: true,
+      render: (value: string) =>
+        value ? new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A',
+    },
+    {
+      key: 'truckType',
+      label: 'Truck',
+      sortable: true,
+      render: (value: string) => getTruckTypeLabel(value),
+    },
+    {
+      key: 'fullPartial',
+      label: 'F/P',
+      width: '60px',
+      align: 'center' as const,
+      render: (value: string) => value === 'FULL' ? 'F' : 'P',
+    },
+    {
+      key: 'dhToOriginKm',
+      label: 'DH-O',
+      width: '70px',
+      sortable: true,
+      align: 'right' as const,
+      render: (value: number) => value ? `${value}km` : '—',
+    },
+    {
+      key: 'pickupCity',
+      label: 'Origin',
+      sortable: true,
+      render: (value: string) => (
+        <span className="font-medium text-slate-800 dark:text-slate-100">{value || 'N/A'}</span>
+      ),
+    },
+    {
+      key: 'tripKm',
+      label: 'Trip',
+      width: '70px',
+      align: 'right' as const,
+      render: (value: number) => value ? `${value}km` : '—',
+    },
+    {
+      key: 'deliveryCity',
+      label: 'Destination',
+      sortable: true,
+      render: (value: string) => (
+        <span className="font-medium text-slate-800 dark:text-slate-100">{value || 'N/A'}</span>
+      ),
+    },
+    {
+      key: 'dhAfterDeliveryKm',
+      label: 'DH-D',
+      width: '70px',
+      sortable: true,
+      align: 'right' as const,
+      render: (value: number) => value ? `${value}km` : '—',
+    },
+    {
+      key: 'shipper',
+      label: 'Company',
+      render: (_: any, row: any) => (
+        <span className="font-medium text-teal-600 dark:text-teal-400 hover:underline cursor-pointer">
+          {row.shipper?.name || 'Anonymous'}
+        </span>
+      ),
+    },
+    {
+      key: 'weight',
+      label: 'Weight',
+      width: '90px',
+      align: 'right' as const,
+      sortable: true,
+      render: (value: number) => value ? `${value.toLocaleString()}kg` : 'N/A',
+    },
+  ], []);
+
+  /**
+   * Table actions configuration (memoized)
+   */
+  const tableActions: RowAction[] = useMemo(() => [
+    {
+      key: 'request',
+      label: 'Request',
+      variant: 'primary',
+      icon: (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+      ),
+      onClick: (row: any) => {
+        setSelectedLoad(row);
+        setShowRequestModal(true);
+      },
+      show: (row: any) => !pendingRequestLoadIds.has(row.id),
+    },
+    {
+      key: 'pending',
+      label: 'Pending',
+      variant: 'secondary',
+      onClick: () => {},
+      show: (row: any) => pendingRequestLoadIds.has(row.id),
+    },
+  ], [pendingRequestLoadIds]);
+
+  /**
    * Results tabs configuration
    */
   const resultsTabs: StatusTab[] = [
@@ -761,173 +879,44 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
         </div>
       )}
 
-      {/* Results Section */}
-      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-teal-600 to-teal-500">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-            {loads.length} {loads.length === 1 ? 'Load' : 'Loads'} Found
-          </h3>
-          <div className="flex gap-2">
-            {resultsTabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveFilter(tab.key as ResultsFilter)}
-                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-colors ${
-                  activeFilter === tab.key
-                    ? 'bg-white text-teal-700'
-                    : 'bg-white/20 text-white hover:bg-white/30'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Results Table */}
-        <div className="overflow-x-auto">
-          {/* Table Header */}
-          <div className="bg-gradient-to-r from-slate-100 to-slate-50 grid grid-cols-14 gap-2 px-4 py-3 text-xs font-semibold text-slate-600 border-b border-slate-200">
-            <div
-              className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-              onClick={() => handleHeaderClick('createdAt')}
+      {/* Results Section Header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-teal-600 to-teal-500 rounded-t-2xl">
+        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
+          {loads.length} {loads.length === 1 ? 'Load' : 'Loads'} Found
+        </h3>
+        <div className="flex gap-2">
+          {resultsTabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveFilter(tab.key as ResultsFilter)}
+              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-colors ${
+                activeFilter === tab.key
+                  ? 'bg-white text-teal-700'
+                  : 'bg-white/20 text-white hover:bg-white/30'
+              }`}
             >
-              Age {sortField === 'createdAt' && (sortOrder === 'asc' ? '↑' : '↓')}
-            </div>
-            <div
-              className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-              onClick={() => handleHeaderClick('pickupDate')}
-            >
-              Pickup {sortField === 'pickupDate' && (sortOrder === 'asc' ? '↑' : '↓')}
-            </div>
-            <div
-              className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-              onClick={() => handleHeaderClick('truckType')}
-            >
-              Truck {sortField === 'truckType' && (sortOrder === 'asc' ? '↑' : '↓')}
-            </div>
-            <div
-              className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-              onClick={() => handleHeaderClick('fullPartial')}
-            >
-              F/P {sortField === 'fullPartial' && (sortOrder === 'asc' ? '↑' : '↓')}
-            </div>
-            <div
-              className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-              onClick={() => handleHeaderClick('dhToOriginKm')}
-            >
-              DH-O {sortField === 'dhToOriginKm' && (sortOrder === 'asc' ? '↑' : '↓')}
-            </div>
-            <div
-              className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-              onClick={() => handleHeaderClick('pickupCity')}
-            >
-              Origin {sortField === 'pickupCity' && (sortOrder === 'asc' ? '↑' : '↓')}
-            </div>
-            <div
-              className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-              onClick={() => handleHeaderClick('tripKm')}
-            >
-              Trip {sortField === 'tripKm' && (sortOrder === 'asc' ? '↑' : '↓')}
-            </div>
-            <div
-              className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-              onClick={() => handleHeaderClick('deliveryCity')}
-            >
-              Destination {sortField === 'deliveryCity' && (sortOrder === 'asc' ? '↑' : '↓')}
-            </div>
-            <div
-              className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-              onClick={() => handleHeaderClick('dhAfterDeliveryKm')}
-            >
-              DH-D {sortField === 'dhAfterDeliveryKm' && (sortOrder === 'asc' ? '↑' : '↓')}
-            </div>
-            <div className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded">
-              Company
-            </div>
-            <div className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded">
-              Contact
-            </div>
-            <div
-              className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-              onClick={() => handleHeaderClick('lengthM')}
-            >
-              Length {sortField === 'lengthM' && (sortOrder === 'asc' ? '↑' : '↓')}
-            </div>
-            <div
-              className="cursor-pointer hover:bg-white/20 px-1 py-0.5 rounded"
-              onClick={() => handleHeaderClick('weight')}
-            >
-              Weight {sortField === 'weight' && (sortOrder === 'asc' ? '↑' : '↓')}
-            </div>
-            <div className="px-1 py-0.5">
-              Action
-            </div>
-          </div>
-
-          {/* Load Rows */}
-          {loading ? (
-            <div className="p-12 text-center">
-              <div className="w-8 h-8 border-2 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-              <p className="text-sm text-slate-500">Loading loads...</p>
-            </div>
-          ) : loads.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="w-16 h-16 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
-                <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              </div>
-              <h3 className="text-sm font-medium text-slate-800 mb-1">No loads found</h3>
-              <p className="text-sm text-slate-500">Try adjusting your search filters</p>
-            </div>
-          ) : (
-            loads.map((load) => (
-              <div
-                key={load.id}
-                className="grid grid-cols-14 gap-2 px-4 py-3 border-b border-slate-100 hover:bg-slate-50 cursor-default text-xs transition-colors group"
-              >
-                <div><AgeIndicator date={load.postedAt || load.createdAt} /></div>
-                <div className="text-slate-700">{load.pickupDate ? new Date(load.pickupDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : 'N/A'}</div>
-                <div className="text-slate-700">{getTruckTypeLabel(load.truckType)}</div>
-                <div className="text-slate-700">{load.fullPartial === 'FULL' ? 'F' : 'P'}</div>
-                <div className="text-slate-500">{load.dhToOriginKm || '—'}</div>
-                <div className="truncate font-medium text-slate-800">{load.pickupCity || 'N/A'}</div>
-                <div className="text-slate-500">{load.tripKm || '—'}</div>
-                <div className="truncate font-medium text-slate-800">{load.deliveryCity || 'N/A'}</div>
-                <div className="text-slate-500">{load.dhAfterDeliveryKm || '—'}</div>
-                <div className="truncate font-medium text-teal-600 hover:text-teal-700 hover:underline cursor-pointer">
-                  {load.shipper?.name || 'Anonymous'}
-                </div>
-                <div className="text-slate-600">{load.shipperContactPhone || 'N/A'}</div>
-                <div className="text-slate-600">{load.lengthM ? `${load.lengthM}m` : 'N/A'}</div>
-                <div className="text-slate-600">{load.weight ? `${load.weight.toLocaleString()}kg` : 'N/A'}</div>
-                <div>
-                  {pendingRequestLoadIds.has(load.id) ? (
-                    <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-lg">
-                      REQUEST SENT
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setSelectedLoad(load);
-                        setShowRequestModal(true);
-                      }}
-                      className="px-3 py-1 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-xs font-semibold rounded-lg hover:from-teal-700 hover:to-teal-600 transition-all shadow-sm"
-                    >
-                      REQUEST
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
+
+      {/* Results Table - Responsive DataTable */}
+      <DataTable
+        columns={columns}
+        data={loads}
+        loading={loading}
+        actions={tableActions}
+        rowKey="id"
+        responsiveCardView={true}
+        cardTitleColumn="pickupCity"
+        cardSubtitleColumn="deliveryCity"
+        emptyMessage="No loads found. Try adjusting your search filters."
+        className="rounded-t-none"
+      />
 
       {/* Edit Search Modal */}
       <EditSearchModal

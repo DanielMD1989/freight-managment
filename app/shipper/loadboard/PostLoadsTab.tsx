@@ -6,12 +6,15 @@
  * Shows POSTED loads with truck matching features
  * For full load management, use My Loads page
  * Sprint 14 - DAT-Style UI Transformation
+ * Updated: Sprint 19 - Responsive DataTable integration
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AgeIndicator } from '@/components/loadboard-ui';
+import DataTable from '@/components/loadboard-ui/DataTable';
+import { TableColumn, RowAction } from '@/types/loadboard-ui';
 import { useToast } from '@/components/Toast/ToastContext';
 import { getCSRFToken } from '@/lib/csrfFetch';
 
@@ -42,7 +45,6 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
   const router = useRouter();
   const [loads, setLoads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedLoadId, setExpandedLoadId] = useState<string | null>(null);
 
   /**
    * Fetch POSTED loads only (marketplace view)
@@ -129,13 +131,114 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
     }
   };
 
+  /**
+   * Table columns definition
+   */
+  const columns: TableColumn[] = useMemo(() => [
+    {
+      key: 'postedAt',
+      label: 'Age',
+      width: '80px',
+      render: (value: string, row: any) => <AgeIndicator date={row.postedAt || row.createdAt} />,
+    },
+    {
+      key: 'pickupDate',
+      label: 'Pickup',
+      sortable: true,
+      render: (value: string) =>
+        value ? new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A',
+    },
+    {
+      key: 'pickupCity',
+      label: 'Origin',
+      sortable: true,
+      render: (value: string) => (
+        <span className="font-medium text-slate-800 dark:text-slate-100">{value || 'N/A'}</span>
+      ),
+    },
+    {
+      key: 'deliveryCity',
+      label: 'Destination',
+      sortable: true,
+      render: (value: string) => (
+        <span className="font-medium text-slate-800 dark:text-slate-100">{value || 'N/A'}</span>
+      ),
+    },
+    {
+      key: 'truckType',
+      label: 'Truck',
+      render: (value: string) => getTruckTypeLabel(value),
+    },
+    {
+      key: 'weight',
+      label: 'Weight',
+      sortable: true,
+      render: (value: number) => (value ? `${value.toLocaleString()} kg` : 'N/A'),
+    },
+    {
+      key: 'matchCount',
+      label: 'Matches',
+      align: 'center' as const,
+      render: (value: number) => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs font-bold ${
+            value > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
+          }`}
+        >
+          {value || 0} trucks
+        </span>
+      ),
+    },
+  ], []);
+
+  /**
+   * Table actions definition
+   */
+  const actions: RowAction[] = useMemo(() => [
+    {
+      key: 'findTrucks',
+      label: 'Find Trucks',
+      variant: 'primary',
+      icon: (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      ),
+      onClick: (row: any) => handleSearchTrucks(row),
+    },
+    {
+      key: 'viewDetails',
+      label: 'View',
+      variant: 'secondary',
+      onClick: (row: any) => router.push(`/shipper/loads/${row.id}`),
+    },
+    {
+      key: 'unpost',
+      label: 'Unpost',
+      variant: 'destructive',
+      onClick: (row: any) => handleUnpost(row),
+    },
+  ], [router]);
+
+  /**
+   * Render expanded row content
+   */
+  const renderExpandedRow = (load: any) => (
+    <div className="flex items-center justify-between text-sm">
+      <div className="text-slate-600 dark:text-slate-300">
+        <strong>Rate:</strong> {load.rate ? `ETB ${load.rate.toLocaleString()}` : 'Not set'} •{' '}
+        <strong>Cargo:</strong> {load.cargoDescription || 'Not specified'}
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6 pt-10">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-800">Posted Loads</h2>
-          <p className="text-sm text-slate-500">Find trucks for your posted loads</p>
+          <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Posted Loads</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Find trucks for your posted loads</p>
         </div>
         <button
           onClick={() => router.push('/shipper/loads/create')}
@@ -149,132 +252,36 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       </div>
 
       {/* Info banner */}
-      <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 flex items-center gap-3">
-        <svg className="w-5 h-5 text-teal-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="bg-teal-50 dark:bg-teal-900/30 border border-teal-200 dark:border-teal-800 rounded-xl p-4 flex items-center gap-3">
+        <svg className="w-5 h-5 text-teal-600 dark:text-teal-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <p className="text-sm text-teal-800">
+        <p className="text-sm text-teal-800 dark:text-teal-200">
           This shows only your <strong>Posted</strong> loads. For full load management (drafts, editing, all statuses), go to{' '}
-          <Link href="/shipper/loads" className="underline font-medium hover:text-teal-900">My Loads</Link>.
+          <Link href="/shipper/loads" className="underline font-medium hover:text-teal-900 dark:hover:text-teal-100">My Loads</Link>.
         </p>
       </div>
 
-      {/* Loads Table */}
-      <div className="bg-white border border-slate-200/60 rounded-2xl overflow-hidden shadow-sm">
-        {/* Table Header */}
-        <div className="bg-gradient-to-r from-teal-600 to-teal-500 grid grid-cols-7 gap-2 px-4 py-3 text-xs font-semibold text-white">
-          <div>Age</div>
-          <div>Pickup</div>
-          <div>Origin</div>
-          <div>Destination</div>
-          <div>Truck</div>
-          <div>Weight</div>
-          <div className="text-center">Matches</div>
-        </div>
-
-        {/* Loading */}
-        {loading ? (
-          <div className="p-12 text-center">
-            <div className="w-8 h-8 border-3 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-slate-500">Loading posted loads...</p>
-          </div>
-        ) : loads.length === 0 ? (
-          /* Empty State */
-          <div className="p-12 text-center">
-            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
-            </div>
-            <h3 className="text-slate-700 font-medium mb-1">No posted loads</h3>
-            <p className="text-slate-500 text-sm mb-4">Post a load to start finding trucks</p>
-            <button
-              onClick={() => router.push('/shipper/loads/create')}
-              className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium"
-            >
-              Post New Load
-            </button>
-          </div>
-        ) : (
-          /* Load Rows */
-          loads.map((load) => (
-            <div key={load.id}>
-              <div
-                className={`grid grid-cols-7 gap-2 px-4 py-3 border-b text-sm cursor-pointer transition-colors ${
-                  expandedLoadId === load.id
-                    ? 'bg-teal-50 border-l-4 border-l-teal-500'
-                    : 'border-slate-100 hover:bg-slate-50'
-                }`}
-                onClick={() => setExpandedLoadId(expandedLoadId === load.id ? null : load.id)}
-              >
-                <div><AgeIndicator date={load.postedAt || load.createdAt} /></div>
-                <div className="text-slate-700">
-                  {load.pickupDate ? new Date(load.pickupDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
-                </div>
-                <div className="font-medium text-slate-800 truncate">{load.pickupCity || 'N/A'}</div>
-                <div className="font-medium text-slate-800 truncate">{load.deliveryCity || 'N/A'}</div>
-                <div className="text-slate-600">{getTruckTypeLabel(load.truckType)}</div>
-                <div className="text-slate-600">{load.weight ? `${load.weight.toLocaleString()} kg` : 'N/A'}</div>
-                <div className="text-center">
-                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                    load.matchCount > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
-                  }`}>
-                    {load.matchCount || 0} trucks
-                  </span>
-                </div>
-              </div>
-
-              {/* Expanded Actions */}
-              {expandedLoadId === load.id && (
-                <div className="bg-teal-50 px-6 py-4 border-b border-teal-200 border-l-4 border-l-teal-500">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-slate-600">
-                      <strong>Rate:</strong> {load.rate ? `ETB ${load.rate.toLocaleString()}` : 'Not set'} •{' '}
-                      <strong>Cargo:</strong> {load.cargoDescription || 'Not specified'}
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSearchTrucks(load);
-                        }}
-                        className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                        Find Trucks ({load.matchCount || 0})
-                      </button>
-                      <Link
-                        href={`/shipper/loads/${load.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="px-4 py-2 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors"
-                      >
-                        View Details
-                      </Link>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleUnpost(load);
-                        }}
-                        className="px-4 py-2 bg-rose-100 text-rose-700 text-sm font-medium rounded-lg hover:bg-rose-200 transition-colors"
-                      >
-                        Unpost
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))
-        )}
-      </div>
+      {/* Loads Table - Responsive with Card View */}
+      <DataTable
+        columns={columns}
+        data={loads}
+        loading={loading}
+        expandable={true}
+        renderExpandedRow={renderExpandedRow}
+        actions={actions}
+        rowKey="id"
+        responsiveCardView={true}
+        cardTitleColumn="pickupCity"
+        cardSubtitleColumn="deliveryCity"
+        emptyMessage="Post a load to start finding trucks"
+      />
 
       {/* Footer note */}
       {loads.length > 0 && (
-        <p className="text-center text-sm text-slate-500">
+        <p className="text-center text-sm text-slate-500 dark:text-slate-400">
           Showing {loads.length} posted load{loads.length !== 1 ? 's' : ''} •{' '}
-          <Link href="/shipper/loads" className="text-teal-600 hover:underline">View all loads</Link>
+          <Link href="/shipper/loads" className="text-teal-600 dark:text-teal-400 hover:underline">View all loads</Link>
         </p>
       )}
     </div>

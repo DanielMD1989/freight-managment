@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify, EncryptJWT, jwtDecrypt, type JWTPayload } from "jose";
 import { cookies } from "next/headers";
+import { createHash, randomBytes } from "crypto";
 
 /**
  * Production-Ready JWT Authentication
@@ -44,6 +45,7 @@ export interface SessionPayload extends JWTPayload {
   organizationId?: string;
   firstName?: string;
   lastName?: string;
+  sessionId?: string; // Sprint 19: Server-side session ID for session management
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -330,4 +332,315 @@ export async function getCurrentUser() {
   });
 
   return user;
+}
+
+// ============================================================================
+// SPRINT 19: SESSION MANAGEMENT FUNCTIONS
+// ============================================================================
+
+/**
+ * Generate a session token (32 bytes of random data)
+ */
+export function generateSessionToken(): string {
+  return randomBytes(32).toString("hex");
+}
+
+/**
+ * Hash a session token for storage
+ * We store hashed tokens to prevent token theft if DB is compromised
+ */
+export function hashSessionToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+/**
+ * Parse user agent string to extract device info
+ */
+export function parseUserAgent(userAgent: string | null): string {
+  if (!userAgent) return "Unknown device";
+
+  // Simple parsing - extract browser and OS
+  let browser = "Unknown browser";
+  let os = "Unknown OS";
+
+  // Detect browser
+  if (userAgent.includes("Firefox/")) browser = "Firefox";
+  else if (userAgent.includes("Edg/")) browser = "Edge";
+  else if (userAgent.includes("Chrome/")) browser = "Chrome";
+  else if (userAgent.includes("Safari/") && !userAgent.includes("Chrome")) browser = "Safari";
+  else if (userAgent.includes("Opera") || userAgent.includes("OPR/")) browser = "Opera";
+
+  // Detect OS
+  if (userAgent.includes("Windows NT 10")) os = "Windows 10";
+  else if (userAgent.includes("Windows NT 11") || userAgent.includes("Windows NT 10.0; Win64; x64")) os = "Windows";
+  else if (userAgent.includes("Windows")) os = "Windows";
+  else if (userAgent.includes("Mac OS X")) os = "macOS";
+  else if (userAgent.includes("Linux")) os = "Linux";
+  else if (userAgent.includes("Android")) os = "Android";
+  else if (userAgent.includes("iPhone") || userAgent.includes("iPad")) os = "iOS";
+
+  return `${browser} on ${os}`;
+}
+
+/**
+ * Create a session record in the database
+ * Returns the session token (to be stored in cookie)
+ */
+export async function createSessionRecord(
+  userId: string,
+  ipAddress?: string | null,
+  userAgent?: string | null
+): Promise<{ sessionId: string; token: string }> {
+  const { db } = await import("./db");
+
+  const token = generateSessionToken();
+  const tokenHash = hashSessionToken(token);
+  const deviceInfo = parseUserAgent(userAgent || null);
+
+  // Session expires in 7 days
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 7);
+
+  const session = await db.session.create({
+    data: {
+      userId,
+      tokenHash,
+      deviceInfo,
+      ipAddress: ipAddress || null,
+      userAgent: userAgent || null,
+      expiresAt,
+    },
+  });
+
+  return { sessionId: session.id, token };
+}
+
+/**
+ * Validate a session by its token hash
+ * Returns session if valid, null if invalid/revoked/expired
+ */
+export async function validateSessionByToken(token: string): Promise<{
+  valid: boolean;
+  session: { id: string; userId: string } | null;
+  reason?: string;
+}> {
+  const { db } = await import("./db");
+
+  const tokenHash = hashSessionToken(token);
+
+  const session = await db.session.findUnique({
+    where: { tokenHash },
+    select: {
+      id: true,
+      userId: true,
+      expiresAt: true,
+      revokedAt: true,
+    },
+  });
+
+  if (!session) {
+    return { valid: false, session: null, reason: "Session not found" };
+  }
+
+  if (session.revokedAt) {
+    return { valid: false, session: null, reason: "Session revoked" };
+  }
+
+  if (new Date() > session.expiresAt) {
+    return { valid: false, session: null, reason: "Session expired" };
+  }
+
+  return { valid: true, session: { id: session.id, userId: session.userId } };
+}
+
+/**
+ * Update session last seen timestamp
+ */
+export async function updateSessionLastSeen(sessionId: string): Promise<void> {
+  const { db } = await import("./db");
+
+  await db.session.update({
+    where: { id: sessionId },
+    data: { lastSeenAt: new Date() },
+  });
+}
+
+/**
+ * Revoke a specific session
+ */
+export async function revokeSession(sessionId: string): Promise<void> {
+  const { db } = await import("./db");
+
+  await db.session.update({
+    where: { id: sessionId },
+    data: { revokedAt: new Date() },
+  });
+}
+
+/**
+ * Revoke all sessions for a user
+ * Optionally exclude a specific session (current session)
+ */
+export async function revokeAllSessions(
+  userId: string,
+  excludeSessionId?: string
+): Promise<number> {
+  const { db } = await import("./db");
+
+  const result = await db.session.updateMany({
+    where: {
+      userId,
+      revokedAt: null,
+      ...(excludeSessionId && { id: { not: excludeSessionId } }),
+    },
+    data: { revokedAt: new Date() },
+  });
+
+  return result.count;
+}
+
+/**
+ * Get all active sessions for a user
+ */
+export async function getUserSessions(userId: string) {
+  const { db } = await import("./db");
+
+  return db.session.findMany({
+    where: {
+      userId,
+      revokedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    select: {
+      id: true,
+      deviceInfo: true,
+      ipAddress: true,
+      lastSeenAt: true,
+      createdAt: true,
+    },
+    orderBy: { lastSeenAt: "desc" },
+  });
+}
+
+/**
+ * Clean up expired sessions (run periodically)
+ */
+export async function cleanupExpiredSessions(): Promise<number> {
+  const { db } = await import("./db");
+
+  // Delete sessions that expired more than 30 days ago
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - 30);
+
+  const result = await db.session.deleteMany({
+    where: {
+      OR: [
+        { expiresAt: { lt: cutoffDate } },
+        { revokedAt: { lt: cutoffDate } },
+      ],
+    },
+  });
+
+  return result.count;
+}
+
+// ============================================================================
+// PASSWORD POLICY
+// ============================================================================
+
+export interface PasswordValidation {
+  valid: boolean;
+  errors: string[];
+}
+
+/**
+ * Validate password against policy
+ * - Minimum 8 characters
+ * - At least 1 uppercase letter
+ * - At least 1 lowercase letter
+ * - At least 1 number
+ */
+export function validatePasswordPolicy(password: string): PasswordValidation {
+  const errors: string[] = [];
+
+  if (password.length < 8) {
+    errors.push("Password must be at least 8 characters");
+  }
+
+  if (!/[A-Z]/.test(password)) {
+    errors.push("Password must contain at least 1 uppercase letter");
+  }
+
+  if (!/[a-z]/.test(password)) {
+    errors.push("Password must contain at least 1 lowercase letter");
+  }
+
+  if (!/[0-9]/.test(password)) {
+    errors.push("Password must contain at least 1 number");
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
+
+// ============================================================================
+// MFA HELPERS
+// ============================================================================
+
+/**
+ * Generate recovery codes for MFA
+ * Returns array of 10 random 8-character codes
+ */
+export function generateRecoveryCodes(): string[] {
+  const codes: string[] = [];
+  const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Excludes confusing chars (0/O, 1/I)
+
+  for (let i = 0; i < 10; i++) {
+    let code = "";
+    for (let j = 0; j < 8; j++) {
+      const randomIndex = randomBytes(1)[0] % charset.length;
+      code += charset[randomIndex];
+    }
+    // Format: XXXX-XXXX
+    codes.push(`${code.slice(0, 4)}-${code.slice(4)}`);
+  }
+
+  return codes;
+}
+
+/**
+ * Hash recovery codes for storage
+ */
+export async function hashRecoveryCodes(codes: string[]): Promise<string[]> {
+  return Promise.all(codes.map(code => bcrypt.hash(code.replace("-", ""), 10)));
+}
+
+/**
+ * Verify a recovery code against hashed codes
+ * Returns the index if found, -1 if not found
+ */
+export async function verifyRecoveryCode(
+  code: string,
+  hashedCodes: string[]
+): Promise<number> {
+  const normalizedCode = code.replace("-", "").toUpperCase();
+
+  for (let i = 0; i < hashedCodes.length; i++) {
+    const match = await bcrypt.compare(normalizedCode, hashedCodes[i]);
+    if (match) {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+/**
+ * Generate a 6-digit OTP
+ */
+export function generateOTP(): string {
+  const otp = randomBytes(3).readUIntBE(0, 3) % 1000000;
+  return otp.toString().padStart(6, "0");
 }
