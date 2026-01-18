@@ -9,6 +9,7 @@
 // Set test environment variables
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-jwt-secret-key-for-testing-only';
+process.env.JWT_ENABLE_ENCRYPTION = 'false'; // Disable encryption in tests (mock doesn't support EncryptJWT)
 process.env.DATABASE_URL = 'postgresql://test@localhost:5432/freight_test';
 process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
 process.env.EMAIL_PROVIDER = 'console';
