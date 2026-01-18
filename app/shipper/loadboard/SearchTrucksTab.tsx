@@ -51,41 +51,47 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
 
   /**
    * Fetch trucks based on filters
+   * Uses current filter values from state ref to avoid stale closure issues
    */
-  const fetchTrucks = async () => {
+  const fetchTrucks = async (overrideFilters?: Record<string, any>) => {
     setLoading(true);
     try {
+      // Use override filters if provided, otherwise use current state
+      const currentFilters = overrideFilters || filterValues;
       const params = new URLSearchParams();
 
+      // DEBUG: Log filter values
+      console.log('[SearchTrucks] fetchTrucks called with filters:', currentFilters);
+
       // Apply filters
-      if (filterValues.ageHours) {
-        params.append('ageHours', filterValues.ageHours.toString());
+      if (currentFilters.ageHours) {
+        params.append('ageHours', currentFilters.ageHours.toString());
       }
 
       // Note: DH-Origin and DH-Destination are carrier-only metrics, hidden from shipper view
 
-      if (filterValues.origin && filterValues.origin.trim() !== '') {
-        params.append('origin', filterValues.origin);
+      if (currentFilters.origin && currentFilters.origin.trim() !== '') {
+        params.append('origin', currentFilters.origin);
       }
-      if (filterValues.destination && filterValues.destination.trim() !== '' && filterValues.destination.toLowerCase() !== 'anywhere') {
-        params.append('destination', filterValues.destination);
+      if (currentFilters.destination && currentFilters.destination.trim() !== '' && currentFilters.destination.toLowerCase() !== 'anywhere') {
+        params.append('destination', currentFilters.destination);
       }
-      if (filterValues.truckType) {
-        params.append('truckType', filterValues.truckType);
+      if (currentFilters.truckType) {
+        params.append('truckType', currentFilters.truckType);
       }
-      if (filterValues.fullPartial) {
-        params.append('fullPartial', filterValues.fullPartial);
+      if (currentFilters.fullPartial) {
+        params.append('fullPartial', currentFilters.fullPartial);
       }
-      if (filterValues.minLength) {
-        params.append('minLength', filterValues.minLength.toString());
+      if (currentFilters.minLength) {
+        params.append('minLength', currentFilters.minLength.toString());
       }
-      if (filterValues.maxWeight) {
-        params.append('maxWeight', filterValues.maxWeight.toString());
+      if (currentFilters.maxWeight) {
+        params.append('maxWeight', currentFilters.maxWeight.toString());
       }
-      if (filterValues.availableFrom) {
-        params.append('availableFrom', filterValues.availableFrom);
+      if (currentFilters.availableFrom) {
+        params.append('availableFrom', currentFilters.availableFrom);
       }
-      if (filterValues.showVerifiedOnly) {
+      if (currentFilters.showVerifiedOnly) {
         params.append('companyVerified', 'true');
       }
 
@@ -96,10 +102,15 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
         params.append('isBlocked', 'true');
       }
 
-      const response = await fetch(`/api/truck-postings?${params.toString()}`);
+      const url = `/api/truck-postings?${params.toString()}`;
+      console.log('[SearchTrucks] Fetching URL:', url);
+
+      const response = await fetch(url);
       const data = await response.json();
 
+      console.log('[SearchTrucks] API response:', { total: data.total, count: data.truckPostings?.length, trucks: data.truckPostings });
       setTrucks(data.truckPostings || []);
+      console.log('[SearchTrucks] setTrucks called with', data.truckPostings?.length, 'trucks');
     } catch (error) {
       console.error('Failed to fetch trucks:', error);
     } finally {
@@ -155,22 +166,17 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
     }
   };
 
-  // Update filters when initialFilters prop changes
-  useEffect(() => {
-    if (initialFilters) {
-      setFilterValues(initialFilters);
-    }
-  }, [initialFilters]);
-
-  useEffect(() => {
-    fetchTrucks();
-  }, [activeFilter, filterValues]);
-
+  // Mount effect - load helper data and initial trucks
   useEffect(() => {
     fetchSavedSearches();
     fetchEthiopianCities();
     fetchPendingTruckRequests();
-  }, []);
+
+    // Initial fetch with initialFilters or empty
+    const filters = initialFilters && Object.keys(initialFilters).length > 0 ? initialFilters : {};
+    console.log('[SearchTrucks] Mount fetch:', filters);
+    fetchTrucks(filters);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * Handle saved search selection
@@ -247,9 +253,22 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   /**
    * Handle filter change
    */
+  // Use ref to always have latest filter values (avoids stale closure)
+  const filterValuesRef = React.useRef(filterValues);
+  filterValuesRef.current = filterValues;
+
   const handleFilterChange = (key: string, value: any) => {
-    setFilterValues({ ...filterValues, [key]: value });
-    setActiveSearchId(null); // Clear active search when filters change
+    const newFilters = { ...filterValues, [key]: value };
+    setFilterValues(newFilters);
+    setActiveSearchId(null);
+  };
+
+  /**
+   * Handle search button click - uses ref to get latest filter values
+   */
+  const handleSearchClick = () => {
+    console.log('[SearchTrucks] SEARCH clicked, filters:', filterValuesRef.current);
+    fetchTrucks(filterValuesRef.current);
   };
 
   /**
@@ -258,6 +277,8 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   const handleFilterReset = () => {
     setFilterValues({});
     setActiveSearchId(null);
+    console.log('[SearchTrucks] RESET clicked, fetching all');
+    fetchTrucks({});
   };
 
   /**
@@ -680,7 +701,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
             {/* Action Buttons */}
             <div className="col-span-2 flex gap-2 justify-end">
               <button
-                onClick={fetchTrucks}
+                onClick={handleSearchClick}
                 className="px-4 py-1.5 bg-teal-700 dark:bg-teal-600 text-white text-xs font-bold rounded-lg hover:bg-teal-800 dark:hover:bg-teal-700 transition-colors"
               >
                 🔍 SEARCH

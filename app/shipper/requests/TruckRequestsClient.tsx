@@ -184,7 +184,7 @@ export default function TruckRequestsClient({ requests: initialRequests }: Props
           </p>
           {statusFilter === 'all' && (
             <a
-              href="/shipper/dat-board?tab=SEARCH_TRUCKS"
+              href="/shipper/loadboard?tab=SEARCH_TRUCKS"
               className="inline-block mt-4 px-4 py-2 bg-[#1e9c99] text-white rounded-lg hover:bg-[#064d51]"
             >
               Search Trucks

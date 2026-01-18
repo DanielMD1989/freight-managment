@@ -52,6 +52,7 @@ export default function ShipperLoadboardClient({ user }: ShipperLoadboardClientP
    * Handle switching to SEARCH TRUCKS tab with filters
    */
   const handleSwitchToSearchTrucks = (filters: any) => {
+    console.log('[LoadboardClient] Switching to SEARCH_TRUCKS with filters:', filters);
     setSearchFilters(filters);
     // Navigate via URL for sidebar sync
     const params = new URLSearchParams(window.location.search);

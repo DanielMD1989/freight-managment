@@ -89,17 +89,19 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
   /**
    * Handle SEARCH TRUCKS action
+   * Note: We don't pass truckType because:
+   * 1. The matching engine uses scoring, not exact type match
+   * 2. Different truck types can often carry the same cargo
+   * 3. User can filter by type on the search page if needed
    */
   const handleSearchTrucks = (load: any) => {
     const filters = {
       origin: load.pickupCity || '',
       destination: load.deliveryCity || '',
-      truckType: load.truckType || '',
-      pickupDate: load.pickupDate || '',
-      length: load.lengthM?.toString() || '',
-      weight: load.weight?.toString() || '',
+      // Don't pass truckType - let user see all available trucks on route
     };
 
+    console.log('[PostLoads] Find Trucks filters:', filters);
     if (onSwitchToSearchTrucks) {
       onSwitchToSearchTrucks(filters);
     }

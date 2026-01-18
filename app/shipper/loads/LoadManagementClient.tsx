@@ -464,7 +464,7 @@ export default function LoadManagementClient({
                           )}
                           {load.status === 'POSTED' && (
                             <Link
-                              href={`/shipper/dat-board?tab=search-trucks&loadId=${load.id}`}
+                              href={`/shipper/loadboard?tab=SEARCH_TRUCKS&origin=${encodeURIComponent(load.pickupCity || '')}&destination=${encodeURIComponent(load.deliveryCity || '')}`}
                               className="text-indigo-600 hover:text-indigo-700"
                             >
                               Find Trucks

@@ -425,7 +425,7 @@ export default async function LoadDetailsPage({ params }: LoadDetailsProps) {
             <div className="space-y-3">
               {load.status === 'POSTED' && (
                 <Link
-                  href={`/shipper/matches?loadId=${load.id}`}
+                  href={`/shipper/loadboard?tab=SEARCH_TRUCKS&origin=${encodeURIComponent(load.pickupCity || '')}&destination=${encodeURIComponent(load.deliveryCity || '')}`}
                   className="block w-full px-4 py-2 bg-blue-600 text-white text-center rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Find Trucks
