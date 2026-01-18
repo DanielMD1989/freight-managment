@@ -4,11 +4,14 @@
  * Sprint 16 - Story 16.7: Commission & Revenue Tracking
  *
  * Processes settlement and commission deduction after POD verification
+ *
+ * SECURITY: Uses atomic update pattern to prevent double-settlement race conditions
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { requireCSRF } from '@/lib/csrf';
 import { processSettlement } from '@/lib/commissionCalculation';
 import { releaseFundsFromEscrow } from '@/lib/escrowManagement'; // Sprint 8
 
@@ -21,6 +24,10 @@ import { releaseFundsFromEscrow } from '@/lib/escrowManagement'; // Sprint 8
  * - Load status must be DELIVERED
  * - POD must be verified
  * - Settlement not already processed
+ *
+ * Security:
+ * - CSRF protection
+ * - Atomic update pattern to prevent double-settlement
  */
 export async function POST(
   request: NextRequest,
@@ -29,6 +36,12 @@ export async function POST(
   try {
     const { id: loadId } = await params;
     const session = await requireAuth();
+
+    // CSRF protection for state-changing operation
+    const csrfError = await requireCSRF(request);
+    if (csrfError) {
+      return csrfError;
+    }
 
     // Only admins can trigger settlement
     // In production, this might be automated after POD verification
@@ -80,6 +93,28 @@ export async function POST(
       return NextResponse.json(
         { error: 'Settlement requirements not met', details: errors },
         { status: 400 }
+      );
+    }
+
+    // IDEMPOTENCY: Atomically mark settlement as IN_PROGRESS to prevent race conditions
+    // If another request already started processing, this will fail (count = 0)
+    const lockResult = await db.load.updateMany({
+      where: {
+        id: loadId,
+        settlementStatus: { not: 'IN_PROGRESS' }, // Only if not already processing
+        status: 'DELIVERED',
+        podVerified: true,
+      },
+      data: {
+        settlementStatus: 'IN_PROGRESS',
+      },
+    });
+
+    if (lockResult.count === 0) {
+      // Another process is already settling this load or it was already settled
+      return NextResponse.json(
+        { error: 'Settlement already in progress or completed', code: 'IDEMPOTENCY_CONFLICT' },
+        { status: 409 }
       );
     }
 
@@ -187,10 +222,17 @@ export async function POST(
     } catch (settlementError: any) {
       console.error('Settlement processing error:', settlementError);
 
+      // IDEMPOTENCY: Reset status on failure so it can be retried
+      await db.load.update({
+        where: { id: loadId },
+        data: { settlementStatus: 'PENDING' },
+      });
+
       return NextResponse.json(
         {
           error: 'Settlement failed',
           details: settlementError.message || 'Unknown error',
+          retryable: true, // Client can retry since we reset status
         },
         { status: 400 }
       );

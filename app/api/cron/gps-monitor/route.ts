@@ -17,15 +17,24 @@ import { checkAllGeofenceEvents } from '@/lib/geofenceNotifications';
 /**
  * GPS monitoring cron endpoint
  *
- * Security: Should be protected by cron secret in production
+ * Security: Protected by CRON_SECRET - required in all environments
  */
 export async function POST(request: NextRequest) {
   try {
-    // Verify cron secret (production security)
+    // Verify cron secret (REQUIRED - not optional)
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
 
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    // SECURITY: Always require CRON_SECRET - never allow unauthenticated access
+    if (!cronSecret) {
+      console.error('[GPS Monitor] CRON_SECRET environment variable not set');
+      return NextResponse.json(
+        { error: 'Server misconfigured - CRON_SECRET required' },
+        { status: 500 }
+      );
+    }
+
+    if (authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

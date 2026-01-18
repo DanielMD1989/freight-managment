@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth';
+import { requireCSRF } from '@/lib/csrf';
 import { canRequestTruck } from '@/lib/dispatcherPermissions';
 import { RULE_CARRIER_FINAL_AUTHORITY, RULE_SHIPPER_DEMAND_FOCUS } from '@/lib/foundation-rules';
 import { UserRole } from '@prisma/client';
@@ -45,6 +46,12 @@ export async function POST(request: NextRequest) {
   try {
     // Require authentication
     const session = await requireAuth();
+
+    // CSRF protection for state-changing operation
+    const csrfError = await requireCSRF(request);
+    if (csrfError) {
+      return csrfError;
+    }
 
     const body = await request.json();
 

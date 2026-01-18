@@ -79,6 +79,12 @@ export async function POST(request: NextRequest) {
     // Require ACTIVE user status for posting trucks
     const session = await requireActiveUser();
 
+    // CSRF protection for state-changing operation
+    const csrfError = await requireCSRF(request);
+    if (csrfError) {
+      return csrfError;
+    }
+
     // Require organization
     if (!session.organizationId) {
       return NextResponse.json(

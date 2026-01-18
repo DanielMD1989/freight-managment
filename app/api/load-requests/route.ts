@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth';
+import { requireCSRF } from '@/lib/csrf';
 import { createNotification } from '@/lib/notifications';
 import { UserRole } from '@prisma/client';
 
@@ -41,6 +42,12 @@ const LoadRequestSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth();
+
+    // CSRF protection for state-changing operation
+    const csrfError = await requireCSRF(request);
+    if (csrfError) {
+      return csrfError;
+    }
 
     // Only carriers can request loads
     if (session.role !== 'CARRIER') {
