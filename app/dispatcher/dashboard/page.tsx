@@ -51,7 +51,14 @@ export default async function DispatcherDashboardPage() {
         </div>
 
         {/* Client Component */}
-        <DispatcherDashboardClient user={user} />
+        <DispatcherDashboardClient
+          user={{
+            userId: user.id,
+            email: user.email,
+            role: user.role,
+            name: [user.firstName, user.lastName].filter(Boolean).join(' ') || undefined,
+          }}
+        />
       </div>
     </div>
   );

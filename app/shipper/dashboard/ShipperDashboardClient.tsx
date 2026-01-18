@@ -3,12 +3,31 @@
 /**
  * Shipper Dashboard Client Component
  *
- * Professional dashboard with stats, quick actions, and activity overview
- * Design System: Clean & Minimal with Teal accent
+ * Sprint 20 - Dashboard Visual Redesign
+ * Clean, minimal, well-proportioned design
+ *
+ * Stats: Total Loads Posted, Active Shipments, Delivered This Month, Pending Loads, Total Spent
+ * Quick Actions: Post New Load, Track Shipments, Find Trucks
+ * Sections: Active Shipments, My Posted Loads, Carrier Applications, Recent Deliveries, Spending Overview, Notifications
  */
 
 import React from 'react';
 import Link from 'next/link';
+import {
+  StatCard,
+  DashboardSection,
+  QuickActionButton,
+  StatusBadge,
+  SpendingChart,
+  PackageIcon,
+  TruckIcon,
+  ClockIcon,
+  CurrencyIcon,
+  MapIcon,
+  SearchIcon,
+  CheckCircleIcon,
+  DocumentIcon,
+} from '@/components/dashboard';
 
 interface User {
   userId: string;
@@ -60,35 +79,45 @@ interface DashboardData {
   };
 }
 
+interface CarrierApplication {
+  id: string;
+  loadId: string;
+  status: string;
+  createdAt: string;
+  carrier?: {
+    name: string;
+  };
+  truck?: {
+    plateNumber: string;
+    truckType: string;
+  };
+  load?: {
+    pickupCity: string;
+    deliveryCity: string;
+  };
+}
+
 interface ShipperDashboardClientProps {
   user: User;
   dashboardData: DashboardData | null;
   recentLoads: Load[];
   activeTrips: Trip[];
+  carrierApplications?: CarrierApplication[];
 }
 
-// Status badge colors
-const loadStatusColors: Record<string, string> = {
-  POSTED: 'bg-blue-50 text-blue-700 border border-blue-200',
-  MATCHED: 'bg-purple-50 text-purple-700 border border-purple-200',
-  ACCEPTED: 'bg-amber-50 text-amber-700 border border-amber-200',
-  PICKED_UP: 'bg-teal-50 text-teal-700 border border-teal-200',
-  IN_TRANSIT: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
-  DELIVERED: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-  CANCELLED: 'bg-slate-50 text-slate-600 border border-slate-200',
-};
-
-const tripStatusColors: Record<string, string> = {
-  PENDING: 'bg-amber-50 text-amber-700 border border-amber-200',
-  IN_TRANSIT: 'bg-teal-50 text-teal-700 border border-teal-200',
-  DELIVERED: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-};
+// PlusIcon - keep local as it's not in shared icons yet
+const PlusIcon = () => (
+  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+  </svg>
+);
 
 export default function ShipperDashboardClient({
   user,
   dashboardData,
   recentLoads,
   activeTrips,
+  carrierApplications = [],
 }: ShipperDashboardClientProps) {
   const stats = dashboardData?.stats || {
     totalLoads: 0,
@@ -100,366 +129,542 @@ export default function ShipperDashboardClient({
   };
 
   const firstName = user.name?.split(' ')[0] || user.email?.split('@')[0] || 'Shipper';
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  // Filter delivered loads
+  const deliveredLoads = recentLoads.filter(l => l.status === 'DELIVERED' || l.status === 'COMPLETED');
+
+  // Filter pending applications
+  const pendingApplications = carrierApplications.filter(a => a.status === 'PENDING');
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen p-6 lg:p-8">
+      <div className="max-w-[1400px] mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-slate-800">
-            Welcome back, {firstName}
-          </h1>
-          <p className="text-slate-500 mt-1">
-            Here&apos;s an overview of your shipping operations
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1
+                className="text-2xl lg:text-[28px] font-bold tracking-tight"
+                style={{ color: 'var(--foreground)' }}
+              >
+                Welcome back, {firstName}
+              </h1>
+              <p
+                className="text-sm mt-1"
+                style={{ color: 'var(--foreground-muted)' }}
+              >
+                {today}
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Stats Grid - 5 cards */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 lg:gap-5 mb-8">
           <StatCard
-            title="Posted Loads"
-            value={stats.activeLoads}
-            subtitle="Available for carriers"
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
-            }
-            trend={stats.totalLoads > 0 ? `${stats.totalLoads} total` : undefined}
-            color="teal"
+            title="Total Loads Posted"
+            value={stats.totalLoads}
+            icon={<PackageIcon />}
+            color="primary"
           />
           <StatCard
-            title="In Transit"
+            title="Active Shipments"
             value={stats.inTransitLoads}
-            subtitle="Currently moving"
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-            }
-            color="indigo"
+            icon={<TruckIcon />}
+            color="accent"
+            trend={stats.inTransitLoads > 0 ? { value: 'In transit', positive: true } : undefined}
           />
           <StatCard
-            title="Delivered"
+            title="Delivered This Month"
             value={stats.deliveredLoads}
-            subtitle="Completed shipments"
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            }
-            color="emerald"
+            icon={<CheckCircleIcon />}
+            color="success"
+          />
+          <StatCard
+            title="Pending Loads"
+            value={stats.activeLoads}
+            icon={<ClockIcon />}
+            color="warning"
           />
           <StatCard
             title="Total Spent"
             value={`${stats.totalSpent.toLocaleString()} ETB`}
-            subtitle={stats.pendingPayments > 0 ? `${stats.pendingPayments.toLocaleString()} ETB pending` : 'All payments settled'}
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            }
-            color="amber"
-            isLarge
+            subtitle={stats.pendingPayments > 0 ? `${stats.pendingPayments.toLocaleString()} ETB pending` : 'This month'}
+            icon={<CurrencyIcon />}
+            color="secondary"
           />
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mb-8">
+          <h2
+            className="text-lg font-semibold mb-4"
+            style={{ color: 'var(--foreground)' }}
+          >
+            Quick Actions
+          </h2>
+          <div className="flex flex-wrap gap-3">
+            <QuickActionButton
+              href="/shipper/loads/create"
+              icon={<PlusIcon />}
+              label="Post New Load"
+              description="Create a shipment"
+              variant="primary"
+            />
+            <QuickActionButton
+              href="/shipper/map"
+              icon={<MapIcon />}
+              label="Track Shipments"
+              description="Live GPS tracking"
+              variant="outline"
+            />
+            <QuickActionButton
+              href="/shipper/loadboard?tab=SEARCH_TRUCKS"
+              icon={<SearchIcon />}
+              label="Find Trucks"
+              description="Search carriers"
+              variant="outline"
+            />
+          </div>
         </div>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Quick Actions */}
-          <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">Quick Actions</h2>
-            <div className="space-y-3">
-              <QuickActionCard
-                href="/shipper?tab=POST_LOADS"
-                icon={
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                }
-                title="Post New Load"
-                description="Create a new shipment listing"
-                color="teal"
-              />
-              <QuickActionCard
-                href="/shipper?tab=SEARCH_TRUCKS"
-                icon={
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                }
-                title="Find Trucks"
-                description="Search available carriers"
-                color="indigo"
-              />
-              <QuickActionCard
-                href="/shipper/map"
-                icon={
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                  </svg>
-                }
-                title="Track Shipments"
-                description="Live GPS tracking"
-                color="emerald"
-              />
-              <QuickActionCard
-                href="/shipper/loads"
-                icon={
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                }
-                title="My Loads"
-                description="Manage all shipments"
-                color="slate"
-              />
-            </div>
+          {/* Active Shipments - 2/3 width */}
+          <div className="lg:col-span-2">
+            <DashboardSection
+              title="Active Shipments"
+              subtitle="Shipments currently in progress"
+              action={{ label: 'View All', href: '/shipper/map' }}
+              noPadding
+            >
+              {activeTrips.length > 0 ? (
+                <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                  {activeTrips.slice(0, 5).map((trip) => (
+                    <Link
+                      key={trip.id}
+                      href="/shipper/map"
+                      className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-[var(--bg-tinted)]"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span
+                            className="font-medium text-sm"
+                            style={{ color: 'var(--foreground)' }}
+                          >
+                            Load #{trip.loadId.slice(-6)}
+                          </span>
+                          <span style={{ color: 'var(--foreground-muted)' }}>•</span>
+                          <span
+                            className="text-sm truncate"
+                            style={{ color: 'var(--foreground-muted)' }}
+                          >
+                            {trip.carrier.name}
+                          </span>
+                        </div>
+                        <div
+                          className="text-xs flex items-center gap-2"
+                          style={{ color: 'var(--foreground-muted)' }}
+                        >
+                          <span>{trip.truck.plateNumber}</span>
+                          <span>•</span>
+                          <span>{trip.truck.truckType}</span>
+                        </div>
+                      </div>
+                      <StatusBadge status={trip.status} />
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center">
+                  <div
+                    className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center"
+                    style={{ background: 'var(--bg-tinted)' }}
+                  >
+                    <TruckIcon />
+                  </div>
+                  <p
+                    className="text-sm font-medium mb-1"
+                    style={{ color: 'var(--foreground)' }}
+                  >
+                    No active shipments
+                  </p>
+                  <p
+                    className="text-xs"
+                    style={{ color: 'var(--foreground-muted)' }}
+                  >
+                    Your shipments will appear here once in transit
+                  </p>
+                </div>
+              )}
+            </DashboardSection>
           </div>
 
-          {/* Recent Loads */}
-          <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-teal-50/30 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-800">Recent Loads</h2>
-                <p className="text-sm text-slate-500">Your latest shipment postings</p>
-              </div>
-              <Link
-                href="/shipper/loads"
-                className="text-sm font-medium text-teal-600 hover:text-teal-700"
-              >
-                View All
-              </Link>
-            </div>
-            <div className="divide-y divide-slate-100">
-              {recentLoads.length > 0 ? (
-                recentLoads.map((load) => (
-                  <LoadRow key={load.id} load={load} />
-                ))
-              ) : (
-                <div className="p-8 text-center">
-                  <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
+          {/* Recent Activity - 1/3 width */}
+          <div>
+            <DashboardSection
+              title="Recent Activity"
+              subtitle="Latest updates"
+              noPadding
+            >
+              <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                {recentLoads.length > 0 ? (
+                  recentLoads.slice(0, 4).map((load) => (
+                    <Link
+                      key={load.id}
+                      href={`/shipper/loads/${load.id}`}
+                      className="flex items-start gap-3 px-6 py-4 transition-colors hover:bg-[var(--bg-tinted)]"
+                    >
+                      <div
+                        className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
+                        style={{ background: load.status === 'DELIVERED' ? 'var(--success-500)' : 'var(--primary-500)' }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className="text-sm font-medium truncate"
+                          style={{ color: 'var(--foreground)' }}
+                        >
+                          {load.pickupCity} → {load.deliveryCity}
+                        </p>
+                        <p
+                          className="text-xs mt-0.5"
+                          style={{ color: 'var(--foreground-muted)' }}
+                        >
+                          {new Date(load.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <StatusBadge status={load.status} />
+                    </Link>
+                  ))
+                ) : (
+                  <div className="py-8 text-center">
+                    <p
+                      className="text-sm"
+                      style={{ color: 'var(--foreground-muted)' }}
+                    >
+                      No recent activity
+                    </p>
                   </div>
-                  <h3 className="text-slate-600 font-medium mb-1">No loads posted yet</h3>
-                  <p className="text-sm text-slate-400">
-                    Create your first shipment to get started
+                )}
+              </div>
+            </DashboardSection>
+          </div>
+        </div>
+
+        {/* Second Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+          {/* My Posted Loads */}
+          <div className="lg:col-span-2">
+            <DashboardSection
+              title="My Posted Loads"
+              subtitle="Your active load postings"
+              action={{ label: 'View All', href: '/shipper/loads' }}
+              noPadding
+            >
+              {recentLoads.filter(l => l.status === 'POSTED').length > 0 ? (
+                <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                  {recentLoads.filter(l => l.status === 'POSTED').slice(0, 4).map((load) => (
+                    <Link
+                      key={load.id}
+                      href={`/shipper/loads/${load.id}`}
+                      className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-[var(--bg-tinted)]"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span
+                            className="font-medium text-sm"
+                            style={{ color: 'var(--foreground)' }}
+                          >
+                            {load.pickupCity}
+                          </span>
+                          <svg className="w-4 h-4" style={{ color: 'var(--foreground-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                          </svg>
+                          <span
+                            className="font-medium text-sm"
+                            style={{ color: 'var(--foreground)' }}
+                          >
+                            {load.deliveryCity}
+                          </span>
+                        </div>
+                        <div
+                          className="text-xs flex items-center gap-2"
+                          style={{ color: 'var(--foreground-muted)' }}
+                        >
+                          <span>{load.truckType}</span>
+                          <span>•</span>
+                          <span>{load.weight.toLocaleString()} kg</span>
+                          <span>•</span>
+                          <span>{new Date(load.pickupDate).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div
+                          className="font-semibold text-sm"
+                          style={{ color: 'var(--foreground)' }}
+                        >
+                          {load.rate.toLocaleString()} ETB
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center">
+                  <div
+                    className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center"
+                    style={{ background: 'var(--bg-tinted)' }}
+                  >
+                    <PackageIcon />
+                  </div>
+                  <p
+                    className="text-sm font-medium mb-1"
+                    style={{ color: 'var(--foreground)' }}
+                  >
+                    No posted loads
+                  </p>
+                  <p
+                    className="text-xs mb-4"
+                    style={{ color: 'var(--foreground-muted)' }}
+                  >
+                    Post your first load to find carriers
                   </p>
                   <Link
-                    href="/shipper?tab=POST_LOADS"
-                    className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-sm font-medium rounded-lg shadow-md shadow-teal-500/25 hover:shadow-lg hover:shadow-teal-500/30 transition-all"
+                    href="/shipper/loads/create"
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-lg bg-primary-500 hover:bg-primary-600 transition-colors"
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Post Your First Load
+                    <PlusIcon />
+                    Post New Load
                   </Link>
                 </div>
               )}
-            </div>
+            </DashboardSection>
+          </div>
+
+          {/* Carrier Applications */}
+          <div>
+            <DashboardSection
+              title="Carrier Applications"
+              subtitle="Bids on your loads"
+              action={{ label: 'View All', href: '/shipper/requests' }}
+              noPadding
+            >
+              {pendingApplications.length > 0 ? (
+                <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                  {pendingApplications.slice(0, 4).map((app) => (
+                    <Link
+                      key={app.id}
+                      href={`/shipper/requests/${app.id}`}
+                      className="flex items-start gap-3 px-6 py-4 transition-colors hover:bg-[var(--bg-tinted)]"
+                    >
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ background: 'var(--bg-tinted)' }}
+                      >
+                        <TruckIcon />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className="text-sm font-medium truncate"
+                          style={{ color: 'var(--foreground)' }}
+                        >
+                          {app.carrier?.name || 'Carrier'}
+                        </p>
+                        <p
+                          className="text-xs mt-0.5"
+                          style={{ color: 'var(--foreground-muted)' }}
+                        >
+                          {app.load?.pickupCity} → {app.load?.deliveryCity}
+                        </p>
+                      </div>
+                      <StatusBadge status={app.status} />
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-8 text-center">
+                  <div
+                    className="w-10 h-10 rounded-full mx-auto mb-3 flex items-center justify-center"
+                    style={{ background: 'var(--bg-tinted)' }}
+                  >
+                    <TruckIcon />
+                  </div>
+                  <p
+                    className="text-sm"
+                    style={{ color: 'var(--foreground-muted)' }}
+                  >
+                    No pending applications
+                  </p>
+                </div>
+              )}
+            </DashboardSection>
           </div>
         </div>
 
-        {/* Active Trips Section */}
-        {activeTrips.length > 0 && (
-          <div className="mt-6 bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-indigo-50/30 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-800">Active Shipments</h2>
-                <p className="text-sm text-slate-500">Shipments currently in transit</p>
+        {/* Third Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+          {/* Recent Deliveries */}
+          <div className="lg:col-span-2">
+            <DashboardSection
+              title="Recent Deliveries"
+              subtitle="Completed shipments"
+              action={{ label: 'View All', href: '/shipper/trips' }}
+              noPadding
+            >
+              {deliveredLoads.length > 0 ? (
+                <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                  {deliveredLoads.slice(0, 4).map((load) => (
+                    <Link
+                      key={load.id}
+                      href={`/shipper/loads/${load.id}`}
+                      className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-[var(--bg-tinted)]"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span
+                            className="font-medium text-sm"
+                            style={{ color: 'var(--foreground)' }}
+                          >
+                            {load.pickupCity}
+                          </span>
+                          <svg className="w-4 h-4" style={{ color: 'var(--foreground-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                          </svg>
+                          <span
+                            className="font-medium text-sm"
+                            style={{ color: 'var(--foreground)' }}
+                          >
+                            {load.deliveryCity}
+                          </span>
+                        </div>
+                        <div
+                          className="text-xs flex items-center gap-2"
+                          style={{ color: 'var(--foreground-muted)' }}
+                        >
+                          <span>{load.truckType}</span>
+                          <span>•</span>
+                          <span>{load.weight.toLocaleString()} kg</span>
+                          <span>•</span>
+                          <span>Delivered {new Date(load.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="font-semibold text-sm"
+                          style={{ color: 'var(--foreground)' }}
+                        >
+                          {load.rate.toLocaleString()} ETB
+                        </span>
+                        <StatusBadge status={load.status} />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center">
+                  <div
+                    className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center"
+                    style={{ background: 'var(--bg-tinted)' }}
+                  >
+                    <CheckCircleIcon />
+                  </div>
+                  <p
+                    className="text-sm font-medium mb-1"
+                    style={{ color: 'var(--foreground)' }}
+                  >
+                    No deliveries yet
+                  </p>
+                  <p
+                    className="text-xs"
+                    style={{ color: 'var(--foreground-muted)' }}
+                  >
+                    Completed shipments will appear here
+                  </p>
+                </div>
+              )}
+            </DashboardSection>
+          </div>
+
+          {/* Spending Overview + Documents */}
+          <div className="space-y-6">
+            {/* Spending Chart */}
+            <DashboardSection
+              title="Spending Overview"
+              subtitle="Your shipping costs"
+            >
+              <SpendingChart organizationId={user.organizationId} />
+            </DashboardSection>
+
+            {/* Documents */}
+            <DashboardSection
+              title="Documents"
+              subtitle="Insurance & contracts"
+              action={{ label: 'Manage', href: '/shipper/documents' }}
+              noPadding
+            >
+              <div className="p-4 space-y-3">
+                <Link
+                  href="/shipper/documents"
+                  className="flex items-center gap-3 p-3 rounded-lg transition-colors hover:bg-[var(--bg-tinted)]"
+                >
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center"
+                    style={{ background: 'var(--primary-500)/10' }}
+                  >
+                    <DocumentIcon />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className="text-sm font-medium"
+                      style={{ color: 'var(--foreground)' }}
+                    >
+                      Shipping Contracts
+                    </p>
+                    <p
+                      className="text-xs"
+                      style={{ color: 'var(--foreground-muted)' }}
+                    >
+                      View and manage contracts
+                    </p>
+                  </div>
+                  <svg className="w-4 h-4" style={{ color: 'var(--foreground-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+                <Link
+                  href="/shipper/documents?tab=insurance"
+                  className="flex items-center gap-3 p-3 rounded-lg transition-colors hover:bg-[var(--bg-tinted)]"
+                >
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center"
+                    style={{ background: 'var(--success-500)/10' }}
+                  >
+                    <CheckCircleIcon />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className="text-sm font-medium"
+                      style={{ color: 'var(--foreground)' }}
+                    >
+                      Insurance Documents
+                    </p>
+                    <p
+                      className="text-xs"
+                      style={{ color: 'var(--foreground-muted)' }}
+                    >
+                      Cargo insurance info
+                    </p>
+                  </div>
+                  <svg className="w-4 h-4" style={{ color: 'var(--foreground-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
               </div>
-              <Link
-                href="/shipper/map"
-                className="text-sm font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                </svg>
-                Track All
-              </Link>
-            </div>
-            <div className="divide-y divide-slate-100">
-              {activeTrips.map((trip) => (
-                <TripRow key={trip.id} trip={trip} />
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// StatCard Component
-interface StatCardProps {
-  title: string;
-  value: string | number;
-  subtitle: string;
-  icon: React.ReactNode;
-  trend?: string;
-  color: 'teal' | 'indigo' | 'emerald' | 'amber' | 'slate';
-  isLarge?: boolean;
-}
-
-function StatCard({ title, value, subtitle, icon, trend, color, isLarge }: StatCardProps) {
-  const colorClasses = {
-    teal: 'from-teal-500 to-teal-600 shadow-teal-500/30',
-    indigo: 'from-indigo-500 to-indigo-600 shadow-indigo-500/30',
-    emerald: 'from-emerald-500 to-emerald-600 shadow-emerald-500/30',
-    amber: 'from-amber-500 to-amber-600 shadow-amber-500/30',
-    slate: 'from-slate-500 to-slate-600 shadow-slate-500/30',
-  };
-
-  return (
-    <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-6 flex flex-col">
-      <div className="flex items-start justify-between mb-4">
-        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${colorClasses[color]} shadow-lg flex items-center justify-center text-white`}>
-          {icon}
-        </div>
-        {trend && (
-          <span className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-full">
-            {trend}
-          </span>
-        )}
-      </div>
-      <div className="mt-auto">
-        <div className={`${isLarge ? 'text-2xl' : 'text-3xl'} font-bold text-slate-800`}>
-          {value}
-        </div>
-        <div className="text-sm text-slate-500 mt-1">{title}</div>
-        <div className="text-xs text-slate-400 mt-0.5">{subtitle}</div>
-      </div>
-    </div>
-  );
-}
-
-// QuickActionCard Component
-interface QuickActionCardProps {
-  href: string;
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  color: 'teal' | 'indigo' | 'emerald' | 'slate';
-}
-
-function QuickActionCard({ href, icon, title, description, color }: QuickActionCardProps) {
-  const colorClasses = {
-    teal: 'bg-teal-50 text-teal-600 group-hover:bg-teal-100',
-    indigo: 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100',
-    emerald: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100',
-    slate: 'bg-slate-100 text-slate-600 group-hover:bg-slate-200',
-  };
-
-  return (
-    <Link
-      href={href}
-      className="group flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors"
-    >
-      <div className={`w-10 h-10 rounded-lg ${colorClasses[color]} flex items-center justify-center transition-colors`}>
-        {icon}
-      </div>
-      <div className="flex-1">
-        <div className="text-sm font-medium text-slate-700 group-hover:text-slate-900">
-          {title}
-        </div>
-        <div className="text-xs text-slate-400">{description}</div>
-      </div>
-      <svg className="w-4 h-4 text-slate-300 group-hover:text-slate-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-      </svg>
-    </Link>
-  );
-}
-
-// LoadRow Component
-interface LoadRowProps {
-  load: Load;
-}
-
-function LoadRow({ load }: LoadRowProps) {
-  const statusClass = loadStatusColors[load.status] || 'bg-slate-50 text-slate-600 border border-slate-200';
-
-  return (
-    <Link
-      href={`/shipper/loads/${load.id}`}
-      className="flex items-center px-6 py-4 hover:bg-slate-50 transition-colors"
-    >
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="font-medium text-slate-800 truncate">
-            {load.pickupCity}
-          </span>
-          <svg className="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-          </svg>
-          <span className="font-medium text-slate-800 truncate">
-            {load.deliveryCity}
-          </span>
-        </div>
-        <div className="flex items-center gap-3 text-xs text-slate-400">
-          <span>{load.truckType}</span>
-          <span className="w-1 h-1 bg-slate-300 rounded-full" />
-          <span>{load.weight.toLocaleString()} kg</span>
-          <span className="w-1 h-1 bg-slate-300 rounded-full" />
-          <span>{new Date(load.pickupDate).toLocaleDateString()}</span>
-        </div>
-      </div>
-      <div className="flex items-center gap-4">
-        <div className="text-right">
-          <div className="font-semibold text-slate-800">
-            {load.rate.toLocaleString()} ETB
+            </DashboardSection>
           </div>
         </div>
-        <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${statusClass}`}>
-          {load.status.replace('_', ' ')}
-        </span>
       </div>
-    </Link>
-  );
-}
-
-// TripRow Component
-interface TripRowProps {
-  trip: Trip;
-}
-
-function TripRow({ trip }: TripRowProps) {
-  const statusClass = tripStatusColors[trip.status] || 'bg-slate-50 text-slate-600 border border-slate-200';
-
-  return (
-    <Link
-      href="/shipper/map"
-      className="flex items-center px-6 py-4 hover:bg-slate-50 transition-colors"
-    >
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="font-medium text-slate-800 truncate">
-            Load #{trip.loadId.slice(-6)}
-          </span>
-          <span className="text-slate-400">-</span>
-          <span className="text-slate-600 truncate">
-            {trip.carrier.name}
-          </span>
-        </div>
-        <div className="flex items-center gap-3 text-xs text-slate-400">
-          <span>{trip.truck.plateNumber}</span>
-          <span className="w-1 h-1 bg-slate-300 rounded-full" />
-          <span>{trip.truck.truckType}</span>
-        </div>
-      </div>
-      <div className="flex items-center gap-4">
-        <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${statusClass}`}>
-          {trip.status.replace('_', ' ')}
-        </span>
-        <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        </div>
-      </div>
-    </Link>
+    </div>
   );
 }

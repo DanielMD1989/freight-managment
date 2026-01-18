@@ -3,23 +3,42 @@
 /**
  * Dispatcher Dashboard Client Component
  *
- * Sprint 16 - Story 16.4: Dispatcher System
+ * Sprint 20 - Dashboard Visual Redesign
+ * Clean, minimal, well-proportioned design
  *
- * Features:
- * - System-wide load and truck views
- * - Load assignment to trucks
- * - GPS tracking access
- * - Advanced filtering
+ * Stats: Active Loads, Assigned, In-Transit, Available Trucks, Alerts
+ * Quick Actions: Assign Load, View Map, Manage Trucks
+ * Sections: Unassigned Loads, Active Trips, Trucks Overview
  */
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import {
+  StatCard,
+  DashboardSection,
+  QuickActionButton,
+  StatusBadge,
+  PackageIcon,
+  TruckIcon,
+  MapIcon,
+  ClockIcon,
+  AlertIcon,
+  RefreshIcon,
+  SearchIcon,
+  AssignIcon,
+} from '@/components/dashboard';
 import QuickAssignModal from '@/components/QuickAssignModal';
 import StatusUpdateModal from '@/components/StatusUpdateModal';
 
 type DashboardTab = 'loads' | 'trucks';
 
 interface DispatcherDashboardClientProps {
-  user: any;
+  user: {
+    userId: string;
+    email: string;
+    role: string;
+    name?: string;
+  };
 }
 
 export default function DispatcherDashboardClient({
@@ -34,6 +53,9 @@ export default function DispatcherDashboardClient({
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const firstName = user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'Dispatcher';
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   // Fetch loads
   const fetchLoads = async () => {
@@ -50,7 +72,6 @@ export default function DispatcherDashboardClient({
       }
 
       if (searchQuery) {
-        // Search by pickup or delivery city
         params.append('pickupCity', searchQuery);
       }
 
@@ -105,107 +126,471 @@ export default function DispatcherDashboardClient({
     }
   }, [activeTab, statusFilter, searchQuery]);
 
+  // Calculate stats
+  const postedLoads = loads.filter(l => l.status === 'POSTED').length;
+  const assignedLoads = loads.filter(l => l.status === 'ASSIGNED').length;
+  const inTransitLoads = loads.filter(l => l.status === 'IN_TRANSIT').length;
+  const availableTrucks = trucks.length;
+
+  // Calculate deliveries today
+  const todayStr = new Date().toISOString().split('T')[0];
+  const deliveriesToday = loads.filter(l => {
+    const deliveryDate = l.deliveryDate ? new Date(l.deliveryDate).toISOString().split('T')[0] : null;
+    return deliveryDate === todayStr && (l.status === 'IN_TRANSIT' || l.status === 'ASSIGNED' || l.status === 'DELIVERED');
+  }).length;
+
+  // Calculate on-time rate (delivered on or before delivery date)
+  const deliveredLoads = loads.filter(l => l.status === 'DELIVERED' || l.status === 'COMPLETED');
+  const onTimeDeliveries = deliveredLoads.filter(l => {
+    if (!l.deliveryDate || !l.completedAt) return true; // Assume on-time if no data
+    return new Date(l.completedAt) <= new Date(l.deliveryDate);
+  }).length;
+  const onTimeRate = deliveredLoads.length > 0
+    ? Math.round((onTimeDeliveries / deliveredLoads.length) * 100)
+    : 100;
+
+  // Calculate alerts (issues/delays)
+  const lateLoads = loads.filter(l => {
+    if (l.status === 'DELIVERED' || l.status === 'CANCELLED' || l.status === 'COMPLETED') return false;
+    if (!l.deliveryDate) return false;
+    return new Date(l.deliveryDate) < new Date();
+  }).length;
+  const alertCount = lateLoads;
+
+  // Today's pickups
+  const pickupsToday = loads.filter(l => {
+    const pickupDate = l.pickupDate ? new Date(l.pickupDate).toISOString().split('T')[0] : null;
+    return pickupDate === todayStr && (l.status === 'ASSIGNED' || l.status === 'POSTED');
+  });
+
   return (
-    <div className="space-y-6">
-      {/* Tabs */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="flex space-x-8 px-6">
-          <button
-            onClick={() => setActiveTab('loads')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'loads'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            ALL LOADS
-          </button>
-          <button
-            onClick={() => setActiveTab('trucks')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'trucks'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            ALL TRUCKS
-          </button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow-sm">
-        <div className="flex gap-4">
-          {/* Status Filter (for loads) */}
-          {activeTab === 'loads' && (
+    <div className="min-h-screen p-6 lg:p-8">
+      <div className="max-w-[1400px] mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              <h1
+                className="text-2xl lg:text-[28px] font-bold tracking-tight"
+                style={{ color: 'var(--foreground)' }}
               >
-                <option value="ALL">All Statuses</option>
-                <option value="DRAFT">Draft</option>
-                <option value="POSTED">Posted</option>
-                <option value="ASSIGNED">Assigned</option>
-                <option value="IN_TRANSIT">In Transit</option>
-                <option value="DELIVERED">Delivered</option>
-                <option value="CANCELLED">Cancelled</option>
-              </select>
+                Welcome back, {firstName}
+              </h1>
+              <p
+                className="text-sm mt-1"
+                style={{ color: 'var(--foreground-muted)' }}
+              >
+                {today}
+              </p>
             </div>
-          )}
+          </div>
+        </div>
 
-          {/* Search */}
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Search
-            </label>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={
-                activeTab === 'loads'
-                  ? 'Search by city...'
-                  : 'Search trucks...'
-              }
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+        {/* Stats Grid - 6 cards */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 lg:gap-5 mb-8">
+          <StatCard
+            title="Unassigned Loads"
+            value={postedLoads}
+            icon={<PackageIcon />}
+            color="warning"
+            trend={postedLoads > 0 ? { value: 'Needs attention', positive: false } : undefined}
+          />
+          <StatCard
+            title="In Transit"
+            value={inTransitLoads}
+            icon={<MapIcon />}
+            color="accent"
+            trend={inTransitLoads > 0 ? { value: 'Active', positive: true } : undefined}
+          />
+          <StatCard
+            title="Deliveries Today"
+            value={deliveriesToday}
+            icon={<ClockIcon />}
+            color="primary"
+            subtitle="Scheduled"
+          />
+          <StatCard
+            title="On-Time Rate"
+            value={`${onTimeRate}%`}
+            icon={<TruckIcon />}
+            color="success"
+            trend={onTimeRate >= 90 ? { value: 'Good', positive: true } : { value: 'Needs improvement', positive: false }}
+          />
+          <StatCard
+            title="Available Trucks"
+            value={availableTrucks}
+            icon={<TruckIcon />}
+            color="secondary"
+          />
+          <StatCard
+            title="Alerts"
+            value={alertCount}
+            icon={<AlertIcon />}
+            color={alertCount > 0 ? 'error' : 'success'}
+            trend={alertCount > 0 ? { value: 'Late deliveries', positive: false } : undefined}
+          />
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mb-8">
+          <h2
+            className="text-lg font-semibold mb-4"
+            style={{ color: 'var(--foreground)' }}
+          >
+            Quick Actions
+          </h2>
+          <div className="flex flex-wrap gap-3">
+            <QuickActionButton
+              href="/dispatcher/assign"
+              icon={<AssignIcon />}
+              label="Assign Load"
+              description="Match loads to trucks"
+              variant="primary"
+            />
+            <QuickActionButton
+              href="/dispatcher/map"
+              icon={<MapIcon />}
+              label="View Map"
+              description="Live GPS tracking"
+              variant="outline"
+            />
+            <QuickActionButton
+              href="/dispatcher/trucks"
+              icon={<TruckIcon />}
+              label="Manage Trucks"
+              description="Fleet overview"
+              variant="outline"
             />
           </div>
+        </div>
 
-          {/* Refresh Button */}
-          <div className="flex items-end">
+        {/* Tabs */}
+        <div
+          className="rounded-xl border overflow-hidden mb-6"
+          style={{
+            background: 'var(--card)',
+            borderColor: 'var(--border)',
+          }}
+        >
+          <div
+            className="flex border-b"
+            style={{ borderColor: 'var(--border)' }}
+          >
+            <button
+              onClick={() => setActiveTab('loads')}
+              className={`px-6 py-4 text-sm font-medium transition-colors relative ${
+                activeTab === 'loads' ? '' : 'opacity-60 hover:opacity-80'
+              }`}
+              style={{ color: 'var(--foreground)' }}
+            >
+              All Loads
+              {activeTab === 'loads' && (
+                <div
+                  className="absolute bottom-0 left-0 right-0 h-0.5"
+                  style={{ background: 'var(--primary-500)' }}
+                />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('trucks')}
+              className={`px-6 py-4 text-sm font-medium transition-colors relative ${
+                activeTab === 'trucks' ? '' : 'opacity-60 hover:opacity-80'
+              }`}
+              style={{ color: 'var(--foreground)' }}
+            >
+              All Trucks
+              {activeTab === 'trucks' && (
+                <div
+                  className="absolute bottom-0 left-0 right-0 h-0.5"
+                  style={{ background: 'var(--primary-500)' }}
+                />
+              )}
+            </button>
+          </div>
+
+          {/* Filters */}
+          <div
+            className="p-4 flex flex-wrap gap-4 items-end border-b"
+            style={{ borderColor: 'var(--border)' }}
+          >
+            {/* Status Filter (for loads) */}
+            {activeTab === 'loads' && (
+              <div>
+                <label
+                  className="block text-xs font-medium mb-1.5"
+                  style={{ color: 'var(--foreground-muted)' }}
+                >
+                  Status
+                </label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="rounded-lg px-3 py-2 text-sm border transition-colors focus:outline-none focus:ring-2"
+                  style={{
+                    background: 'var(--background)',
+                    borderColor: 'var(--border)',
+                    color: 'var(--foreground)',
+                  }}
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="DRAFT">Draft</option>
+                  <option value="POSTED">Posted</option>
+                  <option value="ASSIGNED">Assigned</option>
+                  <option value="IN_TRANSIT">In Transit</option>
+                  <option value="DELIVERED">Delivered</option>
+                  <option value="CANCELLED">Cancelled</option>
+                </select>
+              </div>
+            )}
+
+            {/* Search */}
+            <div className="flex-1 min-w-[200px]">
+              <label
+                className="block text-xs font-medium mb-1.5"
+                style={{ color: 'var(--foreground-muted)' }}
+              >
+                Search
+              </label>
+              <div className="relative">
+                <div
+                  className="absolute left-3 top-1/2 -translate-y-1/2"
+                  style={{ color: 'var(--foreground-muted)' }}
+                >
+                  <SearchIcon />
+                </div>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={
+                    activeTab === 'loads'
+                      ? 'Search by city...'
+                      : 'Search trucks...'
+                  }
+                  className="w-full rounded-lg pl-10 pr-3 py-2 text-sm border transition-colors focus:outline-none focus:ring-2"
+                  style={{
+                    background: 'var(--background)',
+                    borderColor: 'var(--border)',
+                    color: 'var(--foreground)',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Refresh Button */}
             <button
               onClick={() => (activeTab === 'loads' ? fetchLoads() : fetchTrucks())}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 transition-colors"
             >
+              <RefreshIcon />
               Refresh
             </button>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div
+              className="mx-4 my-3 px-4 py-3 rounded-lg text-sm"
+              style={{
+                background: 'var(--error-500)',
+                color: 'white',
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          {/* Content */}
+          {loading ? (
+            <div className="py-16 text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+              <p
+                className="mt-4 text-sm"
+                style={{ color: 'var(--foreground-muted)' }}
+              >
+                Loading...
+              </p>
+            </div>
+          ) : activeTab === 'loads' ? (
+            <LoadsTable loads={loads} onRefresh={fetchLoads} />
+          ) : (
+            <TrucksTable trucks={trucks} onRefresh={fetchTrucks} />
+          )}
+        </div>
+
+        {/* Additional Sections Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+          {/* Live Map Preview */}
+          <DashboardSection
+            title="Live Map"
+            subtitle="Real-time fleet tracking"
+            action={{ label: 'Full Map', href: '/dispatcher/map' }}
+            noPadding
+          >
+            <div className="relative h-48 overflow-hidden">
+              <div
+                className="absolute inset-0 flex items-center justify-center"
+                style={{ background: 'var(--bg-tinted)' }}
+              >
+                <div className="text-center">
+                  <div
+                    className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center"
+                    style={{ background: 'var(--primary-500)/10' }}
+                  >
+                    <MapIcon />
+                  </div>
+                  <p
+                    className="text-sm font-medium"
+                    style={{ color: 'var(--foreground)' }}
+                  >
+                    {inTransitLoads} trucks in transit
+                  </p>
+                  <p
+                    className="text-xs mt-1"
+                    style={{ color: 'var(--foreground-muted)' }}
+                  >
+                    Click to view full map
+                  </p>
+                  <Link
+                    href="/dispatcher/map"
+                    className="inline-flex items-center gap-2 mt-3 px-4 py-2 text-sm font-medium text-white rounded-lg bg-primary-500 hover:bg-primary-600 transition-colors"
+                  >
+                    <MapIcon />
+                    Open Map
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </DashboardSection>
+
+          {/* Today's Schedule */}
+          <DashboardSection
+            title="Today's Schedule"
+            subtitle="Pickups and deliveries"
+            noPadding
+          >
+            {pickupsToday.length > 0 ? (
+              <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                {pickupsToday.slice(0, 4).map((load: any) => (
+                  <Link
+                    key={load.id}
+                    href={`/dashboard/loads/${load.id}`}
+                    className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[var(--bg-tinted)]"
+                  >
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: 'var(--primary-500)/10' }}
+                    >
+                      <PackageIcon />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className="text-sm font-medium truncate"
+                        style={{ color: 'var(--foreground)' }}
+                      >
+                        {load.pickupCity} → {load.deliveryCity}
+                      </p>
+                      <p
+                        className="text-xs"
+                        style={{ color: 'var(--foreground-muted)' }}
+                      >
+                        Pickup: {new Date(load.pickupDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                    <StatusBadge status={load.status} />
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center">
+                <div
+                  className="w-10 h-10 rounded-full mx-auto mb-3 flex items-center justify-center"
+                  style={{ background: 'var(--bg-tinted)' }}
+                >
+                  <ClockIcon />
+                </div>
+                <p
+                  className="text-sm"
+                  style={{ color: 'var(--foreground-muted)' }}
+                >
+                  No pickups scheduled today
+                </p>
+              </div>
+            )}
+          </DashboardSection>
+
+          {/* Alerts Section */}
+          <DashboardSection
+            title="Alerts"
+            subtitle="Issues requiring attention"
+            noPadding
+          >
+            {alertCount > 0 ? (
+              <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                {loads
+                  .filter(l => {
+                    if (l.status === 'DELIVERED' || l.status === 'CANCELLED' || l.status === 'COMPLETED') return false;
+                    if (!l.deliveryDate) return false;
+                    return new Date(l.deliveryDate) < new Date();
+                  })
+                  .slice(0, 4)
+                  .map((load: any) => (
+                    <Link
+                      key={load.id}
+                      href={`/dashboard/loads/${load.id}`}
+                      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[var(--bg-tinted)]"
+                    >
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ background: 'var(--error-500)/10' }}
+                      >
+                        <AlertIcon />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className="text-sm font-medium truncate"
+                          style={{ color: 'var(--foreground)' }}
+                        >
+                          {load.pickupCity} → {load.deliveryCity}
+                        </p>
+                        <p
+                          className="text-xs"
+                          style={{ color: 'var(--error-500)' }}
+                        >
+                          Past due: {new Date(load.deliveryDate).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <StatusBadge status={load.status} />
+                    </Link>
+                  ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center">
+                <div
+                  className="w-10 h-10 rounded-full mx-auto mb-3 flex items-center justify-center"
+                  style={{ background: 'var(--success-500)/10' }}
+                >
+                  <svg className="w-5 h-5" style={{ color: 'var(--success-500)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <p
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--foreground)' }}
+                >
+                  All clear!
+                </p>
+                <p
+                  className="text-xs mt-1"
+                  style={{ color: 'var(--foreground-muted)' }}
+                >
+                  No issues at this time
+                </p>
+              </div>
+            )}
+          </DashboardSection>
         </div>
       </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md">
-          {error}
-        </div>
-      )}
-
-      {/* Content */}
-      {loading ? (
-        <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      ) : activeTab === 'loads' ? (
-        <LoadsTable loads={loads} onRefresh={fetchLoads} />
-      ) : (
-        <TrucksTable trucks={trucks} onRefresh={fetchTrucks} />
-      )}
     </div>
   );
 }
@@ -238,15 +623,34 @@ function LoadsTable({ loads, onRefresh }: { loads: any[]; onRefresh: () => void 
 
   if (loads.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-        <p className="text-gray-500">No loads found</p>
+      <div className="py-16 text-center">
+        <div
+          className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center"
+          style={{ background: 'var(--bg-tinted)' }}
+        >
+          <svg className="w-6 h-6" style={{ color: 'var(--foreground-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
+        </div>
+        <p
+          className="text-sm font-medium"
+          style={{ color: 'var(--foreground)' }}
+        >
+          No loads found
+        </p>
+        <p
+          className="text-xs mt-1"
+          style={{ color: 'var(--foreground-muted)' }}
+        >
+          Try adjusting your filters
+        </p>
       </div>
     );
   }
 
   return (
     <>
-      {/* Sprint 16: Story 16.4 - Quick Assignment Modal */}
+      {/* Quick Assignment Modal */}
       {selectedLoad && (
         <QuickAssignModal
           isOpen={assignModalOpen}
@@ -265,7 +669,7 @@ function LoadsTable({ loads, onRefresh }: { loads: any[]; onRefresh: () => void 
         />
       )}
 
-      {/* Sprint 16: Story 16.4 - Status Update Modal */}
+      {/* Status Update Modal */}
       {selectedLoad && (
         <StatusUpdateModal
           isOpen={statusModalOpen}
@@ -283,118 +687,156 @@ function LoadsTable({ loads, onRefresh }: { loads: any[]; onRefresh: () => void 
         />
       )}
 
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+              <th
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                style={{ color: 'var(--foreground-muted)' }}
+              >
                 Load ID
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                style={{ color: 'var(--foreground-muted)' }}
+              >
                 Status
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Pickup
+              <th
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                style={{ color: 'var(--foreground-muted)' }}
+              >
+                Route
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Delivery
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                style={{ color: 'var(--foreground-muted)' }}
+              >
                 Truck Type
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                style={{ color: 'var(--foreground-muted)' }}
+              >
                 Rate
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                style={{ color: 'var(--foreground-muted)' }}
+              >
                 Shipper
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                style={{ color: 'var(--foreground-muted)' }}
+              >
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
             {loads.map((load) => (
-              <tr key={load.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm text-gray-900">
-                  {load.id.slice(0, 8)}...
-                </td>
-                <td className="px-4 py-3 text-sm">
+              <tr
+                key={load.id}
+                className="transition-colors hover:bg-[var(--bg-tinted)]"
+              >
+                <td className="px-4 py-3">
                   <span
-                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      load.status === 'POSTED'
-                        ? 'bg-green-100 text-green-800'
-                        : load.status === 'ASSIGNED'
-                        ? 'bg-blue-100 text-blue-800'
-                        : load.status === 'IN_TRANSIT'
-                        ? 'bg-purple-100 text-purple-800'
-                        : load.status === 'DELIVERED'
-                        ? 'bg-gray-100 text-gray-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}
+                    className="text-sm font-mono"
+                    style={{ color: 'var(--foreground)' }}
                   >
-                    {load.status}
+                    {load.id.slice(0, 8)}...
                   </span>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-900">
-                  {load.pickupCity}
-                  <div className="text-xs text-gray-500">
-                    {new Date(load.pickupDate).toLocaleDateString()}
+                <td className="px-4 py-3">
+                  <StatusBadge status={load.status} />
+                </td>
+                <td className="px-4 py-3">
+                  <div>
+                    <p
+                      className="text-sm font-medium"
+                      style={{ color: 'var(--foreground)' }}
+                    >
+                      {load.pickupCity} → {load.deliveryCity}
+                    </p>
+                    <p
+                      className="text-xs mt-0.5"
+                      style={{ color: 'var(--foreground-muted)' }}
+                    >
+                      {new Date(load.pickupDate).toLocaleDateString()} - {new Date(load.deliveryDate).toLocaleDateString()}
+                    </p>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-900">
-                  {load.deliveryCity}
-                  <div className="text-xs text-gray-500">
-                    {new Date(load.deliveryDate).toLocaleDateString()}
-                  </div>
+                <td className="px-4 py-3">
+                  <span
+                    className="text-sm"
+                    style={{ color: 'var(--foreground-muted)' }}
+                  >
+                    {load.truckType}
+                  </span>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-700">
-                  {load.truckType}
+                <td className="px-4 py-3">
+                  <span
+                    className="text-sm font-medium"
+                    style={{ color: 'var(--foreground)' }}
+                  >
+                    {load.rate?.toLocaleString()} {load.currency || 'ETB'}
+                  </span>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-900">
-                  {load.rate?.toLocaleString()} {load.currency || 'ETB'}
+                <td className="px-4 py-3">
+                  <span
+                    className="text-sm"
+                    style={{ color: 'var(--foreground-muted)' }}
+                  >
+                    {load.shipper?.name || 'Unknown'}
+                  </span>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-700">
-                  {load.shipper?.name || 'Unknown'}
-                </td>
-                <td className="px-4 py-3 text-sm">
-                  <div className="flex gap-2 flex-wrap">
-                    {/* Sprint 16: Story 16.4 - Quick assignment interface */}
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
                     {load.status === 'POSTED' && (
                       <button
                         onClick={() => handleAssignLoad(load)}
-                        className="text-blue-600 hover:text-blue-800 font-medium"
+                        className="text-xs font-medium px-2.5 py-1 rounded-md transition-colors"
+                        style={{
+                          background: 'var(--primary-500)',
+                          color: 'white',
+                        }}
                       >
                         Assign
                       </button>
                     )}
-                    {/* Sprint 16: Story 16.4 - Status update controls */}
                     {load.status !== 'DELIVERED' && load.status !== 'CANCELLED' && (
                       <button
                         onClick={() => handleUpdateStatus(load)}
-                        className="text-purple-600 hover:text-purple-800 font-medium"
+                        className="text-xs font-medium px-2.5 py-1 rounded-md transition-colors"
+                        style={{
+                          background: 'var(--accent-500)',
+                          color: 'white',
+                        }}
                       >
                         Update
                       </button>
                     )}
-                    {/* Sprint 16: Story 16.4 - GPS tracking access */}
                     {(load.status === 'ASSIGNED' || load.status === 'IN_TRANSIT') && (
-                      <a
+                      <Link
                         href={`/tracking?loadId=${load.id}`}
                         target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-green-600 hover:text-green-800 font-medium"
+                        className="text-xs font-medium px-2.5 py-1 rounded-md transition-colors bg-emerald-500 text-white"
                       >
                         GPS
-                      </a>
+                      </Link>
                     )}
-                    <a
+                    <Link
                       href={`/dashboard/loads/${load.id}`}
-                      className="text-gray-600 hover:text-gray-800 font-medium"
+                      className="text-xs font-medium px-2.5 py-1 rounded-md transition-colors"
+                      style={{
+                        background: 'var(--bg-tinted)',
+                        color: 'var(--foreground)',
+                      }}
                     >
                       View
-                    </a>
+                    </Link>
                   </div>
                 </td>
               </tr>
@@ -402,7 +844,6 @@ function LoadsTable({ loads, onRefresh }: { loads: any[]; onRefresh: () => void 
           </tbody>
         </table>
       </div>
-    </div>
     </>
   );
 }
@@ -411,87 +852,161 @@ function LoadsTable({ loads, onRefresh }: { loads: any[]; onRefresh: () => void 
 function TrucksTable({ trucks, onRefresh }: { trucks: any[]; onRefresh: () => void }) {
   if (trucks.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-        <p className="text-gray-500">No trucks found</p>
+      <div className="py-16 text-center">
+        <div
+          className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center"
+          style={{ background: 'var(--bg-tinted)' }}
+        >
+          <svg className="w-6 h-6" style={{ color: 'var(--foreground-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 17h8M8 17a2 2 0 11-4 0 2 2 0 014 0zm8 0a2 2 0 104 0 2 2 0 00-4 0zM3 9h13a2 2 0 012 2v4H3V9zm13-4l4 4h-4V5z" />
+          </svg>
+        </div>
+        <p
+          className="text-sm font-medium"
+          style={{ color: 'var(--foreground)' }}
+        >
+          No trucks found
+        </p>
+        <p
+          className="text-xs mt-1"
+          style={{ color: 'var(--foreground-muted)' }}
+        >
+          Try adjusting your search
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                License Plate
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Truck Type
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Origin
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Destination
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Available From
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Carrier
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                GPS
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {trucks.map((posting) => (
-              <tr key={posting.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm font-medium text-gray-900">
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <thead>
+          <tr style={{ borderBottom: '1px solid var(--border)' }}>
+            <th
+              className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+              style={{ color: 'var(--foreground-muted)' }}
+            >
+              License Plate
+            </th>
+            <th
+              className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+              style={{ color: 'var(--foreground-muted)' }}
+            >
+              Truck Type
+            </th>
+            <th
+              className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+              style={{ color: 'var(--foreground-muted)' }}
+            >
+              Route
+            </th>
+            <th
+              className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+              style={{ color: 'var(--foreground-muted)' }}
+            >
+              Available From
+            </th>
+            <th
+              className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+              style={{ color: 'var(--foreground-muted)' }}
+            >
+              Carrier
+            </th>
+            <th
+              className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+              style={{ color: 'var(--foreground-muted)' }}
+            >
+              GPS Status
+            </th>
+            <th
+              className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+              style={{ color: 'var(--foreground-muted)' }}
+            >
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
+          {trucks.map((posting) => (
+            <tr
+              key={posting.id}
+              className="transition-colors hover:bg-[var(--bg-tinted)]"
+            >
+              <td className="px-4 py-3">
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--foreground)' }}
+                >
                   {posting.truck?.licensePlate || 'N/A'}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-700">
+                </span>
+              </td>
+              <td className="px-4 py-3">
+                <span
+                  className="text-sm"
+                  style={{ color: 'var(--foreground-muted)' }}
+                >
                   {posting.truck?.truckType || 'N/A'}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-900">
-                  {posting.originCity?.name || 'N/A'}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-900">
-                  {posting.destinationCity?.name || 'N/A'}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-700">
+                </span>
+              </td>
+              <td className="px-4 py-3">
+                <p
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--foreground)' }}
+                >
+                  {posting.originCity?.name || 'N/A'} → {posting.destinationCity?.name || 'N/A'}
+                </p>
+              </td>
+              <td className="px-4 py-3">
+                <span
+                  className="text-sm"
+                  style={{ color: 'var(--foreground-muted)' }}
+                >
                   {new Date(posting.availableFrom).toLocaleDateString()}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-700">
+                </span>
+              </td>
+              <td className="px-4 py-3">
+                <span
+                  className="text-sm"
+                  style={{ color: 'var(--foreground-muted)' }}
+                >
                   {posting.carrier?.name || 'Unknown'}
-                </td>
-                <td className="px-4 py-3 text-sm">
-                  {posting.truck?.gpsStatus === 'ACTIVE' ? (
-                    <span className="text-green-600 font-medium">Active</span>
-                  ) : posting.truck?.imei ? (
-                    <span className="text-yellow-600 font-medium">Registered</span>
-                  ) : (
-                    <span className="text-gray-400">No GPS</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-sm">
-                  <a
-                    href={`/carrier/postings/${posting.id}`}
-                    className="text-gray-600 hover:text-gray-800 font-medium"
+                </span>
+              </td>
+              <td className="px-4 py-3">
+                {posting.truck?.gpsStatus === 'ACTIVE' ? (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Active
+                  </span>
+                ) : posting.truck?.imei ? (
+                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                    Registered
+                  </span>
+                ) : (
+                  <span
+                    className="text-xs"
+                    style={{ color: 'var(--foreground-muted)', opacity: 0.5 }}
                   >
-                    View
-                  </a>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                    No GPS
+                  </span>
+                )}
+              </td>
+              <td className="px-4 py-3">
+                <Link
+                  href={`/carrier/postings/${posting.id}`}
+                  className="text-xs font-medium px-2.5 py-1 rounded-md transition-colors"
+                  style={{
+                    background: 'var(--bg-tinted)',
+                    color: 'var(--foreground)',
+                  }}
+                >
+                  View
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

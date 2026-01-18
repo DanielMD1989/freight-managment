@@ -74,6 +74,24 @@ async function getActiveTrips(sessionCookie: string) {
   }
 }
 
+async function getCarrierApplications(sessionCookie: string) {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/requests?type=received&limit=10`, {
+      headers: {
+        Cookie: `session=${sessionCookie}`,
+      },
+      cache: 'no-store',
+    });
+
+    if (!response.ok) return [];
+    const data = await response.json();
+    return data.requests || [];
+  } catch {
+    return [];
+  }
+}
+
 export default async function ShipperDashboardPage() {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get('session');
@@ -88,10 +106,11 @@ export default async function ShipperDashboardPage() {
     redirect('/unauthorized');
   }
 
-  const [dashboardData, recentLoads, activeTrips] = await Promise.all([
+  const [dashboardData, recentLoads, activeTrips, carrierApplications] = await Promise.all([
     getDashboardData(sessionCookie.value),
     getRecentLoads(sessionCookie.value),
     getActiveTrips(sessionCookie.value),
+    getCarrierApplications(sessionCookie.value),
   ]);
 
   return (
@@ -101,6 +120,7 @@ export default async function ShipperDashboardPage() {
         dashboardData={dashboardData}
         recentLoads={recentLoads}
         activeTrips={activeTrips}
+        carrierApplications={carrierApplications}
       />
     </Suspense>
   );
