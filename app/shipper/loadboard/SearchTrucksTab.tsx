@@ -41,7 +41,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   const [selectedCompany, setSelectedCompany] = useState<any>(null);
   const [sortField, setSortField] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [showSearchForm, setShowSearchForm] = useState(false);
+  const [showSearchForm, setShowSearchForm] = useState(true); // Show search form by default
   const [ethiopianCities, setEthiopianCities] = useState<any[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
@@ -545,48 +545,85 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   ], [pendingRequestTruckIds]);
 
   return (
-    <div className="flex gap-4">
+    <div className="flex gap-6">
       {/* Main Content - Left Side */}
-      <div className="flex-1 space-y-4">
-        {/* NEW TRUCK SEARCH Button */}
-        <button
-          onClick={() => setShowSearchForm(!showSearchForm)}
-          className="px-6 py-3 bg-teal-700 dark:bg-teal-600 text-white font-bold text-sm rounded-lg hover:bg-teal-800 dark:hover:bg-teal-700 transition-colors shadow-md flex items-center gap-2"
-        >
-          <span className="text-lg">🚛</span>
-          {showSearchForm ? 'HIDE SEARCH' : 'NEW TRUCK SEARCH'}
-        </button>
+      <div className="flex-1 space-y-6">
+        {/* Header Section */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2
+              className="text-xl font-semibold"
+              style={{ color: 'var(--foreground)' }}
+            >
+              Find Available Trucks
+            </h2>
+            <p
+              className="text-sm mt-1"
+              style={{ color: 'var(--foreground-muted)' }}
+            >
+              Search for trucks that match your shipping needs
+            </p>
+          </div>
+          <button
+            onClick={() => setShowSearchForm(!showSearchForm)}
+            className="px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+            style={{
+              background: showSearchForm ? 'var(--bg-tinted)' : 'var(--primary-500)',
+              color: showSearchForm ? 'var(--foreground)' : 'white',
+            }}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={showSearchForm ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
+            </svg>
+            {showSearchForm ? 'Collapse Search' : 'Expand Search'}
+          </button>
+        </div>
 
-        {/* Inline Search Form - Only show when toggled */}
+        {/* Search Form Card */}
         {showSearchForm && (
-        <div className="bg-white dark:bg-slate-800 border border-teal-200 dark:border-teal-800 rounded-xl shadow-sm overflow-hidden">
-          {/* Header Row - DH-O and DH-D hidden from shipper */}
-          <div className="grid grid-cols-10 gap-2 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-teal-700 to-teal-600 dark:from-teal-800 dark:to-teal-700">
-            <div>Truck</div>
+        <div
+          className="rounded-xl border overflow-hidden"
+          style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+        >
+          {/* Header Row */}
+          <div
+            className="grid grid-cols-10 gap-2 px-4 py-3 text-xs font-semibold"
+            style={{ background: 'var(--primary-500)', color: 'white' }}
+          >
+            <div>Truck Type</div>
             <div>Origin</div>
             <div>Destination</div>
-            <div>Avail</div>
+            <div>Available</div>
             <div>F/P</div>
             <div>Length</div>
             <div>Weight</div>
-            <div>Search Back</div>
-            <div className="col-span-2"></div>
+            <div>Age (hrs)</div>
+            <div className="col-span-2 text-right">Actions</div>
           </div>
 
-          {/* Editable Search Row - DH-O and DH-D hidden from shipper */}
-          <div className="grid grid-cols-10 gap-2 px-4 py-3 text-xs items-center bg-teal-50 dark:bg-slate-700/50">
+          {/* Search Row */}
+          <div
+            className="grid grid-cols-10 gap-2 px-4 py-4 text-xs items-center"
+            style={{ background: 'var(--bg-tinted)' }}
+          >
             {/* Truck Type */}
-            <div className="flex items-center gap-1">
+            <div>
               <select
                 value={filterValues.truckType || ''}
                 onChange={(e) => handleFilterChange('truckType', e.target.value)}
-                className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 dark:text-slate-200"
+                className="w-full px-3 py-2 text-sm rounded-lg border transition-colors focus:outline-none focus:ring-2"
+                style={{
+                  background: 'var(--card)',
+                  borderColor: 'var(--border)',
+                  color: 'var(--foreground)',
+                }}
               >
-                <option value="">ANY</option>
+                <option value="">Any Type</option>
                 <option value="DRY_VAN">Van</option>
                 <option value="FLATBED">Flatbed</option>
                 <option value="REFRIGERATED">Reefer</option>
                 <option value="CONTAINER">Container</option>
+                <option value="TANKER">Tanker</option>
               </select>
             </div>
 
@@ -596,11 +633,15 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
                 value={filterValues.origin || ''}
                 onChange={(e) => handleFilterChange('origin', e.target.value)}
                 disabled={loadingCities}
-                className="w-full px-2 py-1.5 text-xs border-2 border-slate-400 dark:border-slate-600 rounded bg-white dark:bg-slate-800 dark:text-slate-200 cursor-pointer hover:border-teal-500 focus:border-teal-600 focus:ring-2 focus:ring-teal-200 dark:focus:ring-teal-800 transition-colors"
-                style={{ minHeight: '32px' }}
+                className="w-full px-3 py-2 text-sm rounded-lg border transition-colors focus:outline-none focus:ring-2"
+                style={{
+                  background: 'var(--card)',
+                  borderColor: 'var(--border)',
+                  color: 'var(--foreground)',
+                }}
               >
                 <option value="">
-                  {loadingCities ? 'Loading cities...' : 'Any Origin'}
+                  {loadingCities ? 'Loading...' : 'Any Origin'}
                 </option>
                 {ethiopianCities.map((city) => (
                   <option key={city.id} value={city.name}>
@@ -616,11 +657,15 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
                 value={filterValues.destination || ''}
                 onChange={(e) => handleFilterChange('destination', e.target.value || undefined)}
                 disabled={loadingCities}
-                className="w-full px-2 py-1.5 text-xs border-2 border-slate-400 dark:border-slate-600 rounded bg-white dark:bg-slate-800 dark:text-slate-200 cursor-pointer hover:border-teal-500 focus:border-teal-600 focus:ring-2 focus:ring-teal-200 dark:focus:ring-teal-800 transition-colors"
-                style={{ minHeight: '32px' }}
+                className="w-full px-3 py-2 text-sm rounded-lg border transition-colors focus:outline-none focus:ring-2"
+                style={{
+                  background: 'var(--card)',
+                  borderColor: 'var(--border)',
+                  color: 'var(--foreground)',
+                }}
               >
                 <option value="">
-                  {loadingCities ? 'Loading cities...' : 'Anywhere'}
+                  {loadingCities ? 'Loading...' : 'Anywhere'}
                 </option>
                 {ethiopianCities.map((city) => (
                   <option key={city.id} value={city.name}>
@@ -636,7 +681,12 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
                 type="date"
                 value={filterValues.availableFrom || ''}
                 onChange={(e) => handleFilterChange('availableFrom', e.target.value)}
-                className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 dark:text-slate-200"
+                className="w-full px-3 py-2 text-sm rounded-lg border transition-colors focus:outline-none focus:ring-2"
+                style={{
+                  background: 'var(--card)',
+                  borderColor: 'var(--border)',
+                  color: 'var(--foreground)',
+                }}
               />
             </div>
 
@@ -645,7 +695,12 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
               <select
                 value={filterValues.fullPartial || ''}
                 onChange={(e) => handleFilterChange('fullPartial', e.target.value)}
-                className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 dark:text-slate-200"
+                className="w-full px-3 py-2 text-sm rounded-lg border transition-colors focus:outline-none focus:ring-2"
+                style={{
+                  background: 'var(--card)',
+                  borderColor: 'var(--border)',
+                  color: 'var(--foreground)',
+                }}
               >
                 <option value="">Any</option>
                 <option value="FULL">Full</option>
@@ -659,8 +714,13 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
                 type="number"
                 value={filterValues.minLength || ''}
                 onChange={(e) => handleFilterChange('minLength', e.target.value ? parseFloat(e.target.value) : undefined)}
-                placeholder="m"
-                className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 dark:text-slate-200"
+                placeholder="Min (m)"
+                className="w-full px-3 py-2 text-sm rounded-lg border transition-colors focus:outline-none focus:ring-2"
+                style={{
+                  background: 'var(--card)',
+                  borderColor: 'var(--border)',
+                  color: 'var(--foreground)',
+                }}
               />
             </div>
 
@@ -670,8 +730,13 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
                 type="number"
                 value={filterValues.maxWeight || ''}
                 onChange={(e) => handleFilterChange('maxWeight', e.target.value ? parseInt(e.target.value) : undefined)}
-                placeholder="kg"
-                className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 dark:text-slate-200"
+                placeholder="Max (kg)"
+                className="w-full px-3 py-2 text-sm rounded-lg border transition-colors focus:outline-none focus:ring-2"
+                style={{
+                  background: 'var(--card)',
+                  borderColor: 'var(--border)',
+                  color: 'var(--foreground)',
+                }}
               />
             </div>
 
@@ -681,8 +746,13 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
                 type="number"
                 value={filterValues.ageHours || ''}
                 onChange={(e) => handleFilterChange('ageHours', e.target.value ? parseInt(e.target.value) : undefined)}
-                placeholder="hrs"
-                className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 dark:text-slate-200"
+                placeholder="Hours"
+                className="w-full px-3 py-2 text-sm rounded-lg border transition-colors focus:outline-none focus:ring-2"
+                style={{
+                  background: 'var(--card)',
+                  borderColor: 'var(--border)',
+                  color: 'var(--foreground)',
+                }}
               />
             </div>
 
@@ -690,58 +760,102 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
             <div className="col-span-2 flex gap-2 justify-end">
               <button
                 onClick={handleSearchClick}
-                className="px-4 py-1.5 bg-teal-700 dark:bg-teal-600 text-white text-xs font-bold rounded-lg hover:bg-teal-800 dark:hover:bg-teal-700 transition-colors"
+                className="px-5 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                style={{ background: 'var(--primary-500)', color: 'white' }}
               >
-                🔍 SEARCH
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                Search
               </button>
               <button
                 onClick={handleFilterReset}
-                className="px-4 py-1.5 bg-rose-500 text-white text-xs font-bold rounded-lg hover:bg-rose-600 transition-colors"
+                className="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+                style={{
+                  background: 'var(--bg-tinted)',
+                  color: 'var(--foreground-muted)',
+                }}
               >
-                🗑️ CLEAR
+                Clear
               </button>
             </div>
           </div>
         </div>
         )}
 
-        {/* Results Summary */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-teal-700 dark:text-teal-400">
-              {trucks.length} TOTAL RESULTS
-            </h3>
+        {/* Results Section */}
+        <div
+          className="rounded-xl border overflow-hidden"
+          style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+        >
+          {/* Results Header */}
+          <div
+            className="px-6 py-4 flex items-center justify-between"
+            style={{ borderBottom: '1px solid var(--border)' }}
+          >
+            <div>
+              <h3
+                className="text-base font-semibold"
+                style={{ color: 'var(--foreground)' }}
+              >
+                {trucks.length} Trucks Found
+              </h3>
+              <p
+                className="text-sm mt-0.5"
+                style={{ color: 'var(--foreground-muted)' }}
+              >
+                {loading ? 'Searching...' : 'Available trucks matching your criteria'}
+              </p>
+            </div>
             <StatusTabs
               tabs={resultsTabs}
               activeTab={activeFilter}
               onTabChange={(key) => setActiveFilter(key as ResultsFilter)}
             />
           </div>
-        </div>
 
-        {/* Results Section - Responsive DataTable */}
-        <DataTable
-          columns={columns}
-          data={trucks}
-          loading={loading}
-          actions={tableActions}
-          rowKey="id"
-          responsiveCardView={true}
-          cardTitleColumn="currentCity"
-          cardSubtitleColumn="destinationCity"
-          emptyMessage="No trucks found. Try adjusting your filters."
-        />
+          {/* Results Table */}
+          <DataTable
+            columns={columns}
+            data={trucks}
+            loading={loading}
+            actions={tableActions}
+            rowKey="id"
+            responsiveCardView={true}
+            cardTitleColumn="currentCity"
+            cardSubtitleColumn="destinationCity"
+            emptyMessage="No trucks found matching your search criteria. Try adjusting your filters."
+          />
+        </div>
       </div>
 
-      {/* Right Sidebar - Filters */}
-      <div className="w-56 flex-shrink-0">
-        <FilterPanel
-          title="REFINE YOUR SEARCH:"
-          filters={filters}
-          values={filterValues}
-          onChange={handleFilterChange}
-          onReset={handleFilterReset}
-        />
+      {/* Right Sidebar - Quick Filters */}
+      <div className="w-64 flex-shrink-0 hidden lg:block">
+        <div
+          className="rounded-xl border overflow-hidden sticky top-6"
+          style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+        >
+          <div
+            className="px-4 py-3"
+            style={{ borderBottom: '1px solid var(--border)' }}
+          >
+            <h3
+              className="text-sm font-semibold"
+              style={{ color: 'var(--foreground)' }}
+            >
+              Refine Results
+            </h3>
+          </div>
+          <div className="p-4">
+            <FilterPanel
+              title=""
+              filters={filters}
+              values={filterValues}
+              onChange={handleFilterChange}
+              onReset={handleFilterReset}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Company Modal */}
