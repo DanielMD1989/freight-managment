@@ -12,6 +12,7 @@ import { requireAuth } from '@/lib/auth';
 import { getCurrentCommissionRates } from '@/lib/commissionCalculation';
 import { z } from 'zod';
 import { Decimal } from 'decimal.js';
+import { writeAuditLog, AuditEventType, AuditSeverity } from '@/lib/auditLog';
 
 const updateCommissionRatesSchema = z.object({
   shipperRate: z.number().min(0).max(100),
@@ -122,16 +123,23 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    // TODO: Create audit log entry
-    // await db.auditLog.create({
-    //   data: {
-    //     userId: session.userId,
-    //     action: 'UPDATE_COMMISSION_RATES',
-    //     entityType: 'COMMISSION_RATE',
-    //     entityId: newRate.id,
-    //     description: `Updated commission rates: shipper ${validatedData.shipperRate}%, carrier ${validatedData.carrierRate}%`,
-    //   },
-    // });
+    // Create audit log entry
+    await writeAuditLog({
+      eventType: AuditEventType.ADMIN_ACTION,
+      severity: AuditSeverity.INFO,
+      userId: session.userId,
+      resource: 'commission_rate',
+      resourceId: newRate.id,
+      action: 'UPDATE_COMMISSION_RATES',
+      result: 'SUCCESS',
+      message: `Updated commission rates: shipper ${validatedData.shipperRate}%, carrier ${validatedData.carrierRate}%`,
+      metadata: {
+        shipperRate: validatedData.shipperRate,
+        carrierRate: validatedData.carrierRate,
+        effectiveFrom: effectiveFrom.toISOString(),
+      },
+      timestamp: new Date(),
+    });
 
     return NextResponse.json({
       message: 'Commission rates updated successfully',

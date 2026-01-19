@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { writeAuditLog, AuditEventType, AuditSeverity } from '@/lib/auditLog';
 
 /**
  * POST /api/admin/organizations/[id]/verify
@@ -65,16 +66,20 @@ export async function POST(
       },
     });
 
-    // TODO: Create audit log entry
-    // await db.auditLog.create({
-    //   data: {
-    //     userId: session.userId,
-    //     action: 'VERIFY_ORGANIZATION',
-    //     entityType: 'ORGANIZATION',
-    //     entityId: orgId,
-    //     description: `Verified organization: ${organization.name}`,
-    //   },
-    // });
+    // Create audit log entry
+    await writeAuditLog({
+      eventType: AuditEventType.ORG_VERIFIED,
+      severity: AuditSeverity.INFO,
+      userId: session.userId,
+      organizationId: orgId,
+      resource: 'organization',
+      resourceId: orgId,
+      action: 'VERIFY',
+      result: 'SUCCESS',
+      message: `Organization verified: ${organization.name}`,
+      metadata: { organizationName: organization.name },
+      timestamp: new Date(),
+    });
 
     return NextResponse.json({
       message: 'Organization verified successfully',
@@ -149,16 +154,20 @@ export async function DELETE(
       },
     });
 
-    // TODO: Create audit log entry
-    // await db.auditLog.create({
-    //   data: {
-    //     userId: session.userId,
-    //     action: 'UNVERIFY_ORGANIZATION',
-    //     entityType: 'ORGANIZATION',
-    //     entityId: orgId,
-    //     description: `Removed verification from organization: ${organization.name}`,
-    //   },
-    // });
+    // Create audit log entry
+    await writeAuditLog({
+      eventType: AuditEventType.ORG_VERIFIED,
+      severity: AuditSeverity.INFO,
+      userId: session.userId,
+      organizationId: orgId,
+      resource: 'organization',
+      resourceId: orgId,
+      action: 'UNVERIFY',
+      result: 'SUCCESS',
+      message: `Organization verification removed: ${organization.name}`,
+      metadata: { organizationName: organization.name },
+      timestamp: new Date(),
+    });
 
     return NextResponse.json({
       message: 'Organization verification removed',
