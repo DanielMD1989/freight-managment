@@ -1,19 +1,19 @@
 /**
- * Carrier Truck Requests Page
+ * Carrier Requests Page
  *
- * Phase 2 - Story 16.15: Shipper-Led Truck Matching
- * Task 16.15.3: Booking Request Management - Carrier
- *
- * View and respond to incoming truck booking requests
+ * Combined view for:
+ * - Shipper Requests: Incoming truck booking requests from shippers
+ * - My Load Requests: Outgoing load requests to shippers
  */
 
 import { Suspense } from 'react';
 import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { redirect } from 'next/navigation';
-import CarrierRequestsClient from './CarrierRequestsClient';
+import RequestsTabs from './RequestsTabs';
 
-async function getIncomingRequests(userId: string) {
+// Get incoming truck requests from shippers
+async function getShipperRequests(userId: string) {
   const user = await db.user.findUnique({
     where: { id: userId },
     select: { organizationId: true },
@@ -57,17 +57,90 @@ async function getIncomingRequests(userId: string) {
   return requests;
 }
 
+// Get outgoing load requests to shippers
+async function getLoadRequests(userId: string) {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { organizationId: true },
+  });
+
+  if (!user?.organizationId) {
+    return [];
+  }
+
+  const requests = await db.loadRequest.findMany({
+    where: {
+      carrierId: user.organizationId,
+    },
+    include: {
+      load: {
+        select: {
+          id: true,
+          status: true,
+          weight: true,
+          truckType: true,
+          pickupCity: true,
+          deliveryCity: true,
+          pickupDate: true,
+          rate: true,
+          totalFareEtb: true,
+          pickupLocation: {
+            select: {
+              name: true,
+            },
+          },
+          deliveryLocation: {
+            select: {
+              name: true,
+            },
+          },
+          shipper: {
+            select: {
+              id: true,
+              name: true,
+              isVerified: true,
+            },
+          },
+        },
+      },
+      truck: {
+        select: {
+          id: true,
+          licensePlate: true,
+          truckType: true,
+          capacity: true,
+        },
+      },
+      requestedBy: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return requests;
+}
+
 export default async function CarrierRequestsPage() {
   const session = await requireAuth();
 
-  if (session.role !== 'CARRIER') {
+  if (session.role !== 'CARRIER' && session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
     redirect('/carrier');
   }
 
-  const requests = await getIncomingRequests(session.userId);
+  // Fetch both types of requests in parallel
+  const [shipperRequests, loadRequests] = await Promise.all([
+    getShipperRequests(session.userId),
+    getLoadRequests(session.userId),
+  ]);
 
-  // Transform dates for client
-  const transformedRequests = requests.map((req) => ({
+  // Transform shipper requests (incoming truck booking requests)
+  const transformedShipperRequests = shipperRequests.map((req) => ({
     id: req.id,
     status: req.status,
     notes: req.notes,
@@ -82,8 +155,8 @@ export default async function CarrierRequestsPage() {
       weight: Number(req.load.weight),
       truckType: req.load.truckType,
       cargoType: req.load.cargoDescription || 'General',
-      pickupCity: req.load.pickupLocation?.name || 'Unknown',
-      deliveryCity: req.load.deliveryLocation?.name || 'Unknown',
+      pickupCity: req.load.pickupLocation?.name || req.load.pickupCity || 'Unknown',
+      deliveryCity: req.load.deliveryLocation?.name || req.load.deliveryCity || 'Unknown',
       pickupDate: req.load.pickupDate.toISOString(),
       deliveryDate: req.load.deliveryDate.toISOString(),
       shipper: req.load.shipper,
@@ -105,19 +178,64 @@ export default async function CarrierRequestsPage() {
       : null,
   }));
 
+  // Transform load requests (outgoing requests to shippers)
+  const transformedLoadRequests = loadRequests.map((req) => ({
+    id: req.id,
+    status: req.status,
+    notes: req.notes,
+    proposedRate: req.proposedRate ? Number(req.proposedRate) : null,
+    responseNotes: req.responseNotes,
+    expiresAt: req.expiresAt.toISOString(),
+    createdAt: req.createdAt.toISOString(),
+    respondedAt: req.respondedAt?.toISOString() || null,
+    load: {
+      id: req.load.id,
+      referenceNumber: `LOAD-${req.load.id.slice(-8).toUpperCase()}`,
+      status: req.load.status,
+      weight: Number(req.load.weight),
+      truckType: req.load.truckType,
+      pickupCity: req.load.pickupLocation?.name || req.load.pickupCity || 'Unknown',
+      deliveryCity: req.load.deliveryLocation?.name || req.load.deliveryCity || 'Unknown',
+      pickupDate: req.load.pickupDate.toISOString(),
+      rate: req.load.totalFareEtb ? Number(req.load.totalFareEtb) : (req.load.rate ? Number(req.load.rate) : null),
+    },
+    truck: {
+      id: req.truck.id,
+      plateNumber: req.truck.licensePlate,
+      truckType: req.truck.truckType,
+      capacity: Number(req.truck.capacity),
+    },
+    shipper: req.load.shipper || null,
+    requestedBy: req.requestedBy
+      ? {
+          id: req.requestedBy.id,
+          name: [req.requestedBy.firstName, req.requestedBy.lastName]
+            .filter(Boolean)
+            .join(' '),
+          email: req.requestedBy.email,
+        }
+      : null,
+  }));
+
+  const pendingShipperRequests = transformedShipperRequests.filter(r => r.status === 'PENDING').length;
+
   return (
     <div className="p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Incoming Requests
+          Requests
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Review and respond to truck booking requests from shippers
+          Manage shipper booking requests and your load requests
         </p>
       </div>
 
       <Suspense fallback={<RequestsSkeleton />}>
-        <CarrierRequestsClient requests={transformedRequests} />
+        <RequestsTabs
+          shipperRequests={transformedShipperRequests}
+          loadRequests={transformedLoadRequests}
+          pendingShipperRequests={pendingShipperRequests}
+        />
       </Suspense>
     </div>
   );

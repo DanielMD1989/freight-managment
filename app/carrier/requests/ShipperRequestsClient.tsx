@@ -1,7 +1,8 @@
 /**
- * Carrier Requests Client Component
+ * Shipper Requests Client Component (Carrier View)
  *
- * Phase 2 - Story 16.15: Shipper-Led Truck Matching
+ * Shows incoming truck booking requests from shippers
+ * Carrier can accept or reject these requests
  */
 
 'use client';
@@ -54,7 +55,7 @@ interface Props {
 
 type StatusFilter = 'all' | 'PENDING' | 'APPROVED' | 'REJECTED';
 
-export default function CarrierRequestsClient({ requests: initialRequests }: Props) {
+export default function ShipperRequestsClient({ requests: initialRequests }: Props) {
   const router = useRouter();
   const [requests, setRequests] = useState<TruckRequest[]>(initialRequests);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('PENDING');
