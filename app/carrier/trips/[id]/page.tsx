@@ -16,6 +16,7 @@ import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { redirect, notFound } from 'next/navigation';
 import TripDetailClient from './TripDetailClient';
+import { createTripForLoad } from '@/lib/tripManagement';
 
 async function getTripDetails(id: string, userId: string) {
   const user = await db.user.findUnique({
@@ -137,6 +138,70 @@ async function getTripDetails(id: string, userId: string) {
         },
       },
     });
+  }
+
+  // If still no trip, check if load exists and is assigned - create trip if so
+  if (!trip) {
+    const load = await db.load.findUnique({
+      where: { id: id },
+      select: {
+        id: true,
+        status: true,
+        assignedTruckId: true,
+        shipperId: true,
+      },
+    });
+
+    // If load exists, is assigned, and carrier owns the truck, create trip
+    if (load?.assignedTruckId) {
+      const truck = await db.truck.findUnique({
+        where: { id: load.assignedTruckId },
+        select: { carrierId: true },
+      });
+
+      if (truck?.carrierId === user.organizationId || user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
+        // Create the missing trip
+        const newTrip = await createTripForLoad(load.id, load.assignedTruckId, userId);
+        if (newTrip) {
+          // Fetch the full trip with relations
+          trip = await db.trip.findUnique({
+            where: { id: newTrip.id },
+            include: {
+              load: {
+                include: {
+                  shipper: {
+                    select: { id: true, name: true, isVerified: true },
+                  },
+                  pickupLocation: true,
+                  deliveryLocation: true,
+                  documents: {
+                    where: { type: { in: ['POD', 'BOL', 'RECEIPT'] } },
+                    orderBy: { uploadedAt: 'desc' },
+                  },
+                  events: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 20,
+                  },
+                },
+              },
+              truck: {
+                include: {
+                  carrier: {
+                    select: { id: true, name: true },
+                  },
+                },
+              },
+              shipper: {
+                select: { id: true, name: true, isVerified: true },
+              },
+              carrier: {
+                select: { id: true, name: true },
+              },
+            },
+          });
+        }
+      }
+    }
   }
 
   if (!trip) {
