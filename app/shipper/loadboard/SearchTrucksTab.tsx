@@ -11,16 +11,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   StatusTabs,
-  ActionButton,
   AgeIndicator,
-  SavedSearches,
-  FilterPanel,
   CompanyLink,
   CompanyModal,
   EditSearchModal,
 } from '@/components/loadboard-ui';
 import DataTable from '@/components/loadboard-ui/DataTable';
-import { TableColumn, StatusTab, Filter, RowAction, SavedSearch, SavedSearchCriteria } from '@/types/loadboard-ui';
+import { TableColumn, StatusTab, RowAction, SavedSearch, SavedSearchCriteria } from '@/types/loadboard-ui';
 import TruckBookingModal from './TruckBookingModal';
 import { getCSRFToken } from '@/lib/csrfFetch';
 
@@ -354,89 +351,6 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   ];
 
   /**
-   * Filter configuration
-   */
-  const cityOptions = ethiopianCities.map(city => ({
-    value: city.name,
-    label: city.name,
-  }));
-
-  const filters: Filter[] = [
-    {
-      key: 'ageHours',
-      label: 'AGE (hours)',
-      type: 'slider',
-      min: 0,
-      max: 168,
-      step: 1,
-      unit: 'h',
-    },
-    // Note: DH-O and DH-D filters hidden from shipper (carrier-only metrics)
-    {
-      key: 'origin',
-      label: 'ORIGIN',
-      type: 'select',
-      options: cityOptions,
-    },
-    {
-      key: 'destination',
-      label: 'DESTINATION',
-      type: 'select',
-      options: cityOptions,
-    },
-    {
-      key: 'truckType',
-      label: 'TRUCK TYPE',
-      type: 'select',
-      options: [
-        { value: 'DRY_VAN', label: 'Dry Van' },
-        { value: 'FLATBED', label: 'Flatbed' },
-        { value: 'REFRIGERATED', label: 'Refrigerated' },
-        { value: 'TANKER', label: 'Tanker' },
-        { value: 'CONTAINER', label: 'Container' },
-      ],
-    },
-    {
-      key: 'fullPartial',
-      label: 'LOAD TYPE',
-      type: 'select',
-      options: [
-        { value: 'FULL', label: 'Full Load' },
-        { value: 'PARTIAL', label: 'Partial Load' },
-      ],
-    },
-    {
-      key: 'minLength',
-      label: 'MIN LENGTH (m)',
-      type: 'slider',
-      min: 0,
-      max: 20,
-      step: 0.5,
-      unit: 'm',
-    },
-    {
-      key: 'maxWeight',
-      label: 'MAX WEIGHT (kg)',
-      type: 'slider',
-      min: 0,
-      max: 50000,
-      step: 1000,
-      unit: 'kg',
-    },
-    {
-      key: 'availableFrom',
-      label: 'AVAILABLE FROM',
-      type: 'date-picker',
-      minDate: new Date(),
-    },
-    {
-      key: 'showVerifiedOnly',
-      label: 'VERIFIED COMPANIES ONLY',
-      type: 'toggle',
-    },
-  ];
-
-  /**
    * Table columns configuration (memoized)
    */
   const columns: TableColumn[] = useMemo(() => [
@@ -545,9 +459,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   ], [pendingRequestTruckIds]);
 
   return (
-    <div className="flex gap-6">
-      {/* Main Content - Left Side */}
-      <div className="flex-1 space-y-6">
+    <div className="space-y-6">
         {/* Header Section */}
         <div className="flex items-center justify-between">
           <div>
@@ -827,36 +739,6 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
             emptyMessage="No trucks found matching your search criteria. Try adjusting your filters."
           />
         </div>
-      </div>
-
-      {/* Right Sidebar - Quick Filters */}
-      <div className="w-64 flex-shrink-0 hidden lg:block">
-        <div
-          className="rounded-xl border overflow-hidden sticky top-6"
-          style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
-        >
-          <div
-            className="px-4 py-3"
-            style={{ borderBottom: '1px solid var(--border)' }}
-          >
-            <h3
-              className="text-sm font-semibold"
-              style={{ color: 'var(--foreground)' }}
-            >
-              Refine Results
-            </h3>
-          </div>
-          <div className="p-4">
-            <FilterPanel
-              title=""
-              filters={filters}
-              values={filterValues}
-              onChange={handleFilterChange}
-              onReset={handleFilterReset}
-            />
-          </div>
-        </div>
-      </div>
 
       {/* Company Modal */}
       {selectedCompany && (
