@@ -152,16 +152,37 @@ async function getTripDetails(id: string, userId: string) {
       },
     });
 
-    // If load exists, is assigned, and carrier owns the truck, create trip
-    if (load?.assignedTruckId) {
+    // Also check for approved load request to get truckId
+    let truckId = load?.assignedTruckId;
+    if (!truckId && load) {
+      const approvedRequest = await db.loadRequest.findFirst({
+        where: {
+          loadId: load.id,
+          status: 'APPROVED',
+        },
+        select: { truckId: true },
+      });
+      truckId = approvedRequest?.truckId || null;
+
+      // Also fix the load's assignedTruckId if it's missing
+      if (truckId) {
+        await db.load.update({
+          where: { id: load.id },
+          data: { assignedTruckId: truckId },
+        });
+      }
+    }
+
+    // If load exists and has a truck, create trip
+    if (load && truckId) {
       const truck = await db.truck.findUnique({
-        where: { id: load.assignedTruckId },
+        where: { id: truckId },
         select: { carrierId: true },
       });
 
       if (truck?.carrierId === user.organizationId || user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
         // Create the missing trip
-        const newTrip = await createTripForLoad(load.id, load.assignedTruckId, userId);
+        const newTrip = await createTripForLoad(load.id, truckId, userId);
         if (newTrip) {
           // Fetch the full trip with relations
           trip = await db.trip.findUnique({
