@@ -264,7 +264,6 @@ const navigationSections: Record<string, NavSection[]> = {
         { label: 'Post Trucks', href: '/carrier/loadboard?tab=POST_TRUCKS', icon: '📤', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
         { label: 'Search Loads', href: '/carrier/loadboard?tab=SEARCH_LOADS', icon: '🔍', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
         { label: 'Requests', href: '/carrier/requests', icon: '📋', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
-        { label: 'My Load Requests', href: '/carrier/load-requests', icon: '📨', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
       ],
     },
     {
