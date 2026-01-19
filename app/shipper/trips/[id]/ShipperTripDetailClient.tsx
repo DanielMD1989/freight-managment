@@ -20,6 +20,15 @@ import TripHistoryPlayback from '@/components/TripHistoryPlayback';
 import { useGpsRealtime } from '@/hooks/useGpsRealtime';
 import { csrfFetch } from '@/lib/csrfFetch';
 
+interface TripPod {
+  id: string;
+  fileUrl: string;
+  fileName: string;
+  fileType: string;
+  notes: string | null;
+  uploadedAt: string;
+}
+
 interface Trip {
   id: string;
   loadId: string;
@@ -48,6 +57,12 @@ interface Trip {
   podUrl: string | null;
   podSubmitted: boolean;
   podVerified: boolean;
+  // New fields for delivery confirmation
+  shipperConfirmed: boolean;
+  receiverName: string | null;
+  receiverPhone: string | null;
+  deliveryNotes: string | null;
+  cancelReason: string | null;
   carrier: {
     id: string;
     name: string;
@@ -73,6 +88,8 @@ interface Trip {
     description: string;
     createdAt: string;
   }[];
+  // New: POD documents array
+  podDocuments?: TripPod[];
 }
 
 interface Props {
@@ -83,8 +100,9 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
   ASSIGNED: { label: 'Assigned', color: 'text-indigo-700', bgColor: 'bg-indigo-50 border-indigo-200' },
   PICKUP_PENDING: { label: 'Pickup Pending', color: 'text-purple-700', bgColor: 'bg-purple-50 border-purple-200' },
   IN_TRANSIT: { label: 'In Transit', color: 'text-amber-700', bgColor: 'bg-amber-50 border-amber-200' },
-  DELIVERED: { label: 'Delivered - Verify POD', color: 'text-purple-700', bgColor: 'bg-purple-50 border-purple-200' },
-  COMPLETED: { label: 'Completed', color: 'text-slate-600', bgColor: 'bg-slate-50 border-slate-200' },
+  DELIVERED: { label: 'Delivered - Confirm Receipt', color: 'text-purple-700', bgColor: 'bg-purple-50 border-purple-200' },
+  COMPLETED: { label: 'Completed', color: 'text-emerald-600', bgColor: 'bg-emerald-50 border-emerald-200' },
+  CANCELLED: { label: 'Cancelled', color: 'text-red-700', bgColor: 'bg-red-50 border-red-200' },
 };
 
 const EVENT_ICONS: Record<string, string> = {
@@ -108,36 +126,62 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
     percent: trip.tripProgressPercent || 0,
     remainingKm: trip.remainingDistanceKm,
   });
-  const [verifyingPod, setVerifyingPod] = useState(false);
+  const [confirmingDelivery, setConfirmingDelivery] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmationNotes, setConfirmationNotes] = useState('');
+  const [podDocuments, setPodDocuments] = useState<TripPod[]>(initialTrip.podDocuments || []);
 
   const statusConfig = STATUS_CONFIG[trip.status] || STATUS_CONFIG.ASSIGNED;
   const isActiveTrip = trip.status === 'IN_TRANSIT';
   const isCompletedTrip = trip.status === 'DELIVERED' || trip.status === 'COMPLETED';
-  const needsPodVerification = trip.status === 'DELIVERED' && trip.podSubmitted && !trip.podVerified;
+  const isCancelledTrip = trip.status === 'CANCELLED';
+  const hasPod = podDocuments.length > 0 || trip.podSubmitted;
+  const needsConfirmation = trip.status === 'DELIVERED' && hasPod && !trip.shipperConfirmed;
 
-  const handleVerifyPod = async () => {
-    setVerifyingPod(true);
+  // Fetch POD documents on mount
+  useEffect(() => {
+    if (trip.status === 'DELIVERED' || trip.status === 'COMPLETED') {
+      fetchPodDocuments();
+    }
+  }, [trip.id, trip.status]);
+
+  const fetchPodDocuments = async () => {
+    try {
+      const response = await fetch(`/api/trips/${trip.id}/pod`);
+      if (response.ok) {
+        const data = await response.json();
+        setPodDocuments(data.pods || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch POD documents:', error);
+    }
+  };
+
+  const handleConfirmDelivery = async () => {
+    setConfirmingDelivery(true);
     setError(null);
 
     try {
-      const response = await csrfFetch(`/api/loads/${trip.loadId}/pod`, {
-        method: 'PUT',
+      const response = await csrfFetch(`/api/trips/${trip.id}/confirm`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: confirmationNotes || undefined }),
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to verify POD');
+        throw new Error(data.error || 'Failed to confirm delivery');
       }
 
       // Update local state
-      setTrip((prev) => ({ ...prev, podVerified: true }));
+      setTrip((prev) => ({ ...prev, shipperConfirmed: true, status: 'COMPLETED' }));
+      setShowConfirmModal(false);
       router.refresh();
     } catch (err: any) {
       setError(err.message);
     } finally {
-      setVerifyingPod(false);
+      setConfirmingDelivery(false);
     }
   };
 
@@ -297,8 +341,27 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
         </div>
       )}
 
-      {/* POD Verification Alert */}
-      {needsPodVerification && (
+      {/* Cancelled Trip Alert */}
+      {isCancelledTrip && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg className="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-red-800">Trip Cancelled</h3>
+              {trip.cancelReason && (
+                <p className="text-red-700 mt-1">Reason: {trip.cancelReason}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delivery Confirmation Alert */}
+      {needsConfirmation && (
         <div className="bg-purple-50 border border-purple-200 rounded-xl p-6">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -307,46 +370,70 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
               </svg>
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-purple-800">POD Verification Required</h3>
+              <h3 className="text-lg font-semibold text-purple-800">Confirm Delivery Receipt</h3>
               <p className="text-purple-700 mt-1">
-                The carrier has submitted the Proof of Delivery. Please review and verify to complete this trip.
+                The carrier has delivered your shipment and uploaded Proof of Delivery. Please review and confirm to complete this trip.
               </p>
-              <div className="flex items-center gap-4 mt-4">
-                {trip.podUrl && (
-                  <a
-                    href={trip.podUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-4 py-2 bg-white border border-purple-300 text-purple-700 rounded-lg font-medium hover:bg-purple-50 transition-colors flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                    View POD Document
-                  </a>
-                )}
-                <button
-                  onClick={handleVerifyPod}
-                  disabled={verifyingPod}
-                  className="px-6 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 disabled:opacity-50 transition-colors flex items-center gap-2"
-                >
-                  {verifyingPod ? (
-                    <>
-                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      Verifying...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      Verify POD & Complete Trip
-                    </>
+
+              {/* Receiver Info */}
+              {(trip.receiverName || trip.receiverPhone) && (
+                <div className="mt-3 p-3 bg-white rounded-lg border border-purple-200">
+                  <p className="text-sm font-medium text-purple-800">Delivery Received By:</p>
+                  {trip.receiverName && <p className="text-sm text-purple-700">{trip.receiverName}</p>}
+                  {trip.receiverPhone && <p className="text-sm text-purple-700">{trip.receiverPhone}</p>}
+                  {trip.deliveryNotes && (
+                    <p className="text-sm text-purple-600 mt-1">Notes: {trip.deliveryNotes}</p>
                   )}
+                </div>
+              )}
+
+              {/* POD Documents List */}
+              {podDocuments.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  <p className="text-sm font-medium text-purple-800">POD Documents ({podDocuments.length}):</p>
+                  {podDocuments.map((pod) => (
+                    <a
+                      key={pod.id}
+                      href={pod.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 p-2 bg-white rounded-lg border border-purple-200 hover:bg-purple-50 transition-colors"
+                    >
+                      <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span className="text-sm text-purple-700">{pod.fileName}</span>
+                      {pod.notes && <span className="text-xs text-purple-500">({pod.notes})</span>}
+                    </a>
+                  ))}
+                </div>
+              )}
+
+              {/* Legacy POD link */}
+              {podDocuments.length === 0 && trip.podUrl && (
+                <a
+                  href={trip.podUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-white border border-purple-300 text-purple-700 rounded-lg font-medium hover:bg-purple-50 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  View POD Document
+                </a>
+              )}
+
+              <div className="mt-4">
+                <button
+                  onClick={() => setShowConfirmModal(true)}
+                  className="px-6 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Confirm Delivery
                 </button>
               </div>
             </div>
@@ -662,6 +749,71 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
                 tripId={trip.id}
                 onClose={() => setShowHistoryPlayback(false)}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Delivery Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="px-6 py-4 border-b border-slate-200">
+              <h2 className="text-lg font-semibold text-slate-800">Confirm Delivery</h2>
+              <p className="text-sm text-slate-500">
+                Confirming will complete the trip and release payment to the carrier.
+              </p>
+            </div>
+            <div className="p-6">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Confirmation Notes (optional)
+                </label>
+                <textarea
+                  value={confirmationNotes}
+                  onChange={(e) => setConfirmationNotes(e.target.value)}
+                  placeholder="Any notes about the delivery..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                />
+              </div>
+
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowConfirmModal(false)}
+                  className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelivery}
+                  disabled={confirmingDelivery}
+                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                >
+                  {confirmingDelivery ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Confirming...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Confirm & Complete
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

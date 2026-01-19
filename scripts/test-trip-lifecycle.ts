@@ -23,11 +23,12 @@ const tripId = 'cmklbvoh4000076ul399je5n4';
 
 // Valid status transitions
 const validTransitions: Record<TripStatus, TripStatus[]> = {
-  ASSIGNED: ['PICKUP_PENDING'],
-  PICKUP_PENDING: ['IN_TRANSIT'],
-  IN_TRANSIT: ['DELIVERED'],
-  DELIVERED: ['COMPLETED'],
+  ASSIGNED: ['PICKUP_PENDING', 'CANCELLED'],
+  PICKUP_PENDING: ['IN_TRANSIT', 'CANCELLED'],
+  IN_TRANSIT: ['DELIVERED', 'CANCELLED'],
+  DELIVERED: ['COMPLETED', 'CANCELLED'],
   COMPLETED: [],
+  CANCELLED: [],
 };
 
 async function updateTripStatus(newStatus: TripStatus): Promise<boolean> {
@@ -90,7 +91,7 @@ async function main() {
   console.log('═══════════════════════════════════════════════════════════════\n');
 
   // Get current trip state
-  let trip = await prisma.trip.findUnique({
+  let trip: any = await prisma.trip.findUnique({
     where: { id: tripId },
     include: {
       load: { select: { pickupCity: true, deliveryCity: true, status: true } },

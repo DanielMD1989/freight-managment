@@ -218,11 +218,12 @@ function generateTrackingUrl(loadId: string): string {
  */
 function isValidStatusTransition(currentStatus: TripStatus, newStatus: TripStatus): boolean {
   const validTransitions: Record<TripStatus, TripStatus[]> = {
-    ASSIGNED: ['PICKUP_PENDING'],
-    PICKUP_PENDING: ['IN_TRANSIT'],
-    IN_TRANSIT: ['DELIVERED'],
-    DELIVERED: ['COMPLETED'],
+    ASSIGNED: ['PICKUP_PENDING', 'CANCELLED'],
+    PICKUP_PENDING: ['IN_TRANSIT', 'CANCELLED'],
+    IN_TRANSIT: ['DELIVERED', 'CANCELLED'],
+    DELIVERED: ['COMPLETED', 'CANCELLED'],
     COMPLETED: [], // Terminal state
+    CANCELLED: [], // Terminal state
   };
 
   return validTransitions[currentStatus]?.includes(newStatus) ?? false;
@@ -238,6 +239,7 @@ async function syncLoadStatus(loadId: string, tripStatus: TripStatus): Promise<v
     IN_TRANSIT: 'IN_TRANSIT',
     DELIVERED: 'DELIVERED',
     COMPLETED: 'COMPLETED',
+    CANCELLED: 'CANCELLED',
   };
 
   const loadStatus = loadStatusMap[tripStatus];

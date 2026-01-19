@@ -28,7 +28,7 @@ async function testPodFlow() {
   console.log('═══════════════════════════════════════════════════════════════\n');
 
   // Find a trip in DELIVERED status
-  let trip = await prisma.trip.findFirst({
+  let trip: any = await prisma.trip.findFirst({
     where: { status: 'DELIVERED' },
     include: {
       load: {

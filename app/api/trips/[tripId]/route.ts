@@ -12,16 +12,21 @@ import { TripStatus, LoadStatus } from '@prisma/client';
 import { z } from 'zod';
 
 const updateTripSchema = z.object({
-  status: z.enum(['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED']).optional(),
+  status: z.enum(['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED', 'CANCELLED']).optional(),
+  // Receiver info (for DELIVERED status)
+  receiverName: z.string().max(100).optional(),
+  receiverPhone: z.string().max(20).optional(),
+  deliveryNotes: z.string().max(500).optional(),
 });
 
 // Valid status transitions
 const validTransitions: Record<TripStatus, TripStatus[]> = {
-  ASSIGNED: ['PICKUP_PENDING'],
-  PICKUP_PENDING: ['IN_TRANSIT'],
-  IN_TRANSIT: ['DELIVERED'],
-  DELIVERED: ['COMPLETED'],
+  ASSIGNED: ['PICKUP_PENDING', 'CANCELLED'],
+  PICKUP_PENDING: ['IN_TRANSIT', 'CANCELLED'],
+  IN_TRANSIT: ['DELIVERED', 'CANCELLED'],
+  DELIVERED: ['COMPLETED', 'CANCELLED'],
   COMPLETED: [], // Terminal state
+  CANCELLED: [], // Terminal state
 };
 
 /**
@@ -239,10 +244,24 @@ export async function PATCH(
           break;
         case 'DELIVERED':
           updateData.deliveredAt = new Date();
+          // Add receiver info if provided
+          if (validatedData.receiverName) {
+            updateData.receiverName = validatedData.receiverName;
+          }
+          if (validatedData.receiverPhone) {
+            updateData.receiverPhone = validatedData.receiverPhone;
+          }
+          if (validatedData.deliveryNotes) {
+            updateData.deliveryNotes = validatedData.deliveryNotes;
+          }
           break;
         case 'COMPLETED':
           updateData.completedAt = new Date();
           updateData.trackingEnabled = false; // GPS stops on completion
+          break;
+        case 'CANCELLED':
+          updateData.cancelledAt = new Date();
+          updateData.trackingEnabled = false;
           break;
       }
     }
@@ -319,6 +338,8 @@ function mapTripStatusToLoadStatus(tripStatus: TripStatus): LoadStatus | null {
       return LoadStatus.DELIVERED;
     case 'COMPLETED':
       return LoadStatus.COMPLETED;
+    case 'CANCELLED':
+      return LoadStatus.CANCELLED;
     default:
       return null;
   }

@@ -95,15 +95,15 @@ export async function GET(request: NextRequest) {
         },
       }),
 
-      // Trip stats (revenue and distance) - using Trip model with carrierId filter
+      // Trip stats - distance only (revenue not implemented)
       db.trip.aggregate({
         where: {
           carrierId: session.organizationId,
           status: { in: ['DELIVERED', 'COMPLETED'] },
         },
         _sum: {
-          rate: true,
-          distance: true,
+          estimatedDistanceKm: true,
+          actualDistanceKm: true,
         },
       }),
 
@@ -138,14 +138,17 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
+    // Calculate total distance from trips
+    const totalDistance = Number(tripStats._sum?.actualDistanceKm || tripStats._sum?.estimatedDistanceKm || 0);
+
     return NextResponse.json({
       totalTrucks,
       activeTrucks,
       activePostings,
       completedDeliveries: completedTrips,
       inTransitTrips,
-      totalRevenue: Number(tripStats._sum.rate || 0),
-      totalDistance: Number(tripStats._sum.distance || 0),
+      totalRevenue: 0, // Revenue tracking not implemented
+      totalDistance,
       wallet: {
         balance: walletAccount?.balance || 0,
         currency: walletAccount?.currency || 'ETB',

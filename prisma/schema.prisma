@@ -172,6 +172,7 @@ enum TripStatus {
   IN_TRANSIT // Load picked up, in transit to destination
   DELIVERED // Load delivered to destination
   COMPLETED // POD confirmed, payment processed
+  CANCELLED // Trip cancelled
 }
 
 // ============================================================================
@@ -944,6 +945,21 @@ model Trip {
   deliveredAt DateTime? // When load was delivered (status -> DELIVERED)
   completedAt DateTime? // When POD confirmed (status -> COMPLETED)
 
+  // Delivery receiver info (captured when marking as DELIVERED)
+  receiverName  String? // Name of person who received the delivery
+  receiverPhone String? // Receiver's phone number
+  deliveryNotes String? // Notes from carrier at delivery
+
+  // Shipper confirmation (after POD upload)
+  shipperConfirmed   Boolean   @default(false)
+  shipperConfirmedAt DateTime?
+  shipperConfirmedBy String? // User ID who confirmed
+
+  // Cancellation
+  cancelledAt  DateTime?
+  cancelledBy  String? // User ID who cancelled
+  cancelReason String?
+
   // Distance tracking
   estimatedDistanceKm  Decimal? @db.Decimal(10, 2) // Estimated route distance
   actualDistanceKm     Decimal? @db.Decimal(10, 2) // Actual GPS-computed distance
@@ -979,6 +995,9 @@ model Trip {
   // Route history - all GPS positions for this trip
   routeHistory GpsPosition[]
 
+  // POD documents for this trip
+  podDocuments TripPod[]
+
   @@index([status])
   @@index([carrierId])
   @@index([shipperId])
@@ -987,6 +1006,32 @@ model Trip {
   @@index([trackingUrl])
   @@index([createdAt])
   @@map("trips")
+}
+
+// ============================================================================
+// TRIP POD (Proof of Delivery) MODEL
+// Supports multiple POD documents per trip
+// ============================================================================
+
+model TripPod {
+  id       String @id @default(cuid())
+  tripId   String
+  trip     Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  // File info
+  fileUrl  String
+  fileName String
+  fileType String // IMAGE, PDF
+  fileSize Int // bytes
+  mimeType String
+
+  // Metadata
+  notes      String?
+  uploadedAt DateTime @default(now())
+  uploadedBy String // User ID who uploaded
+
+  @@index([tripId])
+  @@map("trip_pods")
 }
 
 // ============================================================================
