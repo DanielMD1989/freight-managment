@@ -5,6 +5,7 @@
  *
  * Multi-step form for creating load postings
  * Sprint 11 - Story 11.2: Load Creation Form
+ * Enhanced UI - Dashboard Style
  */
 
 import { useState } from 'react';
@@ -13,14 +14,14 @@ import { useToast } from '@/components/Toast';
 import { getCSRFToken } from '@/lib/csrfFetch';
 
 const TRUCK_TYPES = [
-  { value: 'FLATBED', label: 'Flatbed' },
-  { value: 'REFRIGERATED', label: 'Refrigerated' },
-  { value: 'TANKER', label: 'Tanker' },
-  { value: 'CONTAINER', label: 'Container' },
-  { value: 'DRY_VAN', label: 'Dry Van' },
-  { value: 'LOWBOY', label: 'Lowboy' },
-  { value: 'DUMP_TRUCK', label: 'Dump Truck' },
-  { value: 'BOX_TRUCK', label: 'Box Truck' },
+  { value: 'FLATBED', label: 'Flatbed', icon: '🚛' },
+  { value: 'REFRIGERATED', label: 'Refrigerated', icon: '❄️' },
+  { value: 'TANKER', label: 'Tanker', icon: '🛢️' },
+  { value: 'CONTAINER', label: 'Container', icon: '📦' },
+  { value: 'DRY_VAN', label: 'Dry Van', icon: '🚚' },
+  { value: 'LOWBOY', label: 'Lowboy', icon: '🔧' },
+  { value: 'DUMP_TRUCK', label: 'Dump Truck', icon: '🏗️' },
+  { value: 'BOX_TRUCK', label: 'Box Truck', icon: '📤' },
 ];
 
 // Ethiopian cities with coordinates for distance calculation
@@ -54,6 +55,13 @@ const ETHIOPIAN_CITIES_DATA: Record<string, { lat: number; lon: number }> = {
 
 const ETHIOPIAN_CITIES = Object.keys(ETHIOPIAN_CITIES_DATA);
 
+const STEPS = [
+  { num: 1, label: 'Route', icon: '📍' },
+  { num: 2, label: 'Cargo', icon: '📦' },
+  { num: 3, label: 'Pricing', icon: '💰' },
+  { num: 4, label: 'Review', icon: '✓' },
+];
+
 /**
  * Calculate Haversine distance between two coordinates
  */
@@ -63,7 +71,7 @@ function calculateHaversineDistance(
   lat2: number,
   lon2: number
 ): number {
-  const R = 6371; // Earth's radius in km
+  const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
@@ -73,21 +81,18 @@ function calculateHaversineDistance(
       Math.sin(dLon / 2) *
       Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return Math.round(R * c * 10) / 10; // Round to 1 decimal
+  return Math.round(R * c * 10) / 10;
 }
 
 export default function LoadCreationForm() {
   const router = useRouter();
   const toast = useToast();
 
-  // Form state
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Form data
   const [formData, setFormData] = useState({
-    // Location & Schedule
     pickupCity: '',
     pickupAddress: '',
     pickupDate: '',
@@ -95,43 +100,28 @@ export default function LoadCreationForm() {
     deliveryAddress: '',
     deliveryDate: '',
     appointmentRequired: false,
-
-    // Load Details
     truckType: 'FLATBED',
     weight: '',
     cargoDescription: '',
     fullPartial: 'FULL',
     isFragile: false,
     requiresRefrigeration: false,
-
-    // Pricing
     rate: '',
     bookMode: 'REQUEST',
-
-    // Privacy & Contact
     isAnonymous: false,
     shipperContactName: '',
     shipperContactPhone: '',
     specialInstructions: '',
-
-    // Status
     status: 'DRAFT',
   });
 
-  /**
-   * Update form field
-   */
   const updateField = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setError('');
   };
 
-  /**
-   * Validate current step
-   */
   const validateStep = (): boolean => {
     if (step === 1) {
-      // Location & Schedule validation
       if (!formData.pickupCity || !formData.deliveryCity) {
         setError('Pickup and delivery cities are required');
         return false;
@@ -145,7 +135,6 @@ export default function LoadCreationForm() {
         return false;
       }
     } else if (step === 2) {
-      // Load Details validation
       if (!formData.truckType) {
         setError('Truck type is required');
         return false;
@@ -159,40 +148,27 @@ export default function LoadCreationForm() {
         return false;
       }
     } else if (step === 3) {
-      // Pricing validation
       if (!formData.rate || parseFloat(formData.rate) <= 0) {
         setError('Valid rate is required');
         return false;
       }
     }
-
     return true;
   };
 
-  /**
-   * Next step
-   */
   const nextStep = () => {
     if (validateStep()) {
       setStep((prev) => Math.min(prev + 1, 4));
     }
   };
 
-  /**
-   * Previous step
-   */
   const prevStep = () => {
     setStep((prev) => Math.max(prev - 1, 1));
     setError('');
   };
 
-  /**
-   * Submit form
-   */
   const handleSubmit = async (isDraft: boolean) => {
-    if (!isDraft && !validateStep()) {
-      return;
-    }
+    if (!isDraft && !validateStep()) return;
 
     setIsSubmitting(true);
     setError('');
@@ -205,7 +181,6 @@ export default function LoadCreationForm() {
         return;
       }
 
-      // Calculate trip distance using API (Google Maps if available, Haversine fallback)
       let tripKm: number | undefined;
       const pickupCoords = ETHIOPIAN_CITIES_DATA[formData.pickupCity];
       const deliveryCoords = ETHIOPIAN_CITIES_DATA[formData.deliveryCity];
@@ -219,7 +194,6 @@ export default function LoadCreationForm() {
             tripKm = distanceData.distanceKm;
           }
         } catch {
-          // Fallback to local Haversine calculation if API fails
           tripKm = calculateHaversineDistance(
             pickupCoords.lat,
             pickupCoords.lon,
@@ -229,7 +203,6 @@ export default function LoadCreationForm() {
         }
       }
 
-      // Prepare submission data
       const submitData = {
         ...formData,
         weight: parseFloat(formData.weight),
@@ -250,9 +223,7 @@ export default function LoadCreationForm() {
 
       if (response.ok) {
         const result = await response.json();
-        toast.success(
-          isDraft ? 'Load saved as draft' : 'Load posted successfully!'
-        );
+        toast.success(isDraft ? 'Load saved as draft' : 'Load posted successfully!');
         router.push(`/shipper/loads/${result.load.id}`);
       } else {
         const errorData = await response.json();
@@ -270,517 +241,564 @@ export default function LoadCreationForm() {
     }
   };
 
+  // Reusable input style
+  const inputStyle = {
+    background: 'var(--card)',
+    borderColor: 'var(--border)',
+    color: 'var(--foreground)',
+  };
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6 md:p-8">
-      {/* Progress Steps */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          {[1, 2, 3, 4].map((s) => (
-            <div
-              key={s}
-              className={`flex items-center ${s < 4 ? 'flex-1' : ''}`}
-            >
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
-                  step >= s
-                    ? 'bg-[#064d51] text-white'
-                    : 'bg-[#064d51]/10 text-[#064d51]/60'
+    <div
+      className="rounded-xl border overflow-hidden"
+      style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+    >
+      {/* Progress Header */}
+      <div
+        className="px-4 py-3"
+        style={{ background: 'var(--bg-tinted)', borderBottom: '1px solid var(--border)' }}
+      >
+        <div className="flex items-center justify-between max-w-md mx-auto">
+          {STEPS.map((s, idx) => (
+            <div key={s.num} className="flex items-center">
+              <button
+                onClick={() => step > s.num && setStep(s.num)}
+                disabled={step < s.num}
+                className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
+                  step > s.num ? 'cursor-pointer hover:scale-105' : step === s.num ? '' : 'cursor-not-allowed'
                 }`}
+                style={{
+                  background: step >= s.num ? 'var(--primary-500)' : 'var(--card)',
+                  color: step >= s.num ? 'white' : 'var(--foreground-muted)',
+                  border: step >= s.num ? 'none' : '1px solid var(--border)',
+                }}
               >
-                {s}
-              </div>
-              {s < 4 && (
+                {step > s.num ? '✓' : s.num}
+              </button>
+              {idx < STEPS.length - 1 && (
                 <div
-                  className={`flex-1 h-1 mx-2 ${
-                    step > s ? 'bg-[#064d51]' : 'bg-[#064d51]/10'
-                  }`}
+                  className="w-12 h-0.5 mx-1"
+                  style={{ background: step > s.num ? 'var(--primary-500)' : 'var(--border)' }}
                 />
               )}
             </div>
           ))}
         </div>
-        <div className="flex justify-between mt-2 text-xs text-[#064d51]/70">
-          <span>Location</span>
-          <span>Load Details</span>
-          <span>Pricing</span>
-          <span>Review</span>
+        <div className="flex justify-between max-w-md mx-auto mt-1">
+          {STEPS.map((s) => (
+            <span
+              key={s.num}
+              className="text-[10px] font-medium w-9 text-center"
+              style={{ color: step >= s.num ? 'var(--primary-500)' : 'var(--foreground-muted)' }}
+            >
+              {s.label}
+            </span>
+          ))}
         </div>
       </div>
 
-      {/* Error Message */}
-      {error && (
-        <div className="mb-6 bg-rose-50 border border-rose-200 rounded-xl p-4">
-          <p className="text-rose-800">{error}</p>
-        </div>
-      )}
+      {/* Form Content */}
+      <div className="p-4">
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 rounded-lg p-3 text-sm flex items-center gap-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {error}
+          </div>
+        )}
 
-      {/* Step 1: Location & Schedule */}
-      {step === 1 && (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-[#064d51]">
-            Location & Schedule
-          </h2>
-
-          {/* Pickup Information */}
-          <div className="border-t border-[#064d51]/10 pt-6">
-            <h3 className="text-lg font-semibold text-[#064d51] mb-4">
-              Pickup Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-[#064d51] mb-2">
-                  Pickup City *
+        {/* Step 1: Route */}
+        {step === 1 && (
+          <div className="space-y-4">
+            {/* Route Visual */}
+            <div
+              className="rounded-lg p-4 flex items-center gap-4"
+              style={{ background: 'var(--bg-tinted)' }}
+            >
+              <div className="flex-1">
+                <label className="block text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--foreground-muted)' }}>
+                  From
                 </label>
                 <select
                   value={formData.pickupCity}
                   onChange={(e) => updateField('pickupCity', e.target.value)}
-                  className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
+                  className="w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  style={inputStyle}
                 >
-                  <option value="">Select city...</option>
+                  <option value="">Select origin...</option>
                   {ETHIOPIAN_CITIES.map((city) => (
-                    <option key={city} value={city}>
-                      {city}
-                    </option>
+                    <option key={city} value={city}>{city}</option>
                   ))}
                 </select>
               </div>
+              <div className="flex flex-col items-center pt-4">
+                <svg className="w-6 h-6" style={{ color: 'var(--primary-500)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <label className="block text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--foreground-muted)' }}>
+                  To
+                </label>
+                <select
+                  value={formData.deliveryCity}
+                  onChange={(e) => updateField('deliveryCity', e.target.value)}
+                  className="w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  style={inputStyle}
+                >
+                  <option value="">Select destination...</option>
+                  {ETHIOPIAN_CITIES.map((city) => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
+            {/* Dates */}
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-[#064d51] mb-2">
-                  Pickup Date *
+                <label className="block text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--foreground-muted)' }}>
+                  Pickup Date
                 </label>
                 <input
                   type="date"
                   value={formData.pickupDate}
                   onChange={(e) => updateField('pickupDate', e.target.value)}
                   min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
+                  className="w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  style={inputStyle}
                 />
               </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-[#064d51] mb-2">
-                  Pickup Address (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={formData.pickupAddress}
-                  onChange={(e) => updateField('pickupAddress', e.target.value)}
-                  placeholder="Enter specific pickup location..."
-                  className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Delivery Information */}
-          <div className="border-t border-[#064d51]/10 pt-6">
-            <h3 className="text-lg font-semibold text-[#064d51] mb-4">
-              Delivery Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[#064d51] mb-2">
-                  Delivery City *
-                </label>
-                <select
-                  value={formData.deliveryCity}
-                  onChange={(e) => updateField('deliveryCity', e.target.value)}
-                  className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
-                >
-                  <option value="">Select city...</option>
-                  {ETHIOPIAN_CITIES.map((city) => (
-                    <option key={city} value={city}>
-                      {city}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[#064d51] mb-2">
-                  Delivery Date *
+                <label className="block text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--foreground-muted)' }}>
+                  Delivery Date
                 </label>
                 <input
                   type="date"
                   value={formData.deliveryDate}
                   onChange={(e) => updateField('deliveryDate', e.target.value)}
                   min={formData.pickupDate || new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
+                  className="w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  style={inputStyle}
                 />
               </div>
+            </div>
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-[#064d51] mb-2">
-                  Delivery Address (Optional)
+            {/* Addresses */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--foreground-muted)' }}>
+                  Pickup Address <span className="font-normal">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.pickupAddress}
+                  onChange={(e) => updateField('pickupAddress', e.target.value)}
+                  placeholder="Specific location..."
+                  className="w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--foreground-muted)' }}>
+                  Delivery Address <span className="font-normal">(optional)</span>
                 </label>
                 <input
                   type="text"
                   value={formData.deliveryAddress}
-                  onChange={(e) =>
-                    updateField('deliveryAddress', e.target.value)
-                  }
-                  placeholder="Enter specific delivery location..."
-                  className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
+                  onChange={(e) => updateField('deliveryAddress', e.target.value)}
+                  placeholder="Specific location..."
+                  className="w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  style={inputStyle}
                 />
               </div>
             </div>
-          </div>
 
-          {/* Appointment Required */}
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="appointmentRequired"
-              checked={formData.appointmentRequired}
-              onChange={(e) =>
-                updateField('appointmentRequired', e.target.checked)
-              }
-              className="h-4 w-4 text-[#1e9c99] focus:ring-[#1e9c99] border-[#064d51]/30 rounded"
-            />
-            <label
-              htmlFor="appointmentRequired"
-              className="ml-2 block text-sm text-[#064d51]/80"
-            >
-              Appointment required for pickup/delivery
+            {/* Appointment */}
+            <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+              <input
+                type="checkbox"
+                checked={formData.appointmentRequired}
+                onChange={(e) => updateField('appointmentRequired', e.target.checked)}
+                className="w-4 h-4 rounded accent-teal-600"
+              />
+              <span className="text-sm" style={{ color: 'var(--foreground)' }}>
+                Appointment required
+              </span>
             </label>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Step 2: Load Details */}
-      {step === 2 && (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-[#064d51]">Load Details</h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Step 2: Cargo */}
+        {step === 2 && (
+          <div className="space-y-4">
+            {/* Truck Type Grid */}
             <div>
-              <label className="block text-sm font-medium text-[#064d51] mb-2">
-                Truck Type *
+              <label className="block text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--foreground-muted)' }}>
+                Truck Type
               </label>
-              <select
-                value={formData.truckType}
-                onChange={(e) => updateField('truckType', e.target.value)}
-                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
-              >
+              <div className="grid grid-cols-4 gap-2">
                 {TRUCK_TYPES.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
+                  <button
+                    key={type.value}
+                    type="button"
+                    onClick={() => updateField('truckType', type.value)}
+                    className={`p-2 rounded-lg border text-center transition-all ${
+                      formData.truckType === type.value ? 'ring-2 ring-teal-500' : 'hover:border-teal-300'
+                    }`}
+                    style={{
+                      background: formData.truckType === type.value ? 'var(--bg-tinted)' : 'var(--card)',
+                      borderColor: formData.truckType === type.value ? 'var(--primary-500)' : 'var(--border)',
+                    }}
+                  >
+                    <div className="text-lg">{type.icon}</div>
+                    <div className="text-[10px] font-medium mt-0.5" style={{ color: 'var(--foreground)' }}>
+                      {type.label}
+                    </div>
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
 
+            {/* Weight & Load Type */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--foreground-muted)' }}>
+                  Weight (kg)
+                </label>
+                <input
+                  type="number"
+                  value={formData.weight}
+                  onChange={(e) => updateField('weight', e.target.value)}
+                  min="0"
+                  placeholder="e.g. 5000"
+                  className="w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--foreground-muted)' }}>
+                  Load Type
+                </label>
+                <div className="flex gap-2">
+                  {[{ value: 'FULL', label: 'Full' }, { value: 'PARTIAL', label: 'Partial' }].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => updateField('fullPartial', opt.value)}
+                      className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-all ${
+                        formData.fullPartial === opt.value ? 'ring-2 ring-teal-500' : ''
+                      }`}
+                      style={{
+                        background: formData.fullPartial === opt.value ? 'var(--primary-500)' : 'var(--card)',
+                        color: formData.fullPartial === opt.value ? 'white' : 'var(--foreground)',
+                        borderColor: formData.fullPartial === opt.value ? 'var(--primary-500)' : 'var(--border)',
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Cargo Description */}
             <div>
-              <label className="block text-sm font-medium text-[#064d51] mb-2">
-                Weight (kg) *
-              </label>
-              <input
-                type="number"
-                value={formData.weight}
-                onChange={(e) => updateField('weight', e.target.value)}
-                min="0"
-                step="0.01"
-                placeholder="Enter weight..."
-                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[#064d51] mb-2">
-                Load Type *
-              </label>
-              <select
-                value={formData.fullPartial}
-                onChange={(e) => updateField('fullPartial', e.target.value)}
-                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
-              >
-                <option value="FULL">Full Truckload</option>
-                <option value="PARTIAL">Partial Load</option>
-              </select>
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-[#064d51] mb-2">
-                Cargo Description *
+              <label className="block text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--foreground-muted)' }}>
+                Cargo Description
               </label>
               <textarea
                 value={formData.cargoDescription}
-                onChange={(e) =>
-                  updateField('cargoDescription', e.target.value)
-                }
-                rows={3}
-                placeholder="Describe the cargo..."
-                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
+                onChange={(e) => updateField('cargoDescription', e.target.value)}
+                rows={2}
+                placeholder="Describe your cargo..."
+                className="w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
+                style={inputStyle}
               />
-              <p className="text-xs text-[#064d51]/60 mt-1">
-                Minimum 5 characters
-              </p>
             </div>
-          </div>
 
-          {/* Special Requirements */}
-          <div className="border-t border-[#064d51]/10 pt-6">
-            <h3 className="text-lg font-semibold text-[#064d51] mb-4">
-              Special Requirements
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center">
+            {/* Special Requirements */}
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                 <input
                   type="checkbox"
-                  id="isFragile"
                   checked={formData.isFragile}
                   onChange={(e) => updateField('isFragile', e.target.checked)}
-                  className="h-4 w-4 text-[#1e9c99] focus:ring-[#1e9c99] border-[#064d51]/30 rounded"
+                  className="w-4 h-4 rounded accent-teal-600"
                 />
-                <label
-                  htmlFor="isFragile"
-                  className="ml-2 block text-sm text-[#064d51]/80"
-                >
-                  Fragile cargo (requires special handling)
-                </label>
-              </div>
-
-              <div className="flex items-center">
+                <span className="text-sm" style={{ color: 'var(--foreground)' }}>Fragile</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                 <input
                   type="checkbox"
-                  id="requiresRefrigeration"
                   checked={formData.requiresRefrigeration}
-                  onChange={(e) =>
-                    updateField('requiresRefrigeration', e.target.checked)
-                  }
-                  className="h-4 w-4 text-[#1e9c99] focus:ring-[#1e9c99] border-[#064d51]/30 rounded"
+                  onChange={(e) => updateField('requiresRefrigeration', e.target.checked)}
+                  className="w-4 h-4 rounded accent-teal-600"
                 />
-                <label
-                  htmlFor="requiresRefrigeration"
-                  className="ml-2 block text-sm text-[#064d51]/80"
-                >
-                  Requires refrigeration
-                </label>
-              </div>
+                <span className="text-sm" style={{ color: 'var(--foreground)' }}>Refrigerated</span>
+              </label>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Step 3: Pricing */}
-      {step === 3 && (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-[#064d51]">
-            Pricing & Booking
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Step 3: Pricing */}
+        {step === 3 && (
+          <div className="space-y-4">
+            {/* Rate Input */}
             <div>
-              <label className="block text-sm font-medium text-[#064d51] mb-2">
-                Rate (ETB) *
+              <label className="block text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--foreground-muted)' }}>
+                Your Rate (ETB)
               </label>
-              <input
-                type="number"
-                value={formData.rate}
-                onChange={(e) => updateField('rate', e.target.value)}
-                min="0"
-                step="0.01"
-                placeholder="Enter rate..."
-                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
-              />
-              <p className="text-xs text-[#064d51]/60 mt-1">
-                Total amount you're willing to pay
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[#064d51] mb-2">
-                Booking Mode *
-              </label>
-              <select
-                value={formData.bookMode}
-                onChange={(e) => updateField('bookMode', e.target.value)}
-                className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
-              >
-                <option value="REQUEST">Request (carrier must apply)</option>
-                <option value="INSTANT">Instant (first come, first served)</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Privacy & Contact */}
-          <div className="border-t border-[#064d51]/10 pt-6">
-            <h3 className="text-lg font-semibold text-[#064d51] mb-4">
-              Privacy & Contact
-            </h3>
-
-            <div className="space-y-4">
-              <div className="flex items-center">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium" style={{ color: 'var(--foreground-muted)' }}>ETB</span>
                 <input
-                  type="checkbox"
-                  id="isAnonymous"
-                  checked={formData.isAnonymous}
-                  onChange={(e) => updateField('isAnonymous', e.target.checked)}
-                  className="h-4 w-4 text-[#1e9c99] focus:ring-[#1e9c99] border-[#064d51]/30 rounded"
+                  type="number"
+                  value={formData.rate}
+                  onChange={(e) => updateField('rate', e.target.value)}
+                  min="0"
+                  placeholder="0"
+                  className="w-full pl-12 pr-3 py-3 text-lg font-semibold rounded-lg border focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  style={inputStyle}
                 />
-                <label
-                  htmlFor="isAnonymous"
-                  className="ml-2 block text-sm text-[#064d51]/80"
-                >
-                  Post anonymously (hide company name from carriers)
-                </label>
               </div>
+            </div>
 
-              {!formData.isAnonymous && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-[#064d51] mb-2">
-                      Contact Name
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.shipperContactName}
-                      onChange={(e) =>
-                        updateField('shipperContactName', e.target.value)
-                      }
-                      placeholder="Contact person name..."
-                      className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
-                    />
-                  </div>
+            {/* Booking Mode */}
+            <div>
+              <label className="block text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--foreground-muted)' }}>
+                Booking Mode
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: 'REQUEST', label: 'Request', desc: 'Review bids first' },
+                  { value: 'INSTANT', label: 'Instant', desc: 'First come, first served' },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => updateField('bookMode', opt.value)}
+                    className={`p-3 rounded-lg border text-left transition-all ${
+                      formData.bookMode === opt.value ? 'ring-2 ring-teal-500' : ''
+                    }`}
+                    style={{
+                      background: formData.bookMode === opt.value ? 'var(--bg-tinted)' : 'var(--card)',
+                      borderColor: formData.bookMode === opt.value ? 'var(--primary-500)' : 'var(--border)',
+                    }}
+                  >
+                    <div className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{opt.label}</div>
+                    <div className="text-[10px]" style={{ color: 'var(--foreground-muted)' }}>{opt.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-[#064d51] mb-2">
-                      Contact Phone
-                    </label>
-                    <input
-                      type="tel"
-                      value={formData.shipperContactPhone}
-                      onChange={(e) =>
-                        updateField('shipperContactPhone', e.target.value)
-                      }
-                      placeholder="+251..."
-                      className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
-                    />
-                  </div>
+            {/* Privacy */}
+            <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+              <input
+                type="checkbox"
+                checked={formData.isAnonymous}
+                onChange={(e) => updateField('isAnonymous', e.target.checked)}
+                className="w-4 h-4 rounded accent-teal-600"
+              />
+              <span className="text-sm" style={{ color: 'var(--foreground)' }}>Post anonymously</span>
+            </label>
+
+            {/* Contact */}
+            {!formData.isAnonymous && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--foreground-muted)' }}>
+                    Contact Name
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.shipperContactName}
+                    onChange={(e) => updateField('shipperContactName', e.target.value)}
+                    placeholder="Your name"
+                    className="w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    style={inputStyle}
+                  />
                 </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-[#064d51] mb-2">
-                  Special Instructions (Optional)
-                </label>
-                <textarea
-                  value={formData.specialInstructions}
-                  onChange={(e) =>
-                    updateField('specialInstructions', e.target.value)
-                  }
-                  rows={3}
-                  placeholder="Any special instructions for the carrier..."
-                  className="w-full px-4 py-2 border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Step 4: Review */}
-      {step === 4 && (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-[#064d51]">Review & Submit</h2>
-
-          <div className="bg-[#f0fdfa] rounded-xl p-6 space-y-4 border border-[#064d51]/10">
-            <div>
-              <h3 className="font-semibold text-[#064d51] mb-2">Route</h3>
-              <p className="text-[#064d51]">
-                {formData.pickupCity} → {formData.deliveryCity}
-              </p>
-              <p className="text-sm text-[#064d51]/70">
-                {formData.pickupDate} to {formData.deliveryDate}
-              </p>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-[#064d51] mb-2">Load</h3>
-              <p className="text-[#064d51]">
-                {TRUCK_TYPES.find((t) => t.value === formData.truckType)?.label}
-              </p>
-              <p className="text-sm text-[#064d51]/70">
-                {formData.weight} kg •{' '}
-                {formData.fullPartial === 'FULL' ? 'Full Load' : 'Partial Load'}
-              </p>
-              <p className="text-sm text-[#064d51]/70">{formData.cargoDescription}</p>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-[#064d51] mb-2">Rate</h3>
-              <p className="text-2xl font-bold text-[#1e9c99]">
-                {parseFloat(formData.rate || '0').toLocaleString()} ETB
-              </p>
-              <p className="text-sm text-[#064d51]/70">
-                {formData.bookMode === 'INSTANT' ? 'Instant Book' : 'Request to Book'}
-              </p>
-            </div>
-
-            {formData.isAnonymous && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <p className="text-sm text-amber-800">
-                  This load will be posted anonymously
-                </p>
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--foreground-muted)' }}>
+                    Contact Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.shipperContactPhone}
+                    onChange={(e) => updateField('shipperContactPhone', e.target.value)}
+                    placeholder="+251..."
+                    className="w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    style={inputStyle}
+                  />
+                </div>
               </div>
             )}
-          </div>
 
-          <div className="bg-[#1e9c99]/10 border border-[#1e9c99]/20 rounded-xl p-4">
-            <p className="text-sm text-[#064d51]">
-              By posting this load, you agree to the platform's terms of service
-              and authorize carriers to bid on or accept this shipment.
+            {/* Instructions */}
+            <div>
+              <label className="block text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--foreground-muted)' }}>
+                Special Instructions <span className="font-normal">(optional)</span>
+              </label>
+              <textarea
+                value={formData.specialInstructions}
+                onChange={(e) => updateField('specialInstructions', e.target.value)}
+                rows={2}
+                placeholder="Any special notes..."
+                className="w-full px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
+                style={inputStyle}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: Review */}
+        {step === 4 && (
+          <div className="space-y-3">
+            {/* Summary Card */}
+            <div
+              className="rounded-lg overflow-hidden"
+              style={{ border: '1px solid var(--border)' }}
+            >
+              {/* Route Header */}
+              <div
+                className="p-3 flex items-center justify-between"
+                style={{ background: 'var(--primary-500)' }}
+              >
+                <div className="text-white">
+                  <div className="text-lg font-bold">{formData.pickupCity}</div>
+                  <div className="text-xs opacity-80">{formData.pickupDate}</div>
+                </div>
+                <svg className="w-6 h-6 text-white/80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+                <div className="text-white text-right">
+                  <div className="text-lg font-bold">{formData.deliveryCity}</div>
+                  <div className="text-xs opacity-80">{formData.deliveryDate}</div>
+                </div>
+              </div>
+
+              {/* Details */}
+              <div className="p-3 grid grid-cols-3 gap-3" style={{ background: 'var(--bg-tinted)' }}>
+                <div>
+                  <div className="text-[10px] font-medium uppercase" style={{ color: 'var(--foreground-muted)' }}>Truck</div>
+                  <div className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+                    {TRUCK_TYPES.find((t) => t.value === formData.truckType)?.icon} {TRUCK_TYPES.find((t) => t.value === formData.truckType)?.label}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-medium uppercase" style={{ color: 'var(--foreground-muted)' }}>Weight</div>
+                  <div className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+                    {formData.weight ? `${parseFloat(formData.weight).toLocaleString()} kg` : '-'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-medium uppercase" style={{ color: 'var(--foreground-muted)' }}>Type</div>
+                  <div className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>
+                    {formData.fullPartial === 'FULL' ? 'Full Load' : 'Partial'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Rate */}
+              <div className="p-3 flex items-center justify-between" style={{ borderTop: '1px solid var(--border)' }}>
+                <div>
+                  <div className="text-[10px] font-medium uppercase" style={{ color: 'var(--foreground-muted)' }}>Rate</div>
+                  <div className="text-xl font-bold" style={{ color: 'var(--primary-500)' }}>
+                    {parseFloat(formData.rate || '0').toLocaleString()} ETB
+                  </div>
+                </div>
+                <div
+                  className="px-2 py-1 rounded text-xs font-medium"
+                  style={{ background: 'var(--bg-tinted)', color: 'var(--foreground-muted)' }}
+                >
+                  {formData.bookMode === 'INSTANT' ? 'Instant Book' : 'Request Mode'}
+                </div>
+              </div>
+            </div>
+
+            {/* Cargo Description */}
+            {formData.cargoDescription && (
+              <div className="text-sm" style={{ color: 'var(--foreground-muted)' }}>
+                <span className="font-medium">Cargo:</span> {formData.cargoDescription}
+              </div>
+            )}
+
+            {/* Badges */}
+            <div className="flex flex-wrap gap-2">
+              {formData.isFragile && (
+                <span className="px-2 py-1 rounded text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                  Fragile
+                </span>
+              )}
+              {formData.requiresRefrigeration && (
+                <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                  Refrigerated
+                </span>
+              )}
+              {formData.isAnonymous && (
+                <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                  Anonymous
+                </span>
+              )}
+              {formData.appointmentRequired && (
+                <span className="px-2 py-1 rounded text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+                  Appointment Required
+                </span>
+              )}
+            </div>
+
+            {/* Terms */}
+            <p className="text-[10px]" style={{ color: 'var(--foreground-muted)' }}>
+              By posting, you agree to the platform's terms and authorize carriers to respond.
             </p>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Navigation Buttons */}
-      <div className="mt-8 flex justify-between">
+      {/* Footer Actions */}
+      <div
+        className="px-4 py-3 flex justify-between"
+        style={{ background: 'var(--bg-tinted)', borderTop: '1px solid var(--border)' }}
+      >
         <button
           onClick={prevStep}
           disabled={step === 1 || isSubmitting}
-          className="px-6 py-2 border border-[#064d51]/20 rounded-lg text-[#064d51] font-medium hover:bg-[#064d51]/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="px-4 py-2 text-sm font-medium rounded-lg border transition-all disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800"
+          style={{ borderColor: 'var(--border)', color: 'var(--foreground)', background: 'var(--card)' }}
         >
-          Previous
+          Back
         </button>
 
-        <div className="flex gap-3">
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleSubmit(true)}
+            disabled={isSubmitting}
+            className="px-4 py-2 text-sm font-medium rounded-lg border transition-all disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800"
+            style={{ borderColor: 'var(--border)', color: 'var(--foreground)', background: 'var(--card)' }}
+          >
+            {isSubmitting ? 'Saving...' : 'Save Draft'}
+          </button>
           {step < 4 ? (
-            <>
-              <button
-                onClick={() => handleSubmit(true)}
-                disabled={isSubmitting}
-                className="px-6 py-2 border border-[#064d51]/20 rounded-lg text-[#064d51] font-medium hover:bg-[#064d51]/5 disabled:opacity-50 transition-colors"
-              >
-                Save Draft
-              </button>
-              <button
-                onClick={nextStep}
-                disabled={isSubmitting}
-                className="px-6 py-2 bg-[#064d51] text-white rounded-lg font-medium hover:bg-[#053d40] disabled:opacity-50 transition-colors"
-              >
-                Next
-              </button>
-            </>
+            <button
+              onClick={nextStep}
+              disabled={isSubmitting}
+              className="px-5 py-2 text-sm font-medium rounded-lg transition-all disabled:opacity-40"
+              style={{ background: 'var(--primary-500)', color: 'white' }}
+            >
+              Continue
+            </button>
           ) : (
-            <>
-              <button
-                onClick={() => handleSubmit(true)}
-                disabled={isSubmitting}
-                className="px-6 py-2 border border-[#064d51]/20 rounded-lg text-[#064d51] font-medium hover:bg-[#064d51]/5 disabled:opacity-50 transition-colors"
-              >
-                {isSubmitting ? 'Saving...' : 'Save Draft'}
-              </button>
-              <button
-                onClick={() => handleSubmit(false)}
-                disabled={isSubmitting}
-                className="px-6 py-2 bg-[#064d51] text-white rounded-lg font-medium hover:bg-[#053d40] disabled:opacity-50 transition-colors"
-              >
-                {isSubmitting ? 'Posting...' : 'Post Load'}
-              </button>
-            </>
+            <button
+              onClick={() => handleSubmit(false)}
+              disabled={isSubmitting}
+              className="px-5 py-2 text-sm font-medium rounded-lg transition-all disabled:opacity-40"
+              style={{ background: 'var(--primary-500)', color: 'white' }}
+            >
+              {isSubmitting ? 'Posting...' : 'Post Load'}
+            </button>
           )}
         </div>
       </div>

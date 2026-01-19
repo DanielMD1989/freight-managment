@@ -33,11 +33,19 @@ export default async function CreateLoadPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Post New Load</h1>
-        <p className="text-gray-600 mt-2">
+      <div>
+        <h1
+          className="text-xl font-semibold"
+          style={{ color: 'var(--foreground)' }}
+        >
+          Post New Load
+        </h1>
+        <p
+          className="text-sm mt-1"
+          style={{ color: 'var(--foreground-muted)' }}
+        >
           Create a new shipment posting to find available carriers
         </p>
       </div>
