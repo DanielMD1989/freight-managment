@@ -34,7 +34,9 @@ interface DashboardData {
   activeTrucks: number;
   activePostings: number;
   completedDeliveries: number;
+  inTransitTrips?: number;
   totalRevenue: number;
+  totalDistance?: number;
   wallet: {
     balance: number;
     currency: string;
@@ -111,7 +113,9 @@ export default function CarrierDashboardClient({
     activeTrucks: 0,
     activePostings: 0,
     completedDeliveries: 0,
+    inTransitTrips: 0,
     totalRevenue: 0,
+    totalDistance: 0,
     wallet: { balance: 0, currency: 'ETB' },
     recentPostings: 0,
     nearbyMatches: 0,

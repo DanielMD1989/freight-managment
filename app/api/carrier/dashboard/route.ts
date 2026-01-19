@@ -14,14 +14,17 @@ import { db } from '@/lib/db';
 /**
  * GET /api/carrier/dashboard
  *
- * Returns:
- * - Total trucks in fleet
+ * Returns carrier-specific statistics using Trip model for accurate data:
+ * - Total trucks in fleet (filtered by carrierId)
+ * - Active trucks available for work
  * - Active postings
- * - Completed deliveries
- * - Truck utilization stats
+ * - Completed deliveries (from Trip model, filtered by carrierId)
+ * - In-transit trips
+ * - Total revenue (from Trip model, filtered by carrierId)
+ * - Total distance traveled
  * - Wallet balance
- * - Pending loads
- * - Recent activity
+ * - Recent postings
+ * - Pending truck approvals
  */
 export async function GET(request: NextRequest) {
   try {
@@ -43,17 +46,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get statistics in parallel
+    // Get statistics in parallel using Trip model for carrier-specific data
     const [
       totalTrucks,
       activeTrucks,
       activePostings,
-      completedDeliveries,
-      totalRevenue,
+      completedTrips,
+      inTransitTrips,
+      tripStats,
       walletAccount,
       recentPostings,
+      pendingApprovals,
     ] = await Promise.all([
-      // Total trucks
+      // Total trucks owned by this carrier
       db.truck.count({
         where: { carrierId: session.organizationId },
       }),
@@ -69,30 +74,36 @@ export async function GET(request: NextRequest) {
       // Active postings (ACTIVE status)
       db.truckPosting.count({
         where: {
-          truck: {
-            carrierId: session.organizationId,
-          },
+          carrierId: session.organizationId,
           status: 'ACTIVE',
         },
       }),
 
-      // Completed deliveries
-      db.load.count({
+      // Completed deliveries - using Trip model with carrierId filter
+      db.trip.count({
         where: {
-          status: 'DELIVERED',
-          // TODO: Add carrierId field to Load model for proper tracking
-          // For now, we'll use a workaround
+          carrierId: session.organizationId,
+          status: { in: ['DELIVERED', 'COMPLETED'] },
         },
       }),
 
-      // Total revenue from completed loads
-      db.load.aggregate({
+      // In-transit trips
+      db.trip.count({
         where: {
-          status: 'DELIVERED',
-          // TODO: Filter by carrier's loads
+          carrierId: session.organizationId,
+          status: 'IN_TRANSIT',
+        },
+      }),
+
+      // Trip stats (revenue and distance) - using Trip model with carrierId filter
+      db.trip.aggregate({
+        where: {
+          carrierId: session.organizationId,
+          status: { in: ['DELIVERED', 'COMPLETED'] },
         },
         _sum: {
           rate: true,
+          distance: true,
         },
       }),
 
@@ -111,12 +122,18 @@ export async function GET(request: NextRequest) {
       // Recent postings (last 7 days)
       db.truckPosting.count({
         where: {
-          truck: {
-            carrierId: session.organizationId,
-          },
+          carrierId: session.organizationId,
           createdAt: {
             gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
           },
+        },
+      }),
+
+      // Trucks pending approval
+      db.truck.count({
+        where: {
+          carrierId: session.organizationId,
+          approvalStatus: 'PENDING',
         },
       }),
     ]);
@@ -125,13 +142,16 @@ export async function GET(request: NextRequest) {
       totalTrucks,
       activeTrucks,
       activePostings,
-      completedDeliveries,
-      totalRevenue: Number(totalRevenue._sum.rate || 0),
+      completedDeliveries: completedTrips,
+      inTransitTrips,
+      totalRevenue: Number(tripStats._sum.rate || 0),
+      totalDistance: Number(tripStats._sum.distance || 0),
       wallet: {
         balance: walletAccount?.balance || 0,
         currency: walletAccount?.currency || 'ETB',
       },
       recentPostings,
+      pendingApprovals,
     });
   } catch (error) {
     console.error('Carrier dashboard error:', error);
