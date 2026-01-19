@@ -125,33 +125,41 @@ export default function RequestsTabs({
   return (
     <div className="space-y-6">
       {/* Tab Navigation */}
-      <div className="flex gap-2 border-b border-[#064d51]/15 dark:border-slate-700">
+      <div className="flex gap-3">
         <button
           onClick={() => handleTabChange('shipper-requests')}
-          className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors relative ${
+          className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
             activeTab === 'shipper-requests'
-              ? 'border-[#1e9c99] text-[#1e9c99]'
-              : 'border-transparent text-[#064d51]/60 dark:text-gray-400 hover:text-[#064d51] dark:hover:text-gray-300'
+              ? 'bg-[#1e9c99] text-white shadow-md'
+              : 'bg-gray-100 dark:bg-slate-700 text-[#064d51]/70 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
           }`}
         >
           Shipper Requests
           {pendingShipperRequests > 0 && (
-            <span className="ml-2 px-2 py-0.5 text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full">
-              {pendingShipperRequests} pending
+            <span className={`px-2 py-0.5 text-xs rounded-full ${
+              activeTab === 'shipper-requests'
+                ? 'bg-white/20 text-white'
+                : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+            }`}>
+              {pendingShipperRequests}
             </span>
           )}
         </button>
         <button
           onClick={() => handleTabChange('my-requests')}
-          className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+          className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
             activeTab === 'my-requests'
-              ? 'border-[#1e9c99] text-[#1e9c99]'
-              : 'border-transparent text-[#064d51]/60 dark:text-gray-400 hover:text-[#064d51] dark:hover:text-gray-300'
+              ? 'bg-[#1e9c99] text-white shadow-md'
+              : 'bg-gray-100 dark:bg-slate-700 text-[#064d51]/70 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
           }`}
         >
           My Load Requests
-          <span className="ml-2 text-xs text-[#064d51]/40 dark:text-gray-500">
-            ({loadRequests.length})
+          <span className={`px-2 py-0.5 text-xs rounded-full ${
+            activeTab === 'my-requests'
+              ? 'bg-white/20 text-white'
+              : 'bg-gray-200 dark:bg-slate-600 text-gray-600 dark:text-gray-400'
+          }`}>
+            {loadRequests.length}
           </span>
         </button>
       </div>
