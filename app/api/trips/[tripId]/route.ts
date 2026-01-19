@@ -205,6 +205,28 @@ export async function PATCH(
         );
       }
 
+      // COMPLETED requires POD to be submitted and verified
+      if (validatedData.status === 'COMPLETED') {
+        if (!trip.load?.podSubmitted) {
+          return NextResponse.json(
+            {
+              error: 'POD must be uploaded before completing the trip',
+              requiresPod: true,
+            },
+            { status: 400 }
+          );
+        }
+        if (!trip.load?.podVerified) {
+          return NextResponse.json(
+            {
+              error: 'POD must be verified by shipper before completing the trip',
+              awaitingVerification: true,
+            },
+            { status: 400 }
+          );
+        }
+      }
+
       updateData.status = validatedData.status;
 
       // Set timestamps based on status

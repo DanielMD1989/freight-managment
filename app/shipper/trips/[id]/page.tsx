@@ -92,6 +92,7 @@ export default async function ShipperTripDetailPage({
   // Transform for client
   const trip = {
     id: load.id,
+    loadId: load.id,
     referenceNumber: `LOAD-${load.id.slice(-8).toUpperCase()}`,
     status: load.status,
     weight: Number(load.weight),
@@ -114,6 +115,9 @@ export default async function ShipperTripDetailPage({
     estimatedTripKm: load.estimatedTripKm ? Number(load.estimatedTripKm) : null,
     assignedAt: load.assignedAt?.toISOString() || null,
     completedAt: load.podSubmittedAt?.toISOString() || null,
+    podUrl: load.podUrl,
+    podSubmitted: load.podSubmitted ?? false,
+    podVerified: load.podVerified ?? false,
     carrier: load.assignedTruck?.carrier ? {
       id: load.assignedTruck.carrier.id,
       name: load.assignedTruck.carrier.name,

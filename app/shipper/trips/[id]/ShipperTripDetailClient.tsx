@@ -13,13 +13,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import GoogleMap, { MapMarker, MapRoute } from '@/components/GoogleMap';
 import TripHistoryPlayback from '@/components/TripHistoryPlayback';
 import { useGpsRealtime } from '@/hooks/useGpsRealtime';
+import { csrfFetch } from '@/lib/csrfFetch';
 
 interface Trip {
   id: string;
+  loadId: string;
   referenceNumber: string;
   status: string;
   weight: number;
@@ -42,6 +45,9 @@ interface Trip {
   estimatedTripKm: number | null;
   assignedAt: string | null;
   completedAt: string | null;
+  podUrl: string | null;
+  podSubmitted: boolean;
+  podVerified: boolean;
   carrier: {
     id: string;
     name: string;
@@ -77,7 +83,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
   ASSIGNED: { label: 'Assigned', color: 'text-indigo-700', bgColor: 'bg-indigo-50 border-indigo-200' },
   PICKUP_PENDING: { label: 'Pickup Pending', color: 'text-purple-700', bgColor: 'bg-purple-50 border-purple-200' },
   IN_TRANSIT: { label: 'In Transit', color: 'text-amber-700', bgColor: 'bg-amber-50 border-amber-200' },
-  DELIVERED: { label: 'Delivered', color: 'text-emerald-700', bgColor: 'bg-emerald-50 border-emerald-200' },
+  DELIVERED: { label: 'Delivered - Verify POD', color: 'text-purple-700', bgColor: 'bg-purple-50 border-purple-200' },
   COMPLETED: { label: 'Completed', color: 'text-slate-600', bgColor: 'bg-slate-50 border-slate-200' },
 };
 
@@ -93,17 +99,47 @@ const EVENT_ICONS: Record<string, string> = {
   POD_UPLOADED: '📄',
 };
 
-export default function ShipperTripDetailClient({ trip }: Props) {
+export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
+  const router = useRouter();
+  const [trip, setTrip] = useState(initialTrip);
   const [showHistoryPlayback, setShowHistoryPlayback] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [tripProgress, setTripProgress] = useState({
     percent: trip.tripProgressPercent || 0,
     remainingKm: trip.remainingDistanceKm,
   });
+  const [verifyingPod, setVerifyingPod] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const statusConfig = STATUS_CONFIG[trip.status] || STATUS_CONFIG.ASSIGNED;
   const isActiveTrip = trip.status === 'IN_TRANSIT';
   const isCompletedTrip = trip.status === 'DELIVERED' || trip.status === 'COMPLETED';
+  const needsPodVerification = trip.status === 'DELIVERED' && trip.podSubmitted && !trip.podVerified;
+
+  const handleVerifyPod = async () => {
+    setVerifyingPod(true);
+    setError(null);
+
+    try {
+      const response = await csrfFetch(`/api/loads/${trip.loadId}/pod`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to verify POD');
+      }
+
+      // Update local state
+      setTrip((prev) => ({ ...prev, podVerified: true }));
+      router.refresh();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setVerifyingPod(false);
+    }
+  };
 
   // Real-time GPS tracking for active trips
   const { isConnected, positions } = useGpsRealtime({
@@ -250,6 +286,73 @@ export default function ShipperTripDetailClient({ trip }: Props) {
           )}
         </div>
       </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700">
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* POD Verification Alert */}
+      {needsPodVerification && (
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-purple-800">POD Verification Required</h3>
+              <p className="text-purple-700 mt-1">
+                The carrier has submitted the Proof of Delivery. Please review and verify to complete this trip.
+              </p>
+              <div className="flex items-center gap-4 mt-4">
+                {trip.podUrl && (
+                  <a
+                    href={trip.podUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-white border border-purple-300 text-purple-700 rounded-lg font-medium hover:bg-purple-50 transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    View POD Document
+                  </a>
+                )}
+                <button
+                  onClick={handleVerifyPod}
+                  disabled={verifyingPod}
+                  className="px-6 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+                >
+                  {verifyingPod ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Verifying...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Verify POD & Complete Trip
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Progress Bar (for active trips) */}
       {isActiveTrip && (

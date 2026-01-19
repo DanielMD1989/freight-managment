@@ -9,8 +9,8 @@
 
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { csrfFetch } from '@/lib/csrfFetch';
 
 interface Trip {
@@ -79,12 +79,20 @@ interface Props {
 
 export default function TripDetailClient({ trip: initialTrip }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [trip, setTrip] = useState(initialTrip);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPodUpload, setShowPodUpload] = useState(false);
   const [podFile, setPodFile] = useState<File | null>(null);
   const [uploadingPod, setUploadingPod] = useState(false);
+
+  // Auto-open POD upload modal if query param is present
+  useEffect(() => {
+    if (searchParams.get('uploadPod') === 'true' && trip.status === 'DELIVERED') {
+      setShowPodUpload(true);
+    }
+  }, [searchParams, trip.status]);
 
   const handleStatusChange = async (newStatus: string) => {
     setLoading(true);
@@ -134,11 +142,9 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
     try {
       const formData = new FormData();
       formData.append('file', podFile);
-      formData.append('documentType', 'POD');
-      // POD documents are associated with loads, so use loadId
-      formData.append('loadId', trip.loadId);
 
-      const response = await csrfFetch('/api/documents/upload', {
+      // Use the proper POD API endpoint that sets podSubmitted flag
+      const response = await csrfFetch(`/api/loads/${trip.loadId}/pod`, {
         method: 'POST',
         body: formData,
       });
@@ -148,12 +154,14 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
         throw new Error(data.error || 'Failed to upload POD');
       }
 
-      // Close modal and clear file state BEFORE navigation
+      // Close modal and clear file state
       setShowPodUpload(false);
       setPodFile(null);
 
-      // After POD upload, complete the trip
-      await handleStatusChange('COMPLETED');
+      // POD uploaded successfully - now awaiting shipper verification
+      // Navigate to completed tab (trip stays in DELIVERED until shipper verifies)
+      router.refresh();
+      router.push('/carrier/trips?tab=active&podUploaded=true');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -166,7 +174,7 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
       ASSIGNED: { bg: 'bg-teal-100 dark:bg-teal-900', text: 'text-teal-800 dark:text-teal-200', label: 'Ready to Start' },
       PICKUP_PENDING: { bg: 'bg-yellow-100 dark:bg-yellow-900', text: 'text-yellow-800 dark:text-yellow-200', label: 'Pickup Pending' },
       IN_TRANSIT: { bg: 'bg-blue-100 dark:bg-blue-900', text: 'text-blue-800 dark:text-blue-200', label: 'In Transit' },
-      DELIVERED: { bg: 'bg-green-100 dark:bg-green-900', text: 'text-green-800 dark:text-green-200', label: 'Delivered' },
+      DELIVERED: { bg: 'bg-purple-100 dark:bg-purple-900', text: 'text-purple-800 dark:text-purple-200', label: 'POD Required' },
       COMPLETED: { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-800 dark:text-gray-200', label: 'Completed' },
     };
 
@@ -250,7 +258,7 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
                 disabled={loading}
                 className="px-6 py-2 text-white bg-orange-600 rounded-lg hover:bg-orange-700 disabled:opacity-50 font-medium"
               >
-                {loading ? 'Ending...' : 'End Trip'}
+                {loading ? 'Marking...' : 'Mark Delivered'}
               </button>
             </>
           )}
@@ -259,7 +267,7 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
               onClick={() => setShowPodUpload(true)}
               className="px-6 py-2 text-white bg-purple-600 rounded-lg hover:bg-purple-700 font-medium"
             >
-              Upload POD & Complete
+              Upload POD
             </button>
           )}
         </div>
@@ -282,7 +290,7 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
               Upload Proof of Delivery
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Upload a photo or scan of the signed delivery receipt to complete this trip.
+              Upload a photo or scan of the signed delivery receipt. The shipper will verify the POD before the trip can be completed.
             </p>
 
             <div className="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-6 text-center mb-4">
@@ -325,7 +333,7 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
                 disabled={!podFile || uploadingPod}
                 className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
               >
-                {uploadingPod ? 'Uploading...' : 'Upload & Complete'}
+                {uploadingPod ? 'Uploading...' : 'Upload POD'}
               </button>
             </div>
           </div>

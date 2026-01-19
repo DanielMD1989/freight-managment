@@ -66,7 +66,7 @@ const TAB_CONFIG = {
   },
   active: {
     label: 'Active Trips',
-    statuses: ['PICKUP_PENDING', 'IN_TRANSIT'],
+    statuses: ['PICKUP_PENDING', 'IN_TRANSIT', 'DELIVERED'],
     emptyMessage: 'No active trips. Start a trip from Ready to Start to see it here.',
   },
 };
@@ -180,7 +180,7 @@ export default function CarrierTripsPage() {
       ASSIGNED: { bg: 'bg-teal-100 dark:bg-teal-900', text: 'text-teal-800 dark:text-teal-200', label: 'Ready to Start' },
       PICKUP_PENDING: { bg: 'bg-yellow-100 dark:bg-yellow-900', text: 'text-yellow-800 dark:text-yellow-200', label: 'Pickup Pending' },
       IN_TRANSIT: { bg: 'bg-blue-100 dark:bg-blue-900', text: 'text-blue-800 dark:text-blue-200', label: 'In Transit' },
-      DELIVERED: { bg: 'bg-green-100 dark:bg-green-900', text: 'text-green-800 dark:text-green-200', label: 'Delivered' },
+      DELIVERED: { bg: 'bg-purple-100 dark:bg-purple-900', text: 'text-purple-800 dark:text-purple-200', label: 'POD Required' },
       COMPLETED: { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-800 dark:text-gray-200', label: 'Completed' },
     };
 
@@ -231,9 +231,18 @@ export default function CarrierTripsPage() {
               disabled={isLoading}
               className="px-3 py-1 text-xs font-medium text-white bg-orange-600 rounded hover:bg-orange-700 disabled:opacity-50"
             >
-              {isLoading ? 'Ending...' : 'End Trip'}
+              {isLoading ? 'Ending...' : 'Mark Delivered'}
             </button>
           </div>
+        );
+      case 'DELIVERED':
+        return (
+          <button
+            onClick={() => router.push(`/carrier/trips/${trip.loadId}?uploadPod=true`)}
+            className="px-3 py-1 text-xs font-medium text-white bg-purple-600 rounded hover:bg-purple-700"
+          >
+            Upload POD
+          </button>
         );
       default:
         return null;
@@ -246,8 +255,8 @@ export default function CarrierTripsPage() {
   useEffect(() => {
     const fetchAllCounts = async () => {
       try {
-        // Fetch only active trips for counts (ASSIGNED, PICKUP_PENDING, IN_TRANSIT)
-        const response = await fetch('/api/trips?status=ASSIGNED,PICKUP_PENDING,IN_TRANSIT');
+        // Fetch trips for counts (ASSIGNED, PICKUP_PENDING, IN_TRANSIT, DELIVERED)
+        const response = await fetch('/api/trips?status=ASSIGNED,PICKUP_PENDING,IN_TRANSIT,DELIVERED');
         if (response.ok) {
           const data = await response.json();
           const fetchedTrips = (data.trips || []).map((trip: any) => ({
