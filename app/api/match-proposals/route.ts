@@ -18,6 +18,7 @@ import { requireCSRF } from '@/lib/csrf';
 import { canProposeMatch } from '@/lib/dispatcherPermissions';
 import { RULE_DISPATCHER_COORDINATION_ONLY } from '@/lib/foundation-rules';
 import { UserRole } from '@prisma/client';
+import { createNotification, NotificationType } from '@/lib/notifications';
 
 // Validation schema for match proposal
 const MatchProposalSchema = z.object({
@@ -202,7 +203,27 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // TODO: Send notification to carrier about the proposal
+    // Notify carrier users about the proposal
+    const carrierUsers = await db.user.findMany({
+      where: { organizationId: truck.carrierId, isActive: true },
+      select: { id: true },
+    });
+
+    await Promise.all(
+      carrierUsers.map((user) =>
+        createNotification({
+          userId: user.id,
+          type: 'MATCH_PROPOSAL',
+          title: 'New Load Match Proposal',
+          message: `A dispatcher has proposed truck ${proposal.truck.licensePlate} for a load from ${proposal.load.pickupCity} to ${proposal.load.deliveryCity}`,
+          metadata: {
+            proposalId: proposal.id,
+            loadId: proposal.loadId,
+            truckId: proposal.truckId,
+          },
+        })
+      )
+    );
 
     return NextResponse.json(
       {

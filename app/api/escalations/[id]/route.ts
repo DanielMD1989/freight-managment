@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
+import { createNotification } from '@/lib/notifications';
 
 const updateEscalationSchema = z.object({
   status: z.enum(['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'ESCALATED']).optional(),
@@ -101,6 +102,8 @@ export async function PATCH(
         load: {
           select: {
             id: true,
+            pickupCity: true,
+            deliveryCity: true,
             shipperId: true,
             assignedTruck: {
               select: {
@@ -195,8 +198,58 @@ export async function PATCH(
       },
     });
 
-    // TODO: Send notification to assigned dispatcher
-    // TODO: Send notification to involved parties if resolved
+    // Send notification to assigned dispatcher
+    if (validatedData.assignedTo) {
+      await createNotification({
+        userId: validatedData.assignedTo,
+        type: 'ESCALATION_ASSIGNED',
+        title: `Escalation Assigned: ${escalation.title}`,
+        message: `You have been assigned an escalation for load ${escalation.load.pickupCity} → ${escalation.load.deliveryCity}`,
+        metadata: {
+          escalationId,
+          loadId: escalation.load.id,
+          priority: updatedEscalation.priority,
+        },
+      });
+    }
+
+    // Send notification to involved parties if resolved
+    if (validatedData.status === 'RESOLVED' || validatedData.status === 'CLOSED') {
+      const notifyUsers: string[] = [];
+
+      // Notify shipper
+      if (escalation.load.shipperId) {
+        const shipperUsers = await db.user.findMany({
+          where: { organizationId: escalation.load.shipperId, isActive: true },
+          select: { id: true },
+        });
+        notifyUsers.push(...shipperUsers.map((u) => u.id));
+      }
+
+      // Notify carrier if truck was assigned
+      if (escalation.load.assignedTruck?.carrierId) {
+        const carrierUsers = await db.user.findMany({
+          where: { organizationId: escalation.load.assignedTruck.carrierId, isActive: true },
+          select: { id: true },
+        });
+        notifyUsers.push(...carrierUsers.map((u) => u.id));
+      }
+
+      await Promise.all(
+        notifyUsers.map((userId) =>
+          createNotification({
+            userId,
+            type: 'ESCALATION_RESOLVED',
+            title: `Escalation Resolved: ${escalation.title}`,
+            message: validatedData.resolution || 'The escalation has been resolved.',
+            metadata: {
+              escalationId,
+              loadId: escalation.load.id,
+            },
+          })
+        )
+      );
+    }
 
     return NextResponse.json({
       message: 'Escalation updated successfully',

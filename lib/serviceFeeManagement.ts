@@ -434,24 +434,6 @@ export async function deductServiceFee(loadId: string): Promise<ServiceFeeDeduct
     },
   });
 
-  console.log(`Service fees calculated for load ${loadId}:`, {
-    corridor: corridor.name,
-    distanceKm,
-    distanceSource,
-    corridorDistanceKm: Number(corridor.distanceKm),
-    shipper: {
-      fee: shipperFeeCalc.finalFee,
-      deducted: shipperDeducted,
-      pricePerKm: shipperPricePerKm,
-    },
-    carrier: {
-      fee: carrierFeeCalc.finalFee,
-      deducted: carrierDeducted,
-      pricePerKm: carrierPricePerKm,
-    },
-    totalPlatformFee,
-  });
-
   return {
     success: true,
     serviceFee: totalPlatformFee, // Legacy

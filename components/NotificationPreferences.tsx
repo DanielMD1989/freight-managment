@@ -106,8 +106,8 @@ export default function NotificationPreferences() {
         body: JSON.stringify({ preferences }),
       });
 
-      if (response.ok) {
-        console.log('Preferences saved successfully');
+      if (!response.ok) {
+        throw new Error('Failed to save preferences');
       }
     } catch (error) {
       console.error('Failed to save preferences:', error);
