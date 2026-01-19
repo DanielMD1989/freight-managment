@@ -967,21 +967,6 @@ model JournalLine {
   @@map("journal_lines")
 }
 
-model PaymentExternal {
-  id              String   @id @default(cuid())
-  provider        String   // CHAPA, STRIPE, etc.
-  providerTxId    String   @unique
-  amount          Decimal  @db.Decimal(12, 2)
-  currency        String   @default("ETB")
-  status          String   // PENDING, COMPLETED, FAILED
-  metadata        Json?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  @@index([providerTxId])
-  @@map("payments_external")
-}
-
 model WithdrawalRequest {
   id              String   @id @default(cuid())
   amount          Decimal  @db.Decimal(12, 2)

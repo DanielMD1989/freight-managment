@@ -12,6 +12,7 @@
 
 import { db } from '@/lib/db';
 import { Load, TruckPosting, Truck, EthiopianLocation } from '@prisma/client';
+import { calculateDistanceKm } from '@/lib/geo';
 
 interface MatchScore {
   score: number; // 0-100
@@ -53,34 +54,6 @@ interface LoadMatch {
 }
 
 /**
- * Calculate distance between two coordinates using Haversine formula
- */
-function calculateDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  const R = 6371; // Earth's radius in km
-  const dLat = toRadians(lat2 - lat1);
-  const dLon = toRadians(lon2 - lon1);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRadians(lat1)) *
-      Math.cos(toRadians(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-function toRadians(degrees: number): number {
-  return degrees * (Math.PI / 180);
-}
-
-/**
  * Calculate route compatibility score (0-40 points)
  *
  * Exact match: 40 points
@@ -96,7 +69,7 @@ function calculateRouteScore(
   loadDelivery: EthiopianLocation
 ): { score: number; match: 'exact' | 'destination_flexible' | 'nearby' } {
   // Check origin match (truck's current location should be near load's pickup)
-  const originDistance = calculateDistance(
+  const originDistance = calculateDistanceKm(
     Number(truckOrigin.latitude),
     Number(truckOrigin.longitude),
     Number(loadPickup.latitude),
@@ -122,7 +95,7 @@ function calculateRouteScore(
   }
 
   // Check destination match
-  const destDistance = calculateDistance(
+  const destDistance = calculateDistanceKm(
     Number(truckDest.latitude),
     Number(truckDest.longitude),
     Number(loadDelivery.latitude),
@@ -268,7 +241,7 @@ function calculateDeadheadScore(
   preferredDhAfterDelivery?: number | null
 ): { score: number; deadheadKm: number } {
   // Calculate deadhead to pickup
-  const dhToPickup = calculateDistance(
+  const dhToPickup = calculateDistanceKm(
     Number(truckOrigin.latitude),
     Number(truckOrigin.longitude),
     Number(loadPickup.latitude),
@@ -278,7 +251,7 @@ function calculateDeadheadScore(
   // Calculate deadhead after delivery (if truck has destination preference)
   let dhAfterDelivery = 0;
   if (truckDest) {
-    dhAfterDelivery = calculateDistance(
+    dhAfterDelivery = calculateDistanceKm(
       Number(loadDelivery.latitude),
       Number(loadDelivery.longitude),
       Number(truckDest.latitude),

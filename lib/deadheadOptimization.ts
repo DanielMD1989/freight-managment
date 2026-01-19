@@ -6,35 +6,10 @@
  */
 
 import { db } from '@/lib/db';
+import { calculateDistanceKm } from '@/lib/geo';
 
-/**
- * Calculate distance between two GPS coordinates in kilometers
- * Using Haversine formula
- */
-export function calculateDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  const R = 6371; // Earth's radius in km
-  const dLat = toRadians(lat2 - lat1);
-  const dLon = toRadians(lon2 - lon1);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRadians(lat1)) *
-      Math.cos(toRadians(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-function toRadians(degrees: number): number {
-  return degrees * (Math.PI / 180);
-}
+// Re-export for backwards compatibility
+export { calculateDistanceKm as calculateDistance } from '@/lib/geo';
 
 /**
  * Calculate DH-O (Deadhead to Origin)
@@ -94,7 +69,7 @@ export async function calculateDHO(
     return null;
   }
 
-  return calculateDistance(
+  return calculateDistanceKm(
     Number(truck.currentLocationLat),
     Number(truck.currentLocationLon),
     pickupLat,
@@ -183,12 +158,12 @@ export async function calculateDHD(
       return null;
     }
 
-    return calculateDistance(deliveryLat, deliveryLon, nextPickupLat, nextPickupLon);
+    return calculateDistanceKm(deliveryLat, deliveryLon, nextPickupLat, nextPickupLon);
   }
 
   // If target coordinates specified, calculate DH-D to target
   if (targetLat !== undefined && targetLon !== undefined) {
-    return calculateDistance(deliveryLat, deliveryLon, targetLat, targetLon);
+    return calculateDistanceKm(deliveryLat, deliveryLon, targetLat, targetLon);
   }
 
   return null;
@@ -351,7 +326,7 @@ export async function findLoadsWithMinimalDHO(
         return null;
       }
 
-      const dho = calculateDistance(
+      const dho = calculateDistanceKm(
         location.latitude,
         location.longitude,
         pickupLat,
@@ -504,7 +479,7 @@ export async function findNextLoadsWithMinimalDHD(
         return null;
       }
 
-      const dhd = calculateDistance(deliveryLat, deliveryLon, pickupLat, pickupLon);
+      const dhd = calculateDistanceKm(deliveryLat, deliveryLon, pickupLat, pickupLon);
 
       return {
         loadId: load.id,

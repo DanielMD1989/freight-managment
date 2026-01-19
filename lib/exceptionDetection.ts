@@ -6,6 +6,7 @@
  */
 
 import { db } from '@/lib/db';
+import { calculateDistanceKm } from '@/lib/geo';
 
 export interface ExceptionRule {
   type: string;
@@ -234,7 +235,7 @@ export async function checkStalledLoad(loadId: string): Promise<ExceptionRule | 
   // Calculate max distance moved in last 4 hours
   let maxDistance = 0;
   for (let i = 0; i < positions.length - 1; i++) {
-    const dist = calculateDistance(
+    const dist = calculateDistanceKm(
       parseFloat(positions[i].latitude.toString()),
       parseFloat(positions[i].longitude.toString()),
       parseFloat(positions[i + 1].latitude.toString()),
@@ -341,28 +342,3 @@ export async function autoCreateEscalations(loadId: string, createdBy: string = 
   };
 }
 
-/**
- * Calculate distance between two GPS coordinates in kilometers
- * Using Haversine formula
- */
-function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Earth's radius in km
-  const dLat = toRadians(lat2 - lat1);
-  const dLon = toRadians(lon2 - lon1);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRadians(lat1)) *
-      Math.cos(toRadians(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const distance = R * c;
-
-  return distance;
-}
-
-function toRadians(degrees: number): number {
-  return degrees * (Math.PI / 180);
-}
