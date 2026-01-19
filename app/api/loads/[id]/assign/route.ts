@@ -9,6 +9,7 @@ import { checkAssignmentConflicts } from '@/lib/assignmentConflictDetection'; //
 import { holdFundsInEscrow, refundEscrowFunds } from '@/lib/escrowManagement'; // Sprint 8
 import { RULE_CARRIER_FINAL_AUTHORITY } from '@/lib/foundation-rules'; // Phase 2
 import { reserveServiceFee } from '@/lib/serviceFeeManagement'; // Service Fee Implementation
+import { createTripForLoad } from '@/lib/tripManagement'; // Trip Management
 
 const assignLoadSchema = z.object({
   truckId: z.string(),
@@ -260,8 +261,33 @@ export async function POST(
       // Continue - assignment succeeded, service fee can be handled manually if needed
     }
 
+    // Create Trip record for this load assignment
+    let trip = null;
+    try {
+      trip = await createTripForLoad(loadId, truckId, session.userId);
+
+      if (trip) {
+        // Create trip created event
+        await db.loadEvent.create({
+          data: {
+            loadId,
+            eventType: 'TRIP_CREATED',
+            description: `Trip created: ${trip.id}`,
+            userId: session.userId,
+            metadata: {
+              tripId: trip.id,
+              trackingUrl: trip.trackingUrl,
+            },
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Trip creation error:', error);
+      // Continue - assignment succeeded, trip can be created manually if needed
+    }
+
     // Sprint 16: Enable GPS tracking if truck has GPS
-    let trackingUrl: string | null = null;
+    let trackingUrl: string | null = trip?.trackingUrl || null;
 
     if (truck.imei && truck.gpsVerifiedAt) {
       try {

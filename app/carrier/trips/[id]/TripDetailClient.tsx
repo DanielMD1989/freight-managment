@@ -4,6 +4,7 @@
  * Sprint 18 - Story 18.3 & 18.4: Trip management and POD upload
  *
  * Displays trip details with status-based actions
+ * Updated to use proper Trip model and /api/trips endpoint
  */
 
 'use client';
@@ -13,7 +14,8 @@ import { useRouter } from 'next/navigation';
 import { csrfFetch } from '@/lib/csrfFetch';
 
 interface Trip {
-  id: string;
+  id: string; // Trip ID
+  loadId: string; // Associated Load ID
   referenceNumber: string;
   status: string;
   weight: number;
@@ -39,7 +41,7 @@ interface Trip {
   shipper: {
     id: string;
     name: string;
-    isVerified: boolean;
+    isVerified?: boolean;
   } | null;
   truck: {
     id: string;
@@ -64,6 +66,11 @@ interface Trip {
     description: string;
     createdAt: string;
   }[];
+  // Trip-specific timestamps
+  startedAt?: string | null;
+  pickedUpAt?: string | null;
+  deliveredAt?: string | null;
+  completedAt?: string | null;
 }
 
 interface Props {
@@ -84,7 +91,8 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
     setError(null);
 
     try {
-      const response = await csrfFetch(`/api/loads/${trip.id}/status`, {
+      // Use the Trip API for status changes
+      const response = await csrfFetch(`/api/trips/${trip.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
@@ -127,7 +135,8 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
       const formData = new FormData();
       formData.append('file', podFile);
       formData.append('documentType', 'POD');
-      formData.append('loadId', trip.id);
+      // POD documents are associated with loads, so use loadId
+      formData.append('loadId', trip.loadId);
 
       const response = await csrfFetch('/api/documents/upload', {
         method: 'POST',

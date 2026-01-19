@@ -7,6 +7,8 @@
  * - Start Trip, Confirm Pickup, End Trip buttons
  * - POD upload for delivered trips
  * - Live map for in-transit trips
+ *
+ * Updated to use proper Trip model
  */
 
 import { Suspense } from 'react';
@@ -15,7 +17,7 @@ import { db } from '@/lib/db';
 import { redirect, notFound } from 'next/navigation';
 import TripDetailClient from './TripDetailClient';
 
-async function getTripDetails(loadId: string, userId: string) {
+async function getTripDetails(id: string, userId: string) {
   const user = await db.user.findUnique({
     where: { id: userId },
     select: { organizationId: true, role: true },
@@ -25,18 +27,36 @@ async function getTripDetails(loadId: string, userId: string) {
     return null;
   }
 
-  // Get the load/trip with full details
-  const load = await db.load.findUnique({
-    where: { id: loadId },
+  // First try to find trip by ID, then by loadId (for backward compatibility)
+  let trip = await db.trip.findUnique({
+    where: { id },
     include: {
-      shipper: {
-        select: {
-          id: true,
-          name: true,
-          isVerified: true,
+      load: {
+        include: {
+          shipper: {
+            select: {
+              id: true,
+              name: true,
+              isVerified: true,
+            },
+          },
+          pickupLocation: true,
+          deliveryLocation: true,
+          documents: {
+            where: {
+              type: {
+                in: ['POD', 'BOL', 'RECEIPT'],
+              },
+            },
+            orderBy: { uploadedAt: 'desc' },
+          },
+          events: {
+            orderBy: { createdAt: 'desc' },
+            take: 20,
+          },
         },
       },
-      assignedTruck: {
+      truck: {
         include: {
           carrier: {
             select: {
@@ -46,35 +66,91 @@ async function getTripDetails(loadId: string, userId: string) {
           },
         },
       },
-      pickupLocation: true,
-      deliveryLocation: true,
-      documents: {
-        where: {
-          type: {
-            in: ['POD', 'BOL', 'RECEIPT'],
-          },
+      shipper: {
+        select: {
+          id: true,
+          name: true,
+          isVerified: true,
         },
-        orderBy: { uploadedAt: 'desc' },
       },
-      events: {
-        orderBy: { createdAt: 'desc' },
-        take: 20,
+      carrier: {
+        select: {
+          id: true,
+          name: true,
+        },
       },
     },
   });
 
-  if (!load) {
+  // If not found by trip ID, try by loadId (backward compatibility)
+  if (!trip) {
+    trip = await db.trip.findUnique({
+      where: { loadId: id },
+      include: {
+        load: {
+          include: {
+            shipper: {
+              select: {
+                id: true,
+                name: true,
+                isVerified: true,
+              },
+            },
+            pickupLocation: true,
+            deliveryLocation: true,
+            documents: {
+              where: {
+                type: {
+                  in: ['POD', 'BOL', 'RECEIPT'],
+                },
+              },
+              orderBy: { uploadedAt: 'desc' },
+            },
+            events: {
+              orderBy: { createdAt: 'desc' },
+              take: 20,
+            },
+          },
+        },
+        truck: {
+          include: {
+            carrier: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        shipper: {
+          select: {
+            id: true,
+            name: true,
+            isVerified: true,
+          },
+        },
+        carrier: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+  }
+
+  if (!trip) {
     return null;
   }
 
   // Verify carrier owns the assigned truck (or is admin)
   if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
-    if (!load.assignedTruck || load.assignedTruck.carrierId !== user.organizationId) {
+    if (trip.carrierId !== user.organizationId) {
       return null;
     }
   }
 
-  return load;
+  return trip;
 }
 
 export default async function TripDetailPage({
@@ -89,58 +165,66 @@ export default async function TripDetailPage({
     redirect('/carrier');
   }
 
-  const load = await getTripDetails(id, session.userId);
+  const tripData = await getTripDetails(id, session.userId);
 
-  if (!load) {
+  if (!tripData) {
     notFound();
   }
 
-  // Transform for client
+  const load = tripData.load;
+
+  // Transform for client - now using Trip model
   const trip = {
-    id: load.id,
-    referenceNumber: `LOAD-${load.id.slice(-8).toUpperCase()}`,
-    status: load.status,
-    weight: Number(load.weight),
-    truckType: load.truckType,
-    pickupCity: load.pickupLocation?.name || load.pickupCity || 'Unknown',
-    deliveryCity: load.deliveryLocation?.name || load.deliveryCity || 'Unknown',
-    pickupDate: load.pickupDate.toISOString(),
-    deliveryDate: load.deliveryDate?.toISOString() || null,
-    pickupAddress: load.pickupAddress,
-    deliveryAddress: load.deliveryAddress,
-    pickupDockHours: load.pickupDockHours,
-    deliveryDockHours: load.deliveryDockHours,
-    rate: load.totalFareEtb ? Number(load.totalFareEtb) : (load.rate ? Number(load.rate) : null),
-    cargoDescription: load.cargoDescription,
-    safetyNotes: load.safetyNotes,
-    shipperContactName: load.shipperContactName,
-    shipperContactPhone: load.shipperContactPhone,
-    trackingEnabled: load.trackingEnabled,
-    trackingUrl: load.trackingUrl,
-    tripProgressPercent: load.tripProgressPercent,
-    remainingDistanceKm: load.remainingDistanceKm ? Number(load.remainingDistanceKm) : null,
-    estimatedTripKm: load.estimatedTripKm ? Number(load.estimatedTripKm) : null,
-    shipper: load.shipper,
-    truck: load.assignedTruck ? {
-      id: load.assignedTruck.id,
-      licensePlate: load.assignedTruck.licensePlate,
-      truckType: load.assignedTruck.truckType,
-      capacity: Number(load.assignedTruck.capacity),
-      carrier: load.assignedTruck.carrier,
+    id: tripData.id, // This is now the Trip ID
+    loadId: tripData.loadId, // Keep loadId for document uploads etc.
+    referenceNumber: `TRIP-${tripData.id.slice(-8).toUpperCase()}`,
+    status: tripData.status,
+    weight: load?.weight ? Number(load.weight) : 0,
+    truckType: load?.truckType || tripData.truck?.truckType || 'Unknown',
+    pickupCity: tripData.pickupCity || load?.pickupLocation?.name || load?.pickupCity || 'Unknown',
+    deliveryCity: tripData.deliveryCity || load?.deliveryLocation?.name || load?.deliveryCity || 'Unknown',
+    pickupDate: load?.pickupDate?.toISOString() || tripData.createdAt.toISOString(),
+    deliveryDate: load?.deliveryDate?.toISOString() || null,
+    pickupAddress: tripData.pickupAddress || load?.pickupAddress,
+    deliveryAddress: tripData.deliveryAddress || load?.deliveryAddress,
+    pickupDockHours: load?.pickupDockHours || null,
+    deliveryDockHours: load?.deliveryDockHours || null,
+    rate: load?.totalFareEtb ? Number(load.totalFareEtb) : (load?.rate ? Number(load.rate) : null),
+    cargoDescription: load?.cargoDescription || null,
+    safetyNotes: load?.safetyNotes || null,
+    shipperContactName: load?.shipperContactName || null,
+    shipperContactPhone: load?.shipperContactPhone || null,
+    trackingEnabled: tripData.trackingEnabled,
+    trackingUrl: tripData.trackingUrl,
+    tripProgressPercent: null, // Calculate from GPS positions if needed
+    remainingDistanceKm: null,
+    estimatedTripKm: tripData.estimatedDistanceKm ? Number(tripData.estimatedDistanceKm) : null,
+    shipper: tripData.shipper || load?.shipper || null,
+    truck: tripData.truck ? {
+      id: tripData.truck.id,
+      licensePlate: tripData.truck.licensePlate,
+      truckType: tripData.truck.truckType,
+      capacity: Number(tripData.truck.capacity),
+      carrier: tripData.truck.carrier,
     } : null,
-    documents: load.documents.map((doc) => ({
+    documents: (load?.documents || []).map((doc) => ({
       id: doc.id,
       documentType: doc.type,
       fileName: doc.fileName,
       fileUrl: doc.fileUrl,
       createdAt: doc.uploadedAt.toISOString(),
     })),
-    events: load.events.map((event) => ({
+    events: (load?.events || []).map((event) => ({
       id: event.id,
       eventType: event.eventType,
       description: event.description || '',
       createdAt: event.createdAt.toISOString(),
     })),
+    // Add trip-specific timestamps
+    startedAt: tripData.startedAt?.toISOString() || null,
+    pickedUpAt: tripData.pickedUpAt?.toISOString() || null,
+    deliveredAt: tripData.deliveredAt?.toISOString() || null,
+    completedAt: tripData.completedAt?.toISOString() || null,
   };
 
   return (

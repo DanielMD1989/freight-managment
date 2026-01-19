@@ -1,0 +1,303 @@
+/**
+ * Trip API - Individual Trip Routes
+ *
+ * GET /api/trips/[tripId] - Get trip details
+ * PATCH /api/trips/[tripId] - Update trip status
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { requireAuth } from '@/lib/auth';
+import { TripStatus, LoadStatus } from '@prisma/client';
+import { z } from 'zod';
+
+const updateTripSchema = z.object({
+  status: z.enum(['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED']).optional(),
+});
+
+// Valid status transitions
+const validTransitions: Record<TripStatus, TripStatus[]> = {
+  ASSIGNED: ['PICKUP_PENDING'],
+  PICKUP_PENDING: ['IN_TRANSIT'],
+  IN_TRANSIT: ['DELIVERED'],
+  DELIVERED: ['COMPLETED'],
+  COMPLETED: [], // Terminal state
+};
+
+/**
+ * GET /api/trips/[tripId]
+ *
+ * Get trip details with role-based access control
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ tripId: string }> }
+) {
+  try {
+    const session = await requireAuth();
+    const { tripId } = await params;
+
+    const trip = await db.trip.findUnique({
+      where: { id: tripId },
+      include: {
+        load: {
+          select: {
+            id: true,
+            status: true,
+            pickupCity: true,
+            pickupAddress: true,
+            pickupDate: true,
+            deliveryCity: true,
+            deliveryAddress: true,
+            deliveryDate: true,
+            cargoDescription: true,
+            weight: true,
+            truckType: true,
+            totalFareEtb: true,
+            rate: true,
+            podUrl: true,
+            podSubmitted: true,
+            podVerified: true,
+          },
+        },
+        truck: {
+          select: {
+            id: true,
+            licensePlate: true,
+            truckType: true,
+            contactName: true,
+            contactPhone: true,
+            currentLocationLat: true,
+            currentLocationLon: true,
+          },
+        },
+        carrier: {
+          select: {
+            id: true,
+            name: true,
+            contactPhone: true,
+            isVerified: true,
+          },
+        },
+        shipper: {
+          select: {
+            id: true,
+            name: true,
+            contactPhone: true,
+          },
+        },
+        routeHistory: {
+          select: {
+            id: true,
+            latitude: true,
+            longitude: true,
+            speed: true,
+            heading: true,
+            timestamp: true,
+          },
+          orderBy: { timestamp: 'desc' },
+          take: 100, // Latest 100 positions
+        },
+      },
+    });
+
+    if (!trip) {
+      return NextResponse.json(
+        { error: 'Trip not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check permissions
+    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+    const isDispatcher = session.role === 'DISPATCHER';
+    const isCarrier = session.role === 'CARRIER' && trip.carrierId === session.organizationId;
+    const isShipper = session.role === 'SHIPPER' && trip.shipperId === session.organizationId;
+
+    if (!isAdmin && !isDispatcher && !isCarrier && !isShipper) {
+      return NextResponse.json(
+        { error: 'You do not have permission to view this trip' },
+        { status: 403 }
+      );
+    }
+
+    // For shippers, only show carrier contact info when trip is IN_TRANSIT or later
+    let responseTrip: any = trip;
+    if (isShipper && trip.status === 'ASSIGNED') {
+      // Hide carrier contact until pickup begins
+      responseTrip = {
+        ...trip,
+        truck: { ...trip.truck, contactPhone: '(hidden)' },
+        carrier: { ...trip.carrier, contactPhone: '(hidden)' },
+      };
+    }
+
+    return NextResponse.json({ trip: responseTrip });
+  } catch (error) {
+    console.error('Get trip error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch trip' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PATCH /api/trips/[tripId]
+ *
+ * Update trip status. Only carrier can update status.
+ * Status transitions are validated.
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ tripId: string }> }
+) {
+  try {
+    const session = await requireAuth();
+    const { tripId } = await params;
+
+    const body = await request.json();
+    const validatedData = updateTripSchema.parse(body);
+
+    // Get current trip
+    const trip = await db.trip.findUnique({
+      where: { id: tripId },
+      include: {
+        load: true,
+        truck: true,
+      },
+    });
+
+    if (!trip) {
+      return NextResponse.json(
+        { error: 'Trip not found' },
+        { status: 404 }
+      );
+    }
+
+    // Only carrier can update trip status (GPS rule from spec)
+    const isCarrier = session.role === 'CARRIER' && trip.carrierId === session.organizationId;
+    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+
+    if (!isCarrier && !isAdmin) {
+      return NextResponse.json(
+        { error: 'Only the carrier can update trip status' },
+        { status: 403 }
+      );
+    }
+
+    // Build update data
+    const updateData: any = {
+      updatedAt: new Date(),
+    };
+
+    // Handle status update
+    if (validatedData.status) {
+      // Validate status transition
+      const allowedTransitions = validTransitions[trip.status];
+      if (!allowedTransitions.includes(validatedData.status)) {
+        return NextResponse.json(
+          {
+            error: `Invalid status transition from ${trip.status} to ${validatedData.status}`,
+            allowedTransitions,
+          },
+          { status: 400 }
+        );
+      }
+
+      updateData.status = validatedData.status;
+
+      // Set timestamps based on status
+      switch (validatedData.status) {
+        case 'PICKUP_PENDING':
+          updateData.startedAt = new Date();
+          break;
+        case 'IN_TRANSIT':
+          updateData.pickedUpAt = new Date();
+          break;
+        case 'DELIVERED':
+          updateData.deliveredAt = new Date();
+          break;
+        case 'COMPLETED':
+          updateData.completedAt = new Date();
+          updateData.trackingEnabled = false; // GPS stops on completion
+          break;
+      }
+    }
+
+    // Update trip
+    const updatedTrip = await db.trip.update({
+      where: { id: tripId },
+      data: updateData,
+      include: {
+        load: true,
+        truck: true,
+        carrier: true,
+        shipper: true,
+      },
+    });
+
+    // Sync trip status with load status
+    if (validatedData.status) {
+      const loadStatus = mapTripStatusToLoadStatus(validatedData.status);
+      if (loadStatus) {
+        await db.load.update({
+          where: { id: trip.loadId },
+          data: { status: loadStatus },
+        });
+      }
+    }
+
+    // Create load event
+    await db.loadEvent.create({
+      data: {
+        loadId: trip.loadId,
+        eventType: 'TRIP_STATUS_UPDATED',
+        description: `Trip status changed to ${validatedData.status}`,
+        userId: session.userId,
+        metadata: {
+          tripId,
+          previousStatus: trip.status,
+          newStatus: validatedData.status,
+        },
+      },
+    });
+
+    return NextResponse.json({
+      message: 'Trip updated successfully',
+      trip: updatedTrip,
+    });
+  } catch (error) {
+    console.error('Update trip error:', error);
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation error', details: error.issues },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Failed to update trip' },
+      { status: 500 }
+    );
+  }
+}
+
+// Map trip status to load status
+function mapTripStatusToLoadStatus(tripStatus: TripStatus): LoadStatus | null {
+  switch (tripStatus) {
+    case 'ASSIGNED':
+      return LoadStatus.ASSIGNED;
+    case 'PICKUP_PENDING':
+      return LoadStatus.PICKUP_PENDING;
+    case 'IN_TRANSIT':
+      return LoadStatus.IN_TRANSIT;
+    case 'DELIVERED':
+      return LoadStatus.DELIVERED;
+    case 'COMPLETED':
+      return LoadStatus.COMPLETED;
+    default:
+      return null;
+  }
+}

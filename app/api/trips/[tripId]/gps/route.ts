@@ -1,0 +1,290 @@
+/**
+ * Trip GPS API - Update GPS Position
+ *
+ * POST /api/trips/[tripId]/gps - Update GPS position (Carrier only)
+ *
+ * GPS Rules (from MAP_GPS_USER_STORIES.md):
+ * - GPS updates come ONLY from carrier side (driver/truck)
+ * - GPS is ACTIVE when: Trip status = IN_TRANSIT
+ * - GPS STOPS when: Trip status = COMPLETED
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { requireAuth } from '@/lib/auth';
+import { z } from 'zod';
+import { Prisma } from '@prisma/client';
+
+const gpsUpdateSchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  speed: z.number().min(0).optional(),
+  heading: z.number().min(0).max(360).optional(),
+  altitude: z.number().optional(),
+  accuracy: z.number().min(0).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+/**
+ * POST /api/trips/[tripId]/gps
+ *
+ * Update GPS position for a trip (Carrier only)
+ */
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ tripId: string }> }
+) {
+  try {
+    const session = await requireAuth();
+    const { tripId } = await params;
+
+    const body = await request.json();
+    const validatedData = gpsUpdateSchema.parse(body);
+
+    // Get trip with truck info
+    const trip = await db.trip.findUnique({
+      where: { id: tripId },
+      include: {
+        truck: {
+          select: {
+            id: true,
+            gpsDeviceId: true,
+            carrierId: true,
+          },
+        },
+      },
+    });
+
+    if (!trip) {
+      return NextResponse.json(
+        { error: 'Trip not found' },
+        { status: 404 }
+      );
+    }
+
+    // GPS writes are restricted to carrier only (from spec)
+    const isCarrier = session.role === 'CARRIER' && trip.carrierId === session.organizationId;
+    if (!isCarrier) {
+      return NextResponse.json(
+        { error: 'Only the carrier can update GPS position' },
+        { status: 403 }
+      );
+    }
+
+    // Check if GPS tracking is enabled for this trip
+    if (!trip.trackingEnabled) {
+      return NextResponse.json(
+        { error: 'GPS tracking is not enabled for this trip' },
+        { status: 400 }
+      );
+    }
+
+    // GPS is only active when trip is IN_TRANSIT (per spec)
+    if (trip.status !== 'IN_TRANSIT' && trip.status !== 'PICKUP_PENDING') {
+      return NextResponse.json(
+        {
+          error: `GPS updates are only accepted when trip is IN_TRANSIT or PICKUP_PENDING. Current status: ${trip.status}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    const now = validatedData.timestamp ? new Date(validatedData.timestamp) : new Date();
+
+    // Get or create GPS device ID (use truck's GPS device or create placeholder)
+    let deviceId = trip.truck.gpsDeviceId;
+    if (!deviceId) {
+      // Create a placeholder GPS device for this truck
+      const device = await db.gpsDevice.create({
+        data: {
+          imei: `TRUCK-${trip.truck.id}`,
+          status: 'ACTIVE',
+          lastSeenAt: now,
+        },
+      });
+      deviceId = device.id;
+
+      // Link device to truck
+      await db.truck.update({
+        where: { id: trip.truck.id },
+        data: { gpsDeviceId: device.id },
+      });
+    }
+
+    // Create GPS position record linked to trip
+    const gpsPosition = await db.gpsPosition.create({
+      data: {
+        truckId: trip.truckId,
+        tripId: tripId,
+        loadId: trip.loadId,
+        deviceId: deviceId,
+        latitude: new Prisma.Decimal(validatedData.latitude),
+        longitude: new Prisma.Decimal(validatedData.longitude),
+        speed: validatedData.speed ? new Prisma.Decimal(validatedData.speed) : null,
+        heading: validatedData.heading ? new Prisma.Decimal(validatedData.heading) : null,
+        altitude: validatedData.altitude ? new Prisma.Decimal(validatedData.altitude) : null,
+        accuracy: validatedData.accuracy ? new Prisma.Decimal(validatedData.accuracy) : null,
+        timestamp: now,
+      },
+    });
+
+    // Update trip's current location
+    await db.trip.update({
+      where: { id: tripId },
+      data: {
+        currentLat: new Prisma.Decimal(validatedData.latitude),
+        currentLng: new Prisma.Decimal(validatedData.longitude),
+        currentLocationUpdatedAt: now,
+      },
+    });
+
+    // Update truck's current location
+    await db.truck.update({
+      where: { id: trip.truckId },
+      data: {
+        currentLocationLat: new Prisma.Decimal(validatedData.latitude),
+        currentLocationLon: new Prisma.Decimal(validatedData.longitude),
+        locationUpdatedAt: now,
+        gpsLastSeenAt: now,
+        gpsStatus: 'ACTIVE',
+      },
+    });
+
+    // Update GPS device last seen
+    await db.gpsDevice.update({
+      where: { id: deviceId },
+      data: {
+        lastSeenAt: now,
+        status: 'ACTIVE',
+      },
+    });
+
+    return NextResponse.json({
+      message: 'GPS position updated',
+      position: {
+        id: gpsPosition.id,
+        latitude: validatedData.latitude,
+        longitude: validatedData.longitude,
+        speed: validatedData.speed,
+        heading: validatedData.heading,
+        timestamp: now.toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error('GPS update error:', error);
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation error', details: error.issues },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Failed to update GPS position' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * GET /api/trips/[tripId]/gps
+ *
+ * Get all GPS positions for a trip (route history)
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ tripId: string }> }
+) {
+  try {
+    const session = await requireAuth();
+    const { tripId } = await params;
+    const { searchParams } = new URL(request.url);
+
+    const limit = parseInt(searchParams.get('limit') || '1000');
+    const since = searchParams.get('since'); // ISO timestamp
+
+    // Get trip
+    const trip = await db.trip.findUnique({
+      where: { id: tripId },
+    });
+
+    if (!trip) {
+      return NextResponse.json(
+        { error: 'Trip not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check permissions
+    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+    const isDispatcher = session.role === 'DISPATCHER';
+    const isCarrier = session.role === 'CARRIER' && trip.carrierId === session.organizationId;
+    const isShipper = session.role === 'SHIPPER' && trip.shipperId === session.organizationId;
+
+    if (!isAdmin && !isDispatcher && !isCarrier && !isShipper) {
+      return NextResponse.json(
+        { error: 'You do not have permission to view this trip' },
+        { status: 403 }
+      );
+    }
+
+    // For shippers, only allow access when trip is IN_TRANSIT or later
+    if (isShipper && trip.status === 'ASSIGNED') {
+      return NextResponse.json(
+        { error: 'GPS data is not available until trip is in transit' },
+        { status: 403 }
+      );
+    }
+
+    // Build query
+    const whereClause: any = { tripId };
+    if (since) {
+      whereClause.timestamp = { gt: new Date(since) };
+    }
+
+    // Get GPS positions
+    const positions = await db.gpsPosition.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        latitude: true,
+        longitude: true,
+        speed: true,
+        heading: true,
+        altitude: true,
+        accuracy: true,
+        timestamp: true,
+      },
+      orderBy: { timestamp: 'asc' },
+      take: limit,
+    });
+
+    return NextResponse.json({
+      tripId,
+      tripStatus: trip.status,
+      currentLocation: trip.currentLat && trip.currentLng ? {
+        latitude: Number(trip.currentLat),
+        longitude: Number(trip.currentLng),
+        updatedAt: trip.currentLocationUpdatedAt,
+      } : null,
+      positions: positions.map(p => ({
+        id: p.id,
+        latitude: Number(p.latitude),
+        longitude: Number(p.longitude),
+        speed: p.speed ? Number(p.speed) : null,
+        heading: p.heading ? Number(p.heading) : null,
+        altitude: p.altitude ? Number(p.altitude) : null,
+        accuracy: p.accuracy ? Number(p.accuracy) : null,
+        timestamp: p.timestamp.toISOString(),
+      })),
+      count: positions.length,
+    });
+  } catch (error) {
+    console.error('Get GPS positions error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch GPS positions' },
+      { status: 500 }
+    );
+  }
+}

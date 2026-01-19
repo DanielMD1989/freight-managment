@@ -16,6 +16,7 @@ import { requireAuth } from '@/lib/auth';
 import { createNotification } from '@/lib/notifications';
 import { enableTrackingForLoad } from '@/lib/gpsTracking';
 import { UserRole } from '@prisma/client';
+import { createTripForLoad } from '@/lib/tripManagement';
 
 // Validation schema for load request response
 const LoadRequestResponseSchema = z.object({
@@ -261,9 +262,17 @@ export async function POST(
         return { request: updatedRequest, load: updatedLoad };
       });
 
+      // Create Trip record
+      let trip = null;
+      try {
+        trip = await createTripForLoad(loadRequest.loadId, loadRequest.truckId, session.userId);
+      } catch (error) {
+        console.error('Failed to create trip:', error);
+      }
+
       // Enable GPS tracking if available
-      let trackingUrl: string | null = null;
-      if (loadRequest.truck.imei && loadRequest.truck.gpsVerifiedAt) {
+      let trackingUrl: string | null = trip?.trackingUrl || null;
+      if (loadRequest.truck.imei && loadRequest.truck.gpsVerifiedAt && !trackingUrl) {
         try {
           trackingUrl = await enableTrackingForLoad(loadRequest.loadId, loadRequest.truckId);
         } catch (error) {

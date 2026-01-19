@@ -14,45 +14,45 @@ datasource db {
 // ============================================================================
 
 enum UserRole {
-  SHIPPER         // Posts loads, searches trucks
-  CARRIER         // Posts trucks, searches loads
-  DISPATCHER      // Assigns loads, handles exceptions
-  ADMIN           // Verifies users, manages wallets, configures rules
-  SUPER_ADMIN     // Platform owner, assigns roles, full access
+  SHIPPER // Posts loads, searches trucks
+  CARRIER // Posts trucks, searches loads
+  DISPATCHER // Assigns loads, handles exceptions
+  ADMIN // Verifies users, manages wallets, configures rules
+  SUPER_ADMIN // Platform owner, assigns roles, full access
 }
 
 enum UserStatus {
-  REGISTERED           // Just registered, documents not yet uploaded
+  REGISTERED // Just registered, documents not yet uploaded
   PENDING_VERIFICATION // Documents uploaded, awaiting admin review
-  ACTIVE              // Verified and approved, can access marketplace
-  SUSPENDED           // Temporarily suspended by admin
-  REJECTED            // Registration rejected by admin
+  ACTIVE // Verified and approved, can access marketplace
+  SUSPENDED // Temporarily suspended by admin
+  REJECTED // Registration rejected by admin
 }
 
 enum OrganizationType {
   SHIPPER
-  CARRIER_COMPANY       // Trucking company with multiple trucks
-  CARRIER_INDIVIDUAL    // Single truck owner (may belong to association)
-  CARRIER_ASSOCIATION   // Governing body that groups owner-operators
-  FLEET_OWNER           // Independent fleet operator (multiple owned trucks)
+  CARRIER_COMPANY // Trucking company with multiple trucks
+  CARRIER_INDIVIDUAL // Single truck owner (may belong to association)
+  CARRIER_ASSOCIATION // Governing body that groups owner-operators
+  FLEET_OWNER // Independent fleet operator (multiple owned trucks)
   LOGISTICS_AGENT
 }
 
 enum LoadStatus {
   // Sprint 3: Complete Load Lifecycle State Machine
-  DRAFT              // Load created but not yet posted
-  POSTED             // Load posted to marketplace, carriers can search
-  SEARCHING          // Actively being matched with carriers
-  OFFERED            // Load offered to a specific carrier
-  ASSIGNED           // Carrier accepted, load assigned
-  PICKUP_PENDING     // Waiting for carrier to pick up load
-  IN_TRANSIT         // Load picked up, in transit to destination
-  DELIVERED          // Load delivered to destination
-  COMPLETED          // POD uploaded, payment processed
-  EXCEPTION          // Issue detected (late, rejected, etc.)
-  CANCELLED          // Load cancelled by shipper
-  EXPIRED            // Load expired (no carrier found)
-  UNPOSTED           // Load removed from marketplace
+  DRAFT // Load created but not yet posted
+  POSTED // Load posted to marketplace, carriers can search
+  SEARCHING // Actively being matched with carriers
+  OFFERED // Load offered to a specific carrier
+  ASSIGNED // Carrier accepted, load assigned
+  PICKUP_PENDING // Waiting for carrier to pick up load
+  IN_TRANSIT // Load picked up, in transit to destination
+  DELIVERED // Load delivered to destination
+  COMPLETED // POD uploaded, payment processed
+  EXCEPTION // Issue detected (late, rejected, etc.)
+  CANCELLED // Load cancelled by shipper
+  EXPIRED // Load expired (no carrier found)
+  UNPOSTED // Load removed from marketplace
 }
 
 enum TruckType {
@@ -92,9 +92,9 @@ enum TransactionType {
   ESCROW_RELEASE
   REFUND
   // Service Fee Transactions (NEW - Service Fee Implementation)
-  SERVICE_FEE_RESERVE   // Reserve service fee from shipper wallet
-  SERVICE_FEE_DEDUCT    // Deduct to platform on trip completion
-  SERVICE_FEE_REFUND    // Refund to shipper on cancellation
+  SERVICE_FEE_RESERVE // Reserve service fee from shipper wallet
+  SERVICE_FEE_DEDUCT // Deduct to platform on trip completion
+  SERVICE_FEE_REFUND // Refund to shipper on cancellation
 }
 
 // ============================================================================
@@ -102,17 +102,17 @@ enum TransactionType {
 // ============================================================================
 
 enum CorridorDirection {
-  ONE_WAY       // Origin → Destination only
-  ROUND_TRIP    // Origin → Destination → Origin
+  ONE_WAY // Origin → Destination only
+  ROUND_TRIP // Origin → Destination → Origin
   BIDIRECTIONAL // Both directions priced separately
 }
 
 enum ServiceFeeStatus {
-  PENDING   // Not yet calculated/reserved
-  RESERVED  // Held from wallet when trip starts
-  DEDUCTED  // Moved to platform revenue on completion
-  REFUNDED  // Returned to shipper on cancellation
-  WAIVED    // Admin waived the fee
+  PENDING // Not yet calculated/reserved
+  RESERVED // Held from wallet when trip starts
+  DEDUCTED // Moved to platform revenue on completion
+  REFUNDED // Returned to shipper on cancellation
+  WAIVED // Admin waived the fee
 }
 
 enum DisputeStatus {
@@ -160,6 +160,18 @@ enum GpsDeviceStatus {
   INACTIVE
   SIGNAL_LOST
   MAINTENANCE
+}
+
+// ============================================================================
+// TRIP STATUS ENUM (For Trip Model)
+// ============================================================================
+
+enum TripStatus {
+  ASSIGNED // Trip created, truck assigned to load
+  PICKUP_PENDING // Carrier en route to pickup location
+  IN_TRANSIT // Load picked up, in transit to destination
+  DELIVERED // Load delivered to destination
+  COMPLETED // POD confirmed, payment processed
 }
 
 // ============================================================================
@@ -218,20 +230,20 @@ enum TruckDocumentType {
 
 // Dispatcher match proposal status
 enum ProposalStatus {
-  PENDING      // Proposal created, awaiting carrier review
-  ACCEPTED     // Carrier accepted the proposal
-  REJECTED     // Carrier rejected the proposal
-  EXPIRED      // Proposal expired without response
-  CANCELLED    // Dispatcher cancelled the proposal
+  PENDING // Proposal created, awaiting carrier review
+  ACCEPTED // Carrier accepted the proposal
+  REJECTED // Carrier rejected the proposal
+  EXPIRED // Proposal expired without response
+  CANCELLED // Dispatcher cancelled the proposal
 }
 
 // Shipper truck request status
 enum RequestStatus {
-  PENDING      // Request created, awaiting carrier approval
-  APPROVED     // Carrier approved the request
-  REJECTED     // Carrier rejected the request
-  EXPIRED      // Request expired without response
-  CANCELLED    // Shipper cancelled the request
+  PENDING // Request created, awaiting carrier approval
+  APPROVED // Carrier approved the request
+  REJECTED // Carrier rejected the request
+  EXPIRED // Request expired without response
+  CANCELLED // Shipper cancelled the request
 }
 
 // ============================================================================
@@ -239,51 +251,51 @@ enum RequestStatus {
 // ============================================================================
 
 model User {
-  id                String     @id @default(cuid())
-  email             String     @unique
-  phone             String?    @unique
-  passwordHash      String
-  firstName         String?
-  lastName          String?
-  role              UserRole   @default(SHIPPER)
-  status            UserStatus @default(REGISTERED) // Sprint 2: User verification workflow
-  isEmailVerified   Boolean    @default(false)
-  isPhoneVerified   Boolean    @default(false)
-  isActive          Boolean    @default(true) // DEPRECATED: Use status field instead
-  lastLoginAt       DateTime?
-  notificationPreferences Json?  // PHASE 2: Story 15.13 - User notification preferences
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  id                      String     @id @default(cuid())
+  email                   String     @unique
+  phone                   String?    @unique
+  passwordHash            String
+  firstName               String?
+  lastName                String?
+  role                    UserRole   @default(SHIPPER)
+  status                  UserStatus @default(REGISTERED) // Sprint 2: User verification workflow
+  isEmailVerified         Boolean    @default(false)
+  isPhoneVerified         Boolean    @default(false)
+  isActive                Boolean    @default(true) // DEPRECATED: Use status field instead
+  lastLoginAt             DateTime?
+  notificationPreferences Json? // PHASE 2: Story 15.13 - User notification preferences
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
 
   // Relations
-  organizationId    String?
-  organization      Organization? @relation(fields: [organizationId], references: [id])
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 
-  loadsCreated      Load[]    @relation("LoadCreator")
-  disputes          Dispute[]
-  reports           Report[]
+  loadsCreated        Load[]               @relation("LoadCreator")
+  disputes            Dispute[]
+  reports             Report[]
   passwordResetTokens PasswordResetToken[]
-  savedSearches     SavedSearch[]  // SPRINT 14: DAT-Style UI
-  notifications     Notification[] // SPRINT 16: Story 16.10 - Notifications
+  savedSearches       SavedSearch[] // SPRINT 14: DAT-Style UI
+  notifications       Notification[] // SPRINT 16: Story 16.10 - Notifications
 
   // PHASE 2: Match proposal and request relations
-  proposalsCreated      MatchProposal[]  @relation("ProposedBy")
-  proposalsResponded    MatchProposal[]  @relation("RespondedBy")
-  requestsCreated       TruckRequest[]   @relation("RequestedBy")
-  requestsResponded     TruckRequest[]   @relation("RespondedByCarrier")
+  proposalsCreated   MatchProposal[] @relation("ProposedBy")
+  proposalsResponded MatchProposal[] @relation("RespondedBy")
+  requestsCreated    TruckRequest[]  @relation("RequestedBy")
+  requestsResponded  TruckRequest[]  @relation("RespondedByCarrier")
 
   // SPRINT 18: Truck approval and load requests
-  trucksApproved        Truck[]          @relation("TruckApprovedBy")
-  loadRequestsCreated   LoadRequest[]    @relation("LoadRequestedBy")
-  loadRequestsResponded LoadRequest[]    @relation("LoadRequestRespondedBy")
+  trucksApproved        Truck[]       @relation("TruckApprovedBy")
+  loadRequestsCreated   LoadRequest[] @relation("LoadRequestedBy")
+  loadRequestsResponded LoadRequest[] @relation("LoadRequestRespondedBy")
 
   // Service Fee Implementation: Corridors created by admin
-  corridorsCreated      Corridor[]       @relation("CorridorCreatedBy")
+  corridorsCreated Corridor[] @relation("CorridorCreatedBy")
 
   // SPRINT 19: Session Management & Security
-  sessions              Session[]
-  mfa                   UserMFA?
-  securityEvents        SecurityEvent[]
+  sessions       Session[]
+  mfa            UserMFA?
+  securityEvents SecurityEvent[]
 
   @@index([email])
   @@index([organizationId])
@@ -291,16 +303,16 @@ model User {
 }
 
 model PasswordResetToken {
-  id          String   @id @default(cuid())
-  token       String   // Bcrypt hash of OTP (not unique since hashes vary)
-  expiresAt   DateTime
-  usedAt      DateTime?
-  attempts    Int      @default(0) // Track failed OTP attempts for brute force protection
-  createdAt   DateTime @default(now())
+  id        String    @id @default(cuid())
+  token     String // Bcrypt hash of OTP (not unique since hashes vary)
+  expiresAt DateTime
+  usedAt    DateTime?
+  attempts  Int       @default(0) // Track failed OTP attempts for brute force protection
+  createdAt DateTime  @default(now())
 
   // Relations
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, expiresAt]) // For finding valid tokens per user
@@ -313,17 +325,17 @@ model PasswordResetToken {
 
 // Server-side session tracking for secure session management
 model Session {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash     String    @unique  // SHA-256 hash of session token
-  deviceInfo    String?   // Browser/OS info (best-effort parsing)
-  ipAddress     String?
-  userAgent     String?   @db.Text
-  lastSeenAt    DateTime  @default(now())
-  createdAt     DateTime  @default(now())
-  expiresAt     DateTime
-  revokedAt     DateTime?
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique // SHA-256 hash of session token
+  deviceInfo String? // Browser/OS info (best-effort parsing)
+  ipAddress  String?
+  userAgent  String?   @db.Text
+  lastSeenAt DateTime  @default(now())
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
 
   @@index([userId])
   @@index([tokenHash])
@@ -334,33 +346,33 @@ model Session {
 
 // MFA configuration for users
 model UserMFA {
-  id                        String    @id @default(cuid())
-  userId                    String    @unique
-  user                      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  enabled                   Boolean   @default(false)
-  phone                     String?   // Phone number for SMS OTP
-  recoveryCodes             String[]  // Hashed recovery codes (bcrypt)
-  recoveryCodesGeneratedAt  DateTime?
-  recoveryCodesUsedCount    Int       @default(0)
-  lastMfaVerifiedAt         DateTime?
-  createdAt                 DateTime  @default(now())
-  updatedAt                 DateTime  @updatedAt
+  id                       String    @id @default(cuid())
+  userId                   String    @unique
+  user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enabled                  Boolean   @default(false)
+  phone                    String? // Phone number for SMS OTP
+  recoveryCodes            String[] // Hashed recovery codes (bcrypt)
+  recoveryCodesGeneratedAt DateTime?
+  recoveryCodesUsedCount   Int       @default(0)
+  lastMfaVerifiedAt        DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
 
   @@map("user_mfa")
 }
 
 // Security events for activity logging and audit trail
 model SecurityEvent {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  eventType     String    // LOGIN_SUCCESS, LOGIN_FAILURE, PASSWORD_CHANGE, MFA_ENABLE, etc.
-  ipAddress     String?
-  userAgent     String?   @db.Text
-  deviceInfo    String?
-  success       Boolean   @default(true)
-  metadata      Json?     // Additional event-specific data
-  createdAt     DateTime  @default(now())
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventType  String // LOGIN_SUCCESS, LOGIN_FAILURE, PASSWORD_CHANGE, MFA_ENABLE, etc.
+  ipAddress  String?
+  userAgent  String?  @db.Text
+  deviceInfo String?
+  success    Boolean  @default(true)
+  metadata   Json? // Additional event-specific data
+  createdAt  DateTime @default(now())
 
   @@index([userId])
   @@index([eventType])
@@ -387,19 +399,19 @@ model SecurityEvent {
 
 // Phase 2 - Story 16.9B: Company Admin Tools - Team Invitations
 model Invitation {
-  id              String           @id @default(cuid())
-  email           String
-  role            UserRole
-  status          InvitationStatus @default(PENDING)
-  token           String           @unique @default(cuid())
-  expiresAt       DateTime
-  acceptedAt      DateTime?
-  createdAt       DateTime         @default(now())
+  id         String           @id @default(cuid())
+  email      String
+  role       UserRole
+  status     InvitationStatus @default(PENDING)
+  token      String           @unique @default(cuid())
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime         @default(now())
 
   // Relations
-  organizationId  String
-  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  invitedById     String?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedById    String?
 
   @@index([email])
   @@index([token])
@@ -415,69 +427,73 @@ enum InvitationStatus {
 }
 
 model Organization {
-  id                String           @id @default(cuid())
-  name              String
-  type              OrganizationType
-  description       String?
-  contactEmail      String
-  contactPhone      String
-  address           String?
-  city              String?
-  isVerified        Boolean          @default(false)
-  verifiedAt        DateTime?
-  licenseNumber     String?
-  taxId             String?
-  allowNameDisplay  Boolean          @default(true)  // SPRINT 14: Company masking preference
+  id               String           @id @default(cuid())
+  name             String
+  type             OrganizationType
+  description      String?
+  contactEmail     String
+  contactPhone     String
+  address          String?
+  city             String?
+  isVerified       Boolean          @default(false)
+  verifiedAt       DateTime?
+  licenseNumber    String?
+  taxId            String?
+  allowNameDisplay Boolean          @default(true) // SPRINT 14: Company masking preference
 
   // Association Support - For CARRIER_INDIVIDUAL belonging to an association
-  associationId     String?          // FK to parent association (if any)
-  association       Organization?    @relation("AssociationMembers", fields: [associationId], references: [id])
-  members           Organization[]   @relation("AssociationMembers") // For associations: their member carriers
+  associationId String? // FK to parent association (if any)
+  association   Organization?  @relation("AssociationMembers", fields: [associationId], references: [id])
+  members       Organization[] @relation("AssociationMembers") // For associations: their member carriers
 
   // SPRINT 16: Story 16.5 - Trust & Reliability Metrics
-  completionRate    Decimal?         @default(0)     // % of loads completed successfully
-  cancellationRate  Decimal?         @default(0)     // % of loads cancelled
-  disputeRate       Decimal?         @default(0)     // % of loads with disputes
-  totalLoadsCompleted Int            @default(0)     // Total loads delivered
-  totalLoadsCancelled Int            @default(0)     // Total loads cancelled
-  totalDisputes     Int              @default(0)     // Total disputes filed
+  completionRate      Decimal? @default(0) // % of loads completed successfully
+  cancellationRate    Decimal? @default(0) // % of loads cancelled
+  disputeRate         Decimal? @default(0) // % of loads with disputes
+  totalLoadsCompleted Int      @default(0) // Total loads delivered
+  totalLoadsCancelled Int      @default(0) // Total loads cancelled
+  totalDisputes       Int      @default(0) // Total disputes filed
 
   // SPRINT 16: Story 16.6 - Anti-Bypass Detection
-  suspiciousCancellationCount Int    @default(0)     // Cancellations after contact view
-  bypassAttemptCount Int             @default(0)     // Reported bypass attempts
-  isFlagged         Boolean          @default(false) // Flagged for suspicious activity
-  flaggedAt         DateTime?                        // When flagged
-  flagReason        String?                          // Reason for flagging
+  suspiciousCancellationCount Int       @default(0) // Cancellations after contact view
+  bypassAttemptCount          Int       @default(0) // Reported bypass attempts
+  isFlagged                   Boolean   @default(false) // Flagged for suspicious activity
+  flaggedAt                   DateTime? // When flagged
+  flagReason                  String? // Reason for flagging
 
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   users             User[]
   loads             Load[]
   trucks            Truck[]
   financialAccounts FinancialAccount[]
-  disputesAgainst   Dispute[]         @relation("DisputedOrganization")
+  disputesAgainst   Dispute[]          @relation("DisputedOrganization")
 
   // SPRINT 8: New relations
-  documents         CompanyDocument[]
-  truckPostings     TruckPosting[]
+  documents     CompanyDocument[]
+  truckPostings TruckPosting[]
 
   // PHASE 2: Match proposal and request relations
-  matchProposals    MatchProposal[]
-  shipperRequests   TruckRequest[]   @relation("ShipperRequests")
-  carrierRequests   TruckRequest[]   @relation("CarrierRequests")
+  matchProposals  MatchProposal[]
+  shipperRequests TruckRequest[]  @relation("ShipperRequests")
+  carrierRequests TruckRequest[]  @relation("CarrierRequests")
 
   // SPRINT 18: LoadRequest - Carrier requests loads
-  carrierLoadRequests  LoadRequest[]   @relation("CarrierLoadRequests")
-  shipperLoadRequests  LoadRequest[]   @relation("ShipperLoadRequests")
+  carrierLoadRequests LoadRequest[] @relation("CarrierLoadRequests")
+  shipperLoadRequests LoadRequest[] @relation("ShipperLoadRequests")
 
   // Phase 2 - Story 16.9B: Company Admin Tools
-  invitations          Invitation[]
+  invitations Invitation[]
+
+  // Trip relations - carrier and shipper trips
+  carrierTrips Trip[] @relation("CarrierTrips")
+  shipperTrips Trip[] @relation("ShipperTrips")
 
   @@index([type])
   @@index([isVerified])
-  @@index([associationId])  // For filtering carriers by association
+  @@index([associationId]) // For filtering carriers by association
   @@map("organizations")
 }
 
@@ -486,198 +502,201 @@ model Organization {
 // ============================================================================
 
 model Load {
-  id                    String      @id @default(cuid())
-  status                LoadStatus  @default(DRAFT)
-  postedAt              DateTime?
+  id       String     @id @default(cuid())
+  status   LoadStatus @default(DRAFT)
+  postedAt DateTime?
 
   // Location & Schedule
-  pickupCity            String?     // SPRINT 8: Made nullable, use pickupCityId
-  pickupCityId          String?     // SPRINT 8: FK to EthiopianLocation
-  pickupAddress         String?
-  pickupDockHours       String?     // Changed from DateTime to String for "8:00 AM - 5:00 PM" format
-  pickupDate            DateTime
-  appointmentRequired   Boolean     @default(false)
+  pickupCity          String? // SPRINT 8: Made nullable, use pickupCityId
+  pickupCityId        String? // SPRINT 8: FK to EthiopianLocation
+  pickupAddress       String?
+  pickupDockHours     String? // Changed from DateTime to String for "8:00 AM - 5:00 PM" format
+  pickupDate          DateTime
+  appointmentRequired Boolean  @default(false)
 
-  deliveryCity          String?     // SPRINT 8: Made nullable, use deliveryCityId
-  deliveryCityId        String?     // SPRINT 8: FK to EthiopianLocation
-  deliveryAddress       String?
-  deliveryDockHours     String?     // Changed from DateTime to String for "8:00 AM - 5:00 PM" format
-  deliveryDate          DateTime
+  deliveryCity      String? // SPRINT 8: Made nullable, use deliveryCityId
+  deliveryCityId    String? // SPRINT 8: FK to EthiopianLocation
+  deliveryAddress   String?
+  deliveryDockHours String? // Changed from DateTime to String for "8:00 AM - 5:00 PM" format
+  deliveryDate      DateTime
 
   // [NEW] Logistics & Distance
-  tripKm                Decimal?    // Required when status = POSTED (legacy - use estimatedTripKm)
-  estimatedTripKm       Decimal?    // SPRINT 16: Estimated trip distance from map
-  dhToOriginKm          Decimal?    // Deadhead to origin
-  dhAfterDeliveryKm     Decimal?    // Deadhead after delivery
-  originLat             Decimal?
-  originLon             Decimal?
-  destinationLat        Decimal?
-  destinationLon        Decimal?
+  tripKm            Decimal? // Required when status = POSTED (legacy - use estimatedTripKm)
+  estimatedTripKm   Decimal? // SPRINT 16: Estimated trip distance from map
+  dhToOriginKm      Decimal? // Deadhead to origin
+  dhAfterDeliveryKm Decimal? // Deadhead after delivery
+  originLat         Decimal?
+  originLon         Decimal?
+  destinationLat    Decimal?
+  destinationLon    Decimal?
 
   // Load Details
   truckType             TruckType
-  weight                Decimal     // in kg
-  volume                Decimal?    // in cubic meters
+  weight                Decimal // in kg
+  volume                Decimal? // in cubic meters
   cargoDescription      String
-  isFullLoad            Boolean     @default(true)  // Keep for backward compatibility
-  fullPartial           LoadType?   @default(FULL)  // [NEW] FULL | PARTIAL
-  isFragile             Boolean     @default(false)
-  requiresRefrigeration Boolean     @default(false)
+  isFullLoad            Boolean   @default(true) // Keep for backward compatibility
+  fullPartial           LoadType? @default(FULL) // [NEW] FULL | PARTIAL
+  isFragile             Boolean   @default(false)
+  requiresRefrigeration Boolean   @default(false)
 
   // [NEW] Cargo Details
-  lengthM               Decimal?    // Cargo length in meters
-  casesCount            Int?        // Number of cases/pallets
+  lengthM    Decimal? // Cargo length in meters
+  casesCount Int? // Number of cases/pallets
 
   // Pricing - SPRINT 16: Base + Per-KM Model
-  baseFareEtb           Decimal?    // Base fare component (ETB)
-  perKmEtb              Decimal?    // Per-kilometer rate (ETB/km)
-  totalFareEtb          Decimal?    // Calculated: baseFareEtb + (estimatedTripKm × perKmEtb)
-  actualTripKm          Decimal?    // GPS-computed actual trip distance (Phase 2)
+  baseFareEtb  Decimal? // Base fare component (ETB)
+  perKmEtb     Decimal? // Per-kilometer rate (ETB/km)
+  totalFareEtb Decimal? // Calculated: baseFareEtb + (estimatedTripKm × perKmEtb)
+  actualTripKm Decimal? // GPS-computed actual trip distance (Phase 2)
 
   // Legacy pricing field (deprecated - use baseFareEtb + perKmEtb instead)
-  rate                  Decimal     // in ETB - DEPRECATED: Use totalFareEtb
-  currency              String      @default("ETB")
-  bookMode              BookMode?   @default(REQUEST)  // [NEW] REQUEST | INSTANT
+  rate     Decimal // in ETB - DEPRECATED: Use totalFareEtb
+  currency String    @default("ETB")
+  bookMode BookMode? @default(REQUEST) // [NEW] REQUEST | INSTANT
 
   // SPRINT 8: Market pricing removed per TRD requirements
   // dtpReference and factorRating removed - use per-km pricing instead
 
   // Privacy & Safety
-  isAnonymous           Boolean     @default(false)
-  shipperContactName    String?     // [NEW] Hidden until assignment
-  shipperContactPhone   String?     // [NEW] Hidden until assignment
-  safetyNotes           String?
-  specialInstructions   String?
+  isAnonymous         Boolean @default(false)
+  shipperContactName  String? // [NEW] Hidden until assignment
+  shipperContactPhone String? // [NEW] Hidden until assignment
+  safetyNotes         String?
+  specialInstructions String?
 
   // Escrow & Finance
-  escrowFunded          Boolean     @default(false)
-  escrowAmount          Decimal?
-  shipperCommission     Decimal?
-  carrierCommission     Decimal?
-  platformCommission    Decimal?
+  escrowFunded       Boolean  @default(false)
+  escrowAmount       Decimal?
+  shipperCommission  Decimal?
+  carrierCommission  Decimal?
+  platformCommission Decimal?
 
   // SPRINT 16: Story 16.7 - Commission & Settlement
-  podUrl                String?                      // Proof of Delivery document URL
-  podSubmitted          Boolean     @default(false)  // POD uploaded by carrier
-  podSubmittedAt        DateTime?                    // When POD was uploaded
-  podVerified           Boolean     @default(false)  // POD verified by shipper
-  podVerifiedAt         DateTime?                    // When POD was verified
-  settlementStatus      String?     @default("PENDING") // PENDING, IN_PROGRESS, PAID, DISPUTED
-  settledAt             DateTime?                    // When commission was deducted
+  podUrl           String? // Proof of Delivery document URL
+  podSubmitted     Boolean   @default(false) // POD uploaded by carrier
+  podSubmittedAt   DateTime? // When POD was uploaded
+  podVerified      Boolean   @default(false) // POD verified by shipper
+  podVerifiedAt    DateTime? // When POD was verified
+  settlementStatus String?   @default("PENDING") // PENDING, IN_PROGRESS, PAID, DISPUTED
+  settledAt        DateTime? // When commission was deducted
 
   // Assignment
-  assignedTruckId       String?     @unique
-  assignedAt            DateTime?
+  assignedTruckId String?   @unique
+  assignedAt      DateTime?
 
   // SPRINT 14: DAT-Style UI - Status tracking
-  isKept                Boolean     @default(false)  // Star/favorite
-  hasAlerts             Boolean     @default(false)  // Bell icon
-  groupId               String?                      // GROUP tab
+  isKept    Boolean @default(false) // Star/favorite
+  hasAlerts Boolean @default(false) // Bell icon
+  groupId   String? // GROUP tab
 
   // SPRINT 16: GPS Live Tracking (Story 16.3)
-  trackingUrl           String?     @unique          // Unique shareable tracking URL
-  trackingEnabled       Boolean     @default(false)  // GPS tracking active
-  trackingStartedAt     DateTime?                    // When tracking began
+  trackingUrl       String?   @unique // Unique shareable tracking URL
+  trackingEnabled   Boolean   @default(false) // GPS tracking active
+  trackingStartedAt DateTime? // When tracking began
 
   // SPRINT 16: Story 16.6 - Anti-Bypass Detection
-  contactViewedAt       DateTime?                    // When contact info was viewed
-  bypassReported        Boolean     @default(false)  // Bypass attempt reported
-  bypassReportedAt      DateTime?                    // When bypass was reported
-  bypassReportedBy      String?                      // User ID who reported
+  contactViewedAt  DateTime? // When contact info was viewed
+  bypassReported   Boolean   @default(false) // Bypass attempt reported
+  bypassReportedAt DateTime? // When bypass was reported
+  bypassReportedBy String? // User ID who reported
 
   // ============================================================================
   // SERVICE FEE FIELDS (NEW - Service Fee Implementation)
   // ============================================================================
 
   // Corridor & Service Fee
-  corridorId            String?
-  corridor              Corridor?         @relation("LoadCorridor", fields: [corridorId], references: [id])
+  corridorId String?
+  corridor   Corridor? @relation("LoadCorridor", fields: [corridorId], references: [id])
 
   // Shipper service fee
-  serviceFeeEtb         Decimal?          @db.Decimal(10, 2)   // Shipper service fee (legacy field)
-  shipperServiceFee     Decimal?          @db.Decimal(10, 2)   // Shipper service fee amount
-  shipperFeeStatus      ServiceFeeStatus  @default(PENDING)
-  shipperFeeDeductedAt  DateTime?                              // When shipper fee was deducted
+  serviceFeeEtb        Decimal?         @db.Decimal(10, 2) // Shipper service fee (legacy field)
+  shipperServiceFee    Decimal?         @db.Decimal(10, 2) // Shipper service fee amount
+  shipperFeeStatus     ServiceFeeStatus @default(PENDING)
+  shipperFeeDeductedAt DateTime? // When shipper fee was deducted
 
   // Carrier service fee
-  carrierServiceFee     Decimal?          @db.Decimal(10, 2)   // Carrier service fee amount
-  carrierFeeStatus      ServiceFeeStatus  @default(PENDING)
-  carrierFeeDeductedAt  DateTime?                              // When carrier fee was deducted
+  carrierServiceFee    Decimal?         @db.Decimal(10, 2) // Carrier service fee amount
+  carrierFeeStatus     ServiceFeeStatus @default(PENDING)
+  carrierFeeDeductedAt DateTime? // When carrier fee was deducted
 
   // Legacy fields (keep for backward compatibility)
-  serviceFeeStatus      ServiceFeeStatus  @default(PENDING)
-  serviceFeeReservedAt  DateTime?                              // When fee was reserved
-  serviceFeeDeductedAt  DateTime?                              // When fee was deducted
-  serviceFeeRefundedAt  DateTime?                              // When fee was refunded
+  serviceFeeStatus     ServiceFeeStatus @default(PENDING)
+  serviceFeeReservedAt DateTime? // When fee was reserved
+  serviceFeeDeductedAt DateTime? // When fee was deducted
+  serviceFeeRefundedAt DateTime? // When fee was refunded
 
   // Trip Progress (for return-load notifications)
-  tripProgressPercent   Int?              @default(0)          // 0-100
-  remainingDistanceKm   Decimal?          @db.Decimal(10, 2)   // Remaining KM to destination
-  lastProgressUpdateAt  DateTime?                              // Last GPS progress update
-  enteredDestGeofence   Boolean           @default(false)      // Truck entered destination geofence
-  enteredDestGeofenceAt DateTime?                              // When truck entered geofence
+  tripProgressPercent   Int?      @default(0) // 0-100
+  remainingDistanceKm   Decimal?  @db.Decimal(10, 2) // Remaining KM to destination
+  lastProgressUpdateAt  DateTime? // Last GPS progress update
+  enteredDestGeofence   Boolean   @default(false) // Truck entered destination geofence
+  enteredDestGeofenceAt DateTime? // When truck entered geofence
 
   // Tracking
-  expiresAt             DateTime?
-  createdAt             DateTime    @default(now())
-  updatedAt             DateTime    @updatedAt
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   // Relations
-  shipperId             String
-  shipper               Organization @relation(fields: [shipperId], references: [id])
+  shipperId String
+  shipper   Organization @relation(fields: [shipperId], references: [id])
 
-  createdById           String
-  createdBy             User         @relation("LoadCreator", fields: [createdById], references: [id])
+  createdById String
+  createdBy   User   @relation("LoadCreator", fields: [createdById], references: [id])
 
-  assignedTruck         Truck?       @relation(fields: [assignedTruckId], references: [id])
+  assignedTruck Truck? @relation(fields: [assignedTruckId], references: [id])
 
   // SPRINT 8: Location relations
-  pickupLocation        EthiopianLocation? @relation("PickupLocation", fields: [pickupCityId], references: [id])
-  deliveryLocation      EthiopianLocation? @relation("DeliveryLocation", fields: [deliveryCityId], references: [id])
+  pickupLocation   EthiopianLocation? @relation("PickupLocation", fields: [pickupCityId], references: [id])
+  deliveryLocation EthiopianLocation? @relation("DeliveryLocation", fields: [deliveryCityId], references: [id])
 
-  documents             Document[]
-  events                LoadEvent[]
-  disputes              Dispute[]
-  journalEntries        JournalEntry[]
-  escalations           LoadEscalation[]  // Sprint 4: Dispatcher escalation tracking
+  documents      Document[]
+  events         LoadEvent[]
+  disputes       Dispute[]
+  journalEntries JournalEntry[]
+  escalations    LoadEscalation[] // Sprint 4: Dispatcher escalation tracking
 
   // PHASE 2: Match proposal and request relations
-  matchProposals        MatchProposal[]
-  truckRequests         TruckRequest[]
+  matchProposals MatchProposal[]
+  truckRequests  TruckRequest[]
 
   // SPRINT 18: LoadRequest - Carrier requests this load
-  loadRequests          LoadRequest[]    @relation("LoadRequests")
+  loadRequests LoadRequest[] @relation("LoadRequests")
+
+  // Trip relation - one-to-one when load is assigned
+  trip Trip?
 
   @@index([status])
   @@index([pickupCity])
   @@index([deliveryCity])
-  @@index([pickupCityId])   // SPRINT 8: Index for location-based filtering
+  @@index([pickupCityId]) // SPRINT 8: Index for location-based filtering
   @@index([deliveryCityId]) // SPRINT 8: Index for location-based filtering
   @@index([pickupDate])
   @@index([shipperId])
   @@index([truckType])
-  @@index([tripKm])        // [NEW] For filtering by trip distance
-  @@index([fullPartial])   // [NEW] For filtering by full/partial
-  @@index([bookMode])      // [NEW] For filtering by booking mode
-  @@index([postedAt])      // [NEW] For age calculation and sorting
-  @@index([trackingUrl])   // SPRINT 16: For tracking page lookups
+  @@index([tripKm]) // [NEW] For filtering by trip distance
+  @@index([fullPartial]) // [NEW] For filtering by full/partial
+  @@index([bookMode]) // [NEW] For filtering by booking mode
+  @@index([postedAt]) // [NEW] For age calculation and sorting
+  @@index([trackingUrl]) // SPRINT 16: For tracking page lookups
   @@index([trackingEnabled]) // SPRINT 16: For filtering tracked loads
-  @@index([corridorId])      // Service Fee: For corridor-based queries
+  @@index([corridorId]) // Service Fee: For corridor-based queries
   @@index([serviceFeeStatus]) // Service Fee: For fee status filtering
   @@map("loads")
 }
 
 model LoadEvent {
   id          String   @id @default(cuid())
-  eventType   String   // CREATED, POSTED, UNPOSTED, EDITED, DELETED, ASSIGNED, etc.
+  eventType   String // CREATED, POSTED, UNPOSTED, EDITED, DELETED, ASSIGNED, etc.
   description String?
-  metadata    Json?    // Store additional event data
+  metadata    Json? // Store additional event data
   userId      String?
   createdAt   DateTime @default(now())
 
   // Relations
-  loadId      String
-  load        Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  loadId String
+  load   Load   @relation(fields: [loadId], references: [id], onDelete: Cascade)
 
   @@index([loadId])
   @@index([eventType])
@@ -686,35 +705,35 @@ model LoadEvent {
 
 // Sprint 4: Dispatcher Escalation System
 model LoadEscalation {
-  id                String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // Escalation Details
-  escalationType    EscalationType        // Type of issue
-  priority          EscalationPriority    // Severity level
-  status            EscalationStatus      @default(OPEN)
+  escalationType EscalationType // Type of issue
+  priority       EscalationPriority // Severity level
+  status         EscalationStatus   @default(OPEN)
 
   // Description
-  title             String                // Short description
-  description       String?               // Detailed description
-  notes             String?               // Internal notes
+  title       String // Short description
+  description String? // Detailed description
+  notes       String? // Internal notes
 
   // Resolution
-  resolution        String?               // How it was resolved
-  resolvedBy        String?               // User ID who resolved
-  resolvedAt        DateTime?             // When it was resolved
+  resolution String? // How it was resolved
+  resolvedBy String? // User ID who resolved
+  resolvedAt DateTime? // When it was resolved
 
   // Assignment
-  assignedTo        String?               // Dispatcher/admin assigned
-  assignedAt        DateTime?             // When it was assigned
+  assignedTo String? // Dispatcher/admin assigned
+  assignedAt DateTime? // When it was assigned
 
   // Tracking
-  createdBy         String                // User ID who created
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdBy String // User ID who created
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  loadId            String
-  load              Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  loadId String
+  load   Load   @relation(fields: [loadId], references: [id], onDelete: Cascade)
 
   @@index([loadId])
   @@index([status])
@@ -725,35 +744,35 @@ model LoadEscalation {
 }
 
 enum EscalationType {
-  LATE_PICKUP          // Carrier late to pickup
-  LATE_DELIVERY        // Delivery delayed
-  TRUCK_BREAKDOWN      // Mechanical failure
-  CARRIER_NO_SHOW      // Carrier didn't show up
-  ROUTE_DEVIATION      // Truck went off route
-  GPS_OFFLINE          // GPS device offline
-  CARGO_DAMAGE         // Cargo damaged
-  SHIPPER_ISSUE        // Issue with shipper
-  CARRIER_ISSUE        // Issue with carrier
-  DOCUMENTATION        // Missing/incorrect documents
-  PAYMENT_DISPUTE      // Payment related issue
-  BYPASS_DETECTED      // Platform bypass attempt
-  OTHER                // Other issues
+  LATE_PICKUP // Carrier late to pickup
+  LATE_DELIVERY // Delivery delayed
+  TRUCK_BREAKDOWN // Mechanical failure
+  CARRIER_NO_SHOW // Carrier didn't show up
+  ROUTE_DEVIATION // Truck went off route
+  GPS_OFFLINE // GPS device offline
+  CARGO_DAMAGE // Cargo damaged
+  SHIPPER_ISSUE // Issue with shipper
+  CARRIER_ISSUE // Issue with carrier
+  DOCUMENTATION // Missing/incorrect documents
+  PAYMENT_DISPUTE // Payment related issue
+  BYPASS_DETECTED // Platform bypass attempt
+  OTHER // Other issues
 }
 
 enum EscalationPriority {
-  LOW                  // Minor issue, no immediate action needed
-  MEDIUM               // Standard issue, should be addressed soon
-  HIGH                 // Important issue, needs attention
-  CRITICAL             // Urgent issue, immediate action required
+  LOW // Minor issue, no immediate action needed
+  MEDIUM // Standard issue, should be addressed soon
+  HIGH // Important issue, needs attention
+  CRITICAL // Urgent issue, immediate action required
 }
 
 enum EscalationStatus {
-  OPEN                 // New escalation, not yet assigned
-  ASSIGNED             // Assigned to dispatcher
-  IN_PROGRESS          // Being worked on
-  RESOLVED             // Issue resolved
-  CLOSED               // Escalation closed
-  ESCALATED            // Escalated to higher level
+  OPEN // New escalation, not yet assigned
+  ASSIGNED // Assigned to dispatcher
+  IN_PROGRESS // Being worked on
+  RESOLVED // Issue resolved
+  CLOSED // Escalation closed
+  ESCALATED // Escalated to higher level
 }
 
 model Document {
@@ -761,14 +780,14 @@ model Document {
   type        DocumentType
   fileName    String
   fileUrl     String
-  fileSize    Int          // in bytes
+  fileSize    Int // in bytes
   mimeType    String
   description String?
   uploadedAt  DateTime     @default(now())
 
   // Relations
-  loadId      String
-  load        Load         @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  loadId String
+  load   Load   @relation(fields: [loadId], references: [id], onDelete: Cascade)
 
   @@index([loadId])
   @@map("documents")
@@ -779,61 +798,64 @@ model Document {
 // ============================================================================
 
 model Truck {
-  id              String      @id @default(cuid())
-  truckType       TruckType
-  licensePlate    String      @unique
-  capacity        Decimal     // in kg
-  volume          Decimal?    // in cubic meters
-  isAvailable     Boolean     @default(true)
-  currentCity     String?
-  currentRegion   String?
+  id            String    @id @default(cuid())
+  truckType     TruckType
+  licensePlate  String    @unique
+  capacity      Decimal // in kg
+  volume        Decimal? // in cubic meters
+  isAvailable   Boolean   @default(true)
+  currentCity   String?
+  currentRegion String?
 
   // Sprint 6: Current location for DH-O calculations
-  currentLocationLat  Decimal?  @db.Decimal(10, 7)  // Current latitude
-  currentLocationLon  Decimal?  @db.Decimal(10, 7)  // Current longitude
-  locationUpdatedAt   DateTime?                     // When location was last updated
+  currentLocationLat Decimal?  @db.Decimal(10, 7) // Current latitude
+  currentLocationLon Decimal?  @db.Decimal(10, 7) // Current longitude
+  locationUpdatedAt  DateTime? // When location was last updated
 
   // SPRINT 8: New fields for truck posting
-  lengthM         Decimal?    // Truck bed length in meters
-  ownerName       String?     // Explicit owner name
-  contactName     String?     // Primary contact
-  contactPhone    String?     // Primary contact phone
+  lengthM      Decimal? // Truck bed length in meters
+  ownerName    String? // Explicit owner name
+  contactName  String? // Primary contact
+  contactPhone String? // Primary contact phone
 
   // SPRINT 16: GPS Tracking Fields (Story 16.2)
-  imei            String?     @unique  // GPS device IMEI (15 digits)
-  gpsProvider     String?              // e.g., "Teltonika", "Queclink", "Coban"
-  gpsStatus       GpsDeviceStatus?     // ACTIVE, INACTIVE, SIGNAL_LOST
-  gpsLastSeenAt   DateTime?            // Last GPS signal received
-  gpsVerifiedAt   DateTime?            // When GPS was verified working
+  imei          String?          @unique // GPS device IMEI (15 digits)
+  gpsProvider   String? // e.g., "Teltonika", "Queclink", "Coban"
+  gpsStatus     GpsDeviceStatus? // ACTIVE, INACTIVE, SIGNAL_LOST
+  gpsLastSeenAt DateTime? // Last GPS signal received
+  gpsVerifiedAt DateTime? // When GPS was verified working
 
   // SPRINT 18: Admin Truck Approval
-  approvalStatus    VerificationStatus  @default(PENDING)
-  approvedAt        DateTime?
-  approvedById      String?
-  approvedBy        User?               @relation("TruckApprovedBy", fields: [approvedById], references: [id])
-  rejectionReason   String?
+  approvalStatus  VerificationStatus @default(PENDING)
+  approvedAt      DateTime?
+  approvedById    String?
+  approvedBy      User?              @relation("TruckApprovedBy", fields: [approvedById], references: [id])
+  rejectionReason String?
 
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  carrierId       String
-  carrier         Organization @relation(fields: [carrierId], references: [id])
+  carrierId String
+  carrier   Organization @relation(fields: [carrierId], references: [id])
 
-  gpsDeviceId     String?      @unique
-  gpsDevice       GpsDevice?   @relation(fields: [gpsDeviceId], references: [id])
+  gpsDeviceId String?    @unique
+  gpsDevice   GpsDevice? @relation(fields: [gpsDeviceId], references: [id])
 
-  assignedLoad    Load?
-  gpsPositions    GpsPosition[]
+  assignedLoad Load?
+  gpsPositions GpsPosition[]
 
   // SPRINT 8: New relations
-  postings        TruckPosting[]
-  documents       TruckDocument[]
+  postings  TruckPosting[]
+  documents TruckDocument[]
 
   // PHASE 2: Match proposal and request relations
-  matchProposals  MatchProposal[]
-  truckRequests   TruckRequest[]
-  loadRequests    LoadRequest[]    // SPRINT 18: Carrier requests loads
+  matchProposals MatchProposal[]
+  truckRequests  TruckRequest[]
+  loadRequests   LoadRequest[] // SPRINT 18: Carrier requests loads
+
+  // Trips performed by this truck
+  trips Trip[]
 
   @@index([carrierId])
   @@index([approvalStatus])
@@ -845,45 +867,126 @@ model Truck {
 }
 
 model GpsDevice {
-  id          String          @id @default(cuid())
-  imei        String          @unique
-  status      GpsDeviceStatus @default(ACTIVE)
-  lastSeenAt  DateTime?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id         String          @id @default(cuid())
+  imei       String          @unique
+  status     GpsDeviceStatus @default(ACTIVE)
+  lastSeenAt DateTime?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 
   // Relations
-  truck       Truck?
-  positions   GpsPosition[]
+  truck     Truck?
+  positions GpsPosition[]
 
   @@index([imei])
   @@map("gps_devices")
 }
 
 model GpsPosition {
-  id          String    @id @default(cuid())
-  latitude    Decimal   @db.Decimal(10, 7)
-  longitude   Decimal   @db.Decimal(10, 7)
-  speed       Decimal?  // in km/h
-  heading     Decimal?  // in degrees
-  altitude    Decimal?  // in meters
-  accuracy    Decimal?  // in meters
-  timestamp   DateTime  @default(now())
+  id        String   @id @default(cuid())
+  latitude  Decimal  @db.Decimal(10, 7)
+  longitude Decimal  @db.Decimal(10, 7)
+  speed     Decimal? // in km/h
+  heading   Decimal? // in degrees
+  altitude  Decimal? // in meters
+  accuracy  Decimal? // in meters
+  timestamp DateTime @default(now())
 
   // SPRINT 16: Story 16.8 - GPS Data Storage
-  loadId      String?   // Link to active load (if truck is on a delivery)
+  loadId String? // Link to active load (if truck is on a delivery)
+
+  // Trip relation - GPS positions are linked to trips for route history
+  tripId String?
+  trip   Trip?   @relation(fields: [tripId], references: [id])
 
   // Relations
-  truckId     String
-  truck       Truck     @relation(fields: [truckId], references: [id], onDelete: Cascade)
+  truckId String
+  truck   Truck  @relation(fields: [truckId], references: [id], onDelete: Cascade)
 
-  deviceId    String
-  device      GpsDevice @relation(fields: [deviceId], references: [id])
+  deviceId String
+  device   GpsDevice @relation(fields: [deviceId], references: [id])
 
   @@index([truckId, timestamp])
   @@index([deviceId])
-  @@index([loadId])         // SPRINT 16: For querying positions by load
+  @@index([loadId]) // SPRINT 16: For querying positions by load
+  @@index([tripId]) // For querying route history by trip
   @@map("gps_positions")
+}
+
+// ============================================================================
+// TRIP MODEL - Core entity for tracking load deliveries
+// ============================================================================
+
+model Trip {
+  id     String     @id @default(cuid())
+  status TripStatus @default(ASSIGNED)
+
+  // Current location (latest GPS position)
+  currentLat               Decimal?  @db.Decimal(10, 7)
+  currentLng               Decimal?  @db.Decimal(10, 7)
+  currentLocationUpdatedAt DateTime?
+
+  // Pickup location
+  pickupLat     Decimal? @db.Decimal(10, 7)
+  pickupLng     Decimal? @db.Decimal(10, 7)
+  pickupAddress String?
+  pickupCity    String?
+
+  // Delivery location
+  deliveryLat     Decimal? @db.Decimal(10, 7)
+  deliveryLng     Decimal? @db.Decimal(10, 7)
+  deliveryAddress String?
+  deliveryCity    String?
+
+  // Trip timing
+  startedAt   DateTime? // When carrier started trip (status -> PICKUP_PENDING)
+  pickedUpAt  DateTime? // When load was picked up (status -> IN_TRANSIT)
+  deliveredAt DateTime? // When load was delivered (status -> DELIVERED)
+  completedAt DateTime? // When POD confirmed (status -> COMPLETED)
+
+  // Distance tracking
+  estimatedDistanceKm  Decimal? @db.Decimal(10, 2) // Estimated route distance
+  actualDistanceKm     Decimal? @db.Decimal(10, 2) // Actual GPS-computed distance
+  estimatedDurationMin Int? // Estimated travel time in minutes
+
+  // Tracking URLs
+  trackingUrl     String? @unique // Public shareable tracking link
+  trackingEnabled Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ============================================================================
+  // RELATIONS
+  // ============================================================================
+
+  // Load associated with this trip (one-to-one)
+  loadId String @unique
+  load   Load   @relation(fields: [loadId], references: [id])
+
+  // Truck performing this trip
+  truckId String
+  truck   Truck  @relation(fields: [truckId], references: [id])
+
+  // Carrier organization (truck owner)
+  carrierId String
+  carrier   Organization @relation("CarrierTrips", fields: [carrierId], references: [id])
+
+  // Shipper organization (load owner)
+  shipperId String
+  shipper   Organization @relation("ShipperTrips", fields: [shipperId], references: [id])
+
+  // Route history - all GPS positions for this trip
+  routeHistory GpsPosition[]
+
+  @@index([status])
+  @@index([carrierId])
+  @@index([shipperId])
+  @@index([truckId])
+  @@index([loadId])
+  @@index([trackingUrl])
+  @@index([createdAt])
+  @@map("trips")
 }
 
 // ============================================================================
@@ -891,20 +994,20 @@ model GpsPosition {
 // ============================================================================
 
 model FinancialAccount {
-  id              String      @id @default(cuid())
-  accountType     AccountType
-  balance         Decimal     @default(0) @db.Decimal(12, 2)
-  currency        String      @default("ETB")
-  isActive        Boolean     @default(true)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id          String      @id @default(cuid())
+  accountType AccountType
+  balance     Decimal     @default(0) @db.Decimal(12, 2)
+  currency    String      @default("ETB")
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   // Relations
-  organizationId  String?
-  organization    Organization? @relation(fields: [organizationId], references: [id])
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 
-  debitLines      JournalLine[] @relation("DebitAccount")
-  creditLines     JournalLine[] @relation("CreditAccount")
+  debitLines  JournalLine[] @relation("DebitAccount")
+  creditLines JournalLine[] @relation("CreditAccount")
 
   @@index([accountType])
   @@index([organizationId])
@@ -913,15 +1016,15 @@ model FinancialAccount {
 
 // SPRINT 16: Story 16.7 - Commission Configuration
 model CommissionRate {
-  id                  String   @id @default(cuid())
-  shipperRate         Decimal  @default(5.0)  // % of load value (default 5%)
-  carrierRate         Decimal  @default(5.0)  // % of load value (default 5%)
-  effectiveFrom       DateTime @default(now())
-  effectiveTo         DateTime?
-  isActive            Boolean  @default(true)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  createdBy           String?  // Admin user ID
+  id            String    @id @default(cuid())
+  shipperRate   Decimal   @default(5.0) // % of load value (default 5%)
+  carrierRate   Decimal   @default(5.0) // % of load value (default 5%)
+  effectiveFrom DateTime  @default(now())
+  effectiveTo   DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdBy     String? // Admin user ID
 
   @@index([isActive])
   @@index([effectiveFrom])
@@ -932,15 +1035,15 @@ model JournalEntry {
   id              String          @id @default(cuid())
   transactionType TransactionType
   description     String
-  reference       String?         // External reference (payment ID, load ID, etc.)
+  reference       String? // External reference (payment ID, load ID, etc.)
   metadata        Json?
   createdAt       DateTime        @default(now())
 
   // Relations
-  loadId          String?
-  load            Load?           @relation(fields: [loadId], references: [id])
+  loadId String?
+  load   Load?   @relation(fields: [loadId], references: [id])
 
-  lines           JournalLine[]
+  lines JournalLine[]
 
   @@index([transactionType])
   @@index([loadId])
@@ -948,17 +1051,17 @@ model JournalEntry {
 }
 
 model JournalLine {
-  id              String           @id @default(cuid())
-  amount          Decimal          @db.Decimal(12, 2)
-  isDebit         Boolean          // true = debit, false = credit
-  createdAt       DateTime         @default(now())
+  id        String   @id @default(cuid())
+  amount    Decimal  @db.Decimal(12, 2)
+  isDebit   Boolean // true = debit, false = credit
+  createdAt DateTime @default(now())
 
   // Relations
-  journalEntryId  String
-  journalEntry    JournalEntry     @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  journalEntryId String
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
 
   accountId       String
-  account         FinancialAccount @relation(fields: [accountId], references: [id], name: "DebitAccount")
+  account         FinancialAccount  @relation(fields: [accountId], references: [id], name: "DebitAccount")
   creditAccountId String?
   creditAccount   FinancialAccount? @relation(fields: [creditAccountId], references: [id], name: "CreditAccount")
 
@@ -968,10 +1071,10 @@ model JournalLine {
 }
 
 model WithdrawalRequest {
-  id              String   @id @default(cuid())
-  amount          Decimal  @db.Decimal(12, 2)
-  currency        String   @default("ETB")
-  status          String   @default("PENDING") // PENDING, APPROVED, REJECTED, COMPLETED
+  id              String    @id @default(cuid())
+  amount          Decimal   @db.Decimal(12, 2)
+  currency        String    @default("ETB")
+  status          String    @default("PENDING") // PENDING, APPROVED, REJECTED, COMPLETED
   bankAccount     String
   bankName        String
   accountHolder   String
@@ -980,8 +1083,8 @@ model WithdrawalRequest {
   approvedAt      DateTime?
   completedAt     DateTime?
   rejectionReason String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@index([status])
   @@index([requestedById])
@@ -993,25 +1096,25 @@ model WithdrawalRequest {
 // ============================================================================
 
 model Dispute {
-  id              String        @id @default(cuid())
-  type            DisputeType
-  status          DisputeStatus @default(OPEN)
-  description     String
-  evidenceUrls    String[]      // Array of file URLs
-  resolution      String?
-  resolvedAt      DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id           String        @id @default(cuid())
+  type         DisputeType
+  status       DisputeStatus @default(OPEN)
+  description  String
+  evidenceUrls String[] // Array of file URLs
+  resolution   String?
+  resolvedAt   DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   // Relations
-  loadId          String
-  load            Load          @relation(fields: [loadId], references: [id])
+  loadId String
+  load   Load   @relation(fields: [loadId], references: [id])
 
-  createdById     String
-  createdBy       User          @relation(fields: [createdById], references: [id])
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
 
-  disputedOrgId   String
-  disputedOrg     Organization  @relation("DisputedOrganization", fields: [disputedOrgId], references: [id])
+  disputedOrgId String
+  disputedOrg   Organization @relation("DisputedOrganization", fields: [disputedOrgId], references: [id])
 
   @@index([status])
   @@index([loadId])
@@ -1023,7 +1126,7 @@ model Report {
   type        ReportType
   status      ReportStatus @default(NEW)
   description String
-  evidence    String?      // File URL or additional details
+  evidence    String? // File URL or additional details
   actionTaken String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -1051,29 +1154,29 @@ model SystemConfig {
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // Event Information
-  eventType String   // AUTH_LOGIN_SUCCESS, FILE_UPLOAD, etc.
-  severity  String   // INFO, WARNING, ERROR, CRITICAL
+  eventType String // AUTH_LOGIN_SUCCESS, FILE_UPLOAD, etc.
+  severity  String // INFO, WARNING, ERROR, CRITICAL
 
   // User Context
   userId         String?
   organizationId String?
 
   // Request Context
-  ipAddress  String?
-  userAgent  String?
+  ipAddress String?
+  userAgent String?
 
   // Resource Information
-  resource   String?  // DOCUMENT, FILE, USER, etc.
-  resourceId String?  // ID of the resource
-  action     String?  // CREATE, UPDATE, DELETE, VERIFY, etc.
+  resource   String? // DOCUMENT, FILE, USER, etc.
+  resourceId String? // ID of the resource
+  action     String? // CREATE, UPDATE, DELETE, VERIFY, etc.
 
   // Result
-  result   String   // SUCCESS or FAILURE
-  message  String   // Human-readable message
-  metadata Json     @default("{}")  // Additional data
+  result   String // SUCCESS or FAILURE
+  message  String // Human-readable message
+  metadata Json   @default("{}") // Additional data
 
   // Timestamp
   timestamp DateTime @default(now())
@@ -1085,7 +1188,6 @@ model AuditLog {
   @@index([severity])
   @@index([timestamp])
   @@index([ipAddress])
-
   @@map("audit_logs")
 }
 
@@ -1094,19 +1196,19 @@ model AuditLog {
 // ============================================================================
 
 model EthiopianLocation {
-  id            String       @id @default(cuid())
-  name          String       // City/town name in English
-  nameEthiopic  String?      // Amharic name
-  region        String       // Administrative region
-  zone          String?      // Sub-region
-  latitude      Decimal      @db.Decimal(10, 7)
-  longitude     Decimal      @db.Decimal(10, 7)
-  type          LocationType @default(CITY)
-  population    Int?
-  aliases       String[]     // Alternative spellings for search
-  isActive      Boolean      @default(true)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id           String       @id @default(cuid())
+  name         String // City/town name in English
+  nameEthiopic String? // Amharic name
+  region       String // Administrative region
+  zone         String? // Sub-region
+  latitude     Decimal      @db.Decimal(10, 7)
+  longitude    Decimal      @db.Decimal(10, 7)
+  type         LocationType @default(CITY)
+  population   Int?
+  aliases      String[] // Alternative spellings for search
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   // Relations
   loadsPickup         Load[]         @relation("PickupLocation")
@@ -1121,51 +1223,51 @@ model EthiopianLocation {
 }
 
 model TruckPosting {
-  id                          String            @id @default(cuid())
-  status                      PostingStatus     @default(ACTIVE)
-  
+  id     String        @id @default(cuid())
+  status PostingStatus @default(ACTIVE)
+
   // Availability
-  availableFrom               DateTime
-  availableTo                 DateTime?
-  
+  availableFrom DateTime
+  availableTo   DateTime?
+
   // Location
-  originCityId                String
-  originCity                  EthiopianLocation @relation("OriginCity", fields: [originCityId], references: [id])
-  destinationCityId           String?
-  destinationCity             EthiopianLocation? @relation("DestinationCity", fields: [destinationCityId], references: [id])
-  
+  originCityId      String
+  originCity        EthiopianLocation  @relation("OriginCity", fields: [originCityId], references: [id])
+  destinationCityId String?
+  destinationCity   EthiopianLocation? @relation("DestinationCity", fields: [destinationCityId], references: [id])
+
   // Truck Details
-  truckId                     String
-  truck                       Truck             @relation(fields: [truckId], references: [id], onDelete: Cascade)
-  fullPartial                 LoadType          @default(FULL)
-  
+  truckId     String
+  truck       Truck    @relation(fields: [truckId], references: [id], onDelete: Cascade)
+  fullPartial LoadType @default(FULL)
+
   // Capacity
-  availableLength             Decimal?
-  availableWeight             Decimal?
-  
+  availableLength Decimal?
+  availableWeight Decimal?
+
   // Deadhead Preferences (OPTIONAL - for filtering only)
-  preferredDhToOriginKm       Decimal?
-  preferredDhAfterDeliveryKm  Decimal?
-  
+  preferredDhToOriginKm      Decimal?
+  preferredDhAfterDeliveryKm Decimal?
+
   // Contact
-  contactName                 String
-  contactPhone                String
-  
+  contactName  String
+  contactPhone String
+
   // Owner
-  ownerName                   String?
-  
+  ownerName String?
+
   // Metadata
-  notes                       String?
-  postedAt                    DateTime          @default(now())
-  expiresAt                   DateTime?
-  createdAt                   DateTime          @default(now())
-  updatedAt                   DateTime          @updatedAt
-  
+  notes     String?
+  postedAt  DateTime  @default(now())
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
   // Relations
-  carrierId                   String
-  carrier                     Organization      @relation(fields: [carrierId], references: [id])
-  createdById                 String
-  
+  carrierId   String
+  carrier     Organization @relation(fields: [carrierId], references: [id])
+  createdById String
+
   @@index([status])
   @@index([originCityId])
   @@index([destinationCityId])
@@ -1182,41 +1284,41 @@ model TruckPosting {
 // Dispatcher proposes a match between load and truck
 // Carrier must approve before assignment happens
 model MatchProposal {
-  id                String            @id @default(cuid())
-  status            ProposalStatus    @default(PENDING)
+  id     String         @id @default(cuid())
+  status ProposalStatus @default(PENDING)
 
   // Load being proposed
-  loadId            String
-  load              Load              @relation(fields: [loadId], references: [id])
+  loadId String
+  load   Load   @relation(fields: [loadId], references: [id])
 
   // Truck being proposed
-  truckId           String
-  truck             Truck             @relation(fields: [truckId], references: [id])
+  truckId String
+  truck   Truck  @relation(fields: [truckId], references: [id])
 
   // Carrier who owns the truck (must approve)
-  carrierId         String
-  carrier           Organization      @relation(fields: [carrierId], references: [id])
+  carrierId String
+  carrier   Organization @relation(fields: [carrierId], references: [id])
 
   // Dispatcher who created the proposal
-  proposedById      String
-  proposedBy        User              @relation("ProposedBy", fields: [proposedById], references: [id])
+  proposedById String
+  proposedBy   User   @relation("ProposedBy", fields: [proposedById], references: [id])
 
   // Proposal metadata
-  notes             String?           // Dispatcher's notes for the carrier
-  proposedRate      Decimal?          // Suggested rate (optional)
+  notes        String? // Dispatcher's notes for the carrier
+  proposedRate Decimal? // Suggested rate (optional)
 
   // Response from carrier
-  respondedAt       DateTime?
-  responseNotes     String?
-  respondedById     String?
-  respondedBy       User?             @relation("RespondedBy", fields: [respondedById], references: [id])
+  respondedAt   DateTime?
+  responseNotes String?
+  respondedById String?
+  respondedBy   User?     @relation("RespondedBy", fields: [respondedById], references: [id])
 
   // Expiration
-  expiresAt         DateTime
+  expiresAt DateTime
 
   // Timestamps
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status])
   @@index([loadId])
@@ -1229,43 +1331,43 @@ model MatchProposal {
 // Shipper requests a specific truck for their load
 // Carrier must approve before assignment happens
 model TruckRequest {
-  id                String            @id @default(cuid())
-  status            RequestStatus     @default(PENDING)
+  id     String        @id @default(cuid())
+  status RequestStatus @default(PENDING)
 
   // Load for which truck is requested
-  loadId            String
-  load              Load              @relation(fields: [loadId], references: [id])
+  loadId String
+  load   Load   @relation(fields: [loadId], references: [id])
 
   // Truck being requested
-  truckId           String
-  truck             Truck             @relation(fields: [truckId], references: [id])
+  truckId String
+  truck   Truck  @relation(fields: [truckId], references: [id])
 
   // Shipper who made the request
-  shipperId         String
-  shipper           Organization      @relation("ShipperRequests", fields: [shipperId], references: [id])
-  requestedById     String
-  requestedBy       User              @relation("RequestedBy", fields: [requestedById], references: [id])
+  shipperId     String
+  shipper       Organization @relation("ShipperRequests", fields: [shipperId], references: [id])
+  requestedById String
+  requestedBy   User         @relation("RequestedBy", fields: [requestedById], references: [id])
 
   // Carrier who owns the truck (must approve)
-  carrierId         String
-  carrier           Organization      @relation("CarrierRequests", fields: [carrierId], references: [id])
+  carrierId String
+  carrier   Organization @relation("CarrierRequests", fields: [carrierId], references: [id])
 
   // Request metadata
-  notes             String?           // Shipper's notes for the carrier
-  offeredRate       Decimal?          // Rate shipper is willing to pay
+  notes       String? // Shipper's notes for the carrier
+  offeredRate Decimal? // Rate shipper is willing to pay
 
   // Response from carrier
-  respondedAt       DateTime?
-  responseNotes     String?
-  respondedById     String?
-  respondedBy       User?             @relation("RespondedByCarrier", fields: [respondedById], references: [id])
+  respondedAt   DateTime?
+  responseNotes String?
+  respondedById String?
+  respondedBy   User?     @relation("RespondedByCarrier", fields: [respondedById], references: [id])
 
   // Expiration
-  expiresAt         DateTime
+  expiresAt DateTime
 
   // Timestamps
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status])
   @@index([loadId])
@@ -1277,42 +1379,42 @@ model TruckRequest {
 
 // SPRINT 18: LoadRequest - Carrier requests load from shipper
 model LoadRequest {
-  id                String            @id @default(cuid())
-  status            RequestStatus     @default(PENDING)
+  id     String        @id @default(cuid())
+  status RequestStatus @default(PENDING)
 
   // Load being requested by carrier
-  loadId            String
-  load              Load              @relation("LoadRequests", fields: [loadId], references: [id])
+  loadId String
+  load   Load   @relation("LoadRequests", fields: [loadId], references: [id])
 
   // Truck carrier wants to use
-  truckId           String
-  truck             Truck             @relation(fields: [truckId], references: [id])
+  truckId String
+  truck   Truck  @relation(fields: [truckId], references: [id])
 
   // Carrier making the request
-  carrierId         String
-  carrier           Organization      @relation("CarrierLoadRequests", fields: [carrierId], references: [id])
-  requestedById     String
-  requestedBy       User              @relation("LoadRequestedBy", fields: [requestedById], references: [id])
+  carrierId     String
+  carrier       Organization @relation("CarrierLoadRequests", fields: [carrierId], references: [id])
+  requestedById String
+  requestedBy   User         @relation("LoadRequestedBy", fields: [requestedById], references: [id])
 
   // Shipper who owns the load (must approve)
-  shipperId         String
-  shipper           Organization      @relation("ShipperLoadRequests", fields: [shipperId], references: [id])
+  shipperId String
+  shipper   Organization @relation("ShipperLoadRequests", fields: [shipperId], references: [id])
 
   // Request metadata
-  notes             String?
-  proposedRate      Decimal?          @db.Decimal(10, 2)
+  notes        String?
+  proposedRate Decimal? @db.Decimal(10, 2)
 
   // Response from shipper
-  respondedAt       DateTime?
-  responseNotes     String?
-  respondedById     String?
-  respondedBy       User?             @relation("LoadRequestRespondedBy", fields: [respondedById], references: [id])
+  respondedAt   DateTime?
+  responseNotes String?
+  respondedById String?
+  respondedBy   User?     @relation("LoadRequestRespondedBy", fields: [respondedById], references: [id])
 
   // Expiration
-  expiresAt         DateTime
+  expiresAt DateTime
 
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status])
   @@index([loadId])
@@ -1323,56 +1425,56 @@ model LoadRequest {
 }
 
 model CompanyDocument {
-  id                 String                @id @default(cuid())
-  type               CompanyDocumentType
-  fileName           String
-  fileUrl            String
-  fileSize           Int                   // bytes
-  mimeType           String
-  
+  id       String              @id @default(cuid())
+  type     CompanyDocumentType
+  fileName String
+  fileUrl  String
+  fileSize Int // bytes
+  mimeType String
+
   // Verification
-  verificationStatus VerificationStatus    @default(PENDING)
+  verificationStatus VerificationStatus @default(PENDING)
   verifiedById       String?
   verifiedAt         DateTime?
   rejectionReason    String?
-  
+
   // Metadata
-  uploadedAt         DateTime              @default(now())
-  expiresAt          DateTime?             // License expiration
-  
+  uploadedAt DateTime  @default(now())
+  expiresAt  DateTime? // License expiration
+
   // Relations
-  organizationId     String
-  organization       Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  uploadedById       String
-  
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedById   String
+
   @@index([organizationId])
   @@index([verificationStatus])
   @@map("company_documents")
 }
 
 model TruckDocument {
-  id                 String              @id @default(cuid())
-  type               TruckDocumentType
-  fileName           String
-  fileUrl            String
-  fileSize           Int
-  mimeType           String
-  
+  id       String            @id @default(cuid())
+  type     TruckDocumentType
+  fileName String
+  fileUrl  String
+  fileSize Int
+  mimeType String
+
   // Verification
-  verificationStatus VerificationStatus  @default(PENDING)
+  verificationStatus VerificationStatus @default(PENDING)
   verifiedById       String?
   verifiedAt         DateTime?
   rejectionReason    String?
-  
+
   // Metadata
-  uploadedAt         DateTime            @default(now())
-  expiresAt          DateTime?
-  
+  uploadedAt DateTime  @default(now())
+  expiresAt  DateTime?
+
   // Relations
-  truckId            String
-  truck              Truck               @relation(fields: [truckId], references: [id], onDelete: Cascade)
-  uploadedById       String
-  
+  truckId      String
+  truck        Truck  @relation(fields: [truckId], references: [id], onDelete: Cascade)
+  uploadedById String
+
   @@index([truckId])
   @@index([verificationStatus])
   @@map("truck_documents")
@@ -1386,13 +1488,13 @@ model SavedSearch {
   id        String     @id @default(cuid())
   name      String
   type      SearchType // LOADS or TRUCKS
-  criteria  Json       // Flexible search criteria
+  criteria  Json // Flexible search criteria
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
   // Relations
-  userId    String
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([type])
@@ -1407,12 +1509,12 @@ model Notification {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      String   // GPS_OFFLINE, POD_SUBMITTED, USER_SUSPENDED, etc.
+  type      String // GPS_OFFLINE, POD_SUBMITTED, USER_SUSPENDED, etc.
   title     String
   message   String   @db.Text
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
-  metadata  Json?    // Additional context (loadId, exceptionId, etc.)
+  metadata  Json? // Additional context (loadId, exceptionId, etc.)
 
   @@index([userId, read])
   @@index([createdAt])
@@ -1424,42 +1526,42 @@ model Notification {
 // ============================================================================
 
 model AutomationRule {
-  id               String             @id @default(cuid())
-  name             String             // Descriptive name (e.g., "Late Pickup Alert - 2hr Grace")
-  description      String?            // Detailed description
+  id          String  @id @default(cuid())
+  name        String // Descriptive name (e.g., "Late Pickup Alert - 2hr Grace")
+  description String? // Detailed description
 
   // Rule Type & Configuration
-  ruleType         RuleType           // TIME_BASED, GPS_BASED, THRESHOLD_BASED, CUSTOM
-  trigger          RuleTrigger        // When to evaluate this rule
+  ruleType RuleType // TIME_BASED, GPS_BASED, THRESHOLD_BASED, CUSTOM
+  trigger  RuleTrigger // When to evaluate this rule
 
   // Conditions (JSON)
-  conditions       Json               // Flexible conditions: { field, operator, value, thresholds }
+  conditions Json // Flexible conditions: { field, operator, value, thresholds }
   // Example: { "graceHours": 2, "status": ["ASSIGNED", "PICKUP_PENDING"], "hoursLateForHigh": 4 }
 
   // Actions (JSON array)
-  actions          Json               // Array of actions to execute
+  actions Json // Array of actions to execute
   // Example: [{ "type": "CREATE_ESCALATION", "escalationType": "LATE_PICKUP", "priority": "MEDIUM" }]
 
   // Status & Control
-  isEnabled        Boolean            @default(true)
-  isSystem         Boolean            @default(false)  // System rules can't be deleted
-  priority         Int                @default(0)      // Execution order (higher = first)
+  isEnabled Boolean @default(true)
+  isSystem  Boolean @default(false) // System rules can't be deleted
+  priority  Int     @default(0) // Execution order (higher = first)
 
   // Scheduling (for ON_SCHEDULE triggers)
-  schedulePattern  String?            // Cron-like pattern: "*/5 * * * *" (every 5 minutes)
-  lastExecutedAt   DateTime?          // When it was last run
-  nextExecutionAt  DateTime?          // When it should run next
+  schedulePattern String? // Cron-like pattern: "*/5 * * * *" (every 5 minutes)
+  lastExecutedAt  DateTime? // When it was last run
+  nextExecutionAt DateTime? // When it should run next
 
   // Metadata
-  createdBy        String             // User ID
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  executionCount   Int                @default(0)      // How many times executed
-  successCount     Int                @default(0)      // Successful executions
-  failureCount     Int                @default(0)      // Failed executions
+  createdBy      String // User ID
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  executionCount Int      @default(0) // How many times executed
+  successCount   Int      @default(0) // Successful executions
+  failureCount   Int      @default(0) // Failed executions
 
   // Relations
-  executions       AutomationRuleExecution[]
+  executions AutomationRuleExecution[]
 
   @@index([ruleType])
   @@index([trigger])
@@ -1469,22 +1571,22 @@ model AutomationRule {
 }
 
 model AutomationRuleExecution {
-  id               String            @id @default(cuid())
+  id String @id @default(cuid())
 
   // Execution Details
-  status           ExecutionStatus   // PENDING, RUNNING, COMPLETED, FAILED
-  executedAt       DateTime          @default(now())
-  completedAt      DateTime?
+  status      ExecutionStatus // PENDING, RUNNING, COMPLETED, FAILED
+  executedAt  DateTime        @default(now())
+  completedAt DateTime?
 
   // Results
-  result           Json?             // Execution result (actions taken, errors, etc.)
-  matchedLoads     Int               @default(0)      // How many loads matched
-  actionsExecuted  Int               @default(0)      // How many actions executed
-  errorMessage     String?           // Error details if failed
+  result          Json? // Execution result (actions taken, errors, etc.)
+  matchedLoads    Int     @default(0) // How many loads matched
+  actionsExecuted Int     @default(0) // How many actions executed
+  errorMessage    String? // Error details if failed
 
   // Relations
-  ruleId           String
-  rule             AutomationRule    @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  ruleId String
+  rule   AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
 
   @@index([ruleId])
   @@index([status])
@@ -1493,20 +1595,20 @@ model AutomationRuleExecution {
 }
 
 enum RuleType {
-  TIME_BASED      // Time-based rules (late pickup, late delivery)
-  GPS_BASED       // GPS-based rules (offline, stalled)
+  TIME_BASED // Time-based rules (late pickup, late delivery)
+  GPS_BASED // GPS-based rules (offline, stalled)
   THRESHOLD_BASED // Threshold rules (custom metrics)
-  CUSTOM          // Custom JavaScript/logic rules
+  CUSTOM // Custom JavaScript/logic rules
 }
 
 enum RuleTrigger {
-  ON_LOAD_CREATED      // When load is created
-  ON_LOAD_ASSIGNED     // When load is assigned to carrier
-  ON_PICKUP_PENDING    // When load enters PICKUP_PENDING status
-  ON_IN_TRANSIT        // When load enters IN_TRANSIT status
-  ON_STATUS_CHANGE     // Any status change
-  ON_SCHEDULE          // Scheduled execution (cron-like)
-  ON_MANUAL            // Manual trigger by admin
+  ON_LOAD_CREATED // When load is created
+  ON_LOAD_ASSIGNED // When load is assigned to carrier
+  ON_PICKUP_PENDING // When load enters PICKUP_PENDING status
+  ON_IN_TRANSIT // When load enters IN_TRANSIT status
+  ON_STATUS_CHANGE // Any status change
+  ON_SCHEDULE // Scheduled execution (cron-like)
+  ON_MANUAL // Manual trigger by admin
 }
 
 enum ExecutionStatus {
@@ -1518,54 +1620,54 @@ enum ExecutionStatus {
 
 // Sprint 10 - Story 10.6: System Configuration
 model SystemSettings {
-  id                    String    @id @default("system")
+  id String @id @default("system")
 
   // Rate Limiting Configuration
-  rateLimitDocumentUpload  Int   @default(10)    // Per hour per user
-  rateLimitTruckPosting    Int   @default(100)   // Per day per carrier
-  rateLimitFileDownload    Int   @default(100)   // Per hour per user
-  rateLimitAuthAttempts    Int   @default(5)     // Per 15 minutes per IP
+  rateLimitDocumentUpload Int @default(10) // Per hour per user
+  rateLimitTruckPosting   Int @default(100) // Per day per carrier
+  rateLimitFileDownload   Int @default(100) // Per hour per user
+  rateLimitAuthAttempts   Int @default(5) // Per 15 minutes per IP
 
   // Match Score Thresholds
-  matchScoreMinimum     Int       @default(40)    // Minimum score to show match
-  matchScoreGood        Int       @default(70)    // Good match threshold
-  matchScoreExcellent   Int       @default(85)    // Excellent match threshold
+  matchScoreMinimum   Int @default(40) // Minimum score to show match
+  matchScoreGood      Int @default(70) // Good match threshold
+  matchScoreExcellent Int @default(85) // Excellent match threshold
 
   // Email Notification Toggles
-  emailNotificationsEnabled      Boolean @default(true)
-  emailNotifyDocumentApproval    Boolean @default(true)
-  emailNotifyDocumentRejection   Boolean @default(true)
-  emailNotifyLoadAssignment      Boolean @default(true)
-  emailNotifyPodVerification     Boolean @default(true)
+  emailNotificationsEnabled    Boolean @default(true)
+  emailNotifyDocumentApproval  Boolean @default(true)
+  emailNotifyDocumentRejection Boolean @default(true)
+  emailNotifyLoadAssignment    Boolean @default(true)
+  emailNotifyPodVerification   Boolean @default(true)
 
   // Platform Fee Configuration (percentages)
-  shipperCommissionRate Decimal   @default(5.0)   @db.Decimal(5, 2)
-  carrierCommissionRate Decimal   @default(5.0)   @db.Decimal(5, 2)
+  shipperCommissionRate Decimal @default(5.0) @db.Decimal(5, 2)
+  carrierCommissionRate Decimal @default(5.0) @db.Decimal(5, 2)
 
   // File Upload Limits
-  maxFileUploadSizeMb   Int       @default(10)    // Max file size in MB
-  maxDocumentsPerEntity Int       @default(20)    // Max documents per entity
+  maxFileUploadSizeMb   Int @default(10) // Max file size in MB
+  maxDocumentsPerEntity Int @default(20) // Max documents per entity
 
   // General Settings
-  platformMaintenanceMode    Boolean  @default(false)
+  platformMaintenanceMode    Boolean @default(false)
   platformMaintenanceMessage String?
-  requireEmailVerification   Boolean  @default(false)
-  requirePhoneVerification   Boolean  @default(false)
+  requireEmailVerification   Boolean @default(false)
+  requirePhoneVerification   Boolean @default(false)
 
   // Settlement Automation Settings (Sprint 16 - Story 16.9A)
-  settlementAutomationEnabled  Boolean  @default(true)   // Enable/disable auto-settlement
-  autoVerifyPodEnabled         Boolean  @default(true)   // Enable/disable auto-POD verification
-  autoVerifyPodTimeoutHours    Int      @default(24)     // Hours before auto-verifying POD
-  settlementBatchSize          Int      @default(50)     // Max settlements to process per batch
-  emailNotifySettlementSuccess Boolean  @default(false)  // Notify admin on successful settlements
-  emailNotifySettlementFailure Boolean  @default(true)   // Notify admin on failed settlements
-  autoSettlementMinAmount      Decimal  @default(0)      @db.Decimal(10, 2) // Minimum amount for auto-settlement
-  autoSettlementMaxAmount      Decimal  @default(0)      @db.Decimal(10, 2) // Maximum amount for auto-settlement (0 = unlimited)
+  settlementAutomationEnabled  Boolean @default(true) // Enable/disable auto-settlement
+  autoVerifyPodEnabled         Boolean @default(true) // Enable/disable auto-POD verification
+  autoVerifyPodTimeoutHours    Int     @default(24) // Hours before auto-verifying POD
+  settlementBatchSize          Int     @default(50) // Max settlements to process per batch
+  emailNotifySettlementSuccess Boolean @default(false) // Notify admin on successful settlements
+  emailNotifySettlementFailure Boolean @default(true) // Notify admin on failed settlements
+  autoSettlementMinAmount      Decimal @default(0) @db.Decimal(10, 2) // Minimum amount for auto-settlement
+  autoSettlementMaxAmount      Decimal @default(0) @db.Decimal(10, 2) // Maximum amount for auto-settlement (0 = unlimited)
 
   // Metadata
-  lastModifiedBy   String
-  lastModifiedAt   DateTime @default(now()) @updatedAt
-  createdAt        DateTime @default(now())
+  lastModifiedBy String
+  lastModifiedAt DateTime @default(now()) @updatedAt
+  createdAt      DateTime @default(now())
 
   @@map("system_settings")
 }
@@ -1575,35 +1677,35 @@ model SystemSettings {
 // ============================================================================
 
 model Corridor {
-  id                String            @id @default(cuid())
-  name              String            // "Addis Ababa - Dire Dawa"
-  originRegion      String            // Ethiopian region name
-  destinationRegion String            // Ethiopian region name
-  distanceKm        Decimal           @db.Decimal(10, 2)
+  id                String  @id @default(cuid())
+  name              String // "Addis Ababa - Dire Dawa"
+  originRegion      String // Ethiopian region name
+  destinationRegion String // Ethiopian region name
+  distanceKm        Decimal @db.Decimal(10, 2)
 
   // Shipper pricing
-  pricePerKm        Decimal           @db.Decimal(10, 4) // ETB per km for shipper service fee (legacy, use shipperPricePerKm)
-  shipperPricePerKm Decimal?          @db.Decimal(10, 4) // ETB per km for shipper (if null, use pricePerKm)
-  shipperPromoFlag  Boolean           @default(false)
-  shipperPromoPct   Decimal?          @db.Decimal(5, 2)  // Shipper promo discount %
+  pricePerKm        Decimal  @db.Decimal(10, 4) // ETB per km for shipper service fee (legacy, use shipperPricePerKm)
+  shipperPricePerKm Decimal? @db.Decimal(10, 4) // ETB per km for shipper (if null, use pricePerKm)
+  shipperPromoFlag  Boolean  @default(false)
+  shipperPromoPct   Decimal? @db.Decimal(5, 2) // Shipper promo discount %
 
   // Carrier pricing
-  carrierPricePerKm Decimal?          @db.Decimal(10, 4) // ETB per km for carrier service fee
-  carrierPromoFlag  Boolean           @default(false)
-  carrierPromoPct   Decimal?          @db.Decimal(5, 2)  // Carrier promo discount %
+  carrierPricePerKm Decimal? @db.Decimal(10, 4) // ETB per km for carrier service fee
+  carrierPromoFlag  Boolean  @default(false)
+  carrierPromoPct   Decimal? @db.Decimal(5, 2) // Carrier promo discount %
 
-  direction         CorridorDirection @default(ONE_WAY)
-  promoFlag         Boolean           @default(false)    // Legacy - use shipperPromoFlag/carrierPromoFlag
-  promoDiscountPct  Decimal?          @db.Decimal(5, 2)  // Legacy - use shipperPromoPct/carrierPromoPct
-  isActive          Boolean           @default(true)
+  direction        CorridorDirection @default(ONE_WAY)
+  promoFlag        Boolean           @default(false) // Legacy - use shipperPromoFlag/carrierPromoFlag
+  promoDiscountPct Decimal?          @db.Decimal(5, 2) // Legacy - use shipperPromoPct/carrierPromoPct
+  isActive         Boolean           @default(true)
 
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  createdById       String?
-  createdBy         User?             @relation("CorridorCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+  createdBy   User?    @relation("CorridorCreatedBy", fields: [createdById], references: [id])
 
   // Relations
-  loads             Load[]            @relation("LoadCorridor")
+  loads Load[] @relation("LoadCorridor")
 
   @@unique([originRegion, destinationRegion, direction])
   @@index([isActive])
@@ -1617,16 +1719,15 @@ model Corridor {
 // ============================================================================
 
 model RouteCache {
-  id              String   @id @default(cuid())
-  cacheKey        String   @unique // "route:{originLat},{originLng}:{destLat},{destLng}"
-  distanceMeters  Decimal  @db.Decimal(12, 2)
-  distanceKm      Decimal  @db.Decimal(10, 2)
+  id              String  @id @default(cuid())
+  cacheKey        String  @unique // "route:{originLat},{originLng}:{destLat},{destLng}"
+  distanceMeters  Decimal @db.Decimal(12, 2)
+  distanceKm      Decimal @db.Decimal(10, 2)
   durationSeconds Int
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([createdAt])
   @@map("route_cache")
 }
-

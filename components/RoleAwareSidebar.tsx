@@ -282,9 +282,9 @@ const navigationSections: Record<string, NavSection[]> = {
     {
       title: 'Trips',
       items: [
-        { label: 'Approved Loads', href: '/carrier/trips?tab=approved', icon: '✅', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Ready to Start', href: '/carrier/trips?tab=approved', icon: '✅', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
         { label: 'Active Trips', href: '/carrier/trips?tab=active', icon: '🚚', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
-        { label: 'Completed Trips', href: '/carrier/trips?tab=completed', icon: '📜', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Trip History', href: '/carrier/trip-history', icon: '📜', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
       ],
     },
     {

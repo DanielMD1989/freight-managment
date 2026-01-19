@@ -1,20 +1,21 @@
 /**
  * Carrier Trips Page
  *
- * Sprint 18 - Story 18.2: Carrier manages trips by status
+ * Manages active trips - Ready to Start and In Progress
  *
  * Features:
- * - Tabs: Approved Loads | Active Trips | Completed Trips
+ * - Tabs: Ready to Start | Active Trips
  * - Trip actions: Start Trip, Confirm Pickup, End Trip
- * - Route playback for completed trips
  * - Live tracking for in-transit trips
+ *
+ * Completed trips are in /carrier/trip-history
  */
 
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import TripHistoryPlayback from '@/components/TripHistoryPlayback';
+import Link from 'next/link';
 import { csrfFetch } from '@/lib/csrfFetch';
 
 interface Trip {
@@ -25,6 +26,13 @@ interface Trip {
   truck: {
     id: string;
     licensePlate: string;
+    truckType?: string;
+    capacity?: number;
+  } | null;
+  load?: {
+    id: string;
+    pickupCity?: string;
+    deliveryCity?: string;
   };
   pickupCity: string;
   deliveryCity: string;
@@ -33,33 +41,33 @@ interface Trip {
   startedAt?: string;
   completedAt?: string;
   shipper?: {
+    id: string;
     name: string;
   };
-  shipperContactName?: string;
-  shipperContactPhone?: string;
-  distance?: number;
-  weight?: number;
+  carrier?: {
+    id: string;
+    name: string;
+  };
+  distance?: number | null;
+  weight?: number | null;
   truckType?: string;
-  rate?: number;
+  rate?: number | null;
+  trackingUrl?: string;
+  trackingEnabled?: boolean;
 }
 
-type TabType = 'approved' | 'active' | 'completed';
+type TabType = 'approved' | 'active';
 
 const TAB_CONFIG = {
   approved: {
-    label: 'Approved Loads',
+    label: 'Ready to Start',
     statuses: ['ASSIGNED'],
     emptyMessage: 'No approved loads waiting to start. When shippers approve your load requests, they will appear here.',
   },
   active: {
     label: 'Active Trips',
     statuses: ['PICKUP_PENDING', 'IN_TRANSIT'],
-    emptyMessage: 'No active trips. Start a trip from Approved Loads to see it here.',
-  },
-  completed: {
-    label: 'Completed Trips',
-    statuses: ['DELIVERED', 'COMPLETED'],
-    emptyMessage: 'No completed trips yet. Complete your first delivery to see trip history.',
+    emptyMessage: 'No active trips. Start a trip from Ready to Start to see it here.',
   },
 };
 
@@ -73,7 +81,6 @@ export default function CarrierTripsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTrips();
@@ -93,38 +100,23 @@ export default function CarrierTripsPage() {
 
       const statuses = TAB_CONFIG[activeTab].statuses;
       const params = new URLSearchParams();
-      params.set('myTrips', 'true');
+      params.set('status', statuses.join(','));
 
-      // For multiple statuses, we need to fetch all and filter client-side
-      // or make multiple requests - for simplicity, fetch all assigned trips
-      if (activeTab === 'active') {
-        // Fetch both PICKUP_PENDING and IN_TRANSIT
-        params.set('status', 'PICKUP_PENDING,IN_TRANSIT');
-      } else {
-        params.set('status', statuses.join(','));
-      }
-
-      const response = await fetch(`/api/loads?${params.toString()}`);
+      const response = await fetch(`/api/trips?${params.toString()}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch trips');
       }
 
       const data = await response.json();
-      // Filter by exact statuses in case API doesn't support comma-separated
-      const filteredTrips = (data.loads || [])
-        .filter((load: any) => statuses.includes(load.status))
-        .map((load: any) => ({
-          ...load,
-          loadId: load.id, // Use load.id as loadId for trip context
-          referenceNumber: `LOAD-${load.id.slice(-8).toUpperCase()}`,
-          // Map assignedTruck to truck for Trip interface
-          truck: load.assignedTruck ? {
-            id: load.assignedTruck.id,
-            licensePlate: load.assignedTruck.licensePlate,
-          } : null,
-        }));
-      setTrips(filteredTrips);
+      // The /api/trips endpoint now returns properly formatted trips
+      const fetchedTrips = (data.trips || []).map((trip: any) => ({
+        ...trip,
+        // Ensure pickupCity/deliveryCity are at top level
+        pickupCity: trip.pickupCity || trip.load?.pickupCity || 'Unknown',
+        deliveryCity: trip.deliveryCity || trip.load?.deliveryCity || 'Unknown',
+      }));
+      setTrips(fetchedTrips);
     } catch (err) {
       console.error('Error fetching trips:', err);
       setError('Failed to load trips');
@@ -133,12 +125,13 @@ export default function CarrierTripsPage() {
     }
   };
 
-  const handleStatusChange = async (loadId: string, newStatus: string) => {
-    setActionLoading(loadId);
+  const handleStatusChange = async (tripId: string, newStatus: string) => {
+    setActionLoading(tripId);
     setError(null);
 
     try {
-      const response = await csrfFetch(`/api/loads/${loadId}/status`, {
+      // Use the Trip API for status changes
+      const response = await csrfFetch(`/api/trips/${tripId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
@@ -157,8 +150,8 @@ export default function CarrierTripsPage() {
         setActiveTab('active');
         router.push('/carrier/trips?tab=active');
       } else if (newStatus === 'DELIVERED') {
-        setActiveTab('completed');
-        router.push('/carrier/trips?tab=completed');
+        // Delivered trips go to trip history
+        router.push('/carrier/trip-history');
       }
     } catch (err: any) {
       setError(err.message);
@@ -172,8 +165,9 @@ export default function CarrierTripsPage() {
     router.push(`/carrier/trips?tab=${tab}`);
   };
 
-  const handleViewDetails = (loadId: string) => {
-    router.push(`/carrier/trips/${loadId}`);
+  const handleViewDetails = (tripId: string, loadId?: string) => {
+    // Navigate to trip detail page - pass loadId for backward compatibility
+    router.push(`/carrier/trips/${loadId || tripId}`);
   };
 
   const formatDate = (dateString?: string) => {
@@ -227,7 +221,7 @@ export default function CarrierTripsPage() {
         return (
           <div className="flex gap-2">
             <button
-              onClick={() => window.location.href = `/carrier/map?tripId=${trip.loadId || trip.id}`}
+              onClick={() => window.location.href = `/carrier/map?tripId=${trip.id}`}
               className="px-3 py-1 text-xs font-medium text-green-600 bg-green-50 rounded hover:bg-green-100"
             >
               Track Live
@@ -241,24 +235,6 @@ export default function CarrierTripsPage() {
             </button>
           </div>
         );
-      case 'DELIVERED':
-        return (
-          <button
-            onClick={() => handleViewDetails(trip.id)}
-            className="px-3 py-1 text-xs font-medium text-purple-600 bg-purple-50 rounded hover:bg-purple-100"
-          >
-            Upload POD
-          </button>
-        );
-      case 'COMPLETED':
-        return (
-          <button
-            onClick={() => setSelectedTripId(trip.loadId || trip.id)}
-            className="px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded hover:bg-blue-100"
-          >
-            Replay Route
-          </button>
-        );
       default:
         return null;
     }
@@ -270,19 +246,16 @@ export default function CarrierTripsPage() {
   useEffect(() => {
     const fetchAllCounts = async () => {
       try {
-        const response = await fetch('/api/loads?myTrips=true');
+        // Fetch only active trips for counts (ASSIGNED, PICKUP_PENDING, IN_TRANSIT)
+        const response = await fetch('/api/trips?status=ASSIGNED,PICKUP_PENDING,IN_TRANSIT');
         if (response.ok) {
           const data = await response.json();
-          const transformedTrips = (data.loads || []).map((load: any) => ({
-            ...load,
-            loadId: load.id,
-            referenceNumber: `LOAD-${load.id.slice(-8).toUpperCase()}`,
-            truck: load.assignedTruck ? {
-              id: load.assignedTruck.id,
-              licensePlate: load.assignedTruck.licensePlate,
-            } : null,
+          const fetchedTrips = (data.trips || []).map((trip: any) => ({
+            ...trip,
+            pickupCity: trip.pickupCity || trip.load?.pickupCity || 'Unknown',
+            deliveryCity: trip.deliveryCity || trip.load?.deliveryCity || 'Unknown',
           }));
-          setAllTrips(transformedTrips);
+          setAllTrips(fetchedTrips);
         }
       } catch (err) {
         console.error('Error fetching counts:', err);
@@ -294,7 +267,6 @@ export default function CarrierTripsPage() {
   const tabCounts = {
     approved: allTrips.filter(t => TAB_CONFIG.approved.statuses.includes(t.status)).length,
     active: allTrips.filter(t => TAB_CONFIG.active.statuses.includes(t.status)).length,
-    completed: allTrips.filter(t => TAB_CONFIG.completed.statuses.includes(t.status)).length,
   };
 
   return (
@@ -307,12 +279,23 @@ export default function CarrierTripsPage() {
             Manage your load assignments and active deliveries
           </p>
         </div>
-        <button
-          onClick={fetchTrips}
-          className="px-4 py-2 text-sm font-medium text-[#1e9c99] bg-[#1e9c99]/10 rounded-lg hover:bg-[#1e9c99]/20"
-        >
-          Refresh
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/carrier/trip-history"
+            className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Trip History
+          </Link>
+          <button
+            onClick={fetchTrips}
+            className="px-4 py-2 text-sm font-medium text-[#1e9c99] bg-[#1e9c99]/10 rounded-lg hover:bg-[#1e9c99]/20"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Tab Navigation */}
@@ -352,19 +335,6 @@ export default function CarrierTripsPage() {
         </div>
       )}
 
-      {/* Trip Playback Modal */}
-      {selectedTripId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-4xl">
-            <TripHistoryPlayback
-              tripId={selectedTripId}
-              height="600px"
-              onClose={() => setSelectedTripId(null)}
-            />
-          </div>
-        </div>
-      )}
-
       {/* Trips Table */}
       {loading ? (
         <div className="animate-pulse space-y-4">
@@ -375,7 +345,7 @@ export default function CarrierTripsPage() {
       ) : trips.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 dark:bg-slate-800 rounded-lg">
           <div className="text-4xl mb-4">
-            {activeTab === 'approved' ? '✅' : activeTab === 'active' ? '🚚' : '📜'}
+            {activeTab === 'approved' ? '✅' : '🚚'}
           </div>
           <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
             {TAB_CONFIG[activeTab].emptyMessage}
@@ -411,7 +381,7 @@ export default function CarrierTripsPage() {
                 <tr
                   key={trip.id}
                   className="hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer"
-                  onClick={() => handleViewDetails(trip.id)}
+                  onClick={() => handleViewDetails(trip.id, trip.loadId)}
                 >
                   <td className="px-4 py-4">
                     <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -453,7 +423,7 @@ export default function CarrierTripsPage() {
                     <div className="flex gap-2">
                       {getActionButton(trip)}
                       <button
-                        onClick={() => handleViewDetails(trip.id)}
+                        onClick={() => handleViewDetails(trip.id, trip.loadId)}
                         className="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded hover:bg-gray-200 dark:bg-slate-600 dark:text-gray-300"
                       >
                         Details
@@ -467,33 +437,6 @@ export default function CarrierTripsPage() {
         </div>
       )}
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700">
-          <div className="text-2xl font-bold text-[#1e9c99]">
-            {tabCounts.approved}
-          </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">Ready to Start</div>
-        </div>
-        <div className="bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700">
-          <div className="text-2xl font-bold text-blue-600">
-            {tabCounts.active}
-          </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">Active Trips</div>
-        </div>
-        <div className="bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700">
-          <div className="text-2xl font-bold text-green-600">
-            {tabCounts.completed}
-          </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">Completed</div>
-        </div>
-        <div className="bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700">
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">
-            {allTrips.reduce((sum, t) => sum + (t.distance || 0), 0).toFixed(0)} km
-          </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">Total Distance</div>
-        </div>
-      </div>
     </div>
   );
 }
