@@ -3,6 +3,34 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../app.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/services/dashboard_service.dart';
+import '../../../core/services/trip_service.dart';
+import '../../../core/models/trip.dart';
+
+/// Provider for shipper dashboard data
+final shipperDashboardProvider =
+    FutureProvider.autoDispose<ShipperDashboardData?>((ref) async {
+  final service = DashboardService();
+  final result = await service.getShipperDashboard();
+  return result.success ? result.data : null;
+});
+
+/// Provider for shipper's active trips (shipments)
+final shipperActiveTripsProvider =
+    FutureProvider.autoDispose<List<Trip>>((ref) async {
+  final service = TripService();
+  final result = await service.getTrips(limit: 5);
+  if (!result.success) return [];
+  // Filter to show only active trips
+  return (result.data ?? [])
+      .where((t) =>
+          t.status == TripStatus.assigned ||
+          t.status == TripStatus.pickupPending ||
+          t.status == TripStatus.inTransit ||
+          t.status == TripStatus.delivered)
+      .take(5)
+      .toList();
+});
 
 class ShipperHomeScreen extends ConsumerWidget {
   const ShipperHomeScreen({super.key});
@@ -11,6 +39,8 @@ class ShipperHomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
     final user = authState.user;
+    final dashboardAsync = ref.watch(shipperDashboardProvider);
+    final activeTripsAsync = ref.watch(shipperActiveTripsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -26,143 +56,260 @@ class ShipperHomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Welcome card
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.secondary, Color(0xFF059669)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(shipperDashboardProvider);
+          ref.invalidate(shipperActiveTripsProvider);
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Welcome card with stats
+              dashboardAsync.when(
+                data: (data) => _WelcomeCard(user: user, data: data),
+                loading: () => _WelcomeCardLoading(user: user),
+                error: (_, __) => _WelcomeCardError(user: user),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Hello, ${user?.fullName ?? 'Shipper'}!',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
+              const SizedBox(height: 24),
+
+              // Quick actions
+              Text(
+                'Quick Actions',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Manage your shipments efficiently',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 14,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _ActionCard(
+                      icon: Icons.add_box,
+                      title: 'Post Load',
+                      color: AppColors.primary,
+                      onTap: () => context.push('/shipper/loads/post'),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      _StatCard(value: '3', label: 'Active', icon: Icons.local_shipping),
-                      const SizedBox(width: 12),
-                      _StatCard(value: '2', label: 'Pending', icon: Icons.pending),
-                      const SizedBox(width: 12),
-                      _StatCard(value: '15', label: 'Completed', icon: Icons.check_circle),
-                    ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _ActionCard(
+                      icon: Icons.search,
+                      title: 'Find Trucks',
+                      color: AppColors.secondary,
+                      onTap: () => context.go('/shipper/trucks'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _ActionCard(
+                      icon: Icons.inventory_2,
+                      title: 'My Loads',
+                      color: AppColors.warning,
+                      onTap: () => context.go('/shipper/loads'),
+                    ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            // Quick actions
-            Text(
-              'Quick Actions',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
+              // Active shipments
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Active Shipments',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _ActionCard(
-                    icon: Icons.add_box,
-                    title: 'Post Load',
-                    color: AppColors.primary,
-                    onTap: () {
-                      // TODO: Navigate to post load
-                    },
+                  TextButton(
+                    onPressed: () => context.go('/shipper/trips'),
+                    child: const Text('View All'),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _ActionCard(
-                    icon: Icons.search,
-                    title: 'Find Trucks',
-                    color: AppColors.secondary,
-                    onTap: () => context.go('/shipper/trucks'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _ActionCard(
-                    icon: Icons.track_changes,
-                    title: 'Track',
-                    color: AppColors.warning,
-                    onTap: () => context.go('/shipper/loads'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
+                ],
+              ),
+              const SizedBox(height: 12),
 
-            // Active shipments
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Active Shipments',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                TextButton(
-                  onPressed: () => context.go('/shipper/loads'),
-                  child: const Text('View All'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            _ShipmentCard(
-              loadId: 'LOAD-1001',
-              route: 'Addis Ababa → Mekelle',
-              status: 'In Transit',
-              statusColor: AppColors.primary,
-              eta: 'ETA: Today 5:00 PM',
-              progress: 0.7,
-            ),
-            const SizedBox(height: 12),
-            _ShipmentCard(
-              loadId: 'LOAD-1002',
-              route: 'Bahir Dar → Addis Ababa',
-              status: 'At Pickup',
-              statusColor: AppColors.warning,
-              eta: 'Pickup: Today 2:00 PM',
-              progress: 0.1,
-            ),
-          ],
+              activeTripsAsync.when(
+                data: (trips) => _ActiveShipmentsSection(trips: trips),
+                loading: () => const _ShipmentsLoading(),
+                error: (_, __) => const _ShipmentsError(),
+              ),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // TODO: Post new load
-        },
+        onPressed: () => context.push('/shipper/loads/post'),
         icon: const Icon(Icons.add),
         label: const Text('Post Load'),
         backgroundColor: AppColors.primary,
+      ),
+    );
+  }
+}
+
+class _WelcomeCard extends StatelessWidget {
+  final dynamic user;
+  final ShipperDashboardData? data;
+
+  const _WelcomeCard({required this.user, this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.secondary, Color(0xFF059669)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Hello, ${user?.fullName ?? 'Shipper'}!',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Manage your shipments efficiently',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.8),
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              _StatCard(
+                value: (data?.activeLoads ?? 0).toString(),
+                label: 'Active',
+                icon: Icons.local_shipping,
+              ),
+              const SizedBox(width: 12),
+              _StatCard(
+                value: (data?.inTransitLoads ?? 0).toString(),
+                label: 'In Transit',
+                icon: Icons.route,
+              ),
+              const SizedBox(width: 12),
+              _StatCard(
+                value: (data?.deliveredLoads ?? 0).toString(),
+                label: 'Delivered',
+                icon: Icons.check_circle,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WelcomeCardLoading extends StatelessWidget {
+  final dynamic user;
+
+  const _WelcomeCardLoading({required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.secondary, Color(0xFF059669)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Hello, ${user?.fullName ?? 'Shipper'}!',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Loading your dashboard...',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.8),
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Center(
+            child: CircularProgressIndicator(color: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WelcomeCardError extends StatelessWidget {
+  final dynamic user;
+
+  const _WelcomeCardError({required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.secondary, Color(0xFF059669)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Hello, ${user?.fullName ?? 'Shipper'}!',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Manage your shipments efficiently',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.8),
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              _StatCard(value: '-', label: 'Active', icon: Icons.local_shipping),
+              const SizedBox(width: 12),
+              _StatCard(value: '-', label: 'In Transit', icon: Icons.route),
+              const SizedBox(width: 12),
+              _StatCard(value: '-', label: 'Delivered', icon: Icons.check_circle),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -257,86 +404,250 @@ class _ActionCard extends StatelessWidget {
   }
 }
 
-class _ShipmentCard extends StatelessWidget {
-  final String loadId;
-  final String route;
-  final String status;
-  final Color statusColor;
-  final String eta;
-  final double progress;
+class _ActiveShipmentsSection extends StatelessWidget {
+  final List<Trip> trips;
 
-  const _ShipmentCard({
-    required this.loadId,
-    required this.route,
-    required this.status,
-    required this.statusColor,
-    required this.eta,
-    required this.progress,
+  const _ActiveShipmentsSection({required this.trips});
+
+  @override
+  Widget build(BuildContext context) {
+    if (trips.isEmpty) {
+      return _EmptyState(
+        icon: Icons.local_shipping,
+        message: 'No active shipments',
+        actionLabel: 'Post a Load',
+        onAction: () => context.push('/shipper/loads/post'),
+      );
+    }
+
+    return Column(
+      children: trips.map((trip) => _ShipmentCard(trip: trip)).toList(),
+    );
+  }
+}
+
+class _ShipmentCard extends StatelessWidget {
+  final Trip trip;
+
+  const _ShipmentCard({required this.trip});
+
+  @override
+  Widget build(BuildContext context) {
+    final statusColor = _getStatusColor(trip.status);
+    final progress = _getProgress(trip.status);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: () => context.push('/shipper/trips/${trip.id}'),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'TRIP-${trip.id.substring(0, 8).toUpperCase()}',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      trip.statusDisplay,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                trip.routeDisplay,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 4),
+              if (trip.truck != null)
+                Row(
+                  children: [
+                    Icon(Icons.local_shipping,
+                        size: 14, color: AppColors.textSecondary),
+                    const SizedBox(width: 4),
+                    Text(
+                      trip.truck!.licensePlate,
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                    if (trip.carrier != null) ...[
+                      const SizedBox(width: 12),
+                      Icon(Icons.business,
+                          size: 14, color: AppColors.textSecondary),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          trip.carrier!.name,
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 13,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: Colors.grey[200],
+                  valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                  minHeight: 6,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _getStatusColor(TripStatus status) {
+    switch (status) {
+      case TripStatus.assigned:
+        return Colors.blue;
+      case TripStatus.pickupPending:
+        return Colors.orange;
+      case TripStatus.inTransit:
+        return AppColors.primary;
+      case TripStatus.delivered:
+        return Colors.purple;
+      case TripStatus.completed:
+        return AppColors.success;
+      case TripStatus.cancelled:
+        return Colors.red;
+    }
+  }
+
+  double _getProgress(TripStatus status) {
+    switch (status) {
+      case TripStatus.assigned:
+        return 0.1;
+      case TripStatus.pickupPending:
+        return 0.25;
+      case TripStatus.inTransit:
+        return 0.6;
+      case TripStatus.delivered:
+        return 0.9;
+      case TripStatus.completed:
+        return 1.0;
+      case TripStatus.cancelled:
+        return 0.0;
+    }
+  }
+}
+
+class _ShipmentsLoading extends StatelessWidget {
+  const _ShipmentsLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: List.generate(
+        2,
+        (i) => Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Container(
+            height: 120,
+            padding: const EdgeInsets.all(16),
+            child: const Center(
+              child: CircularProgressIndicator(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ShipmentsError extends StatelessWidget {
+  const _ShipmentsError();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.red[50],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.error_outline, color: AppColors.error),
+          SizedBox(width: 12),
+          Text('Failed to load shipments'),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  const _EmptyState({
+    required this.icon,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  loadId,
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    status,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              route,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              eta,
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 14,
-              ),
-            ),
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 48, color: Colors.grey[400]),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            style: TextStyle(color: Colors.grey[600]),
+          ),
+          if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: progress,
-                backgroundColor: Colors.grey[200],
-                valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-                minHeight: 6,
-              ),
+            ElevatedButton(
+              onPressed: onAction,
+              child: Text(actionLabel!),
             ),
           ],
-        ),
+        ],
       ),
     );
   }

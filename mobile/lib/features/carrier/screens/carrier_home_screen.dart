@@ -101,7 +101,6 @@ class CarrierHomeScreen extends ConsumerWidget {
           ),
         ),
       ),
-      bottomNavigationBar: _BottomNav(),
     );
   }
 }
@@ -356,17 +355,17 @@ class _QuickActionsSection extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _QuickActionButton(
-                icon: Icons.post_add,
-                label: 'Post Truck',
-                onTap: () => context.push('/carrier/postings/create'),
+                icon: Icons.search,
+                label: 'Find Loads',
+                onTap: () => context.go('/carrier/loadboard'),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _QuickActionButton(
-                icon: Icons.search,
-                label: 'Find Loads',
-                onTap: () => context.push('/carrier/loads'),
+                icon: Icons.route,
+                label: 'My Trips',
+                onTap: () => context.go('/carrier/trips'),
               ),
             ),
           ],
@@ -655,53 +654,3 @@ class _SectionLoading extends StatelessWidget {
   }
 }
 
-class _BottomNav extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      currentIndex: 0,
-      onTap: (index) {
-        switch (index) {
-          case 0:
-            // Already on home
-            break;
-          case 1:
-            context.push('/carrier/trucks');
-            break;
-          case 2:
-            context.push('/carrier/loads');
-            break;
-          case 3:
-            context.push('/carrier/trips');
-            break;
-          case 4:
-            context.push('/profile');
-            break;
-        }
-      },
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: 'Home',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.local_shipping),
-          label: 'Trucks',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.inventory_2),
-          label: 'Loads',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.route),
-          label: 'Trips',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person),
-          label: 'Profile',
-        ),
-      ],
-    );
-  }
-}
