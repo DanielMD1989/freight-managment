@@ -29,6 +29,7 @@ import 'features/shipper/screens/shipper_truck_details_screen.dart';
 import 'features/shipper/screens/post_load_screen.dart';
 import 'features/shipper/screens/shipper_load_details_screen.dart';
 import 'features/shipper/screens/shipper_load_requests_screen.dart';
+import 'features/shipper/screens/shipper_truck_requests_screen.dart';
 import 'features/shared/screens/profile_screen.dart';
 import 'features/shared/screens/notifications_screen.dart';
 
@@ -615,6 +616,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => ShipperTruckDetailsScreen(
               truckId: state.pathParameters['id']!,
             ),
+          ),
+          GoRoute(
+            path: '/shipper/bookings',
+            builder: (context, state) => const ShipperTruckRequestsScreen(),
           ),
           GoRoute(
             path: '/shipper/trips',

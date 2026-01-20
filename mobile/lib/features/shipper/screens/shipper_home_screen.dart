@@ -102,13 +102,26 @@ class ShipperHomeScreen extends ConsumerWidget {
                       onTap: () => context.go('/shipper/trucks'),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
                   Expanded(
                     child: _ActionCard(
                       icon: Icons.inventory_2,
                       title: 'My Loads',
                       color: AppColors.warning,
                       onTap: () => context.go('/shipper/loads'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _ActionCard(
+                      icon: Icons.send,
+                      title: 'My Bookings',
+                      color: AppColors.info,
+                      onTap: () => context.push('/shipper/bookings'),
                     ),
                   ),
                 ],

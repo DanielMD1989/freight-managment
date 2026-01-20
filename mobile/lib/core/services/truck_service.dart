@@ -279,6 +279,77 @@ class TruckService {
       return ApiResponse.error('An unexpected error occurred: $e');
     }
   }
+
+  /// Get truck requests (for shipper to see their outgoing requests)
+  Future<ApiResponse<List<TruckRequest>>> getTruckRequests({
+    String? status,
+    String? truckId,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    try {
+      final params = <String, dynamic>{
+        'limit': limit.toString(),
+        'offset': offset.toString(),
+      };
+      if (status != null) params['status'] = status;
+      if (truckId != null) params['truckId'] = truckId;
+
+      final response = await _apiClient.dio.get(
+        '/api/truck-requests',
+        queryParameters: params,
+      );
+
+      if (response.statusCode == 200) {
+        final requests = (response.data['truckRequests'] as List? ?? [])
+            .map((json) => TruckRequest.fromJson(json))
+            .toList();
+        return ApiResponse.success(requests);
+      }
+
+      return ApiResponse.error(
+        response.data['error'] ?? 'Failed to load truck requests',
+        statusCode: response.statusCode,
+      );
+    } on DioException catch (e) {
+      return ApiResponse.error(e.friendlyMessage, statusCode: e.response?.statusCode);
+    } catch (e) {
+      return ApiResponse.error('An unexpected error occurred');
+    }
+  }
+
+  /// Respond to a truck request (carrier approves/rejects)
+  Future<ApiResponse<TruckRequest>> respondToTruckRequest({
+    required String requestId,
+    required String action, // APPROVE or REJECT
+    String? responseNotes,
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        'action': action,
+      };
+      if (responseNotes != null) data['responseNotes'] = responseNotes;
+
+      final response = await _apiClient.dio.post(
+        '/api/truck-requests/$requestId/respond',
+        data: data,
+      );
+
+      if (response.statusCode == 200) {
+        final request = TruckRequest.fromJson(response.data['request'] ?? response.data);
+        return ApiResponse.success(request);
+      }
+
+      return ApiResponse.error(
+        response.data['error'] ?? 'Failed to respond to request',
+        statusCode: response.statusCode,
+      );
+    } on DioException catch (e) {
+      return ApiResponse.error(e.friendlyMessage, statusCode: e.response?.statusCode);
+    } catch (e) {
+      return ApiResponse.error('An unexpected error occurred');
+    }
+  }
 }
 
 /// Truck search result with pagination
@@ -314,6 +385,7 @@ class TruckRequest {
   final DateTime? respondedAt;
   final DateTime createdAt;
   final Truck? truck;
+  final TruckRequestLoad? load;
 
   TruckRequest({
     required this.id,
@@ -328,6 +400,7 @@ class TruckRequest {
     this.respondedAt,
     required this.createdAt,
     this.truck,
+    this.load,
   });
 
   factory TruckRequest.fromJson(Map<String, dynamic> json) {
@@ -350,6 +423,7 @@ class TruckRequest {
           ? DateTime.parse(json['createdAt'])
           : DateTime.now(),
       truck: json['truck'] != null ? Truck.fromJson(json['truck']) : null,
+      load: json['load'] != null ? TruckRequestLoad.fromJson(json['load']) : null,
     );
   }
 
@@ -357,4 +431,36 @@ class TruckRequest {
   bool get isApproved => status == 'APPROVED';
   bool get isRejected => status == 'REJECTED';
   bool get isExpired => status == 'EXPIRED';
+}
+
+/// Minimal load info for truck requests
+class TruckRequestLoad {
+  final String id;
+  final String? pickupCity;
+  final String? deliveryCity;
+  final double? weight;
+  final String? truckType;
+
+  TruckRequestLoad({
+    required this.id,
+    this.pickupCity,
+    this.deliveryCity,
+    this.weight,
+    this.truckType,
+  });
+
+  factory TruckRequestLoad.fromJson(Map<String, dynamic> json) {
+    return TruckRequestLoad(
+      id: json['id'] ?? '',
+      pickupCity: json['pickupCity'],
+      deliveryCity: json['deliveryCity'],
+      weight: json['weight']?.toDouble(),
+      truckType: json['truckType'],
+    );
+  }
+
+  String get route => '${pickupCity ?? "N/A"} → ${deliveryCity ?? "N/A"}';
+  String get weightDisplay => weight != null
+      ? '${(weight! / 1000).toStringAsFixed(1)} tons'
+      : 'N/A';
 }
