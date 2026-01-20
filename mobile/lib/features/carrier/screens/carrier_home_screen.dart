@@ -382,6 +382,26 @@ class _QuickActionsSection extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _QuickActionButton(
+                icon: Icons.inbox,
+                label: 'Bookings',
+                onTap: () => context.push('/carrier/bookings'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _QuickActionButton(
+                icon: Icons.local_shipping,
+                label: 'My Trucks',
+                onTap: () => context.go('/carrier/trucks'),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
