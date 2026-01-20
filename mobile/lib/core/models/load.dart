@@ -337,6 +337,27 @@ class Load {
 
   String get weightDisplay => '${(weight / 1000).toStringAsFixed(1)} tons';
 
+  String get truckTypeDisplay {
+    switch (truckType) {
+      case TruckType.flatbed:
+        return 'Flatbed';
+      case TruckType.refrigerated:
+        return 'Refrigerated';
+      case TruckType.tanker:
+        return 'Tanker';
+      case TruckType.container:
+        return 'Container';
+      case TruckType.dryVan:
+        return 'Dry Van';
+      case TruckType.lowboy:
+        return 'Lowboy';
+      case TruckType.dumpTruck:
+        return 'Dump Truck';
+      case TruckType.boxTruck:
+        return 'Box Truck';
+    }
+  }
+
   String get distanceDisplay {
     final km = estimatedTripKm ?? tripKm;
     return km != null ? '${km.toStringAsFixed(0)} km' : 'N/A';

@@ -449,7 +449,7 @@ class _ShipperLoadDetailsScreenState
               spacing: 8,
               runSpacing: 8,
               children: [
-                _buildInfoChip(Icons.local_shipping, truckTypeDisplayName(load.truckType)),
+                _buildInfoChip(Icons.local_shipping, load.truckTypeDisplay),
                 _buildInfoChip(Icons.scale, load.weightDisplay),
                 _buildInfoChip(
                   Icons.view_in_ar,
@@ -643,14 +643,14 @@ class _ShipperLoadDetailsScreenState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        truck.plateNumber,
+                        truck.licensePlate,
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 16,
                         ),
                       ),
                       Text(
-                        truckTypeDisplayName(truck.truckType),
+                        truck.truckTypeDisplay,
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 13,
@@ -661,7 +661,7 @@ class _ShipperLoadDetailsScreenState
                 ),
               ],
             ),
-            if (truck.ownerName != null || truck.ownerPhone != null) ...[
+            if (truck.ownerName != null || truck.contactPhone != null) ...[
               const Divider(height: 24),
               Row(
                 children: const [
@@ -679,7 +679,7 @@ class _ShipperLoadDetailsScreenState
                   truck.ownerName!,
                   style: const TextStyle(fontSize: 15),
                 ),
-              if (truck.ownerPhone != null) ...[
+              if (truck.contactPhone != null) ...[
                 const SizedBox(height: 4),
                 Row(
                   children: [
@@ -687,7 +687,7 @@ class _ShipperLoadDetailsScreenState
                         size: 14, color: AppColors.textSecondary),
                     const SizedBox(width: 4),
                     Text(
-                      truck.ownerPhone!,
+                      truck.contactPhone!,
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
@@ -775,12 +775,12 @@ class _ShipperLoadDetailsScreenState
             children: [
               if (request.truck != null) ...[
                 Text(
-                  request.truck!.plateNumber,
+                  request.truck!.licensePlate,
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  truckTypeDisplayName(request.truck!.truckType),
+                  request.truck!.truckTypeDisplay,
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 13,

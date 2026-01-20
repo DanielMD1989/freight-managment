@@ -295,7 +295,7 @@ class _RequestCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            truckTypeDisplayName(request.load!.truckType),
+                            request.load!.truckTypeDisplay,
                             style: TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 13,
@@ -333,7 +333,7 @@ class _RequestCard extends StatelessWidget {
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              request.truck!.plateNumber,
+                              request.truck!.licensePlate,
                               style: TextStyle(
                                 color: AppColors.textSecondary,
                                 fontSize: 13,

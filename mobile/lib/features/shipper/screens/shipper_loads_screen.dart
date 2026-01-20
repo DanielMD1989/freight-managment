@@ -310,7 +310,7 @@ class _ActiveLoadCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      load.assignedTruck!.plateNumber,
+                      load.assignedTruck!.licensePlate,
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
@@ -638,7 +638,7 @@ class _CompletedLoadCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      load.assignedTruck!.plateNumber,
+                      load.assignedTruck!.licensePlate,
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,

@@ -251,7 +251,7 @@ class _LoadSummaryHeader extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      truckTypeDisplayName(load.truckType),
+                      load.truckTypeDisplay,
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
@@ -323,14 +323,14 @@ class _RequestCard extends StatelessWidget {
                     children: [
                       if (request.truck != null) ...[
                         Text(
-                          request.truck!.plateNumber,
+                          request.truck!.licensePlate,
                           style: const TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 16,
                           ),
                         ),
                         Text(
-                          truckTypeDisplayName(request.truck!.truckType),
+                          request.truck!.truckTypeDisplay,
                           style: TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 13,
