@@ -6,6 +6,7 @@ import '../../../app.dart';
 import '../../../core/models/load.dart';
 import '../../../core/models/truck.dart';
 import '../../../core/services/load_service.dart';
+import '../../../core/utils/foundation_rules.dart';
 
 /// Provider for fetching a single load by ID
 final shipperLoadDetailsProvider =
@@ -931,11 +932,28 @@ class _ShipperLoadDetailsScreenState
       child: SafeArea(
         child: Row(
           children: [
-            if (load.isActive) ...[
+            // Use LoadStateMachine to determine valid actions
+            if (LoadStateMachine.canEdit(load.status)) ...[
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => _editLoad(load),
                   child: const Text('Edit'),
+                ),
+              ),
+              const SizedBox(width: 12),
+            ],
+            if (load.status == LoadStatus.draft) ...[
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _postLoad(load),
+                  child: const Text('Post Load'),
+                ),
+              ),
+            ] else if (load.status == LoadStatus.posted) ...[
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _unpostLoad(load),
+                  child: const Text('Unpost'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -948,14 +966,41 @@ class _ShipperLoadDetailsScreenState
                   child: const Text('Cancel'),
                 ),
               ),
-            ] else if (load.isAssigned) ...[
+            ] else if (load.status == LoadStatus.unposted) ...[
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _postLoad(load),
+                  child: const Text('Re-Post'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _cancelLoad(load),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                  ),
+                  child: const Text('Cancel'),
+                ),
+              ),
+            ] else if (load.isActive) ...[
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _cancelLoad(load),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.error,
+                  ),
+                  child: const Text('Cancel'),
+                ),
+              ),
+            ] else if (LoadStateMachine.isInProgress(load.status)) ...[
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    // TODO: Contact carrier
+                    context.push('/shipper/map');
                   },
-                  icon: const Icon(Icons.phone),
-                  label: const Text('Contact Carrier'),
+                  icon: const Icon(Icons.map),
+                  label: const Text('Track Shipment'),
                 ),
               ),
             ],
@@ -1085,6 +1130,93 @@ class _ShipperLoadDetailsScreenState
     );
   }
 
+  Future<void> _postLoad(Load load) async {
+    setState(() => _isProcessing = true);
+
+    try {
+      final service = LoadService();
+      final result = await service.postLoad(load.id);
+
+      if (!mounted) return;
+
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Load posted successfully'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        ref.invalidate(shipperLoadDetailsProvider(widget.loadId));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.error ?? 'Failed to post load'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
+  }
+
+  Future<void> _unpostLoad(Load load) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Unpost Load'),
+        content: const Text(
+          'This will remove your load from the marketplace. '
+          'You can re-post it later.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Unpost'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isProcessing = true);
+
+    try {
+      final service = LoadService();
+      final result = await service.unpostLoad(load.id);
+
+      if (!mounted) return;
+
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Load unposted'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        ref.invalidate(shipperLoadDetailsProvider(widget.loadId));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.error ?? 'Failed to unpost load'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
+  }
+
   void _cancelLoad(Load load) {
     showDialog(
       context: context,
@@ -1118,7 +1250,7 @@ class _ShipperLoadDetailsScreenState
 
     try {
       final service = LoadService();
-      final result = await service.updateLoad(id: loadId, status: 'CANCELLED');
+      final result = await service.cancelLoad(loadId);
 
       if (!mounted) return;
 

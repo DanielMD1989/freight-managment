@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../app.dart';
 import '../../../core/models/truck.dart';
 import '../../../core/services/truck_service.dart';
+import '../../../core/utils/foundation_rules.dart';
 
 /// Provider for Ethiopian locations
 final ethiopianLocationsProvider =
@@ -33,6 +34,15 @@ final myTruckPostingsProvider =
   return result.success
       ? result.data!
       : TruckPostingsResult(postings: [], total: 0);
+});
+
+/// Provider for all active postings (for one-active-post validation)
+/// Per RULE_ONE_ACTIVE_POST_PER_TRUCK: Each truck can only have one active posting
+final allActivePostingsProvider =
+    FutureProvider.autoDispose<List<TruckPosting>>((ref) async {
+  final service = TruckService();
+  final result = await service.getMyTruckPostings(status: 'ACTIVE');
+  return result.success ? result.data!.postings : [];
 });
 
 /// Carrier Post Trucks Screen
@@ -467,6 +477,11 @@ class _PostTruckModalState extends ConsumerState<_PostTruckModal> {
   final _notesController = TextEditingController();
   bool _isSubmitting = false;
 
+  /// Track if selected truck already has an active posting
+  /// Per RULE_ONE_ACTIVE_POST_PER_TRUCK
+  bool _truckHasActivePosting = false;
+  String? _existingPostingInfo;
+
   @override
   void dispose() {
     _contactNameController.dispose();
@@ -475,12 +490,53 @@ class _PostTruckModalState extends ConsumerState<_PostTruckModal> {
     super.dispose();
   }
 
+  /// Check if truck has an active posting (RULE_ONE_ACTIVE_POST_PER_TRUCK)
+  void _checkTruckActivePosting(String? truckId) {
+    if (truckId == null) {
+      setState(() {
+        _truckHasActivePosting = false;
+        _existingPostingInfo = null;
+      });
+      return;
+    }
+
+    final activePostings = ref.read(allActivePostingsProvider).valueOrNull ?? [];
+    final existingPosting = activePostings
+        .where((p) => p.truckId == truckId)
+        .firstOrNull;
+
+    setState(() {
+      _truckHasActivePosting = existingPosting != null;
+      if (existingPosting != null) {
+        _existingPostingInfo =
+            '${existingPosting.originCityName ?? "Unknown"} → ${existingPosting.destinationCityName ?? "Any"} '
+            '(${DateFormat("MMM d").format(existingPosting.availableFrom)})';
+      } else {
+        _existingPostingInfo = null;
+      }
+    });
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedTruckId == null || _selectedOriginCityId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please select a truck and origin city'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    // RULE_ONE_ACTIVE_POST_PER_TRUCK: Block if truck has active posting
+    if (_truckHasActivePosting) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'This truck already has an active posting. '
+            'Please expire or delete the existing posting first.',
+          ),
           backgroundColor: AppColors.error,
         ),
       );
@@ -581,24 +637,124 @@ class _PostTruckModalState extends ConsumerState<_PostTruckModal> {
                       ),
                       const SizedBox(height: 8),
                       trucksAsync.when(
-                        data: (trucks) => DropdownButtonFormField<String>(
-                          value: _selectedTruckId,
-                          decoration: const InputDecoration(
-                            hintText: 'Select an approved truck',
-                          ),
-                          items: trucks.map((truck) {
-                            return DropdownMenuItem(
-                              value: truck.id,
-                              child: Text(
-                                '${truck.licensePlate} - ${truck.truckTypeDisplay}',
+                        data: (trucks) {
+                          final activePostings =
+                              ref.watch(allActivePostingsProvider).valueOrNull ?? [];
+                          final trucksWithActivePosting = activePostings
+                              .map((p) => p.truckId)
+                              .toSet();
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              DropdownButtonFormField<String>(
+                                value: _selectedTruckId,
+                                decoration: InputDecoration(
+                                  hintText: 'Select an approved truck',
+                                  errorText: _truckHasActivePosting
+                                      ? 'This truck already has an active posting'
+                                      : null,
+                                ),
+                                items: trucks.map((truck) {
+                                  final hasActivePosting =
+                                      trucksWithActivePosting.contains(truck.id);
+                                  return DropdownMenuItem(
+                                    value: truck.id,
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            '${truck.licensePlate} - ${truck.truckTypeDisplay}',
+                                            style: TextStyle(
+                                              color: hasActivePosting
+                                                  ? AppColors.warning
+                                                  : null,
+                                            ),
+                                          ),
+                                        ),
+                                        if (hasActivePosting)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.warning
+                                                  .withOpacity(0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: const Text(
+                                              'POSTED',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.warning,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() => _selectedTruckId = value);
+                                  _checkTruckActivePosting(value);
+                                },
+                                validator: (value) =>
+                                    value == null ? 'Required' : null,
                               ),
-                            );
-                          }).toList(),
-                          onChanged: (value) =>
-                              setState(() => _selectedTruckId = value),
-                          validator: (value) =>
-                              value == null ? 'Required' : null,
-                        ),
+                              // Warning for trucks with active posting
+                              if (_truckHasActivePosting &&
+                                  _existingPostingInfo != null) ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.warning.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: AppColors.warning.withOpacity(0.3),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.warning_amber_rounded,
+                                        color: AppColors.warning,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'One Active Post Per Truck',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12,
+                                                color: AppColors.warning,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              'Existing: $_existingPostingInfo',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color:
+                                                    AppColors.warning.withOpacity(0.8),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          );
+                        },
                         loading: () => const LinearProgressIndicator(),
                         error: (_, __) => const Text('Failed to load trucks'),
                       ),

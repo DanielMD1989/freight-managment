@@ -20,11 +20,20 @@ enum TruckRequestFilter { all, pending, approved, rejected }
 final truckRequestFilterProvider =
     StateProvider<TruckRequestFilter>((ref) => TruckRequestFilter.all);
 
-class ShipperTruckRequestsScreen extends ConsumerWidget {
+class ShipperTruckRequestsScreen extends ConsumerStatefulWidget {
   const ShipperTruckRequestsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ShipperTruckRequestsScreen> createState() =>
+      _ShipperTruckRequestsScreenState();
+}
+
+class _ShipperTruckRequestsScreenState
+    extends ConsumerState<ShipperTruckRequestsScreen> {
+  String? _cancellingRequestId;
+
+  @override
+  Widget build(BuildContext context) {
     final requestsAsync = ref.watch(shipperTruckRequestsProvider);
     final filter = ref.watch(truckRequestFilterProvider);
 
@@ -94,12 +103,16 @@ class ShipperTruckRequestsScreen extends ConsumerWidget {
                     padding: const EdgeInsets.all(16),
                     itemCount: sortedRequests.length,
                     itemBuilder: (context, index) {
+                      final request = sortedRequests[index];
                       return _RequestCard(
-                        request: sortedRequests[index],
+                        request: request,
+                        isCancelling: _cancellingRequestId == request.id,
                         onTap: () {
-                          context.push(
-                              '/shipper/trucks/${sortedRequests[index].truckId}');
+                          context.push('/shipper/trucks/${request.truckId}');
                         },
+                        onCancel: request.isPending
+                            ? () => _confirmCancel(request)
+                            : null,
                       );
                     },
                   ),
@@ -112,6 +125,67 @@ class ShipperTruckRequestsScreen extends ConsumerWidget {
     );
   }
 
+  Future<void> _confirmCancel(TruckRequest request) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Booking?'),
+        content: Text(
+          'Are you sure you want to cancel your booking request for '
+          '${request.truck?.licensePlate ?? "this truck"}?\n\n'
+          'You can request again later if needed.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Cancel Booking'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await _cancelRequest(request.id);
+    }
+  }
+
+  Future<void> _cancelRequest(String requestId) async {
+    setState(() => _cancellingRequestId = requestId);
+
+    try {
+      final service = TruckService();
+      final result = await service.cancelTruckRequest(requestId: requestId);
+
+      if (!mounted) return;
+
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Booking cancelled'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        ref.invalidate(shipperTruckRequestsProvider);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.error ?? 'Failed to cancel booking'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _cancellingRequestId = null);
+      }
+    }
+  }
+
   List<TruckRequest> _filterRequests(
       List<TruckRequest> requests, TruckRequestFilter filter) {
     switch (filter) {
@@ -122,7 +196,9 @@ class ShipperTruckRequestsScreen extends ConsumerWidget {
       case TruckRequestFilter.approved:
         return requests.where((r) => r.isApproved).toList();
       case TruckRequestFilter.rejected:
-        return requests.where((r) => r.isRejected || r.isExpired).toList();
+        return requests
+            .where((r) => r.isRejected || r.isExpired || r.isCancelled)
+            .toList();
     }
   }
 }
@@ -255,10 +331,14 @@ class _FilterChip extends StatelessWidget {
 class _RequestCard extends StatelessWidget {
   final TruckRequest request;
   final VoidCallback onTap;
+  final VoidCallback? onCancel;
+  final bool isCancelling;
 
   const _RequestCard({
     required this.request,
     required this.onTap,
+    this.onCancel,
+    this.isCancelling = false,
   });
 
   @override
@@ -444,34 +524,61 @@ class _RequestCard extends StatelessWidget {
                 ),
               ],
 
-              // Expiration warning for pending
-              if (request.isPending && request.expiresAt != null) ...[
+              // Expiration warning and cancel button for pending
+              if (request.isPending) ...[
                 const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.warning.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.timer,
-                        size: 18,
-                        color: AppColors.warning,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Expires ${dateFormat.format(request.expiresAt!)}',
-                        style: TextStyle(
+                if (request.expiresAt != null)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.timer,
+                          size: 18,
                           color: AppColors.warning,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        Text(
+                          'Expires ${dateFormat.format(request.expiresAt!)}',
+                          style: TextStyle(
+                            color: AppColors.warning,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                // Cancel button
+                if (onCancel != null) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: isCancelling ? null : onCancel,
+                      icon: isCancelling
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.error,
+                              ),
+                            )
+                          : const Icon(Icons.cancel_outlined, size: 18),
+                      label: Text(isCancelling ? 'Cancelling...' : 'Cancel Booking'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.error,
+                        side: const BorderSide(color: AppColors.error),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ],
           ),

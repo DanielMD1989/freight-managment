@@ -351,6 +351,42 @@ class TruckService {
     }
   }
 
+  /// Cancel a pending truck request (shipper cancels their own request)
+  /// Per RequestStateMachine: Only PENDING requests can be cancelled
+  Future<ApiResponse<TruckRequest>> cancelTruckRequest({
+    required String requestId,
+    String? cancellationReason,
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        'action': 'CANCEL',
+      };
+      if (cancellationReason != null) {
+        data['cancellationReason'] = cancellationReason;
+      }
+
+      final response = await _apiClient.dio.post(
+        '/api/truck-requests/$requestId/cancel',
+        data: data,
+      );
+
+      if (response.statusCode == 200) {
+        final request =
+            TruckRequest.fromJson(response.data['request'] ?? response.data);
+        return ApiResponse.success(request);
+      }
+
+      return ApiResponse.error(
+        response.data['error'] ?? 'Failed to cancel request',
+        statusCode: response.statusCode,
+      );
+    } on DioException catch (e) {
+      return ApiResponse.error(e.friendlyMessage, statusCode: e.response?.statusCode);
+    } catch (e) {
+      return ApiResponse.error('An unexpected error occurred');
+    }
+  }
+
   // ========== TRUCK POSTING METHODS ==========
 
   /// Get Ethiopian locations for city selection
@@ -681,6 +717,7 @@ class TruckRequest {
   bool get isApproved => status == 'APPROVED';
   bool get isRejected => status == 'REJECTED';
   bool get isExpired => status == 'EXPIRED';
+  bool get isCancelled => status == 'CANCELLED';
 }
 
 /// Minimal load info for truck requests

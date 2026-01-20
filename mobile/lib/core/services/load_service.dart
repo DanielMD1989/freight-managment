@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import '../api/api_client.dart';
 import '../models/load.dart';
 import '../models/truck.dart';
+import '../utils/foundation_rules.dart';
 
 /// Load service for searching and managing loads
 class LoadService {
@@ -214,6 +215,45 @@ class LoadService {
     } catch (e) {
       return ApiResponse.error('An unexpected error occurred');
     }
+  }
+
+  /// Update load status with validation
+  /// Uses LoadStateMachine to validate transitions before API call
+  Future<ApiResponse<Load>> updateLoadStatus({
+    required String loadId,
+    required LoadStatus currentStatus,
+    required LoadStatus newStatus,
+  }) async {
+    // Client-side validation using LoadStateMachine
+    if (!LoadStateMachine.canTransition(currentStatus, newStatus)) {
+      final validStatuses = LoadStateMachine.getValidNextStatuses(currentStatus)
+          .map((s) => s.name)
+          .join(', ');
+      return ApiResponse.error(
+        'Invalid status transition from ${currentStatus.name} to ${newStatus.name}. '
+        'Valid transitions: $validStatuses',
+      );
+    }
+
+    return updateLoad(
+      id: loadId,
+      status: loadStatusToString(newStatus),
+    );
+  }
+
+  /// Post a load (change status from DRAFT to POSTED)
+  Future<ApiResponse<Load>> postLoad(String loadId) async {
+    return updateLoad(id: loadId, status: 'POSTED');
+  }
+
+  /// Unpost a load (change status from POSTED to UNPOSTED)
+  Future<ApiResponse<Load>> unpostLoad(String loadId) async {
+    return updateLoad(id: loadId, status: 'UNPOSTED');
+  }
+
+  /// Cancel a load
+  Future<ApiResponse<Load>> cancelLoad(String loadId) async {
+    return updateLoad(id: loadId, status: 'CANCELLED');
   }
 
   /// Request a load (carrier)
