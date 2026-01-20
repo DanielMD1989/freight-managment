@@ -350,6 +350,226 @@ class TruckService {
       return ApiResponse.error('An unexpected error occurred');
     }
   }
+
+  // ========== TRUCK POSTING METHODS ==========
+
+  /// Get Ethiopian locations for city selection
+  Future<ApiResponse<List<EthiopianLocation>>> getEthiopianLocations() async {
+    try {
+      final response = await _apiClient.dio.get('/api/ethiopian-locations');
+
+      if (response.statusCode == 200) {
+        final locations = (response.data['locations'] as List? ?? [])
+            .map((json) => EthiopianLocation.fromJson(json))
+            .toList();
+        return ApiResponse.success(locations);
+      }
+
+      return ApiResponse.error(
+        response.data['error'] ?? 'Failed to load locations',
+        statusCode: response.statusCode,
+      );
+    } on DioException catch (e) {
+      return ApiResponse.error(e.friendlyMessage, statusCode: e.response?.statusCode);
+    } catch (e) {
+      return ApiResponse.error('An unexpected error occurred');
+    }
+  }
+
+  /// Get carrier's truck postings
+  Future<ApiResponse<TruckPostingsResult>> getMyTruckPostings({
+    String status = 'ACTIVE',
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    try {
+      final params = <String, dynamic>{
+        'status': status,
+        'limit': limit.toString(),
+        'offset': offset.toString(),
+      };
+
+      final response = await _apiClient.dio.get(
+        '/api/truck-postings',
+        queryParameters: params,
+      );
+
+      if (response.statusCode == 200) {
+        final postingsData = response.data['truckPostings'] ?? response.data['postings'] ?? [];
+        final postings = (postingsData as List)
+            .map((json) => TruckPosting.fromJson(json))
+            .toList();
+        final pagination = response.data['pagination'] ?? {};
+
+        return ApiResponse.success(TruckPostingsResult(
+          postings: postings,
+          total: pagination['total'] ?? postings.length,
+        ));
+      }
+
+      return ApiResponse.error(
+        response.data['error'] ?? 'Failed to load truck postings',
+        statusCode: response.statusCode,
+      );
+    } on DioException catch (e) {
+      return ApiResponse.error(e.friendlyMessage, statusCode: e.response?.statusCode);
+    } catch (e) {
+      return ApiResponse.error('An unexpected error occurred: $e');
+    }
+  }
+
+  /// Create a new truck posting
+  Future<ApiResponse<TruckPosting>> createTruckPosting({
+    required String truckId,
+    required String originCityId,
+    String? destinationCityId,
+    required DateTime availableFrom,
+    DateTime? availableTo,
+    String fullPartial = 'FULL',
+    double? availableLength,
+    double? availableWeight,
+    double? preferredDhToOriginKm,
+    double? preferredDhAfterDeliveryKm,
+    required String contactName,
+    required String contactPhone,
+    String? ownerName,
+    String? notes,
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        'truckId': truckId,
+        'originCityId': originCityId,
+        'availableFrom': availableFrom.toIso8601String(),
+        'fullPartial': fullPartial,
+        'contactName': contactName,
+        'contactPhone': contactPhone,
+      };
+      if (destinationCityId != null) data['destinationCityId'] = destinationCityId;
+      if (availableTo != null) data['availableTo'] = availableTo.toIso8601String();
+      if (availableLength != null) data['availableLength'] = availableLength;
+      if (availableWeight != null) data['availableWeight'] = availableWeight;
+      if (preferredDhToOriginKm != null) data['preferredDhToOriginKm'] = preferredDhToOriginKm;
+      if (preferredDhAfterDeliveryKm != null) data['preferredDhAfterDeliveryKm'] = preferredDhAfterDeliveryKm;
+      if (ownerName != null) data['ownerName'] = ownerName;
+      if (notes != null) data['notes'] = notes;
+
+      final response = await _apiClient.dio.post('/api/truck-postings', data: data);
+
+      if (response.statusCode == 201) {
+        final posting = TruckPosting.fromJson(response.data['truckPosting'] ?? response.data);
+        return ApiResponse.success(posting);
+      }
+
+      return ApiResponse.error(
+        response.data['error'] ?? 'Failed to create truck posting',
+        statusCode: response.statusCode,
+      );
+    } on DioException catch (e) {
+      return ApiResponse.error(e.friendlyMessage, statusCode: e.response?.statusCode);
+    } catch (e) {
+      return ApiResponse.error('An unexpected error occurred: $e');
+    }
+  }
+
+  /// Update a truck posting
+  Future<ApiResponse<TruckPosting>> updateTruckPosting({
+    required String postingId,
+    String? originCityId,
+    String? destinationCityId,
+    DateTime? availableFrom,
+    DateTime? availableTo,
+    String? fullPartial,
+    double? availableLength,
+    double? availableWeight,
+    String? contactName,
+    String? contactPhone,
+    String? notes,
+    String? status,
+  }) async {
+    try {
+      final data = <String, dynamic>{};
+      if (originCityId != null) data['originCityId'] = originCityId;
+      if (destinationCityId != null) data['destinationCityId'] = destinationCityId;
+      if (availableFrom != null) data['availableFrom'] = availableFrom.toIso8601String();
+      if (availableTo != null) data['availableTo'] = availableTo.toIso8601String();
+      if (fullPartial != null) data['fullPartial'] = fullPartial;
+      if (availableLength != null) data['availableLength'] = availableLength;
+      if (availableWeight != null) data['availableWeight'] = availableWeight;
+      if (contactName != null) data['contactName'] = contactName;
+      if (contactPhone != null) data['contactPhone'] = contactPhone;
+      if (notes != null) data['notes'] = notes;
+      if (status != null) data['status'] = status;
+
+      final response = await _apiClient.dio.patch(
+        '/api/truck-postings/$postingId',
+        data: data,
+      );
+
+      if (response.statusCode == 200) {
+        final posting = TruckPosting.fromJson(response.data['truckPosting'] ?? response.data);
+        return ApiResponse.success(posting);
+      }
+
+      return ApiResponse.error(
+        response.data['error'] ?? 'Failed to update truck posting',
+        statusCode: response.statusCode,
+      );
+    } on DioException catch (e) {
+      return ApiResponse.error(e.friendlyMessage, statusCode: e.response?.statusCode);
+    } catch (e) {
+      return ApiResponse.error('An unexpected error occurred');
+    }
+  }
+
+  /// Delete/unpost a truck posting
+  Future<ApiResponse<bool>> deleteTruckPosting(String postingId) async {
+    try {
+      final response = await _apiClient.dio.delete('/api/truck-postings/$postingId');
+
+      if (response.statusCode == 200) {
+        return ApiResponse.success(true);
+      }
+
+      return ApiResponse.error(
+        response.data['error'] ?? 'Failed to delete truck posting',
+        statusCode: response.statusCode,
+      );
+    } on DioException catch (e) {
+      return ApiResponse.error(e.friendlyMessage, statusCode: e.response?.statusCode);
+    } catch (e) {
+      return ApiResponse.error('An unexpected error occurred');
+    }
+  }
+
+  /// Get matching loads for a truck posting
+  Future<ApiResponse<List<MatchingLoad>>> getMatchingLoadsForPosting(
+    String postingId, {
+    int limit = 50,
+  }) async {
+    try {
+      final response = await _apiClient.dio.get(
+        '/api/truck-postings/$postingId/matching-loads',
+        queryParameters: {'limit': limit.toString()},
+      );
+
+      if (response.statusCode == 200) {
+        final matchesData = response.data['matches'] ?? [];
+        final matches = (matchesData as List)
+            .map((json) => MatchingLoad.fromJson(json))
+            .toList();
+        return ApiResponse.success(matches);
+      }
+
+      return ApiResponse.error(
+        response.data['error'] ?? 'Failed to load matching loads',
+        statusCode: response.statusCode,
+      );
+    } on DioException catch (e) {
+      return ApiResponse.error(e.friendlyMessage, statusCode: e.response?.statusCode);
+    } catch (e) {
+      return ApiResponse.error('An unexpected error occurred');
+    }
+  }
 }
 
 /// Truck search result with pagination
@@ -369,6 +589,36 @@ class TruckSearchResult {
   });
 
   bool get hasMore => page < pages;
+}
+
+/// Ethiopian location for city selection
+class EthiopianLocation {
+  final String id;
+  final String name;
+  final String region;
+  final double? latitude;
+  final double? longitude;
+
+  EthiopianLocation({
+    required this.id,
+    required this.name,
+    required this.region,
+    this.latitude,
+    this.longitude,
+  });
+
+  factory EthiopianLocation.fromJson(Map<String, dynamic> json) {
+    return EthiopianLocation(
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      region: json['region'] ?? '',
+      latitude: json['latitude']?.toDouble(),
+      longitude: json['longitude']?.toDouble(),
+    );
+  }
+
+  @override
+  String toString() => name;
 }
 
 /// Truck request model
@@ -456,6 +706,70 @@ class TruckRequestLoad {
       deliveryCity: json['deliveryCity'],
       weight: json['weight']?.toDouble(),
       truckType: json['truckType'],
+    );
+  }
+
+  String get route => '${pickupCity ?? "N/A"} → ${deliveryCity ?? "N/A"}';
+  String get weightDisplay => weight != null
+      ? '${(weight! / 1000).toStringAsFixed(1)} tons'
+      : 'N/A';
+}
+
+/// Result container for truck postings
+class TruckPostingsResult {
+  final List<TruckPosting> postings;
+  final int total;
+
+  TruckPostingsResult({
+    required this.postings,
+    required this.total,
+  });
+}
+
+/// Matching load from truck posting match
+class MatchingLoad {
+  final String id;
+  final String? pickupCity;
+  final String? deliveryCity;
+  final double? weight;
+  final String? truckType;
+  final String? cargoDescription;
+  final DateTime? pickupDate;
+  final String? fullPartial;
+  final double? distanceToOrigin;
+  final double? distanceAfterDelivery;
+  final int? matchScore;
+
+  MatchingLoad({
+    required this.id,
+    this.pickupCity,
+    this.deliveryCity,
+    this.weight,
+    this.truckType,
+    this.cargoDescription,
+    this.pickupDate,
+    this.fullPartial,
+    this.distanceToOrigin,
+    this.distanceAfterDelivery,
+    this.matchScore,
+  });
+
+  factory MatchingLoad.fromJson(Map<String, dynamic> json) {
+    final load = json['load'] ?? json;
+    return MatchingLoad(
+      id: load['id'] ?? '',
+      pickupCity: load['pickupCity'],
+      deliveryCity: load['deliveryCity'],
+      weight: load['weight']?.toDouble(),
+      truckType: load['truckType'],
+      cargoDescription: load['cargoDescription'],
+      pickupDate: load['pickupDate'] != null
+          ? DateTime.parse(load['pickupDate'])
+          : null,
+      fullPartial: load['fullPartial'],
+      distanceToOrigin: json['distanceToOrigin']?.toDouble(),
+      distanceAfterDelivery: json['distanceAfterDelivery']?.toDouble(),
+      matchScore: json['matchScore'],
     );
   }
 

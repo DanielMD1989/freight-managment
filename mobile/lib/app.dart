@@ -20,6 +20,7 @@ import 'features/carrier/screens/carrier_loadboard_screen.dart';
 import 'features/carrier/screens/load_details_screen.dart';
 import 'features/carrier/screens/carrier_load_requests_screen.dart';
 import 'features/carrier/screens/carrier_truck_requests_screen.dart';
+import 'features/carrier/screens/carrier_post_trucks_screen.dart';
 import 'features/shipper/screens/shipper_home_screen.dart';
 import 'features/shipper/screens/shipper_trips_screen.dart';
 import 'features/shipper/screens/shipper_trip_details_screen.dart';
@@ -31,8 +32,10 @@ import 'features/shipper/screens/post_load_screen.dart';
 import 'features/shipper/screens/shipper_load_details_screen.dart';
 import 'features/shipper/screens/shipper_load_requests_screen.dart';
 import 'features/shipper/screens/shipper_truck_requests_screen.dart';
+import 'features/shipper/screens/shipper_map_screen.dart';
 import 'features/shared/screens/profile_screen.dart';
 import 'features/shared/screens/notifications_screen.dart';
+import 'features/shared/screens/wallet_screen.dart';
 
 /// Provider for onboarding completion status
 final onboardingCompleteProvider = FutureProvider<bool>((ref) async {
@@ -578,6 +581,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
+            path: '/carrier/post-trucks',
+            builder: (context, state) => const CarrierPostTrucksScreen(),
+          ),
+          GoRoute(
             path: '/carrier/requests',
             builder: (context, state) => const CarrierLoadRequestsScreen(),
           ),
@@ -640,6 +647,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/shipper/loads/post',
             builder: (context, state) => const PostLoadScreen(),
           ),
+          GoRoute(
+            path: '/shipper/map',
+            builder: (context, state) => const ShipperMapScreen(),
+          ),
         ],
       ),
 
@@ -651,6 +662,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/notifications',
         builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: '/wallet',
+        builder: (context, state) => const WalletScreen(),
       ),
     ],
   );
@@ -681,6 +696,11 @@ class CarrierShell extends StatelessWidget {
             label: 'Find Loads',
           ),
           NavigationDestination(
+            icon: Icon(Icons.publish_outlined),
+            selectedIcon: Icon(Icons.publish),
+            label: 'Post Trucks',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.route_outlined),
             selectedIcon: Icon(Icons.route),
             label: 'Trips',
@@ -698,8 +718,9 @@ class CarrierShell extends StatelessWidget {
   int _calculateSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
     if (location.startsWith('/carrier/loadboard')) return 1;
-    if (location.startsWith('/carrier/trips')) return 2;
-    if (location.startsWith('/carrier/trucks')) return 3;
+    if (location.startsWith('/carrier/post-trucks')) return 2;
+    if (location.startsWith('/carrier/trips')) return 3;
+    if (location.startsWith('/carrier/trucks')) return 4;
     return 0;
   }
 
@@ -712,9 +733,12 @@ class CarrierShell extends StatelessWidget {
         context.go('/carrier/loadboard');
         break;
       case 2:
-        context.go('/carrier/trips');
+        context.go('/carrier/post-trucks');
         break;
       case 3:
+        context.go('/carrier/trips');
+        break;
+      case 4:
         context.go('/carrier/trucks');
         break;
     }
@@ -746,6 +770,11 @@ class ShipperShell extends StatelessWidget {
             label: 'My Loads',
           ),
           NavigationDestination(
+            icon: Icon(Icons.map_outlined),
+            selectedIcon: Icon(Icons.map),
+            label: 'Track',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.route_outlined),
             selectedIcon: Icon(Icons.route),
             label: 'Shipments',
@@ -763,8 +792,9 @@ class ShipperShell extends StatelessWidget {
   int _calculateSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
     if (location.startsWith('/shipper/loads')) return 1;
-    if (location.startsWith('/shipper/trips')) return 2;
-    if (location.startsWith('/shipper/trucks')) return 3;
+    if (location.startsWith('/shipper/map')) return 2;
+    if (location.startsWith('/shipper/trips')) return 3;
+    if (location.startsWith('/shipper/trucks')) return 4;
     return 0;
   }
 
@@ -777,9 +807,12 @@ class ShipperShell extends StatelessWidget {
         context.go('/shipper/loads');
         break;
       case 2:
-        context.go('/shipper/trips');
+        context.go('/shipper/map');
         break;
       case 3:
+        context.go('/shipper/trips');
+        break;
+      case 4:
         context.go('/shipper/trucks');
         break;
     }
