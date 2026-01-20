@@ -18,6 +18,7 @@ import 'features/carrier/screens/carrier_trip_details_screen.dart';
 import 'features/carrier/screens/pod_upload_screen.dart';
 import 'features/carrier/screens/carrier_loadboard_screen.dart';
 import 'features/carrier/screens/load_details_screen.dart';
+import 'features/carrier/screens/carrier_load_requests_screen.dart';
 import 'features/shipper/screens/shipper_home_screen.dart';
 import 'features/shipper/screens/shipper_trips_screen.dart';
 import 'features/shipper/screens/shipper_trip_details_screen.dart';
@@ -573,6 +574,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => LoadDetailsScreen(
               loadId: state.pathParameters['id']!,
             ),
+          ),
+          GoRoute(
+            path: '/carrier/requests',
+            builder: (context, state) => const CarrierLoadRequestsScreen(),
           ),
         ],
       ),

@@ -360,6 +360,18 @@ class _QuickActionsSection extends StatelessWidget {
                 onTap: () => context.go('/carrier/loadboard'),
               ),
             ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _QuickActionButton(
+                icon: Icons.send,
+                label: 'My Requests',
+                onTap: () => context.push('/carrier/requests'),
+              ),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: _QuickActionButton(
