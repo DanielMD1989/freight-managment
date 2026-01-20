@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../app.dart';
 
 class ShipperLoadsScreen extends StatelessWidget {
@@ -30,9 +31,7 @@ class ShipperLoadsScreen extends StatelessWidget {
           ],
         ),
         floatingActionButton: FloatingActionButton.extended(
-          onPressed: () {
-            // TODO: Post new load
-          },
+          onPressed: () => context.push('/shipper/loads/post'),
           icon: const Icon(Icons.add),
           label: const Text('Post Load'),
         ),

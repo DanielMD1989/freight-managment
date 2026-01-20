@@ -16,11 +16,16 @@ import 'features/carrier/screens/edit_truck_screen.dart';
 import 'features/carrier/screens/carrier_trips_screen.dart';
 import 'features/carrier/screens/carrier_trip_details_screen.dart';
 import 'features/carrier/screens/pod_upload_screen.dart';
+import 'features/carrier/screens/carrier_loadboard_screen.dart';
+import 'features/carrier/screens/load_details_screen.dart';
 import 'features/shipper/screens/shipper_home_screen.dart';
 import 'features/shipper/screens/shipper_trips_screen.dart';
 import 'features/shipper/screens/shipper_trip_details_screen.dart';
 import 'features/shipper/screens/shipper_loads_screen.dart';
 import 'features/shipper/screens/shipper_trucks_screen.dart';
+import 'features/shipper/screens/shipper_truckboard_screen.dart';
+import 'features/shipper/screens/shipper_truck_details_screen.dart';
+import 'features/shipper/screens/post_load_screen.dart';
 import 'features/shared/screens/profile_screen.dart';
 import 'features/shared/screens/notifications_screen.dart';
 
@@ -557,6 +562,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/carrier/map',
             builder: (context, state) => const CarrierMapScreen(),
           ),
+          GoRoute(
+            path: '/carrier/loadboard',
+            builder: (context, state) => const CarrierLoadboardScreen(),
+          ),
+          GoRoute(
+            path: '/carrier/loadboard/:id',
+            builder: (context, state) => LoadDetailsScreen(
+              loadId: state.pathParameters['id']!,
+            ),
+          ),
         ],
       ),
 
@@ -574,7 +589,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/shipper/trucks',
-            builder: (context, state) => const ShipperTrucksScreen(),
+            builder: (context, state) => const ShipperTruckboardScreen(),
+          ),
+          GoRoute(
+            path: '/shipper/trucks/:id',
+            builder: (context, state) => ShipperTruckDetailsScreen(
+              truckId: state.pathParameters['id']!,
+            ),
           ),
           GoRoute(
             path: '/shipper/trips',
@@ -585,6 +606,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => ShipperTripDetailsScreen(
               tripId: state.pathParameters['id']!,
             ),
+          ),
+          GoRoute(
+            path: '/shipper/loads/post',
+            builder: (context, state) => const PostLoadScreen(),
           ),
         ],
       ),
@@ -622,6 +647,11 @@ class CarrierShell extends StatelessWidget {
             label: 'Home',
           ),
           NavigationDestination(
+            icon: Icon(Icons.search_outlined),
+            selectedIcon: Icon(Icons.search),
+            label: 'Find Loads',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.route_outlined),
             selectedIcon: Icon(Icons.route),
             label: 'Trips',
@@ -631,11 +661,6 @@ class CarrierShell extends StatelessWidget {
             selectedIcon: Icon(Icons.local_shipping),
             label: 'Trucks',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.map_outlined),
-            selectedIcon: Icon(Icons.map),
-            label: 'Map',
-          ),
         ],
       ),
     );
@@ -643,9 +668,9 @@ class CarrierShell extends StatelessWidget {
 
   int _calculateSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
-    if (location.startsWith('/carrier/trips')) return 1;
-    if (location.startsWith('/carrier/trucks')) return 2;
-    if (location.startsWith('/carrier/map')) return 3;
+    if (location.startsWith('/carrier/loadboard')) return 1;
+    if (location.startsWith('/carrier/trips')) return 2;
+    if (location.startsWith('/carrier/trucks')) return 3;
     return 0;
   }
 
@@ -655,13 +680,13 @@ class CarrierShell extends StatelessWidget {
         context.go('/carrier');
         break;
       case 1:
-        context.go('/carrier/trips');
+        context.go('/carrier/loadboard');
         break;
       case 2:
-        context.go('/carrier/trucks');
+        context.go('/carrier/trips');
         break;
       case 3:
-        context.go('/carrier/map');
+        context.go('/carrier/trucks');
         break;
     }
   }
