@@ -21,7 +21,7 @@ import { checkSuspiciousCancellation } from "@/lib/bypassDetection";
 import { validateStateTransition, LoadStatus } from "@/lib/loadStateMachine";
 
 const updateLoadSchema = z.object({
-  status: z.enum(["DRAFT", "POSTED", "UNPOSTED", "ASSIGNED", "IN_TRANSIT", "DELIVERED", "CANCELLED", "EXPIRED"]).optional(),
+  status: z.enum(["DRAFT", "POSTED", "UNPOSTED", "ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT", "DELIVERED", "COMPLETED", "CANCELLED", "EXPIRED"]).optional(),
   pickupCity: z.string().min(2).optional(),
   pickupAddress: z.string().optional().nullable(),
   deliveryCity: z.string().min(2).optional(),
@@ -307,6 +307,59 @@ export async function PATCH(
         ...additionalData,
       },
     });
+
+    // Sync Trip status when Load status changes
+    if (validatedData.status) {
+      const tripStatusMap: Record<string, string> = {
+        'ASSIGNED': 'ASSIGNED',
+        'PICKUP_PENDING': 'PICKUP_PENDING',
+        'IN_TRANSIT': 'IN_TRANSIT',
+        'DELIVERED': 'DELIVERED',
+        'COMPLETED': 'COMPLETED',
+        'CANCELLED': 'CANCELLED',
+      };
+
+      const newTripStatus = tripStatusMap[validatedData.status];
+      if (newTripStatus) {
+        // Find and update associated Trip
+        const trip = await db.trip.findUnique({
+          where: { loadId: id },
+        });
+
+        if (trip) {
+          const tripUpdateData: any = {
+            status: newTripStatus,
+          };
+
+          // Set appropriate timestamps based on status transition
+          if (validatedData.status === 'PICKUP_PENDING' && !trip.startedAt) {
+            tripUpdateData.startedAt = new Date();
+          }
+          if (validatedData.status === 'IN_TRANSIT' && !trip.pickedUpAt) {
+            tripUpdateData.pickedUpAt = new Date();
+          }
+          if (validatedData.status === 'DELIVERED' && !trip.deliveredAt) {
+            tripUpdateData.deliveredAt = new Date();
+          }
+          if (validatedData.status === 'COMPLETED' && !trip.completedAt) {
+            tripUpdateData.completedAt = new Date();
+            tripUpdateData.trackingEnabled = false;
+          }
+          if (validatedData.status === 'CANCELLED' && !trip.cancelledAt) {
+            tripUpdateData.cancelledAt = new Date();
+            tripUpdateData.cancelledBy = session.userId;
+            tripUpdateData.trackingEnabled = false;
+          }
+
+          await db.trip.update({
+            where: { loadId: id },
+            data: tripUpdateData,
+          });
+
+          console.log(`[LoadAPI] Synced Trip status to ${newTripStatus} for load ${id}`);
+        }
+      }
+    }
 
     // Log truck unassignment if it happened
     const terminalStatuses = ['DELIVERED', 'COMPLETED', 'CANCELLED', 'EXPIRED'];

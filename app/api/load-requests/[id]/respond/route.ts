@@ -97,8 +97,36 @@ export async function POST(
       );
     }
 
-    // Check if request is still pending
+    // Validate request body first (needed for idempotency check)
+    const body = await request.json();
+    const validationResult = LoadRequestResponseSchema.safeParse(body);
+
+    if (!validationResult.success) {
+      return NextResponse.json(
+        {
+          error: 'Invalid request data',
+          details: validationResult.error.format(),
+        },
+        { status: 400 }
+      );
+    }
+
+    const data = validationResult.data;
+
+    // Check if request is still pending - handle idempotency
     if (loadRequest.status !== 'PENDING') {
+      // Idempotent: If already in the desired state, return success
+      if (
+        (loadRequest.status === 'APPROVED' && data.action === 'APPROVE') ||
+        (loadRequest.status === 'REJECTED' && data.action === 'REJECT')
+      ) {
+        return NextResponse.json({
+          request: loadRequest,
+          message: `Request was already ${loadRequest.status.toLowerCase()}`,
+          idempotent: true,
+        });
+      }
+
       return NextResponse.json(
         {
           error: `Request has already been ${loadRequest.status.toLowerCase()}`,
@@ -120,22 +148,6 @@ export async function POST(
         { status: 400 }
       );
     }
-
-    // Validate request body
-    const body = await request.json();
-    const validationResult = LoadRequestResponseSchema.safeParse(body);
-
-    if (!validationResult.success) {
-      return NextResponse.json(
-        {
-          error: 'Invalid request data',
-          details: validationResult.error.format(),
-        },
-        { status: 400 }
-      );
-    }
-
-    const data = validationResult.data;
 
     if (data.action === 'APPROVE') {
       // Check if load is still available

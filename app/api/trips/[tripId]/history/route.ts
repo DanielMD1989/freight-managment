@@ -190,6 +190,8 @@ export async function GET(
         avgSpeedKmh: avgSpeedKmh ? Math.round(avgSpeedKmh * 10) / 10 : null,
       },
       route,
+      // Also include 'positions' for mobile app compatibility
+      positions: route,
     });
   } catch (error) {
     console.error('Get trip history error:', error);

@@ -9,6 +9,7 @@
 
 import { db } from './db';
 import { Trip, TripStatus } from '@prisma/client';
+import crypto from 'crypto';
 
 /**
  * Create a trip when a load is assigned to a truck
@@ -207,10 +208,10 @@ export async function updateTripLocation(
  * Generate a unique tracking URL for a trip
  */
 function generateTrackingUrl(loadId: string): string {
-  const shortId = loadId.slice(-8);
-  const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substring(2, 6);
-  return `trip-${shortId}-${timestamp}-${random}`;
+  // Use cryptographically secure random bytes to prevent collisions
+  const randomBytes = crypto.randomBytes(12).toString('hex');
+  const shortId = loadId.slice(-6);
+  return `trip-${shortId}-${randomBytes}`;
 }
 
 /**

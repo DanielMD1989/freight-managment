@@ -147,19 +147,18 @@ export async function POST(
       },
     });
 
-    // Also update Load model for backward compatibility (first POD only)
-    const existingPods = await db.tripPod.count({ where: { tripId } });
-    if (existingPods === 1) {
-      // First POD - update Load model
-      await db.load.update({
-        where: { id: trip.loadId },
-        data: {
-          podUrl,
-          podSubmitted: true,
-          podSubmittedAt: new Date(),
-        },
-      });
-    }
+    // Update Load model for backward compatibility
+    // Always update to the most recent POD URL
+    const podCount = await db.tripPod.count({ where: { tripId } });
+    await db.load.update({
+      where: { id: trip.loadId },
+      data: {
+        podUrl,  // Always use latest POD
+        podSubmitted: true,
+        podSubmittedAt: new Date(),
+        // Store POD count in metadata for reference
+      },
+    });
 
     // Create load event
     await db.loadEvent.create({
