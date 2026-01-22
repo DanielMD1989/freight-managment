@@ -1,30 +1,130 @@
 /**
- * Caching Layer
+ * Global Caching Layer
  *
- * PHASE 4: Performance Optimization
+ * PHASE 3: Critical Architecture - Caching for 10K+ DAU
  *
- * Provides a unified caching interface with:
- * - In-memory LRU cache for development/single-server deployments
- * - Redis-compatible interface for production (swap adapter when ready)
- * - TTL support
- * - Cache invalidation patterns
- * - Memoization helpers
+ * Features:
+ * - Redis-backed distributed caching (production)
+ * - In-memory LRU fallback (development/single-server)
+ * - Automatic cache invalidation on writes
+ * - Hit/miss monitoring with 70%+ target hit rate
+ * - Domain-specific caching for common entities
  *
- * Usage:
- * ```typescript
- * import { cache, memoize } from '@/lib/cache';
+ * Cache Hierarchy:
+ * ┌─────────────────────────────────────────────────────────────┐
+ * │                      Application Layer                       │
+ * │  Sessions │ Users │ RBAC │ Loads │ Trucks │ Trips │ Geodata │
+ * └─────────────────────────────────────────────────────────────┘
+ *                              │
+ *              ┌───────────────┴───────────────┐
+ *              │                               │
+ *       ┌──────▼──────┐                 ┌──────▼──────┐
+ *       │    Redis    │                 │  In-Memory  │
+ *       │ (Production)│                 │  (Fallback) │
+ *       └─────────────┘                 └─────────────┘
  *
- * // Simple get/set
- * await cache.set('user:123', userData, 300); // 5 min TTL
- * const user = await cache.get('user:123');
- *
- * // Memoize expensive functions
- * const getCachedUser = memoize(
- *   (id: string) => db.user.findUnique({ where: { id } }),
- *   { ttlSeconds: 60, keyPrefix: 'user' }
- * );
- * ```
+ * TTL Strategy:
+ * - Sessions: 24h (long-lived, user-bound)
+ * - User profiles: 5min (frequently updated)
+ * - Permissions: 10min (RBAC changes rare)
+ * - Load/Truck lists: 30s (high churn, needs freshness)
+ * - Individual loads/trucks: 2min (balance freshness/performance)
+ * - Geodata: 24h (rarely changes)
+ * - Active trips: 1min (real-time updates)
  */
+
+import { redis, isRedisEnabled, RedisKeys } from './redis';
+
+// =============================================================================
+// CACHE METRICS & MONITORING
+// =============================================================================
+
+interface CacheMetrics {
+  hits: number;
+  misses: number;
+  sets: number;
+  deletes: number;
+  errors: number;
+  lastReset: number;
+}
+
+const metrics: Record<string, CacheMetrics> = {};
+
+function getOrCreateMetrics(namespace: string): CacheMetrics {
+  if (!metrics[namespace]) {
+    metrics[namespace] = {
+      hits: 0,
+      misses: 0,
+      sets: 0,
+      deletes: 0,
+      errors: 0,
+      lastReset: Date.now(),
+    };
+  }
+  return metrics[namespace];
+}
+
+function recordHit(namespace: string): void {
+  getOrCreateMetrics(namespace).hits++;
+}
+
+function recordMiss(namespace: string): void {
+  getOrCreateMetrics(namespace).misses++;
+}
+
+function recordSet(namespace: string): void {
+  getOrCreateMetrics(namespace).sets++;
+}
+
+function recordDelete(namespace: string): void {
+  getOrCreateMetrics(namespace).deletes++;
+}
+
+function recordError(namespace: string): void {
+  getOrCreateMetrics(namespace).errors++;
+}
+
+/**
+ * Get cache metrics for monitoring
+ */
+export function getCacheMetrics(): {
+  overall: { hitRate: number; totalHits: number; totalMisses: number };
+  byNamespace: Record<string, { hitRate: number; hits: number; misses: number }>;
+} {
+  let totalHits = 0;
+  let totalMisses = 0;
+  const byNamespace: Record<string, { hitRate: number; hits: number; misses: number }> = {};
+
+  for (const [ns, m] of Object.entries(metrics)) {
+    totalHits += m.hits;
+    totalMisses += m.misses;
+    const total = m.hits + m.misses;
+    byNamespace[ns] = {
+      hitRate: total > 0 ? Math.round((m.hits / total) * 100) : 0,
+      hits: m.hits,
+      misses: m.misses,
+    };
+  }
+
+  const total = totalHits + totalMisses;
+  return {
+    overall: {
+      hitRate: total > 0 ? Math.round((totalHits / total) * 100) : 0,
+      totalHits,
+      totalMisses,
+    },
+    byNamespace,
+  };
+}
+
+/**
+ * Reset cache metrics
+ */
+export function resetCacheMetrics(): void {
+  for (const key of Object.keys(metrics)) {
+    delete metrics[key];
+  }
+}
 
 // =============================================================================
 // CACHE INTERFACE
@@ -43,14 +143,14 @@ export interface CacheAdapter {
 export interface CacheOptions {
   /** Default TTL in seconds (default: 300 = 5 minutes) */
   defaultTtlSeconds?: number;
-  /** Maximum number of items in cache (for LRU, default: 1000) */
+  /** Maximum number of items in cache (for LRU, default: 5000) */
   maxSize?: number;
   /** Key prefix for namespacing */
   keyPrefix?: string;
 }
 
 // =============================================================================
-// LRU CACHE IMPLEMENTATION (In-Memory)
+// LRU CACHE IMPLEMENTATION (In-Memory Fallback)
 // =============================================================================
 
 interface CacheEntry<T> {
@@ -59,17 +159,13 @@ interface CacheEntry<T> {
   accessedAt: number;
 }
 
-/**
- * Simple LRU (Least Recently Used) cache implementation
- * Suitable for development and single-server deployments
- */
 class LRUCache implements CacheAdapter {
-  private cache = new Map<string, CacheEntry<any>>();
+  private cache = new Map<string, CacheEntry<unknown>>();
   private maxSize: number;
   private defaultTtl: number;
 
   constructor(options: CacheOptions = {}) {
-    this.maxSize = options.maxSize || 1000;
+    this.maxSize = options.maxSize || 5000;
     this.defaultTtl = options.defaultTtlSeconds || 300;
   }
 
@@ -142,7 +238,7 @@ class LRUCache implements CacheAdapter {
     }
 
     const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
-    return allKeys.filter(key => regex.test(key));
+    return allKeys.filter((key) => regex.test(key));
   }
 
   private evictLRU(): void {
@@ -167,8 +263,7 @@ class LRUCache implements CacheAdapter {
     }
   }
 
-  /** Get cache statistics */
-  getStats(): { size: number; maxSize: number; hitRate?: number } {
+  getStats(): { size: number; maxSize: number } {
     return {
       size: this.cache.size,
       maxSize: this.maxSize,
@@ -177,29 +272,16 @@ class LRUCache implements CacheAdapter {
 }
 
 // =============================================================================
-// REDIS ADAPTER (Placeholder for production)
+// REDIS CACHE IMPLEMENTATION
 // =============================================================================
 
-/**
- * Redis cache adapter placeholder
- *
- * To enable Redis:
- * 1. Install: npm install ioredis
- * 2. Set REDIS_URL environment variable
- * 3. Uncomment and configure this adapter
- */
-/*
-import Redis from 'ioredis';
-
 class RedisCache implements CacheAdapter {
-  private client: Redis;
   private defaultTtl: number;
   private keyPrefix: string;
 
   constructor(options: CacheOptions = {}) {
-    this.client = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
     this.defaultTtl = options.defaultTtlSeconds || 300;
-    this.keyPrefix = options.keyPrefix || 'freight:';
+    this.keyPrefix = options.keyPrefix || 'cache:';
   }
 
   private prefixKey(key: string): string {
@@ -207,141 +289,254 @@ class RedisCache implements CacheAdapter {
   }
 
   async get<T>(key: string): Promise<T | null> {
-    const data = await this.client.get(this.prefixKey(key));
-    if (!data) return null;
-    return JSON.parse(data) as T;
+    if (!redis) return null;
+
+    try {
+      const data = await redis.get(this.prefixKey(key));
+      if (!data) return null;
+      return JSON.parse(data) as T;
+    } catch (error) {
+      console.error('[Cache Redis] get error:', error);
+      return null;
+    }
   }
 
   async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
-    const ttl = ttlSeconds ?? this.defaultTtl;
-    const data = JSON.stringify(value);
+    if (!redis) return;
 
-    if (ttl > 0) {
-      await this.client.setex(this.prefixKey(key), ttl, data);
-    } else {
-      await this.client.set(this.prefixKey(key), data);
+    try {
+      const ttl = ttlSeconds ?? this.defaultTtl;
+      const data = JSON.stringify(value);
+
+      if (ttl > 0) {
+        await redis.setex(this.prefixKey(key), ttl, data);
+      } else {
+        await redis.set(this.prefixKey(key), data);
+      }
+    } catch (error) {
+      console.error('[Cache Redis] set error:', error);
     }
   }
 
   async delete(key: string): Promise<boolean> {
-    const result = await this.client.del(this.prefixKey(key));
-    return result > 0;
+    if (!redis) return false;
+
+    try {
+      const result = await redis.del(this.prefixKey(key));
+      return result > 0;
+    } catch (error) {
+      console.error('[Cache Redis] delete error:', error);
+      return false;
+    }
   }
 
   async deletePattern(pattern: string): Promise<number> {
-    const keys = await this.client.keys(this.prefixKey(pattern));
-    if (keys.length === 0) return 0;
-    return await this.client.del(...keys);
+    if (!redis) return 0;
+
+    try {
+      const keys = await redis.keys(this.prefixKey(pattern));
+      if (keys.length === 0) return 0;
+      return await redis.del(...keys);
+    } catch (error) {
+      console.error('[Cache Redis] deletePattern error:', error);
+      return 0;
+    }
   }
 
   async has(key: string): Promise<boolean> {
-    const exists = await this.client.exists(this.prefixKey(key));
-    return exists > 0;
+    if (!redis) return false;
+
+    try {
+      const exists = await redis.exists(this.prefixKey(key));
+      return exists > 0;
+    } catch (error) {
+      console.error('[Cache Redis] has error:', error);
+      return false;
+    }
   }
 
   async clear(): Promise<void> {
-    const keys = await this.client.keys(`${this.keyPrefix}*`);
-    if (keys.length > 0) {
-      await this.client.del(...keys);
+    if (!redis) return;
+
+    try {
+      const keys = await redis.keys(`${this.keyPrefix}*`);
+      if (keys.length > 0) {
+        await redis.del(...keys);
+      }
+    } catch (error) {
+      console.error('[Cache Redis] clear error:', error);
     }
   }
 
   async keys(pattern?: string): Promise<string[]> {
-    const searchPattern = pattern
-      ? this.prefixKey(pattern)
-      : `${this.keyPrefix}*`;
-    return await this.client.keys(searchPattern);
+    if (!redis) return [];
+
+    try {
+      const searchPattern = pattern ? this.prefixKey(pattern) : `${this.keyPrefix}*`;
+      return await redis.keys(searchPattern);
+    } catch (error) {
+      console.error('[Cache Redis] keys error:', error);
+      return [];
+    }
   }
 }
-*/
 
 // =============================================================================
-// CACHE INSTANCE
+// CACHE INSTANCE (Auto-select Redis or In-Memory)
 // =============================================================================
 
-/**
- * Global cache instance
- *
- * Uses in-memory LRU cache by default.
- * To switch to Redis, uncomment RedisCache and update this line.
- */
-export const cache: CacheAdapter = new LRUCache({
-  maxSize: 2000,
-  defaultTtlSeconds: 300, // 5 minutes default
+const inMemoryCache = new LRUCache({
+  maxSize: 5000,
+  defaultTtlSeconds: 300,
 });
 
-// =============================================================================
-// MEMOIZATION HELPERS
-// =============================================================================
+const redisCache = new RedisCache({
+  defaultTtlSeconds: 300,
+  keyPrefix: 'cache:',
+});
 
-export interface MemoizeOptions {
-  /** TTL in seconds (default: 60) */
-  ttlSeconds?: number;
-  /** Key prefix for cache keys */
-  keyPrefix?: string;
-  /** Custom key generator */
-  keyGenerator?: (...args: any[]) => string;
+/**
+ * Get the appropriate cache adapter based on Redis availability
+ */
+function getCacheAdapter(): CacheAdapter {
+  if (isRedisEnabled() && redis) {
+    return redisCache;
+  }
+  return inMemoryCache;
 }
 
 /**
- * Memoize an async function with caching
- *
- * @param fn The async function to memoize
- * @param options Memoization options
- * @returns Memoized function
- *
- * @example
- * ```typescript
- * const getCachedUser = memoize(
- *   (id: string) => db.user.findUnique({ where: { id } }),
- *   { ttlSeconds: 60, keyPrefix: 'user' }
- * );
- * ```
+ * Global cache instance (auto-selects Redis or in-memory)
  */
-export function memoize<TArgs extends any[], TResult>(
-  fn: (...args: TArgs) => Promise<TResult>,
-  options: MemoizeOptions = {}
-): (...args: TArgs) => Promise<TResult> {
-  const { ttlSeconds = 60, keyPrefix = 'memo', keyGenerator } = options;
+export const cache: CacheAdapter = {
+  async get<T>(key: string): Promise<T | null> {
+    const namespace = key.split(':')[0] || 'default';
+    const adapter = getCacheAdapter();
+    const result = await adapter.get<T>(key);
 
-  return async (...args: TArgs): Promise<TResult> => {
-    // Generate cache key
-    const key = keyGenerator
-      ? `${keyPrefix}:${keyGenerator(...args)}`
-      : `${keyPrefix}:${JSON.stringify(args)}`;
-
-    // Try to get from cache
-    const cached = await cache.get<TResult>(key);
-    if (cached !== null) {
-      return cached;
+    if (result !== null) {
+      recordHit(namespace);
+    } else {
+      recordMiss(namespace);
     }
 
-    // Execute function and cache result
-    const result = await fn(...args);
-    await cache.set(key, result, ttlSeconds);
-
     return result;
-  };
-}
+  },
+
+  async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
+    const namespace = key.split(':')[0] || 'default';
+    const adapter = getCacheAdapter();
+    await adapter.set(key, value, ttlSeconds);
+    recordSet(namespace);
+  },
+
+  async delete(key: string): Promise<boolean> {
+    const namespace = key.split(':')[0] || 'default';
+    const adapter = getCacheAdapter();
+    const result = await adapter.delete(key);
+    recordDelete(namespace);
+    return result;
+  },
+
+  async deletePattern(pattern: string): Promise<number> {
+    const adapter = getCacheAdapter();
+    return adapter.deletePattern(pattern);
+  },
+
+  async has(key: string): Promise<boolean> {
+    const adapter = getCacheAdapter();
+    return adapter.has(key);
+  },
+
+  async clear(): Promise<void> {
+    const adapter = getCacheAdapter();
+    return adapter.clear();
+  },
+
+  async keys(pattern?: string): Promise<string[]> {
+    const adapter = getCacheAdapter();
+    return adapter.keys(pattern);
+  },
+};
+
+// =============================================================================
+// TTL CONSTANTS (Optimized for 70%+ hit rate)
+// =============================================================================
+
+export const CacheTTL = {
+  /** Sessions: 24 hours - long-lived, user-bound */
+  SESSION: 24 * 60 * 60,
+  /** User profiles: 5 minutes - frequently updated */
+  USER_PROFILE: 5 * 60,
+  /** Permissions/RBAC: 10 minutes - rarely changes */
+  PERMISSIONS: 10 * 60,
+  /** Load/Truck listings: 30 seconds - high churn */
+  LISTINGS: 30,
+  /** Individual load/truck: 2 minutes - balance freshness */
+  ENTITY: 2 * 60,
+  /** Geodata/distances: 24 hours - static data */
+  GEODATA: 24 * 60 * 60,
+  /** Active trips: 1 minute - real-time updates */
+  ACTIVE_TRIP: 60,
+  /** Corridors: 1 hour - semi-static */
+  CORRIDOR: 60 * 60,
+  /** Locations: 24 hours - static reference data */
+  LOCATIONS: 24 * 60 * 60,
+} as const;
+
+// =============================================================================
+// CACHE KEYS
+// =============================================================================
+
+export const CacheKeys = {
+  // Session cache keys
+  session: (sessionId: string) => `session:${sessionId}`,
+  userSessions: (userId: string) => `session:user:${userId}`,
+
+  // User cache keys
+  user: (id: string) => `user:${id}`,
+  userByEmail: (email: string) => `user:email:${email}`,
+  userPermissions: (userId: string) => `permissions:user:${userId}`,
+
+  // Organization cache keys
+  organization: (id: string) => `org:${id}`,
+  orgPermissions: (orgId: string) => `permissions:org:${orgId}`,
+
+  // Load cache keys
+  load: (id: string) => `load:${id}`,
+  loadList: (filters: string) => `loads:list:${filters}`,
+  loadsByStatus: (status: string) => `loads:status:${status}`,
+  loadsByShipper: (shipperId: string) => `loads:shipper:${shipperId}`,
+  loadsByOrg: (orgId: string) => `loads:org:${orgId}`,
+
+  // Truck cache keys
+  truck: (id: string) => `truck:${id}`,
+  truckList: (filters: string) => `trucks:list:${filters}`,
+  truckPostings: (carrierId: string) => `trucks:postings:${carrierId}`,
+  trucksByOrg: (orgId: string) => `trucks:org:${orgId}`,
+
+  // Trip cache keys
+  trip: (id: string) => `trip:${id}`,
+  tripsByCarrier: (carrierId: string) => `trips:carrier:${carrierId}`,
+  tripsByShipper: (shipperId: string) => `trips:shipper:${shipperId}`,
+  activeTrips: () => 'trips:active',
+  activeTripsByOrg: (orgId: string) => `trips:active:org:${orgId}`,
+
+  // Geodata cache keys
+  locations: () => 'geodata:locations',
+  location: (id: string) => `geodata:location:${id}`,
+  distance: (originId: string, destId: string) => `geodata:distance:${originId}:${destId}`,
+  corridor: (originId: string, destId: string) => `geodata:corridor:${originId}:${destId}`,
+  corridors: () => 'geodata:corridors',
+  route: (originId: string, destId: string) => `geodata:route:${originId}:${destId}`,
+};
+
+// =============================================================================
+// CACHE HELPERS
+// =============================================================================
 
 /**
- * Cache-aside pattern helper
- *
- * Tries cache first, falls back to fetcher, caches result
- *
- * @param key Cache key
- * @param fetcher Function to fetch data if not in cache
- * @param ttlSeconds TTL for cached data
- * @returns Cached or freshly fetched data
- *
- * @example
- * ```typescript
- * const user = await cacheAside(
- *   `user:${userId}`,
- *   () => db.user.findUnique({ where: { id: userId } }),
- *   300
- * );
- * ```
+ * Cache-aside pattern: Try cache first, fallback to fetcher
  */
 export async function cacheAside<T>(
   key: string,
@@ -363,111 +558,444 @@ export async function cacheAside<T>(
   return result;
 }
 
+/**
+ * Memoize an async function with caching
+ */
+export function memoize<TArgs extends unknown[], TResult>(
+  fn: (...args: TArgs) => Promise<TResult>,
+  options: {
+    ttlSeconds?: number;
+    keyPrefix?: string;
+    keyGenerator?: (...args: TArgs) => string;
+  } = {}
+): (...args: TArgs) => Promise<TResult> {
+  const { ttlSeconds = 60, keyPrefix = 'memo', keyGenerator } = options;
+
+  return async (...args: TArgs): Promise<TResult> => {
+    const key = keyGenerator
+      ? `${keyPrefix}:${keyGenerator(...args)}`
+      : `${keyPrefix}:${JSON.stringify(args)}`;
+
+    const cached = await cache.get<TResult>(key);
+    if (cached !== null) {
+      return cached;
+    }
+
+    const result = await fn(...args);
+    await cache.set(key, result, ttlSeconds);
+
+    return result;
+  };
+}
+
 // =============================================================================
-// CACHE INVALIDATION HELPERS
+// CACHE INVALIDATION
 // =============================================================================
 
 /**
- * Invalidate cache entries for an entity
- *
- * @param entityType Entity type (e.g., 'user', 'load', 'truck')
- * @param entityId Entity ID
- *
- * @example
- * ```typescript
- * // After updating a user
- * await invalidateEntity('user', userId);
- * ```
+ * Invalidate cache for a specific entity
  */
-export async function invalidateEntity(
-  entityType: string,
-  entityId: string
-): Promise<void> {
+export async function invalidateEntity(entityType: string, entityId: string): Promise<void> {
   await cache.deletePattern(`${entityType}:${entityId}*`);
   await cache.deletePattern(`*:${entityType}:${entityId}*`);
 }
 
 /**
  * Invalidate all cache entries for an entity type
- *
- * @param entityType Entity type (e.g., 'user', 'load', 'truck')
- *
- * @example
- * ```typescript
- * // After bulk update
- * await invalidateEntityType('load');
- * ```
  */
 export async function invalidateEntityType(entityType: string): Promise<void> {
   await cache.deletePattern(`${entityType}:*`);
 }
 
-// =============================================================================
-// PREDEFINED CACHE KEYS
-// =============================================================================
-
 /**
- * Cache key generators for common entities
+ * Invalidation helpers for specific entity types
  */
-export const CacheKeys = {
-  // User cache keys
-  user: (id: string) => `user:${id}`,
-  userByEmail: (email: string) => `user:email:${email}`,
-  userSession: (sessionId: string) => `session:${sessionId}`,
+export const CacheInvalidation = {
+  /** Invalidate user and their related caches */
+  async user(userId: string): Promise<void> {
+    await Promise.all([
+      cache.deletePattern(`user:${userId}*`),
+      cache.deletePattern(`permissions:user:${userId}*`),
+      cache.deletePattern(`session:user:${userId}*`),
+    ]);
+  },
 
-  // Organization cache keys
-  organization: (id: string) => `org:${id}`,
-  organizationTrucks: (orgId: string) => `org:${orgId}:trucks`,
+  /** Invalidate organization and related caches */
+  async organization(orgId: string): Promise<void> {
+    await Promise.all([
+      cache.deletePattern(`org:${orgId}*`),
+      cache.deletePattern(`permissions:org:${orgId}*`),
+      cache.deletePattern(`loads:org:${orgId}*`),
+      cache.deletePattern(`trucks:org:${orgId}*`),
+      cache.deletePattern(`trips:*:org:${orgId}*`),
+    ]);
+  },
 
-  // Load cache keys
-  load: (id: string) => `load:${id}`,
-  loadsByStatus: (status: string) => `loads:status:${status}`,
-  loadsByShipper: (shipperId: string) => `loads:shipper:${shipperId}`,
+  /** Invalidate load and listing caches */
+  async load(loadId: string, shipperId?: string, orgId?: string): Promise<void> {
+    const promises = [
+      cache.delete(CacheKeys.load(loadId)),
+      cache.deletePattern('loads:list:*'),
+      cache.deletePattern('loads:status:*'),
+    ];
+    if (shipperId) {
+      promises.push(cache.delete(CacheKeys.loadsByShipper(shipperId)));
+    }
+    if (orgId) {
+      promises.push(cache.delete(CacheKeys.loadsByOrg(orgId)));
+    }
+    await Promise.all(promises);
+  },
 
-  // Truck cache keys
-  truck: (id: string) => `truck:${id}`,
-  truckPostings: (carrierId: string) => `truck-postings:carrier:${carrierId}`,
+  /** Invalidate truck and posting caches */
+  async truck(truckId: string, carrierId?: string, orgId?: string): Promise<void> {
+    const promises = [
+      cache.delete(CacheKeys.truck(truckId)),
+      cache.deletePattern('trucks:list:*'),
+    ];
+    if (carrierId) {
+      promises.push(cache.delete(CacheKeys.truckPostings(carrierId)));
+    }
+    if (orgId) {
+      promises.push(cache.delete(CacheKeys.trucksByOrg(orgId)));
+    }
+    await Promise.all(promises);
+  },
 
-  // Trip cache keys
-  trip: (id: string) => `trip:${id}`,
-  tripsByCarrier: (carrierId: string) => `trips:carrier:${carrierId}`,
+  /** Invalidate trip caches */
+  async trip(tripId: string, carrierId?: string, shipperId?: string, orgId?: string): Promise<void> {
+    const promises = [
+      cache.delete(CacheKeys.trip(tripId)),
+      cache.delete(CacheKeys.activeTrips()),
+    ];
+    if (carrierId) {
+      promises.push(cache.delete(CacheKeys.tripsByCarrier(carrierId)));
+    }
+    if (shipperId) {
+      promises.push(cache.delete(CacheKeys.tripsByShipper(shipperId)));
+    }
+    if (orgId) {
+      promises.push(cache.delete(CacheKeys.activeTripsByOrg(orgId)));
+    }
+    await Promise.all(promises);
+  },
 
-  // Location cache keys
-  locations: () => 'ethiopian-locations:all',
-  location: (id: string) => `location:${id}`,
+  /** Invalidate session cache */
+  async session(sessionId: string, userId?: string): Promise<void> {
+    const promises = [cache.delete(CacheKeys.session(sessionId))];
+    if (userId) {
+      promises.push(cache.delete(CacheKeys.userSessions(userId)));
+    }
+    await Promise.all(promises);
+  },
 
-  // Distance cache keys
-  distance: (origin: string, dest: string) => `distance:${origin}:${dest}`,
-
-  // Corridor cache keys
-  corridor: (origin: string, dest: string) => `corridor:${origin}:${dest}`,
-  corridors: () => 'corridors:all',
+  /** Invalidate all listing caches (after bulk operations) */
+  async allListings(): Promise<void> {
+    await Promise.all([
+      cache.deletePattern('loads:list:*'),
+      cache.deletePattern('loads:status:*'),
+      cache.deletePattern('trucks:list:*'),
+      cache.deletePattern('trips:active*'),
+    ]);
+  },
 };
 
 // =============================================================================
-// CACHE STATISTICS (for monitoring)
+// DOMAIN-SPECIFIC CACHING FUNCTIONS
 // =============================================================================
 
 /**
- * Get cache statistics
+ * Session caching
  */
-export function getCacheStats(): { size: number; maxSize: number } {
-  if (cache instanceof LRUCache) {
-    return (cache as any).getStats();
-  }
-  return { size: 0, maxSize: 0 };
+export const SessionCache = {
+  async get(sessionId: string): Promise<{
+    userId: string;
+    email: string;
+    role: string;
+    organizationId?: string;
+  } | null> {
+    return cache.get(CacheKeys.session(sessionId));
+  },
+
+  async set(
+    sessionId: string,
+    session: { userId: string; email: string; role: string; organizationId?: string }
+  ): Promise<void> {
+    await cache.set(CacheKeys.session(sessionId), session, CacheTTL.SESSION);
+  },
+
+  async delete(sessionId: string): Promise<void> {
+    await cache.delete(CacheKeys.session(sessionId));
+  },
+};
+
+/**
+ * User profile caching
+ */
+export const UserCache = {
+  async get(userId: string): Promise<{
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+    status: string;
+    organizationId?: string;
+  } | null> {
+    return cache.get(CacheKeys.user(userId));
+  },
+
+  async set(
+    userId: string,
+    user: {
+      id: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      role: string;
+      status: string;
+      organizationId?: string;
+    }
+  ): Promise<void> {
+    await cache.set(CacheKeys.user(userId), user, CacheTTL.USER_PROFILE);
+  },
+
+  async getByEmail(email: string): Promise<{ id: string } | null> {
+    return cache.get(CacheKeys.userByEmail(email));
+  },
+
+  async setByEmail(email: string, user: { id: string }): Promise<void> {
+    await cache.set(CacheKeys.userByEmail(email), user, CacheTTL.USER_PROFILE);
+  },
+
+  async invalidate(userId: string): Promise<void> {
+    await CacheInvalidation.user(userId);
+  },
+};
+
+/**
+ * Permissions (RBAC) caching
+ */
+export const PermissionsCache = {
+  async get(userId: string): Promise<{
+    role: string;
+    permissions: string[];
+    organizationId?: string;
+    organizationType?: string;
+  } | null> {
+    return cache.get(CacheKeys.userPermissions(userId));
+  },
+
+  async set(
+    userId: string,
+    permissions: {
+      role: string;
+      permissions: string[];
+      organizationId?: string;
+      organizationType?: string;
+    }
+  ): Promise<void> {
+    await cache.set(CacheKeys.userPermissions(userId), permissions, CacheTTL.PERMISSIONS);
+  },
+
+  async invalidate(userId: string): Promise<void> {
+    await cache.delete(CacheKeys.userPermissions(userId));
+  },
+};
+
+/**
+ * Load list caching
+ */
+export const LoadCache = {
+  async getById(loadId: string): Promise<unknown | null> {
+    return cache.get(CacheKeys.load(loadId));
+  },
+
+  async setById(loadId: string, load: unknown): Promise<void> {
+    await cache.set(CacheKeys.load(loadId), load, CacheTTL.ENTITY);
+  },
+
+  async getList(filters: Record<string, unknown>): Promise<unknown[] | null> {
+    const filterKey = JSON.stringify(filters);
+    return cache.get(CacheKeys.loadList(filterKey));
+  },
+
+  async setList(filters: Record<string, unknown>, loads: unknown[]): Promise<void> {
+    const filterKey = JSON.stringify(filters);
+    await cache.set(CacheKeys.loadList(filterKey), loads, CacheTTL.LISTINGS);
+  },
+
+  async invalidate(loadId: string, shipperId?: string, orgId?: string): Promise<void> {
+    await CacheInvalidation.load(loadId, shipperId, orgId);
+  },
+};
+
+/**
+ * Truck list caching
+ */
+export const TruckCache = {
+  async getById(truckId: string): Promise<unknown | null> {
+    return cache.get(CacheKeys.truck(truckId));
+  },
+
+  async setById(truckId: string, truck: unknown): Promise<void> {
+    await cache.set(CacheKeys.truck(truckId), truck, CacheTTL.ENTITY);
+  },
+
+  async getList(filters: Record<string, unknown>): Promise<unknown[] | null> {
+    const filterKey = JSON.stringify(filters);
+    return cache.get(CacheKeys.truckList(filterKey));
+  },
+
+  async setList(filters: Record<string, unknown>, trucks: unknown[]): Promise<void> {
+    const filterKey = JSON.stringify(filters);
+    await cache.set(CacheKeys.truckList(filterKey), trucks, CacheTTL.LISTINGS);
+  },
+
+  async invalidate(truckId: string, carrierId?: string, orgId?: string): Promise<void> {
+    await CacheInvalidation.truck(truckId, carrierId, orgId);
+  },
+};
+
+/**
+ * Trip caching
+ */
+export const TripCache = {
+  async getById(tripId: string): Promise<unknown | null> {
+    return cache.get(CacheKeys.trip(tripId));
+  },
+
+  async setById(tripId: string, trip: unknown): Promise<void> {
+    await cache.set(CacheKeys.trip(tripId), trip, CacheTTL.ACTIVE_TRIP);
+  },
+
+  async getActiveTrips(): Promise<unknown[] | null> {
+    return cache.get(CacheKeys.activeTrips());
+  },
+
+  async setActiveTrips(trips: unknown[]): Promise<void> {
+    await cache.set(CacheKeys.activeTrips(), trips, CacheTTL.ACTIVE_TRIP);
+  },
+
+  async getByOrg(orgId: string): Promise<unknown[] | null> {
+    return cache.get(CacheKeys.activeTripsByOrg(orgId));
+  },
+
+  async setByOrg(orgId: string, trips: unknown[]): Promise<void> {
+    await cache.set(CacheKeys.activeTripsByOrg(orgId), trips, CacheTTL.ACTIVE_TRIP);
+  },
+
+  async invalidate(tripId: string, carrierId?: string, shipperId?: string, orgId?: string): Promise<void> {
+    await CacheInvalidation.trip(tripId, carrierId, shipperId, orgId);
+  },
+};
+
+/**
+ * Geodata caching (distances, locations, corridors)
+ */
+export const GeoCache = {
+  async getLocations(): Promise<unknown[] | null> {
+    return cache.get(CacheKeys.locations());
+  },
+
+  async setLocations(locations: unknown[]): Promise<void> {
+    await cache.set(CacheKeys.locations(), locations, CacheTTL.LOCATIONS);
+  },
+
+  async getDistance(originId: string, destId: string): Promise<{ distanceKm: number; durationMinutes?: number } | null> {
+    return cache.get(CacheKeys.distance(originId, destId));
+  },
+
+  async setDistance(
+    originId: string,
+    destId: string,
+    data: { distanceKm: number; durationMinutes?: number }
+  ): Promise<void> {
+    await cache.set(CacheKeys.distance(originId, destId), data, CacheTTL.GEODATA);
+  },
+
+  async getCorridor(originId: string, destId: string): Promise<unknown | null> {
+    return cache.get(CacheKeys.corridor(originId, destId));
+  },
+
+  async setCorridor(originId: string, destId: string, corridor: unknown): Promise<void> {
+    await cache.set(CacheKeys.corridor(originId, destId), corridor, CacheTTL.CORRIDOR);
+  },
+
+  async getAllCorridors(): Promise<unknown[] | null> {
+    return cache.get(CacheKeys.corridors());
+  },
+
+  async setAllCorridors(corridors: unknown[]): Promise<void> {
+    await cache.set(CacheKeys.corridors(), corridors, CacheTTL.CORRIDOR);
+  },
+
+  async getRoute(originId: string, destId: string): Promise<unknown | null> {
+    return cache.get(CacheKeys.route(originId, destId));
+  },
+
+  async setRoute(originId: string, destId: string, route: unknown): Promise<void> {
+    await cache.set(CacheKeys.route(originId, destId), route, CacheTTL.GEODATA);
+  },
+};
+
+// =============================================================================
+// CACHE STATISTICS
+// =============================================================================
+
+/**
+ * Get comprehensive cache statistics for monitoring
+ */
+export function getCacheStats(): {
+  adapter: 'redis' | 'memory';
+  metrics: ReturnType<typeof getCacheMetrics>;
+  memoryStats?: { size: number; maxSize: number };
+} {
+  const isUsingRedis = isRedisEnabled() && redis;
+
+  return {
+    adapter: isUsingRedis ? 'redis' : 'memory',
+    metrics: getCacheMetrics(),
+    memoryStats: !isUsingRedis ? inMemoryCache.getStats() : undefined,
+  };
 }
 
 // =============================================================================
-// CLEANUP
+// CACHE WARMING
 // =============================================================================
 
-// Periodic cleanup of expired entries (every 5 minutes)
-if (typeof setInterval !== 'undefined') {
-  setInterval(async () => {
-    if (cache instanceof LRUCache) {
-      // LRU cache handles expiration on access
-      // This is just a placeholder for any additional cleanup
-    }
-  }, 5 * 60 * 1000);
+/**
+ * Warm cache with frequently accessed data
+ * Call this on application startup or periodically
+ */
+export async function warmCache(
+  fetchers: {
+    locations?: () => Promise<unknown[]>;
+    corridors?: () => Promise<unknown[]>;
+  }
+): Promise<void> {
+  console.log('[Cache] Warming cache...');
+
+  const promises: Promise<void>[] = [];
+
+  if (fetchers.locations) {
+    promises.push(
+      fetchers.locations().then(async (locations) => {
+        await GeoCache.setLocations(locations);
+        console.log(`[Cache] Warmed ${locations.length} locations`);
+      })
+    );
+  }
+
+  if (fetchers.corridors) {
+    promises.push(
+      fetchers.corridors().then(async (corridors) => {
+        await GeoCache.setAllCorridors(corridors);
+        console.log(`[Cache] Warmed ${corridors.length} corridors`);
+      })
+    );
+  }
+
+  await Promise.all(promises);
+  console.log('[Cache] Cache warming complete');
 }

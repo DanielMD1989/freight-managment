@@ -17,6 +17,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { checkDatabaseHealth, getPoolMetrics } from "@/lib/db";
 import { checkRedisHealth, isRedisEnabled } from "@/lib/redis";
 import { getRateLimitMetrics } from "@/lib/rateLimit";
+import { getCacheStats, getCacheMetrics } from "@/lib/cache";
 
 /**
  * GET /api/health
@@ -106,6 +107,26 @@ export async function GET(request: NextRequest) {
         inMemoryKeys: rateLimitMetrics.inMemoryKeys,
         mode: rateLimitMetrics.redisConnected ? "distributed" : "in-memory",
       };
+
+      // Add cache metrics (Phase 3: Global Caching Layer)
+      const cacheStats = getCacheStats();
+      const cacheMetricsData = getCacheMetrics();
+      response.cache = {
+        adapter: cacheStats.adapter,
+        hitRate: cacheMetricsData.overall.hitRate,
+        targetHitRate: 70, // 70%+ target
+        totalHits: cacheMetricsData.overall.totalHits,
+        totalMisses: cacheMetricsData.overall.totalMisses,
+        status: cacheMetricsData.overall.hitRate >= 70 ? "optimal" : "warming",
+        ...(cacheStats.memoryStats && {
+          memorySize: cacheStats.memoryStats.size,
+          memoryMaxSize: cacheStats.memoryStats.maxSize,
+        }),
+      };
+
+      if (detailed) {
+        response.cacheByNamespace = cacheMetricsData.byNamespace;
+      }
 
       // Add environment info
       response.environment = {

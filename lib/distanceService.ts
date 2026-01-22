@@ -2,15 +2,17 @@
  * Distance Calculation Service
  *
  * Sprint 8 - Story 8.3: Map-Based Distance Calculation
+ * PHASE 3: Redis Caching for Performance
  *
  * Provides distance calculation between Ethiopian locations using:
  * - Haversine formula (straight-line distance)
  * - Optional: Road distance via routing APIs (future)
- * - Distance caching for performance
+ * - Redis caching for performance (24hr TTL for geodata)
  */
 
 import { db } from '@/lib/db';
 import { getLocationById } from '@/lib/locationService';
+import { GeoCache, CacheTTL } from '@/lib/cache';
 
 /**
  * Calculate distance between two locations
@@ -116,6 +118,7 @@ function toRadians(degrees: number): number {
 /**
  * Get cached distance between two locations
  *
+ * Uses Redis cache (Phase 3) with automatic fallback to in-memory.
  * Checks both directions (origin->destination and destination->origin)
  * since distance is symmetric.
  *
@@ -128,21 +131,34 @@ async function getCachedDistance(
   destinationId: string
 ): Promise<number | null> {
   try {
-    // Check if we have a system config cache for distances
-    // Format: "distance:locationId1:locationId2" -> distance value
+    // Try Redis cache first (both directions)
+    const cached = await GeoCache.getDistance(originId, destinationId);
+    if (cached) {
+      return cached.distanceKm;
+    }
+
+    // Try reverse direction
+    const cachedReverse = await GeoCache.getDistance(destinationId, originId);
+    if (cachedReverse) {
+      return cachedReverse.distanceKm;
+    }
+
+    // Fallback: Check database cache (legacy)
     const cacheKeys = [
       `distance:${originId}:${destinationId}`,
-      `distance:${destinationId}:${originId}`, // Check reverse too
+      `distance:${destinationId}:${originId}`,
     ];
 
     for (const key of cacheKeys) {
-      const cached = await db.systemConfig.findUnique({
+      const dbCached = await db.systemConfig.findUnique({
         where: { key },
       });
 
-      if (cached) {
-        const distance = parseFloat(cached.value);
+      if (dbCached) {
+        const distance = parseFloat(dbCached.value);
         if (!isNaN(distance)) {
+          // Migrate to Redis cache
+          await GeoCache.setDistance(originId, destinationId, { distanceKm: distance });
           return distance;
         }
       }
@@ -158,8 +174,8 @@ async function getCachedDistance(
 /**
  * Cache calculated distance
  *
- * Stores distance in SystemConfig table for future lookups.
- * This is a simple in-database cache. For production, consider Redis.
+ * Uses Redis cache (Phase 3) for high-performance distributed caching.
+ * Falls back to database storage for persistence.
  *
  * @param originId Origin location ID
  * @param destinationId Destination location ID
@@ -171,9 +187,12 @@ async function cacheDistance(
   distance: number
 ): Promise<void> {
   try {
-    const key = `distance:${originId}:${destinationId}`;
+    // Cache in Redis (24hr TTL - geodata rarely changes)
+    await GeoCache.setDistance(originId, destinationId, { distanceKm: distance });
 
-    await db.systemConfig.upsert({
+    // Also persist to database for long-term storage (background, non-blocking)
+    const key = `distance:${originId}:${destinationId}`;
+    db.systemConfig.upsert({
       where: { key },
       update: { value: distance.toString() },
       create: {
@@ -181,6 +200,8 @@ async function cacheDistance(
         value: distance.toString(),
         description: `Cached distance between ${originId} and ${destinationId}`,
       },
+    }).catch((error) => {
+      console.error('Error persisting distance to database:', error);
     });
   } catch (error) {
     // Cache failure shouldn't break the app
@@ -236,11 +257,16 @@ export async function batchCalculateDistances(
 /**
  * Clear distance cache (admin utility)
  *
- * Removes all cached distance calculations.
+ * Removes all cached distance calculations from both Redis and database.
  * Useful after location data updates.
  */
 export async function clearDistanceCache(): Promise<void> {
   try {
+    // Clear Redis cache
+    const { cache } = await import('@/lib/cache');
+    await cache.deletePattern('geodata:distance:*');
+
+    // Clear database cache
     await db.systemConfig.deleteMany({
       where: {
         key: {
@@ -248,6 +274,8 @@ export async function clearDistanceCache(): Promise<void> {
         },
       },
     });
+
+    console.log('[DistanceService] Distance cache cleared');
   } catch (error) {
     console.error('Error clearing distance cache:', error);
   }
