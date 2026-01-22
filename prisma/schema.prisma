@@ -684,6 +684,12 @@ model Load {
   @@index([trackingEnabled]) // SPRINT 16: For filtering tracked loads
   @@index([corridorId]) // Service Fee: For corridor-based queries
   @@index([serviceFeeStatus]) // Service Fee: For fee status filtering
+  // PHASE 4: Composite indexes for common query patterns
+  @@index([status, createdAt]) // List loads by status sorted by date
+  @@index([shipperId, status]) // Shipper's loads by status
+  @@index([status, pickupDate]) // Filter posted loads by pickup date
+  @@index([truckType, status]) // Filter by truck type and status
+  @@index([status, postedAt]) // Posted loads sorted by age
   @@map("loads")
 }
 
@@ -864,6 +870,11 @@ model Truck {
   @@index([isAvailable])
   @@index([imei])
   @@index([gpsStatus])
+  // PHASE 4: Composite indexes for common query patterns
+  @@index([carrierId, isAvailable]) // Available trucks per carrier
+  @@index([truckType, isAvailable]) // Available trucks by type
+  @@index([carrierId, approvalStatus]) // Carrier's trucks by approval status
+  @@index([approvalStatus, createdAt]) // Admin approval queue
   @@map("trucks")
 }
 
@@ -911,6 +922,9 @@ model GpsPosition {
   @@index([deviceId])
   @@index([loadId]) // SPRINT 16: For querying positions by load
   @@index([tripId]) // For querying route history by trip
+  // PHASE 4: Composite indexes for common query patterns
+  @@index([tripId, timestamp]) // Trip route history sorted by time
+  @@index([loadId, timestamp]) // Load tracking history sorted by time
   @@map("gps_positions")
 }
 
@@ -1005,6 +1019,10 @@ model Trip {
   @@index([loadId])
   @@index([trackingUrl])
   @@index([createdAt])
+  // PHASE 4: Composite indexes for common query patterns
+  @@index([carrierId, status]) // Carrier's trips by status
+  @@index([shipperId, status]) // Shipper's trips by status
+  @@index([status, createdAt]) // List trips by status sorted by date
   @@map("trips")
 }
 
@@ -1014,9 +1032,9 @@ model Trip {
 // ============================================================================
 
 model TripPod {
-  id       String @id @default(cuid())
-  tripId   String
-  trip     Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  tripId String
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
 
   // File info
   fileUrl  String
@@ -1318,6 +1336,11 @@ model TruckPosting {
   @@index([destinationCityId])
   @@index([availableFrom])
   @@index([carrierId])
+  // PHASE 4: Composite indexes for common query patterns
+  @@index([status, availableFrom]) // Active postings by date
+  @@index([originCityId, status]) // Filter by origin and status
+  @@index([carrierId, status]) // Carrier's postings by status
+  @@index([originCityId, destinationCityId, status]) // Route matching
   @@map("truck_postings")
 }
 
@@ -1370,6 +1393,10 @@ model MatchProposal {
   @@index([truckId])
   @@index([carrierId])
   @@index([proposedById])
+  // PHASE 4: Composite indexes for common query patterns
+  @@index([carrierId, status]) // Carrier's proposals by status
+  @@index([status, createdAt]) // List proposals by status sorted by date
+  @@index([status, expiresAt]) // Find pending proposals near expiry
   @@map("match_proposals")
 }
 
@@ -1419,6 +1446,11 @@ model TruckRequest {
   @@index([truckId])
   @@index([shipperId])
   @@index([carrierId])
+  // PHASE 4: Composite indexes for common query patterns
+  @@index([carrierId, status]) // Carrier's requests by status
+  @@index([shipperId, status]) // Shipper's requests by status
+  @@index([status, createdAt]) // List requests by status sorted by date
+  @@index([status, expiresAt]) // Find pending requests near expiry
   @@map("truck_requests")
 }
 
@@ -1466,6 +1498,11 @@ model LoadRequest {
   @@index([truckId])
   @@index([carrierId])
   @@index([shipperId])
+  // PHASE 4: Composite indexes for common query patterns
+  @@index([carrierId, status]) // Carrier's requests by status
+  @@index([shipperId, status]) // Shipper's requests by status
+  @@index([status, createdAt]) // List requests by status sorted by date
+  @@index([status, expiresAt]) // Find pending requests near expiry
   @@map("load_requests")
 }
 
@@ -1563,6 +1600,9 @@ model Notification {
 
   @@index([userId, read])
   @@index([createdAt])
+  // PHASE 4: Composite indexes for common query patterns
+  @@index([userId, createdAt]) // User's notifications sorted by date
+  @@index([userId, read, createdAt]) // Unread notifications sorted by date
   @@map("notifications")
 }
 

@@ -80,9 +80,16 @@ export async function POST(request: NextRequest) {
     const session = await requireActiveUser();
 
     // CSRF protection for state-changing operation
-    const csrfError = await requireCSRF(request);
-    if (csrfError) {
-      return csrfError;
+    // Skip for mobile clients using Bearer token authentication (no cookies)
+    // Bearer tokens are inherently CSRF-safe as attackers cannot add Authorization headers cross-origin
+    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
+    const hasBearerAuth = request.headers.get('authorization')?.startsWith('Bearer ');
+
+    if (!isMobileClient || !hasBearerAuth) {
+      const csrfError = await requireCSRF(request);
+      if (csrfError) {
+        return csrfError;
+      }
     }
 
     // Require organization
@@ -174,11 +181,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate origin location exists
-    const originExists = await db.ethiopianLocation.findUnique({
-      where: { id: data.originCityId },
-      select: { isActive: true },
-    });
+    // PHASE 4: Run validation queries in parallel (N+1 fix)
+    const [originExists, destExists, truck, existingActivePost] = await Promise.all([
+      // Validate origin location exists
+      db.ethiopianLocation.findUnique({
+        where: { id: data.originCityId },
+        select: { isActive: true },
+      }),
+      // Validate destination location if provided
+      data.destinationCityId
+        ? db.ethiopianLocation.findUnique({
+            where: { id: data.destinationCityId },
+            select: { isActive: true },
+          })
+        : Promise.resolve(null),
+      // Validate truck exists
+      db.truck.findUnique({
+        where: { id: data.truckId },
+        select: { carrierId: true, isAvailable: true },
+      }),
+      // PHASE 2: Check for existing active posting (ONE_ACTIVE_POST_PER_TRUCK rule)
+      db.truckPosting.findFirst({
+        where: {
+          truckId: data.truckId,
+          status: 'ACTIVE',
+        },
+        select: { id: true },
+      }),
+    ]);
 
     if (!originExists || !originExists.isActive) {
       return NextResponse.json(
@@ -187,26 +217,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate destination location if provided
-    if (data.destinationCityId) {
-      const destExists = await db.ethiopianLocation.findUnique({
-        where: { id: data.destinationCityId },
-        select: { isActive: true },
-      });
-
-      if (!destExists || !destExists.isActive) {
-        return NextResponse.json(
-          { error: 'Destination location not found or inactive' },
-          { status: 400 }
-        );
-      }
+    if (data.destinationCityId && (!destExists || !destExists.isActive)) {
+      return NextResponse.json(
+        { error: 'Destination location not found or inactive' },
+        { status: 400 }
+      );
     }
-
-    // Validate truck exists
-    const truck = await db.truck.findUnique({
-      where: { id: data.truckId },
-      select: { carrierId: true, isAvailable: true },
-    });
 
     if (!truck) {
       return NextResponse.json(
@@ -214,16 +230,6 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
-
-    // PHASE 2: Enforce ONE_ACTIVE_POST_PER_TRUCK rule
-    // Foundation Rule: Each truck can only have one active posting
-    const existingActivePost = await db.truckPosting.findFirst({
-      where: {
-        truckId: data.truckId,
-        status: 'ACTIVE',
-      },
-      select: { id: true },
-    });
 
     const oneActivePostValidation = validateOneActivePostPerTruck({
       truckId: data.truckId,
@@ -389,37 +395,37 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(limitParam || '20', 10), 100);
     const offset = Math.max(parseInt(offsetParam || '0', 10), 0);
 
-    // Convert city names to IDs if provided
+    // PHASE 4: Convert city names to IDs in parallel (N+1 fix)
     let resolvedOriginCityId = originCityId;
     let resolvedDestinationCityId = destinationCityId;
 
-    if (origin) {
-      const originCity = await db.ethiopianLocation.findFirst({
-        where: {
-          name: {
-            contains: origin,
-            mode: 'insensitive',
-          },
-        },
-        select: { id: true },
-      });
-      if (originCity) {
-        resolvedOriginCityId = originCity.id;
-      }
+    // Run city lookups in parallel if needed
+    const cityLookups = [];
+    if (origin && !originCityId) {
+      cityLookups.push(
+        db.ethiopianLocation.findFirst({
+          where: { name: { contains: origin, mode: 'insensitive' } },
+          select: { id: true },
+        }).then(city => ({ type: 'origin', city }))
+      );
+    }
+    if (destination && !destinationCityId) {
+      cityLookups.push(
+        db.ethiopianLocation.findFirst({
+          where: { name: { contains: destination, mode: 'insensitive' } },
+          select: { id: true },
+        }).then(city => ({ type: 'destination', city }))
+      );
     }
 
-    if (destination) {
-      const destinationCity = await db.ethiopianLocation.findFirst({
-        where: {
-          name: {
-            contains: destination,
-            mode: 'insensitive',
-          },
-        },
-        select: { id: true },
-      });
-      if (destinationCity) {
-        resolvedDestinationCityId = destinationCity.id;
+    if (cityLookups.length > 0) {
+      const results = await Promise.all(cityLookups);
+      for (const result of results) {
+        if (result.type === 'origin' && result.city) {
+          resolvedOriginCityId = result.city.id;
+        } else if (result.type === 'destination' && result.city) {
+          resolvedDestinationCityId = result.city.id;
+        }
       }
     }
 

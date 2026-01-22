@@ -173,6 +173,7 @@ export async function PATCH(
     const session = await requireAuth();
 
     // Check if load exists and belongs to user's organization
+    // PHASE 4: Optimized query - include pricing fields and carrier info to avoid N+1 queries
     const existingLoad = await db.load.findUnique({
       where: { id },
       select: {
@@ -180,6 +181,17 @@ export async function PATCH(
         status: true,
         createdById: true,
         assignedTruckId: true,
+        // Include pricing fields to avoid redundant query later
+        baseFareEtb: true,
+        perKmEtb: true,
+        tripKm: true,
+        estimatedTripKm: true,
+        // Include carrier info for trust metrics
+        assignedTruck: {
+          select: {
+            carrierId: true,
+          },
+        },
       },
     });
 
@@ -245,20 +257,10 @@ export async function PATCH(
     }
 
     if (pricingFieldsChanged) {
-      // Get current load data to fill in missing fields
-      const currentLoad = await db.load.findUnique({
-        where: { id },
-        select: {
-          baseFareEtb: true,
-          perKmEtb: true,
-          tripKm: true,
-          estimatedTripKm: true,
-        },
-      });
-
-      const baseFare = validatedData.baseFareEtb ?? currentLoad?.baseFareEtb;
-      const perKm = validatedData.perKmEtb ?? currentLoad?.perKmEtb;
-      const tripKm = validatedData.estimatedTripKm ?? validatedData.tripKm ?? currentLoad?.estimatedTripKm ?? currentLoad?.tripKm;
+      // PHASE 4: Use existingLoad data instead of redundant query (N+1 fix)
+      const baseFare = validatedData.baseFareEtb ?? existingLoad.baseFareEtb;
+      const perKm = validatedData.perKmEtb ?? existingLoad.perKmEtb;
+      const tripKm = validatedData.estimatedTripKm ?? validatedData.tripKm ?? existingLoad.estimatedTripKm ?? existingLoad.tripKm;
 
       // Calculate totalFareEtb if we have all required fields
       if (baseFare && perKm && tripKm) {
@@ -385,20 +387,10 @@ export async function PATCH(
         await incrementCompletedLoads(existingLoad.shipperId);
       }
 
+      // PHASE 4: Use existingLoad data instead of redundant query (N+1 fix)
       // Also increment for carrier if assigned
-      const assignedLoad = await db.load.findUnique({
-        where: { id },
-        select: {
-          assignedTruck: {
-            select: {
-              carrierId: true,
-            },
-          },
-        },
-      });
-
-      if (assignedLoad?.assignedTruck?.carrierId) {
-        await incrementCompletedLoads(assignedLoad.assignedTruck.carrierId);
+      if (existingLoad.assignedTruck?.carrierId) {
+        await incrementCompletedLoads(existingLoad.assignedTruck.carrierId);
       }
     } else if (validatedData.status === "CANCELLED") {
       // Increment cancelled loads for shipper
