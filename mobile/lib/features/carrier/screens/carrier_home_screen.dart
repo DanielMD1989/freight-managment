@@ -43,6 +43,12 @@ class CarrierHomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
         title: const Text('Dashboard'),
         actions: [
           IconButton(

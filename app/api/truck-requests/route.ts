@@ -48,9 +48,16 @@ export async function POST(request: NextRequest) {
     const session = await requireAuth();
 
     // CSRF protection for state-changing operation
-    const csrfError = await requireCSRF(request);
-    if (csrfError) {
-      return csrfError;
+    // Skip for mobile clients using Bearer token authentication (no cookies)
+    // Bearer tokens are inherently CSRF-safe as attackers cannot add Authorization headers cross-origin
+    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
+    const hasBearerAuth = request.headers.get('authorization')?.startsWith('Bearer ');
+
+    if (!isMobileClient || !hasBearerAuth) {
+      const csrfError = await requireCSRF(request);
+      if (csrfError) {
+        return csrfError;
+      }
     }
 
     const body = await request.json();

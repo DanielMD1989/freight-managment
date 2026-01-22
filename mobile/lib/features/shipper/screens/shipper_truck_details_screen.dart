@@ -245,20 +245,42 @@ class _ShipperTruckDetailsScreenState
   }
 
   Future<void> _showBookingModal(Truck truck) async {
-    final loadsAsync = ref.read(shipperLoadsForBookingProvider);
-    final loads = loadsAsync.valueOrNull ?? [];
+    // Show loading indicator while fetching loads
+    setState(() => _isBooking = true);
+
+    // Refresh the loads provider and wait for the result
+    ref.invalidate(shipperLoadsForBookingProvider);
+
+    // Wait a moment for the provider to start fetching
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    // Get the loads - use a direct API call for reliability
+    final service = LoadService();
+    final result = await service.searchLoads(
+      status: 'POSTED',
+      myLoads: true,
+    );
+
+    setState(() => _isBooking = false);
+
+    final List<Load> loads = result.success ? result.data?.loads ?? [] : [];
 
     if (loads.isEmpty) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('You need at least one posted load to book a truck'),
+        SnackBar(
+          content: Text(result.success
+            ? 'You need at least one posted load to book a truck'
+            : 'Failed to load your loads: ${result.error}'),
           backgroundColor: AppColors.error,
         ),
       );
       return;
     }
 
-    final result = await showModalBottomSheet<Map<String, dynamic>>(
+    if (!mounted) return;
+
+    final modalResult = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
       builder: (context) => _BookTruckModal(
@@ -267,8 +289,8 @@ class _ShipperTruckDetailsScreenState
       ),
     );
 
-    if (result != null && mounted) {
-      await _submitBooking(truck.id, result);
+    if (modalResult != null && mounted) {
+      await _submitBooking(truck.id, modalResult);
     }
   }
 

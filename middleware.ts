@@ -45,6 +45,25 @@ export async function middleware(request: NextRequest) {
   // Generate request ID for all requests (for error tracking and logging)
   const requestId = request.headers.get('x-request-id') || generateRequestId();
 
+  // Handle CORS preflight requests
+  if (method === 'OPTIONS') {
+    const response = new NextResponse(null, { status: 204 });
+
+    // Allow all origins for development
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, Cookie, x-client-type');
+    response.headers.set('Access-Control-Max-Age', '86400');
+    return response;
+  }
+
+  // Add CORS headers to all responses
+  const corsHeaders: Record<string, string> = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-client-type',
+  };
+
   // Extract client IP
   const clientIP = getClientIP(request.headers);
 
@@ -69,7 +88,11 @@ export async function middleware(request: NextRequest) {
   }
 
   // Sprint 9: CSRF Protection for API routes with state-changing methods
-  if (pathname.startsWith('/api') && STATE_CHANGING_METHODS.includes(method)) {
+  // Requests with Authorization header (Bearer token) are exempt since they're not vulnerable to CSRF
+  const authHeader = request.headers.get('authorization');
+  const hasBearerToken = authHeader?.startsWith('Bearer ');
+
+  if (pathname.startsWith('/api') && STATE_CHANGING_METHODS.includes(method) && !hasBearerToken) {
     const isExempt = CSRF_EXEMPT_ROUTES.some((route) => pathname.startsWith(route));
 
     if (!isExempt) {
@@ -102,13 +125,34 @@ export async function middleware(request: NextRequest) {
   if (publicPaths.some((path) => pathname.startsWith(path))) {
     const response = NextResponse.next();
     response.headers.set('x-request-id', requestId);
+    // Add CORS headers
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
     return addSecurityHeaders(response);
   }
 
-  // Get session token
-  const token = request.cookies.get("session")?.value;
+  // Get session token from cookie or Authorization header
+  let token = request.cookies.get("session")?.value;
+
+  // For mobile clients, check Authorization header (authHeader already declared above)
+  if (!token && authHeader?.startsWith('Bearer ')) {
+    token = authHeader.substring(7);
+  }
 
   if (!token) {
+    // For API routes, return 401 instead of redirect
+    if (pathname.startsWith('/api')) {
+      const response = NextResponse.json(
+        { error: 'Authentication required', requestId },
+        { status: 401 }
+      );
+      response.headers.set('x-request-id', requestId);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        response.headers.set(key, value);
+      });
+      return addSecurityHeaders(response);
+    }
     // Redirect to login for protected routes
     const url = new URL("/login", request.url);
     url.searchParams.set("redirect", pathname);
@@ -169,6 +213,10 @@ export async function middleware(request: NextRequest) {
 
     const response = NextResponse.next();
     response.headers.set('x-request-id', requestId);
+    // Add CORS headers
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
 
     return addSecurityHeaders(response);
   } catch (error) {

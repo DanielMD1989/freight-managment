@@ -586,52 +586,37 @@ class _PostTruckModalState extends ConsumerState<_PostTruckModal> {
   Widget build(BuildContext context) {
     final trucksAsync = ref.watch(approvedTrucksForPostingProvider);
     final locationsAsync = ref.watch(ethiopianLocationsProvider);
+    final screenHeight = MediaQuery.of(context).size.height;
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.85,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: AppColors.border),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Text(
-                    'Post Truck',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
+    return SizedBox(
+      height: screenHeight * 0.85,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          title: const Text('Post Truck'),
+          actions: [
+            IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.close),
             ),
-
-            // Form
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Truck selection
-                      const Text(
+          ],
+        ),
+        body: SingleChildScrollView(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: keyboardHeight + 16,
+          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Truck selection
+                const Text(
                         'Select Truck *',
                         style: TextStyle(fontWeight: FontWeight.w600),
                       ),
@@ -649,6 +634,7 @@ class _PostTruckModalState extends ConsumerState<_PostTruckModal> {
                             children: [
                               DropdownButtonFormField<String>(
                                 value: _selectedTruckId,
+                                isExpanded: true,
                                 decoration: InputDecoration(
                                   hintText: 'Select an approved truck',
                                   errorText: _truckHasActivePosting
@@ -660,38 +646,14 @@ class _PostTruckModalState extends ConsumerState<_PostTruckModal> {
                                       trucksWithActivePosting.contains(truck.id);
                                   return DropdownMenuItem(
                                     value: truck.id,
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            '${truck.licensePlate} - ${truck.truckTypeDisplay}',
-                                            style: TextStyle(
-                                              color: hasActivePosting
-                                                  ? AppColors.warning
-                                                  : null,
-                                            ),
-                                          ),
-                                        ),
-                                        if (hasActivePosting)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.warning
-                                                  .withOpacity(0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                            ),
-                                            child: const Text(
-                                              'POSTED',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: AppColors.warning,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
+                                    child: Text(
+                                      '${truck.licensePlate} - ${truck.truckTypeDisplay}${hasActivePosting ? ' (POSTED)' : ''}',
+                                      style: TextStyle(
+                                        color: hasActivePosting
+                                            ? AppColors.warning
+                                            : null,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   );
                                 }).toList(),
@@ -769,13 +731,17 @@ class _PostTruckModalState extends ConsumerState<_PostTruckModal> {
                       locationsAsync.when(
                         data: (locations) => DropdownButtonFormField<String>(
                           value: _selectedOriginCityId,
+                          isExpanded: true,
                           decoration: const InputDecoration(
                             hintText: 'Where is the truck available?',
                           ),
                           items: locations.map((loc) {
                             return DropdownMenuItem(
                               value: loc.id,
-                              child: Text('${loc.name}, ${loc.region}'),
+                              child: Text(
+                                '${loc.name}, ${loc.region}',
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             );
                           }).toList(),
                           onChanged: (value) =>
@@ -798,6 +764,7 @@ class _PostTruckModalState extends ConsumerState<_PostTruckModal> {
                       locationsAsync.when(
                         data: (locations) => DropdownButtonFormField<String>(
                           value: _selectedDestinationCityId,
+                          isExpanded: true,
                           decoration: const InputDecoration(
                             hintText: 'Preferred destination',
                           ),
@@ -809,7 +776,10 @@ class _PostTruckModalState extends ConsumerState<_PostTruckModal> {
                             ...locations.map((loc) {
                               return DropdownMenuItem(
                                 value: loc.id,
-                                child: Text('${loc.name}, ${loc.region}'),
+                                child: Text(
+                                  '${loc.name}, ${loc.region}',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               );
                             }),
                           ],
@@ -922,10 +892,17 @@ class _PostTruckModalState extends ConsumerState<_PostTruckModal> {
                       TextFormField(
                         controller: _contactNameController,
                         decoration: const InputDecoration(
-                          hintText: 'Enter contact name',
+                          hintText: 'Enter contact name (min 2 characters)',
                         ),
-                        validator: (value) =>
-                            value?.isEmpty == true ? 'Required' : null,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Required';
+                          }
+                          if (value.length < 2) {
+                            return 'Name must be at least 2 characters';
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 16),
 
@@ -938,11 +915,23 @@ class _PostTruckModalState extends ConsumerState<_PostTruckModal> {
                       TextFormField(
                         controller: _contactPhoneController,
                         decoration: const InputDecoration(
-                          hintText: '+251 9XX XXX XXX',
+                          hintText: '0912345678 or +251912345678',
+                          helperText: 'Ethiopian format: 09XXXXXXXX',
                         ),
                         keyboardType: TextInputType.phone,
-                        validator: (value) =>
-                            value?.isEmpty == true ? 'Required' : null,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Required';
+                          }
+                          // Clean phone number (remove spaces/dashes)
+                          final cleaned = value.replaceAll(RegExp(r'[\s\-]'), '');
+                          // Ethiopian phone pattern
+                          final pattern = RegExp(r'^(\+251|0)?9\d{8}$');
+                          if (!pattern.hasMatch(cleaned)) {
+                            return 'Invalid Ethiopian phone format';
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 16),
 
@@ -983,12 +972,9 @@ class _PostTruckModalState extends ConsumerState<_PostTruckModal> {
                 ),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+          );
+        }
+      }
 
 /// Edit posting modal
 class _EditPostingModal extends ConsumerStatefulWidget {

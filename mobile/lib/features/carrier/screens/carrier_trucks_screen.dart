@@ -383,31 +383,83 @@ class TruckCard extends StatelessWidget {
                 ],
               ),
 
-              // Actions row (only for approved and available trucks)
-              if (truck.isApproved && truck.isAvailable) ...[
+              // Actions row (only for approved trucks)
+              if (truck.isApproved) ...[
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: onPostTruck,
-                        icon: const Icon(Icons.post_add, size: 18),
-                        label: const Text('Post Truck'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                if (truck.isAvailable)
+                  // Available truck - show Post Truck button
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: onPostTruck,
+                          icon: const Icon(Icons.post_add, size: 18),
+                          label: const Text('Post Truck'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    OutlinedButton(
-                      onPressed: onTap,
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                      const SizedBox(width: 12),
+                      OutlinedButton(
+                        onPressed: onTap,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                        ),
+                        child: const Text('Details'),
                       ),
-                      child: const Text('Details'),
-                    ),
-                  ],
-                ),
+                    ],
+                  )
+                else
+                  // On Job truck - show View Trip button
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline, color: Colors.blue[700], size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'This truck is assigned to an active delivery. Check Trips to track progress.',
+                                style: TextStyle(color: Colors.blue[700], fontSize: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => GoRouter.of(context).push('/carrier/trips'),
+                              icon: const Icon(Icons.route, size: 18),
+                              label: const Text('View Trips'),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                backgroundColor: Colors.blue,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          OutlinedButton(
+                            onPressed: onTap,
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                            ),
+                            child: const Text('Details'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
               ],
 
               // Show rejection reason if rejected

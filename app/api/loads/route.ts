@@ -94,18 +94,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createLoadSchema.parse(body);
 
-    // Pricing validation: Must provide either new model (base + per-km) or legacy rate
+    // Pricing is optional - shippers and carriers agree on pricing outside the platform
     const hasNewPricing = validatedData.baseFareEtb && validatedData.perKmEtb;
     const hasLegacyPricing = validatedData.rate;
 
-    if (!hasNewPricing && !hasLegacyPricing) {
-      return NextResponse.json(
-        { error: "Must provide either (baseFareEtb + perKmEtb) or rate" },
-        { status: 400 }
-      );
-    }
-
-    // Calculate totalFareEtb if using new pricing model
+    // Calculate totalFareEtb if using new pricing model (optional)
     let totalFareEtb = null;
     if (hasNewPricing && validatedData.tripKm) {
       try {
@@ -120,37 +113,8 @@ export async function POST(request: NextRequest) {
           validatedData.tripKm
         );
       } catch (error: any) {
-        return NextResponse.json(
-          { error: error.message || "Invalid pricing parameters" },
-          { status: 400 }
-        );
-      }
-    }
-
-    // [NEW] Additional validation for POSTED loads
-    if (validatedData.status === "POSTED") {
-      if (!validatedData.tripKm) {
-        return NextResponse.json(
-          { error: "Trip distance (tripKm) is required for posted loads" },
-          { status: 400 }
-        );
-      }
-
-      // Validate pricing for posted loads
-      if (hasNewPricing) {
-        if (!totalFareEtb || totalFareEtb.isZero()) {
-          return NextResponse.json(
-            { error: "Calculated total fare must be greater than 0" },
-            { status: 400 }
-          );
-        }
-      } else if (hasLegacyPricing) {
-        if (validatedData.rate! <= 0) {
-          return NextResponse.json(
-            { error: "Rate must be greater than 0" },
-            { status: 400 }
-          );
-        }
+        // Pricing calculation failed - proceed without calculated fare
+        console.warn("Pricing calculation failed:", error.message);
       }
     }
 
@@ -159,10 +123,10 @@ export async function POST(request: NextRequest) {
         ...validatedData,
         pickupDate: new Date(validatedData.pickupDate),
         deliveryDate: new Date(validatedData.deliveryDate),
-        // Sprint 16: Add calculated totalFareEtb
+        // Sprint 16: Add calculated totalFareEtb (optional)
         totalFareEtb: totalFareEtb ? totalFareEtb.toNumber() : null,
-        // Backward compatibility: If using new pricing, also set rate to totalFare
-        rate: hasNewPricing && totalFareEtb ? totalFareEtb.toNumber() : validatedData.rate!,
+        // Pricing is optional - set rate if provided (schema requires non-null, default to 0)
+        rate: hasNewPricing && totalFareEtb ? totalFareEtb.toNumber() : (validatedData.rate || 0),
         // [NEW] Set postedAt when status is POSTED
         postedAt: validatedData.status === "POSTED" ? new Date() : null,
         shipperId: user.organizationId,
@@ -498,7 +462,10 @@ export async function GET(request: NextRequest) {
     console.error("List loads error:", error);
 
     return NextResponse.json(
-      { error: "Internal server error" },
+      {
+        error: "Internal server error",
+        details: process.env.NODE_ENV !== 'production' ? String(error) : undefined
+      },
       { status: 500 }
     );
   }

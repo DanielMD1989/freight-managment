@@ -607,6 +607,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/shipper/loads',
             builder: (context, state) => const ShipperLoadsScreen(),
           ),
+          // IMPORTANT: Static routes must come BEFORE dynamic :id routes
+          GoRoute(
+            path: '/shipper/loads/post',
+            builder: (context, state) => const PostLoadScreen(),
+          ),
           GoRoute(
             path: '/shipper/loads/:id',
             builder: (context, state) => ShipperLoadDetailsScreen(
@@ -644,10 +649,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
-            path: '/shipper/loads/post',
-            builder: (context, state) => const PostLoadScreen(),
-          ),
-          GoRoute(
             path: '/shipper/map',
             builder: (context, state) => const ShipperMapScreen(),
           ),
@@ -671,7 +672,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-/// Carrier shell with bottom navigation
+/// Carrier shell with bottom navigation and drawer
 class CarrierShell extends StatelessWidget {
   final Widget child;
 
@@ -681,6 +682,7 @@ class CarrierShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: child,
+      drawer: _CarrierDrawer(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _calculateSelectedIndex(context),
         onDestinationSelected: (index) => _onItemTapped(index, context),
@@ -745,7 +747,211 @@ class CarrierShell extends StatelessWidget {
   }
 }
 
-/// Shipper shell with bottom navigation
+/// Carrier drawer menu
+class _CarrierDrawer extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+    final user = authState.user;
+
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Header
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.primary, AppColors.primaryDark],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: 32,
+                    backgroundColor: Colors.white,
+                    child: Text(
+                      user?.fullName.isNotEmpty == true ? user!.fullName[0].toUpperCase() : 'C',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    user?.fullName ?? 'Carrier',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    user?.email ?? '',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Menu items
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                children: [
+                  _DrawerItem(
+                    icon: Icons.home,
+                    label: 'Dashboard',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.go('/carrier');
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.local_shipping,
+                    label: 'My Trucks',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.go('/carrier/trucks');
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.route,
+                    label: 'My Trips',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.go('/carrier/trips');
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.search,
+                    label: 'Find Loads',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.go('/carrier/loadboard');
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.publish,
+                    label: 'Post Trucks',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.go('/carrier/post-trucks');
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.inbox,
+                    label: 'Load Requests',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.go('/carrier/requests');
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.bookmark,
+                    label: 'Truck Bookings',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.go('/carrier/bookings');
+                    },
+                  ),
+                  const Divider(),
+                  _DrawerItem(
+                    icon: Icons.map,
+                    label: 'Track Map',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.go('/carrier/map');
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.account_balance_wallet,
+                    label: 'Wallet',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/wallet');
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.notifications,
+                    label: 'Notifications',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/notifications');
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.person,
+                    label: 'Profile',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/profile');
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // Logout
+            const Divider(),
+            _DrawerItem(
+              icon: Icons.logout,
+              label: 'Logout',
+              color: AppColors.error,
+              onTap: () {
+                Navigator.pop(context);
+                ref.read(authStateProvider.notifier).logout();
+                context.go('/login');
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DrawerItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color? color;
+
+  const _DrawerItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon, color: color ?? AppColors.textSecondary),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: color ?? AppColors.textPrimary,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      onTap: onTap,
+    );
+  }
+}
+
+/// Shipper shell with bottom navigation and drawer
 class ShipperShell extends StatelessWidget {
   final Widget child;
 
@@ -755,6 +961,7 @@ class ShipperShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: child,
+      drawer: _ShipperDrawer(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _calculateSelectedIndex(context),
         onDestinationSelected: (index) => _onItemTapped(index, context),
@@ -816,5 +1023,172 @@ class ShipperShell extends StatelessWidget {
         context.go('/shipper/trucks');
         break;
     }
+  }
+}
+
+/// Shipper drawer menu
+class _ShipperDrawer extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+    final user = authState.user;
+
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Header
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.accent, AppColors.accent700],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: 32,
+                    backgroundColor: Colors.white,
+                    child: Text(
+                      user?.fullName.isNotEmpty == true ? user!.fullName[0].toUpperCase() : 'S',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.accent,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    user?.fullName ?? 'Shipper',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    user?.email ?? '',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Menu items
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                children: [
+                  _DrawerItem(
+                    icon: Icons.home,
+                    label: 'Dashboard',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.go('/shipper');
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.inventory_2,
+                    label: 'My Loads',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.go('/shipper/loads');
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.add_box,
+                    label: 'Post New Load',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/shipper/loads/post');
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.route,
+                    label: 'My Shipments',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.go('/shipper/trips');
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.local_shipping,
+                    label: 'Find Trucks',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.go('/shipper/trucks');
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.bookmark,
+                    label: 'My Truck Requests',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.go('/shipper/bookings');
+                    },
+                  ),
+                  const Divider(),
+                  _DrawerItem(
+                    icon: Icons.map,
+                    label: 'Track Shipments',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.go('/shipper/map');
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.account_balance_wallet,
+                    label: 'Wallet',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/wallet');
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.notifications,
+                    label: 'Notifications',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/notifications');
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.person,
+                    label: 'Profile',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/profile');
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // Logout
+            const Divider(),
+            _DrawerItem(
+              icon: Icons.logout,
+              label: 'Logout',
+              color: AppColors.error,
+              onTap: () {
+                Navigator.pop(context);
+                ref.read(authStateProvider.notifier).logout();
+                context.go('/login');
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
   }
 }

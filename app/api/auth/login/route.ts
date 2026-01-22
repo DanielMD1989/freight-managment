@@ -4,6 +4,14 @@ import { verifyPassword, setSession, isLoginAllowed, createSessionRecord, genera
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { logAuthFailure, logAuthSuccess } from "@/lib/auditLog";
+
+// Helper to add CORS headers to response
+function addCorsHeaders(response: NextResponse, _request: NextRequest): NextResponse {
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-client-type');
+  return response;
+}
 // CSRF token generated inline - generateCSRFToken imported dynamically
 import {
   getClientIP,
@@ -28,6 +36,16 @@ const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
+// Handle CORS preflight requests
+export async function OPTIONS(request: NextRequest) {
+  const response = new NextResponse(null, { status: 204 });
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-client-type, x-csrf-token, Accept');
+  response.headers.set('Access-Control-Max-Age', '86400');
+  return response;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -44,12 +62,12 @@ export async function POST(request: NextRequest) {
         details: { endpoint: '/api/auth/login', email: validatedData.email },
       });
 
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         {
           error: 'Access denied. Your IP address has been blocked.',
         },
         { status: 403 }
-      );
+      ), request);
     }
 
     // Check brute force protection
@@ -67,13 +85,13 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         {
           error: `Too many failed login attempts. Account temporarily locked. Please try again in ${Math.ceil(remainingTime / 60)} minutes.`,
           retryAfter: remainingTime,
         },
         { status: 429 }
-      );
+      ), request);
     }
 
     // Rate limiting: 5 login attempts per 15 minutes per email
@@ -90,7 +108,7 @@ export async function POST(request: NextRequest) {
 
     if (!rateLimit.allowed) {
       await logAuthFailure(validatedData.email, 'Rate limit exceeded', request);
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         {
           error: 'Too many login attempts. Please try again later.',
           retryAfter: Math.ceil((rateLimit.retryAfter || 0) / 1000),
@@ -104,7 +122,7 @@ export async function POST(request: NextRequest) {
             'Retry-After': Math.ceil((rateLimit.retryAfter || 0) / 1000).toString(),
           },
         }
-      );
+      ), request);
     }
 
     // Find user by email
@@ -127,12 +145,12 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       await logAuthFailure(validatedData.email, 'User not found', request);
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         {
           error: "Invalid email or password",
         },
         { status: 401 }
-      );
+      ), request);
     }
 
     // Check user status using centralized function
@@ -140,23 +158,23 @@ export async function POST(request: NextRequest) {
 
     if (!loginCheck.allowed) {
       await logAuthFailure(validatedData.email, `Account status: ${user.status}`, request);
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         {
           error: loginCheck.error || "Account inactive. Please contact support.",
         },
         { status: 403 }
-      );
+      ), request);
     }
 
     // Legacy check (will be deprecated)
     if (!user.isActive) {
       await logAuthFailure(validatedData.email, 'Account inactive (legacy)', request);
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         {
           error: "Account is inactive. Please contact support.",
         },
         { status: 403 }
-      );
+      ), request);
     }
 
     // Determine access level based on status
@@ -184,20 +202,20 @@ export async function POST(request: NextRequest) {
       await logAuthFailure(validatedData.email, 'Invalid password', request);
 
       if (shouldBlock) {
-        return NextResponse.json(
+        return addCorsHeaders(NextResponse.json(
           {
             error: "Too many failed attempts. Account temporarily locked.",
           },
           { status: 429 }
-        );
+        ), request);
       }
 
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         {
           error: "Invalid email or password",
         },
         { status: 401 }
-      );
+      ), request);
     }
 
     // Reset failed attempts on successful login
@@ -239,13 +257,13 @@ export async function POST(request: NextRequest) {
         console.log(`[LOGIN MFA DEV] OTP for ${user.email}: ${otp}`);
       }
 
-      return NextResponse.json({
+      return addCorsHeaders(NextResponse.json({
         mfaRequired: true,
         message: 'Two-factor authentication required',
         mfaToken: mfaToken,
         phoneLastFour: userMFA.phone.slice(-4),
         expiresIn: 300, // 5 minutes
-      });
+      }), request);
     }
 
     // No MFA - proceed with normal login
@@ -265,6 +283,18 @@ export async function POST(request: NextRequest) {
     );
 
     // Create JWT session with sessionId for session validation
+    // Also get the raw token for mobile clients
+    const { createSessionToken } = await import('@/lib/auth');
+    const sessionToken = await createSessionToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      organizationId: user.organizationId || undefined,
+      sessionId,
+    });
+
+    // Set the session cookie for web clients
     await setSession({
       userId: user.id,
       email: user.email,
@@ -281,6 +311,11 @@ export async function POST(request: NextRequest) {
     // We need to generate token first, then build response with it
     const { generateCSRFToken } = await import('@/lib/csrf');
     const csrfToken = generateCSRFToken();
+
+    // Check if request is from mobile app (via header or user-agent)
+    const isMobileClient = request.headers.get('x-client-type') === 'mobile' ||
+      request.headers.get('user-agent')?.includes('Dart') ||
+      request.headers.get('user-agent')?.includes('Flutter');
 
     const response = NextResponse.json({
       message: isLimitedAccess
@@ -301,6 +336,8 @@ export async function POST(request: NextRequest) {
         restrictedMessage: 'Your account is pending verification. Some features are restricted.',
       }),
       csrfToken, // Include token for client-side caching
+      // Include session token for mobile clients (for Authorization header)
+      ...(isMobileClient && { sessionToken }),
     });
 
     // Set CSRF cookie
@@ -312,25 +349,28 @@ export async function POST(request: NextRequest) {
       maxAge: 60 * 60 * 24, // 24 hours
     });
 
-    return response;
+    // Add CORS headers
+    return addCorsHeaders(response, request);
   } catch (error) {
     console.error("Login error:", error);
+    console.error("Login error stack:", error instanceof Error ? error.stack : "No stack trace");
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
+      return addCorsHeaders(NextResponse.json(
         {
           error: "Validation error",
           details: error.issues,
         },
         { status: 400 }
-      );
+      ), request);
     }
 
-    return NextResponse.json(
+    return addCorsHeaders(NextResponse.json(
       {
         error: "Internal server error",
+        details: process.env.NODE_ENV !== 'production' ? String(error) : undefined,
       },
       { status: 500 }
-    );
+    ), request);
   }
 }

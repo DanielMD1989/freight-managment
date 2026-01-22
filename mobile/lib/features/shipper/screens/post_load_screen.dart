@@ -41,6 +41,10 @@ class _PostLoadScreenState extends ConsumerState<PostLoadScreen> {
   bool _isFragile = false;
   bool _requiresRefrigeration = false;
 
+  // Pricing (required by API)
+  final _tripKmController = TextEditingController();
+  final _rateController = TextEditingController();
+
   // Step 4: Additional Info
   final _safetyNotesController = TextEditingController();
   final _specialInstructionsController = TextEditingController();
@@ -63,6 +67,8 @@ class _PostLoadScreenState extends ConsumerState<PostLoadScreen> {
     _specialInstructionsController.dispose();
     _contactNameController.dispose();
     _contactPhoneController.dispose();
+    _tripKmController.dispose();
+    _rateController.dispose();
     super.dispose();
   }
 
@@ -179,6 +185,9 @@ class _PostLoadScreenState extends ConsumerState<PostLoadScreen> {
             if (value == null || value.isEmpty) {
               return 'Please enter pickup city';
             }
+            if (value.length < 2) {
+              return 'City name must be at least 2 characters';
+            }
             return null;
           },
         ),
@@ -215,6 +224,9 @@ class _PostLoadScreenState extends ConsumerState<PostLoadScreen> {
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Please enter delivery city';
+            }
+            if (value.length < 2) {
+              return 'City name must be at least 2 characters';
             }
             return null;
           },
@@ -423,13 +435,16 @@ class _PostLoadScreenState extends ConsumerState<PostLoadScreen> {
           controller: _cargoDescriptionController,
           decoration: const InputDecoration(
             labelText: 'Cargo Description *',
-            hintText: 'What are you shipping?',
+            hintText: 'What are you shipping? (min 5 characters)',
             prefixIcon: Icon(Icons.inventory_2),
           ),
           maxLines: 2,
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Please describe the cargo';
+            }
+            if (value.length < 5) {
+              return 'Description must be at least 5 characters';
             }
             return null;
           },
