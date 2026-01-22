@@ -62,27 +62,8 @@ const STEPS = [
   { num: 4, label: 'Review', icon: '✓' },
 ];
 
-/**
- * Calculate Haversine distance between two coordinates
- */
-function calculateHaversineDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return Math.round(R * c * 10) / 10;
-}
+// Distance calculation removed - backend is single source of truth
+// Distance is fetched from /api/distance/road endpoint only
 
 export default function LoadCreationForm() {
   const router = useRouter();
@@ -181,6 +162,7 @@ export default function LoadCreationForm() {
         return;
       }
 
+      // Fetch distance from backend API - backend is single source of truth
       let tripKm: number | undefined;
       const pickupCoords = ETHIOPIAN_CITIES_DATA[formData.pickupCity];
       const deliveryCoords = ETHIOPIAN_CITIES_DATA[formData.deliveryCity];
@@ -193,13 +175,10 @@ export default function LoadCreationForm() {
             const distanceData = await distanceRes.json();
             tripKm = distanceData.distanceKm;
           }
+          // If API fails, tripKm remains undefined - backend can calculate if needed
         } catch {
-          tripKm = calculateHaversineDistance(
-            pickupCoords.lat,
-            pickupCoords.lon,
-            deliveryCoords.lat,
-            deliveryCoords.lon
-          );
+          // API error - proceed without tripKm, backend will handle
+          console.warn('Distance API unavailable, proceeding without tripKm');
         }
       }
 
