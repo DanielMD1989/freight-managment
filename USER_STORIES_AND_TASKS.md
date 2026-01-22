@@ -6563,10 +6563,10 @@ Phase 4: Critical Architecture           [✅] 34/34 tasks (100%) - COMPLETE ✅
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
            PHASE 3: MEDIUM PRIORITY ARCHITECTURE (Horizontal Scaling)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Phase 3: Medium Priority Architecture    [✅] 34/34 tasks (100%) - COMPLETE ✅
+Phase 3: Medium Priority Architecture    [✅] 49/49 tasks (100%) - COMPLETE ✅
 
 **Goal:** Prepare infrastructure for multi-server horizontal scaling
-**Dependencies:** AWS S3, CloudFront (optional), Logging & Monitoring, Config Management, Feature Flags
+**Dependencies:** AWS S3, CloudFront (optional), Logging & Monitoring, Config Management, Feature Flags, BullMQ
 
 ---
 
@@ -6894,6 +6894,108 @@ const riskyOperation = withFeatureFlag('experimental_feature',
 - Admin API for flag management ✅
 - Core flags protected from deletion ✅
 - Flag evaluation with user context ✅
+
+---
+
+### **Story 3.5: Background Worker Queue (BullMQ)**
+**Priority:** P3 (Low)
+**Effort:** 1 day
+**Status:** ✅ COMPLETE
+
+**Goal:** Offload heavy tasks from API requests to background workers for better performance
+
+#### Tasks:
+- [x] 3.5.1: Create queue service (lib/queue.ts)
+- [x] 3.5.2: Add multiple queue types (email, sms, notifications, etc.)
+- [x] 3.5.3: Implement Redis-backed BullMQ with in-memory fallback
+- [x] 3.5.4: Create job processors (lib/queue/processors.ts)
+- [x] 3.5.5: Add email send/bulk processors
+- [x] 3.5.6: Add SMS send processor
+- [x] 3.5.7: Add notification create/bulk processors
+- [x] 3.5.8: Add distance matrix batch calculator processor
+- [x] 3.5.9: Add PDF generation processor
+- [x] 3.5.10: Add cleanup processors (expired loads, postings, GPS data)
+- [x] 3.5.11: Add bulk status update processor
+- [x] 3.5.12: Add auto-settlement scheduled job processor
+- [x] 3.5.13: Create queue management API (app/api/queues/route.ts)
+- [x] 3.5.14: Create individual queue management API (app/api/queues/[queue]/route.ts)
+- [x] 3.5.15: Update .env.example with queue configuration
+
+#### Implementation Details:
+
+**Queue Service (lib/queue.ts):**
+- 8 specialized queues: email, sms, notifications, distance-matrix, pdf, cleanup, bulk, scheduled
+- BullMQ for Redis-backed persistent queues
+- In-memory fallback when Redis unavailable
+- Configurable concurrency, rate limiting, retries with exponential backoff
+- Job progress tracking and completion callbacks
+- Queue pause/resume/clean operations
+
+**Job Processors (lib/queue/processors.ts):**
+- Email: Send individual or bulk emails via provider
+- SMS: Send via AfroMessage
+- Notifications: Create in-app notifications (single or bulk)
+- Distance Matrix: Batch calculate distances via Google Routes API
+- PDF: Generate documents (placeholder for puppeteer/pdfkit)
+- Cleanup: Expire old loads, truck postings, GPS data
+- Bulk: Mass status updates across models
+- Scheduled: Auto-settlement for delivered loads
+
+**Queue Management API:**
+- GET /api/queues - Get all queue statistics
+- POST /api/queues - Add a job to a queue
+- GET /api/queues/[queue] - Get individual queue statistics
+- POST /api/queues/[queue] - Pause, resume, or clean a queue
+
+#### Environment Variables:
+```env
+QUEUE_ENABLED="false"        # Enable BullMQ (requires Redis)
+QUEUE_DEFAULT_ATTEMPTS="3"   # Default retry attempts
+QUEUE_BACKOFF_DELAY="1000"   # Backoff delay in ms
+```
+
+#### Files Created/Modified:
+- `lib/queue.ts` - Queue service with BullMQ
+- `lib/queue/processors.ts` - Job processors for all queue types
+- `app/api/queues/route.ts` - Queue management API
+- `app/api/queues/[queue]/route.ts` - Individual queue API
+- `.env.example` - Updated with queue configuration
+
+#### Usage Example:
+```typescript
+import { addJob, getQueueStats } from '@/lib/queue';
+
+// Add an email job to the queue
+const jobId = await addJob('email', 'send', {
+  to: 'user@example.com',
+  subject: 'Welcome!',
+  html: '<h1>Hello</h1>',
+});
+
+// Add a bulk notification job
+await addJob('notifications', 'bulk', {
+  notifications: [
+    { userId: 'user1', type: 'info', title: 'Update', message: 'New load' },
+    { userId: 'user2', type: 'info', title: 'Update', message: 'New load' },
+  ],
+});
+
+// Schedule a cleanup job
+await addJob('cleanup', 'expire-loads', {}, {
+  repeat: { cron: '0 * * * *' }, // Every hour
+});
+
+// Get queue statistics
+const stats = await getQueueStats('email');
+```
+
+#### Acceptance Criteria:
+- BullMQ queue service with Redis backend ✅
+- In-memory fallback when Redis unavailable ✅
+- Processors for all heavy task types ✅
+- Admin API for queue management ✅
+- Job retry with exponential backoff ✅
+- Queue pause/resume/clean operations ✅
 
 ---
 
