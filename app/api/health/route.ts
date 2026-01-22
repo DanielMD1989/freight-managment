@@ -15,6 +15,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { checkDatabaseHealth, getPoolMetrics } from "@/lib/db";
+import { checkRedisHealth, isRedisEnabled } from "@/lib/redis";
+import { getRateLimitMetrics } from "@/lib/rateLimit";
 
 /**
  * GET /api/health
@@ -29,8 +31,9 @@ export async function GET(request: NextRequest) {
   try {
     // Basic health check
     const dbHealth = await checkDatabaseHealth();
+    const redisHealth = isRedisEnabled() ? await checkRedisHealth() : null;
 
-    // Determine overall health
+    // Determine overall health (Redis is optional, so don't fail if unavailable)
     const isHealthy = dbHealth.healthy;
 
     // Build response
@@ -46,6 +49,22 @@ export async function GET(request: NextRequest) {
       latencyMs: dbHealth.latencyMs,
       ...(dbHealth.error && { error: dbHealth.error }),
     };
+
+    // Add Redis health (if enabled)
+    if (redisHealth) {
+      response.redis = {
+        enabled: true,
+        status: redisHealth.connected ? "connected" : "disconnected",
+        latencyMs: redisHealth.latencyMs,
+        ...(redisHealth.error && { error: redisHealth.error }),
+      };
+    } else {
+      response.redis = {
+        enabled: false,
+        status: "disabled",
+        note: "Using in-memory fallback for rate limiting",
+      };
+    }
 
     // Add detailed info if requested (protected in production)
     if (detailed || includeMetrics) {
@@ -79,10 +98,20 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      // Add rate limiting metrics
+      const rateLimitMetrics = await getRateLimitMetrics();
+      response.rateLimit = {
+        redisEnabled: rateLimitMetrics.redisEnabled,
+        redisConnected: rateLimitMetrics.redisConnected,
+        inMemoryKeys: rateLimitMetrics.inMemoryKeys,
+        mode: rateLimitMetrics.redisConnected ? "distributed" : "in-memory",
+      };
+
       // Add environment info
       response.environment = {
         nodeEnv: process.env.NODE_ENV,
         pgBouncer: process.env.PGBOUNCER_ENABLED === "true",
+        redisEnabled: isRedisEnabled(),
       };
     }
 

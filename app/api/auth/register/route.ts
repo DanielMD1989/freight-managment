@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     // Rate limiting: 3 registrations per hour per IP
     const clientIp = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
-    const rateLimit = checkRateLimit(
+    const rateLimit = await checkRateLimit(
       {
         name: 'register',
         limit: 3,

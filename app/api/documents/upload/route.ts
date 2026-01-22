@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check rate limit: 10 uploads per hour per user
-    const rateLimitResult = checkRateLimit(RATE_LIMIT_DOCUMENT_UPLOAD, userId);
+    const rateLimitResult = await checkRateLimit(RATE_LIMIT_DOCUMENT_UPLOAD, userId);
 
     if (!rateLimitResult.allowed) {
       return NextResponse.json(

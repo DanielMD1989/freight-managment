@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check rate limit: 100 postings per day per carrier
-    const rateLimitResult = checkRateLimit(
+    const rateLimitResult = await checkRateLimit(
       RATE_LIMIT_TRUCK_POSTING,
       session.organizationId
     );

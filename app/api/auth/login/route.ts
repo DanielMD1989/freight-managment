@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
 
     // Rate limiting: 5 login attempts per 15 minutes per email
     const rateLimitKey = `${validatedData.email}:${clientIp}`;
-    const rateLimit = checkRateLimit(
+    const rateLimit = await checkRateLimit(
       {
         name: 'login',
         limit: 5,

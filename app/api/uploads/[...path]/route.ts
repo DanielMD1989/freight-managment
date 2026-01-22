@@ -53,7 +53,7 @@ export async function GET(
     const session = await requireAuth();
 
     // Check rate limit: 100 downloads per hour per user
-    const rateLimitResult = checkRateLimit(RATE_LIMIT_FILE_DOWNLOAD, session.userId);
+    const rateLimitResult = await checkRateLimit(RATE_LIMIT_FILE_DOWNLOAD, session.userId);
 
     if (!rateLimitResult.allowed) {
       return NextResponse.json(
