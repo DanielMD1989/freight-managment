@@ -268,6 +268,32 @@ export const RATE_LIMIT_PASSWORD_RESET: RateLimitConfig = {
 };
 
 /**
+ * PHASE 4: GPS update rate limit: 12 updates per hour per truck (1 every 5 minutes)
+ * Critical for preventing database overload at scale
+ */
+export const RATE_LIMIT_GPS_UPDATE: RateLimitConfig = {
+  name: 'gps_update',
+  limit: 12,
+  windowMs: 60 * 60 * 1000, // 1 hour
+  keyGenerator: (req, userId, orgId) => {
+    // Rate limit by truck ID from request body or query
+    const truckId = req.headers.get('x-truck-id') || 'unknown';
+    return `truck:${truckId}`;
+  },
+  message: 'GPS update rate limited. Maximum 1 update per 5 minutes per truck.',
+};
+
+/**
+ * PHASE 4: Notification fetch rate limit: 60 requests per minute per user
+ */
+export const RATE_LIMIT_NOTIFICATIONS: RateLimitConfig = {
+  name: 'notifications',
+  limit: 60,
+  windowMs: 60 * 1000, // 1 minute
+  message: 'Notification fetch rate limited. Please slow down.',
+};
+
+/**
  * Helper: Get user session info for rate limiting
  */
 export async function getRateLimitIdentifier(request: NextRequest): Promise<{

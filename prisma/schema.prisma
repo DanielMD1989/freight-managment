@@ -300,6 +300,11 @@ model User {
 
   @@index([email])
   @@index([organizationId])
+  // PHASE 4: Scalability indexes for 10K+ DAU
+  @@index([phone]) // Phone lookups for authentication
+  @@index([status]) // Filter users by status
+  @@index([role]) // Filter users by role
+  @@index([status, isActive]) // Active user checks (compound)
   @@map("users")
 }
 
@@ -495,6 +500,9 @@ model Organization {
   @@index([type])
   @@index([isVerified])
   @@index([associationId]) // For filtering carriers by association
+  // PHASE 4: Scalability compound indexes
+  @@index([isVerified, type]) // Verified carriers/shippers query
+  @@index([type, isVerified, isFlagged]) // Admin dashboard filtering
   @@map("organizations")
 }
 
