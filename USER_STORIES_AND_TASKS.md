@@ -6563,10 +6563,10 @@ Phase 4: Critical Architecture           [✅] 34/34 tasks (100%) - COMPLETE ✅
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
            PHASE 3: MEDIUM PRIORITY ARCHITECTURE (Horizontal Scaling)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Phase 3: Medium Priority Architecture    [✅] 24/24 tasks (100%) - COMPLETE ✅
+Phase 3: Medium Priority Architecture    [✅] 34/34 tasks (100%) - COMPLETE ✅
 
 **Goal:** Prepare infrastructure for multi-server horizontal scaling
-**Dependencies:** AWS S3, CloudFront (optional), Logging & Monitoring, Config Management
+**Dependencies:** AWS S3, CloudFront (optional), Logging & Monitoring, Config Management, Feature Flags
 
 ---
 
@@ -6793,6 +6793,107 @@ const errors = validateConfig();
 - .env.example documents all variables ✅
 - Configuration validated on startup ✅
 - Config API accessible to admins ✅
+
+---
+
+### **Story 3.4: Feature Flag System**
+**Priority:** P3 (Low)
+**Effort:** 0.5 day
+**Status:** ✅ COMPLETE
+
+**Goal:** Safe rollout of new features through feature flags with percentage-based targeting
+
+#### Tasks:
+- [x] 3.4.1: Create feature flag service (lib/featureFlags.ts)
+- [x] 3.4.2: Add multiple providers support (local, database, LaunchDarkly, Unleash)
+- [x] 3.4.3: Implement percentage-based rollouts with consistent hashing
+- [x] 3.4.4: Add targeting rules for user/context-based flags
+- [x] 3.4.5: Create feature flag API (GET, POST, PATCH, DELETE)
+- [x] 3.4.6: Add flag categories (core, beta, experimental, deprecated, ops)
+- [x] 3.4.7: Create convenience wrappers for risky operations
+- [x] 3.4.8: Add flag evaluation caching
+- [x] 3.4.9: Integrate with existing admin UI
+- [x] 3.4.10: Update .env.example with flag configuration
+
+#### Implementation Details:
+
+**Feature Flag Service (lib/featureFlags.ts):**
+- Providers: local (in-memory), database, LaunchDarkly, Unleash
+- Default flags: GPS tracking, notifications, auto-settlement, etc.
+- Percentage rollout with consistent hashing per user
+- Targeting rules: userId, organizationId, role, email, custom attributes
+- Rule operators: eq, neq, in, nin, contains, startsWith
+
+**Feature Flag API:**
+- GET /api/feature-flags - List all flags (admin) or evaluated flags (users)
+- GET /api/feature-flags?evaluate=true - Get flags evaluated for current user
+- POST /api/feature-flags - Create new flag (admin only)
+- GET /api/feature-flags/[key] - Get single flag
+- PATCH /api/feature-flags/[key] - Update flag (admin only)
+- DELETE /api/feature-flags/[key] - Delete flag (admin only, not core)
+
+**Flag Categories:**
+- `core` - Essential platform features (cannot be deleted)
+- `beta` - Features in beta testing
+- `experimental` - Internal testing only
+- `deprecated` - Features being phased out
+- `ops` - Operational toggles (maintenance mode, etc.)
+
+**Built-in Flags:**
+- `gps_tracking` - Real-time GPS tracking (core)
+- `real_time_notifications` - WebSocket notifications (core)
+- `auto_settlement` - Automatic load settlement (core)
+- `sms_notifications` - SMS via AfroMessage (core)
+- `new_dashboard` - Redesigned dashboard (beta)
+- `route_optimization` - Multi-stop route optimization (beta)
+- `advanced_matching` - ML-based matching (experimental)
+- `maintenance_mode` - Show maintenance page (ops)
+- `read_only_mode` - Disable writes (ops)
+
+#### Environment Variables:
+```env
+FEATURE_FLAG_PROVIDER="local"           # local | database | launchdarkly | unleash
+FEATURE_FLAG_CACHE_MS="60000"           # Cache TTL (1 minute)
+LAUNCHDARKLY_SDK_KEY=""                 # LaunchDarkly SDK key
+UNLEASH_URL=""                          # Unleash server URL
+UNLEASH_API_KEY=""                      # Unleash API key
+UNLEASH_APP_NAME="freight-platform"     # App name in Unleash
+```
+
+#### Files Created/Modified:
+- `lib/featureFlags.ts` - Feature flag service
+- `app/api/feature-flags/route.ts` - List/create flags API
+- `app/api/feature-flags/[key]/route.ts` - Single flag CRUD API
+- `.env.example` - Updated with flag configuration
+
+#### Usage Example:
+```typescript
+import { isFeatureEnabled, withFeatureFlag } from '@/lib/featureFlags';
+
+// Simple check
+if (await isFeatureEnabled('new_dashboard')) {
+  // Show new dashboard
+}
+
+// With user context for percentage rollout
+if (await isFeatureEnabled('beta_feature', { userId: user.id })) {
+  // Show beta feature to selected users
+}
+
+// Wrap risky operations
+const riskyOperation = withFeatureFlag('experimental_feature',
+  () => performRiskyOperation(),
+  fallbackValue
+);
+```
+
+#### Acceptance Criteria:
+- Feature flag service with multiple providers ✅
+- LaunchDarkly and Unleash integration available ✅
+- Percentage-based rollouts working ✅
+- Admin API for flag management ✅
+- Core flags protected from deletion ✅
+- Flag evaluation with user context ✅
 
 ---
 
