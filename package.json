@@ -16,7 +16,10 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "loadtest:db": "npx tsx scripts/load-test-db.ts",
+    "loadtest:api": "npx tsx scripts/load-test-api.ts",
+    "health:check": "curl -s http://localhost:3000/api/health?detailed=true | npx json"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^1.16.10",

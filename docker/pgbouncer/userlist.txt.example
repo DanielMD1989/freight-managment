@@ -1,0 +1,25 @@
+;; PgBouncer User Authentication File
+;;
+;; Format: "username" "password_hash"
+;;
+;; To generate SCRAM-SHA-256 hash:
+;; SELECT 'SCRAM-SHA-256$' ||
+;;        iteration_count || ':' ||
+;;        encode(salt, 'base64') || '$' ||
+;;        encode(stored_key, 'base64') || ':' ||
+;;        encode(server_key, 'base64')
+;; FROM pg_authid WHERE rolname = 'your_user';
+;;
+;; Or use md5 (less secure):
+;; echo -n "passwordusername" | md5sum | awk '{print "md5" $1}'
+;;
+;; IMPORTANT: Replace these with your actual credentials!
+;; Never commit real credentials to version control.
+
+;; Example users (replace with actual hashes):
+"postgres" "SCRAM-SHA-256$4096:salt$storedkey:serverkey"
+"freight_app" "SCRAM-SHA-256$4096:salt$storedkey:serverkey"
+
+;; For development/testing with md5:
+; "postgres" "md5abcdef1234567890abcdef12345678"
+; "freight_app" "md5abcdef1234567890abcdef12345678"
