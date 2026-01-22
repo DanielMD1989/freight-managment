@@ -6364,10 +6364,10 @@ Sprint 22: Mobile App (Flutter)              [🔄] 10/20 tasks (50%) - IN PROGR
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
               PHASE 4: CRITICAL ARCHITECTURE (10K+ DAU)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Phase 4: Critical Architecture           [✅] 12/12 tasks (100%) - COMPLETE ✅
+Phase 4: Critical Architecture           [✅] 24/24 tasks (100%) - COMPLETE ✅
 
 **Goal:** Prepare infrastructure for 10,000+ daily active users
-**Dependencies:** PostgreSQL, PgBouncer (optional)
+**Dependencies:** PostgreSQL, PgBouncer (optional), Redis (optional)
 **Completed:** 2026-01-22
 
 ---
@@ -6426,6 +6426,61 @@ Phase 4: Critical Architecture           [✅] 12/12 tasks (100%) - COMPLETE ✅
 
 ---
 
+### **Story 4.4: Redis-Based Distributed Rate Limiting**
+**Priority:** P0 (Critical)
+**Effort:** 1 day
+**Status:** ✅ COMPLETE
+
+#### Tasks:
+- [x] 4.4.1: Create Redis client configuration (lib/redis.ts)
+- [x] 4.4.2: Implement Redis-backed sliding window rate limiting
+- [x] 4.4.3: Add automatic fallback to in-memory when Redis unavailable
+- [x] 4.4.4: Implement multi-key limiting (IP + User + Organization)
+- [x] 4.4.5: Add RPS (requests per second) limits for high-traffic endpoints
+- [x] 4.4.6: Update all API routes to use async rate limiting
+
+#### Acceptance Criteria:
+- Rate limiting works across multiple servers ✅
+- Graceful degradation when Redis unavailable ✅
+- Auth endpoints: 5 attempts/15min ✅
+- API endpoints: 1000 requests/hour per user ✅
+
+**Commit:** `71fe0e1` - Add Redis-backed distributed rate limiting for 10K+ DAU support
+
+---
+
+### **Story 4.5: Global Caching Layer**
+**Priority:** P1 (High)
+**Effort:** 1 day
+**Status:** ✅ COMPLETE
+
+#### Tasks:
+- [x] 4.5.1: Create unified cache wrapper with Redis/in-memory adapters
+- [x] 4.5.2: Implement domain-specific caches (SessionCache, UserCache, etc.)
+- [x] 4.5.3: Add cache invalidation helpers (CacheInvalidation module)
+- [x] 4.5.4: Implement hit/miss monitoring with 70%+ target hit rate
+- [x] 4.5.5: Integrate caching in distance service
+- [x] 4.5.6: Add cache metrics to health endpoint
+
+#### Cached Entities:
+- Sessions: 24hr TTL ✅
+- User profiles: 5min TTL ✅
+- Permissions (RBAC): 10min TTL ✅
+- Load/Truck listings: 30s TTL ✅
+- Individual loads/trucks: 2min TTL ✅
+- Active trips: 1min TTL ✅
+- Geodata/distances: 24hr TTL ✅
+
+#### Acceptance Criteria:
+- Cache hit rate monitoring in health endpoint ✅
+- Automatic invalidation on writes ✅
+- Redis-first with in-memory fallback ✅
+- Per-namespace metrics tracking ✅
+
+**Commit:** `1b462bd` - Add global caching layer with Redis for 10K+ DAU support
+
+---
+
 ### **PHASE 4 FOUNDATION VERIFICATION**
 
 | Rule | Status | Evidence |
@@ -6435,8 +6490,13 @@ Phase 4: Critical Architecture           [✅] 12/12 tasks (100%) - COMPLETE ✅
 | **Foundation Rules** | ✅ ALL 7 PRESENT | lib/foundation-rules.ts unchanged |
 | **Authority Workflow** | ✅ CORRECT | Dispatcher propose-only; carrier approves |
 | **Test Suite** | ✅ 177 PASSING | All 8 test suites green |
+| **Rate Limiting** | ✅ DISTRIBUTED | Redis-backed with in-memory fallback |
+| **Caching Layer** | ✅ IMPLEMENTED | 70%+ hit rate target, domain-specific caches |
 
-**Commit:** `f570ed7` - Add database connection pooling layer for 10K+ DAU support
+**Phase 4 Commits:**
+- `f570ed7` - Add database connection pooling layer for 10K+ DAU support
+- `71fe0e1` - Add Redis-backed distributed rate limiting for 10K+ DAU support
+- `1b462bd` - Add global caching layer with Redis for 10K+ DAU support
 
 ---
 
