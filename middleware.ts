@@ -10,6 +10,35 @@ import {
   getClientIP,
 } from "@/lib/security";
 
+// PHASE 3: Request logging (lightweight for Edge runtime)
+const LOG_REQUESTS = process.env.LOG_REQUESTS !== 'false';
+
+/**
+ * Add timing headers and log response (PHASE 3)
+ */
+function addTimingHeaders(
+  response: NextResponse,
+  startTime: number,
+  requestId: string,
+  method: string,
+  pathname: string,
+  statusCode?: number
+): NextResponse {
+  const durationMs = Date.now() - startTime;
+  response.headers.set('x-request-id', requestId);
+  response.headers.set('x-response-time', `${durationMs}ms`);
+  response.headers.set('x-request-start', startTime.toString());
+
+  // Log response in development
+  if (LOG_REQUESTS && process.env.NODE_ENV === 'development') {
+    const status = statusCode || response.status || 200;
+    const logLevel = status >= 500 ? 'ERROR' : status >= 400 ? 'WARN' : 'INFO';
+    console.log(`[${logLevel}] ${method} ${pathname} ${status} ${durationMs}ms - ${requestId}`);
+  }
+
+  return response;
+}
+
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "development-jwt-secret"
 );
@@ -39,11 +68,21 @@ const CSRF_EXEMPT_ROUTES = [
 const STATE_CHANGING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
 export async function middleware(request: NextRequest) {
+  const startTime = Date.now();
   const { pathname } = request.nextUrl;
   const method = request.method;
 
   // Generate request ID for all requests (for error tracking and logging)
   const requestId = request.headers.get('x-request-id') || generateRequestId();
+
+  // Extract client IP for logging
+  const clientIP = getClientIP(request.headers);
+  const userAgent = request.headers.get('user-agent') || 'unknown';
+
+  // PHASE 3: Log incoming request (debug level - only in development or when enabled)
+  if (LOG_REQUESTS && process.env.NODE_ENV === 'development') {
+    console.log(`[REQ] ${method} ${pathname} - ${requestId} - ${clientIP}`);
+  }
 
   // Handle CORS preflight requests
   if (method === 'OPTIONS') {
@@ -64,9 +103,6 @@ export async function middleware(request: NextRequest) {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-client-type',
   };
 
-  // Extract client IP
-  const clientIP = getClientIP(request.headers);
-
   // Sprint 9: IP Blocking Check
   if (isIPBlocked(clientIP)) {
     await logSecurityEvent({
@@ -83,7 +119,7 @@ export async function middleware(request: NextRequest) {
       { error: 'Access denied. Your IP address has been blocked.', requestId },
       { status: 403 }
     );
-    response.headers.set('x-request-id', requestId);
+    addTimingHeaders(response, startTime, requestId, method, pathname, 403);
     return addSecurityHeaders(response);
   }
 
@@ -115,7 +151,7 @@ export async function middleware(request: NextRequest) {
           { error: 'Invalid or missing CSRF token', requestId },
           { status: 403 }
         );
-        response.headers.set('x-request-id', requestId);
+        addTimingHeaders(response, startTime, requestId, method, pathname, 403);
         return addSecurityHeaders(response);
       }
     }
@@ -124,7 +160,7 @@ export async function middleware(request: NextRequest) {
   // Allow public paths
   if (publicPaths.some((path) => pathname.startsWith(path))) {
     const response = NextResponse.next();
-    response.headers.set('x-request-id', requestId);
+    addTimingHeaders(response, startTime, requestId, method, pathname);
     // Add CORS headers
     Object.entries(corsHeaders).forEach(([key, value]) => {
       response.headers.set(key, value);
@@ -147,7 +183,7 @@ export async function middleware(request: NextRequest) {
         { error: 'Authentication required', requestId },
         { status: 401 }
       );
-      response.headers.set('x-request-id', requestId);
+      addTimingHeaders(response, startTime, requestId, method, pathname, 401);
       Object.entries(corsHeaders).forEach(([key, value]) => {
         response.headers.set(key, value);
       });
@@ -212,7 +248,7 @@ export async function middleware(request: NextRequest) {
     }
 
     const response = NextResponse.next();
-    response.headers.set('x-request-id', requestId);
+    addTimingHeaders(response, startTime, requestId, method, pathname);
     // Add CORS headers
     Object.entries(corsHeaders).forEach(([key, value]) => {
       response.headers.set(key, value);
@@ -220,12 +256,15 @@ export async function middleware(request: NextRequest) {
 
     return addSecurityHeaders(response);
   } catch (error) {
-    console.error("Token verification failed:", error);
+    // PHASE 3: Log token verification failures
+    if (LOG_REQUESTS) {
+      console.error(`[AUTH ERROR] Token verification failed for ${method} ${pathname} - ${requestId}:`, error);
+    }
 
     // Clear invalid token and redirect to login
     const response = NextResponse.redirect(new URL("/login", request.url));
     response.cookies.delete("session");
-    response.headers.set('x-request-id', requestId);
+    addTimingHeaders(response, startTime, requestId, method, pathname, 302);
     return addSecurityHeaders(response);
   }
 }

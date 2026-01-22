@@ -19,6 +19,8 @@ import { checkRedisHealth, isRedisEnabled } from "@/lib/redis";
 import { getRateLimitMetrics } from "@/lib/rateLimit";
 import { getCacheStats, getCacheMetrics } from "@/lib/cache";
 import { checkStorageHealth, getStorageProvider, isCDNEnabled } from "@/lib/storage";
+import { getMonitoringSummary, getSystemMetrics, getActiveAlerts } from "@/lib/monitoring";
+import { logger } from "@/lib/logger";
 
 /**
  * GET /api/health
@@ -140,6 +142,62 @@ export async function GET(request: NextRequest) {
         ...(storageHealth.error && { error: storageHealth.error }),
       };
 
+      // Add monitoring metrics (Phase 3: Application Monitoring)
+      const monitoringSummary = getMonitoringSummary();
+      const systemMetrics = getSystemMetrics();
+      const activeAlerts = getActiveAlerts();
+
+      response.monitoring = {
+        status: monitoringSummary.status,
+        healthScore: monitoringSummary.healthScore,
+        activeAlerts: monitoringSummary.activeAlerts,
+        metrics: monitoringSummary.metrics,
+      };
+
+      response.system = {
+        cpu: {
+          usage: systemMetrics.cpu.usage,
+          loadAverage: systemMetrics.cpu.loadAverage,
+        },
+        memory: {
+          usagePercent: systemMetrics.memory.usagePercent,
+          heapUsedMB: Math.round(systemMetrics.memory.heapUsed / 1024 / 1024),
+          heapTotalMB: Math.round(systemMetrics.memory.heapTotal / 1024 / 1024),
+          rssMB: Math.round(systemMetrics.memory.rss / 1024 / 1024),
+        },
+        eventLoop: {
+          latencyMs: systemMetrics.eventLoop.latencyMs,
+        },
+        uptime: Math.round(systemMetrics.uptime),
+      };
+
+      if (activeAlerts.length > 0) {
+        response.alerts = activeAlerts.slice(0, 5).map(a => ({
+          type: a.type,
+          severity: a.severity,
+          message: a.message,
+          timestamp: a.timestamp,
+        }));
+      }
+
+      // Add logging metrics
+      const logMetrics = logger.getMetrics();
+      response.logging = {
+        requests: {
+          total: logMetrics.requests.count,
+          avgDurationMs: logMetrics.requests.avgDurationMs,
+          maxDurationMs: logMetrics.requests.maxDurationMs,
+          errorCount: logMetrics.requests.errorCount,
+          slowCount: logMetrics.requests.slowCount,
+        },
+        errors: {
+          total: logMetrics.errors.count,
+        },
+        slowQueries: {
+          count: logMetrics.slowQueries.count,
+        },
+      };
+
       // Add environment info
       response.environment = {
         nodeEnv: process.env.NODE_ENV,
@@ -147,6 +205,7 @@ export async function GET(request: NextRequest) {
         redisEnabled: isRedisEnabled(),
         storageProvider: getStorageProvider(),
         cdnEnabled: isCDNEnabled(),
+        monitoringEnabled: process.env.MONITORING_ENABLED !== 'false',
       };
     }
 

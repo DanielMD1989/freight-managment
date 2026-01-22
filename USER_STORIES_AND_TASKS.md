@@ -6563,10 +6563,10 @@ Phase 4: Critical Architecture           [✅] 34/34 tasks (100%) - COMPLETE ✅
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
            PHASE 3: MEDIUM PRIORITY ARCHITECTURE (Horizontal Scaling)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Phase 3: Medium Priority Architecture    [🔄] 6/6 tasks (100%) - COMPLETE ✅
+Phase 3: Medium Priority Architecture    [✅] 24/24 tasks (100%) - COMPLETE ✅
 
 **Goal:** Prepare infrastructure for multi-server horizontal scaling
-**Dependencies:** AWS S3, CloudFront (optional)
+**Dependencies:** AWS S3, CloudFront (optional), Logging & Monitoring, Config Management
 
 ---
 
@@ -6613,6 +6613,186 @@ npm run storage:migrate:dry-run   # Preview migration without changes
 - CDN URLs returned when CDN_ENABLED=true ✅
 - Migration script can move existing files ✅
 - Health endpoint reports storage status ✅
+
+---
+
+### **Story 3.2: Application-Level Logging & Monitoring**
+**Priority:** P2 (Medium)
+**Effort:** 1 day
+**Status:** ✅ COMPLETE
+
+**Goal:** Detect issues before they become failures through comprehensive logging and monitoring
+
+#### Tasks:
+- [x] 3.2.1: Create structured logging service (lib/logger.ts)
+- [x] 3.2.2: Add log levels (debug, info, warn, error, fatal)
+- [x] 3.2.3: Implement JSON logging for production, pretty format for development
+- [x] 3.2.4: Add request correlation via requestId
+- [x] 3.2.5: Create request/response logging wrapper (lib/requestLogger.ts)
+- [x] 3.2.6: Add middleware request timing with x-response-time header
+- [x] 3.2.7: Create application monitoring service (lib/monitoring.ts)
+- [x] 3.2.8: Add system metrics collection (CPU, memory, event loop)
+- [x] 3.2.9: Implement health score calculation
+- [x] 3.2.10: Add alert system for CPU, memory, slow queries, error rate
+- [x] 3.2.11: Create monitoring API endpoint (app/api/monitoring/route.ts)
+- [x] 3.2.12: Update health endpoint with monitoring metrics
+
+#### Implementation Details:
+
+**Structured Logging (lib/logger.ts):**
+- Log levels: debug, info, warn, error, fatal
+- JSON format for production, colorized pretty format for development
+- Request correlation via requestId
+- Performance timing with metrics collection
+- Slow query tracking (>1000ms threshold)
+- Child loggers for request-scoped logging
+
+**Application Monitoring (lib/monitoring.ts):**
+- System metrics: CPU usage, memory (heap, RSS), event loop latency
+- Health score calculation (0-100) based on CPU, memory, error rate, response time
+- Alert system with thresholds:
+  - CPU: >80% warning, >95% critical
+  - Memory: >85% warning, >95% critical
+  - Event loop: >100ms warning, >500ms critical
+  - Error rate: >5% warning, >10% critical
+  - Slow queries: >1000ms warning, >2000ms critical
+- Auto-start in production with 1-minute check intervals
+
+**Request Logging (lib/requestLogger.ts):**
+- withRequestLogging() wrapper for API routes
+- Automatic request/response timing
+- Error tracking integration
+- Request ID propagation via x-request-id header
+- Response time via x-response-time header
+
+**Middleware Integration (middleware.ts):**
+- Request timing with startTime capture
+- x-request-id, x-response-time, x-request-start headers
+- Development logging for debugging
+
+**Monitoring API (/api/monitoring):**
+- GET /api/monitoring - Full monitoring data
+- GET /api/monitoring?summary=true - Summary only
+- GET /api/monitoring?alerts=true - Alerts only
+- POST /api/monitoring - Resolve alerts, reset metrics
+- Admin access or API key required
+
+#### Environment Variables:
+```env
+LOG_LEVEL=info               # 'debug' | 'info' | 'warn' | 'error'
+LOG_FORMAT=json              # 'json' | 'pretty'
+LOG_SAMPLE_RATE=1            # 0-1 for sampling high-volume logs
+LOG_REQUESTS=true            # Enable request logging
+MONITORING_ENABLED=true      # Enable monitoring service
+MONITORING_API_KEY=xxx       # API key for external monitoring tools
+ALERT_CPU_THRESHOLD=80       # CPU usage % threshold
+ALERT_MEMORY_THRESHOLD=85    # Memory usage % threshold
+ALERT_SLOW_QUERY_THRESHOLD_MS=1000  # Slow query threshold
+ALERT_ERROR_RATE_THRESHOLD=5        # Error rate % threshold
+ALERT_EVENT_LOOP_THRESHOLD_MS=100   # Event loop latency threshold
+MONITORING_CHECK_INTERVAL_MS=60000  # Check interval (1 minute)
+```
+
+#### Files Created/Modified:
+- `lib/logger.ts` - Structured logging service
+- `lib/monitoring.ts` - Application monitoring service
+- `lib/requestLogger.ts` - Request logging wrapper
+- `app/api/monitoring/route.ts` - Monitoring API endpoint
+- `app/api/health/route.ts` - Updated with monitoring metrics
+- `middleware.ts` - Added request timing headers
+
+#### Acceptance Criteria:
+- Structured JSON logs in production ✅
+- Request/response timing logged ✅
+- System metrics (CPU, memory) collected ✅
+- Alerts generated for threshold violations ✅
+- Health score calculated and exposed via API ✅
+- Monitoring data accessible via /api/monitoring ✅
+
+---
+
+### **Story 3.3: Centralized Configuration Management**
+**Priority:** P3 (Low)
+**Effort:** 0.5 day
+**Status:** ✅ COMPLETE
+
+**Goal:** Prevent misconfiguration between environments through standardized configuration management
+
+#### Tasks:
+- [x] 3.3.1: Create centralized config module (lib/config.ts)
+- [x] 3.3.2: Add typed configuration access for all settings
+- [x] 3.3.3: Implement AWS Secrets Manager integration
+- [x] 3.3.4: Create comprehensive .env.example documentation
+- [x] 3.3.5: Add startup configuration validation
+- [x] 3.3.6: Create config API endpoint for admin inspection
+
+#### Implementation Details:
+
+**Centralized Config Module (lib/config.ts):**
+- Typed configuration for: app, database, auth, redis, storage, email, sms, monitoring, logging, rateLimit, featureFlags, gps, payment
+- Environment-based defaults (development vs production)
+- Configuration versioning (CONFIG_VERSION)
+- Helper functions: getEnv, getEnvInt, getEnvFloat, getEnvBool, getEnvOrNull
+
+**AWS Secrets Manager Support:**
+- Automatic secret loading with `applySecrets()`
+- Secrets cached for configurable TTL (default: 5 minutes)
+- Environment variables take precedence over secrets
+- Enable with SECRETS_MANAGER_ENABLED=true
+
+**Configuration Validation:**
+- `validateConfig()` - Returns errors and warnings
+- `validateConfigOrThrow()` - Throws on critical errors
+- Production-specific checks:
+  - JWT secrets must be changed from defaults
+  - Redis recommended for distributed systems
+  - S3/Cloudinary recommended over local storage
+  - Email provider credentials validation
+
+**Startup Validation (instrumentation.ts):**
+- Loads secrets from AWS Secrets Manager
+- Logs current configuration (without secrets)
+- Validates configuration
+- Warns on issues, errors in production
+
+**Config API (/api/config):**
+- GET /api/config - Configuration summary
+- GET /api/config?validate=true - Include validation results
+- Admin access required
+
+#### Environment Variables:
+```env
+# AWS Secrets Manager
+SECRETS_MANAGER_ENABLED="false"
+SECRETS_MANAGER_SECRET_ID="freight-platform/production"
+SECRETS_MANAGER_CACHE_MS="300000"
+```
+
+#### Files Created/Modified:
+- `lib/config.ts` - Centralized configuration module
+- `.env.example` - Comprehensive environment documentation
+- `instrumentation.ts` - Startup validation hook
+- `app/api/config/route.ts` - Configuration API endpoint
+
+#### Usage Example:
+```typescript
+import { config, validateConfig } from '@/lib/config';
+
+// Access typed configuration
+const dbUrl = config.database.url;
+const isRedisEnabled = config.redis.enabled;
+const jwtExpiry = config.auth.jwtExpiresIn;
+
+// Validate configuration
+const errors = validateConfig();
+```
+
+#### Acceptance Criteria:
+- Typed configuration access available ✅
+- AWS Secrets Manager integration working ✅
+- .env.example documents all variables ✅
+- Configuration validated on startup ✅
+- Config API accessible to admins ✅
 
 ---
 
