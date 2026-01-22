@@ -18,6 +18,7 @@ import { checkDatabaseHealth, getPoolMetrics } from "@/lib/db";
 import { checkRedisHealth, isRedisEnabled } from "@/lib/redis";
 import { getRateLimitMetrics } from "@/lib/rateLimit";
 import { getCacheStats, getCacheMetrics } from "@/lib/cache";
+import { checkStorageHealth, getStorageProvider, isCDNEnabled } from "@/lib/storage";
 
 /**
  * GET /api/health
@@ -128,11 +129,24 @@ export async function GET(request: NextRequest) {
         response.cacheByNamespace = cacheMetricsData.byNamespace;
       }
 
+      // Add storage health (Phase 3: S3 + CDN)
+      const storageHealth = await checkStorageHealth();
+      response.storage = {
+        provider: storageHealth.provider,
+        status: storageHealth.healthy ? "healthy" : "unhealthy",
+        latencyMs: storageHealth.latencyMs,
+        cdnEnabled: storageHealth.cdnEnabled,
+        ...(storageHealth.cdnDomain && { cdnDomain: storageHealth.cdnDomain }),
+        ...(storageHealth.error && { error: storageHealth.error }),
+      };
+
       // Add environment info
       response.environment = {
         nodeEnv: process.env.NODE_ENV,
         pgBouncer: process.env.PGBOUNCER_ENABLED === "true",
         redisEnabled: isRedisEnabled(),
+        storageProvider: getStorageProvider(),
+        cdnEnabled: isCDNEnabled(),
       };
     }
 

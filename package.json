@@ -19,7 +19,9 @@
     "db:studio": "prisma studio",
     "loadtest:db": "npx tsx scripts/load-test-db.ts",
     "loadtest:api": "npx tsx scripts/load-test-api.ts",
-    "health:check": "curl -s http://localhost:3000/api/health?detailed=true | npx json"
+    "health:check": "curl -s http://localhost:3000/api/health?detailed=true | npx json",
+    "storage:migrate": "npx tsx scripts/migrate-storage-to-s3.ts",
+    "storage:migrate:dry-run": "npx tsx scripts/migrate-storage-to-s3.ts --dry-run"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^1.16.10",

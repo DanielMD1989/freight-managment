@@ -6560,7 +6560,63 @@ Phase 4: Critical Architecture           [✅] 34/34 tasks (100%) - COMPLETE ✅
 
 ---
 
-## **DEFERRED TO PHASE 3:**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           PHASE 3: MEDIUM PRIORITY ARCHITECTURE (Horizontal Scaling)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Phase 3: Medium Priority Architecture    [🔄] 6/6 tasks (100%) - COMPLETE ✅
+
+**Goal:** Prepare infrastructure for multi-server horizontal scaling
+**Dependencies:** AWS S3, CloudFront (optional)
+
+---
+
+### **Story 3.1: S3 + CDN File Storage Migration**
+**Priority:** P2 (Medium)
+**Effort:** 1 day
+**Status:** ✅ COMPLETE
+
+**Goal:** Allow multi-server deployment by migrating file storage from local disk to S3 + CDN
+
+#### Tasks:
+- [x] 3.1.1: Add CDN configuration support (CDN_DOMAIN, CDN_ENABLED)
+- [x] 3.1.2: Enhance S3 upload adapter to return CDN URLs
+- [x] 3.1.3: Add storage health check (checkStorageHealth)
+- [x] 3.1.4: Create file migration script (scripts/migrate-storage-to-s3.ts)
+- [x] 3.1.5: Update health endpoint with storage metrics
+- [x] 3.1.6: Add npm scripts for migration (storage:migrate, storage:migrate:dry-run)
+
+#### Implementation Details:
+- **Storage Providers:** local (development), s3 (production), cloudinary (alternative)
+- **CDN Support:** Optional CloudFront/CDN integration via CDN_DOMAIN env var
+- **Migration Script:** Batch migration with database URL updates
+- **Health Monitoring:** Storage health exposed via /api/health?detailed=true
+
+#### Environment Variables:
+```env
+STORAGE_PROVIDER=s3       # 'local' | 's3' | 'cloudinary'
+AWS_S3_BUCKET=bucket-name
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=xxx
+AWS_SECRET_ACCESS_KEY=xxx
+CDN_ENABLED=true          # Enable CDN URLs
+CDN_DOMAIN=cdn.example.com
+```
+
+#### Scripts:
+```bash
+npm run storage:migrate           # Migrate local files to S3
+npm run storage:migrate:dry-run   # Preview migration without changes
+```
+
+#### Acceptance Criteria:
+- Files can be uploaded to S3 ✅
+- CDN URLs returned when CDN_ENABLED=true ✅
+- Migration script can move existing files ✅
+- Health endpoint reports storage status ✅
+
+---
+
+## **DEFERRED TO FUTURE PHASE:**
 
 ### **Story 16.11: Driver Mobile App**
 **Priority:** P3 (Low - Future)
