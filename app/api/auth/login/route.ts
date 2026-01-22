@@ -275,11 +275,17 @@ export async function POST(request: NextRequest) {
     });
 
     // Create server-side session record for session management
+    // PHASE 4: Pass user details for Redis caching
     const userAgent = request.headers.get('user-agent');
     const { sessionId } = await createSessionRecord(
       user.id,
       clientIp,
-      userAgent
+      userAgent,
+      {
+        email: user.email,
+        role: user.role,
+        organizationId: user.organizationId || undefined,
+      }
     );
 
     // Create JWT session with sessionId for session validation
@@ -295,6 +301,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Set the session cookie for web clients
+    // PHASE 4: Include firstName/lastName for Redis caching
     await setSession({
       userId: user.id,
       email: user.email,
@@ -302,6 +309,8 @@ export async function POST(request: NextRequest) {
       status: user.status, // Sprint 2: Include status in session
       organizationId: user.organizationId || undefined,
       sessionId, // Sprint 19: Include sessionId for session management
+      firstName: user.firstName || undefined,
+      lastName: user.lastName || undefined,
     });
 
     // Log successful login

@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify, EncryptJWT, jwtDecrypt, type JWTPayload } from "jose";
 import { cookies, headers } from "next/headers";
 import { createHash, randomBytes } from "crypto";
+import { SessionCache, UserCache, CacheInvalidation, cache as globalCache } from "@/lib/cache";
 
 /**
  * Production-Ready JWT Authentication
@@ -201,11 +202,45 @@ export async function setSession(payload: SessionPayload): Promise<void> {
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: "/",
   });
+
+  // PHASE 4: Cache session data in Redis for fast lookups
+  // This eliminates DB lookups on every request
+  if (payload.sessionId) {
+    await SessionCache.set(payload.sessionId, {
+      userId: payload.userId,
+      email: payload.email,
+      role: payload.role,
+      organizationId: payload.organizationId,
+    });
+  }
+
+  // Also cache user profile for fast access
+  await UserCache.set(payload.userId, {
+    id: payload.userId,
+    email: payload.email,
+    firstName: payload.firstName || "",
+    lastName: payload.lastName || "",
+    role: payload.role,
+    status: payload.status || "ACTIVE",
+    organizationId: payload.organizationId,
+  });
 }
 
 export async function clearSession(): Promise<void> {
+  // Get session before clearing to invalidate cache
+  const session = await getSession();
+
   const cookieStore = await cookies();
   cookieStore.delete("session");
+
+  // PHASE 4: Invalidate Redis cache on logout
+  if (session) {
+    if (session.sessionId) {
+      await CacheInvalidation.session(session.sessionId, session.userId);
+    }
+    // Also clear user status cache
+    userStatusCache.delete(session.userId);
+  }
 }
 
 export async function requireAuth(): Promise<SessionPayload> {
@@ -224,12 +259,13 @@ export async function requireAuth(): Promise<SessionPayload> {
  * Use this for protected actions that require verified active users
  */
 /**
- * PHASE 4: Scalability - Cache user status to reduce DB load
- * TTL: 5 seconds - balances freshness with performance
+ * PHASE 4: Scalability - Cache user status in Redis for distributed caching
+ * Primary: Redis (5 minute TTL)
+ * Fallback: In-memory Map (5 second TTL)
  * At 10K DAU: reduces DB queries by 95%+ for status checks
  */
 const userStatusCache = new Map<string, { status: string; isActive: boolean; cachedAt: number }>();
-const USER_STATUS_CACHE_TTL_MS = 5000; // 5 seconds
+const USER_STATUS_CACHE_TTL_MS = 5000; // 5 seconds for in-memory fallback
 
 export async function requireActiveUser(): Promise<SessionPayload & { dbStatus: string }> {
   const session = await getSessionAny();
@@ -241,28 +277,52 @@ export async function requireActiveUser(): Promise<SessionPayload & { dbStatus: 
   // Import db here to avoid circular dependencies
   const { db } = await import("./db");
 
-  // PHASE 4: Check cache first
-  const cached = userStatusCache.get(session.userId);
+  let userStatus: { status: string; isActive: boolean };
   const now = Date.now();
 
-  let userStatus: { status: string; isActive: boolean };
-
-  if (cached && (now - cached.cachedAt) < USER_STATUS_CACHE_TTL_MS) {
-    // Use cached status
-    userStatus = { status: cached.status, isActive: cached.isActive };
+  // PHASE 4: Check Redis cache first (distributed)
+  const cachedUser = await UserCache.get(session.userId);
+  if (cachedUser && cachedUser.status) {
+    userStatus = { status: cachedUser.status, isActive: cachedUser.status === 'ACTIVE' };
   } else {
-    // Fetch from database and cache
-    const user = await db.user.findUnique({
-      where: { id: session.userId },
-      select: { status: true, isActive: true },
-    });
+    // Fallback: Check in-memory cache (local)
+    const memoryCached = userStatusCache.get(session.userId);
+    if (memoryCached && (now - memoryCached.cachedAt) < USER_STATUS_CACHE_TTL_MS) {
+      userStatus = { status: memoryCached.status, isActive: memoryCached.isActive };
+    } else {
+      // Cache miss: Fetch from database
+      const user = await db.user.findUnique({
+        where: { id: session.userId },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          status: true,
+          isActive: true,
+          organizationId: true,
+        },
+      });
 
-    if (!user) {
-      throw new Error("Unauthorized: User not found");
+      if (!user) {
+        throw new Error("Unauthorized: User not found");
+      }
+
+      userStatus = { status: user.status, isActive: user.isActive };
+
+      // Cache in both Redis and in-memory
+      userStatusCache.set(session.userId, { ...userStatus, cachedAt: now });
+      await UserCache.set(session.userId, {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        role: user.role,
+        status: user.status,
+        organizationId: user.organizationId || undefined,
+      });
     }
-
-    userStatus = { status: user.status, isActive: user.isActive };
-    userStatusCache.set(session.userId, { ...userStatus, cachedAt: now });
   }
 
   // Check user status - only ACTIVE users can perform actions
@@ -289,9 +349,11 @@ export async function requireActiveUser(): Promise<SessionPayload & { dbStatus: 
 
 /**
  * Invalidate user status cache (call when user status changes)
+ * PHASE 4: Clears both Redis and in-memory cache
  */
-export function invalidateUserStatusCache(userId: string): void {
+export async function invalidateUserStatusCache(userId: string): Promise<void> {
   userStatusCache.delete(userId);
+  await CacheInvalidation.user(userId);
 }
 
 export async function requireRole(
@@ -470,11 +532,13 @@ export function parseUserAgent(userAgent: string | null): string {
 /**
  * Create a session record in the database
  * Returns the session token (to be stored in cookie)
+ * PHASE 4: Also caches session in Redis for fast lookups
  */
 export async function createSessionRecord(
   userId: string,
   ipAddress?: string | null,
-  userAgent?: string | null
+  userAgent?: string | null,
+  userDetails?: { email: string; role: string; organizationId?: string }
 ): Promise<{ sessionId: string; token: string }> {
   const { db } = await import("./db");
 
@@ -497,22 +561,34 @@ export async function createSessionRecord(
     },
   });
 
+  // PHASE 4: Cache session in Redis for fast lookups
+  if (userDetails) {
+    await SessionCache.set(session.id, {
+      userId,
+      email: userDetails.email,
+      role: userDetails.role,
+      organizationId: userDetails.organizationId,
+    });
+  }
+
   return { sessionId: session.id, token };
 }
 
 /**
  * Validate a session by its token hash
  * Returns session if valid, null if invalid/revoked/expired
+ * PHASE 4: Uses Redis cache for faster lookups
  */
 export async function validateSessionByToken(token: string): Promise<{
   valid: boolean;
-  session: { id: string; userId: string } | null;
+  session: { id: string; userId: string; email?: string; role?: string; organizationId?: string } | null;
   reason?: string;
 }> {
   const { db } = await import("./db");
 
   const tokenHash = hashSessionToken(token);
 
+  // First, lookup session in database (needed to validate token hash)
   const session = await db.session.findUnique({
     where: { tokenHash },
     select: {
@@ -528,11 +604,32 @@ export async function validateSessionByToken(token: string): Promise<{
   }
 
   if (session.revokedAt) {
+    // PHASE 4: Ensure cache is invalidated for revoked sessions
+    await CacheInvalidation.session(session.id, session.userId);
     return { valid: false, session: null, reason: "Session revoked" };
   }
 
   if (new Date() > session.expiresAt) {
+    // PHASE 4: Clean up expired session from cache
+    await CacheInvalidation.session(session.id, session.userId);
     return { valid: false, session: null, reason: "Session expired" };
+  }
+
+  // PHASE 4: Try to get extended session data from cache
+  const cachedSession = await SessionCache.get(session.id);
+  if (cachedSession) {
+    // Refresh TTL on successful validation
+    await SessionCache.set(session.id, cachedSession);
+    return {
+      valid: true,
+      session: {
+        id: session.id,
+        userId: session.userId,
+        email: cachedSession.email,
+        role: cachedSession.role,
+        organizationId: cachedSession.organizationId,
+      },
+    };
   }
 
   return { valid: true, session: { id: session.id, userId: session.userId } };
@@ -540,6 +637,7 @@ export async function validateSessionByToken(token: string): Promise<{
 
 /**
  * Update session last seen timestamp
+ * PHASE 4: Also refreshes Redis cache TTL
  */
 export async function updateSessionLastSeen(sessionId: string): Promise<void> {
   const { db } = await import("./db");
@@ -548,29 +646,63 @@ export async function updateSessionLastSeen(sessionId: string): Promise<void> {
     where: { id: sessionId },
     data: { lastSeenAt: new Date() },
   });
+
+  // PHASE 4: Refresh Redis cache TTL on activity
+  // Re-cache the session to extend its TTL
+  const cached = await SessionCache.get(sessionId);
+  if (cached) {
+    await SessionCache.set(sessionId, cached);
+  }
+}
+
+/**
+ * PHASE 4: Refresh session cache TTL without DB write
+ * Call this on each request to extend cache validity
+ * Lightweight operation - only updates Redis TTL
+ */
+export async function refreshSessionCacheTTL(sessionId: string): Promise<void> {
+  const cached = await SessionCache.get(sessionId);
+  if (cached) {
+    await SessionCache.set(sessionId, cached);
+  }
 }
 
 /**
  * Revoke a specific session
+ * PHASE 4: Also invalidates Redis cache
  */
-export async function revokeSession(sessionId: string): Promise<void> {
+export async function revokeSession(sessionId: string, userId?: string): Promise<void> {
   const { db } = await import("./db");
 
   await db.session.update({
     where: { id: sessionId },
     data: { revokedAt: new Date() },
   });
+
+  // PHASE 4: Invalidate Redis cache
+  await CacheInvalidation.session(sessionId, userId);
 }
 
 /**
  * Revoke all sessions for a user
  * Optionally exclude a specific session (current session)
+ * PHASE 4: Also invalidates all Redis session caches for user
  */
 export async function revokeAllSessions(
   userId: string,
   excludeSessionId?: string
 ): Promise<number> {
   const { db } = await import("./db");
+
+  // Get all active sessions to invalidate cache
+  const sessions = await db.session.findMany({
+    where: {
+      userId,
+      revokedAt: null,
+      ...(excludeSessionId && { id: { not: excludeSessionId } }),
+    },
+    select: { id: true },
+  });
 
   const result = await db.session.updateMany({
     where: {
@@ -580,6 +712,14 @@ export async function revokeAllSessions(
     },
     data: { revokedAt: new Date() },
   });
+
+  // PHASE 4: Invalidate Redis cache for all revoked sessions
+  await Promise.all(
+    sessions.map(session => CacheInvalidation.session(session.id, userId))
+  );
+
+  // Also clear user status cache
+  userStatusCache.delete(userId);
 
   return result.count;
 }

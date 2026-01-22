@@ -183,7 +183,17 @@ export async function POST(request: NextRequest) {
     });
 
     // Create session
-    const { sessionId } = await createSessionRecord(user.id, clientIp, userAgent);
+    // PHASE 4: Pass user details for Redis caching
+    const { sessionId } = await createSessionRecord(
+      user.id,
+      clientIp,
+      userAgent,
+      {
+        email: user.email,
+        role: user.role,
+        organizationId: user.organizationId || undefined,
+      }
+    );
 
     // Create session token for mobile clients
     const { createSessionToken } = await import('@/lib/auth');
@@ -197,6 +207,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Set session cookie for web clients
+    // PHASE 4: Include firstName/lastName for Redis caching
     await setSession({
       userId: user.id,
       email: user.email,
@@ -204,6 +215,8 @@ export async function POST(request: NextRequest) {
       status: user.status,
       organizationId: user.organizationId || undefined,
       sessionId,
+      firstName: user.firstName || undefined,
+      lastName: user.lastName || undefined,
     });
 
     // Log successful MFA verification

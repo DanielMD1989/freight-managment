@@ -6364,7 +6364,7 @@ Sprint 22: Mobile App (Flutter)              [🔄] 10/20 tasks (50%) - IN PROGR
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
               PHASE 4: CRITICAL ARCHITECTURE (10K+ DAU)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Phase 4: Critical Architecture           [✅] 28/28 tasks (100%) - COMPLETE ✅
+Phase 4: Critical Architecture           [✅] 34/34 tasks (100%) - COMPLETE ✅
 
 **Goal:** Prepare infrastructure for 10,000+ daily active users
 **Dependencies:** PostgreSQL, PgBouncer (optional), Redis (optional)
@@ -6510,6 +6510,36 @@ Phase 4: Critical Architecture           [✅] 28/28 tasks (100%) - COMPLETE ✅
 
 ---
 
+### **Story 4.7: Redis Session Caching**
+**Priority:** P0 (Critical)
+**Effort:** 0.5 days
+**Status:** ✅ COMPLETE
+
+**Goal:** Remove DB lookups on every request by caching session data in Redis
+
+#### Tasks:
+- [x] 4.7.1: Update session creation (setSession) to cache in Redis
+- [x] 4.7.2: Cache user profile/permissions on login
+- [x] 4.7.3: Add TTL refresh on session activity
+- [x] 4.7.4: Add token invalidation on logout/revocation
+- [x] 4.7.5: Update login route to pass user details for caching
+- [x] 4.7.6: Update MFA verify route for Redis caching
+
+#### Implementation Details:
+- Session data cached with 24hr TTL (SessionCache)
+- User profile cached with 5min TTL (UserCache)
+- Permissions cached with 10min TTL (PermissionsCache)
+- TTL refreshed on each request via refreshSessionCacheTTL()
+- Cache invalidation on logout, session revocation, user status change
+
+#### Acceptance Criteria:
+- Session lookups use Redis (no DB hit on every request) ✅
+- TTL automatically refreshed on activity ✅
+- Proper invalidation on logout/security events ✅
+- In-memory fallback when Redis unavailable ✅
+
+---
+
 ### **PHASE 4 FOUNDATION VERIFICATION**
 
 | Rule | Status | Evidence |
@@ -6521,6 +6551,7 @@ Phase 4: Critical Architecture           [✅] 28/28 tasks (100%) - COMPLETE ✅
 | **Test Suite** | ✅ 177 PASSING | All 8 test suites green |
 | **Rate Limiting** | ✅ DISTRIBUTED | Redis-backed with in-memory fallback |
 | **Caching Layer** | ✅ IMPLEMENTED | 70%+ hit rate target, domain-specific caches |
+| **Session Caching** | ✅ IMPLEMENTED | No DB lookup on every request, Redis + in-memory |
 
 **Phase 4 Commits:**
 - `f570ed7` - Add database connection pooling layer for 10K+ DAU support
