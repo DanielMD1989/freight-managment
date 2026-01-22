@@ -5,8 +5,17 @@ import '../models/truck.dart';
 import '../utils/foundation_rules.dart';
 
 /// Load service for searching and managing loads
+/// FOUNDATION RULES ENFORCED:
+/// - SHIPPER_DEMAND_FOCUS: Shippers post/manage their own loads
+/// - CARRIER_FINAL_AUTHORITY: Carriers respond to load requests (shippers approve)
 class LoadService {
   final ApiClient _apiClient = ApiClient();
+
+  /// Get current user role from storage
+  Future<UserRole> _getCurrentUserRole() async {
+    final roleStr = await _apiClient.getCurrentUserRole();
+    return userRoleFromString(roleStr);
+  }
 
   /// Search loads on the marketplace
   Future<ApiResponse<LoadSearchResult>> searchLoads({
@@ -85,7 +94,9 @@ class LoadService {
       final response = await _apiClient.dio.get('/api/loads/$id');
 
       if (response.statusCode == 200) {
-        final load = Load.fromJson(response.data);
+        // API returns { load: {...} }
+        final loadData = response.data['load'] ?? response.data;
+        final load = Load.fromJson(loadData);
         return ApiResponse.success(load);
       }
 
@@ -96,7 +107,7 @@ class LoadService {
     } on DioException catch (e) {
       return ApiResponse.error(e.friendlyMessage, statusCode: e.response?.statusCode);
     } catch (e) {
-      return ApiResponse.error('An unexpected error occurred');
+      return ApiResponse.error('An unexpected error occurred: $e');
     }
   }
 
@@ -121,6 +132,7 @@ class LoadService {
     bool requiresRefrigeration = false,
     double? baseFareEtb,
     double? perKmEtb,
+    double? rate,
     bool isAnonymous = false,
     String? shipperContactName,
     String? shipperContactPhone,
@@ -153,26 +165,64 @@ class LoadService {
       if (tripKm != null) data['tripKm'] = tripKm;
       if (baseFareEtb != null) data['baseFareEtb'] = baseFareEtb;
       if (perKmEtb != null) data['perKmEtb'] = perKmEtb;
+      if (rate != null) data['rate'] = rate;
       if (shipperContactName != null) data['shipperContactName'] = shipperContactName;
       if (shipperContactPhone != null) data['shipperContactPhone'] = shipperContactPhone;
       if (safetyNotes != null) data['safetyNotes'] = safetyNotes;
       if (specialInstructions != null) data['specialInstructions'] = specialInstructions;
 
+      // Pricing is optional - shippers and carriers agree outside the platform
+
+      // Debug logging
+      print('[LoadService] Creating load with data: $data');
+      print('[LoadService] API Base URL: ${_apiClient.dio.options.baseUrl}');
+      print('[LoadService] Full URL: ${_apiClient.dio.options.baseUrl}/api/loads');
+
       final response = await _apiClient.dio.post('/api/loads', data: data);
 
+      print('[LoadService] Response status: ${response.statusCode}');
+      print('[LoadService] Response data: ${response.data}');
+
       if (response.statusCode == 201) {
-        final load = Load.fromJson(response.data);
+        // API returns { load: {...} }
+        final loadData = response.data['load'] ?? response.data;
+        final load = Load.fromJson(loadData);
         return ApiResponse.success(load);
       }
 
+      // Handle validation errors with details
+      String errorMsg = response.data['error'] ?? 'Failed to create load';
+      if (response.data['details'] != null) {
+        final details = response.data['details'] as List;
+        if (details.isNotEmpty) {
+          final firstError = details.first;
+          errorMsg = '${firstError['path']?.join('.') ?? 'Field'}: ${firstError['message'] ?? errorMsg}';
+        }
+      }
+
       return ApiResponse.error(
-        response.data['error'] ?? 'Failed to create load',
+        errorMsg,
         statusCode: response.statusCode,
       );
     } on DioException catch (e) {
-      return ApiResponse.error(e.friendlyMessage, statusCode: e.response?.statusCode);
+      // Extract detailed error from response if available
+      String errorMsg = e.friendlyMessage;
+      if (e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map) {
+          errorMsg = data['error'] ?? errorMsg;
+          if (data['details'] != null) {
+            final details = data['details'] as List;
+            if (details.isNotEmpty) {
+              final firstError = details.first;
+              errorMsg = '${firstError['path']?.join('.') ?? 'Field'}: ${firstError['message'] ?? errorMsg}';
+            }
+          }
+        }
+      }
+      return ApiResponse.error(errorMsg, statusCode: e.response?.statusCode);
     } catch (e) {
-      return ApiResponse.error('An unexpected error occurred');
+      return ApiResponse.error('An unexpected error occurred: $e');
     }
   }
 
@@ -331,13 +381,22 @@ class LoadService {
     }
   }
 
-  /// Respond to a load request (shipper)
+  /// Respond to a load request (shipper approves/rejects carrier's request)
+  /// ENFORCES: Only shippers can respond to load requests for their loads
   Future<ApiResponse<LoadRequest>> respondToRequest({
     required String requestId,
     required String action, // APPROVE or REJECT
     String? responseNotes,
   }) async {
     try {
+      // FOUNDATION RULE CHECK: Only shippers can respond to load requests
+      final role = await _getCurrentUserRole();
+      try {
+        assertCanRespondToTruckRequest(role); // Shippers respond to carrier requests
+      } on FoundationRuleViolation catch (e) {
+        return ApiResponse.error(e.message, statusCode: 403);
+      }
+
       final data = <String, dynamic>{
         'action': action,
       };

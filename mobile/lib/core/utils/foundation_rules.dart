@@ -8,6 +8,7 @@ library;
 
 import '../models/load.dart';
 import '../models/truck.dart';
+import '../models/trip.dart';
 
 // =============================================================================
 // RULE 1: CARRIER OWNS TRUCKS
@@ -225,14 +226,15 @@ VisibilityRules getVisibilityRules(UserRole role) {
 // =============================================================================
 
 /// Valid load status transitions
-/// Matches the web app's load state machine
+/// MUST MATCH the backend's lib/loadStateMachine.ts
 class LoadStateMachine {
   static const Map<LoadStatus, List<LoadStatus>> validTransitions = {
     LoadStatus.draft: [LoadStatus.posted, LoadStatus.cancelled],
     LoadStatus.posted: [
-      LoadStatus.unposted,
       LoadStatus.searching,
+      LoadStatus.offered,
       LoadStatus.assigned,
+      LoadStatus.unposted,
       LoadStatus.cancelled,
       LoadStatus.expired
     ],
@@ -240,36 +242,43 @@ class LoadStateMachine {
     LoadStatus.searching: [
       LoadStatus.offered,
       LoadStatus.assigned,
+      LoadStatus.exception,
       LoadStatus.cancelled,
       LoadStatus.expired
     ],
     LoadStatus.offered: [
       LoadStatus.assigned,
-      LoadStatus.searching,
-      LoadStatus.cancelled
+      LoadStatus.searching, // Carrier rejected, back to searching
+      LoadStatus.exception,
+      LoadStatus.cancelled,
+      LoadStatus.expired
     ],
     LoadStatus.assigned: [
       LoadStatus.pickupPending,
-      LoadStatus.cancelled,
-      LoadStatus.exception
+      LoadStatus.inTransit, // Direct transition if pickup happens immediately
+      LoadStatus.exception,
+      LoadStatus.cancelled
     ],
     LoadStatus.pickupPending: [
       LoadStatus.inTransit,
-      LoadStatus.cancelled,
-      LoadStatus.exception
+      LoadStatus.exception,
+      LoadStatus.cancelled
     ],
     LoadStatus.inTransit: [
       LoadStatus.delivered,
       LoadStatus.exception
     ],
     LoadStatus.delivered: [LoadStatus.completed, LoadStatus.exception],
-    LoadStatus.completed: [], // Terminal state
+    LoadStatus.completed: [LoadStatus.exception], // Can still report issues after completion
     LoadStatus.exception: [
-      LoadStatus.inTransit,
-      LoadStatus.delivered,
-      LoadStatus.cancelled
+      LoadStatus.searching,     // Resolved, reassign
+      LoadStatus.assigned,      // Resolved, same carrier
+      LoadStatus.inTransit,     // Resolved, continue journey
+      LoadStatus.pickupPending, // Resolved, waiting for pickup
+      LoadStatus.cancelled,     // Unresolvable, cancel
+      LoadStatus.completed      // Issue resolved, mark complete
     ],
-    LoadStatus.cancelled: [], // Terminal state
+    LoadStatus.cancelled: [], // Terminal state - no transitions
     LoadStatus.expired: [LoadStatus.posted], // Can re-post
   };
 
@@ -312,6 +321,48 @@ class LoadStateMachine {
     return status == LoadStatus.assigned ||
         status == LoadStatus.pickupPending ||
         status == LoadStatus.inTransit;
+  }
+}
+
+// =============================================================================
+// TRIP STATUS MACHINE
+// =============================================================================
+
+/// Valid trip status transitions
+/// MUST MATCH the backend's lib/tripManagement.ts
+class TripStateMachine {
+  static const Map<TripStatus, List<TripStatus>> validTransitions = {
+    TripStatus.assigned: [TripStatus.pickupPending, TripStatus.cancelled],
+    TripStatus.pickupPending: [TripStatus.inTransit, TripStatus.cancelled],
+    TripStatus.inTransit: [TripStatus.delivered, TripStatus.cancelled],
+    TripStatus.delivered: [TripStatus.completed, TripStatus.cancelled],
+    TripStatus.completed: [], // Terminal state
+    TripStatus.cancelled: [], // Terminal state
+  };
+
+  /// Check if a transition is valid
+  static bool canTransition(TripStatus from, TripStatus to) {
+    return validTransitions[from]?.contains(to) ?? false;
+  }
+
+  /// Get valid next statuses
+  static List<TripStatus> getValidNextStatuses(TripStatus current) {
+    return validTransitions[current] ?? [];
+  }
+
+  /// Check if trip is in a terminal state
+  static bool isTerminal(TripStatus status) {
+    return status == TripStatus.completed || status == TripStatus.cancelled;
+  }
+
+  /// Check if trip can be cancelled
+  static bool canCancel(TripStatus status) {
+    return validTransitions[status]?.contains(TripStatus.cancelled) ?? false;
+  }
+
+  /// Check if trip is in-progress
+  static bool isInProgress(TripStatus status) {
+    return status == TripStatus.pickupPending || status == TripStatus.inTransit;
   }
 }
 
@@ -396,5 +447,101 @@ class RequestStateMachine {
   /// Check if request can be responded to
   static bool canRespond(String status) {
     return status == 'PENDING';
+  }
+}
+
+// =============================================================================
+// FOUNDATION RULE EXCEPTION
+// =============================================================================
+
+/// Exception thrown when a foundation rule is violated
+class FoundationRuleViolation implements Exception {
+  final String ruleId;
+  final String message;
+  final String attemptedAction;
+
+  FoundationRuleViolation({
+    required this.ruleId,
+    required this.message,
+    required this.attemptedAction,
+  });
+
+  @override
+  String toString() => 'FoundationRuleViolation [$ruleId]: $message. Attempted: $attemptedAction';
+}
+
+// =============================================================================
+// PERMISSION ENFORCEMENT - THROWS EXCEPTIONS
+// =============================================================================
+
+/// Assert that user can modify truck ownership
+/// Throws FoundationRuleViolation if not permitted
+void assertCanModifyTruck(UserRole role) {
+  if (!canModifyTruckOwnership(role)) {
+    throw FoundationRuleViolation(
+      ruleId: RULE_CARRIER_OWNS_TRUCKS,
+      message: 'Only carriers can create, edit, or delete trucks',
+      attemptedAction: 'modify truck',
+    );
+  }
+}
+
+/// Assert that user can start trips
+/// Throws FoundationRuleViolation if not permitted
+void assertCanStartTrip(UserRole role) {
+  if (!canStartTrips(role)) {
+    throw FoundationRuleViolation(
+      ruleId: RULE_CARRIER_FINAL_AUTHORITY,
+      message: 'Only carriers can start trips',
+      attemptedAction: 'start trip',
+    );
+  }
+}
+
+/// Assert that user can accept/reject load requests
+/// Throws FoundationRuleViolation if not permitted
+void assertCanRespondToLoadRequest(UserRole role) {
+  if (!canAcceptLoadRequests(role)) {
+    throw FoundationRuleViolation(
+      ruleId: RULE_CARRIER_FINAL_AUTHORITY,
+      message: 'Only carriers can respond to load requests',
+      attemptedAction: 'respond to load request',
+    );
+  }
+}
+
+/// Assert that user can accept/reject truck requests (shipper)
+/// Throws FoundationRuleViolation if not permitted
+void assertCanRespondToTruckRequest(UserRole role) {
+  if (!canAcceptTruckRequests(role)) {
+    throw FoundationRuleViolation(
+      ruleId: RULE_SHIPPER_DEMAND_FOCUS,
+      message: 'Only shippers can respond to truck requests',
+      attemptedAction: 'respond to truck request',
+    );
+  }
+}
+
+/// Assert that user can directly assign loads
+/// Throws FoundationRuleViolation if not permitted
+void assertCanAssignLoads(UserRole role) {
+  if (!canDirectlyAssignLoads(role)) {
+    throw FoundationRuleViolation(
+      ruleId: RULE_DISPATCHER_COORDINATION_ONLY,
+      message: 'You cannot directly assign loads',
+      attemptedAction: 'assign load',
+    );
+  }
+}
+
+/// Assert that dispatcher is only proposing, not executing
+/// Throws FoundationRuleViolation if dispatcher attempts to execute
+void assertDispatcherCannotExecute(UserRole role, String action) {
+  if (role == UserRole.dispatcher) {
+    throw FoundationRuleViolation(
+      ruleId: RULE_DISPATCHER_COORDINATION_ONLY,
+      message: 'Dispatchers can only propose matches, not execute assignments',
+      attemptedAction: action,
+    );
   }
 }

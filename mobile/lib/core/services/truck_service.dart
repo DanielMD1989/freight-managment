@@ -1,10 +1,20 @@
 import 'package:dio/dio.dart';
 import '../api/api_client.dart';
 import '../models/truck.dart';
+import '../utils/foundation_rules.dart';
 
 /// Truck service for CRUD operations
+/// FOUNDATION RULES ENFORCED:
+/// - CARRIER_OWNS_TRUCKS: Only carriers can create/edit/delete trucks
+/// - CARRIER_FINAL_AUTHORITY: Only carriers can respond to truck requests
 class TruckService {
   final ApiClient _apiClient = ApiClient();
+
+  /// Get current user role from storage
+  Future<UserRole> _getCurrentUserRole() async {
+    final roleStr = await _apiClient.getCurrentUserRole();
+    return userRoleFromString(roleStr);
+  }
 
   /// Get all trucks for the carrier
   Future<ApiResponse<List<Truck>>> getTrucks({
@@ -67,6 +77,7 @@ class TruckService {
   }
 
   /// Create a new truck
+  /// ENFORCES: RULE_CARRIER_OWNS_TRUCKS - Only carriers can create trucks
   Future<ApiResponse<Truck>> createTruck({
     required String licensePlate,
     required String truckType,
@@ -80,6 +91,14 @@ class TruckService {
     double? lengthM,
   }) async {
     try {
+      // FOUNDATION RULE CHECK: Only carriers can create trucks
+      final role = await _getCurrentUserRole();
+      try {
+        assertCanModifyTruck(role);
+      } on FoundationRuleViolation catch (e) {
+        return ApiResponse.error(e.message, statusCode: 403);
+      }
+
       final response = await _apiClient.dio.post(
         '/api/trucks',
         data: {
@@ -113,6 +132,7 @@ class TruckService {
   }
 
   /// Update a truck
+  /// ENFORCES: RULE_CARRIER_OWNS_TRUCKS - Only carriers can update trucks
   Future<ApiResponse<Truck>> updateTruck({
     required String id,
     String? licensePlate,
@@ -128,6 +148,14 @@ class TruckService {
     double? lengthM,
   }) async {
     try {
+      // FOUNDATION RULE CHECK: Only carriers can update trucks
+      final role = await _getCurrentUserRole();
+      try {
+        assertCanModifyTruck(role);
+      } on FoundationRuleViolation catch (e) {
+        return ApiResponse.error(e.message, statusCode: 403);
+      }
+
       final data = <String, dynamic>{};
       if (licensePlate != null) data['licensePlate'] = licensePlate;
       if (truckType != null) data['truckType'] = truckType;
@@ -163,8 +191,17 @@ class TruckService {
   }
 
   /// Delete a truck
+  /// ENFORCES: RULE_CARRIER_OWNS_TRUCKS - Only carriers can delete trucks
   Future<ApiResponse<bool>> deleteTruck(String id) async {
     try {
+      // FOUNDATION RULE CHECK: Only carriers can delete trucks
+      final role = await _getCurrentUserRole();
+      try {
+        assertCanModifyTruck(role);
+      } on FoundationRuleViolation catch (e) {
+        return ApiResponse.error(e.message, statusCode: 403);
+      }
+
       final response = await _apiClient.dio.delete('/api/trucks/$id');
 
       if (response.statusCode == 200) {
@@ -319,12 +356,21 @@ class TruckService {
   }
 
   /// Respond to a truck request (carrier approves/rejects)
+  /// ENFORCES: RULE_CARRIER_FINAL_AUTHORITY - Only carriers can approve/reject truck requests
   Future<ApiResponse<TruckRequest>> respondToTruckRequest({
     required String requestId,
     required String action, // APPROVE or REJECT
     String? responseNotes,
   }) async {
     try {
+      // FOUNDATION RULE CHECK: Only carriers can respond to truck requests
+      final role = await _getCurrentUserRole();
+      try {
+        assertCanModifyTruck(role); // Carriers own trucks, so they respond
+      } on FoundationRuleViolation catch (e) {
+        return ApiResponse.error(e.message, statusCode: 403);
+      }
+
       final data = <String, dynamic>{
         'action': action,
       };
@@ -489,19 +535,47 @@ class TruckService {
       if (ownerName != null) data['ownerName'] = ownerName;
       if (notes != null) data['notes'] = notes;
 
+      // Debug logging
+      print('[TruckService] Creating truck posting with data: $data');
+
       final response = await _apiClient.dio.post('/api/truck-postings', data: data);
+
+      print('[TruckService] Response status: ${response.statusCode}');
+      print('[TruckService] Response data: ${response.data}');
 
       if (response.statusCode == 201) {
         final posting = TruckPosting.fromJson(response.data['truckPosting'] ?? response.data);
         return ApiResponse.success(posting);
       }
 
-      return ApiResponse.error(
-        response.data['error'] ?? 'Failed to create truck posting',
-        statusCode: response.statusCode,
-      );
+      // Handle validation errors with details
+      String errorMsg = response.data['error'] ?? 'Failed to create truck posting';
+      if (response.data['details'] != null) {
+        final details = response.data['details'] as List;
+        if (details.isNotEmpty) {
+          final firstError = details.first;
+          errorMsg = '${firstError['path']?.join('.') ?? 'Field'}: ${firstError['message'] ?? errorMsg}';
+        }
+      }
+
+      return ApiResponse.error(errorMsg, statusCode: response.statusCode);
     } on DioException catch (e) {
-      return ApiResponse.error(e.friendlyMessage, statusCode: e.response?.statusCode);
+      // Extract detailed error from response if available
+      String errorMsg = e.friendlyMessage;
+      if (e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map) {
+          errorMsg = data['error'] ?? errorMsg;
+          if (data['details'] != null) {
+            final details = data['details'] as List;
+            if (details.isNotEmpty) {
+              final firstError = details.first;
+              errorMsg = '${firstError['path']?.join('.') ?? 'Field'}: ${firstError['message'] ?? errorMsg}';
+            }
+          }
+        }
+      }
+      return ApiResponse.error(errorMsg, statusCode: e.response?.statusCode);
     } catch (e) {
       return ApiResponse.error('An unexpected error occurred: $e');
     }

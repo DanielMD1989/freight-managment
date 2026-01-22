@@ -1,5 +1,8 @@
 import 'package:dio/dio.dart';
+import 'package:dio/browser.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// API configuration
 class ApiConfig {
@@ -29,8 +32,12 @@ class ApiClient {
   static ApiClient? _instance;
   late final Dio _dio;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  SharedPreferences? _webPrefs;
 
   ApiClient._internal() {
+    print('[API] Initializing ApiClient with baseUrl: ${ApiConfig.baseUrl}');
+    print('[API] Running on web: $kIsWeb');
+
     _dio = Dio(BaseOptions(
       baseUrl: ApiConfig.baseUrl,
       connectTimeout: const Duration(milliseconds: ApiConfig.connectTimeout),
@@ -41,9 +48,25 @@ class ApiClient {
       },
     ));
 
+    // Configure for web - try without credentials first for CORS
+    if (kIsWeb) {
+      print('[API] Configuring BrowserHttpClientAdapter');
+      // Note: withCredentials: false to avoid strict CORS requirements
+      _dio.httpClientAdapter = BrowserHttpClientAdapter(withCredentials: false);
+    }
+
     // Add interceptors
     _dio.interceptors.add(_authInterceptor());
     _dio.interceptors.add(_loggingInterceptor());
+
+    // Initialize web preferences
+    if (kIsWeb) {
+      _initWebPrefs();
+    }
+  }
+
+  Future<void> _initWebPrefs() async {
+    _webPrefs = await SharedPreferences.getInstance();
   }
 
   factory ApiClient() {
@@ -57,16 +80,22 @@ class ApiClient {
   Interceptor _authInterceptor() {
     return InterceptorsWrapper(
       onRequest: (options, handler) async {
-        // Get session token from secure storage
-        final token = await _storage.read(key: StorageKeys.sessionToken);
-        if (token != null) {
-          options.headers['Cookie'] = 'session=$token';
+        // Get session token
+        final token = await _readStorage(StorageKeys.sessionToken);
+
+        // Add Authorization header for mobile/web clients
+        // This works for both platforms and doesn't rely on cookies
+        if (token != null && token.isNotEmpty && token != 'authenticated') {
+          options.headers['Authorization'] = 'Bearer $token';
         }
+
+        // Mark request as from mobile client (for server to return sessionToken)
+        options.headers['x-client-type'] = 'mobile';
 
         // Add CSRF token for state-changing requests
         if (['POST', 'PUT', 'PATCH', 'DELETE'].contains(options.method)) {
-          final csrfToken = await _storage.read(key: StorageKeys.csrfToken);
-          if (csrfToken != null) {
+          final csrfToken = await _readStorage(StorageKeys.csrfToken);
+          if (csrfToken != null && csrfToken.isNotEmpty) {
             options.headers['x-csrf-token'] = csrfToken;
           }
         }
@@ -74,17 +103,20 @@ class ApiClient {
         handler.next(options);
       },
       onResponse: (response, handler) async {
-        // Extract and save CSRF token from response cookies
-        final cookies = response.headers['set-cookie'];
-        if (cookies != null) {
-          for (final cookie in cookies) {
-            if (cookie.startsWith('csrf_token=')) {
-              final token = cookie.split(';').first.split('=').last;
-              await _storage.write(key: StorageKeys.csrfToken, value: token);
-            }
-            if (cookie.startsWith('session=')) {
-              final token = cookie.split(';').first.split('=').last;
-              await _storage.write(key: StorageKeys.sessionToken, value: token);
+        // Extract and save CSRF token from response cookies (mobile only)
+        // On web, cookies are handled by browser
+        if (!kIsWeb) {
+          final cookies = response.headers['set-cookie'];
+          if (cookies != null) {
+            for (final cookie in cookies) {
+              if (cookie.startsWith('csrf_token=')) {
+                final token = cookie.split(';').first.split('=').last;
+                await _writeStorage(StorageKeys.csrfToken, token);
+              }
+              if (cookie.startsWith('session=')) {
+                final token = cookie.split(';').first.split('=').last;
+                await _writeStorage(StorageKeys.sessionToken, token);
+              }
             }
           }
         }
@@ -103,12 +135,54 @@ class ApiClient {
 
   /// Logging interceptor for debugging
   Interceptor _loggingInterceptor() {
-    return LogInterceptor(
-      requestBody: true,
-      responseBody: true,
-      error: true,
-      logPrint: (obj) => print('[API] $obj'),
+    return InterceptorsWrapper(
+      onRequest: (options, handler) {
+        print('[API REQUEST] ${options.method} ${options.uri}');
+        print('[API REQUEST HEADERS] ${options.headers}');
+        handler.next(options);
+      },
+      onResponse: (response, handler) {
+        print('[API RESPONSE] ${response.statusCode} ${response.requestOptions.uri}');
+        print('[API RESPONSE DATA] ${response.data}');
+        handler.next(response);
+      },
+      onError: (error, handler) {
+        print('[API ERROR] ${error.type}: ${error.message}');
+        print('[API ERROR] Request: ${error.requestOptions.method} ${error.requestOptions.uri}');
+        print('[API ERROR] Response: ${error.response?.statusCode} ${error.response?.data}');
+        print('[API ERROR] Stack: ${error.stackTrace}');
+        handler.next(error);
+      },
     );
+  }
+
+  /// Helper to read from storage (web uses SharedPreferences)
+  Future<String?> _readStorage(String key) async {
+    if (kIsWeb) {
+      _webPrefs ??= await SharedPreferences.getInstance();
+      return _webPrefs!.getString(key);
+    }
+    return await _storage.read(key: key);
+  }
+
+  /// Helper to write to storage (web uses SharedPreferences)
+  Future<void> _writeStorage(String key, String value) async {
+    if (kIsWeb) {
+      _webPrefs ??= await SharedPreferences.getInstance();
+      await _webPrefs!.setString(key, value);
+    } else {
+      await _storage.write(key: key, value: value);
+    }
+  }
+
+  /// Helper to delete from storage
+  Future<void> _deleteStorage(String key) async {
+    if (kIsWeb) {
+      _webPrefs ??= await SharedPreferences.getInstance();
+      await _webPrefs!.remove(key);
+    } else {
+      await _storage.delete(key: key);
+    }
   }
 
   /// Save auth tokens after login
@@ -118,36 +192,41 @@ class ApiClient {
     required String userId,
     required String userRole,
   }) async {
-    await _storage.write(key: StorageKeys.sessionToken, value: sessionToken);
+    await _writeStorage(StorageKeys.sessionToken, sessionToken);
     if (csrfToken != null) {
-      await _storage.write(key: StorageKeys.csrfToken, value: csrfToken);
+      await _writeStorage(StorageKeys.csrfToken, csrfToken);
     }
-    await _storage.write(key: StorageKeys.userId, value: userId);
-    await _storage.write(key: StorageKeys.userRole, value: userRole);
+    await _writeStorage(StorageKeys.userId, userId);
+    await _writeStorage(StorageKeys.userRole, userRole);
   }
 
   /// Clear auth tokens on logout
   Future<void> clearAuth() async {
-    await _storage.delete(key: StorageKeys.sessionToken);
-    await _storage.delete(key: StorageKeys.csrfToken);
-    await _storage.delete(key: StorageKeys.userId);
-    await _storage.delete(key: StorageKeys.userRole);
+    await _deleteStorage(StorageKeys.sessionToken);
+    await _deleteStorage(StorageKeys.csrfToken);
+    await _deleteStorage(StorageKeys.userId);
+    await _deleteStorage(StorageKeys.userRole);
   }
 
   /// Check if user is authenticated
   Future<bool> isAuthenticated() async {
-    final token = await _storage.read(key: StorageKeys.sessionToken);
+    // On web, check userId instead since cookies are handled by browser
+    if (kIsWeb) {
+      final userId = await _readStorage(StorageKeys.userId);
+      return userId != null && userId.isNotEmpty;
+    }
+    final token = await _readStorage(StorageKeys.sessionToken);
     return token != null && token.isNotEmpty;
   }
 
   /// Get current user ID
   Future<String?> getCurrentUserId() async {
-    return await _storage.read(key: StorageKeys.userId);
+    return await _readStorage(StorageKeys.userId);
   }
 
   /// Get current user role
   Future<String?> getCurrentUserRole() async {
-    return await _storage.read(key: StorageKeys.userRole);
+    return await _readStorage(StorageKeys.userRole);
   }
 }
 
@@ -180,12 +259,19 @@ class ApiResponse<T> {
 /// Extension for Dio error handling
 extension DioErrorExtension on DioException {
   String get friendlyMessage {
+    // Log the actual error for debugging
+    print('[API Error] Type: $type, Message: $message, Error: $error');
+
     switch (type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
         return 'Connection timed out. Please check your internet.';
       case DioExceptionType.connectionError:
+        // On web, CORS errors often appear as connection errors
+        if (kIsWeb) {
+          return 'Connection failed. This may be a CORS issue. Check browser console.';
+        }
         return 'No internet connection.';
       case DioExceptionType.badResponse:
         final data = response?.data;
@@ -196,7 +282,7 @@ extension DioErrorExtension on DioException {
       case DioExceptionType.cancel:
         return 'Request cancelled.';
       default:
-        return 'Something went wrong. Please try again.';
+        return 'Something went wrong: ${message ?? type.name}';
     }
   }
 }

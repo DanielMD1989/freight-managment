@@ -185,7 +185,18 @@ export async function POST(request: NextRequest) {
     // Create session
     const { sessionId } = await createSessionRecord(user.id, clientIp, userAgent);
 
-    // Set session cookie
+    // Create session token for mobile clients
+    const { createSessionToken } = await import('@/lib/auth');
+    const sessionToken = await createSessionToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      organizationId: user.organizationId || undefined,
+      sessionId,
+    });
+
+    // Set session cookie for web clients
     await setSession({
       userId: user.id,
       email: user.email,
@@ -210,6 +221,11 @@ export async function POST(request: NextRequest) {
     const { generateCSRFToken } = await import('@/lib/csrf');
     const csrfToken = generateCSRFToken();
 
+    // Check if request is from mobile app
+    const isMobileClient = request.headers.get('x-client-type') === 'mobile' ||
+      userAgent?.includes('Dart') ||
+      userAgent?.includes('Flutter');
+
     const response = NextResponse.json({
       message: 'Login successful',
       user: {
@@ -226,6 +242,8 @@ export async function POST(request: NextRequest) {
         remainingRecoveryCodes: mfa.recoveryCodes.length - (mfa.recoveryCodesUsedCount || 0) - 1,
       }),
       csrfToken,
+      // Include session token for mobile clients
+      ...(isMobileClient && { sessionToken }),
     });
 
     // Set CSRF cookie

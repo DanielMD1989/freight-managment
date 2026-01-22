@@ -1,10 +1,19 @@
 import 'package:dio/dio.dart';
 import '../api/api_client.dart';
 import '../models/trip.dart';
+import '../utils/foundation_rules.dart';
 
 /// Trip service for managing trip operations
+/// FOUNDATION RULES ENFORCED:
+/// - CARRIER_FINAL_AUTHORITY: Only carriers can start/progress trips
 class TripService {
   final ApiClient _apiClient = ApiClient();
+
+  /// Get current user role from storage
+  Future<UserRole> _getCurrentUserRole() async {
+    final roleStr = await _apiClient.getCurrentUserRole();
+    return userRoleFromString(roleStr);
+  }
 
   /// Get all trips for the carrier
   Future<ApiResponse<List<Trip>>> getTrips({
@@ -49,7 +58,9 @@ class TripService {
       final response = await _apiClient.dio.get('/api/trips/$id');
 
       if (response.statusCode == 200) {
-        final trip = Trip.fromJson(response.data);
+        // API may return { trip: {...} } or just the trip object
+        final tripData = response.data['trip'] ?? response.data;
+        final trip = Trip.fromJson(tripData);
         return ApiResponse.success(trip);
       }
 
@@ -60,11 +71,12 @@ class TripService {
     } on DioException catch (e) {
       return ApiResponse.error(e.friendlyMessage, statusCode: e.response?.statusCode);
     } catch (e) {
-      return ApiResponse.error('An unexpected error occurred');
+      return ApiResponse.error('An unexpected error occurred: $e');
     }
   }
 
   /// Update trip status
+  /// ENFORCES: RULE_CARRIER_FINAL_AUTHORITY - Only carriers can update trip status
   Future<ApiResponse<Trip>> updateTripStatus({
     required String tripId,
     required String status,
@@ -73,6 +85,14 @@ class TripService {
     String? deliveryNotes,
   }) async {
     try {
+      // FOUNDATION RULE CHECK: Only carriers can update trip status
+      final role = await _getCurrentUserRole();
+      try {
+        assertCanStartTrip(role);
+      } on FoundationRuleViolation catch (e) {
+        return ApiResponse.error(e.message, statusCode: 403);
+      }
+
       final data = <String, dynamic>{
         'status': status,
       };
@@ -86,7 +106,9 @@ class TripService {
       );
 
       if (response.statusCode == 200) {
-        final trip = Trip.fromJson(response.data);
+        // API may return { trip: {...} } or just the trip object
+        final tripData = response.data['trip'] ?? response.data;
+        final trip = Trip.fromJson(tripData);
         return ApiResponse.success(trip);
       }
 
@@ -97,21 +119,24 @@ class TripService {
     } on DioException catch (e) {
       return ApiResponse.error(e.friendlyMessage, statusCode: e.response?.statusCode);
     } catch (e) {
-      return ApiResponse.error('An unexpected error occurred');
+      return ApiResponse.error('An unexpected error occurred: $e');
     }
   }
 
   /// Start trip (ASSIGNED -> PICKUP_PENDING)
+  /// ENFORCES: RULE_CARRIER_FINAL_AUTHORITY - Only carriers can start trips
   Future<ApiResponse<Trip>> startTrip(String tripId) async {
     return updateTripStatus(tripId: tripId, status: 'PICKUP_PENDING');
   }
 
   /// Mark picked up (PICKUP_PENDING -> IN_TRANSIT)
+  /// ENFORCES: RULE_CARRIER_FINAL_AUTHORITY - Only carriers can mark pickup
   Future<ApiResponse<Trip>> markPickedUp(String tripId) async {
     return updateTripStatus(tripId: tripId, status: 'IN_TRANSIT');
   }
 
   /// Mark delivered (IN_TRANSIT -> DELIVERED)
+  /// ENFORCES: RULE_CARRIER_FINAL_AUTHORITY - Only carriers can mark delivery
   Future<ApiResponse<Trip>> markDelivered({
     required String tripId,
     required String receiverName,
@@ -128,11 +153,20 @@ class TripService {
   }
 
   /// Cancel trip
+  /// ENFORCES: RULE_CARRIER_FINAL_AUTHORITY - Only carriers can cancel trips
   Future<ApiResponse<Trip>> cancelTrip({
     required String tripId,
     required String reason,
   }) async {
     try {
+      // FOUNDATION RULE CHECK: Only carriers can cancel trips
+      final role = await _getCurrentUserRole();
+      try {
+        assertCanStartTrip(role);
+      } on FoundationRuleViolation catch (e) {
+        return ApiResponse.error(e.message, statusCode: 403);
+      }
+
       final response = await _apiClient.dio.post(
         '/api/trips/$tripId/cancel',
         data: {'reason': reason},

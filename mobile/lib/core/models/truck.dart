@@ -158,17 +158,25 @@ class Truck {
   });
 
   factory Truck.fromJson(Map<String, dynamic> json) {
+    // Helper to parse number from string or number
+    double parseDouble(dynamic value, [double defaultValue = 0]) {
+      if (value == null) return defaultValue;
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? defaultValue;
+      return defaultValue;
+    }
+
     return Truck(
       id: json['id'] ?? '',
       truckType: truckTypeFromString(json['truckType']),
       licensePlate: json['licensePlate'] ?? '',
-      capacity: (json['capacity'] ?? 0).toDouble(),
-      volume: json['volume']?.toDouble(),
+      capacity: parseDouble(json['capacity']),
+      volume: json['volume'] != null ? parseDouble(json['volume']) : null,
       isAvailable: json['isAvailable'] ?? true,
       currentCity: json['currentCity'],
       currentRegion: json['currentRegion'],
-      currentLocationLat: json['currentLocationLat']?.toDouble(),
-      currentLocationLon: json['currentLocationLon']?.toDouble(),
+      currentLocationLat: json['currentLocationLat'] != null ? parseDouble(json['currentLocationLat']) : null,
+      currentLocationLon: json['currentLocationLon'] != null ? parseDouble(json['currentLocationLon']) : null,
       locationUpdatedAt: json['locationUpdatedAt'] != null
           ? DateTime.parse(json['locationUpdatedAt'])
           : null,
@@ -184,7 +192,7 @@ class Truck {
       ownerName: json['ownerName'],
       contactName: json['contactName'],
       contactPhone: json['contactPhone'],
-      lengthM: json['lengthM']?.toDouble(),
+      lengthM: json['lengthM'] != null ? parseDouble(json['lengthM']) : null,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : DateTime.now(),
@@ -316,8 +324,16 @@ class TruckPosting {
           ? DateTime.parse(json['availableTo'])
           : null,
       fullPartial: json['fullPartial'],
-      availableLength: json['availableLength']?.toDouble(),
-      availableWeight: json['availableWeight']?.toDouble(),
+      availableLength: json['availableLength'] != null
+          ? (json['availableLength'] is num
+              ? json['availableLength'].toDouble()
+              : double.tryParse(json['availableLength'].toString()))
+          : null,
+      availableWeight: json['availableWeight'] != null
+          ? (json['availableWeight'] is num
+              ? json['availableWeight'].toDouble()
+              : double.tryParse(json['availableWeight'].toString()))
+          : null,
       notes: json['notes'],
       contactName: json['contactName'],
       contactPhone: json['contactPhone'],

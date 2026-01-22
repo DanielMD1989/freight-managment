@@ -89,6 +89,42 @@ String loadStatusToString(LoadStatus status) {
   }
 }
 
+/// Service fee status
+enum ServiceFeeStatus {
+  pending,
+  paid,
+  waived,
+  refunded,
+}
+
+ServiceFeeStatus serviceFeeStatusFromString(String? value) {
+  switch (value?.toUpperCase()) {
+    case 'PAID':
+      return ServiceFeeStatus.paid;
+    case 'WAIVED':
+      return ServiceFeeStatus.waived;
+    case 'REFUNDED':
+      return ServiceFeeStatus.refunded;
+    default:
+      return ServiceFeeStatus.pending;
+  }
+}
+
+/// Book mode
+enum BookMode {
+  request,
+  direct,
+}
+
+BookMode bookModeFromString(String? value) {
+  switch (value?.toUpperCase()) {
+    case 'DIRECT':
+      return BookMode.direct;
+    default:
+      return BookMode.request;
+  }
+}
+
 /// Load model matching the web app's Load type
 class Load {
   final String id;
@@ -101,6 +137,7 @@ class Load {
   final String? pickupAddress;
   final String? pickupDockHours;
   final DateTime pickupDate;
+  final bool appointmentRequired;
   final String? deliveryCity;
   final String? deliveryCityId;
   final String? deliveryAddress;
@@ -121,17 +158,40 @@ class Load {
   final LoadType fullPartial;
   final bool isFragile;
   final bool requiresRefrigeration;
+  final double? lengthM;
+  final int? casesCount;
 
   // Distance
   final double? tripKm;
   final double? estimatedTripKm;
   final double? dhToOriginKm;
+  final double? dhAfterDeliveryKm;
+  final double? actualTripKm;
 
   // Pricing
   final double? baseFareEtb;
   final double? perKmEtb;
   final double? totalFareEtb;
   final double? rate;
+  final String currency;
+  final BookMode bookMode;
+
+  // Service Fees (HIGH priority missing fields)
+  final double? serviceFeeEtb;
+  final double? shipperServiceFee;
+  final ServiceFeeStatus shipperFeeStatus;
+  final double? carrierServiceFee;
+  final ServiceFeeStatus carrierFeeStatus;
+  final String? corridorId;
+
+  // Escrow & Commissions
+  final bool escrowFunded;
+  final double? escrowAmount;
+  final double? shipperCommission;
+  final double? carrierCommission;
+  final double? platformCommission;
+  final String? settlementStatus;
+  final DateTime? settledAt;
 
   // Privacy & Safety
   final bool isAnonymous;
@@ -147,10 +207,22 @@ class Load {
   final bool podVerified;
   final DateTime? podVerifiedAt;
 
+  // Tracking (HIGH priority missing fields)
+  final String? trackingUrl;
+  final bool trackingEnabled;
+  final DateTime? trackingStartedAt;
+
+  // Trip Progress
+  final int tripProgressPercent;
+  final double? remainingDistanceKm;
+
   // Relationships
   final String shipperId;
+  final String? createdById;
   final String? assignedTruckId;
   final Truck? assignedTruck;
+  final DateTime? assignedAt;
+  final DateTime? expiresAt;
 
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -164,6 +236,7 @@ class Load {
     this.pickupAddress,
     this.pickupDockHours,
     required this.pickupDate,
+    this.appointmentRequired = false,
     this.deliveryCity,
     this.deliveryCityId,
     this.deliveryAddress,
@@ -180,13 +253,32 @@ class Load {
     this.fullPartial = LoadType.full,
     this.isFragile = false,
     this.requiresRefrigeration = false,
+    this.lengthM,
+    this.casesCount,
     this.tripKm,
     this.estimatedTripKm,
     this.dhToOriginKm,
+    this.dhAfterDeliveryKm,
+    this.actualTripKm,
     this.baseFareEtb,
     this.perKmEtb,
     this.totalFareEtb,
     this.rate,
+    this.currency = 'ETB',
+    this.bookMode = BookMode.request,
+    this.serviceFeeEtb,
+    this.shipperServiceFee,
+    this.shipperFeeStatus = ServiceFeeStatus.pending,
+    this.carrierServiceFee,
+    this.carrierFeeStatus = ServiceFeeStatus.pending,
+    this.corridorId,
+    this.escrowFunded = false,
+    this.escrowAmount,
+    this.shipperCommission,
+    this.carrierCommission,
+    this.platformCommission,
+    this.settlementStatus,
+    this.settledAt,
     this.isAnonymous = false,
     this.shipperContactName,
     this.shipperContactPhone,
@@ -197,14 +289,46 @@ class Load {
     this.podSubmittedAt,
     this.podVerified = false,
     this.podVerifiedAt,
+    this.trackingUrl,
+    this.trackingEnabled = false,
+    this.trackingStartedAt,
+    this.tripProgressPercent = 0,
+    this.remainingDistanceKm,
     required this.shipperId,
+    this.createdById,
     this.assignedTruckId,
     this.assignedTruck,
+    this.assignedAt,
+    this.expiresAt,
     required this.createdAt,
     required this.updatedAt,
   });
 
   factory Load.fromJson(Map<String, dynamic> json) {
+    // Helper to parse number from string or number
+    double? parseDoubleOrNull(dynamic value) {
+      if (value == null) return null;
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value);
+      return null;
+    }
+
+    double parseDouble(dynamic value, [double defaultValue = 0]) {
+      return parseDoubleOrNull(value) ?? defaultValue;
+    }
+
+    int? parseIntOrNull(dynamic value) {
+      if (value == null) return null;
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      if (value is String) return int.tryParse(value);
+      return null;
+    }
+
+    int parseInt(dynamic value, [int defaultValue = 0]) {
+      return parseIntOrNull(value) ?? defaultValue;
+    }
+
     return Load(
       id: json['id'] ?? '',
       status: loadStatusFromString(json['status']),
@@ -217,6 +341,7 @@ class Load {
       pickupDate: json['pickupDate'] != null
           ? DateTime.parse(json['pickupDate'])
           : DateTime.now(),
+      appointmentRequired: json['appointmentRequired'] ?? false,
       deliveryCity: json['deliveryCity'] ?? json['deliveryLocation']?['name'],
       deliveryCityId: json['deliveryCityId'],
       deliveryAddress: json['deliveryAddress'],
@@ -224,26 +349,47 @@ class Load {
       deliveryDate: json['deliveryDate'] != null
           ? DateTime.parse(json['deliveryDate'])
           : DateTime.now(),
-      originLat: json['originLat']?.toDouble(),
-      originLon: json['originLon']?.toDouble(),
-      destinationLat: json['destinationLat']?.toDouble(),
-      destinationLon: json['destinationLon']?.toDouble(),
+      originLat: parseDoubleOrNull(json['originLat']),
+      originLon: parseDoubleOrNull(json['originLon']),
+      destinationLat: parseDoubleOrNull(json['destinationLat']),
+      destinationLon: parseDoubleOrNull(json['destinationLon']),
       truckType: truckTypeFromString(json['truckType']),
-      weight: (json['weight'] ?? 0).toDouble(),
-      volume: json['volume']?.toDouble(),
+      weight: parseDouble(json['weight']),
+      volume: parseDoubleOrNull(json['volume']),
       cargoDescription: json['cargoDescription'] ?? '',
       fullPartial: json['fullPartial'] == 'PARTIAL'
           ? LoadType.partial
           : LoadType.full,
       isFragile: json['isFragile'] ?? false,
       requiresRefrigeration: json['requiresRefrigeration'] ?? false,
-      tripKm: json['tripKm']?.toDouble(),
-      estimatedTripKm: json['estimatedTripKm']?.toDouble(),
-      dhToOriginKm: json['dhToOriginKm']?.toDouble(),
-      baseFareEtb: json['baseFareEtb']?.toDouble(),
-      perKmEtb: json['perKmEtb']?.toDouble(),
-      totalFareEtb: json['totalFareEtb']?.toDouble(),
-      rate: json['rate']?.toDouble(),
+      lengthM: parseDoubleOrNull(json['lengthM']),
+      casesCount: parseIntOrNull(json['casesCount']),
+      tripKm: parseDoubleOrNull(json['tripKm']),
+      estimatedTripKm: parseDoubleOrNull(json['estimatedTripKm']),
+      dhToOriginKm: parseDoubleOrNull(json['dhToOriginKm']),
+      dhAfterDeliveryKm: parseDoubleOrNull(json['dhAfterDeliveryKm']),
+      actualTripKm: parseDoubleOrNull(json['actualTripKm']),
+      baseFareEtb: parseDoubleOrNull(json['baseFareEtb']),
+      perKmEtb: parseDoubleOrNull(json['perKmEtb']),
+      totalFareEtb: parseDoubleOrNull(json['totalFareEtb']),
+      rate: parseDoubleOrNull(json['rate']),
+      currency: json['currency'] ?? 'ETB',
+      bookMode: bookModeFromString(json['bookMode']),
+      serviceFeeEtb: parseDoubleOrNull(json['serviceFeeEtb']),
+      shipperServiceFee: parseDoubleOrNull(json['shipperServiceFee']),
+      shipperFeeStatus: serviceFeeStatusFromString(json['shipperFeeStatus']),
+      carrierServiceFee: parseDoubleOrNull(json['carrierServiceFee']),
+      carrierFeeStatus: serviceFeeStatusFromString(json['carrierFeeStatus']),
+      corridorId: json['corridorId'],
+      escrowFunded: json['escrowFunded'] ?? false,
+      escrowAmount: parseDoubleOrNull(json['escrowAmount']),
+      shipperCommission: parseDoubleOrNull(json['shipperCommission']),
+      carrierCommission: parseDoubleOrNull(json['carrierCommission']),
+      platformCommission: parseDoubleOrNull(json['platformCommission']),
+      settlementStatus: json['settlementStatus'],
+      settledAt: json['settledAt'] != null
+          ? DateTime.parse(json['settledAt'])
+          : null,
       isAnonymous: json['isAnonymous'] ?? false,
       shipperContactName: json['shipperContactName'],
       shipperContactPhone: json['shipperContactPhone'],
@@ -258,10 +404,24 @@ class Load {
       podVerifiedAt: json['podVerifiedAt'] != null
           ? DateTime.parse(json['podVerifiedAt'])
           : null,
+      trackingUrl: json['trackingUrl'],
+      trackingEnabled: json['trackingEnabled'] ?? false,
+      trackingStartedAt: json['trackingStartedAt'] != null
+          ? DateTime.parse(json['trackingStartedAt'])
+          : null,
+      tripProgressPercent: parseInt(json['tripProgressPercent']),
+      remainingDistanceKm: parseDoubleOrNull(json['remainingDistanceKm']),
       shipperId: json['shipperId'] ?? '',
+      createdById: json['createdById'],
       assignedTruckId: json['assignedTruckId'],
       assignedTruck: json['assignedTruck'] != null
           ? Truck.fromJson(json['assignedTruck'])
+          : null,
+      assignedAt: json['assignedAt'] != null
+          ? DateTime.parse(json['assignedAt'])
+          : null,
+      expiresAt: json['expiresAt'] != null
+          ? DateTime.parse(json['expiresAt'])
           : null,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])

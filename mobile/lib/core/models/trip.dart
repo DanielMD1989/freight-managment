@@ -89,6 +89,7 @@ class Trip {
   // Shipper confirmation
   final bool shipperConfirmed;
   final DateTime? shipperConfirmedAt;
+  final String? shipperConfirmedBy;
 
   // Cancellation
   final DateTime? cancelledAt;
@@ -140,6 +141,7 @@ class Trip {
     this.deliveryNotes,
     this.shipperConfirmed = false,
     this.shipperConfirmedAt,
+    this.shipperConfirmedBy,
     this.cancelledAt,
     this.cancelledBy,
     this.cancelReason,
@@ -157,6 +159,14 @@ class Trip {
   });
 
   factory Trip.fromJson(Map<String, dynamic> json) {
+    // Helper to parse number from string or number
+    double? parseDoubleOrNull(dynamic value) {
+      if (value == null) return null;
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value);
+      return null;
+    }
+
     return Trip(
       id: json['id'] ?? '',
       status: tripStatusFromString(json['status']),
@@ -164,17 +174,17 @@ class Trip {
       truckId: json['truckId'] ?? '',
       carrierId: json['carrierId'] ?? '',
       shipperId: json['shipperId'] ?? '',
-      currentLat: json['currentLat']?.toDouble(),
-      currentLng: json['currentLng']?.toDouble(),
+      currentLat: parseDoubleOrNull(json['currentLat']),
+      currentLng: parseDoubleOrNull(json['currentLng']),
       currentLocationUpdatedAt: json['currentLocationUpdatedAt'] != null
           ? DateTime.parse(json['currentLocationUpdatedAt'])
           : null,
-      pickupLat: json['pickupLat']?.toDouble(),
-      pickupLng: json['pickupLng']?.toDouble(),
+      pickupLat: parseDoubleOrNull(json['pickupLat']),
+      pickupLng: parseDoubleOrNull(json['pickupLng']),
       pickupAddress: json['pickupAddress'],
       pickupCity: json['pickupCity'],
-      deliveryLat: json['deliveryLat']?.toDouble(),
-      deliveryLng: json['deliveryLng']?.toDouble(),
+      deliveryLat: parseDoubleOrNull(json['deliveryLat']),
+      deliveryLng: parseDoubleOrNull(json['deliveryLng']),
       deliveryAddress: json['deliveryAddress'],
       deliveryCity: json['deliveryCity'],
       startedAt: json['startedAt'] != null
@@ -196,13 +206,14 @@ class Trip {
       shipperConfirmedAt: json['shipperConfirmedAt'] != null
           ? DateTime.parse(json['shipperConfirmedAt'])
           : null,
+      shipperConfirmedBy: json['shipperConfirmedBy'],
       cancelledAt: json['cancelledAt'] != null
           ? DateTime.parse(json['cancelledAt'])
           : null,
       cancelledBy: json['cancelledBy'],
       cancelReason: json['cancelReason'],
-      estimatedDistanceKm: json['estimatedDistanceKm']?.toDouble(),
-      actualDistanceKm: json['actualDistanceKm']?.toDouble(),
+      estimatedDistanceKm: parseDoubleOrNull(json['estimatedDistanceKm']),
+      actualDistanceKm: parseDoubleOrNull(json['actualDistanceKm']),
       estimatedDurationMin: json['estimatedDurationMin'],
       trackingUrl: json['trackingUrl'],
       trackingEnabled: json['trackingEnabled'] ?? true,
@@ -327,14 +338,25 @@ class GpsPosition {
   });
 
   factory GpsPosition.fromJson(Map<String, dynamic> json) {
+    double? parseDoubleOrNull(dynamic value) {
+      if (value == null) return null;
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value);
+      return null;
+    }
+
+    double parseDouble(dynamic value, [double defaultValue = 0]) {
+      return parseDoubleOrNull(value) ?? defaultValue;
+    }
+
     return GpsPosition(
       id: json['id'] ?? '',
-      latitude: (json['latitude'] ?? 0).toDouble(),
-      longitude: (json['longitude'] ?? 0).toDouble(),
-      speed: json['speed']?.toDouble(),
-      heading: json['heading']?.toDouble(),
-      altitude: json['altitude']?.toDouble(),
-      accuracy: json['accuracy']?.toDouble(),
+      latitude: parseDouble(json['latitude']),
+      longitude: parseDouble(json['longitude']),
+      speed: parseDoubleOrNull(json['speed']),
+      heading: parseDoubleOrNull(json['heading']),
+      altitude: parseDoubleOrNull(json['altitude']),
+      accuracy: parseDoubleOrNull(json['accuracy']),
       timestamp: json['timestamp'] != null
           ? DateTime.parse(json['timestamp'])
           : DateTime.now(),
