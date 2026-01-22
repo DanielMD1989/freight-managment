@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { hashPassword, setSession } from "@/lib/auth";
+import { hashPassword, setSession, validatePasswordPolicy } from "@/lib/auth";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rateLimit";
 
@@ -48,6 +48,18 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const validatedData = registerSchema.parse(body);
+
+    // Validate password policy (uppercase, lowercase, numeric requirements)
+    const passwordValidation = validatePasswordPolicy(validatedData.password);
+    if (!passwordValidation.valid) {
+      return NextResponse.json(
+        {
+          error: "Password does not meet security requirements",
+          details: passwordValidation.errors,
+        },
+        { status: 400 }
+      );
+    }
 
     // Rate limiting: 3 registrations per hour per IP
     const clientIp = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';

@@ -701,11 +701,11 @@ export const RPS_CONFIGS: Record<string, RpsConfig> = {
     rps: 50,
     burst: 20,
   },
-  // GPS updates - strict limit
+  // GPS updates - high throughput for fleet tracking
   gps: {
     endpoint: '/api/gps',
-    rps: 20,
-    burst: 5,
+    rps: 100,
+    burst: 20,
   },
   // Notifications - moderate limit
   notifications: {
