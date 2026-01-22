@@ -349,6 +349,42 @@ function validatePasswordPolicy(password: string) {
 
 ---
 
+## 9. Realignment Phase - Model Synchronization
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `types/domain.ts` | Centralized TypeScript types matching Prisma schema |
+| `types/index.ts` | Barrel export for all types |
+| `mobile/lib/core/models/request.dart` | TruckRequest and LoadRequest models |
+| `mobile/lib/core/models/models.dart` | Barrel export for mobile models |
+
+### Type Synchronization
+
+**Backend (Prisma) → Web (TypeScript) → Mobile (Dart)**
+
+All domain types now flow from a single source:
+- `prisma/schema.prisma` - Database schema (authoritative)
+- `types/domain.ts` - TypeScript types matching Prisma
+- `mobile/lib/core/models/*.dart` - Dart models matching Prisma
+
+### Model Coverage
+
+| Model | Backend | Web Types | Mobile Dart |
+|-------|---------|-----------|-------------|
+| User | ✓ | ✓ | ✓ |
+| Organization | ✓ | ✓ | ✓ |
+| Load | ✓ | ✓ | ✓ |
+| Truck | ✓ | ✓ | ✓ |
+| Trip | ✓ | ✓ | ✓ |
+| TruckPosting | ✓ | ✓ | ✓ |
+| TruckRequest | ✓ | ✓ | ✓ (NEW) |
+| LoadRequest | ✓ | ✓ | ✓ (NEW) |
+| Notification | ✓ | ✓ | ✓ |
+
+---
+
 ## Conclusion
 
 The freight management system maintains **proper separation of concerns** with the backend serving as the **single source of truth** for:
@@ -356,6 +392,7 @@ The freight management system maintains **proper separation of concerns** with t
 1. **Data validation** - Zod schemas enforce constraints
 2. **Business rules** - State machines, RBAC, pricing calculations
 3. **Domain models** - Prisma schema is authoritative
+4. **Type definitions** - `types/domain.ts` mirrors Prisma for web, mobile mirrors same structure
 
 Frontend validation (mobile and web) serves as **UX enhancement** only and cannot bypass backend security. All platforms are aligned and operate on the same backend logic.
 
@@ -365,3 +402,5 @@ All identified issues have been resolved:
 - Haversine fallback removed from LoadCreationForm.tsx
 - Backend is the sole source of truth for all calculations
 - Mobile and web apps properly defer to backend for validation
+- Centralized type definitions prevent future model drift
+- Missing request models added to mobile
