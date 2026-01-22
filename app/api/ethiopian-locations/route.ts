@@ -2,36 +2,58 @@
  * Ethiopian Locations API
  *
  * Returns list of Ethiopian cities and locations for dropdowns
+ *
+ * PHASE 4: Added caching - locations rarely change, cache for 1 hour
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { cacheAside, CacheKeys } from '@/lib/cache';
+
+// Cache TTL: 1 hour (locations rarely change)
+const LOCATIONS_CACHE_TTL = 60 * 60;
+
+interface Location {
+  id: string;
+  name: string;
+  nameEthiopic: string | null;
+  region: string;
+  latitude: any;
+  longitude: any;
+}
 
 /**
  * GET /api/ethiopian-locations
  *
- * Fetch all active Ethiopian locations
+ * Fetch all active Ethiopian locations (cached)
  *
  * Returns: Array of locations with id, name, nameEthiopic, region
  */
 export async function GET(request: NextRequest) {
   try {
-    const locations = await db.ethiopianLocation.findMany({
-      where: {
-        isActive: true,
+    // PHASE 4: Use cache-aside pattern for locations
+    const locations = await cacheAside<Location[]>(
+      CacheKeys.locations(),
+      async () => {
+        return db.ethiopianLocation.findMany({
+          where: {
+            isActive: true,
+          },
+          select: {
+            id: true,
+            name: true,
+            nameEthiopic: true,
+            region: true,
+            latitude: true,
+            longitude: true,
+          },
+          orderBy: {
+            name: 'asc',
+          },
+        });
       },
-      select: {
-        id: true,
-        name: true,
-        nameEthiopic: true,
-        region: true,
-        latitude: true,
-        longitude: true,
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    });
+      LOCATIONS_CACHE_TTL
+    );
 
     return NextResponse.json({
       locations,
