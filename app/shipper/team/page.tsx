@@ -98,12 +98,18 @@ export default async function ShipperTeamPage() {
   }));
 
   return (
-    <div className="p-6">
+    <div className="p-6" style={{ background: 'var(--background)' }}>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h1
+          className="text-2xl font-bold"
+          style={{ color: 'var(--foreground)' }}
+        >
           Team Management
         </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
+        <p
+          className="mt-1"
+          style={{ color: 'var(--foreground-muted)' }}
+        >
           Manage your company's team members and invitations
         </p>
       </div>
@@ -123,8 +129,14 @@ export default async function ShipperTeamPage() {
 function TeamSkeleton() {
   return (
     <div className="animate-pulse space-y-4">
-      <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-      <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded"></div>
+      <div
+        className="h-12 rounded w-1/3"
+        style={{ background: 'var(--bg-tinted)' }}
+      />
+      <div
+        className="h-64 rounded"
+        style={{ background: 'var(--bg-tinted)' }}
+      />
     </div>
   );
 }

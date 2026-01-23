@@ -5,6 +5,7 @@
  * Sprint 11 - Story 11.5: Document Management
  */
 
+import { Suspense } from 'react';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth';
 import { redirect } from 'next/navigation';
@@ -86,20 +87,51 @@ export default async function DocumentsPage() {
   const documents = await getDocuments(session.organizationId);
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto p-6">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Company Documents</h1>
-        <p className="text-gray-600 mt-2">
+        <h1
+          className="text-3xl font-bold"
+          style={{ color: 'var(--foreground)' }}
+        >
+          Company Documents
+        </h1>
+        <p
+          className="mt-2"
+          style={{ color: 'var(--foreground-muted)' }}
+        >
           Upload and manage your company verification documents
         </p>
       </div>
 
       {/* Document Management Client Component */}
-      <DocumentManagementClient
-        initialDocuments={documents || []}
-        organizationId={session.organizationId}
+      <Suspense fallback={<DocumentsSkeleton />}>
+        <DocumentManagementClient
+          initialDocuments={documents || []}
+          organizationId={session.organizationId}
+        />
+      </Suspense>
+    </div>
+  );
+}
+
+function DocumentsSkeleton() {
+  return (
+    <div className="animate-pulse space-y-6">
+      <div
+        className="h-32 rounded-xl"
+        style={{ background: 'var(--bg-tinted)' }}
       />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div
+          className="h-24 rounded-lg"
+          style={{ background: 'var(--bg-tinted)' }}
+        />
+        <div
+          className="h-24 rounded-lg"
+          style={{ background: 'var(--bg-tinted)' }}
+        />
+      </div>
     </div>
   );
 }

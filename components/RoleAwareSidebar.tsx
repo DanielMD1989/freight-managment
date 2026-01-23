@@ -298,34 +298,31 @@ const navigationSections: Record<string, NavSection[]> = {
     {
       items: [
         { label: 'Dashboard', href: '/shipper/dashboard', icon: '📊', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
-        { label: 'Map', href: '/shipper/map', icon: '🗺️', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Live Map', href: '/shipper/map', icon: '🗺️', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
       ],
     },
     {
-      title: 'Load Board',
+      title: 'Marketplace',
       items: [
         { label: 'Post Loads', href: '/shipper/loadboard?tab=POST_LOADS', icon: '📤', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
-        { label: 'Search Trucks', href: '/shipper/loadboard?tab=SEARCH_TRUCKS', icon: '🔍', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Find Trucks', href: '/shipper/loadboard?tab=SEARCH_TRUCKS', icon: '🔍', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
         { label: 'Requests', href: '/shipper/requests', icon: '📋', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
       ],
     },
     {
-      title: 'Loads',
+      title: 'Shipments',
       items: [
         { label: 'My Loads', href: '/shipper/loads', icon: '📦', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Active Trips', href: '/shipper/trips', icon: '🚚', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
       ],
     },
     {
-      title: 'Financial',
+      title: 'Account',
       items: [
         { label: 'Wallet', href: '/shipper/wallet', icon: '💰', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
-      ],
-    },
-    {
-      title: 'Operations',
-      items: [
-        { label: 'Trip History', href: '/shipper/trips', icon: '📜', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Analytics', href: '/shipper/analytics', icon: '📈', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
         { label: 'Documents', href: '/shipper/documents', icon: '📁', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Team', href: '/shipper/team', icon: '👥', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
       ],
     },
   ],

@@ -65,12 +65,18 @@ export default async function ShipperSettingsPage() {
   };
 
   return (
-    <div className="p-6 min-h-screen bg-[var(--bg-tinted)]">
+    <div className="p-6 min-h-screen" style={{ background: 'var(--background)' }}>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#064d51]">
+        <h1
+          className="text-2xl font-bold"
+          style={{ color: 'var(--foreground)' }}
+        >
           Company Settings
         </h1>
-        <p className="text-[#064d51]/70 mt-1">
+        <p
+          className="mt-1"
+          style={{ color: 'var(--foreground-muted)' }}
+        >
           Manage your company profile and preferences
         </p>
       </div>
@@ -85,8 +91,14 @@ export default async function ShipperSettingsPage() {
 function SettingsSkeleton() {
   return (
     <div className="animate-pulse space-y-4">
-      <div className="h-12 bg-[#064d51]/10 rounded-lg w-1/3"></div>
-      <div className="h-64 bg-[#064d51]/10 rounded-xl"></div>
+      <div
+        className="h-12 rounded-lg w-1/3"
+        style={{ background: 'var(--bg-tinted)' }}
+      />
+      <div
+        className="h-64 rounded-xl"
+        style={{ background: 'var(--bg-tinted)' }}
+      />
     </div>
   );
 }
