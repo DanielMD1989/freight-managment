@@ -21,9 +21,41 @@
  *                  │    Redis    │
  *                  │  (Shared)   │
  *                  └─────────────┘
+ *
+ * Edge Runtime Compatibility:
+ * This module detects Edge Runtime and provides stub implementations.
+ * ioredis is only loaded in Node.js runtime.
  */
 
-import Redis, { RedisOptions } from 'ioredis';
+// Edge Runtime detection - ioredis is not compatible with Edge
+// Check for Edge Runtime using Next.js environment variable
+const isEdgeRuntime = (typeof process !== 'undefined' && process.env.NEXT_RUNTIME === 'edge') ||
+  (typeof globalThis !== 'undefined' && 'EdgeRuntime' in globalThis);
+
+// Conditional import for Node.js runtime only
+let Redis: any = null;
+
+if (!isEdgeRuntime) {
+  try {
+    // Dynamic require to avoid bundling ioredis for Edge
+    const ioredis = require('ioredis');
+    Redis = ioredis.default || ioredis;
+  } catch (error) {
+    console.warn('[Redis] ioredis not available, using in-memory fallback');
+  }
+}
+
+// Type alias for Redis options (used in getRedisConfig)
+type RedisConfigOptions = {
+  host?: string;
+  port?: number;
+  password?: string;
+  db?: number;
+  lazyConnect?: boolean;
+  maxRetriesPerRequest?: number;
+  retryStrategy?: (times: number) => number | null;
+  reconnectOnError?: (err: Error) => boolean;
+};
 
 // =============================================================================
 // CONFIGURATION
@@ -32,7 +64,7 @@ import Redis, { RedisOptions } from 'ioredis';
 /**
  * Redis connection options
  */
-function getRedisConfig(): RedisOptions {
+function getRedisConfig(): RedisConfigOptions {
   const redisUrl = process.env.REDIS_URL;
 
   if (redisUrl) {
@@ -81,21 +113,31 @@ function getRedisConfig(): RedisOptions {
 // =============================================================================
 
 const globalForRedis = globalThis as unknown as {
-  redis: Redis | undefined;
+  redis: any | undefined;
   redisConnected: boolean;
 };
 
 /**
  * Check if Redis is enabled
+ * Returns false in Edge Runtime since ioredis is not compatible
  */
 export function isRedisEnabled(): boolean {
+  // Never enabled in Edge Runtime
+  if (isEdgeRuntime || !Redis) {
+    return false;
+  }
   return process.env.REDIS_ENABLED === 'true' || !!process.env.REDIS_URL;
 }
 
 /**
  * Create or return existing Redis client
  */
-function createRedisClient(): Redis | null {
+function createRedisClient(): any | null {
+  // Edge Runtime or Redis not available
+  if (isEdgeRuntime || !Redis) {
+    return null;
+  }
+
   if (!isRedisEnabled()) {
     console.log('[Redis] Disabled - using in-memory fallback');
     return null;

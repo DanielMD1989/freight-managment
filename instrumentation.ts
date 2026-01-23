@@ -6,6 +6,7 @@
  * - Configuration validation
  * - Loading secrets from AWS Secrets Manager
  * - Initializing monitoring services
+ * - Initializing background job queues and workers
  *
  * @see https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation
  */
@@ -54,6 +55,44 @@ export async function register() {
     if (config.app.nodeEnv === 'production' && criticalErrors.length > 0) {
       const errorMessages = criticalErrors.map(e => `${e.field}: ${e.message}`).join('\n');
       throw new Error(`Configuration validation failed:\n${errorMessages}`);
+    }
+
+    // =========================================
+    // Initialize Background Job Queues
+    // =========================================
+    console.log('\n[Startup] Initializing background job queues...');
+
+    try {
+      // Import queue modules
+      const { initializeQueues, startWorkers, getQueueInfo } = await import('@/lib/queue');
+      const { registerAllProcessors } = await import('@/lib/queue/processors');
+
+      // Step 1: Initialize BullMQ queues (connects to Redis)
+      await initializeQueues();
+
+      // Step 2: Register all job processors
+      // - Email: send, bulk
+      // - SMS: send
+      // - Notifications: create, bulk
+      // - Distance Matrix: calculate
+      // - PDF: generate
+      // - Cleanup: expire-loads, expire-postings, gps-data
+      // - Bulk: status-update
+      // - Scheduled: auto-settle
+      registerAllProcessors();
+
+      // Step 3: Start workers for all queues
+      await startWorkers();
+
+      // Log queue system info
+      const queueInfo = getQueueInfo();
+      console.log(`[Startup] Queue system ready:`);
+      console.log(`  - Provider: ${queueInfo.provider}`);
+      console.log(`  - Enabled: ${queueInfo.enabled}`);
+      console.log(`  - Queues: ${queueInfo.queues.join(', ')}`);
+    } catch (queueError) {
+      // Don't fail server startup if queues fail - they have in-memory fallback
+      console.error('[Startup] Queue initialization error (using in-memory fallback):', queueError);
     }
 
     console.log('\n[Startup] Server initialization complete');

@@ -1,12 +1,21 @@
 /**
  * Security Utilities
  * Sprint 9 - Security Hardening
+ * Phase 4 - Scalability: Redis-backed security stores for horizontal scaling
  *
  * CSRF protection, XSS sanitization, and security headers
  * Note: Uses Web Crypto API for Edge Runtime compatibility
+ *
+ * CRITICAL FIX: Migrated brute force and IP blocking stores to Redis
+ * for multi-instance deployment support.
+ *
+ * Edge Runtime Compatibility: The redis module now handles Edge Runtime
+ * detection and provides stub implementations. This module can safely
+ * import from redis.ts.
  */
 
 import { NextResponse } from 'next/server';
+import { redis, isRedisEnabled, RedisKeys, setWithTTL, get, del } from './redis';
 
 /**
  * Generate CSRF token (Edge-compatible using Web Crypto API)
@@ -82,50 +91,102 @@ export function sanitizeObject<T extends Record<string, any>>(obj: T): T {
 }
 
 /**
- * Add security headers to response
+ * Generate a cryptographically secure nonce for CSP
  */
-export function addSecurityHeaders(response: NextResponse): NextResponse {
-  // Content Security Policy
+export function generateCSPNonce(): string {
+  const array = new Uint8Array(16);
+  crypto.getRandomValues(array);
+  return btoa(String.fromCharCode(...array));
+}
+
+/**
+ * Get allowed connect-src domains from environment
+ * Format: comma-separated list (e.g., "https://api.example.com,wss://ws.example.com")
+ */
+function getConnectSrcDomains(): string {
+  const domains = process.env.CSP_CONNECT_SRC || '';
+  const baseDomains = "'self' https://maps.googleapis.com https://maps.google.com";
+
+  if (domains) {
+    return `${baseDomains} ${domains.split(',').map(d => d.trim()).join(' ')}`;
+  }
+
+  return baseDomains;
+}
+
+/**
+ * Add security headers to response
+ *
+ * SECURITY FIX v4:
+ * - Removed 'unsafe-inline' from script-src (use nonces instead)
+ * - Removed 'unsafe-eval' from script-src
+ * - Added 'strict-dynamic' for trusted script loading
+ * - Improved connect-src with WebSocket support
+ */
+export function addSecurityHeaders(response: NextResponse, nonce?: string): NextResponse {
+  // Generate nonce if not provided
+  const cspNonce = nonce || generateCSPNonce();
+
+  // Build Content Security Policy
+  // Note: 'strict-dynamic' allows scripts loaded by trusted scripts
+  // In production, use nonces for inline scripts
+  const scriptSrc = process.env.NODE_ENV === 'production'
+    ? `'self' 'nonce-${cspNonce}' 'strict-dynamic' https://maps.googleapis.com`
+    : `'self' 'nonce-${cspNonce}' https://maps.googleapis.com`; // Dev: no strict-dynamic for easier debugging
+
+  // Style-src: Use nonce for inline styles in production
+  const styleSrc = process.env.NODE_ENV === 'production'
+    ? `'self' 'nonce-${cspNonce}' https://fonts.googleapis.com`
+    : `'self' 'unsafe-inline' https://fonts.googleapis.com`; // Dev: allow inline for hot reload
+
   response.headers.set(
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: https:",
-      "connect-src 'self' https://maps.googleapis.com",
+      `script-src ${scriptSrc}`,
+      `style-src ${styleSrc}`,
+      "font-src 'self' https://fonts.gstatic.com data:",
+      "img-src 'self' data: https: blob:",
+      `connect-src ${getConnectSrcDomains()}`,
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
+      "upgrade-insecure-requests",
     ].join('; ')
   );
 
-  // XSS Protection
+  // Set the nonce header for the app to use
+  response.headers.set('X-CSP-Nonce', cspNonce);
+
+  // XSS Protection (legacy, but still useful for older browsers)
   response.headers.set('X-XSS-Protection', '1; mode=block');
 
-  // Content Type Options
+  // Content Type Options - Prevent MIME type sniffing
   response.headers.set('X-Content-Type-Options', 'nosniff');
 
-  // Frame Options
+  // Frame Options - Prevent clickjacking
   response.headers.set('X-Frame-Options', 'DENY');
 
-  // Referrer Policy
+  // Referrer Policy - Control referrer information
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
-  // Permissions Policy
+  // Permissions Policy - Disable unnecessary features
   response.headers.set(
     'Permissions-Policy',
-    'camera=(), microphone=(), geolocation=(self)'
+    'camera=(), microphone=(), geolocation=(self), payment=(), usb=()'
   );
 
-  // Strict Transport Security (HSTS)
+  // Strict Transport Security (HSTS) - Force HTTPS
   if (process.env.NODE_ENV === 'production') {
     response.headers.set(
       'Strict-Transport-Security',
       'max-age=31536000; includeSubDomains; preload'
     );
   }
+
+  // Cross-Origin policies for additional isolation
+  response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+  response.headers.set('Cross-Origin-Resource-Policy', 'same-origin');
 
   return response;
 }
@@ -251,15 +312,19 @@ export async function logSecurityEvent(event: {
 /**
  * Brute Force Protection
  * Track failed login attempts and block IPs after threshold
+ *
+ * PHASE 4: Redis-backed for horizontal scaling
+ * Falls back to in-memory when Redis is unavailable
  */
 
 interface BruteForceAttempt {
   count: number;
-  firstAttempt: Date;
-  lastAttempt: Date;
+  firstAttempt: number; // Unix timestamp
+  lastAttempt: number;  // Unix timestamp
 }
 
-const bruteForceStore = new Map<string, BruteForceAttempt>();
+// In-memory fallback store (used when Redis unavailable)
+const bruteForceStoreFallback = new Map<string, BruteForceAttempt>();
 
 export interface BruteForceConfig {
   maxAttempts: number;
@@ -274,67 +339,113 @@ export const DEFAULT_BRUTE_FORCE_CONFIG: BruteForceConfig = {
 };
 
 /**
- * Record a failed login attempt
+ * Record a failed login attempt (Redis-backed)
  */
-export function recordFailedAttempt(
+export async function recordFailedAttempt(
   identifier: string,
   config: BruteForceConfig = DEFAULT_BRUTE_FORCE_CONFIG
-): boolean {
-  const now = new Date();
-  const existing = bruteForceStore.get(identifier);
+): Promise<boolean> {
+  const now = Date.now();
+  const key = RedisKeys.bruteForce('login', identifier);
 
+  // Try Redis first
+  if (isRedisEnabled() && redis) {
+    try {
+      const existingData = await get(key);
+      let attempt: BruteForceAttempt;
+
+      if (existingData) {
+        attempt = JSON.parse(existingData);
+        const timeSinceFirst = now - attempt.firstAttempt;
+
+        // Reset if outside window
+        if (timeSinceFirst > config.windowMs) {
+          attempt = { count: 1, firstAttempt: now, lastAttempt: now };
+        } else {
+          attempt.count++;
+          attempt.lastAttempt = now;
+        }
+      } else {
+        attempt = { count: 1, firstAttempt: now, lastAttempt: now };
+      }
+
+      // Store with TTL equal to block duration
+      const ttlSeconds = Math.ceil(config.blockDurationMs / 1000);
+      await setWithTTL(key, JSON.stringify(attempt), ttlSeconds);
+
+      return attempt.count >= config.maxAttempts;
+    } catch (error) {
+      console.error('[Security] Redis brute force error:', error);
+      // Fall through to in-memory fallback
+    }
+  }
+
+  // In-memory fallback
+  const existing = bruteForceStoreFallback.get(identifier);
   if (existing) {
-    const timeSinceFirst = now.getTime() - existing.firstAttempt.getTime();
+    const timeSinceFirst = now - existing.firstAttempt;
 
-    // Reset if outside window
     if (timeSinceFirst > config.windowMs) {
-      bruteForceStore.set(identifier, {
-        count: 1,
-        firstAttempt: now,
-        lastAttempt: now,
-      });
+      bruteForceStoreFallback.set(identifier, { count: 1, firstAttempt: now, lastAttempt: now });
       return false;
     }
 
-    // Increment attempt count
     existing.count++;
     existing.lastAttempt = now;
-    bruteForceStore.set(identifier, existing);
-
-    // Check if threshold exceeded
+    bruteForceStoreFallback.set(identifier, existing);
     return existing.count >= config.maxAttempts;
   } else {
-    // First attempt
-    bruteForceStore.set(identifier, {
-      count: 1,
-      firstAttempt: now,
-      lastAttempt: now,
-    });
+    bruteForceStoreFallback.set(identifier, { count: 1, firstAttempt: now, lastAttempt: now });
     return false;
   }
 }
 
 /**
- * Check if identifier is currently blocked due to brute force
+ * Check if identifier is currently blocked due to brute force (Redis-backed)
  */
-export function isBlockedByBruteForce(
+export async function isBlockedByBruteForce(
   identifier: string,
   config: BruteForceConfig = DEFAULT_BRUTE_FORCE_CONFIG
-): boolean {
-  const attempt = bruteForceStore.get(identifier);
+): Promise<boolean> {
+  const now = Date.now();
+  const key = RedisKeys.bruteForce('login', identifier);
+
+  // Try Redis first
+  if (isRedisEnabled() && redis) {
+    try {
+      const data = await get(key);
+      if (!data) return false;
+
+      const attempt: BruteForceAttempt = JSON.parse(data);
+      const timeSinceLast = now - attempt.lastAttempt;
+
+      if (attempt.count >= config.maxAttempts && timeSinceLast < config.blockDurationMs) {
+        return true;
+      }
+
+      // Block period expired, clean up
+      if (timeSinceLast >= config.blockDurationMs) {
+        await del(key);
+      }
+      return false;
+    } catch (error) {
+      console.error('[Security] Redis brute force check error:', error);
+      // Fall through to in-memory fallback
+    }
+  }
+
+  // In-memory fallback
+  const attempt = bruteForceStoreFallback.get(identifier);
   if (!attempt) return false;
 
-  const now = new Date();
-  const timeSinceLast = now.getTime() - attempt.lastAttempt.getTime();
+  const timeSinceLast = now - attempt.lastAttempt;
 
-  // Check if still in block period
   if (attempt.count >= config.maxAttempts && timeSinceLast < config.blockDurationMs) {
     return true;
   }
 
-  // Block period expired, clean up
   if (timeSinceLast >= config.blockDurationMs) {
-    bruteForceStore.delete(identifier);
+    bruteForceStoreFallback.delete(identifier);
   }
 
   return false;
@@ -343,22 +454,53 @@ export function isBlockedByBruteForce(
 /**
  * Reset failed attempts for identifier (e.g., after successful login)
  */
-export function resetFailedAttempts(identifier: string): void {
-  bruteForceStore.delete(identifier);
+export async function resetFailedAttempts(identifier: string): Promise<void> {
+  const key = RedisKeys.bruteForce('login', identifier);
+
+  if (isRedisEnabled() && redis) {
+    try {
+      await del(key);
+    } catch (error) {
+      console.error('[Security] Redis reset error:', error);
+    }
+  }
+
+  bruteForceStoreFallback.delete(identifier);
 }
 
 /**
- * Get remaining block time in seconds
+ * Get remaining block time in seconds (Redis-backed)
  */
-export function getRemainingBlockTime(
+export async function getRemainingBlockTime(
   identifier: string,
   config: BruteForceConfig = DEFAULT_BRUTE_FORCE_CONFIG
-): number {
-  const attempt = bruteForceStore.get(identifier);
+): Promise<number> {
+  const now = Date.now();
+  const key = RedisKeys.bruteForce('login', identifier);
+
+  // Try Redis first
+  if (isRedisEnabled() && redis) {
+    try {
+      const data = await get(key);
+      if (!data) return 0;
+
+      const attempt: BruteForceAttempt = JSON.parse(data);
+      if (attempt.count < config.maxAttempts) return 0;
+
+      const timeSinceLast = now - attempt.lastAttempt;
+      const remainingMs = config.blockDurationMs - timeSinceLast;
+
+      return remainingMs > 0 ? Math.ceil(remainingMs / 1000) : 0;
+    } catch (error) {
+      console.error('[Security] Redis remaining time error:', error);
+    }
+  }
+
+  // In-memory fallback
+  const attempt = bruteForceStoreFallback.get(identifier);
   if (!attempt || attempt.count < config.maxAttempts) return 0;
 
-  const now = new Date();
-  const timeSinceLast = now.getTime() - attempt.lastAttempt.getTime();
+  const timeSinceLast = now - attempt.lastAttempt;
   const remainingMs = config.blockDurationMs - timeSinceLast;
 
   return remainingMs > 0 ? Math.ceil(remainingMs / 1000) : 0;
@@ -367,34 +509,52 @@ export function getRemainingBlockTime(
 /**
  * IP Blocking System
  * Maintain a list of blocked IPs and check against it
+ *
+ * PHASE 4: Redis-backed for horizontal scaling
+ * Falls back to in-memory when Redis is unavailable
  */
 
 interface IPBlockEntry {
   ip: string;
   reason: string;
-  blockedAt: Date;
-  expiresAt?: Date;
+  blockedAt: number; // Unix timestamp
+  expiresAt?: number; // Unix timestamp
 }
 
-const blockedIPs = new Map<string, IPBlockEntry>();
+// In-memory fallback store
+const blockedIPsFallback = new Map<string, IPBlockEntry>();
 
 /**
- * Block an IP address
+ * Block an IP address (Redis-backed)
  */
-export function blockIP(
+export async function blockIP(
   ip: string,
   reason: string,
   durationMs?: number
-): void {
-  const now = new Date();
+): Promise<void> {
+  const now = Date.now();
   const entry: IPBlockEntry = {
     ip,
     reason,
     blockedAt: now,
-    expiresAt: durationMs ? new Date(now.getTime() + durationMs) : undefined,
+    expiresAt: durationMs ? now + durationMs : undefined,
   };
 
-  blockedIPs.set(ip, entry);
+  const key = RedisKeys.ipBlock(ip);
+
+  // Try Redis first
+  if (isRedisEnabled() && redis) {
+    try {
+      // If no duration, use a very long TTL (1 year)
+      const ttlSeconds = durationMs ? Math.ceil(durationMs / 1000) : 365 * 24 * 60 * 60;
+      await setWithTTL(key, JSON.stringify(entry), ttlSeconds);
+    } catch (error) {
+      console.error('[Security] Redis IP block error:', error);
+    }
+  }
+
+  // Also store in fallback for single-instance scenarios
+  blockedIPsFallback.set(ip, entry);
 
   logSecurityEvent({
     type: 'IP_BLOCKED',
@@ -404,55 +564,116 @@ export function blockIP(
 }
 
 /**
- * Check if IP is blocked
+ * Check if IP is blocked (Redis-backed)
  */
-export function isIPBlocked(ip: string): boolean {
-  const entry = blockedIPs.get(ip);
+export async function isIPBlocked(ip: string): Promise<boolean> {
+  const key = RedisKeys.ipBlock(ip);
+  const now = Date.now();
+
+  // Try Redis first
+  if (isRedisEnabled() && redis) {
+    try {
+      const data = await get(key);
+      if (data) {
+        const entry: IPBlockEntry = JSON.parse(data);
+
+        // Check if temporary block has expired
+        if (entry.expiresAt && now > entry.expiresAt) {
+          await del(key);
+          return false;
+        }
+        return true;
+      }
+    } catch (error) {
+      console.error('[Security] Redis IP block check error:', error);
+    }
+  }
+
+  // In-memory fallback
+  const entry = blockedIPsFallback.get(ip);
   if (!entry) return false;
 
-  // Check if temporary block has expired
-  if (entry.expiresAt) {
-    const now = new Date();
-    if (now > entry.expiresAt) {
-      blockedIPs.delete(ip);
-      return false;
-    }
+  if (entry.expiresAt && now > entry.expiresAt) {
+    blockedIPsFallback.delete(ip);
+    return false;
   }
 
   return true;
 }
 
 /**
- * Unblock an IP address
+ * Unblock an IP address (Redis-backed)
  */
-export function unblockIP(ip: string): boolean {
-  return blockedIPs.delete(ip);
+export async function unblockIP(ip: string): Promise<boolean> {
+  const key = RedisKeys.ipBlock(ip);
+  let deleted = false;
+
+  // Try Redis first
+  if (isRedisEnabled() && redis) {
+    try {
+      await del(key);
+      deleted = true;
+    } catch (error) {
+      console.error('[Security] Redis IP unblock error:', error);
+    }
+  }
+
+  // Also remove from fallback
+  const localDeleted = blockedIPsFallback.delete(ip);
+  return deleted || localDeleted;
 }
 
 /**
- * Get list of blocked IPs
+ * Get list of blocked IPs (from fallback only - Redis doesn't support scanning in this implementation)
+ * Note: This returns in-memory blocked IPs. For full list, query Redis directly.
  */
 export function getBlockedIPs(): IPBlockEntry[] {
-  return Array.from(blockedIPs.values());
+  const now = Date.now();
+  const validEntries: IPBlockEntry[] = [];
+
+  for (const [ip, entry] of blockedIPsFallback.entries()) {
+    if (!entry.expiresAt || now <= entry.expiresAt) {
+      validEntries.push(entry);
+    } else {
+      blockedIPsFallback.delete(ip);
+    }
+  }
+
+  return validEntries;
 }
 
 /**
- * Get block details for an IP
+ * Get block details for an IP (Redis-backed)
  */
-export function getIPBlockDetails(ip: string): IPBlockEntry | undefined {
-  return blockedIPs.get(ip);
+export async function getIPBlockDetails(ip: string): Promise<IPBlockEntry | undefined> {
+  const key = RedisKeys.ipBlock(ip);
+
+  // Try Redis first
+  if (isRedisEnabled() && redis) {
+    try {
+      const data = await get(key);
+      if (data) {
+        return JSON.parse(data) as IPBlockEntry;
+      }
+    } catch (error) {
+      console.error('[Security] Redis IP block details error:', error);
+    }
+  }
+
+  // In-memory fallback
+  return blockedIPsFallback.get(ip);
 }
 
 /**
- * Clean up expired IP blocks
+ * Clean up expired IP blocks (in-memory only - Redis handles TTL automatically)
  */
 export function cleanupExpiredBlocks(): number {
-  const now = new Date();
+  const now = Date.now();
   let cleaned = 0;
 
-  for (const [ip, entry] of blockedIPs.entries()) {
+  for (const [ip, entry] of blockedIPsFallback.entries()) {
     if (entry.expiresAt && now > entry.expiresAt) {
-      blockedIPs.delete(ip);
+      blockedIPsFallback.delete(ip);
       cleaned++;
     }
   }

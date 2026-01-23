@@ -65,7 +65,13 @@ export type VerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED'
 
 export type GpsDeviceStatus = 'ACTIVE' | 'INACTIVE' | 'SIGNAL_LOST' | 'MAINTENANCE';
 
-export type OrganizationType = 'SHIPPER' | 'CARRIER' | 'BROKER' | 'ASSOCIATION';
+export type OrganizationType =
+  | 'SHIPPER'
+  | 'CARRIER_COMPANY'
+  | 'CARRIER_INDIVIDUAL'
+  | 'CARRIER_ASSOCIATION'
+  | 'FLEET_OWNER'
+  | 'LOGISTICS_AGENT';
 
 export type NotificationType =
   | 'LOAD_ASSIGNED'

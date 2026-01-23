@@ -110,19 +110,50 @@ ServiceFeeStatus serviceFeeStatusFromString(String? value) {
   }
 }
 
-/// Book mode
+/// Book mode matching Prisma BookMode enum
+/// - REQUEST: Shipper requests truck, carrier must approve
+/// - INSTANT: Immediate booking, no approval needed
 enum BookMode {
   request,
-  direct,
+  instant,
 }
 
-BookMode bookModeFromString(String? value) {
-  switch (value?.toUpperCase()) {
-    case 'DIRECT':
-      return BookMode.direct;
-    default:
-      return BookMode.request;
+extension BookModeExtension on BookMode {
+  /// Get the API value (SCREAMING_CASE)
+  String get value {
+    switch (this) {
+      case BookMode.request:
+        return 'REQUEST';
+      case BookMode.instant:
+        return 'INSTANT';
+    }
   }
+
+  /// Get display name for UI
+  String get displayName {
+    switch (this) {
+      case BookMode.request:
+        return 'Request';
+      case BookMode.instant:
+        return 'Instant';
+    }
+  }
+
+  /// Parse from API string
+  static BookMode fromString(String? value) {
+    switch (value?.toUpperCase()) {
+      case 'INSTANT':
+        return BookMode.instant;
+      case 'REQUEST':
+      default:
+        return BookMode.request;
+    }
+  }
+}
+
+/// Helper function for backward compatibility
+BookMode bookModeFromString(String? value) {
+  return BookModeExtension.fromString(value);
 }
 
 /// Load model matching the web app's Load type

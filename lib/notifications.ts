@@ -61,7 +61,45 @@ export const NotificationType = {
 } as const;
 
 /**
+ * User notification preferences type
+ * Maps notification type to enabled/disabled boolean
+ */
+export type NotificationPreferences = Record<string, boolean>;
+
+/**
+ * Check if a notification type is enabled for a user
+ * Returns true by default if preference is not set
+ */
+export async function isNotificationEnabled(
+  userId: string,
+  type: string
+): Promise<boolean> {
+  try {
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { notificationPreferences: true },
+    });
+
+    if (!user || !user.notificationPreferences) {
+      // Default to enabled if no preferences set
+      return true;
+    }
+
+    const preferences = user.notificationPreferences as NotificationPreferences;
+
+    // Check if this notification type is explicitly disabled
+    // Default to enabled if not specified
+    return preferences[type] !== false;
+  } catch (error) {
+    console.error('Failed to check notification preferences:', error);
+    // Default to enabled on error to avoid missing important notifications
+    return true;
+  }
+}
+
+/**
  * Create a notification for a specific user
+ * Respects user notification preferences - skips if type is disabled
  */
 export async function createNotification(params: {
   userId: string;
@@ -69,10 +107,20 @@ export async function createNotification(params: {
   title: string;
   message: string;
   metadata?: Record<string, unknown>;
-}): Promise<{ id: string; userId: string; type: string } | null> {
-  const { userId, type, title, message, metadata } = params;
+  skipPreferenceCheck?: boolean; // For critical system notifications
+}): Promise<{ id: string; userId: string; type: string; skipped?: boolean } | null> {
+  const { userId, type, title, message, metadata, skipPreferenceCheck = false } = params;
 
   try {
+    // Check user preferences before creating notification
+    if (!skipPreferenceCheck) {
+      const enabled = await isNotificationEnabled(userId, type);
+      if (!enabled) {
+        // User has disabled this notification type
+        return { id: '', userId, type, skipped: true };
+      }
+    }
+
     const notification = await db.notification.create({
       data: {
         userId,

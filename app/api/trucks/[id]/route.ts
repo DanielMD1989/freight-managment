@@ -3,6 +3,38 @@ import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { TripStatus } from "@prisma/client";
+
+/**
+ * Helper function to apply RPS rate limiting for fleet endpoints
+ */
+async function applyFleetRpsLimit(request: NextRequest): Promise<NextResponse | null> {
+  const ip =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown';
+  const rpsResult = await checkRpsLimit(
+    RPS_CONFIGS.fleet.endpoint,
+    ip,
+    RPS_CONFIGS.fleet.rps,
+    RPS_CONFIGS.fleet.burst
+  );
+  if (!rpsResult.allowed) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded. Please slow down.', retryAfter: 1 },
+      {
+        status: 429,
+        headers: {
+          'X-RateLimit-Limit': rpsResult.limit.toString(),
+          'X-RateLimit-Remaining': rpsResult.remaining.toString(),
+          'Retry-After': '1',
+        },
+      }
+    );
+  }
+  return null;
+}
 
 const updateTruckSchema = z.object({
   truckType: z.enum(["FLATBED", "REFRIGERATED", "TANKER", "CONTAINER", "DRY_VAN", "LOWBOY", "DUMP_TRUCK", "BOX_TRUCK"]).optional(),
@@ -26,6 +58,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting: Apply RPS_CONFIGS.fleet
+    const rateLimitError = await applyFleetRpsLimit(request);
+    if (rateLimitError) return rateLimitError;
+
     const session = await requireAuth();
     const { id } = await params;
 
@@ -85,6 +121,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting: Apply RPS_CONFIGS.fleet
+    const rateLimitError = await applyFleetRpsLimit(request);
+    if (rateLimitError) return rateLimitError;
+
     const session = await requireAuth();
     await requirePermission(Permission.EDIT_TRUCKS);
     const { id } = await params;
@@ -174,6 +214,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting: Apply RPS_CONFIGS.fleet
+    const rateLimitError = await applyFleetRpsLimit(request);
+    if (rateLimitError) return rateLimitError;
+
     const session = await requireAuth();
     await requirePermission(Permission.DELETE_TRUCKS);
     const { id } = await params;
@@ -203,6 +247,51 @@ export async function DELETE(
       return NextResponse.json(
         { error: "You don't have permission to delete this truck" },
         { status: 403 }
+      );
+    }
+
+    // =================================================================
+    // GUARD: Check for active trips before allowing deletion
+    // Active trip = any trip NOT in COMPLETED or CANCELLED status
+    // =================================================================
+    const ACTIVE_TRIP_STATUSES: TripStatus[] = ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT', 'DELIVERED'];
+
+    const activeTrip = await db.trip.findFirst({
+      where: {
+        truckId: id,
+        status: {
+          in: ACTIVE_TRIP_STATUSES,
+        },
+      },
+      select: {
+        id: true,
+        status: true,
+        load: {
+          select: {
+            id: true,
+            pickupCity: true,
+            deliveryCity: true,
+          },
+        },
+      },
+    });
+
+    if (activeTrip) {
+      return NextResponse.json(
+        {
+          error: "Cannot delete truck with active trip",
+          code: "TRUCK_HAS_ACTIVE_TRIP",
+          message: `This truck is currently assigned to an active trip (${activeTrip.status}). Complete or cancel the trip before deleting the truck.`,
+          details: {
+            tripId: activeTrip.id,
+            tripStatus: activeTrip.status,
+            loadId: activeTrip.load?.id,
+            route: activeTrip.load
+              ? `${activeTrip.load.pickupCity} → ${activeTrip.load.deliveryCity}`
+              : undefined,
+          },
+        },
+        { status: 409 }
       );
     }
 

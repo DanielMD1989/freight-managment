@@ -19,6 +19,37 @@ import {
 } from "@/lib/trustMetrics";
 import { checkSuspiciousCancellation } from "@/lib/bypassDetection";
 import { validateStateTransition, LoadStatus } from "@/lib/loadStateMachine";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+
+/**
+ * Helper function to apply RPS rate limiting
+ */
+async function applyRpsLimit(request: NextRequest): Promise<NextResponse | null> {
+  const ip =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown';
+  const rpsResult = await checkRpsLimit(
+    RPS_CONFIGS.marketplace.endpoint,
+    ip,
+    RPS_CONFIGS.marketplace.rps,
+    RPS_CONFIGS.marketplace.burst
+  );
+  if (!rpsResult.allowed) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded. Please slow down.', retryAfter: 1 },
+      {
+        status: 429,
+        headers: {
+          'X-RateLimit-Limit': rpsResult.limit.toString(),
+          'X-RateLimit-Remaining': rpsResult.remaining.toString(),
+          'Retry-After': '1',
+        },
+      }
+    );
+  }
+  return null;
+}
 
 const updateLoadSchema = z.object({
   status: z.enum(["DRAFT", "POSTED", "UNPOSTED", "ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT", "DELIVERED", "COMPLETED", "CANCELLED", "EXPIRED"]).optional(),
@@ -58,6 +89,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting: Apply RPS_CONFIGS.marketplace
+    const rateLimitError = await applyRpsLimit(request);
+    if (rateLimitError) return rateLimitError;
+
     const { id } = await params;
     const session = await requireAuth();
 
@@ -169,6 +204,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting: Apply RPS_CONFIGS.marketplace
+    const rateLimitError = await applyRpsLimit(request);
+    if (rateLimitError) return rateLimitError;
+
     const { id } = await params;
     const session = await requireAuth();
 

@@ -14,6 +14,7 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
+import { checkRateLimit, withRpsLimit, RATE_LIMIT_GPS_UPDATE, RPS_CONFIGS } from '@/lib/rateLimit';
 
 const gpsUpdateSchema = z.object({
   latitude: z.number().min(-90).max(90),
@@ -30,13 +31,38 @@ const gpsUpdateSchema = z.object({
  *
  * Update GPS position for a trip (Carrier only)
  */
-export async function POST(
+async function postHandler(
   request: NextRequest,
   { params }: { params: Promise<{ tripId: string }> }
 ) {
   try {
     const session = await requireAuth();
     const { tripId } = await params;
+
+    // PHASE 4: Enforce GPS rate limiting to prevent DoS
+    // Rate limit by tripId - 12 requests per hour per trip
+    const rateLimitResult = await checkRateLimit(
+      { ...RATE_LIMIT_GPS_UPDATE, keyGenerator: () => `trip:${tripId}` },
+      tripId
+    );
+
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        {
+          error: 'GPS update rate limit exceeded. Maximum 12 updates per hour per trip.',
+          retryAfter: rateLimitResult.retryAfter,
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString(),
+            'Retry-After': rateLimitResult.retryAfter?.toString() || '60',
+          },
+        }
+      );
+    }
 
     const body = await request.json();
     const validatedData = gpsUpdateSchema.parse(body);
@@ -187,12 +213,15 @@ export async function POST(
   }
 }
 
+// Apply RPS rate limiting to POST (100 RPS with 20 burst)
+export const POST = withRpsLimit(RPS_CONFIGS.gps, postHandler);
+
 /**
  * GET /api/trips/[tripId]/gps
  *
  * Get all GPS positions for a trip (route history)
  */
-export async function GET(
+async function getHandler(
   request: NextRequest,
   { params }: { params: Promise<{ tripId: string }> }
 ) {
@@ -288,3 +317,6 @@ export async function GET(
     );
   }
 }
+
+// Apply RPS rate limiting to GET (100 RPS with 20 burst)
+export const GET = withRpsLimit(RPS_CONFIGS.gps, getHandler);

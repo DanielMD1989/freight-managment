@@ -215,7 +215,7 @@ function checkRateLimitInMemory(
 /**
  * Check RPS limit using Redis (token bucket algorithm)
  */
-async function checkRpsLimit(
+export async function checkRpsLimit(
   endpoint: string,
   identifier: string,
   rps: number,
@@ -695,8 +695,22 @@ export const RPS_CONFIGS: Record<string, RpsConfig> = {
     rps: 50,
     burst: 20,
   },
+  // Marketplace (loads) - shared config for all loads endpoints
+  // Used for GET /api/loads, GET /api/loads/{id}, POST /api/loads, PATCH /api/loads/{id}
+  marketplace: {
+    endpoint: '/api/loads',
+    rps: 50,
+    burst: 20,
+  },
   // Trucks listing - moderate limit
   trucks: {
+    endpoint: '/api/trucks',
+    rps: 50,
+    burst: 20,
+  },
+  // Fleet (trucks) - shared config for all trucks endpoints
+  // Used for GET /api/trucks, GET /api/trucks/{id}, POST /api/trucks, PATCH /api/trucks/{id}, DELETE /api/trucks/{id}
+  fleet: {
     endpoint: '/api/trucks',
     rps: 50,
     burst: 20,

@@ -1,5 +1,6 @@
 import 'truck.dart';
 import 'load.dart';
+import 'user.dart' show Organization;
 
 /// Trip status enum matching web app
 enum TripStatus {
@@ -364,29 +365,4 @@ class GpsPosition {
   }
 }
 
-/// Organization reference (carrier or shipper)
-class Organization {
-  final String id;
-  final String name;
-  final bool isVerified;
-  final String? contactPhone;
-  final String? contactEmail;
-
-  Organization({
-    required this.id,
-    required this.name,
-    this.isVerified = false,
-    this.contactPhone,
-    this.contactEmail,
-  });
-
-  factory Organization.fromJson(Map<String, dynamic> json) {
-    return Organization(
-      id: json['id'] ?? '',
-      name: json['name'] ?? '',
-      isVerified: json['isVerified'] ?? false,
-      contactPhone: json['contactPhone'],
-      contactEmail: json['contactEmail'],
-    );
-  }
-}
+// Organization class is imported from user.dart

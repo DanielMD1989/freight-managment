@@ -2,13 +2,21 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 import { generateRequestId } from "@/lib/errorHandler";
+// Note: isIPBlocked removed - uses Redis which is incompatible with Edge Runtime
+// IP blocking is handled at the API route level instead
 import {
-  isIPBlocked,
   addSecurityHeaders,
   logSecurityEvent,
   verifyCSRFToken,
   getClientIP,
 } from "@/lib/security";
+
+// Edge-compatible IP blocking (in-memory only, per-instance)
+// For production, use API-level Redis-backed blocking
+const edgeBlockedIPs = new Set<string>();
+function isIPBlockedEdge(ip: string): boolean {
+  return edgeBlockedIPs.has(ip);
+}
 
 // PHASE 3: Request logging (lightweight for Edge runtime)
 const LOG_REQUESTS = process.env.LOG_REQUESTS !== 'false';
@@ -151,7 +159,7 @@ export async function middleware(request: NextRequest) {
   const corsHeaders = getCorsHeaders(requestOrigin);
 
   // Sprint 9: IP Blocking Check
-  if (await isIPBlocked(clientIP)) {
+  if (isIPBlockedEdge(clientIP)) {
     await logSecurityEvent({
       type: 'IP_BLOCKED',
       ip: clientIP,

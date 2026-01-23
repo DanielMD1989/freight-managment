@@ -298,6 +298,9 @@ model User {
   mfa            UserMFA?
   securityEvents SecurityEvent[]
 
+  // PHASE 3: Push Notifications
+  deviceTokens DeviceToken[]
+
   @@index([email])
   @@index([organizationId])
   // PHASE 4: Scalability indexes for 10K+ DAU
@@ -348,6 +351,24 @@ model Session {
   @@index([expiresAt])
   @@index([userId, revokedAt, expiresAt]) // Composite index for finding active sessions per user
   @@map("sessions")
+}
+
+// Device tokens for push notifications (PHASE 3: Push Notifications)
+model DeviceToken {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String   // FCM or APNs token
+  platform   String   // 'ios' or 'android'
+  appVersion String?  // App version for compatibility
+  lastActive DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, token]) // One token per user per device
+  @@index([userId])
+  @@index([token])
+  @@index([lastActive])
+  @@map("device_tokens")
 }
 
 // MFA configuration for users
