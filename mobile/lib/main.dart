@@ -22,8 +22,10 @@ void main() async {
     ),
   );
 
-  // TODO: Initialize Firebase for push notifications
-  // await Firebase.initializeApp();
+  // Initialize Firebase for push notifications
+  // Note: Requires firebase_options.dart to be generated via FlutterFire CLI
+  // Run: flutterfire configure --project=<your-firebase-project>
+  // await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(
     const ProviderScope(

@@ -5,6 +5,12 @@
  *
  * Provides email sending functionality for notifications.
  *
+ * ASYNC QUEUE MIGRATION:
+ * - sendEmail() now enqueues jobs to the email queue
+ * - sendEmailDirect() performs synchronous sending (used by workers)
+ * - Retry: 3 attempts with exponential backoff
+ * - Visibility timeout: 30 seconds for long-running jobs
+ *
  * Supported providers:
  * - Resend (recommended for MVP - simple, free tier)
  * - SendGrid (enterprise option)
@@ -19,6 +25,9 @@
  * - SENDGRID_API_KEY: API key for SendGrid
  * - AWS_REGION: AWS region for SES
  */
+
+import { addJob, registerProcessor, isQueueReadySync } from './queue';
+import { logger } from './logger';
 
 /**
  * Email message structure
@@ -171,19 +180,19 @@ function getEmailProvider(): EmailProvider {
 }
 
 /**
- * Send email
+ * Send email directly (synchronous - used by queue workers)
  *
  * @param message Email message
  * @returns Send result
  */
-export async function sendEmail(message: EmailMessage): Promise<EmailResult> {
+export async function sendEmailDirect(message: EmailMessage): Promise<EmailResult> {
   const provider = getEmailProvider();
 
   try {
     const result = await provider.send(message);
 
     // Log email send attempt
-    console.log('[EMAIL]', {
+    logger.info('[EMAIL] Sent', {
       to: message.to,
       subject: message.subject,
       success: result.success,
@@ -193,10 +202,9 @@ export async function sendEmail(message: EmailMessage): Promise<EmailResult> {
 
     return result;
   } catch (error: any) {
-    console.error('[EMAIL ERROR]', {
+    logger.error('[EMAIL ERROR]', error, {
       to: message.to,
       subject: message.subject,
-      error: error.message,
     });
 
     return {
@@ -204,6 +212,68 @@ export async function sendEmail(message: EmailMessage): Promise<EmailResult> {
       error: error.message || 'Failed to send email',
     };
   }
+}
+
+/**
+ * Email job data for queue
+ */
+export interface EmailJobData {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+  replyTo?: string;
+  [key: string]: unknown; // Index signature for JobData compatibility
+}
+
+/**
+ * Send email via async queue
+ *
+ * Enqueues the email to be sent by a background worker.
+ * Falls back to direct sending if queue is not available.
+ *
+ * @param message Email message
+ * @returns Send result (immediate for fallback, queued otherwise)
+ */
+export async function sendEmail(message: EmailMessage): Promise<EmailResult> {
+  // Try to use queue if available
+  if (isQueueReadySync()) {
+    try {
+      const jobData: EmailJobData = {
+        to: message.to,
+        subject: message.subject,
+        html: message.html,
+        text: message.text,
+        replyTo: message.replyTo,
+      };
+      const jobId = await addJob('email', 'send-email', jobData, {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 2000, // Start with 2s, then 4s, then 8s
+        },
+        removeOnComplete: 100,
+        removeOnFail: 500,
+      });
+
+      logger.debug('[EMAIL] Queued', {
+        jobId,
+        to: message.to,
+        subject: message.subject,
+      });
+
+      return {
+        success: true,
+        messageId: `queued:${jobId}`,
+      };
+    } catch (queueError) {
+      logger.warn('[EMAIL] Queue failed, falling back to direct send', { error: queueError });
+      // Fall through to direct send
+    }
+  }
+
+  // Fallback to direct send
+  return sendEmailDirect(message);
 }
 
 /**
@@ -571,4 +641,61 @@ export async function sendTestEmail(toEmail: string): Promise<EmailResult> {
     html: createEmailHTML(content),
     text: 'This is a test email from the Freight Management Platform. If you received this, your email service is working correctly!',
   });
+}
+
+// =============================================================================
+// EMAIL QUEUE PROCESSOR
+// =============================================================================
+
+/**
+ * Process email job from queue
+ *
+ * Called by BullMQ worker to send emails asynchronously.
+ * Includes retry logic: 3 attempts with exponential backoff.
+ */
+export async function processEmailJob(
+  job: { id: string; name: string; data: EmailJobData },
+  updateProgress: (progress: number) => Promise<void>
+): Promise<void> {
+  const { to, subject, html, text, replyTo } = job.data;
+
+  logger.info('[EMAIL WORKER] Processing job', {
+    jobId: job.id,
+    to,
+    subject,
+  });
+
+  await updateProgress(10);
+
+  const result = await sendEmailDirect({
+    to,
+    subject,
+    html,
+    text,
+    replyTo,
+  });
+
+  await updateProgress(90);
+
+  if (!result.success) {
+    // Throw error to trigger retry
+    throw new Error(result.error || 'Failed to send email');
+  }
+
+  await updateProgress(100);
+
+  logger.info('[EMAIL WORKER] Job completed', {
+    jobId: job.id,
+    messageId: result.messageId,
+  });
+}
+
+/**
+ * Register email processor with queue system
+ *
+ * Call this during application startup to enable email queue processing.
+ */
+export function registerEmailProcessor(): void {
+  registerProcessor('email', 'send-email', processEmailJob);
+  logger.info('[EMAIL] Processor registered for queue: email');
 }

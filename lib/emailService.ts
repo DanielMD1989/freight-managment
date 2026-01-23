@@ -4,10 +4,17 @@
  * Sprint 16 - Story 16.10: User Notifications
  * Task: Email notifications for GPS, Settlement, and Account events
  *
+ * ASYNC QUEUE MIGRATION:
+ * - sendEmail() and sendEmailToUser() now enqueue jobs to the email queue
+ * - sendEmailDirect() performs synchronous sending (used by workers)
+ * - Retry: 3 attempts with exponential backoff
+ *
  * Supports multiple email providers: SendGrid, AWS SES, Resend
  */
 
 import { db } from './db';
+import { addJob, registerProcessor, isQueueReadySync } from './queue';
+import { logger } from './logger';
 
 /**
  * Email provider configuration
@@ -410,13 +417,13 @@ async function sendViaResend(message: EmailMessage): Promise<void> {
 }
 
 /**
- * Send an email notification
+ * Send an email notification directly (synchronous - used by workers)
  *
  * @param to - Recipient email address
  * @param template - Email template to use
  * @param data - Template data
  */
-export async function sendEmail(
+export async function sendEmailDirect(
   to: string,
   template: EmailTemplate,
   data: EmailTemplateData
@@ -453,9 +460,73 @@ export async function sendEmail(
         break;
     }
 
-    console.log(`📧 Email notification sent: ${template} to ${to}`);
+    logger.info(`[EMAIL SERVICE] Sent: ${template} to ${to}`);
   } catch (error) {
-    console.error('Failed to send email:', error);
+    logger.error('[EMAIL SERVICE] Failed to send email', error);
+    throw error; // Re-throw for queue retry
+  }
+}
+
+/**
+ * Template email job data for queue
+ */
+export interface TemplateEmailJobData {
+  to: string;
+  template: EmailTemplate;
+  data: EmailTemplateData;
+  [key: string]: unknown; // Index signature for JobData compatibility
+}
+
+/**
+ * Send an email notification via async queue
+ *
+ * Enqueues the email to be sent by a background worker.
+ * Falls back to direct sending if queue is not available.
+ *
+ * @param to - Recipient email address
+ * @param template - Email template to use
+ * @param data - Template data
+ */
+export async function sendEmail(
+  to: string,
+  template: EmailTemplate,
+  data: EmailTemplateData
+): Promise<void> {
+  // Try to use queue if available
+  if (isQueueReadySync()) {
+    try {
+      const jobId = await addJob('email', 'send-template-email', {
+        to,
+        template,
+        data,
+      } as TemplateEmailJobData, {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 2000, // Start with 2s, then 4s, then 8s
+        },
+        removeOnComplete: 100,
+        removeOnFail: 500,
+      });
+
+      logger.debug('[EMAIL SERVICE] Queued', {
+        jobId,
+        to,
+        template,
+      });
+
+      return;
+    } catch (queueError) {
+      logger.warn('[EMAIL SERVICE] Queue failed, falling back to direct send', { error: queueError });
+      // Fall through to direct send
+    }
+  }
+
+  // Fallback to direct send (swallows errors like before)
+  try {
+    await sendEmailDirect(to, template, data);
+  } catch (error) {
+    logger.error('[EMAIL SERVICE] Failed to send email', error);
     // Don't throw - emails are non-critical, just log the error
   }
 }
@@ -482,7 +553,7 @@ export async function sendEmailToUser(
   });
 
   if (!user?.email) {
-    console.log(`No email address for user ${userId}`);
+    logger.debug(`[EMAIL SERVICE] No email address for user ${userId}`);
     return;
   }
 
@@ -494,4 +565,47 @@ export async function sendEmailToUser(
     ...data,
     recipientName,
   });
+}
+
+// =============================================================================
+// EMAIL TEMPLATE QUEUE PROCESSOR
+// =============================================================================
+
+/**
+ * Process template email job from queue
+ *
+ * Called by BullMQ worker to send template-based emails asynchronously.
+ * Includes retry logic: 3 attempts with exponential backoff.
+ */
+export async function processTemplateEmailJob(
+  job: { id: string; name: string; data: TemplateEmailJobData },
+  updateProgress: (progress: number) => Promise<void>
+): Promise<void> {
+  const { to, template, data } = job.data;
+
+  logger.info('[EMAIL SERVICE WORKER] Processing job', {
+    jobId: job.id,
+    to,
+    template,
+  });
+
+  await updateProgress(10);
+
+  await sendEmailDirect(to, template, data);
+
+  await updateProgress(100);
+
+  logger.info('[EMAIL SERVICE WORKER] Job completed', {
+    jobId: job.id,
+  });
+}
+
+/**
+ * Register email service processor with queue system
+ *
+ * Call this during application startup to enable template email queue processing.
+ */
+export function registerTemplateEmailProcessor(): void {
+  registerProcessor('email', 'send-template-email', processTemplateEmailJob);
+  logger.info('[EMAIL SERVICE] Processor registered for queue: email (template)');
 }

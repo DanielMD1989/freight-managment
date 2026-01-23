@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     const isMobileClient = request.headers.get('x-client-type') === 'mobile';
     const hasBearerAuth = request.headers.get('authorization')?.startsWith('Bearer ');
 
-    if (!isMobileClient || !hasBearerAuth) {
+    if (!isMobileClient && !hasBearerAuth) {
       const csrfError = await requireCSRF(request);
       if (csrfError) {
         return csrfError;

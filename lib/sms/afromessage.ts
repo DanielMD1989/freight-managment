@@ -6,6 +6,12 @@
  * Integration with AfroMessage (https://afromessage.com) - Ethiopia's
  * enterprise-grade SMS service provider.
  *
+ * ASYNC QUEUE MIGRATION:
+ * - sendSMS() now enqueues jobs to the sms queue
+ * - sendSMSDirect() performs synchronous sending (used by workers)
+ * - Retry: 3 attempts with exponential backoff
+ * - Visibility timeout: 30 seconds for long-running jobs
+ *
  * Features:
  * - Send OTP for MFA verification
  * - Send password reset codes
@@ -15,6 +21,9 @@
  * - AFROMESSAGE_API_KEY: Your API key from AfroMessage dashboard
  * - AFROMESSAGE_SENDER_NAME: Registered sender ID (e.g., "FreightMgt")
  */
+
+import { addJob, registerProcessor, isQueueReadySync } from '../queue';
+import { logger } from '../logger';
 
 // AfroMessage API configuration
 const AFROMESSAGE_API_URL = 'https://api.afromessage.com/api/send';
@@ -84,13 +93,22 @@ export function formatEthiopianPhone(phone: string): string {
 }
 
 /**
- * Send SMS via AfroMessage API
+ * SMS job data for queue
+ */
+export interface SMSJobData {
+  to: string;
+  message: string;
+  [key: string]: unknown; // Index signature for JobData compatibility
+}
+
+/**
+ * Send SMS via AfroMessage API (direct - used by workers)
  *
  * @param to - Recipient phone number (Ethiopian format)
  * @param message - SMS message content (max 160 chars for single SMS)
  * @returns SendSMSResult with success status and optional message ID
  */
-export async function sendSMS(to: string, message: string): Promise<SendSMSResult> {
+export async function sendSMSDirect(to: string, message: string): Promise<SendSMSResult> {
   try {
     const config = getConfig();
     const formattedPhone = formatEthiopianPhone(to);
@@ -112,7 +130,7 @@ export async function sendSMS(to: string, message: string): Promise<SendSMSResul
     });
 
     if (!response.ok) {
-      console.error('[AfroMessage] HTTP error:', response.status, response.statusText);
+      logger.error('[AfroMessage] HTTP error', { status: response.status, statusText: response.statusText });
       return {
         success: false,
         error: `HTTP error: ${response.status}`,
@@ -122,25 +140,71 @@ export async function sendSMS(to: string, message: string): Promise<SendSMSResul
     const data: AfroMessageResponse = await response.json();
 
     if (data.acknowledge === 'success') {
-      console.log('[AfroMessage] SMS sent successfully to:', formattedPhone);
+      logger.info('[AfroMessage] SMS sent successfully', { to: formattedPhone });
       return {
         success: true,
         messageId: data.message_id,
       };
     } else {
-      console.error('[AfroMessage] API error:', data.error || data.response);
+      logger.error('[AfroMessage] API error', { error: data.error || data.response });
       return {
         success: false,
         error: data.error || data.response || 'Unknown error',
       };
     }
   } catch (error) {
-    console.error('[AfroMessage] Send SMS error:', error);
+    logger.error('[AfroMessage] Send SMS error', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to send SMS',
     };
   }
+}
+
+/**
+ * Send SMS via async queue
+ *
+ * Enqueues the SMS to be sent by a background worker.
+ * Falls back to direct sending if queue is not available.
+ *
+ * @param to - Recipient phone number (Ethiopian format)
+ * @param message - SMS message content (max 160 chars for single SMS)
+ * @returns SendSMSResult with success status and optional message ID
+ */
+export async function sendSMS(to: string, message: string): Promise<SendSMSResult> {
+  // Try to use queue if available
+  if (isQueueReadySync()) {
+    try {
+      const jobId = await addJob('sms', 'send-sms', {
+        to,
+        message,
+      } as SMSJobData, {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 3000, // Start with 3s, then 6s, then 12s (SMS APIs often have stricter rate limits)
+        },
+        removeOnComplete: 100,
+        removeOnFail: 500,
+      });
+
+      logger.debug('[SMS] Queued', {
+        jobId,
+        to,
+      });
+
+      return {
+        success: true,
+        messageId: `queued:${jobId}`,
+      };
+    } catch (queueError) {
+      logger.warn('[SMS] Queue failed, falling back to direct send', { error: queueError });
+      // Fall through to direct send
+    }
+  }
+
+  // Fallback to direct send
+  return sendSMSDirect(to, message);
 }
 
 /**
@@ -196,4 +260,54 @@ export function isValidEthiopianPhone(phone: string): boolean {
   } catch {
     return false;
   }
+}
+
+// =============================================================================
+// SMS QUEUE PROCESSOR
+// =============================================================================
+
+/**
+ * Process SMS job from queue
+ *
+ * Called by BullMQ worker to send SMS asynchronously.
+ * Includes retry logic: 3 attempts with exponential backoff.
+ */
+export async function processSmsJob(
+  job: { id: string; name: string; data: SMSJobData },
+  updateProgress: (progress: number) => Promise<void>
+): Promise<void> {
+  const { to, message } = job.data;
+
+  logger.info('[SMS WORKER] Processing job', {
+    jobId: job.id,
+    to,
+  });
+
+  await updateProgress(10);
+
+  const result = await sendSMSDirect(to, message);
+
+  await updateProgress(90);
+
+  if (!result.success) {
+    // Throw error to trigger retry
+    throw new Error(result.error || 'Failed to send SMS');
+  }
+
+  await updateProgress(100);
+
+  logger.info('[SMS WORKER] Job completed', {
+    jobId: job.id,
+    messageId: result.messageId,
+  });
+}
+
+/**
+ * Register SMS processor with queue system
+ *
+ * Call this during application startup to enable SMS queue processing.
+ */
+export function registerSmsProcessor(): void {
+  registerProcessor('sms', 'send-sms', processSmsJob);
+  logger.info('[SMS] Processor registered for queue: sms');
 }

@@ -54,9 +54,9 @@ export type QueueName =
   | 'bulk'
   | 'scheduled';
 
-export interface JobData {
-  [key: string]: unknown;
-}
+// JobData is a base type for queue job data
+// Specific job data types (EmailJobData, SMSJobData, etc.) extend this
+export type JobData = Record<string, unknown>;
 
 export interface JobOptions {
   delay?: number;
@@ -202,6 +202,41 @@ function generateJobId(): string {
 
 let bullmqQueues: Map<QueueName, any> | null = null;
 let bullmqWorkers: Map<QueueName, any> | null = null;
+let redisConnection: any | null = null;
+
+// =============================================================================
+// GRACEFUL SHUTDOWN STATE
+// =============================================================================
+
+let isShuttingDown = false;
+let isDraining = false;
+let shutdownPromise: Promise<void> | null = null;
+
+export type WorkerStatus = 'running' | 'draining' | 'stopped';
+
+/**
+ * Get current worker status for health checks
+ */
+export function getWorkerStatus(): {
+  status: WorkerStatus;
+  isShuttingDown: boolean;
+  isDraining: boolean;
+  activeWorkers: number;
+  activeQueues: number;
+} {
+  let status: WorkerStatus = 'stopped';
+  if (bullmqWorkers && bullmqWorkers.size > 0) {
+    status = isDraining ? 'draining' : 'running';
+  }
+
+  return {
+    status,
+    isShuttingDown,
+    isDraining,
+    activeWorkers: bullmqWorkers?.size ?? 0,
+    activeQueues: bullmqQueues?.size ?? 0,
+  };
+}
 
 /**
  * Initialize BullMQ queues
@@ -232,6 +267,9 @@ async function initializeBullMQ(): Promise<boolean> {
           password: config.redisPassword || undefined,
           maxRetriesPerRequest: null,
         });
+
+    // Store connection reference for health checks
+    redisConnection = connection;
 
     bullmqQueues = new Map();
     bullmqWorkers = new Map();
@@ -541,23 +579,28 @@ export async function cleanQueue(
 // JOB PROCESSORS
 // =============================================================================
 
-export type JobProcessor = (
-  job: { id: string; name: string; data: JobData },
+// JobProcessor type uses generic to allow specific job data types
+// The processor receives job data that extends JobData
+export type JobProcessor<T extends JobData = JobData> = (
+  job: { id: string; name: string; data: T },
   updateProgress: (progress: number) => Promise<void>
 ) => Promise<void>;
 
-const processors: Map<string, JobProcessor> = new Map();
+// Internal storage uses the base JobProcessor type
+const processors: Map<string, JobProcessor<JobData>> = new Map();
 
 /**
  * Register a job processor
+ * Accepts processors with specific job data types
  */
-export function registerProcessor(
+export function registerProcessor<T extends JobData>(
   queueName: QueueName,
   jobName: string,
-  processor: JobProcessor
+  processor: JobProcessor<T>
 ): void {
   const key = `${queueName}:${jobName}`;
-  processors.set(key, processor);
+  // Type assertion is safe because T extends JobData
+  processors.set(key, processor as JobProcessor<JobData>);
   logger.info('Job processor registered', { queueName, jobName });
 }
 
@@ -719,17 +762,109 @@ export async function startWorkers(): Promise<void> {
 
 /**
  * Stop all workers gracefully
+ * Workers will finish processing current jobs before stopping
  */
 export async function stopWorkers(): Promise<void> {
   if (!bullmqWorkers) return;
 
+  isDraining = true;
+  logger.info('Workers entering draining mode - waiting for active jobs to complete');
+
+  const closePromises: Promise<void>[] = [];
+
   for (const [queueName, worker] of bullmqWorkers) {
-    await worker.close();
-    logger.info(`Worker stopped: ${queueName}`);
+    closePromises.push(
+      worker.close().then(() => {
+        logger.info(`Worker stopped: ${queueName}`);
+      }).catch((error: Error) => {
+        logger.error(`Error stopping worker: ${queueName}`, error);
+      })
+    );
   }
 
+  await Promise.all(closePromises);
   bullmqWorkers = null;
+  isDraining = false;
   logger.info('All workers stopped');
+}
+
+/**
+ * Close all queues
+ */
+export async function closeQueues(): Promise<void> {
+  if (!bullmqQueues) return;
+
+  const closePromises: Promise<void>[] = [];
+
+  for (const [queueName, queue] of bullmqQueues) {
+    closePromises.push(
+      queue.close().then(() => {
+        logger.info(`Queue closed: ${queueName}`);
+      }).catch((error: Error) => {
+        logger.error(`Error closing queue: ${queueName}`, error);
+      })
+    );
+  }
+
+  await Promise.all(closePromises);
+  bullmqQueues = null;
+  logger.info('All queues closed');
+}
+
+/**
+ * Graceful shutdown handler
+ * 1. Stops accepting new jobs
+ * 2. Waits for active jobs to complete (draining)
+ * 3. Closes all workers
+ * 4. Closes all queues
+ * 5. Exits process
+ */
+export async function gracefulShutdown(signal: string): Promise<void> {
+  // Prevent multiple shutdown attempts
+  if (isShuttingDown) {
+    logger.info(`Shutdown already in progress, ignoring ${signal}`);
+    return shutdownPromise ?? Promise.resolve();
+  }
+
+  isShuttingDown = true;
+  logger.info(`Received ${signal}, starting graceful shutdown...`);
+
+  shutdownPromise = (async () => {
+    try {
+      // Step 1: Stop workers (will wait for active jobs to finish)
+      await stopWorkers();
+
+      // Step 2: Close all queues
+      await closeQueues();
+
+      logger.info('Graceful shutdown completed successfully');
+    } catch (error) {
+      logger.error('Error during graceful shutdown', error);
+    }
+  })();
+
+  return shutdownPromise;
+}
+
+// Register signal handlers for graceful shutdown
+// Only register once to avoid duplicate handlers
+let signalHandlersRegistered = false;
+
+export function registerShutdownHandlers(): void {
+  if (signalHandlersRegistered) return;
+  signalHandlersRegistered = true;
+
+  process.on('SIGTERM', async () => {
+    await gracefulShutdown('SIGTERM');
+    process.exit(0);
+  });
+
+  process.on('SIGINT', async () => {
+    await gracefulShutdown('SIGINT');
+    process.exit(0);
+  });
+
+  logger.info('Graceful shutdown handlers registered (SIGTERM, SIGINT)');
 }
 
 // =============================================================================
@@ -741,14 +876,171 @@ export async function stopWorkers(): Promise<void> {
  */
 export async function initializeQueues(): Promise<void> {
   await initializeBullMQ();
+  registerShutdownHandlers();
   logger.info('Queue system initialized');
 }
 
 /**
- * Check if queue system is ready
+ * Queue health status details
  */
-export function isQueueReady(): boolean {
-  return bullmqQueues !== null || true; // In-memory fallback always ready
+export interface QueueHealthStatus {
+  ready: boolean;
+  provider: 'bullmq' | 'in-memory';
+  redisConnected: boolean;
+  redisPingMs: number | null;
+  queuesInitialized: boolean;
+  allQueuesOperational: boolean;
+  pausedQueues: string[];
+  error?: string;
+}
+
+/**
+ * Check if queue system is ready (comprehensive check)
+ *
+ * For BullMQ:
+ * - Redis must respond to PING
+ * - Queues must be initialized
+ * - At least one queue must not be paused
+ *
+ * For in-memory:
+ * - Always ready when BullMQ is disabled
+ *
+ * @returns true if ready to accept jobs, false otherwise
+ */
+export async function isQueueReady(): Promise<boolean> {
+  const status = await getQueueHealthStatus();
+  return status.ready;
+}
+
+/**
+ * Synchronous queue ready check (for backward compatibility)
+ * WARNING: Does not verify Redis connection - use isQueueReady() for full check
+ */
+export function isQueueReadySync(): boolean {
+  const config = getConfig();
+
+  // If queue system is disabled, in-memory fallback is ready
+  if (!config.enabled) {
+    return true;
+  }
+
+  // BullMQ: check if queues are initialized (does not verify Redis connection)
+  return bullmqQueues !== null && bullmqQueues.size > 0;
+}
+
+/**
+ * Get detailed queue health status
+ * Performs Redis ping and checks all queue states
+ */
+export async function getQueueHealthStatus(): Promise<QueueHealthStatus> {
+  const config = getConfig();
+
+  // If queue system is disabled, in-memory fallback is always ready
+  if (!config.enabled) {
+    return {
+      ready: true,
+      provider: 'in-memory',
+      redisConnected: false,
+      redisPingMs: null,
+      queuesInitialized: true,
+      allQueuesOperational: true,
+      pausedQueues: [],
+    };
+  }
+
+  // Check if BullMQ queues are initialized
+  if (!bullmqQueues || bullmqQueues.size === 0) {
+    return {
+      ready: false,
+      provider: 'bullmq',
+      redisConnected: false,
+      redisPingMs: null,
+      queuesInitialized: false,
+      allQueuesOperational: false,
+      pausedQueues: [],
+      error: 'BullMQ queues not initialized',
+    };
+  }
+
+  // Check Redis connection with PING
+  let redisConnected = false;
+  let redisPingMs: number | null = null;
+
+  if (redisConnection) {
+    try {
+      const pingStart = Date.now();
+      const pingResult = await Promise.race([
+        redisConnection.ping(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Redis ping timeout')), 5000)
+        ),
+      ]);
+      redisPingMs = Date.now() - pingStart;
+      redisConnected = pingResult === 'PONG';
+    } catch (error) {
+      redisConnected = false;
+      redisPingMs = null;
+      logger.warn('Redis ping failed during health check', { error });
+    }
+  }
+
+  // If Redis is down, queue is not ready
+  if (!redisConnected) {
+    return {
+      ready: false,
+      provider: 'bullmq',
+      redisConnected: false,
+      redisPingMs: null,
+      queuesInitialized: true,
+      allQueuesOperational: false,
+      pausedQueues: [],
+      error: 'Redis connection failed',
+    };
+  }
+
+  // Check queue states (paused, can accept jobs)
+  const pausedQueues: string[] = [];
+  let hasOperationalQueue = false;
+
+  try {
+    for (const [queueName, queue] of bullmqQueues) {
+      const isPaused = await queue.isPaused();
+      if (isPaused) {
+        pausedQueues.push(queueName);
+      } else {
+        hasOperationalQueue = true;
+      }
+    }
+  } catch (error) {
+    logger.warn('Failed to check queue states', { error });
+    return {
+      ready: false,
+      provider: 'bullmq',
+      redisConnected,
+      redisPingMs,
+      queuesInitialized: true,
+      allQueuesOperational: false,
+      pausedQueues: [],
+      error: 'Failed to check queue states',
+    };
+  }
+
+  // Ready if Redis is connected and at least one queue is operational
+  const allQueuesOperational = pausedQueues.length === 0;
+  const ready = redisConnected && hasOperationalQueue;
+
+  return {
+    ready,
+    provider: 'bullmq',
+    redisConnected,
+    redisPingMs,
+    queuesInitialized: true,
+    allQueuesOperational,
+    pausedQueues,
+    ...(pausedQueues.length === bullmqQueues.size && {
+      error: 'All queues are paused',
+    }),
+  };
 }
 
 /**
@@ -784,7 +1076,13 @@ export default {
   registerProcessor,
   startWorkers,
   stopWorkers,
+  closeQueues,
+  gracefulShutdown,
+  registerShutdownHandlers,
+  getWorkerStatus,
   initializeQueues,
   isQueueReady,
+  isQueueReadySync,
+  getQueueHealthStatus,
   getQueueInfo,
 };

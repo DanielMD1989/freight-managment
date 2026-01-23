@@ -13,6 +13,51 @@ import {
 // PHASE 3: Request logging (lightweight for Edge runtime)
 const LOG_REQUESTS = process.env.LOG_REQUESTS !== 'false';
 
+// =============================================================================
+// CORS CONFIGURATION - Security Fix v4
+// =============================================================================
+// Allowed origins for CORS requests. Configure via ALLOWED_ORIGINS env var.
+// Format: comma-separated list of origins (e.g., "https://app.example.com,https://admin.example.com")
+const ALLOWED_ORIGINS = new Set(
+  (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000')
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean)
+);
+
+/**
+ * Check if an origin is allowed for CORS
+ */
+function isOriginAllowed(origin: string | null): boolean {
+  if (!origin) return false;
+
+  // In development, allow localhost origins
+  if (process.env.NODE_ENV === 'development') {
+    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+      return true;
+    }
+  }
+
+  return ALLOWED_ORIGINS.has(origin);
+}
+
+/**
+ * Get CORS headers for allowed origin
+ */
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  if (!origin || !isOriginAllowed(origin)) {
+    // Return empty headers if origin not allowed (browser will block the request)
+    return {};
+  }
+
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRF-Token, X-Requested-With, Accept, x-client-type',
+  };
+}
+
 /**
  * Add timing headers and log response (PHASE 3)
  */
@@ -84,27 +129,29 @@ export async function middleware(request: NextRequest) {
     console.log(`[REQ] ${method} ${pathname} - ${requestId} - ${clientIP}`);
   }
 
+  // Get request origin for CORS validation
+  const requestOrigin = request.headers.get('origin');
+
   // Handle CORS preflight requests
   if (method === 'OPTIONS') {
     const response = new NextResponse(null, { status: 204 });
 
-    // Allow all origins for development
-    response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, Cookie, x-client-type');
-    response.headers.set('Access-Control-Max-Age', '86400');
+    // Only set CORS headers if origin is allowed
+    if (isOriginAllowed(requestOrigin)) {
+      response.headers.set('Access-Control-Allow-Origin', requestOrigin!);
+      response.headers.set('Access-Control-Allow-Credentials', 'true');
+      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+      response.headers.set('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, Cookie, x-client-type');
+      response.headers.set('Access-Control-Max-Age', '86400');
+    }
     return response;
   }
 
-  // Add CORS headers to all responses
-  const corsHeaders: Record<string, string> = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-client-type',
-  };
+  // Get CORS headers for this request (empty if origin not allowed)
+  const corsHeaders = getCorsHeaders(requestOrigin);
 
   // Sprint 9: IP Blocking Check
-  if (isIPBlocked(clientIP)) {
+  if (await isIPBlocked(clientIP)) {
     await logSecurityEvent({
       type: 'IP_BLOCKED',
       ip: clientIP,

@@ -13,6 +13,8 @@ import {
   calculateTotalFare,
   validatePricing,
 } from "@/lib/pricingCalculation";
+import { LoadCache, CacheInvalidation, CacheTTL } from "@/lib/cache";
+import { checkRpsLimit, RPS_CONFIGS, addRateLimitHeaders } from "@/lib/rateLimit";
 
 const createLoadSchema = z.object({
   // Location & Schedule
@@ -74,6 +76,31 @@ const createLoadSchema = z.object({
 // POST /api/loads - Create load
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting: Apply RPS_CONFIGS.marketplace
+    const ip =
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      request.headers.get('x-real-ip') ||
+      'unknown';
+    const rpsResult = await checkRpsLimit(
+      RPS_CONFIGS.marketplace.endpoint,
+      ip,
+      RPS_CONFIGS.marketplace.rps,
+      RPS_CONFIGS.marketplace.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please slow down.', retryAfter: 1 },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rpsResult.limit.toString(),
+            'X-RateLimit-Remaining': rpsResult.remaining.toString(),
+            'Retry-After': '1',
+          },
+        }
+      );
+    }
+
     // Require ACTIVE user status for creating loads
     const session = await requireActiveUser();
     await requirePermission(Permission.CREATE_LOAD);
@@ -154,6 +181,29 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // PHASE 4: Invalidate load list caches when new load is created
+    await CacheInvalidation.allListings();
+
+    // PHASE 4: Send push notification to carriers when load is posted
+    if (validatedData.status === "POSTED") {
+      // Notify carriers about new load asynchronously (fire-and-forget)
+      import('@/lib/notifications').then(({ createNotificationForRole }) => {
+        createNotificationForRole({
+          role: 'CARRIER',
+          type: 'NEW_LOAD_POSTED',
+          title: 'New Load Available',
+          message: `New ${validatedData.truckType} load: ${validatedData.pickupCity} → ${validatedData.deliveryCity}`,
+          metadata: {
+            loadId: load.id,
+            pickupCity: validatedData.pickupCity,
+            deliveryCity: validatedData.deliveryCity,
+            truckType: validatedData.truckType,
+            weight: validatedData.weight,
+          },
+        }).catch(err => console.error('Failed to notify carriers:', err));
+      }).catch(err => console.error('Failed to load notifications module:', err));
+    }
+
     return NextResponse.json({ load }, { status: 201 });
   } catch (error) {
     console.error("Create load error:", error);
@@ -179,6 +229,31 @@ export async function POST(request: NextRequest) {
 // GET /api/loads - List loads (marketplace)
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting: Apply RPS_CONFIGS.marketplace
+    const ip =
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      request.headers.get('x-real-ip') ||
+      'unknown';
+    const rpsResult = await checkRpsLimit(
+      RPS_CONFIGS.marketplace.endpoint,
+      ip,
+      RPS_CONFIGS.marketplace.rps,
+      RPS_CONFIGS.marketplace.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please slow down.', retryAfter: 1 },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rpsResult.limit.toString(),
+            'X-RateLimit-Remaining': rpsResult.remaining.toString(),
+            'Retry-After': '1',
+          },
+        }
+      );
+    }
+
     const session = await requireAuth();
     const { searchParams } = request.nextUrl;
 
@@ -198,6 +273,24 @@ export async function GET(request: NextRequest) {
     const bookMode = searchParams.get("bookMode");
     const rateMin = searchParams.get("rateMin");
     const rateMax = searchParams.get("rateMax");
+
+    // PHASE 4: Build cache key from filter parameters
+    const cacheFilters = {
+      page, limit, status, pickupCity, deliveryCity, truckType,
+      myLoads, myTrips, tripKmMin, tripKmMax, fullPartial, bookMode,
+      rateMin, rateMax, role: session.role, orgId: session.organizationId,
+      sortBy: searchParams.get("sortBy"), sortOrder: searchParams.get("sortOrder"),
+    };
+
+    // Try cache first for marketplace queries (public loads only)
+    // Only cache non-personalized queries
+    const isPublicQuery = !myLoads && !myTrips && session.role !== 'SHIPPER';
+    if (isPublicQuery) {
+      const cachedResult = await LoadCache.getList(cacheFilters);
+      if (cachedResult) {
+        return NextResponse.json(cachedResult);
+      }
+    }
 
     const where: any = {};
 
@@ -449,7 +542,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({
+    const response = {
       loads: loadsWithComputed,
       pagination: {
         page,
@@ -457,7 +550,15 @@ export async function GET(request: NextRequest) {
         total,
         pages: Math.ceil(total / limit),
       },
-    });
+    };
+
+    // PHASE 4: Cache the result for non-personalized queries
+    if (isPublicQuery) {
+      // Cache with short TTL (30 seconds) for listings - high churn data
+      await LoadCache.setList(cacheFilters, response as unknown as unknown[]);
+    }
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error("List loads error:", error);
 
