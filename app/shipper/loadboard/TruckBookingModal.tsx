@@ -152,7 +152,7 @@ export default function TruckBookingModal({ isOpen, onClose, truckPosting, onReq
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 dark:border-slate-700">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-800 dark:text-white dark:text-white">
+            <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
               Request Truck
             </h2>
             <button
@@ -172,37 +172,37 @@ export default function TruckBookingModal({ isOpen, onClose, truckPosting, onReq
 
         {/* Truck Info */}
         <div className="px-6 py-4 bg-teal-600/10 dark:bg-blue-900/20 border-b border-slate-200 dark:border-slate-700 dark:border-slate-700">
-          <h3 className="text-sm font-medium text-slate-800 dark:text-white dark:text-blue-200 mb-2">
+          <h3 className="text-sm font-medium text-slate-800 dark:text-blue-200 mb-2">
             Selected Truck
           </h3>
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div>
               <span className="text-slate-500 dark:text-slate-400 dark:text-gray-400">Plate:</span>{' '}
-              <span className="font-medium text-slate-800 dark:text-white dark:text-white">
+              <span className="font-medium text-slate-800 dark:text-white">
                 {truckPosting.truck?.licensePlate || 'N/A'}
               </span>
             </div>
             <div>
               <span className="text-slate-500 dark:text-slate-400 dark:text-gray-400">Type:</span>{' '}
-              <span className="font-medium text-slate-800 dark:text-white dark:text-white">
+              <span className="font-medium text-slate-800 dark:text-white">
                 {truckPosting.truck?.truckType || 'N/A'}
               </span>
             </div>
             <div>
               <span className="text-slate-500 dark:text-slate-400 dark:text-gray-400">Capacity:</span>{' '}
-              <span className="font-medium text-slate-800 dark:text-white dark:text-white">
+              <span className="font-medium text-slate-800 dark:text-white">
                 {truckPosting.truck?.capacity?.toLocaleString() || 'N/A'} kg
               </span>
             </div>
             <div>
               <span className="text-slate-500 dark:text-slate-400 dark:text-gray-400">Carrier:</span>{' '}
-              <span className="font-medium text-slate-800 dark:text-white dark:text-white">
+              <span className="font-medium text-slate-800 dark:text-white">
                 {truckPosting.carrier?.name || 'Unknown'}
               </span>
             </div>
             <div className="col-span-2">
               <span className="text-slate-500 dark:text-slate-400 dark:text-gray-400">Route:</span>{' '}
-              <span className="font-medium text-slate-800 dark:text-white dark:text-white">
+              <span className="font-medium text-slate-800 dark:text-white">
                 {truckPosting.originCity?.name || 'N/A'}
                 {truckPosting.destinationCity?.name
                   ? ` → ${truckPosting.destinationCity.name}`
@@ -227,7 +227,7 @@ export default function TruckBookingModal({ isOpen, onClose, truckPosting, onReq
                 />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-slate-800 dark:text-white dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">
               Request Sent!
             </h3>
             <p className="text-gray-600 dark:text-gray-400">
@@ -283,25 +283,25 @@ export default function TruckBookingModal({ isOpen, onClose, truckPosting, onReq
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <span className="text-slate-500 dark:text-slate-400">Route:</span>{' '}
-                    <span className="text-slate-800 dark:text-white dark:text-white">
+                    <span className="text-slate-800 dark:text-white">
                       {selectedLoad.pickupCityName} → {selectedLoad.deliveryCityName}
                     </span>
                   </div>
                   <div>
                     <span className="text-slate-500 dark:text-slate-400">Pickup:</span>{' '}
-                    <span className="text-slate-800 dark:text-white dark:text-white">
+                    <span className="text-slate-800 dark:text-white">
                       {new Date(selectedLoad.pickupDate).toLocaleDateString()}
                     </span>
                   </div>
                   <div>
                     <span className="text-slate-500 dark:text-slate-400">Weight:</span>{' '}
-                    <span className="text-slate-800 dark:text-white dark:text-white">
+                    <span className="text-slate-800 dark:text-white">
                       {selectedLoad.weight.toLocaleString()} kg
                     </span>
                   </div>
                   <div>
                     <span className="text-slate-500 dark:text-slate-400">Type:</span>{' '}
-                    <span className="text-slate-800 dark:text-white dark:text-white">
+                    <span className="text-slate-800 dark:text-white">
                       {selectedLoad.truckType}
                     </span>
                   </div>

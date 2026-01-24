@@ -194,7 +194,7 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
             className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
               statusFilter === status
                 ? 'bg-teal-600 text-white'
-                : 'bg-teal-700/10 dark:bg-slate-700 text-slate-700 dark:text-slate-200/80 dark:text-gray-300 hover:bg-teal-700/20 dark:hover:bg-slate-600'
+                : 'bg-teal-700/10 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-teal-700/20 dark:hover:bg-slate-600'
             }`}
           >
             {status === 'all' ? 'All' : status} ({statusCounts[status]})
@@ -204,12 +204,31 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
 
       {/* Requests List */}
       {filteredRequests.length === 0 ? (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 dark:border-slate-700 p-8 text-center">
-          <p className="text-slate-700 dark:text-slate-200/60 dark:text-gray-400">
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 p-12 text-center">
+          <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">
+            {statusFilter === 'all' ? 'No Carrier Requests Yet' : `No ${statusFilter} Requests`}
+          </h3>
+          <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-sm mx-auto">
             {statusFilter === 'all'
-              ? "You haven't received any load requests from carriers yet."
-              : `No ${statusFilter.toLowerCase()} requests.`}
+              ? "When carriers apply to haul your loads, their requests will appear here for your review."
+              : `You don't have any ${statusFilter.toLowerCase()} requests at the moment.`}
           </p>
+          {statusFilter === 'all' && (
+            <a
+              href="/shipper/loads"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+              View My Loads
+            </a>
+          )}
         </div>
       ) : (
         <div className="space-y-4">
@@ -219,7 +238,7 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
               className={`bg-white dark:bg-slate-800 rounded-lg shadow border ${
                 request.status === 'PENDING'
                   ? 'border-yellow-300 dark:border-yellow-700'
-                  : 'border-slate-200 dark:border-slate-700 dark:border-slate-700'
+                  : 'border-slate-200 dark:border-slate-700'
               } p-6`}
             >
               <div className="flex items-start justify-between mb-4">
@@ -238,7 +257,7 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-slate-700 dark:text-slate-200/60 dark:text-gray-400 mt-1">
+                  <p className="text-sm text-slate-700 dark:text-slate-400 mt-1">
                     Received {formatDate(request.createdAt)}
                   </p>
                 </div>
@@ -277,8 +296,8 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
 
               {/* Response Form */}
               {showResponseForm === request.id && (
-                <div className="mb-4 p-4 bg-teal-50 dark:bg-slate-800 dark:bg-slate-700 rounded-lg">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200/80 dark:text-gray-300 mb-2">
+                <div className="mb-4 p-4 bg-teal-50 dark:bg-slate-700 rounded-lg">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                     Response Notes (Optional)
                   </label>
                   <textarea
@@ -288,7 +307,7 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
                     }
                     rows={2}
                     placeholder="Add any notes for the carrier..."
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-teal-500 dark:bg-slate-600 dark:text-white"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-teal-500 dark:bg-slate-600 dark:text-white"
                   />
                   <div className="flex gap-2 mt-3">
                     <button
@@ -311,21 +330,21 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Load Info */}
-                <div className="bg-teal-50 dark:bg-slate-800 dark:bg-slate-700 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-slate-700 dark:text-slate-200/80 dark:text-gray-300 mb-2">
+                <div className="bg-teal-50 dark:bg-slate-700 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                     Your Load
                   </h3>
                   <div className="space-y-1 text-sm">
-                    <p className="text-slate-700 dark:text-slate-200 dark:text-white font-medium">
+                    <p className="text-slate-700 dark:text-white font-medium">
                       {request.load.referenceNumber || request.load.id.slice(-8)}
                     </p>
-                    <p className="text-slate-700 dark:text-slate-200/70 dark:text-gray-400">
+                    <p className="text-slate-700 dark:text-slate-400">
                       {request.load.pickupCity} → {request.load.deliveryCity}
                     </p>
-                    <p className="text-slate-700 dark:text-slate-200/70 dark:text-gray-400">
+                    <p className="text-slate-700 dark:text-slate-400">
                       {request.load.weight.toLocaleString()} kg • {request.load.truckType}
                     </p>
-                    <p className="text-slate-700 dark:text-slate-200/70 dark:text-gray-400">
+                    <p className="text-slate-700 dark:text-slate-400">
                       Pickup: {new Date(request.load.pickupDate).toLocaleDateString()}
                     </p>
                     {request.load.rate && (
@@ -338,11 +357,11 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
 
                 {/* Carrier Info */}
                 <div className="bg-teal-600/10 dark:bg-blue-900/20 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-slate-700 dark:text-slate-200 dark:text-blue-200 mb-2">
+                  <h3 className="text-sm font-medium text-slate-700 dark:text-blue-200 mb-2">
                     Carrier
                   </h3>
                   <div className="space-y-1 text-sm">
-                    <p className="text-slate-700 dark:text-slate-200 dark:text-white font-medium">
+                    <p className="text-slate-700 dark:text-white font-medium">
                       {request.carrier.name}
                       {request.carrier.isVerified && (
                         <span className="ml-1 text-green-600">✓ Verified</span>
@@ -350,10 +369,10 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
                     </p>
                     {request.requestedBy && (
                       <>
-                        <p className="text-slate-700 dark:text-slate-200/70 dark:text-gray-400">
+                        <p className="text-slate-700 dark:text-slate-400">
                           Contact: {request.requestedBy.name}
                         </p>
-                        <p className="text-slate-700 dark:text-slate-200/70 dark:text-gray-400">
+                        <p className="text-slate-700 dark:text-slate-400">
                           {request.requestedBy.email}
                         </p>
                       </>
@@ -367,13 +386,13 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
                     Their Truck
                   </h3>
                   <div className="space-y-1 text-sm">
-                    <p className="text-slate-700 dark:text-slate-200 dark:text-white font-medium">
+                    <p className="text-slate-700 dark:text-white font-medium">
                       {request.truck.plateNumber}
                     </p>
-                    <p className="text-slate-700 dark:text-slate-200/70 dark:text-gray-400">
+                    <p className="text-slate-700 dark:text-slate-400">
                       {request.truck.truckType}
                     </p>
-                    <p className="text-slate-700 dark:text-slate-200/70 dark:text-gray-400">
+                    <p className="text-slate-700 dark:text-slate-400">
                       Capacity: {request.truck.capacity.toLocaleString()} kg
                     </p>
                   </div>
@@ -382,7 +401,7 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
 
               {/* Rate and Notes */}
               {(request.proposedRate || request.notes) && (
-                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 dark:border-slate-700">
+                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                   <div className="flex flex-wrap gap-4 text-sm">
                     {request.proposedRate && (
                       <div className="bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 rounded-lg">
@@ -393,8 +412,8 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
                     )}
                     {request.notes && (
                       <div className="flex-1">
-                        <span className="text-slate-700 dark:text-slate-200/60 dark:text-gray-400">Notes:</span>{' '}
-                        <span className="text-slate-700 dark:text-slate-200 dark:text-white">{request.notes}</span>
+                        <span className="text-slate-700 dark:text-slate-400">Notes:</span>{' '}
+                        <span className="text-slate-700 dark:text-white">{request.notes}</span>
                       </div>
                     )}
                   </div>
