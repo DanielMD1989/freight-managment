@@ -150,11 +150,11 @@ export default function ShipperTripsClient({
           <button
             key={option.value}
             onClick={() => handleStatusChange(option.value)}
-            className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-              statusFilter === option.value
-                ? 'bg-[#1e9c99] text-white'
-                : 'bg-[#064d51]/10 text-[#064d51]/80 hover:bg-[#064d51]/20'
-            }`}
+            className="px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+            style={{
+              background: statusFilter === option.value ? 'var(--secondary-600)' : 'var(--bg-tinted)',
+              color: statusFilter === option.value ? 'white' : 'var(--foreground-muted)',
+            }}
           >
             {option.label}
           </button>
@@ -163,18 +163,25 @@ export default function ShipperTripsClient({
 
       {/* Trips List */}
       {initialTrips.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/15 p-8 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#064d51]/10 flex items-center justify-center">
-            <svg className="w-8 h-8 text-[#064d51]/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div
+          className="rounded-xl shadow-sm p-8 text-center"
+          style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
+        >
+          <div
+            className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
+            style={{ background: 'var(--bg-tinted)' }}
+          >
+            <svg className="w-8 h-8" style={{ color: 'var(--foreground-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
           </div>
-          <p className="text-[#064d51]/60">
+          <p style={{ color: 'var(--foreground-muted)' }}>
             No completed trips yet. Trips will appear here after delivery.
           </p>
           <Link
             href="/shipper/loads"
-            className="inline-block mt-4 px-4 py-2 bg-[#1e9c99] text-white rounded-lg hover:bg-[#064d51] transition-colors"
+            className="inline-block mt-4 px-4 py-2 text-white rounded-lg transition-colors"
+            style={{ background: 'var(--secondary-600)' }}
           >
             View Active Loads
           </Link>
@@ -184,14 +191,15 @@ export default function ShipperTripsClient({
           {initialTrips.map((trip) => (
             <div
               key={trip.id}
-              className="bg-white rounded-xl shadow-sm border border-[#064d51]/15 p-6 hover:shadow-md transition-shadow"
+              className="rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow"
+              style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(trip.status)}`}>
                     {getStatusLabel(trip.status)}
                   </span>
-                  <span className="text-sm font-medium text-[#064d51]">
+                  <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
                     {trip.referenceNumber}
                   </span>
                 </div>
@@ -208,7 +216,8 @@ export default function ShipperTripsClient({
                   </Link>
                   <Link
                     href={`/shipper/trips/${trip.loadId}`}
-                    className="px-4 py-2 text-sm bg-[#064d51]/10 text-[#064d51] rounded-lg hover:bg-[#064d51]/20 transition-colors"
+                    className="px-4 py-2 text-sm rounded-lg transition-colors"
+                    style={{ background: 'var(--bg-tinted)', color: 'var(--foreground)' }}
                   >
                     View Details
                   </Link>
@@ -220,53 +229,53 @@ export default function ShipperTripsClient({
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                    <span className="font-medium text-[#064d51]">{trip.pickupCity}</span>
+                    <span className="font-medium text-slate-700 dark:text-slate-200">{trip.pickupCity}</span>
                   </div>
-                  <p className="text-xs text-[#064d51]/60 ml-5">
+                  <p className="text-xs text-slate-700 dark:text-slate-200/60 ml-5">
                     Pickup: {formatDate(trip.pickupDate)}
                   </p>
                 </div>
                 <div className="flex-shrink-0">
-                  <svg className="w-6 h-6 text-[#064d51]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-6 h-6 text-slate-700 dark:text-slate-200/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                   </svg>
                 </div>
                 <div className="flex-1 text-right">
                   <div className="flex items-center justify-end gap-2">
-                    <span className="font-medium text-[#064d51]">{trip.deliveryCity}</span>
+                    <span className="font-medium text-slate-700 dark:text-slate-200">{trip.deliveryCity}</span>
                     <div className="w-3 h-3 rounded-full bg-red-500"></div>
                   </div>
-                  <p className="text-xs text-[#064d51]/60 mr-5">
+                  <p className="text-xs text-slate-700 dark:text-slate-200/60 mr-5">
                     Delivery: {formatDate(trip.deliveryDate)}
                   </p>
                 </div>
               </div>
 
               {/* Trip Details Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-[#064d51]/10">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                 {/* Load Info */}
                 <div>
-                  <p className="text-xs text-[#064d51]/50 uppercase tracking-wide mb-1">Load</p>
-                  <p className="text-sm font-medium text-[#064d51]">
+                  <p className="text-xs text-slate-700 dark:text-slate-200/50 uppercase tracking-wide mb-1">Load</p>
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
                     {trip.weight.toLocaleString()} kg
                   </p>
-                  <p className="text-xs text-[#064d51]/60">{trip.truckType}</p>
+                  <p className="text-xs text-slate-700 dark:text-slate-200/60">{trip.truckType}</p>
                 </div>
 
                 {/* Rate */}
                 <div>
-                  <p className="text-xs text-[#064d51]/50 uppercase tracking-wide mb-1">Rate</p>
-                  <p className="text-sm font-medium text-[#064d51]">
+                  <p className="text-xs text-slate-700 dark:text-slate-200/50 uppercase tracking-wide mb-1">Rate</p>
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
                     {formatCurrency(trip.rate)}
                   </p>
                 </div>
 
                 {/* Carrier Info */}
                 <div>
-                  <p className="text-xs text-[#064d51]/50 uppercase tracking-wide mb-1">Carrier</p>
+                  <p className="text-xs text-slate-700 dark:text-slate-200/50 uppercase tracking-wide mb-1">Carrier</p>
                   {trip.carrier ? (
                     <>
-                      <p className="text-sm font-medium text-[#064d51]">
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
                         {trip.carrier.name}
                         {trip.carrier.isVerified && (
                           <span className="ml-1 text-green-600">✓</span>
@@ -274,22 +283,22 @@ export default function ShipperTripsClient({
                       </p>
                     </>
                   ) : (
-                    <p className="text-sm text-[#064d51]/40">-</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-200/40">-</p>
                   )}
                 </div>
 
                 {/* Truck Info */}
                 <div>
-                  <p className="text-xs text-[#064d51]/50 uppercase tracking-wide mb-1">Truck</p>
+                  <p className="text-xs text-slate-700 dark:text-slate-200/50 uppercase tracking-wide mb-1">Truck</p>
                   {trip.truck ? (
                     <>
-                      <p className="text-sm font-medium text-[#064d51]">
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
                         {trip.truck.licensePlate}
                       </p>
-                      <p className="text-xs text-[#064d51]/60">{trip.truck.truckType}</p>
+                      <p className="text-xs text-slate-700 dark:text-slate-200/60">{trip.truck.truckType}</p>
                     </>
                   ) : (
-                    <p className="text-sm text-[#064d51]/40">-</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-200/40">-</p>
                   )}
                 </div>
               </div>
@@ -300,8 +309,8 @@ export default function ShipperTripsClient({
 
       {/* Pagination */}
       {pagination.pages > 1 && (
-        <div className="flex items-center justify-between border-t border-[#064d51]/10 pt-4">
-          <p className="text-sm text-[#064d51]/60">
+        <div className="flex items-center justify-between border-t border-slate-200 dark:border-slate-700 pt-4">
+          <p className="text-sm text-slate-700 dark:text-slate-200/60">
             Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
             {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
             {pagination.total} trips
@@ -310,17 +319,17 @@ export default function ShipperTripsClient({
             <button
               onClick={() => handlePageChange(pagination.page - 1)}
               disabled={pagination.page === 1}
-              className="px-3 py-1 text-sm border border-[#064d51]/20 rounded-lg hover:bg-[#064d51]/5 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 text-sm border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
-            <span className="px-3 py-1 text-sm text-[#064d51]/60">
+            <span className="px-3 py-1 text-sm text-slate-700 dark:text-slate-200/60">
               Page {pagination.page} of {pagination.pages}
             </span>
             <button
               onClick={() => handlePageChange(pagination.page + 1)}
               disabled={pagination.page === pagination.pages}
-              className="px-3 py-1 text-sm border border-[#064d51]/20 rounded-lg hover:bg-[#064d51]/5 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 text-sm border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>

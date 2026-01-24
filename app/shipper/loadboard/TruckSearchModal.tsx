@@ -118,7 +118,7 @@ export default function TruckSearchModal({
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="bg-[#1e9c99] px-6 py-4 flex items-center justify-between rounded-t-lg">
+        <div className="bg-teal-600 px-6 py-4 flex items-center justify-between rounded-t-lg">
           <h2 className="text-xl font-bold text-white">NEW TRUCK SEARCH</h2>
           <button
             onClick={onClose}
@@ -140,7 +140,7 @@ export default function TruckSearchModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Search Name */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-[#064d51]/80 mb-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200/80 mb-1">
                 Search Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -148,7 +148,7 @@ export default function TruckSearchModal({
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className={`w-full px-3 py-2 border rounded-md ${
-                  errors.name ? 'border-red-500' : 'border-[#064d51]/20'
+                  errors.name ? 'border-red-500' : 'border-slate-200 dark:border-slate-600'
                 }`}
                 placeholder="e.g., Addis to Dire Dawa - Flatbed"
               />
@@ -156,15 +156,15 @@ export default function TruckSearchModal({
             </div>
 
             {/* Location */}
-            <div className="md:col-span-2 border-b border-[#064d51]/15 pb-4">
-              <h3 className="text-lg font-semibold text-[#064d51] mb-4">Location Criteria</h3>
+            <div className="md:col-span-2 border-b border-slate-200 dark:border-slate-700 pb-4">
+              <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-4">Location Criteria</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Origin</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200/80 mb-1">Origin</label>
                   <select
                     value={formData.origin}
                     onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-md"
                   >
                     <option value="">Any</option>
                     {ETHIOPIAN_LOCATIONS.map((location) => (
@@ -175,11 +175,11 @@ export default function TruckSearchModal({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Destination</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200/80 mb-1">Destination</label>
                   <select
                     value={formData.destination}
                     onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-md"
                   >
                     <option value="">Any</option>
                     {ETHIOPIAN_LOCATIONS.map((location) => (
@@ -193,15 +193,15 @@ export default function TruckSearchModal({
             </div>
 
             {/* Truck Specifications */}
-            <div className="md:col-span-2 border-b border-[#064d51]/15 pb-4">
-              <h3 className="text-lg font-semibold text-[#064d51] mb-4">Truck Specifications</h3>
+            <div className="md:col-span-2 border-b border-slate-200 dark:border-slate-700 pb-4">
+              <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-4">Truck Specifications</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Truck Type</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200/80 mb-1">Truck Type</label>
                   <select
                     value={formData.truckType}
                     onChange={(e) => setFormData({ ...formData, truckType: e.target.value })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-md"
                   >
                     <option value="">Any</option>
                     <option value="Reefer">Reefer</option>
@@ -211,11 +211,11 @@ export default function TruckSearchModal({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Full/Partial</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200/80 mb-1">Full/Partial</label>
                   <select
                     value={formData.fullPartial}
                     onChange={(e) => setFormData({ ...formData, fullPartial: e.target.value })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-md"
                   >
                     <option value="">Any</option>
                     <option value="FULL">FULL</option>
@@ -223,12 +223,12 @@ export default function TruckSearchModal({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Max Age (hours)</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200/80 mb-1">Max Age (hours)</label>
                   <input
                     type="number"
                     value={formData.ageHours}
                     onChange={(e) => setFormData({ ...formData, ageHours: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-md"
                     min="0"
                     max="168"
                   />
@@ -237,87 +237,87 @@ export default function TruckSearchModal({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Min Length (m)</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200/80 mb-1">Min Length (m)</label>
                   <input
                     type="number"
                     step="0.1"
                     value={formData.minLength}
                     onChange={(e) => setFormData({ ...formData, minLength: parseFloat(e.target.value) })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-md"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Max Length (m)</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200/80 mb-1">Max Length (m)</label>
                   <input
                     type="number"
                     step="0.1"
                     value={formData.maxLength}
                     onChange={(e) => setFormData({ ...formData, maxLength: parseFloat(e.target.value) })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-md"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Min Weight (kg)</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200/80 mb-1">Min Weight (kg)</label>
                   <input
                     type="number"
                     value={formData.minWeight}
                     onChange={(e) => setFormData({ ...formData, minWeight: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-md"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Max Weight (kg)</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200/80 mb-1">Max Weight (kg)</label>
                   <input
                     type="number"
                     value={formData.maxWeight}
                     onChange={(e) => setFormData({ ...formData, maxWeight: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-md"
                   />
                 </div>
               </div>
             </div>
 
             {/* Deadhead Distances */}
-            <div className="md:col-span-2 border-b border-[#064d51]/15 pb-4">
-              <h3 className="text-lg font-semibold text-[#064d51] mb-4">Deadhead Distances (km)</h3>
+            <div className="md:col-span-2 border-b border-slate-200 dark:border-slate-700 pb-4">
+              <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-4">Deadhead Distances (km)</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">DH-Origin Min</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200/80 mb-1">DH-Origin Min</label>
                   <input
                     type="number"
                     value={formData.dhOriginMin}
                     onChange={(e) => setFormData({ ...formData, dhOriginMin: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-md"
                     min="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">DH-Origin Max</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200/80 mb-1">DH-Origin Max</label>
                   <input
                     type="number"
                     value={formData.dhOriginMax}
                     onChange={(e) => setFormData({ ...formData, dhOriginMax: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-md"
                     min="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">DH-Dest Min</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200/80 mb-1">DH-Dest Min</label>
                   <input
                     type="number"
                     value={formData.dhDestMin}
                     onChange={(e) => setFormData({ ...formData, dhDestMin: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-md"
                     min="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">DH-Dest Max</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200/80 mb-1">DH-Dest Max</label>
                   <input
                     type="number"
                     value={formData.dhDestMax}
                     onChange={(e) => setFormData({ ...formData, dhDestMax: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-md"
                     min="0"
                   />
                 </div>
@@ -325,25 +325,25 @@ export default function TruckSearchModal({
             </div>
 
             {/* Availability */}
-            <div className="md:col-span-2 border-b border-[#064d51]/15 pb-4">
-              <h3 className="text-lg font-semibold text-[#064d51] mb-4">Availability</h3>
+            <div className="md:col-span-2 border-b border-slate-200 dark:border-slate-700 pb-4">
+              <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-4">Availability</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Available From</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200/80 mb-1">Available From</label>
                   <input
                     type="date"
                     value={formData.availableFrom}
                     onChange={(e) => setFormData({ ...formData, availableFrom: e.target.value })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-md"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Available To</label>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200/80 mb-1">Available To</label>
                   <input
                     type="date"
                     value={formData.availableTo}
                     onChange={(e) => setFormData({ ...formData, availableTo: e.target.value })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-md"
                   />
                 </div>
               </div>
@@ -351,16 +351,16 @@ export default function TruckSearchModal({
 
             {/* Company Filters */}
             <div className="md:col-span-2">
-              <h3 className="text-lg font-semibold text-[#064d51] mb-4">Company Filters</h3>
+              <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-4">Company Filters</h3>
               <div className="flex items-center">
                 <input
                   type="checkbox"
                   id="verifiedOnly"
                   checked={formData.showVerifiedOnly}
                   onChange={(e) => setFormData({ ...formData, showVerifiedOnly: e.target.checked })}
-                  className="h-4 w-4 rounded border-[#064d51]/20 text-[#1e9c99]"
+                  className="h-4 w-4 rounded border-slate-200 dark:border-slate-600 text-teal-600"
                 />
-                <label htmlFor="verifiedOnly" className="ml-2 text-sm text-[#064d51]/80">
+                <label htmlFor="verifiedOnly" className="ml-2 text-sm text-slate-700 dark:text-slate-200/80">
                   Show verified companies only
                 </label>
               </div>
@@ -368,11 +368,11 @@ export default function TruckSearchModal({
           </div>
 
           {/* Actions */}
-          <div className="flex gap-4 justify-end mt-6 pt-6 border-t border-[#064d51]/15">
+          <div className="flex gap-4 justify-end mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 border border-[#064d51]/20 rounded-md text-[#064d51]/80 hover:bg-[#f0fdfa]"
+              className="px-6 py-2 border border-slate-200 dark:border-slate-600 rounded-md text-slate-700 dark:text-slate-200/80 hover:bg-teal-50 dark:hover:bg-slate-700"
               disabled={loading}
             >
               Cancel

@@ -157,8 +157,8 @@ export default async function ShipperTripsPage({
     return (
       <div className="max-w-7xl mx-auto p-6">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[#064d51]">Trip History</h1>
-          <p className="text-[#064d51]/70 mt-2">View delivered and completed trips</p>
+          <h1 className="text-3xl font-bold text-slate-800 dark:text-white">Trip History</h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-2">View delivered and completed trips</p>
         </div>
         <div className="bg-rose-50 border border-rose-200 rounded-xl p-4">
           <p className="text-rose-800">
@@ -173,8 +173,8 @@ export default async function ShipperTripsPage({
     <div className="max-w-7xl mx-auto p-6">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[#064d51]">Trip History</h1>
-        <p className="text-[#064d51]/70 mt-2">
+        <h1 className="text-3xl font-bold text-slate-800 dark:text-white">Trip History</h1>
+        <p className="text-slate-600 dark:text-slate-400 mt-2">
           View delivered and completed trips ({data.pagination.total} total)
         </p>
       </div>

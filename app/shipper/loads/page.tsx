@@ -8,6 +8,7 @@
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import Image from 'next/image';
 import LoadManagementClient from './LoadManagementClient';
 
 interface Load {
@@ -134,8 +135,8 @@ export default async function LoadsPage({
     return (
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[#064d51]">My Loads</h1>
-          <p className="text-[#064d51]/70 mt-2">Manage your shipment postings</p>
+          <h1 className="text-3xl font-bold text-slate-800 dark:text-white">My Loads</h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-2">Manage your shipment postings</p>
         </div>
         <div className="bg-rose-50 border border-rose-200 rounded-xl p-4">
           <p className="text-rose-800">
@@ -150,17 +151,31 @@ export default async function LoadsPage({
     <div className="max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-[#064d51]">My Loads</h1>
-          <p className="text-[#064d51]/70 mt-2">
-            Manage your shipment postings ({data.pagination.total} total)
-          </p>
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-lg shadow-teal-500/25 p-2.5">
+            <Image
+              src="/cargo-icon.png"
+              alt="My Loads"
+              width={40}
+              height={40}
+              style={{ objectFit: 'contain' }}
+            />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-800">My Loads</h1>
+            <p className="text-slate-500 mt-1">
+              Manage your shipment postings ({data.pagination.total} total)
+            </p>
+          </div>
         </div>
         <a
           href="/shipper/loads/create"
-          className="px-6 py-3 bg-[#064d51] text-white rounded-lg font-medium hover:bg-[#053d40] transition-colors"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-600 to-teal-500 text-white rounded-xl font-medium shadow-md shadow-teal-500/25 hover:shadow-lg hover:shadow-teal-500/30 transition-all"
         >
-          + Post New Load
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Post New Load
         </a>
       </div>
 

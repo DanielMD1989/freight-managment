@@ -193,8 +193,8 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
             onClick={() => setStatusFilter(status)}
             className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
               statusFilter === status
-                ? 'bg-[#1e9c99] text-white'
-                : 'bg-[#064d51]/10 dark:bg-slate-700 text-[#064d51]/80 dark:text-gray-300 hover:bg-[#064d51]/20 dark:hover:bg-slate-600'
+                ? 'bg-teal-600 text-white'
+                : 'bg-teal-700/10 dark:bg-slate-700 text-slate-700 dark:text-slate-200/80 dark:text-gray-300 hover:bg-teal-700/20 dark:hover:bg-slate-600'
             }`}
           >
             {status === 'all' ? 'All' : status} ({statusCounts[status]})
@@ -204,8 +204,8 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
 
       {/* Requests List */}
       {filteredRequests.length === 0 ? (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-[#064d51]/15 dark:border-slate-700 p-8 text-center">
-          <p className="text-[#064d51]/60 dark:text-gray-400">
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-slate-200 dark:border-slate-700 dark:border-slate-700 p-8 text-center">
+          <p className="text-slate-700 dark:text-slate-200/60 dark:text-gray-400">
             {statusFilter === 'all'
               ? "You haven't received any load requests from carriers yet."
               : `No ${statusFilter.toLowerCase()} requests.`}
@@ -219,7 +219,7 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
               className={`bg-white dark:bg-slate-800 rounded-lg shadow border ${
                 request.status === 'PENDING'
                   ? 'border-yellow-300 dark:border-yellow-700'
-                  : 'border-[#064d51]/15 dark:border-slate-700'
+                  : 'border-slate-200 dark:border-slate-700 dark:border-slate-700'
               } p-6`}
             >
               <div className="flex items-start justify-between mb-4">
@@ -238,7 +238,7 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-[#064d51]/60 dark:text-gray-400 mt-1">
+                  <p className="text-sm text-slate-700 dark:text-slate-200/60 dark:text-gray-400 mt-1">
                     Received {formatDate(request.createdAt)}
                   </p>
                 </div>
@@ -249,7 +249,7 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
                     {showResponseForm === request.id ? (
                       <button
                         onClick={() => setShowResponseForm(null)}
-                        className="px-3 py-1 text-sm text-[#064d51]/70 border border-[#064d51]/15 rounded-lg hover:bg-[#f0fdfa]"
+                        className="px-3 py-1 text-sm text-slate-700 dark:text-slate-200/70 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-teal-50 dark:bg-slate-800"
                       >
                         Cancel
                       </button>
@@ -277,8 +277,8 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
 
               {/* Response Form */}
               {showResponseForm === request.id && (
-                <div className="mb-4 p-4 bg-[#f0fdfa] dark:bg-slate-700 rounded-lg">
-                  <label className="block text-sm font-medium text-[#064d51]/80 dark:text-gray-300 mb-2">
+                <div className="mb-4 p-4 bg-teal-50 dark:bg-slate-800 dark:bg-slate-700 rounded-lg">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200/80 dark:text-gray-300 mb-2">
                     Response Notes (Optional)
                   </label>
                   <textarea
@@ -288,7 +288,7 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
                     }
                     rows={2}
                     placeholder="Add any notes for the carrier..."
-                    className="w-full px-3 py-2 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99] dark:bg-slate-600 dark:text-white"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-teal-500 dark:bg-slate-600 dark:text-white"
                   />
                   <div className="flex gap-2 mt-3">
                     <button
@@ -311,21 +311,21 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Load Info */}
-                <div className="bg-[#f0fdfa] dark:bg-slate-700 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-[#064d51]/80 dark:text-gray-300 mb-2">
+                <div className="bg-teal-50 dark:bg-slate-800 dark:bg-slate-700 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-slate-700 dark:text-slate-200/80 dark:text-gray-300 mb-2">
                     Your Load
                   </h3>
                   <div className="space-y-1 text-sm">
-                    <p className="text-[#064d51] dark:text-white font-medium">
+                    <p className="text-slate-700 dark:text-slate-200 dark:text-white font-medium">
                       {request.load.referenceNumber || request.load.id.slice(-8)}
                     </p>
-                    <p className="text-[#064d51]/70 dark:text-gray-400">
+                    <p className="text-slate-700 dark:text-slate-200/70 dark:text-gray-400">
                       {request.load.pickupCity} → {request.load.deliveryCity}
                     </p>
-                    <p className="text-[#064d51]/70 dark:text-gray-400">
+                    <p className="text-slate-700 dark:text-slate-200/70 dark:text-gray-400">
                       {request.load.weight.toLocaleString()} kg • {request.load.truckType}
                     </p>
-                    <p className="text-[#064d51]/70 dark:text-gray-400">
+                    <p className="text-slate-700 dark:text-slate-200/70 dark:text-gray-400">
                       Pickup: {new Date(request.load.pickupDate).toLocaleDateString()}
                     </p>
                     {request.load.rate && (
@@ -337,12 +337,12 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
                 </div>
 
                 {/* Carrier Info */}
-                <div className="bg-[#1e9c99]/10 dark:bg-blue-900/20 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-[#064d51] dark:text-blue-200 mb-2">
+                <div className="bg-teal-600/10 dark:bg-blue-900/20 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-slate-700 dark:text-slate-200 dark:text-blue-200 mb-2">
                     Carrier
                   </h3>
                   <div className="space-y-1 text-sm">
-                    <p className="text-[#064d51] dark:text-white font-medium">
+                    <p className="text-slate-700 dark:text-slate-200 dark:text-white font-medium">
                       {request.carrier.name}
                       {request.carrier.isVerified && (
                         <span className="ml-1 text-green-600">✓ Verified</span>
@@ -350,10 +350,10 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
                     </p>
                     {request.requestedBy && (
                       <>
-                        <p className="text-[#064d51]/70 dark:text-gray-400">
+                        <p className="text-slate-700 dark:text-slate-200/70 dark:text-gray-400">
                           Contact: {request.requestedBy.name}
                         </p>
-                        <p className="text-[#064d51]/70 dark:text-gray-400">
+                        <p className="text-slate-700 dark:text-slate-200/70 dark:text-gray-400">
                           {request.requestedBy.email}
                         </p>
                       </>
@@ -367,13 +367,13 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
                     Their Truck
                   </h3>
                   <div className="space-y-1 text-sm">
-                    <p className="text-[#064d51] dark:text-white font-medium">
+                    <p className="text-slate-700 dark:text-slate-200 dark:text-white font-medium">
                       {request.truck.plateNumber}
                     </p>
-                    <p className="text-[#064d51]/70 dark:text-gray-400">
+                    <p className="text-slate-700 dark:text-slate-200/70 dark:text-gray-400">
                       {request.truck.truckType}
                     </p>
-                    <p className="text-[#064d51]/70 dark:text-gray-400">
+                    <p className="text-slate-700 dark:text-slate-200/70 dark:text-gray-400">
                       Capacity: {request.truck.capacity.toLocaleString()} kg
                     </p>
                   </div>
@@ -382,7 +382,7 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
 
               {/* Rate and Notes */}
               {(request.proposedRate || request.notes) && (
-                <div className="mt-4 pt-4 border-t border-[#064d51]/15 dark:border-slate-700">
+                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 dark:border-slate-700">
                   <div className="flex flex-wrap gap-4 text-sm">
                     {request.proposedRate && (
                       <div className="bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 rounded-lg">
@@ -393,8 +393,8 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
                     )}
                     {request.notes && (
                       <div className="flex-1">
-                        <span className="text-[#064d51]/60 dark:text-gray-400">Notes:</span>{' '}
-                        <span className="text-[#064d51] dark:text-white">{request.notes}</span>
+                        <span className="text-slate-700 dark:text-slate-200/60 dark:text-gray-400">Notes:</span>{' '}
+                        <span className="text-slate-700 dark:text-slate-200 dark:text-white">{request.notes}</span>
                       </div>
                     )}
                   </div>

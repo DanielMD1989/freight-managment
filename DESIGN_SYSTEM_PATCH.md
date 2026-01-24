@@ -1,131 +1,36 @@
 # Design System Patch Report
 
-**Date:** 2026-01-23
-**Scope:** Shipper Portal CSS Variable Compliance
-
----
-
 ## Summary
+Standardized the Shipper portal design system by replacing all hardcoded hex colors with CSS variables and Tailwind utility classes that support dark mode.
 
-Replaced all hardcoded color values with CSS custom properties from the design system.
+## Changes Made
 
----
+### Color Mapping
+| Old Value | New Value |
+|-----------|-----------|
+| `#064d51` | `text-slate-800 dark:text-white` or `var(--secondary-700)` |
+| `#064d51/70` | `text-slate-600 dark:text-slate-400` |
+| `#064d51/60` | `text-slate-500 dark:text-slate-400` |
+| `#064d51/20` | `border-slate-200 dark:border-slate-600` |
+| `#064d51/15` | `border-slate-200 dark:border-slate-700` |
+| `#064d51/10` | `border-slate-200 dark:border-slate-700` |
+| `#1e9c99` | `bg-teal-600` or `text-teal-600` |
+| `#f0fdfa` | `bg-teal-50 dark:bg-slate-800` |
+| `hover:bg-[#064d51]` | `hover:bg-teal-700` |
+| `focus:ring-[#1e9c99]` | `focus:ring-teal-500` |
 
-## Files Modified
+### Files Updated
 
-| File | Changes |
-|------|---------|
-| `app/shipper/settings/page.tsx` | 6 color replacements |
-| `app/shipper/team/page.tsx` | 8 color replacements |
-| `app/shipper/documents/page.tsx` | 4 color replacements |
-| `app/shipper/wallet/page.tsx` | Complete rewrite (18+ replacements) |
+1. **app/shipper/trips/ShipperTripsClient.tsx** - Replaced all hardcoded colors with Tailwind utilities
+2. **app/shipper/trips/page.tsx** - Updated header text colors
+3. **app/shipper/requests/TruckRequestsClient.tsx** - Standardized status badges and filter tabs
+4. **app/shipper/requests/LoadRequestsClient.tsx** - Fixed form input borders and focus states
+5. **app/shipper/requests/RequestsTabs.tsx** - Updated tab button colors
+6. **app/shipper/loadboard/TruckBookingModal.tsx** - Replaced all text and border colors
+7. **app/shipper/loadboard/TruckSearchModal.tsx** - Fixed section divider borders
+8. **app/shipper/loadboard/LoadPostingModal.tsx** - Updated header colors with dark mode
+9. **app/shipper/analytics/ShipperAnalyticsClient.tsx** - Replaced all chart and stat card colors
+10. **app/shipper/loads/page.tsx** - Updated header text colors
 
----
-
-## Color Replacements
-
-### Settings Page
-
-```diff
-- <h1 className="text-2xl font-bold text-[#064d51]">
-+ <h1 className="text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
-
-- <p className="text-[#064d51]/70 mt-1">
-+ <p className="mt-1" style={{ color: 'var(--foreground-muted)' }}>
-
-- <div className="h-12 bg-[#064d51]/10 rounded-lg w-1/3">
-+ <div className="h-12 rounded-lg w-1/3" style={{ background: 'var(--bg-tinted)' }}>
-```
-
-### Team Page
-
-```diff
-- <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-+ <h1 className="text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
-
-- <p className="text-gray-600 dark:text-gray-400 mt-1">
-+ <p className="mt-1" style={{ color: 'var(--foreground-muted)' }}>
-
-- <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded w-1/3">
-+ <div className="h-12 rounded w-1/3" style={{ background: 'var(--bg-tinted)' }}>
-```
-
-### Documents Page
-
-```diff
-- <h1 className="text-3xl font-bold text-gray-900">
-+ <h1 className="text-3xl font-bold" style={{ color: 'var(--foreground)' }}>
-
-- <p className="text-gray-600 mt-2">
-+ <p className="mt-2" style={{ color: 'var(--foreground-muted)' }}>
-```
-
-### Wallet Page (Major Rewrite)
-
-```diff
-# Header
-- <h1 className="text-2xl font-bold text-[#064d51]">
-+ <h1 className="text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
-
-# Balance Card
-- <div className="bg-gradient-to-r from-[#1e9c99] to-[#0d7377] rounded-xl">
-+ <div className="rounded-xl" style={{ background: 'linear-gradient(135deg, var(--primary-600), var(--primary-700))' }}>
-
-# Stats Cards
-- <div className="text-sm text-[#064d51]/70 mb-2">
-+ <div className="text-sm mb-1" style={{ color: 'var(--foreground-muted)' }}>
-
-# Action Buttons
-- <a className="... text-[#1e9c99] ...">
-+ <Link className="..." style={{ color: 'var(--primary-600)' }}>
-```
-
----
-
-## CSS Variables Used
-
-| Variable | Purpose | Value (Dark) | Value (Light) |
-|----------|---------|--------------|---------------|
-| `--foreground` | Primary text | `#f9fafb` | `#37352f` |
-| `--foreground-muted` | Secondary text | `#9ca3af` | `#787774` |
-| `--background` | Page background | `#0a0a0f` | `#f7f7f5` |
-| `--card` | Card background | `#16161d` | `#ffffff` |
-| `--border` | Border color | `#27272a` | `#e3e2de` |
-| `--bg-tinted` | Tinted background | `rgba(139,92,246,0.08)` | `rgba(47,129,247,0.05)` |
-| `--primary-500` | Primary accent | `#8b5cf6` | `#2f81f7` |
-| `--primary-600` | Primary darker | `#7c3aed` | `#1a6edb` |
-| `--primary-700` | Primary darkest | `#6d28d9` | - |
-| `--success-500` | Success color | `#10b981` | `#10b981` |
-| `--warning-500` | Warning color | `#f59e0b` | `#f59e0b` |
-
----
-
-## Benefits
-
-1. **Theme Consistency**: All colors now respond to dark/light mode toggle
-2. **Single Source of Truth**: Colors defined once in `globals.css`
-3. **Maintainability**: Easy to update colors globally
-4. **Accessibility**: Ensures proper contrast ratios
-5. **Professional Appearance**: Consistent visual language
-
----
-
-## Pattern Established
-
-Going forward, all new components should use this pattern:
-
-```tsx
-// Good - Use CSS variables via style prop
-<div style={{ color: 'var(--foreground)' }}>
-<div style={{ background: 'var(--card)' }}>
-<div style={{ border: '1px solid var(--border)' }}>
-
-// Avoid - Hardcoded colors
-<div className="text-gray-900 dark:text-white">
-<div className="bg-white dark:bg-gray-800">
-<div className="border-gray-200">
-```
-
----
-
-*Generated by UI/UX Professionalization Pass*
+## Verification
+All hardcoded hex colors have been successfully replaced from the Shipper directory.

@@ -107,8 +107,8 @@ export default function RequestsTabs({
           onClick={() => setActiveTab('carrier-requests')}
           className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
             activeTab === 'carrier-requests'
-              ? 'bg-[#1e9c99] text-white shadow-md'
-              : 'bg-gray-100 dark:bg-slate-700 text-[#064d51]/70 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+              ? 'bg-teal-600 text-white shadow-md'
+              : 'bg-gray-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
           }`}
         >
           Carrier Requests
@@ -126,8 +126,8 @@ export default function RequestsTabs({
           onClick={() => setActiveTab('my-requests')}
           className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
             activeTab === 'my-requests'
-              ? 'bg-[#1e9c99] text-white shadow-md'
-              : 'bg-gray-100 dark:bg-slate-700 text-[#064d51]/70 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+              ? 'bg-teal-600 text-white shadow-md'
+              : 'bg-gray-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
           }`}
         >
           My Truck Requests
@@ -144,14 +144,14 @@ export default function RequestsTabs({
       {/* Tab Content */}
       {activeTab === 'carrier-requests' ? (
         <div>
-          <p className="text-sm text-[#064d51]/60 dark:text-gray-400 mb-4">
+          <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-gray-400 mb-4">
             Requests from carriers who want to transport your loads
           </p>
           <LoadRequestsClient requests={loadRequests} />
         </div>
       ) : (
         <div>
-          <p className="text-sm text-[#064d51]/60 dark:text-gray-400 mb-4">
+          <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-gray-400 mb-4">
             Your requests to book trucks for your loads
           </p>
           <TruckRequestsClient requests={truckRequests} />

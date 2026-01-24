@@ -489,13 +489,14 @@ export default function TruckMatchesClient({
                     </button>
                     <button
                       onClick={() =>
-                        alert(
-                          `Contact carrier functionality coming soon!\n\nCarrier: ${match.truckPosting.truck.carrier.name}\nTruck: ${match.truckPosting.truck.licensePlate}`
+                        toast.success(
+                          `Carrier: ${match.truckPosting.truck.carrier.name}\nTruck: ${match.truckPosting.truck.licensePlate}`,
+                          { duration: 5000 }
                         )
                       }
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                     >
-                      Contact
+                      View Carrier
                     </button>
                   </div>
                 </div>
