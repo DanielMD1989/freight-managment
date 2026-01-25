@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { getSLASummary, getSLATrends } from '@/lib/slaAggregation';
 
 type TimePeriod = 'day' | 'week' | 'month' | 'year';
 
@@ -333,6 +334,13 @@ export async function GET(request: NextRequest) {
     type LoadStatusGroup = { status: string; _count: number };
     const loadStatusArray = loadsByStatus as LoadStatusGroup[];
 
+    // Get SLA metrics for carrier's trips
+    const slaPeriod = period === 'year' ? 'month' : period === 'day' ? 'day' : 'week';
+    const [slaSummary, slaTrends] = await Promise.all([
+      getSLASummary(slaPeriod as 'day' | 'week' | 'month', { carrierId }),
+      getSLATrends(14, { carrierId }),
+    ]);
+
     return NextResponse.json({
       period,
       dateRange: { start, end },
@@ -394,6 +402,20 @@ export async function GET(request: NextRequest) {
           status: s.status,
           count: s._count,
         })),
+        slaTrends: slaTrends.map(t => ({
+          date: t.date,
+          pickupRate: t.pickupRate,
+          deliveryRate: t.deliveryRate,
+        })),
+      },
+
+      sla: {
+        onTimePickupRate: slaSummary.onTimePickupRate,
+        onTimeDeliveryRate: slaSummary.onTimeDeliveryRate,
+        cancellationRate: slaSummary.cancellationRate,
+        avgExceptionMTTR: slaSummary.avgMTTR,
+        totalDeliveries: slaSummary.totalDeliveries,
+        totalExceptions: slaSummary.totalExceptions,
       },
     });
   } catch (error) {

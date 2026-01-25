@@ -8,6 +8,7 @@
 export { default as StatCard } from './StatCard';
 export { default as DashboardSection } from './DashboardSection';
 export { default as QuickActionButton } from './QuickActionButton';
+export { default as QuickActionLink } from './QuickActionLink';
 export { default as StatusBadge } from './StatusBadge';
 export { default as DashboardHeader } from './DashboardHeader';
 export { default as EarningsChart } from './EarningsChart';

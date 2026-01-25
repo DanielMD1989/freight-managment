@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requirePermission, Permission } from '@/lib/rbac';
 import { db } from '@/lib/db';
+import { getSLASummary, getSLATrends, calculateSLAMetrics } from '@/lib/slaAggregation';
 
 type TimePeriod = 'day' | 'week' | 'month' | 'year';
 
@@ -242,6 +243,13 @@ export async function GET(request: NextRequest) {
     const approvedTrucks = trucksByStatus.find((t: { approvalStatus: string; _count: number }) => t.approvalStatus === 'APPROVED')?._count || 0;
     const pendingTrucks = trucksByStatus.find((t: { approvalStatus: string; _count: number }) => t.approvalStatus === 'PENDING')?._count || 0;
 
+    // Get comprehensive SLA metrics for admin (platform-wide)
+    const slaPeriod = period === 'year' ? 'month' : period === 'day' ? 'day' : 'week';
+    const [slaMetrics, slaTrends] = await Promise.all([
+      calculateSLAMetrics(slaPeriod as 'day' | 'week' | 'month'),
+      getSLATrends(30), // Admin gets 30-day trends
+    ]);
+
     return NextResponse.json({
       period,
       dateRange: { start, end },
@@ -307,6 +315,48 @@ export async function GET(request: NextRequest) {
           status: s.status,
           count: s._count,
         })),
+        slaTrends: slaTrends.map(t => ({
+          date: t.date,
+          pickupRate: t.pickupRate,
+          deliveryRate: t.deliveryRate,
+          cancellationRate: t.cancellationRate,
+        })),
+      },
+
+      // Comprehensive SLA metrics for admin dashboard
+      sla: {
+        period: slaMetrics.period,
+        dateRange: {
+          start: slaMetrics.startDate,
+          end: slaMetrics.endDate,
+        },
+        pickup: {
+          total: slaMetrics.pickup.total,
+          onTime: slaMetrics.pickup.onTime,
+          late: slaMetrics.pickup.late,
+          rate: slaMetrics.pickup.rate,
+          avgDelayHours: slaMetrics.pickup.avgDelayHours,
+        },
+        delivery: {
+          total: slaMetrics.delivery.total,
+          onTime: slaMetrics.delivery.onTime,
+          late: slaMetrics.delivery.late,
+          rate: slaMetrics.delivery.rate,
+          avgDelayHours: slaMetrics.delivery.avgDelayHours,
+        },
+        cancellation: {
+          total: slaMetrics.cancellation.total,
+          cancelled: slaMetrics.cancellation.cancelled,
+          rate: slaMetrics.cancellation.rate,
+        },
+        exceptions: {
+          total: slaMetrics.exceptions.total,
+          resolved: slaMetrics.exceptions.resolved,
+          open: slaMetrics.exceptions.open,
+          avgMTTR: slaMetrics.exceptions.avgMTTR,
+          mttrByType: slaMetrics.exceptions.mttrByType,
+          mttrByPriority: slaMetrics.exceptions.mttrByPriority,
+        },
       },
     });
   } catch (error) {

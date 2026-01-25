@@ -14,6 +14,8 @@ import { verifyToken } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import {
+  StatCard,
+  QuickActionLink,
   PackageIcon,
   TruckIcon,
   CurrencyIcon,
@@ -21,6 +23,8 @@ import {
   AlertIcon,
   UsersIcon,
   BuildingIcon,
+  LockIcon,
+  CheckIcon,
 } from '@/components/dashboard';
 import { formatCurrency } from '@/lib/formatters';
 
@@ -74,160 +78,6 @@ async function getDashboardStats(): Promise<DashboardStats | null> {
   }
 }
 
-// Local icons not in shared components
-const LockIcon = () => (
-  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-  </svg>
-);
-
-const ChevronRightIcon = () => (
-  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-  </svg>
-);
-
-/**
- * Stat Card Component
- */
-function StatCard({
-  title,
-  value,
-  icon,
-  subtitle,
-  trend,
-  color = 'primary',
-}: {
-  title: string;
-  value: string | number;
-  icon: React.ReactNode;
-  subtitle?: string;
-  trend?: { value: string; positive: boolean };
-  color?: 'primary' | 'secondary' | 'accent' | 'success' | 'warning' | 'error';
-}) {
-  const colorStyles = {
-    primary: {
-      iconBg: 'bg-primary-500/15 dark:bg-primary-500/20',
-      iconColor: 'text-primary-600 dark:text-primary-400',
-    },
-    secondary: {
-      iconBg: 'bg-secondary-500/15 dark:bg-secondary-500/20',
-      iconColor: 'text-secondary-600 dark:text-secondary-400',
-    },
-    accent: {
-      iconBg: 'bg-accent-500/15 dark:bg-accent-500/20',
-      iconColor: 'text-accent-600 dark:text-accent-400',
-    },
-    success: {
-      iconBg: 'bg-emerald-500/15 dark:bg-emerald-500/20',
-      iconColor: 'text-emerald-600 dark:text-emerald-400',
-    },
-    warning: {
-      iconBg: 'bg-amber-500/15 dark:bg-amber-500/20',
-      iconColor: 'text-amber-600 dark:text-amber-400',
-    },
-    error: {
-      iconBg: 'bg-rose-500/15 dark:bg-rose-500/20',
-      iconColor: 'text-rose-600 dark:text-rose-400',
-    },
-  };
-
-  const styles = colorStyles[color];
-
-  return (
-    <div
-      className="relative overflow-hidden rounded-xl border p-5 transition-all duration-200 hover:shadow-md"
-      style={{
-        background: 'var(--card)',
-        borderColor: 'var(--border)',
-      }}
-    >
-      <div className="flex items-start justify-between mb-4">
-        <div
-          className={`w-11 h-11 rounded-xl ${styles.iconBg} ${styles.iconColor} flex items-center justify-center`}
-        >
-          {icon}
-        </div>
-        {trend && (
-          <span
-            className={`text-xs font-medium px-2 py-1 rounded-full ${
-              trend.positive
-                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
-            }`}
-          >
-            {trend.positive ? '+' : ''}{trend.value}
-          </span>
-        )}
-      </div>
-
-      <div
-        className="text-3xl font-bold mb-1 tracking-tight"
-        style={{ color: 'var(--foreground)' }}
-      >
-        {value}
-      </div>
-
-      <div
-        className="text-sm font-medium"
-        style={{ color: 'var(--foreground-muted)' }}
-      >
-        {title}
-      </div>
-
-      {subtitle && (
-        <div
-          className="text-xs mt-1"
-          style={{ color: 'var(--foreground-muted)', opacity: 0.7 }}
-        >
-          {subtitle}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
- * Quick Action Link
- */
-function QuickActionLink({
-  href,
-  label,
-  description,
-  color,
-}: {
-  href: string;
-  label: string;
-  description: string;
-  color: 'primary' | 'secondary' | 'success' | 'accent';
-}) {
-  const colorStyles = {
-    primary: 'bg-primary-500/10 hover:bg-primary-500/20 text-primary-600 dark:text-primary-400',
-    secondary: 'bg-secondary-500/10 hover:bg-secondary-500/20 text-secondary-600 dark:text-secondary-400',
-    success: 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400',
-    accent: 'bg-accent-500/10 hover:bg-accent-500/20 text-accent-600 dark:text-accent-400',
-  };
-
-  return (
-    <Link
-      href={href}
-      className={`block px-4 py-3 rounded-lg transition-colors ${colorStyles[color]}`}
-    >
-      <div className="flex items-center justify-between">
-        <div>
-          <span className="font-medium">{label}</span>
-          <p
-            className="text-xs mt-0.5"
-            style={{ color: 'var(--foreground-muted)' }}
-          >
-            {description}
-          </p>
-        </div>
-        <ChevronRightIcon />
-      </div>
-    </Link>
-  );
-}
 
 /**
  * Load Status Breakdown
@@ -585,10 +435,8 @@ export default async function AdminDashboard() {
                 </div>
               ) : (
                 <div className="py-6 text-center">
-                  <div className="w-10 h-10 rounded-full mx-auto mb-3 flex items-center justify-center bg-emerald-500/10">
-                    <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
+                  <div className="w-10 h-10 rounded-full mx-auto mb-3 flex items-center justify-center bg-emerald-500/10 text-emerald-500">
+                    <CheckIcon />
                   </div>
                   <p className="text-sm" style={{ color: 'var(--foreground-muted)' }}>No pending approvals</p>
                 </div>
