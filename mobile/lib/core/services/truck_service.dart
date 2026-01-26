@@ -224,7 +224,8 @@ class TruckService {
     return updateTruck(id: id, isAvailable: isAvailable);
   }
 
-  /// Search trucks on the marketplace (for shippers)
+  /// Search trucks on the marketplace (for shippers) - LEGACY method
+  /// @deprecated Use searchTruckPostings() for full posting data with direction
   Future<ApiResponse<TruckSearchResult>> searchTrucks({
     int page = 1,
     int limit = 20,
@@ -275,6 +276,89 @@ class TruckService {
 
       return ApiResponse.error(
         response.data['error'] ?? 'Failed to search trucks',
+        statusCode: response.statusCode,
+      );
+    } on DioException catch (e) {
+      return ApiResponse.error(e.friendlyMessage, statusCode: e.response?.statusCode);
+    } catch (e) {
+      return ApiResponse.error('An unexpected error occurred: $e');
+    }
+  }
+
+  /// Search truck postings with FULL posting data (WEB PARITY)
+  /// Returns TruckPosting objects with origin/destination, age, availability
+  /// Matches web SearchTrucksTab.tsx filter parameters
+  Future<ApiResponse<TruckPostingSearchResult>> searchTruckPostings({
+    int page = 1,
+    int limit = 20,
+    String? origin,        // origin city filter (availableCity)
+    String? destination,   // destination city filter (WEB PARITY)
+    String? truckType,
+    String? fullPartial,   // FULL, PARTIAL, BOTH (WEB PARITY)
+    double? minLength,     // minimum trailer length (WEB PARITY)
+    double? maxWeight,     // maximum weight capacity (WEB PARITY)
+    DateTime? availableFrom, // availability date filter (WEB PARITY)
+    int? ageHours,         // max posting age in hours (WEB PARITY)
+    String? sortBy,
+    String? sortOrder,
+  }) async {
+    try {
+      final params = <String, dynamic>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+        'status': 'ACTIVE', // Only show active postings
+      };
+
+      // Origin filter (matches web's "origin" filter)
+      if (origin != null && origin.isNotEmpty) {
+        params['origin'] = origin;
+      }
+      // Destination filter (WEB PARITY - web uses "destination")
+      if (destination != null && destination.isNotEmpty) {
+        params['destination'] = destination;
+      }
+      if (truckType != null) params['truckType'] = truckType;
+      // Full/Partial filter (WEB PARITY)
+      if (fullPartial != null) params['fullPartial'] = fullPartial;
+      // Length filter (WEB PARITY)
+      if (minLength != null) params['minLength'] = minLength.toString();
+      // Weight filter (WEB PARITY)
+      if (maxWeight != null) params['maxWeight'] = maxWeight.toString();
+      // Availability date filter (WEB PARITY)
+      if (availableFrom != null) {
+        params['availableFrom'] = availableFrom.toIso8601String().split('T')[0];
+      }
+      // Age filter (WEB PARITY - filter by posting age)
+      if (ageHours != null) params['ageHours'] = ageHours.toString();
+      if (sortBy != null) params['sortBy'] = sortBy;
+      if (sortOrder != null) params['sortOrder'] = sortOrder;
+
+      final response = await _apiClient.dio.get(
+        '/api/truck-postings',
+        queryParameters: params,
+      );
+
+      if (response.statusCode == 200) {
+        // Parse full posting data (NOT just the truck)
+        final postingsData = response.data['truckPostings'] ??
+                            response.data['postings'] ??
+                            response.data['trucks'] ?? [];
+        final postings = (postingsData as List)
+            .map((json) => TruckPosting.fromJson(json))
+            .toList();
+        final pagination = response.data['pagination'] ?? {};
+
+        return ApiResponse.success(TruckPostingSearchResult(
+          postings: postings,
+          page: pagination['page'] ?? page,
+          limit: pagination['limit'] ?? limit,
+          total: pagination['total'] ?? postings.length,
+          pages: pagination['pages'] ?? 1,
+        ));
+      }
+
+      return ApiResponse.error(
+        response.data['error'] ?? 'Failed to search truck postings',
         statusCode: response.statusCode,
       );
     } on DioException catch (e) {
@@ -682,7 +766,7 @@ class TruckService {
   }
 }
 
-/// Truck search result with pagination
+/// Truck search result with pagination (LEGACY - use TruckPostingSearchResult)
 class TruckSearchResult {
   final List<Truck> trucks;
   final int page;
@@ -692,6 +776,26 @@ class TruckSearchResult {
 
   TruckSearchResult({
     required this.trucks,
+    required this.page,
+    required this.limit,
+    required this.total,
+    required this.pages,
+  });
+
+  bool get hasMore => page < pages;
+}
+
+/// Truck POSTING search result with FULL posting data (WEB PARITY)
+/// Includes origin/destination direction, age, availability, carrier info
+class TruckPostingSearchResult {
+  final List<TruckPosting> postings;
+  final int page;
+  final int limit;
+  final int total;
+  final int pages;
+
+  TruckPostingSearchResult({
+    required this.postings,
     required this.page,
     required this.limit,
     required this.total,

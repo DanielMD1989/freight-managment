@@ -263,7 +263,7 @@ class Truck {
   String get capacityDisplay => '${(capacity / 1000).toStringAsFixed(1)} tons';
 }
 
-/// Truck posting for loadboard
+/// Truck posting for loadboard (WEB PARITY: matches /api/truck-postings response)
 class TruckPosting {
   final String id;
   final String truckId;
@@ -273,6 +273,10 @@ class TruckPosting {
   final String? destinationCityId;
   final String? originCityName;
   final String? destinationCityName;
+  final double? originLat;
+  final double? originLng;
+  final double? destinationLat;
+  final double? destinationLng;
   final DateTime availableFrom;
   final DateTime? availableTo;
   final String? fullPartial;
@@ -283,7 +287,10 @@ class TruckPosting {
   final String? contactPhone;
   final String? ownerName;
   final String carrierId;
+  final String? carrierName;
+  final bool? carrierIsVerified;
   final DateTime createdAt;
+  final DateTime? postedAt;
 
   TruckPosting({
     required this.id,
@@ -294,6 +301,10 @@ class TruckPosting {
     this.destinationCityId,
     this.originCityName,
     this.destinationCityName,
+    this.originLat,
+    this.originLng,
+    this.destinationLat,
+    this.destinationLng,
     required this.availableFrom,
     this.availableTo,
     this.fullPartial,
@@ -304,10 +315,18 @@ class TruckPosting {
     this.contactPhone,
     this.ownerName,
     required this.carrierId,
+    this.carrierName,
+    this.carrierIsVerified,
     required this.createdAt,
+    this.postedAt,
   });
 
   factory TruckPosting.fromJson(Map<String, dynamic> json) {
+    // Parse origin city data (matches web API response structure)
+    final originCity = json['originCity'];
+    final destinationCity = json['destinationCity'];
+    final carrier = json['carrier'];
+
     return TruckPosting(
       id: json['id'] ?? '',
       truckId: json['truckId'] ?? '',
@@ -315,8 +334,14 @@ class TruckPosting {
       status: json['status'] ?? 'ACTIVE',
       originCityId: json['originCityId'],
       destinationCityId: json['destinationCityId'],
-      originCityName: json['originCity']?['name'] ?? json['originCityName'],
-      destinationCityName: json['destinationCity']?['name'] ?? json['destinationCityName'],
+      // Parse city names from nested objects (web API format)
+      originCityName: originCity is Map ? originCity['name'] : (json['originCityName'] ?? originCity),
+      destinationCityName: destinationCity is Map ? destinationCity['name'] : (json['destinationCityName'] ?? destinationCity),
+      // Parse coordinates for direction calculation
+      originLat: originCity is Map ? _parseDouble(originCity['latitude']) : null,
+      originLng: originCity is Map ? _parseDouble(originCity['longitude']) : null,
+      destinationLat: destinationCity is Map ? _parseDouble(destinationCity['latitude']) : null,
+      destinationLng: destinationCity is Map ? _parseDouble(destinationCity['longitude']) : null,
       availableFrom: json['availableFrom'] != null
           ? DateTime.parse(json['availableFrom'])
           : DateTime.now(),
@@ -324,26 +349,108 @@ class TruckPosting {
           ? DateTime.parse(json['availableTo'])
           : null,
       fullPartial: json['fullPartial'],
-      availableLength: json['availableLength'] != null
-          ? (json['availableLength'] is num
-              ? json['availableLength'].toDouble()
-              : double.tryParse(json['availableLength'].toString()))
-          : null,
-      availableWeight: json['availableWeight'] != null
-          ? (json['availableWeight'] is num
-              ? json['availableWeight'].toDouble()
-              : double.tryParse(json['availableWeight'].toString()))
-          : null,
+      availableLength: _parseDouble(json['availableLength']),
+      availableWeight: _parseDouble(json['availableWeight']),
       notes: json['notes'],
       contactName: json['contactName'],
       contactPhone: json['contactPhone'],
       ownerName: json['ownerName'],
       carrierId: json['carrierId'] ?? '',
+      // Parse carrier info (web API includes carrier object)
+      carrierName: carrier is Map ? carrier['name'] : json['carrierName'],
+      carrierIsVerified: carrier is Map ? carrier['isVerified'] : json['carrierIsVerified'],
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : DateTime.now(),
+      postedAt: json['postedAt'] != null
+          ? DateTime.parse(json['postedAt'])
+          : (json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null),
     );
   }
 
+  static double? _parseDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
+  }
+
   bool get isActive => status == 'ACTIVE';
+
+  /// Route display: "Origin → Destination" or "Origin → Any"
+  String get routeDisplay {
+    final origin = originCityName ?? 'Unknown';
+    final dest = destinationCityName ?? 'Any';
+    return '$origin → $dest';
+  }
+
+  /// Age display: "2h", "1d", "3d" etc. (matches web behavior)
+  String get ageDisplay {
+    final posted = postedAt ?? createdAt;
+    final diff = DateTime.now().difference(posted);
+
+    if (diff.inMinutes < 60) {
+      return '${diff.inMinutes}m';
+    } else if (diff.inHours < 24) {
+      return '${diff.inHours}h';
+    } else {
+      return '${diff.inDays}d';
+    }
+  }
+
+  /// Full/Partial display
+  String get fullPartialDisplay {
+    switch (fullPartial?.toUpperCase()) {
+      case 'FULL':
+        return 'F';
+      case 'PARTIAL':
+        return 'P';
+      case 'BOTH':
+        return 'F/P';
+      default:
+        return 'F';
+    }
+  }
+
+  /// Availability date display
+  String get availabilityDisplay {
+    final now = DateTime.now();
+    final diff = availableFrom.difference(now);
+
+    if (diff.isNegative || diff.inHours < 24) {
+      return 'Now';
+    } else if (diff.inDays < 7) {
+      return '${diff.inDays}d';
+    } else {
+      return '${availableFrom.month}/${availableFrom.day}';
+    }
+  }
+
+  /// Truck type from nested truck object
+  String get truckTypeDisplay {
+    return truck?.truckTypeDisplay ?? 'Unknown';
+  }
+
+  /// Capacity from nested truck object
+  String get capacityDisplay {
+    return truck?.capacityDisplay ?? 'N/A';
+  }
+
+  /// Length display
+  String? get lengthDisplay {
+    final length = availableLength ?? truck?.lengthM;
+    if (length == null) return null;
+    return '${length.toStringAsFixed(1)}m';
+  }
+
+  /// Weight display
+  String? get weightDisplay {
+    if (availableWeight == null) return null;
+    return '${(availableWeight! / 1000).toStringAsFixed(1)}t';
+  }
+
+  /// Company name (carrier or owner)
+  String get companyDisplay {
+    return carrierName ?? ownerName ?? 'Unknown';
+  }
 }

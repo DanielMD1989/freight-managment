@@ -1,0 +1,253 @@
+diff --git a/mobile/lib/features/shipper/screens/shipper_truckboard_screen.dart b/mobile/lib/features/shipper/screens/shipper_truckboard_screen.dart
+--- a/mobile/lib/features/shipper/screens/shipper_truckboard_screen.dart (BEFORE)
++++ b/mobile/lib/features/shipper/screens/shipper_truckboard_screen.dart (AFTER)
+
+=== CHANGE 1: Updated Provider to Return TruckPosting ===
+
+-/// Provider for truck search results
+-final truckSearchResultsProvider =
+-    FutureProvider.autoDispose<TruckSearchResult>((ref) async {
++/// Provider for truck POSTING search results (WEB PARITY: returns full posting data)
++final truckPostingSearchResultsProvider =
++    FutureProvider.autoDispose<TruckPostingSearchResult>((ref) async {
+   final params = ref.watch(truckSearchParamsProvider);
+   final service = TruckService();
+-  final result = await service.searchTrucks(
++  // Use searchTruckPostings() for FULL posting data with direction
++  final result = await service.searchTruckPostings(
+     page: params.page,
+     limit: 20,
+-    availableCity: params.availableCity,
++    origin: params.availableCity,      // WEB PARITY: origin filter
++    destination: params.destination,    // WEB PARITY: destination filter
+     truckType: params.truckType,
+-    minCapacity: params.minCapacity,
+-    isAvailable: true,
++    fullPartial: params.fullPartial,    // WEB PARITY: full/partial filter
++    minLength: params.minLength,        // WEB PARITY: length filter
++    maxWeight: params.maxWeight,        // WEB PARITY: weight filter
++    availableFrom: params.availableFrom, // WEB PARITY: availability filter
++    ageHours: params.ageHours,          // WEB PARITY: age filter
+     sortBy: params.sortBy,
+     sortOrder: params.sortOrder,
+   );
+   return result.success
+       ? result.data!
+-      : TruckSearchResult(trucks: [], page: 1, limit: 20, total: 0, pages: 0);
++      : TruckPostingSearchResult(postings: [], page: 1, limit: 20, total: 0, pages: 0);
+ });
+
+
+=== CHANGE 2: Extended TruckSearchParams with Web Filters ===
+
+ class TruckSearchParams {
+   final int page;
+   final String? availableCity;  // Origin city
++  final String? destination;    // WEB PARITY: destination city filter
+   final String? truckType;
++  final String? fullPartial;    // WEB PARITY: FULL, PARTIAL, BOTH
+   final double? minCapacity;
++  final double? minLength;      // WEB PARITY: minimum length (m)
++  final double? maxWeight;      // WEB PARITY: maximum weight (kg)
++  final DateTime? availableFrom; // WEB PARITY: availability date
++  final int? ageHours;          // WEB PARITY: max posting age
+   final String sortBy;
+   final String sortOrder;
+   ...
+ }
+
+
+=== CHANGE 3: New TruckPostingCard with Direction Display ===
+
++/// WEB PARITY: Truck POSTING card with direction display (Origin → Destination)
++class _TruckPostingCard extends StatelessWidget {
++  final TruckPosting posting;
++  ...
++
++  @override
++  Widget build(BuildContext context) {
++    return Card(
++      child: Column(
++        children: [
++          // WEB PARITY: Header row with Age, Truck Type, F/P indicator
++          Row(
++            children: [
++              // Age badge (WEB PARITY: matches "Age" column)
++              Container(
++                child: Text(posting.ageDisplay),  // "2h", "1d"
++              ),
++              // Truck type badge
++              Container(
++                child: Text(posting.truckTypeDisplay),
++              ),
++              // WEB PARITY: Full/Partial indicator
++              Container(
++                child: Text(posting.fullPartialDisplay),  // "F", "P", "F/P"
++              ),
++              // WEB PARITY: Availability indicator
++              Text('Avail: ${posting.availabilityDisplay}'),
++            ],
++          ),
++
++          // WEB PARITY: Direction display (Origin → Destination)
++          Container(
++            child: Row(
++              children: [
++                // Origin
++                Column(
++                  children: [
++                    Text('FROM'),
++                    Text(posting.originCityName ?? 'Unknown'),
++                  ],
++                ),
++                // Arrow indicator
++                Icon(Icons.arrow_forward),
++                // Destination
++                Column(
++                  children: [
++                    Text('TO'),
++                    Text(posting.destinationCityName ?? 'Any'),
++                  ],
++                ),
++              ],
++            ),
++          ),
++
++          // WEB PARITY: Company and specs row
++          Row(
++            children: [
++              Text(posting.companyDisplay),
++              if (posting.carrierIsVerified == true)
++                Icon(Icons.verified),
++            ],
++          ),
++
++          // Specs chips (WEB PARITY: matches Length, Weight columns)
++          Wrap(
++            children: [
++              _SpecChip(label: posting.capacityDisplay),
++              if (posting.lengthDisplay != null)
++                _SpecChip(label: posting.lengthDisplay!),
++              if (posting.weightDisplay != null)
++                _SpecChip(label: posting.weightDisplay!),
++            ],
++          ),
++
++          // Action button
++          ElevatedButton(
++            onPressed: onBook,
++            child: Text('Book Truck'),
++          ),
++        ],
++      ),
++    );
++  }
++}
+
+
+=== CHANGE 4: Updated Filters Panel with Destination Filter ===
+
+ class _FiltersPanel extends StatelessWidget {
+   final TextEditingController cityController;
++  final TextEditingController destinationController;  // WEB PARITY
+   ...
+
+   @override
+   Widget build(BuildContext context) {
+     return Column(
+       children: [
+-        // Location search
+-        TextField(
+-          controller: cityController,
+-          decoration: InputDecoration(labelText: 'Available In City'),
+-        ),
++        // WEB PARITY: Origin and Destination cities
++        Row(
++          children: [
++            Expanded(
++              child: TextField(
++                controller: cityController,
++                decoration: InputDecoration(labelText: 'Origin City'),
++              ),
++            ),
++            Expanded(
++              child: TextField(
++                controller: destinationController,
++                decoration: InputDecoration(labelText: 'Destination'),
++              ),
++            ),
++          ],
++        ),
+
+-        // Truck type and capacity
++        // WEB PARITY: Truck type and Full/Partial
+         Row(
+           children: [
+             Expanded(
+               child: DropdownButtonFormField<String>(
+                 decoration: InputDecoration(labelText: 'Truck Type'),
+               ),
+             ),
+-            Expanded(
+-              child: TextField(
+-                controller: minCapacityController,
+-                decoration: InputDecoration(labelText: 'Min Capacity'),
+-              ),
+-            ),
++            Expanded(
++              child: DropdownButtonFormField<String>(
++                decoration: InputDecoration(labelText: 'Full/Partial'),
++                items: [
++                  DropdownMenuItem(value: null, child: Text('Any')),
++                  DropdownMenuItem(value: 'FULL', child: Text('Full Load')),
++                  DropdownMenuItem(value: 'PARTIAL', child: Text('Partial')),
++                  DropdownMenuItem(value: 'BOTH', child: Text('Both')),
++                ],
++              ),
++            ),
+           ],
+         ),
+       ],
+     );
+   }
+ }
+
+
+=== CHANGE 5: Updated Active Filters Bar ===
+
+ class _ActiveFiltersBar extends StatelessWidget {
+   @override
+   Widget build(BuildContext context) {
+     return Row(
+       children: [
+         if (params.availableCity != null)
+-          _FilterChip(label: 'City: ${params.availableCity}'),
++          _FilterChip(label: 'From: ${params.availableCity}'),
++        if (params.destination != null)
++          _FilterChip(label: 'To: ${params.destination}'),
+         if (params.truckType != null)
+           _FilterChip(label: params.truckType!),
++        if (params.fullPartial != null)
++          _FilterChip(label: params.fullPartial!),
+-        if (params.minCapacity != null)
+-          _FilterChip(label: '>${params.minCapacity!}kg'),
++        if (params.minLength != null)
++          _FilterChip(label: '>${params.minLength!}m'),
++        if (params.maxWeight != null)
++          _FilterChip(label: '<${params.maxWeight!}t'),
++        if (params.ageHours != null)
++          _FilterChip(label: '<${params.ageHours}h old'),
+       ],
+     );
+   }
+ }
+
+
+=== Summary of UI Changes ===
+
+1. Provider returns TruckPosting[] instead of Truck[]
+2. Search params include all web filter fields
+3. New TruckPostingCard displays direction (origin -> dest)
+4. Card shows age badge, F/P indicator, availability
+5. Filters panel includes destination and full/partial dropdowns
+6. Active filters bar shows all active filter types
