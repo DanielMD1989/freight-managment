@@ -409,9 +409,33 @@ class _ShipperTruckboardScreenState
   }
 
   /// WEB PARITY: Booking modal for truck postings
+  /// SINGLE SOURCE OF TRUTH: Uses widget.loadId if provided (from Find Trucks button)
   Future<void> _showPostingBookingModal(TruckPosting posting) async {
-    final loadsAsync = ref.read(shipperPostedLoadsProvider);
-    final loads = loadsAsync.valueOrNull ?? [];
+    List<Load> loads = [];
+    String? preSelectedLoadId = widget.loadId;
+
+    // SINGLE SOURCE OF TRUTH: If loadId was passed via Find Trucks, fetch that specific load
+    if (widget.loadId != null && widget.loadId!.isNotEmpty) {
+      final loadService = LoadService();
+      final loadResult = await loadService.getLoadById(widget.loadId!);
+      if (loadResult.success && loadResult.data != null) {
+        loads = [loadResult.data!];
+        preSelectedLoadId = loadResult.data!.id;
+      }
+    }
+
+    // Fallback: If no loadId provided or fetch failed, get all posted loads
+    if (loads.isEmpty) {
+      final loadsAsync = ref.read(shipperPostedLoadsProvider);
+      loads = loadsAsync.valueOrNull ?? [];
+
+      // If still empty, try fetching directly
+      if (loads.isEmpty) {
+        final loadService = LoadService();
+        final result = await loadService.searchLoads(status: 'POSTED', myLoads: true);
+        loads = result.success ? result.data?.loads ?? [] : [];
+      }
+    }
 
     if (loads.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -429,6 +453,7 @@ class _ShipperTruckboardScreenState
       builder: (context) => _BookTruckPostingModal(
         posting: posting,
         loads: loads,
+        preSelectedLoadId: preSelectedLoadId,  // Pass pre-selected load
       ),
     );
 
@@ -1459,11 +1484,17 @@ class _BookTruckModalState extends State<_BookTruckModal> {
 }
 
 /// WEB PARITY: Book truck posting modal with direction display
+/// SINGLE SOURCE OF TRUTH: Uses preSelectedLoadId if provided (from Find Trucks)
 class _BookTruckPostingModal extends StatefulWidget {
   final TruckPosting posting;
   final List<Load> loads;
+  final String? preSelectedLoadId;  // From Find Trucks button navigation
 
-  const _BookTruckPostingModal({required this.posting, required this.loads});
+  const _BookTruckPostingModal({
+    required this.posting,
+    required this.loads,
+    this.preSelectedLoadId,
+  });
 
   @override
   State<_BookTruckPostingModal> createState() => _BookTruckPostingModalState();
@@ -1477,7 +1508,10 @@ class _BookTruckPostingModalState extends State<_BookTruckPostingModal> {
   @override
   void initState() {
     super.initState();
-    if (widget.loads.isNotEmpty) {
+    // SINGLE SOURCE OF TRUTH: Use pre-selected loadId if provided
+    if (widget.preSelectedLoadId != null) {
+      _selectedLoadId = widget.preSelectedLoadId;
+    } else if (widget.loads.isNotEmpty) {
       _selectedLoadId = widget.loads.first.id;
     }
   }

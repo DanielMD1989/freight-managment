@@ -190,6 +190,33 @@ final postings = postingsData.map((json) =>
 
 ---
 
+## Issue 5: Single Source of Truth - Booking Load Selection
+
+### Problem
+When clicking "Find Trucks" from a posted load, the `loadId` was passed via URL but ignored during booking. The booking modal fetched loads from a separate provider that might be empty.
+
+### Solution
+Fixed `_showPostingBookingModal` to use `widget.loadId` as the single source of truth:
+
+```dart
+// SINGLE SOURCE OF TRUTH: If loadId was passed via Find Trucks, fetch that specific load
+if (widget.loadId != null && widget.loadId!.isNotEmpty) {
+  final loadService = LoadService();
+  final loadResult = await loadService.getLoadById(widget.loadId!);
+  if (loadResult.success && loadResult.data != null) {
+    loads = [loadResult.data!];
+    preSelectedLoadId = loadResult.data!.id;
+  }
+}
+```
+
+The booking modal now:
+1. Uses the loadId from navigation if provided
+2. Pre-selects that load in the dropdown
+3. Falls back to fetching posted loads only if no loadId provided
+
+---
+
 ## Conclusion
 
 The mobile "Find Trucks" feature now achieves **100% feature parity** with the web implementation:
@@ -198,5 +225,6 @@ The mobile "Find Trucks" feature now achieves **100% feature parity** with the w
 2. **Filter Parity** - All 8 web filters supported
 3. **Data Model Parity** - Full posting data preserved
 4. **UI Parity** - Age, availability, F/P, carrier all displayed
+5. **Single Source of Truth** - LoadId from navigation used directly for booking
 
 The same API endpoint is used, same filter parameters, same response parsing, and same UI presentation.
