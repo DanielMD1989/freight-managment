@@ -9,6 +9,10 @@ import { requireAuth, requireActiveUser } from '@/lib/auth';
 import { z } from 'zod';
 import { validateStateTransition, LoadStatus, getStatusDescription } from '@/lib/loadStateMachine';
 import { deductServiceFee, refundServiceFee } from '@/lib/serviceFeeManagement'; // Service Fee Implementation
+// CRITICAL FIX: Import CacheInvalidation for status changes
+import { CacheInvalidation } from '@/lib/cache';
+// CRITICAL FIX: Import notification helper for status change notifications
+import { createNotification } from '@/lib/notifications';
 
 const updateStatusSchema = z.object({
   status: z.enum([
@@ -234,8 +238,67 @@ export async function PATCH(
       }
     }
 
-    // TODO: Create LoadStatusHistory record for audit trail
-    // TODO: Trigger notifications to relevant parties
+    // CRITICAL FIX: Invalidate cache after status change
+    await CacheInvalidation.load(loadId, load.shipperId);
+
+    // CRITICAL FIX: Create LoadEvent for status change audit trail
+    await db.loadEvent.create({
+      data: {
+        loadId,
+        eventType: 'STATUS_CHANGED',
+        description: `Status changed from ${load.status} to ${newStatus}${reason ? ` - ${reason}` : ''}`,
+        userId: session.userId,
+        metadata: {
+          previousStatus: load.status,
+          newStatus,
+          reason,
+          notes,
+        },
+      },
+    });
+
+    // CRITICAL FIX: Trigger notifications to relevant parties
+    const notificationPromises: Promise<any>[] = [];
+
+    // Notify shipper of status changes
+    const shipperUsers = await db.user.findMany({
+      where: { organizationId: load.shipperId, status: 'ACTIVE' },
+      select: { id: true },
+    });
+    for (const user of shipperUsers) {
+      notificationPromises.push(
+        createNotification({
+          userId: user.id,
+          type: 'LOAD_STATUS_CHANGE',
+          title: `Load Status: ${newStatus}`,
+          message: `Your load status has been updated to ${getStatusDescription(newStatus as LoadStatus)}`,
+          metadata: { loadId, previousStatus: load.status, newStatus },
+        }).catch(console.error)
+      );
+    }
+
+    // Notify carrier if assigned
+    if (load.assignedTruck?.carrierId) {
+      const carrierUsers = await db.user.findMany({
+        where: { organizationId: load.assignedTruck.carrierId, status: 'ACTIVE' },
+        select: { id: true },
+      });
+      for (const user of carrierUsers) {
+        notificationPromises.push(
+          createNotification({
+            userId: user.id,
+            type: 'LOAD_STATUS_CHANGE',
+            title: `Load Status: ${newStatus}`,
+            message: `Load status has been updated to ${getStatusDescription(newStatus as LoadStatus)}`,
+            metadata: { loadId, previousStatus: load.status, newStatus },
+          }).catch(console.error)
+        );
+      }
+    }
+
+    // Fire-and-forget notifications
+    Promise.all(notificationPromises).catch(console.error);
+
     // TODO: Trigger automation rules based on new status
 
     // Build service fee response based on action type

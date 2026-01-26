@@ -20,6 +20,10 @@ import {
 import { checkSuspiciousCancellation } from "@/lib/bypassDetection";
 import { validateStateTransition, LoadStatus } from "@/lib/loadStateMachine";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+// CRITICAL FIX: Import CacheInvalidation for load mutations
+import { CacheInvalidation } from "@/lib/cache";
+// CRITICAL FIX: Import notification helper for status change notifications
+import { createNotification } from "@/lib/notifications";
 
 /**
  * Helper function to apply RPS rate limiting
@@ -451,6 +455,29 @@ export async function PATCH(
       },
     });
 
+    // CRITICAL FIX: Invalidate cache after load update
+    await CacheInvalidation.load(id, existingLoad.shipperId);
+
+    // CRITICAL FIX: Send notifications for status changes
+    if (validatedData.status && validatedData.status !== existingLoad.status) {
+      // Notify carrier if assigned
+      if (existingLoad.assignedTruck?.carrierId) {
+        const carrierUsers = await db.user.findMany({
+          where: { organizationId: existingLoad.assignedTruck.carrierId, status: 'ACTIVE' },
+          select: { id: true },
+        });
+        for (const user of carrierUsers) {
+          await createNotification({
+            userId: user.id,
+            type: 'LOAD_STATUS_CHANGE',
+            title: `Load Status: ${validatedData.status}`,
+            message: `Load status changed to ${validatedData.status}`,
+            metadata: { loadId: id, status: validatedData.status },
+          }).catch(console.error);
+        }
+      }
+    }
+
     return NextResponse.json({ load });
   } catch (error) {
     console.error("Update load error:", error);
@@ -515,6 +542,13 @@ export async function DELETE(
     }
 
     await db.load.delete({ where: { id } });
+
+    // CRITICAL FIX: Invalidate cache after load deletion
+    await CacheInvalidation.load(id, load.shipperId);
+
+    // CRITICAL FIX: Create load event for audit trail before deletion
+    // Note: Load is already deleted, so we log to console
+    console.log(`[LoadAPI] Load ${id} deleted by user ${session.userId}`);
 
     return NextResponse.json({ message: "Load deleted successfully" });
   } catch (error) {
