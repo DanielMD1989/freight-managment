@@ -541,14 +541,109 @@ export async function DELETE(
       );
     }
 
-    await db.load.delete({ where: { id } });
+    // P1-007 FIX: Clean up related requests before deleting load to prevent FK constraint errors
+    // Use transaction to ensure atomicity and notify affected carriers
+    const deletionResult = await db.$transaction(async (tx) => {
+      // Find all pending LoadRequests for this load
+      const pendingLoadRequests = await tx.loadRequest.findMany({
+        where: { loadId: id, status: 'PENDING' },
+        select: { id: true, carrierId: true },
+      });
+
+      // Find all pending TruckRequests for this load
+      const pendingTruckRequests = await tx.truckRequest.findMany({
+        where: { loadId: id, status: 'PENDING' },
+        select: { id: true, truckId: true, truck: { select: { carrierId: true } } },
+      });
+
+      // Reject all pending LoadRequests with system reason
+      if (pendingLoadRequests.length > 0) {
+        await tx.loadRequest.updateMany({
+          where: { loadId: id, status: 'PENDING' },
+          data: {
+            status: 'REJECTED',
+            responseNotes: 'Load was deleted by shipper',
+            respondedAt: new Date(),
+          },
+        });
+      }
+
+      // Reject all pending TruckRequests with system reason
+      if (pendingTruckRequests.length > 0) {
+        await tx.truckRequest.updateMany({
+          where: { loadId: id, status: 'PENDING' },
+          data: {
+            status: 'REJECTED',
+            responseNotes: 'Load was deleted by shipper',
+            respondedAt: new Date(),
+          },
+        });
+      }
+
+      // Delete the load
+      await tx.load.delete({ where: { id } });
+
+      return {
+        deletedLoadId: id,
+        rejectedLoadRequests: pendingLoadRequests,
+        rejectedTruckRequests: pendingTruckRequests,
+      };
+    });
 
     // CRITICAL FIX: Invalidate cache after load deletion
     await CacheInvalidation.load(id, load.shipperId);
 
-    // CRITICAL FIX: Create load event for audit trail before deletion
-    // Note: Load is already deleted, so we log to console
-    console.log(`[LoadAPI] Load ${id} deleted by user ${session.userId}`);
+    // P1-007 FIX: Notify affected carriers about rejected requests (fire-and-forget)
+    const notificationPromises: Promise<any>[] = [];
+
+    // Notify carriers whose LoadRequests were rejected
+    for (const req of deletionResult.rejectedLoadRequests) {
+      const carrierUsers = await db.user.findMany({
+        where: { organizationId: req.carrierId, status: 'ACTIVE' },
+        select: { id: true },
+      });
+      for (const u of carrierUsers) {
+        notificationPromises.push(
+          createNotification({
+            userId: u.id,
+            type: 'LOAD_REQUEST_REJECTED',
+            title: 'Load Request Cancelled',
+            message: 'The load you requested has been deleted by the shipper.',
+            metadata: { loadRequestId: req.id, loadId: id, reason: 'Load deleted' },
+          }).catch(console.error)
+        );
+      }
+    }
+
+    // Notify carriers whose TruckRequests were rejected
+    for (const req of deletionResult.rejectedTruckRequests) {
+      if (req.truck?.carrierId) {
+        const carrierUsers = await db.user.findMany({
+          where: { organizationId: req.truck.carrierId, status: 'ACTIVE' },
+          select: { id: true },
+        });
+        for (const u of carrierUsers) {
+          notificationPromises.push(
+            createNotification({
+              userId: u.id,
+              type: 'TRUCK_REQUEST_REJECTED',
+              title: 'Truck Request Cancelled',
+              message: 'The load for your truck request has been deleted by the shipper.',
+              metadata: { truckRequestId: req.id, loadId: id, reason: 'Load deleted' },
+            }).catch(console.error)
+          );
+        }
+      }
+    }
+
+    // Fire-and-forget notifications
+    Promise.all(notificationPromises).catch(console.error);
+
+    // Audit log
+    console.log(`[LoadAPI] Load ${id} deleted by user ${session.userId}`, {
+      rejectedLoadRequests: deletionResult.rejectedLoadRequests.length,
+      rejectedTruckRequests: deletionResult.rejectedTruckRequests.length,
+    });
 
     return NextResponse.json({ message: "Load deleted successfully" });
   } catch (error) {
