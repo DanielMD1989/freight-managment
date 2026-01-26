@@ -282,12 +282,19 @@ export interface Truck {
   contactName?: string | null;
   contactPhone?: string | null;
 
-  // GPS
+  // GPS Device
   imei?: string | null;
   gpsProvider?: string | null;
   gpsStatus?: GpsDeviceStatus | null;
   gpsLastSeenAt?: Date | null;
   gpsVerifiedAt?: Date | null;
+
+  // P1-003-B FIX: GPS Tracking Fields (mobile-web parity)
+  lastLatitude?: number | null;
+  lastLongitude?: number | null;
+  heading?: number | null;
+  speed?: number | null;
+  gpsUpdatedAt?: Date | null;
 
   // Approval
   approvalStatus: VerificationStatus;

@@ -22,6 +22,8 @@ import { z } from 'zod';
 import { requireAuth } from '@/lib/auth';
 import { hasElevatedPermissions } from '@/lib/dispatcherPermissions';
 import { UserRole } from '@prisma/client';
+// P1-001-B FIX: Import CacheInvalidation for update/delete operations
+import { CacheInvalidation } from '@/lib/cache';
 
 // Update schema (partial)
 const UpdateTruckPostingSchema = z.object({
@@ -312,6 +314,9 @@ export async function PATCH(
       },
     });
 
+    // P1-001-B FIX: Invalidate cache after posting update to ensure fresh data
+    await CacheInvalidation.truck(updated.truckId, updated.carrierId, updated.carrierId);
+
     return NextResponse.json(updated);
   } catch (error) {
     console.error('Error updating truck posting:', error);
@@ -387,8 +392,13 @@ export async function DELETE(
       select: {
         id: true,
         status: true,
+        truckId: true,
+        carrierId: true,
       },
     });
+
+    // P1-001-B FIX: Invalidate cache after posting cancellation to remove stale data
+    await CacheInvalidation.truck(cancelled.truckId, cancelled.carrierId, cancelled.carrierId);
 
     return NextResponse.json({
       message: 'Truck posting cancelled successfully',

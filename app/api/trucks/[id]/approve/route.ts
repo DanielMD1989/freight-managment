@@ -16,6 +16,8 @@ import { requireAuth } from '@/lib/auth';
 import { hasPermission, Permission } from '@/lib/rbac/permissions';
 import { createNotification } from '@/lib/notifications';
 import { UserRole } from '@prisma/client';
+// P1-001-B FIX: Import CacheInvalidation for approval status changes
+import { CacheInvalidation } from '@/lib/cache';
 
 // Validation schema for truck approval
 const TruckApprovalSchema = z.object({
@@ -142,6 +144,9 @@ export async function POST(
 
       // TODO: Send email notification to carrier
 
+      // P1-001-B FIX: Invalidate cache after truck approval to update listings
+      await CacheInvalidation.truck(updatedTruck.id, updatedTruck.carrierId, updatedTruck.carrierId);
+
       return NextResponse.json({
         truck: updatedTruck,
         message: 'Truck approved successfully',
@@ -189,6 +194,9 @@ export async function POST(
       }
 
       // TODO: Send email notification to carrier
+
+      // P1-001-B FIX: Invalidate cache after truck rejection to update listings
+      await CacheInvalidation.truck(updatedTruck.id, updatedTruck.carrierId, updatedTruck.carrierId);
 
       return NextResponse.json({
         truck: updatedTruck,

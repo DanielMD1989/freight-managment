@@ -5,6 +5,8 @@ import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { TripStatus } from "@prisma/client";
+// P1-001-B FIX: Import CacheInvalidation for update/delete operations
+import { CacheInvalidation } from "@/lib/cache";
 
 /**
  * Helper function to apply RPS rate limiting for fleet endpoints
@@ -189,6 +191,9 @@ export async function PATCH(
       },
     });
 
+    // P1-001-B FIX: Invalidate cache after truck update to ensure fresh data
+    await CacheInvalidation.truck(updatedTruck.id, updatedTruck.carrierId, updatedTruck.carrierId);
+
     return NextResponse.json(updatedTruck);
   } catch (error) {
     console.error("PATCH /api/trucks/[id] error:", error);
@@ -313,6 +318,9 @@ export async function DELETE(
       }
       throw deleteError;
     }
+
+    // P1-001-B FIX: Invalidate cache after truck deletion to remove stale data
+    await CacheInvalidation.truck(truck.id, truck.carrierId, truck.carrierId);
 
     return NextResponse.json({
       success: true,
