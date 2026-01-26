@@ -13,6 +13,10 @@ import { deductServiceFee, refundServiceFee } from '@/lib/serviceFeeManagement';
 import { CacheInvalidation } from '@/lib/cache';
 // CRITICAL FIX: Import notification helper for status change notifications
 import { createNotification } from '@/lib/notifications';
+// CRITICAL FIX: Import trust metrics for analytics tracking
+import { incrementCompletedLoads, incrementCancelledLoads } from '@/lib/trustMetrics';
+// CRITICAL FIX: Import bypass detection for suspicious cancellations
+import { checkSuspiciousCancellation } from '@/lib/bypassDetection';
 
 const updateStatusSchema = z.object({
   status: z.enum([
@@ -298,6 +302,25 @@ export async function PATCH(
 
     // Fire-and-forget notifications
     Promise.all(notificationPromises).catch(console.error);
+
+    // CRITICAL FIX: Update trust metrics for analytics tracking
+    if (newStatus === 'DELIVERED' || newStatus === 'COMPLETED') {
+      // Increment completed loads for shipper
+      if (load.shipperId) {
+        await incrementCompletedLoads(load.shipperId).catch(console.error);
+      }
+      // Increment completed loads for carrier if assigned
+      if (load.assignedTruck?.carrierId) {
+        await incrementCompletedLoads(load.assignedTruck.carrierId).catch(console.error);
+      }
+    } else if (newStatus === 'CANCELLED') {
+      // Increment cancelled loads for shipper
+      if (load.shipperId) {
+        await incrementCancelledLoads(load.shipperId).catch(console.error);
+      }
+      // Check for suspicious bypass pattern
+      await checkSuspiciousCancellation(loadId).catch(console.error);
+    }
 
     // TODO: Trigger automation rules based on new status
 
