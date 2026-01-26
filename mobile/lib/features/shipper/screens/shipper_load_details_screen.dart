@@ -950,21 +950,35 @@ class _ShipperLoadDetailsScreenState
                 ),
               ),
             ] else if (load.status == LoadStatus.posted) ...[
+              // Find Trucks button - PRIMARY ACTION for posted loads (PARITY with web)
+              Expanded(
+                flex: 2,
+                child: ElevatedButton.icon(
+                  onPressed: () => context.push(
+                    '/shipper/trucks?origin=${Uri.encodeComponent(load.pickupCity ?? '')}&destination=${Uri.encodeComponent(load.deliveryCity ?? '')}&loadId=${load.id}',
+                  ),
+                  icon: const Icon(Icons.search, size: 18),
+                  label: const Text('Find Trucks'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Unpost button
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => _unpostLoad(load),
                   child: const Text('Unpost'),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => _cancelLoad(load),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.error,
-                  ),
-                  child: const Text('Cancel'),
-                ),
+              const SizedBox(width: 8),
+              // Cancel button
+              IconButton(
+                onPressed: () => _cancelLoad(load),
+                icon: const Icon(Icons.cancel_outlined),
+                color: AppColors.error,
+                tooltip: 'Cancel Load',
               ),
             ] else if (load.status == LoadStatus.unposted) ...[
               Expanded(

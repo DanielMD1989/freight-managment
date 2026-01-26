@@ -15,8 +15,8 @@ import { z } from 'zod';
 import { requireAuth } from '@/lib/auth';
 import { createNotification } from '@/lib/notifications';
 import { enableTrackingForLoad } from '@/lib/gpsTracking';
-import { UserRole } from '@prisma/client';
-import { createTripForLoad } from '@/lib/tripManagement';
+import { UserRole, Prisma } from '@prisma/client';
+import crypto from 'crypto';
 
 // Validation schema for load request response
 const LoadRequestResponseSchema = z.object({
@@ -150,177 +150,222 @@ export async function POST(
     }
 
     if (data.action === 'APPROVE') {
-      // Check if load is still available
-      if (loadRequest.load.assignedTruckId) {
-        return NextResponse.json(
-          { error: 'Load has already been assigned to another truck' },
-          { status: 400 }
-        );
-      }
+      // P0-002 & P0-003 FIX: All checks and operations now inside atomic transaction
+      // This prevents race conditions and ensures trip creation is atomic
+      try {
+        const result = await db.$transaction(async (tx) => {
+          // P0-002 FIX: Re-fetch load inside transaction to prevent race condition
+          const freshLoad = await tx.load.findUnique({
+            where: { id: loadRequest.loadId },
+            select: {
+              id: true,
+              status: true,
+              assignedTruckId: true,
+              shipperId: true,
+              pickupCity: true,
+              deliveryCity: true,
+              pickupAddress: true,
+              deliveryAddress: true,
+              originLat: true,
+              originLon: true,
+              destinationLat: true,
+              destinationLon: true,
+              tripKm: true,
+              estimatedTripKm: true,
+            },
+          });
 
-      const availableStatuses = ['POSTED', 'SEARCHING', 'OFFERED'];
-      if (!availableStatuses.includes(loadRequest.load.status)) {
-        return NextResponse.json(
-          { error: `Load is no longer available (status: ${loadRequest.load.status})` },
-          { status: 400 }
-        );
-      }
+          if (!freshLoad) {
+            throw new Error('LOAD_NOT_FOUND');
+          }
 
-      // Check if truck is already assigned to another load (unique constraint on assignedTruckId)
-      const existingAssignment = await db.load.findFirst({
-        where: {
-          assignedTruckId: loadRequest.truckId,
-        },
-        select: {
-          id: true,
-          status: true,
-          pickupCity: true,
-          deliveryCity: true,
-        },
-      });
+          // P0-002 FIX: Check availability INSIDE transaction
+          if (freshLoad.assignedTruckId) {
+            throw new Error('LOAD_ALREADY_ASSIGNED');
+          }
 
-      if (existingAssignment) {
-        // If the existing load is completed/delivered/cancelled, unassign it first
-        const inactiveStatuses = ['DELIVERED', 'COMPLETED', 'CANCELLED', 'EXPIRED'];
-        if (inactiveStatuses.includes(existingAssignment.status)) {
-          await db.load.update({
-            where: { id: existingAssignment.id },
+          const availableStatuses = ['POSTED', 'SEARCHING', 'OFFERED'];
+          if (!availableStatuses.includes(freshLoad.status)) {
+            throw new Error(`LOAD_NOT_AVAILABLE:${freshLoad.status}`);
+          }
+
+          // Check if truck is already assigned to another active load
+          const existingAssignment = await tx.load.findFirst({
+            where: {
+              assignedTruckId: loadRequest.truckId,
+              status: { notIn: ['DELIVERED', 'COMPLETED', 'CANCELLED', 'EXPIRED'] },
+            },
+            select: { id: true, pickupCity: true, deliveryCity: true, status: true },
+          });
+
+          if (existingAssignment) {
+            throw new Error(`TRUCK_BUSY:${existingAssignment.pickupCity}:${existingAssignment.deliveryCity}`);
+          }
+
+          // Unassign truck from any completed loads
+          await tx.load.updateMany({
+            where: {
+              assignedTruckId: loadRequest.truckId,
+              status: { in: ['DELIVERED', 'COMPLETED', 'CANCELLED', 'EXPIRED'] },
+            },
             data: { assignedTruckId: null },
           });
-        } else {
-          return NextResponse.json(
-            {
-              error: `This truck is already assigned to an active load (${existingAssignment.pickupCity} → ${existingAssignment.deliveryCity})`,
-              existingLoadId: existingAssignment.id,
-              existingLoadStatus: existingAssignment.status,
+
+          // Update load request to approved
+          const updatedRequest = await tx.loadRequest.update({
+            where: { id: requestId },
+            data: {
+              status: 'APPROVED',
+              respondedAt: new Date(),
+              responseNotes: data.responseNotes,
+              respondedById: session.userId,
             },
+          });
+
+          // Assign load to truck
+          const updatedLoad = await tx.load.update({
+            where: { id: loadRequest.loadId },
+            data: {
+              assignedTruckId: loadRequest.truckId,
+              assignedAt: new Date(),
+              status: 'ASSIGNED',
+            },
+          });
+
+          // P0-003 FIX: Create trip INSIDE transaction (atomic with assignment)
+          const trackingUrl = `trip-${loadRequest.loadId.slice(-6)}-${crypto.randomBytes(12).toString('hex')}`;
+
+          const trip = await tx.trip.create({
+            data: {
+              loadId: loadRequest.loadId,
+              truckId: loadRequest.truckId,
+              carrierId: loadRequest.carrierId,
+              shipperId: freshLoad.shipperId,
+              status: 'ASSIGNED',
+              pickupLat: freshLoad.originLat,
+              pickupLng: freshLoad.originLon,
+              pickupAddress: freshLoad.pickupAddress,
+              pickupCity: freshLoad.pickupCity,
+              deliveryLat: freshLoad.destinationLat,
+              deliveryLng: freshLoad.destinationLon,
+              deliveryAddress: freshLoad.deliveryAddress,
+              deliveryCity: freshLoad.deliveryCity,
+              estimatedDistanceKm: freshLoad.tripKm || freshLoad.estimatedTripKm,
+              trackingUrl,
+              trackingEnabled: true,
+            },
+          });
+
+          // Create load event
+          await tx.loadEvent.create({
+            data: {
+              loadId: loadRequest.loadId,
+              eventType: 'ASSIGNED',
+              description: `Load assigned to ${loadRequest.carrier.name} (${loadRequest.truck.licensePlate}) via carrier request`,
+              userId: session.userId,
+              metadata: {
+                loadRequestId: requestId,
+                approvedViaRequest: true,
+                carrierId: loadRequest.carrierId,
+                tripId: trip.id,
+              },
+            },
+          });
+
+          // Cancel other pending load requests for this load
+          await tx.loadRequest.updateMany({
+            where: {
+              loadId: loadRequest.loadId,
+              id: { not: requestId },
+              status: 'PENDING',
+            },
+            data: { status: 'CANCELLED' },
+          });
+
+          // Cancel pending truck requests for this load
+          await tx.truckRequest.updateMany({
+            where: {
+              loadId: loadRequest.loadId,
+              status: 'PENDING',
+            },
+            data: { status: 'CANCELLED' },
+          });
+
+          // Cancel pending match proposals
+          await tx.matchProposal.updateMany({
+            where: {
+              loadId: loadRequest.loadId,
+              status: 'PENDING',
+            },
+            data: { status: 'CANCELLED' },
+          });
+
+          return { request: updatedRequest, load: updatedLoad, trip };
+        });
+
+        // Non-critical: Enable GPS tracking outside transaction (fire-and-forget)
+        let trackingUrl: string | null = result.trip?.trackingUrl || null;
+        if (loadRequest.truck.imei && loadRequest.truck.gpsVerifiedAt) {
+          enableTrackingForLoad(loadRequest.loadId, loadRequest.truckId)
+            .then(url => { if (url) trackingUrl = url; })
+            .catch(err => console.error('Failed to enable GPS tracking:', err));
+        }
+
+        // Non-critical: Notify carrier users (fire-and-forget)
+        db.user.findMany({
+          where: { organizationId: loadRequest.carrierId, status: 'ACTIVE' },
+          select: { id: true },
+        }).then(async (carrierUsers) => {
+          for (const user of carrierUsers) {
+            await createNotification({
+              userId: user.id,
+              type: 'LOAD_REQUEST_APPROVED',
+              title: 'Load Request Approved',
+              message: `Your request for the load from ${loadRequest.load.pickupCity} to ${loadRequest.load.deliveryCity} has been approved!`,
+              metadata: {
+                loadRequestId: requestId,
+                loadId: loadRequest.loadId,
+                truckId: loadRequest.truckId,
+              },
+            });
+          }
+        }).catch(err => console.error('Failed to notify carriers:', err));
+
+        return NextResponse.json({
+          request: result.request,
+          load: result.load,
+          trip: result.trip,
+          trackingUrl,
+          message: 'Load request approved. Load has been assigned to the carrier.',
+        });
+
+      } catch (error: any) {
+        // Handle specific transaction errors
+        if (error.message === 'LOAD_NOT_FOUND') {
+          return NextResponse.json({ error: 'Load not found' }, { status: 404 });
+        }
+        if (error.message === 'LOAD_ALREADY_ASSIGNED') {
+          return NextResponse.json(
+            { error: 'Load has already been assigned to another truck' },
+            { status: 409 }
+          );
+        }
+        if (error.message.startsWith('LOAD_NOT_AVAILABLE:')) {
+          const status = error.message.split(':')[1];
+          return NextResponse.json(
+            { error: `Load is no longer available (status: ${status})` },
             { status: 400 }
           );
         }
-      }
-
-      // Transaction: Update request and assign load
-      const result = await db.$transaction(async (tx) => {
-        // Update load request to approved
-        const updatedRequest = await tx.loadRequest.update({
-          where: { id: requestId },
-          data: {
-            status: 'APPROVED',
-            respondedAt: new Date(),
-            responseNotes: data.responseNotes,
-            respondedById: session.userId,
-          },
-        });
-
-        // Assign load to truck
-        const updatedLoad = await tx.load.update({
-          where: { id: loadRequest.loadId },
-          data: {
-            assignedTruckId: loadRequest.truckId,
-            assignedAt: new Date(),
-            status: 'ASSIGNED',
-          },
-        });
-
-        // Create load event
-        await tx.loadEvent.create({
-          data: {
-            loadId: loadRequest.loadId,
-            eventType: 'ASSIGNED',
-            description: `Load assigned to ${loadRequest.carrier.name} (${loadRequest.truck.licensePlate}) via carrier request`,
-            userId: session.userId,
-            metadata: {
-              loadRequestId: requestId,
-              approvedViaRequest: true,
-              carrierId: loadRequest.carrierId,
-            },
-          },
-        });
-
-        // Cancel other pending requests for this load
-        await tx.loadRequest.updateMany({
-          where: {
-            loadId: loadRequest.loadId,
-            id: { not: requestId },
-            status: 'PENDING',
-          },
-          data: {
-            status: 'CANCELLED',
-          },
-        });
-
-        // Cancel other pending truck requests for this load
-        await tx.truckRequest.updateMany({
-          where: {
-            loadId: loadRequest.loadId,
-            status: 'PENDING',
-          },
-          data: {
-            status: 'CANCELLED',
-          },
-        });
-
-        // Cancel pending match proposals for this load
-        await tx.matchProposal.updateMany({
-          where: {
-            loadId: loadRequest.loadId,
-            status: 'PENDING',
-          },
-          data: {
-            status: 'CANCELLED',
-          },
-        });
-
-        return { request: updatedRequest, load: updatedLoad };
-      });
-
-      // Create Trip record
-      let trip = null;
-      try {
-        trip = await createTripForLoad(loadRequest.loadId, loadRequest.truckId, session.userId);
-      } catch (error) {
-        console.error('Failed to create trip:', error);
-      }
-
-      // Enable GPS tracking if available
-      let trackingUrl: string | null = trip?.trackingUrl || null;
-      if (loadRequest.truck.imei && loadRequest.truck.gpsVerifiedAt && !trackingUrl) {
-        try {
-          trackingUrl = await enableTrackingForLoad(loadRequest.loadId, loadRequest.truckId);
-        } catch (error) {
-          console.error('Failed to enable GPS tracking:', error);
+        if (error.message.startsWith('TRUCK_BUSY:')) {
+          const [, pickup, delivery] = error.message.split(':');
+          return NextResponse.json(
+            { error: `This truck is already assigned to an active load (${pickup} → ${delivery})` },
+            { status: 400 }
+          );
         }
+        throw error; // Re-throw for generic error handling
       }
-
-      // Notify carrier users
-      const carrierUsers = await db.user.findMany({
-        where: {
-          organizationId: loadRequest.carrierId,
-          status: 'ACTIVE',
-        },
-        select: { id: true },
-      });
-
-      for (const user of carrierUsers) {
-        await createNotification({
-          userId: user.id,
-          type: 'LOAD_REQUEST_APPROVED',
-          title: 'Load Request Approved',
-          message: `Your request for the load from ${loadRequest.load.pickupCity} to ${loadRequest.load.deliveryCity} has been approved!`,
-          metadata: {
-            loadRequestId: requestId,
-            loadId: loadRequest.loadId,
-            truckId: loadRequest.truckId,
-          },
-        });
-      }
-
-      return NextResponse.json({
-        request: result.request,
-        load: result.load,
-        trackingUrl,
-        message: 'Load request approved. Load has been assigned to the carrier.',
-      });
     } else {
       // REJECT
       const updatedRequest = await db.loadRequest.update({

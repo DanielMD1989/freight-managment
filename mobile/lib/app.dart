@@ -43,6 +43,18 @@ final onboardingCompleteProvider = FutureProvider<bool>((ref) async {
   return prefs.getBool('onboarding_complete') ?? false;
 });
 
+/// Global key for the shipper shell scaffold
+final shipperScaffoldKey = GlobalKey<ScaffoldState>();
+
+/// Global key for the carrier shell scaffold
+final carrierScaffoldKey = GlobalKey<ScaffoldState>();
+
+/// Helper function to open the drawer from anywhere
+void openDrawer(BuildContext context, {bool isShipper = true}) {
+  final key = isShipper ? shipperScaffoldKey : carrierScaffoldKey;
+  key.currentState?.openDrawer();
+}
+
 /// A2 Modern Navy Design System Colors
 class AppColors {
   // Primary Colors (Ocean Blue)
@@ -626,7 +638,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/shipper/trucks',
-            builder: (context, state) => const ShipperTruckboardScreen(),
+            builder: (context, state) => ShipperTruckboardScreen(
+              origin: state.uri.queryParameters['origin'],
+              destination: state.uri.queryParameters['destination'],
+              loadId: state.uri.queryParameters['loadId'],
+            ),
           ),
           GoRoute(
             path: '/shipper/trucks/:id',
@@ -681,6 +697,7 @@ class CarrierShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: carrierScaffoldKey,
       body: child,
       drawer: _CarrierDrawer(),
       bottomNavigationBar: NavigationBar(
@@ -960,6 +977,7 @@ class ShipperShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: shipperScaffoldKey,
       body: child,
       drawer: _ShipperDrawer(),
       bottomNavigationBar: NavigationBar(

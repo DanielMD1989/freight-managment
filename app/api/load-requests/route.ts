@@ -14,7 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth';
-import { requireCSRF } from '@/lib/csrf';
+// P0-001 FIX: Removed requireCSRF import - middleware handles CSRF and exempts Bearer tokens (mobile)
 import { createNotification } from '@/lib/notifications';
 import { UserRole } from '@prisma/client';
 
@@ -43,11 +43,9 @@ export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth();
 
-    // CSRF protection for state-changing operation
-    const csrfError = await requireCSRF(request);
-    if (csrfError) {
-      return csrfError;
-    }
+    // P0-001 FIX: CSRF validation is handled by middleware
+    // Middleware exempts Bearer token requests (mobile clients)
+    // Removing duplicate check that was blocking mobile carrier workflow
 
     // Only carriers can request loads
     if (session.role !== 'CARRIER') {

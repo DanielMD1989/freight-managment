@@ -12,6 +12,7 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { TripStatus } from '@prisma/client';
 import { z } from 'zod';
+import { TripCache, CacheInvalidation, CacheTTL, cacheAside, CacheKeys, cache } from '@/lib/cache';
 
 const createTripSchema = z.object({
   loadId: z.string(),
@@ -38,6 +39,20 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '100'); // Higher default for UI
     const skip = (page - 1) * limit;
+
+    // PHASE 4: Build cache key from filter parameters
+    const cacheKey = `trips:list:${JSON.stringify({
+      status: statusParam, page, limit, role: session.role, orgId: session.organizationId,
+    })}`;
+
+    // Try cache first for admin/dispatcher queries (global view)
+    const isCacheableQuery = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN' || session.role === 'DISPATCHER';
+    if (isCacheableQuery) {
+      const cachedResult = await cache.get(cacheKey);
+      if (cachedResult) {
+        return NextResponse.json(cachedResult);
+      }
+    }
 
     // Build where clause based on role
     let whereClause: any = {};
@@ -137,7 +152,7 @@ export async function GET(request: NextRequest) {
       rate: trip.load?.totalFareEtb ? Number(trip.load.totalFareEtb) : (trip.load?.rate ? Number(trip.load.rate) : null),
     }));
 
-    return NextResponse.json({
+    const response = {
       trips: transformedTrips,
       pagination: {
         page,
@@ -145,9 +160,28 @@ export async function GET(request: NextRequest) {
         total,
         totalPages: Math.ceil(total / limit),
       },
-    });
+    };
+
+    // PHASE 4: Cache the result for cacheable queries
+    if (isCacheableQuery) {
+      // Cache with short TTL (60 seconds) for active trips - real-time updates
+      await cache.set(cacheKey, response, CacheTTL.ACTIVE_TRIP);
+    }
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('List trips error:', error);
+
+    // Handle specific error types
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized' || error.name === 'UnauthorizedError') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      if (error.name === 'ForbiddenError') {
+        return NextResponse.json({ error: error.message }, { status: 403 });
+      }
+    }
+
     return NextResponse.json(
       { error: 'Failed to fetch trips' },
       { status: 500 }
@@ -268,6 +302,10 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // PHASE 4: Invalidate trip and load caches when new trip is created
+    await CacheInvalidation.trip(trip.id, truck.carrierId, load.shipperId);
+    await CacheInvalidation.allListings();
 
     return NextResponse.json({
       message: 'Trip created successfully',

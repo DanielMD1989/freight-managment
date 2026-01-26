@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../app.dart';
+import '../../../app.dart' show AppColors, openDrawer;
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/services/dashboard_service.dart';
 import '../../../core/services/truck_service.dart';
@@ -43,11 +43,9 @@ class CarrierHomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed: () => openDrawer(context, isShipper: false),
         ),
         title: const Text('Dashboard'),
         actions: [

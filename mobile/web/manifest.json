@@ -1,11 +1,11 @@
 {
-    "name": "freight_management_mobile",
-    "short_name": "freight_management_mobile",
+    "name": "FreightHub - Ethiopian Freight Platform",
+    "short_name": "FreightHub",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#f0fdfa",
+    "theme_color": "#0d9488",
+    "description": "Ethiopian freight management and load board platform",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

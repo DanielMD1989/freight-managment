@@ -35,18 +35,18 @@ dependencies:
   geolocator: ^10.1.0
   geocoding: ^2.1.1
 
-  # Background Services
+  # Background Services (temporarily disabled for initial testing)
   workmanager: ^0.5.2
-  flutter_background_geolocation: ^4.14.3
+  # flutter_background_geolocation: ^4.14.3
 
   # Camera & Files
   image_picker: ^1.0.7
   file_picker: ^6.1.1
   path_provider: ^2.1.2
 
-  # Push Notifications
-  firebase_core: ^2.25.4
-  firebase_messaging: ^14.7.15
+  # Push Notifications (Firebase temporarily disabled for Xcode 26 compatibility)
+  # firebase_core: ^2.25.4
+  # firebase_messaging: ^14.7.15
   flutter_local_notifications: ^16.3.2
 
   # UI Components
@@ -68,8 +68,8 @@ dependencies:
   connectivity_plus: ^5.0.2
   permission_handler: ^11.2.0
 
-  # Barcode/QR
-  mobile_scanner: ^4.0.1
+  # Barcode/QR (temporarily disabled)
+  # mobile_scanner: ^4.0.1
 
 dev_dependencies:
   flutter_test:

@@ -222,12 +222,17 @@ export default async function CarrierRequestsPage() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Requests
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Manage shipper booking requests and your load requests
-        </p>
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-md shadow-teal-500/25">
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800">Requests</h1>
+            <p className="text-slate-500 text-sm">Manage shipper booking requests and your load requests</p>
+          </div>
+        </div>
       </div>
 
       <Suspense fallback={<RequestsSkeleton />}>

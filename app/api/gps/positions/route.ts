@@ -3,9 +3,10 @@ import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { broadcastGpsPosition } from "@/lib/websocket-server";
+import { checkRateLimit, withRpsLimit, RATE_LIMIT_GPS_UPDATE, RPS_CONFIGS } from "@/lib/rateLimit";
 
 // GET /api/gps/positions - Get latest GPS positions
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   try {
     const session = await requireAuth();
     const { searchParams } = request.nextUrl;
@@ -84,8 +85,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Apply RPS rate limiting to GET (100 RPS with 20 burst)
+export const GET = withRpsLimit(RPS_CONFIGS.gps, getHandler);
+
 // POST /api/gps/positions - Receive GPS data from devices
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     // This would be called by GPS hardware devices
     // For MVP, we'll allow simple position updates
@@ -97,6 +101,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Missing required fields: imei, latitude, longitude" },
         { status: 400 }
+      );
+    }
+
+    // PHASE 4: Enforce GPS rate limiting to prevent DoS
+    // Rate limit by IMEI (device identifier) - 12 requests per hour per device
+    const rateLimitResult = await checkRateLimit(
+      { ...RATE_LIMIT_GPS_UPDATE, keyGenerator: () => `imei:${imei}` },
+      imei
+    );
+
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        {
+          error: "GPS update rate limit exceeded. Maximum 12 updates per hour per device.",
+          retryAfter: rateLimitResult.retryAfter,
+        },
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": rateLimitResult.limit.toString(),
+            "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+            "X-RateLimit-Reset": new Date(rateLimitResult.resetTime).toISOString(),
+            "Retry-After": rateLimitResult.retryAfter?.toString() || "60",
+          },
+        }
       );
     }
 
@@ -194,3 +223,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Apply RPS rate limiting to POST (100 RPS with 20 burst)
+export const POST = withRpsLimit(RPS_CONFIGS.gps, postHandler);

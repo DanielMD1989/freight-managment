@@ -109,13 +109,13 @@ export default function ShipperRequestsClient({ requests: initialRequests }: Pro
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      PENDING: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      APPROVED: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      REJECTED: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      EXPIRED: 'bg-[#064d51]/10 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
-      CANCELLED: 'bg-[#064d51]/10 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+      PENDING: 'bg-amber-50 text-amber-700 border border-amber-200',
+      APPROVED: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+      REJECTED: 'bg-rose-50 text-rose-700 border border-rose-200',
+      EXPIRED: 'bg-slate-50 text-slate-600 border border-slate-200',
+      CANCELLED: 'bg-slate-50 text-slate-600 border border-slate-200',
     };
-    return styles[status] || 'bg-[#064d51]/10 text-gray-800';
+    return styles[status] || 'bg-slate-50 text-slate-600 border border-slate-200';
   };
 
   const formatDate = (date: string) => {
@@ -194,10 +194,10 @@ export default function ShipperRequestsClient({ requests: initialRequests }: Pro
           <button
             key={status}
             onClick={() => setStatusFilter(status)}
-            className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+            className={`px-4 py-2 rounded-xl font-medium text-sm transition-all ${
               statusFilter === status
-                ? 'bg-[#1e9c99] text-white'
-                : 'bg-[#064d51]/10 dark:bg-slate-700 text-[#064d51]/80 dark:text-gray-300 hover:bg-[#064d51]/20 dark:hover:bg-slate-600'
+                ? 'bg-gradient-to-r from-teal-600 to-teal-500 text-white shadow-md shadow-teal-500/25'
+                : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
             }`}
           >
             {status === 'all' ? 'All' : status} ({statusCounts[status]})
@@ -207,8 +207,14 @@ export default function ShipperRequestsClient({ requests: initialRequests }: Pro
 
       {/* Requests List */}
       {filteredRequests.length === 0 ? (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-[#064d51]/15 dark:border-slate-700 p-8 text-center">
-          <p className="text-[#064d51]/60 dark:text-gray-400">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-12 text-center">
+          <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-slate-800 mb-2">No Requests</h3>
+          <p className="text-slate-500">
             {statusFilter === 'all'
               ? "You haven't received any truck requests yet."
               : `No ${statusFilter.toLowerCase()} requests.`}
@@ -219,11 +225,11 @@ export default function ShipperRequestsClient({ requests: initialRequests }: Pro
           {filteredRequests.map((request) => (
             <div
               key={request.id}
-              className={`bg-white dark:bg-slate-800 rounded-lg shadow border ${
+              className={`bg-white rounded-2xl shadow-sm border p-6 ${
                 request.status === 'PENDING'
-                  ? 'border-yellow-300 dark:border-yellow-700'
-                  : 'border-[#064d51]/15 dark:border-slate-700'
-              } p-6`}
+                  ? 'border-amber-300 ring-1 ring-amber-100'
+                  : 'border-slate-200/60'
+              }`}
             >
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -261,14 +267,14 @@ export default function ShipperRequestsClient({ requests: initialRequests }: Pro
                         <button
                           onClick={() => handleRespond(request.id, false)}
                           disabled={loading === request.id}
-                          className="px-4 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-900/30 disabled:opacity-50"
+                          className="px-4 py-2 text-sm text-rose-600 border border-rose-200 rounded-xl hover:bg-rose-50 disabled:opacity-50 font-medium transition-colors"
                         >
                           Reject
                         </button>
                         <button
                           onClick={() => handleRespond(request.id, true)}
                           disabled={loading === request.id}
-                          className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                          className="px-4 py-2 text-sm bg-gradient-to-r from-emerald-600 to-emerald-500 text-white rounded-xl hover:from-emerald-700 hover:to-emerald-600 disabled:opacity-50 font-medium shadow-md shadow-emerald-500/25 transition-all"
                         >
                           {loading === request.id ? 'Processing...' : 'Accept'}
                         </button>

@@ -78,9 +78,11 @@ class _PostLoadScreenState extends ConsumerState<PostLoadScreen> {
       appBar: AppBar(
         title: const Text('Post New Load'),
       ),
-      body: Form(
-        key: _formKey,
-        child: Stepper(
+      body: SafeArea(
+        top: false, // AppBar handles top safe area
+        child: Form(
+          key: _formKey,
+          child: Stepper(
           type: StepperType.vertical,
           currentStep: _currentStep,
           onStepContinue: _onStepContinue,
@@ -160,6 +162,7 @@ class _PostLoadScreenState extends ConsumerState<PostLoadScreen> {
               content: _buildAdditionalInfoStep(),
             ),
           ],
+          ),
         ),
       ),
     );

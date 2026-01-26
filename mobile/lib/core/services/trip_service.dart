@@ -275,8 +275,25 @@ class TripService {
       final response = await _apiClient.dio.get('/api/trips/$tripId/live');
 
       if (response.statusCode == 200 && response.data != null) {
-        final position = GpsPosition.fromJson(response.data);
-        return ApiResponse.success(position);
+        // Backend returns a rich object with currentLocation, pickup, delivery, etc.
+        // Extract the currentLocation to create a GpsPosition
+        final currentLocation = response.data['currentLocation'];
+        if (currentLocation != null) {
+          final position = GpsPosition(
+            id: tripId, // Use tripId as position id since backend doesn't provide one
+            latitude: (currentLocation['latitude'] as num?)?.toDouble() ?? 0,
+            longitude: (currentLocation['longitude'] as num?)?.toDouble() ?? 0,
+            speed: (currentLocation['speed'] as num?)?.toDouble(),
+            heading: (currentLocation['heading'] as num?)?.toDouble(),
+            altitude: null,
+            accuracy: null,
+            timestamp: currentLocation['updatedAt'] != null
+                ? DateTime.parse(currentLocation['updatedAt'])
+                : DateTime.now(),
+          );
+          return ApiResponse.success(position);
+        }
+        return ApiResponse.success(null);
       }
 
       return ApiResponse.success(null);

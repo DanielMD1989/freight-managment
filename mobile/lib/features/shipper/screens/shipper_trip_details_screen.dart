@@ -154,9 +154,11 @@ class _ShipperTripDetailsScreenState
         ref.invalidate(shipperTripDetailProvider(widget.tripId));
         ref.invalidate(tripPodsProvider(widget.tripId));
       },
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
+      child: SafeArea(
+        top: false, // AppBar handles top safe area
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
           // Status card with progress
           _StatusCard(trip: trip),
           const SizedBox(height: 16),
@@ -209,6 +211,7 @@ class _ShipperTripDetailsScreenState
           _TimelineSection(trip: trip),
           const SizedBox(height: 32),
         ],
+        ),
       ),
     );
   }
@@ -735,12 +738,17 @@ class _CarrierSection extends StatelessWidget {
                     ),
                   ),
                   if (onCall != null)
-                    IconButton(
-                      onPressed: onCall,
-                      icon: const Icon(Icons.phone),
-                      style: IconButton.styleFrom(
-                        backgroundColor: AppColors.success.withOpacity(0.1),
-                        foregroundColor: AppColors.success,
+                    SizedBox(
+                      width: 48, // Minimum touch target
+                      height: 48, // Minimum touch target
+                      child: IconButton(
+                        onPressed: onCall,
+                        icon: const Icon(Icons.phone),
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppColors.success.withOpacity(0.1),
+                          foregroundColor: AppColors.success,
+                          minimumSize: const Size(48, 48),
+                        ),
                       ),
                     ),
                 ],

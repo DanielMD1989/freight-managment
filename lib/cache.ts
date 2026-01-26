@@ -647,11 +647,14 @@ export const CacheInvalidation = {
     await Promise.all(promises);
   },
 
-  /** Invalidate truck and posting caches */
+  /** Invalidate truck and posting caches - P1-001 FIX: Also invalidate matching caches */
   async truck(truckId: string, carrierId?: string, orgId?: string): Promise<void> {
     const promises = [
       cache.delete(CacheKeys.truck(truckId)),
       cache.deletePattern('trucks:list:*'),
+      // P1-001 FIX: Invalidate matching caches to ensure new trucks are visible immediately
+      cache.deletePattern('matching:*'),
+      cache.deletePattern('truck-postings:*'),
     ];
     if (carrierId) {
       promises.push(cache.delete(CacheKeys.truckPostings(carrierId)));

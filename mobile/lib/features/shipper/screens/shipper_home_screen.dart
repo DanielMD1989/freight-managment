@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../app.dart';
+import '../../../app.dart' show AppColors, openDrawer;
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/services/dashboard_service.dart';
 import '../../../core/services/trip_service.dart';
@@ -44,11 +44,12 @@ class ShipperHomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed: () {
+            // Use the global key to open the drawer from the parent ShipperShell
+            openDrawer(context, isShipper: true);
+          },
         ),
         title: const Text('Dashboard'),
         actions: [

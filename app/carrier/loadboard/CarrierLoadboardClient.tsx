@@ -8,12 +8,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { NavTabs } from '@/components/loadboard-ui';
+import Image from 'next/image';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import PostTrucksTab from './PostTrucksTab';
 import SearchLoadsTab from './SearchLoadsTab';
-import NotificationBell from '@/components/NotificationBell';
-import { clearCSRFToken, getCSRFToken } from '@/lib/csrfFetch';
 
 interface CarrierLoadboardClientProps {
   user: any;
@@ -58,7 +56,7 @@ export default function CarrierLoadboardClient({ user }: CarrierLoadboardClientP
 
   // Handle browser back/forward navigation
   useEffect(() => {
-    const handlePopState = (event: PopStateEvent) => {
+    const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get('tab') as CarrierTabKey;
 
@@ -73,77 +71,59 @@ export default function CarrierLoadboardClient({ user }: CarrierLoadboardClientP
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  /**
-   * Handle logout
-   */
-  const handleLogout = async () => {
-    try {
-      const csrfToken = await getCSRFToken();
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: { ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        // Clear CSRF token cache on logout
-        clearCSRFToken();
-        // Redirect to login page
-        window.location.href = '/login';
-      } else {
-        alert('Logout failed. Please try again.');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-      alert('Logout failed. Please try again.');
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-[var(--bg-tinted)]">
-      {/* Header - Medium Teal Design */}
-      <div className="portal-header">
-        {/* Navigation Tabs */}
-        <div className="flex-1 flex justify-start">
-          <NavTabs
-            activeTab={activeTab}
-            onTabChange={(tab) => setActiveTab(tab as CarrierTabKey)}
-            userRole={user.role}
-            portalType="carrier"
-          />
-        </div>
-
-        {/* User Info & Actions */}
-        <div className="flex items-center gap-4 pl-4 border-l border-white/20">
-          {/* Notification Bell */}
-          <NotificationBell />
-
-          {/* Divider before user info */}
-          <div className="h-8 w-px bg-white/20 hidden sm:block"></div>
-
-          {/* User Info */}
-          <div className="portal-header-user" style={{ borderLeft: 'none', paddingLeft: 0, marginLeft: 0 }}>
-            <div className="portal-header-avatar">
-              {user.firstName?.[0]}{user.lastName?.[0]}
-            </div>
-            <div className="hidden sm:block">
-              <div className="portal-header-name">{user.firstName} {user.lastName}</div>
-              <div className="portal-header-role">{user.role}</div>
-            </div>
+    <div className="p-6 space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-md shadow-teal-500/25 p-2">
+            <Image
+              src="/cargo-icon.png"
+              alt="Load Board"
+              width={32}
+              height={32}
+              style={{ objectFit: 'contain' }}
+            />
           </div>
-
-          {/* Logout Button */}
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 bg-white hover:bg-white/90 text-[#1e9c99] text-sm font-semibold rounded-lg transition-colors border border-white"
-          >
-            Logout
-          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800">Load Board</h1>
+            <p className="text-slate-500 text-sm">Post trucks and search for available loads</p>
+          </div>
         </div>
       </div>
 
+      {/* Tab Navigation */}
+      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-1.5 inline-flex gap-1">
+        <button
+          onClick={() => setActiveTab('POST_TRUCKS')}
+          className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+            activeTab === 'POST_TRUCKS'
+              ? 'bg-gradient-to-r from-teal-600 to-teal-500 text-white shadow-md shadow-teal-500/25'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Post Trucks
+        </button>
+        <button
+          onClick={() => setActiveTab('SEARCH_LOADS')}
+          className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+            activeTab === 'SEARCH_LOADS'
+              ? 'bg-gradient-to-r from-teal-600 to-teal-500 text-white shadow-md shadow-teal-500/25'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          Search Loads
+        </button>
+      </div>
+
       {/* Tab Content */}
-      <div className="p-6">
+      <div>
         {isInitialLoad ? (
           /* Loading skeleton while restoring tab state */
           <div className="bg-white rounded-xl shadow-sm border border-[var(--border)] p-6 animate-pulse">

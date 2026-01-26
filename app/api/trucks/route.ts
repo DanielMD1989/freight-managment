@@ -10,6 +10,8 @@ import {
   determineGpsStatus,
 } from "@/lib/gpsVerification";
 import { getVisibilityRules, RULE_SHIPPER_DEMAND_FOCUS } from "@/lib/foundation-rules";
+import { TruckCache, CacheInvalidation } from "@/lib/cache";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 
 const createTruckSchema = z.object({
   truckType: z.enum(["FLATBED", "REFRIGERATED", "TANKER", "CONTAINER", "DRY_VAN", "LOWBOY", "DUMP_TRUCK", "BOX_TRUCK"]),
@@ -28,6 +30,31 @@ const createTruckSchema = z.object({
 // POST /api/trucks - Create truck
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting: Apply RPS_CONFIGS.fleet
+    const ip =
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      request.headers.get('x-real-ip') ||
+      'unknown';
+    const rpsResult = await checkRpsLimit(
+      RPS_CONFIGS.fleet.endpoint,
+      ip,
+      RPS_CONFIGS.fleet.rps,
+      RPS_CONFIGS.fleet.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please slow down.', retryAfter: 1 },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rpsResult.limit.toString(),
+            'X-RateLimit-Remaining': rpsResult.remaining.toString(),
+            'Retry-After': '1',
+          },
+        }
+      );
+    }
+
     const session = await requireAuth();
     await requirePermission(Permission.CREATE_TRUCK);
 
@@ -108,6 +135,9 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // PHASE 4: Invalidate truck list caches when new truck is created
+    await CacheInvalidation.truck(truck.id, user.organizationId, user.organizationId);
+
     return NextResponse.json({ truck }, { status: 201 });
   } catch (error) {
     console.error("Create truck error:", error);
@@ -134,6 +164,31 @@ export async function POST(request: NextRequest) {
 // - ADMIN/SUPER_ADMIN: Full access
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting: Apply RPS_CONFIGS.fleet
+    const ip =
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      request.headers.get('x-real-ip') ||
+      'unknown';
+    const rpsResult = await checkRpsLimit(
+      RPS_CONFIGS.fleet.endpoint,
+      ip,
+      RPS_CONFIGS.fleet.rps,
+      RPS_CONFIGS.fleet.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please slow down.', retryAfter: 1 },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rpsResult.limit.toString(),
+            'X-RateLimit-Remaining': rpsResult.remaining.toString(),
+            'Retry-After': '1',
+          },
+        }
+      );
+    }
+
     const session = await requireAuth();
     const { searchParams } = request.nextUrl;
 
@@ -144,6 +199,22 @@ export async function GET(request: NextRequest) {
     const myTrucks = searchParams.get("myTrucks") === "true";
     const carrierId = searchParams.get("carrierId"); // Admin filter
     const approvalStatus = searchParams.get("approvalStatus"); // Sprint 18: Filter by approval status
+
+    // PHASE 4: Build cache key from filter parameters
+    const cacheFilters = {
+      page, limit, truckType, isAvailable, myTrucks, carrierId,
+      approvalStatus, role: session.role, orgId: session.organizationId,
+    };
+
+    // Try cache first for non-personalized queries
+    // Cache dispatcher/admin queries that see all trucks
+    const isCacheableQuery = session.role === 'DISPATCHER' || session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+    if (isCacheableQuery && !myTrucks) {
+      const cachedResult = await TruckCache.getList(cacheFilters);
+      if (cachedResult) {
+        return NextResponse.json(cachedResult);
+      }
+    }
 
     // Get user with role info
     const user = await db.user.findUnique({
@@ -260,7 +331,7 @@ export async function GET(request: NextRequest) {
       activePostingId: truck.postings[0]?.id || null,
     }));
 
-    return NextResponse.json({
+    const response = {
       trucks: trucksWithPostingStatus,
       pagination: {
         page,
@@ -268,9 +339,27 @@ export async function GET(request: NextRequest) {
         total,
         pages: Math.ceil(total / limit),
       },
-    });
+    };
+
+    // PHASE 4: Cache the result for cacheable queries
+    if (isCacheableQuery && !myTrucks) {
+      await TruckCache.setList(cacheFilters, response as unknown as unknown[]);
+    }
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error("List trucks error:", error);
+
+    // Handle specific error types
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized' || error.name === 'UnauthorizedError') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      if (error.name === 'ForbiddenError') {
+        return NextResponse.json({ error: error.message }, { status: 403 });
+      }
+    }
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

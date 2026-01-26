@@ -188,42 +188,46 @@ class _FilterChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final chipColor = color ?? AppColors.primary;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? chipColor : chipColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : chipColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: isSelected ? Colors.white.withOpacity(0.25) : chipColor.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                count.toString(),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 48), // Minimum touch target
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? chipColor : chipColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
                 style: TextStyle(
                   color: isSelected ? Colors.white : chipColor,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.white.withOpacity(0.25) : chipColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  count.toString(),
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : chipColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -316,16 +320,20 @@ class _ShipmentCard extends StatelessWidget {
                   children: [
                     Icon(Icons.local_shipping, size: 16, color: Colors.grey[600]),
                     const SizedBox(width: 8),
-                    Text(
-                      trip.carrier!.name,
-                      style: TextStyle(color: Colors.grey[700], fontSize: 13),
+                    Expanded(
+                      child: Text(
+                        trip.carrier!.name,
+                        style: TextStyle(color: Colors.grey[700], fontSize: 13),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
                     ),
                     if (trip.carrier!.isVerified) ...[
                       const SizedBox(width: 4),
                       Icon(Icons.verified, size: 14, color: AppColors.primary),
                     ],
                     if (trip.truck != null) ...[
-                      const Spacer(),
+                      const SizedBox(width: 8),
                       Text(
                         trip.truck!.licensePlate,
                         style: TextStyle(

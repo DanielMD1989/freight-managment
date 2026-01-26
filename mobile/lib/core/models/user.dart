@@ -312,4 +312,10 @@ class Organization {
 
   /// Check if this organization is a shipper
   bool get isShipper => type == OrganizationType.shipper;
+
+  /// Alias for phone (for compatibility with web API)
+  String? get contactPhone => phone;
+
+  /// Alias for email (for compatibility with web API)
+  String? get contactEmail => email;
 }

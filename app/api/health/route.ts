@@ -13,6 +13,9 @@
  * - Monitoring systems (Datadog, New Relic, etc.)
  */
 
+// Force Node.js runtime (required for ioredis/bullmq compatibility)
+export const runtime = 'nodejs';
+
 import { NextRequest, NextResponse } from "next/server";
 import { checkDatabaseHealth, getPoolMetrics } from "@/lib/db";
 import { checkRedisHealth, isRedisEnabled } from "@/lib/redis";
@@ -20,6 +23,7 @@ import { getRateLimitMetrics } from "@/lib/rateLimit";
 import { getCacheStats, getCacheMetrics } from "@/lib/cache";
 import { checkStorageHealth, getStorageProvider, isCDNEnabled } from "@/lib/storage";
 import { getMonitoringSummary, getSystemMetrics, getActiveAlerts } from "@/lib/monitoring";
+import { getQueueInfo, getAllQueueStats, isQueueReady, getWorkerStatus, getQueueHealthStatus } from "@/lib/queue";
 import { logger } from "@/lib/logger";
 
 /**
@@ -131,6 +135,71 @@ export async function GET(request: NextRequest) {
         response.cacheByNamespace = cacheMetricsData.byNamespace;
       }
 
+      // Add queue health (Phase 4: Background Job Queues)
+      try {
+        const queueInfo = getQueueInfo();
+        const queueStats = await getAllQueueStats();
+        const workerStatus = getWorkerStatus();
+        const queueHealth = await getQueueHealthStatus();
+
+        // Calculate totals
+        const totalJobs = queueStats.reduce((acc, q) => ({
+          waiting: acc.waiting + q.waiting,
+          active: acc.active + q.active,
+          completed: acc.completed + q.completed,
+          failed: acc.failed + q.failed,
+          delayed: acc.delayed + q.delayed,
+        }), { waiting: 0, active: 0, completed: 0, failed: 0, delayed: 0 });
+
+        response.queues = {
+          enabled: queueInfo.enabled,
+          provider: queueHealth.provider,
+          ready: queueHealth.ready,
+          redisConnected: queueHealth.redisConnected,
+          redisPingMs: queueHealth.redisPingMs,
+          queuesInitialized: queueHealth.queuesInitialized,
+          allQueuesOperational: queueHealth.allQueuesOperational,
+          status: queueHealth.ready ? "active" : (queueHealth.error || "not_ready"),
+          queueCount: queueInfo.queues.length,
+          totals: totalJobs,
+          ...(queueHealth.pausedQueues.length > 0 && { pausedQueues: queueHealth.pausedQueues }),
+          ...(queueHealth.error && { error: queueHealth.error }),
+        };
+
+        // Add worker status (for graceful shutdown monitoring)
+        response.workers = {
+          status: workerStatus.status,
+          isShuttingDown: workerStatus.isShuttingDown,
+          isDraining: workerStatus.isDraining,
+          activeWorkers: workerStatus.activeWorkers,
+          activeQueues: workerStatus.activeQueues,
+        };
+
+        if (detailed) {
+          response.queueDetails = queueStats.map(q => ({
+            name: q.name,
+            waiting: q.waiting,
+            active: q.active,
+            completed: q.completed,
+            failed: q.failed,
+            delayed: q.delayed,
+            paused: q.paused,
+          }));
+        }
+      } catch (queueError) {
+        response.queues = {
+          enabled: false,
+          provider: "in-memory",
+          ready: false,
+          redisConnected: false,
+          redisPingMs: null,
+          queuesInitialized: false,
+          allQueuesOperational: false,
+          status: "error",
+          error: queueError instanceof Error ? queueError.message : "Unknown error",
+        };
+      }
+
       // Add storage health (Phase 3: S3 + CDN)
       const storageHealth = await checkStorageHealth();
       response.storage = {
@@ -199,6 +268,7 @@ export async function GET(request: NextRequest) {
       };
 
       // Add environment info
+      const queueEnvInfo = getQueueInfo();
       response.environment = {
         nodeEnv: process.env.NODE_ENV,
         pgBouncer: process.env.PGBOUNCER_ENABLED === "true",
@@ -206,6 +276,8 @@ export async function GET(request: NextRequest) {
         storageProvider: getStorageProvider(),
         cdnEnabled: isCDNEnabled(),
         monitoringEnabled: process.env.MONITORING_ENABLED !== 'false',
+        queueProvider: queueEnvInfo.provider,
+        queueEnabled: queueEnvInfo.enabled,
       };
     }
 

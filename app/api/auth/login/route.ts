@@ -4,13 +4,11 @@ import { verifyPassword, setSession, isLoginAllowed, createSessionRecord, genera
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { logAuthFailure, logAuthSuccess } from "@/lib/auditLog";
+import { addCorsHeaders as addSecureCorsHeaders, isOriginAllowed } from "@/lib/cors";
 
-// Helper to add CORS headers to response
-function addCorsHeaders(response: NextResponse, _request: NextRequest): NextResponse {
-  response.headers.set('Access-Control-Allow-Origin', '*');
-  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-client-type');
-  return response;
+// Helper to add CORS headers to response (uses secure origin validation)
+function addCorsHeaders(response: NextResponse, request: NextRequest): NextResponse {
+  return addSecureCorsHeaders(response, request);
 }
 // CSRF token generated inline - generateCSRFToken imported dynamically
 import {
@@ -36,13 +34,20 @@ const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
-// Handle CORS preflight requests
+// Handle CORS preflight requests (uses secure origin validation)
 export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('origin');
   const response = new NextResponse(null, { status: 204 });
-  response.headers.set('Access-Control-Allow-Origin', '*');
-  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-client-type, x-csrf-token, Accept');
-  response.headers.set('Access-Control-Max-Age', '86400');
+
+  // Only set CORS headers if origin is in the allowed list
+  if (origin && isOriginAllowed(origin)) {
+    response.headers.set('Access-Control-Allow-Origin', origin);
+    response.headers.set('Access-Control-Allow-Credentials', 'true');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-client-type, x-csrf-token, Accept');
+    response.headers.set('Access-Control-Max-Age', '86400');
+  }
+
   return response;
 }
 
@@ -55,7 +60,7 @@ export async function POST(request: NextRequest) {
     const clientIp = getClientIP(request.headers);
 
     // Check if IP is blocked
-    if (isIPBlocked(clientIp)) {
+    if (await isIPBlocked(clientIp)) {
       await logSecurityEvent({
         type: 'IP_BLOCKED',
         ip: clientIp,
@@ -72,8 +77,8 @@ export async function POST(request: NextRequest) {
 
     // Check brute force protection
     const bruteForceKey = `login:${validatedData.email}`;
-    if (isBlockedByBruteForce(bruteForceKey)) {
-      const remainingTime = getRemainingBlockTime(bruteForceKey);
+    if (await isBlockedByBruteForce(bruteForceKey)) {
+      const remainingTime = await getRemainingBlockTime(bruteForceKey);
 
       await logSecurityEvent({
         type: 'BRUTE_FORCE',
@@ -188,15 +193,15 @@ export async function POST(request: NextRequest) {
 
     if (!isValidPassword) {
       // Record failed login attempt for brute force protection
-      const shouldBlock = recordFailedAttempt(bruteForceKey);
+      const shouldBlock = await recordFailedAttempt(bruteForceKey);
 
       // Auto-block IP after 10 failed attempts from same IP
       const ipKey = `login:ip:${clientIp}`;
-      const ipShouldBlock = recordFailedAttempt(ipKey);
+      const ipShouldBlock = await recordFailedAttempt(ipKey);
 
       if (ipShouldBlock) {
         // Permanently block IP after too many attempts
-        blockIP(clientIp, 'Excessive failed login attempts', 24 * 60 * 60 * 1000); // 24 hours
+        await blockIP(clientIp, 'Excessive failed login attempts', 24 * 60 * 60 * 1000); // 24 hours
       }
 
       await logAuthFailure(validatedData.email, 'Invalid password', request);
@@ -219,8 +224,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Reset failed attempts on successful login
-    resetFailedAttempts(bruteForceKey);
-    resetFailedAttempts(`login:ip:${clientIp}`);
+    await resetFailedAttempts(bruteForceKey);
+    await resetFailedAttempts(`login:ip:${clientIp}`);
 
     // Check if user has MFA enabled
     const userMFA = await db.userMFA.findUnique({

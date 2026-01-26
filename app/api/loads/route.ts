@@ -562,6 +562,16 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("List loads error:", error);
 
+    // Handle specific error types
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized' || error.name === 'UnauthorizedError') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      if (error.name === 'ForbiddenError') {
+        return NextResponse.json({ error: error.message }, { status: 403 });
+      }
+    }
+
     return NextResponse.json(
       {
         error: "Internal server error",

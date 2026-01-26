@@ -161,10 +161,12 @@ class _CarrierLoadboardScreenState
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Filters panel
-          if (_showFilters) _FiltersPanel(
+      body: SafeArea(
+        top: false, // AppBar handles top safe area
+        child: Column(
+          children: [
+            // Filters panel
+            if (_showFilters) _FiltersPanel(
             pickupController: _pickupController,
             deliveryController: _deliveryController,
             params: params,
@@ -234,7 +236,8 @@ class _CarrierLoadboardScreenState
               ),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -481,15 +484,16 @@ class _FilterChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      constraints: const BoxConstraints(minHeight: 36), // Better touch target
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: AppColors.primary100,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 12,
+          fontSize: 13,
           color: AppColors.primary700,
           fontWeight: FontWeight.w500,
         ),

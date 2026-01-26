@@ -16,6 +16,7 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
 import { broadcastGpsPosition } from '@/lib/websocket-server';
+import { withRpsLimit, RPS_CONFIGS } from '@/lib/rateLimit';
 
 const gpsUpdateSchema = z.object({
   truckId: z.string().min(1),
@@ -28,7 +29,7 @@ const gpsUpdateSchema = z.object({
   timestamp: z.string().datetime().optional(),
 });
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     const session = await requireAuth();
 
@@ -162,6 +163,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Handle specific error types
+    if (error instanceof Error) {
+      if (error.message === 'Unauthorized' || error.name === 'UnauthorizedError') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      if (error.name === 'ForbiddenError') {
+        return NextResponse.json({ error: error.message }, { status: 403 });
+      }
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -169,13 +180,16 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// Apply RPS rate limiting (100 RPS with 20 burst)
+export const POST = withRpsLimit(RPS_CONFIGS.gps, postHandler);
+
 /**
  * GET /api/gps/position - Get current position for a truck
  *
  * Query params:
  * - truckId: Truck ID to get position for
  */
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   try {
     const session = await requireAuth();
     const { searchParams } = request.nextUrl;
@@ -272,3 +286,6 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+// Apply RPS rate limiting (100 RPS with 20 burst)
+export const GET = withRpsLimit(RPS_CONFIGS.gps, getHandler);

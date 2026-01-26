@@ -16,8 +16,22 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Freight Management Platform",
-  description: "Ethiopian freight management and load board platform",
+  title: {
+    default: "FreightHub - Ethiopian Freight Platform",
+    template: "%s | FreightHub",
+  },
+  description: "Ethiopian freight management and load board platform - Connect shippers with carriers seamlessly",
+  keywords: ["freight", "logistics", "Ethiopia", "shipping", "carriers", "load board", "trucking"],
+  authors: [{ name: "FreightHub" }],
+  icons: {
+    icon: [
+      { url: '/icon', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-icon', sizes: '180x180', type: 'image/png' },
+    ],
+  },
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({

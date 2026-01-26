@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:dio/browser.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -11,7 +10,7 @@ class ApiConfig {
   /// In production, use your production API URL
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:3000',
+    defaultValue: 'http://192.168.1.6:3000',
   );
 
   /// API timeout in milliseconds
@@ -48,12 +47,8 @@ class ApiClient {
       },
     ));
 
-    // Configure for web - try without credentials first for CORS
-    if (kIsWeb) {
-      print('[API] Configuring BrowserHttpClientAdapter');
-      // Note: withCredentials: false to avoid strict CORS requirements
-      _dio.httpClientAdapter = BrowserHttpClientAdapter(withCredentials: false);
-    }
+    // Note: For web builds, browser handles CORS automatically
+    // No special adapter needed for iOS/Android
 
     // Add interceptors
     _dio.interceptors.add(_authInterceptor());

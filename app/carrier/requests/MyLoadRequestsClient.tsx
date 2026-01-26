@@ -65,13 +65,13 @@ export default function MyLoadRequestsClient({ requests }: Props) {
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      PENDING: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      APPROVED: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      REJECTED: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      EXPIRED: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
-      CANCELLED: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+      PENDING: 'bg-amber-50 text-amber-700 border border-amber-200',
+      APPROVED: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+      REJECTED: 'bg-rose-50 text-rose-700 border border-rose-200',
+      EXPIRED: 'bg-slate-50 text-slate-600 border border-slate-200',
+      CANCELLED: 'bg-slate-50 text-slate-600 border border-slate-200',
     };
-    return styles[status] || 'bg-gray-100 text-gray-800';
+    return styles[status] || 'bg-slate-50 text-slate-600 border border-slate-200';
   };
 
   const formatDate = (date: string) => {
@@ -119,23 +119,44 @@ export default function MyLoadRequestsClient({ requests }: Props) {
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-          <div className="text-2xl font-bold text-yellow-800 dark:text-yellow-200">
-            {pendingCount}
+        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+              <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-slate-800">{pendingCount}</div>
+              <div className="text-sm text-slate-500">Pending Requests</div>
+            </div>
           </div>
-          <div className="text-sm text-yellow-600 dark:text-yellow-400">Pending Requests</div>
         </div>
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-          <div className="text-2xl font-bold text-green-800 dark:text-green-200">
-            {approvedCount}
+        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+              <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-slate-800">{approvedCount}</div>
+              <div className="text-sm text-slate-500">Approved</div>
+            </div>
           </div>
-          <div className="text-sm text-green-600 dark:text-green-400">Approved</div>
         </div>
-        <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-          <div className="text-2xl font-bold text-gray-800 dark:text-gray-200">
-            {requests.length}
+        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+              <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-slate-800">{requests.length}</div>
+              <div className="text-sm text-slate-500">Total Requests</div>
+            </div>
           </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">Total Requests</div>
         </div>
       </div>
 
@@ -145,10 +166,10 @@ export default function MyLoadRequestsClient({ requests }: Props) {
           <button
             key={status}
             onClick={() => setStatusFilter(status)}
-            className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+            className={`px-4 py-2 rounded-xl font-medium text-sm transition-all ${
               statusFilter === status
-                ? 'bg-[#1e9c99] text-white'
-                : 'bg-[#064d51]/10 dark:bg-slate-700 text-[#064d51]/80 dark:text-gray-300 hover:bg-[#064d51]/20 dark:hover:bg-slate-600'
+                ? 'bg-gradient-to-r from-teal-600 to-teal-500 text-white shadow-md shadow-teal-500/25'
+                : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
             }`}
           >
             {status === 'all' ? 'All' : status} ({statusCounts[status]})
@@ -158,8 +179,14 @@ export default function MyLoadRequestsClient({ requests }: Props) {
 
       {/* Requests List */}
       {filteredRequests.length === 0 ? (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-[#064d51]/15 dark:border-slate-700 p-8 text-center">
-          <p className="text-[#064d51]/60 dark:text-gray-400">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-12 text-center">
+          <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-slate-800 mb-2">No Requests</h3>
+          <p className="text-slate-500">
             {statusFilter === 'all'
               ? "You haven't sent any load requests yet. Browse available loads and click 'Request' to get started."
               : `No ${statusFilter.toLowerCase()} requests.`}
@@ -170,13 +197,13 @@ export default function MyLoadRequestsClient({ requests }: Props) {
           {filteredRequests.map((request) => (
             <div
               key={request.id}
-              className={`bg-white dark:bg-slate-800 rounded-lg shadow border ${
+              className={`bg-white rounded-2xl shadow-sm border p-6 ${
                 request.status === 'PENDING'
-                  ? 'border-yellow-300 dark:border-yellow-700'
+                  ? 'border-amber-300 ring-1 ring-amber-100'
                   : request.status === 'APPROVED'
-                  ? 'border-green-300 dark:border-green-700'
-                  : 'border-[#064d51]/15 dark:border-slate-700'
-              } p-6`}
+                  ? 'border-emerald-300 ring-1 ring-emerald-100'
+                  : 'border-slate-200/60'
+              }`}
             >
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -212,7 +239,7 @@ export default function MyLoadRequestsClient({ requests }: Props) {
                   {request.status === 'APPROVED' && (
                     <button
                       onClick={() => handleViewTrip(request.load.id)}
-                      className="px-4 py-2 text-sm bg-[#1e9c99] text-white rounded-lg hover:bg-[#064d51]"
+                      className="px-4 py-2 text-sm bg-gradient-to-r from-teal-600 to-teal-500 text-white rounded-xl hover:from-teal-700 hover:to-teal-600 font-medium shadow-md shadow-teal-500/25 transition-all"
                     >
                       View Trip
                     </button>

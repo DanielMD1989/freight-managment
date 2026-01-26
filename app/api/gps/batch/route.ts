@@ -16,6 +16,7 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { broadcastGpsPosition } from '@/lib/websocket-server';
 import { z } from 'zod';
+import { withRpsLimit, RPS_CONFIGS } from '@/lib/rateLimit';
 
 const positionSchema = z.object({
   latitude: z.number().min(-90).max(90),
@@ -32,7 +33,7 @@ const batchUpdateSchema = z.object({
   positions: z.array(positionSchema).min(1).max(100), // Max 100 positions per batch
 });
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     const session = await requireAuth();
 
@@ -176,3 +177,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Apply RPS rate limiting (100 RPS with 20 burst)
+export const POST = withRpsLimit(RPS_CONFIGS.gps, postHandler);

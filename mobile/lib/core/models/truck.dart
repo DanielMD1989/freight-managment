@@ -120,6 +120,12 @@ class Truck {
   final String? gpsProvider;
   final GpsDeviceStatus? gpsStatus;
   final DateTime? gpsLastSeenAt;
+  // P1-003 FIX: Added GPS tracking fields for web-mobile parity
+  final double? lastLatitude;      // Latest GPS latitude
+  final double? lastLongitude;     // Latest GPS longitude
+  final double? heading;           // Direction of travel (0-360 degrees)
+  final double? speed;             // Current speed in km/h
+  final DateTime? gpsUpdatedAt;    // When GPS position was last updated
   final VerificationStatus approvalStatus;
   final String? rejectionReason;
   final String carrierId;
@@ -146,6 +152,12 @@ class Truck {
     this.gpsProvider,
     this.gpsStatus,
     this.gpsLastSeenAt,
+    // P1-003 FIX: GPS tracking fields
+    this.lastLatitude,
+    this.lastLongitude,
+    this.heading,
+    this.speed,
+    this.gpsUpdatedAt,
     required this.approvalStatus,
     this.rejectionReason,
     required this.carrierId,
@@ -186,6 +198,14 @@ class Truck {
       gpsLastSeenAt: json['gpsLastSeenAt'] != null
           ? DateTime.parse(json['gpsLastSeenAt'])
           : null,
+      // P1-003 FIX: Parse GPS tracking fields
+      lastLatitude: json['lastLatitude'] != null ? parseDouble(json['lastLatitude']) : null,
+      lastLongitude: json['lastLongitude'] != null ? parseDouble(json['lastLongitude']) : null,
+      heading: json['heading'] != null ? parseDouble(json['heading']) : null,
+      speed: json['speed'] != null ? parseDouble(json['speed']) : null,
+      gpsUpdatedAt: json['gpsUpdatedAt'] != null
+          ? DateTime.parse(json['gpsUpdatedAt'])
+          : null,
       approvalStatus: verificationStatusFromString(json['approvalStatus']),
       rejectionReason: json['rejectionReason'],
       carrierId: json['carrierId'] ?? '',
@@ -216,6 +236,11 @@ class Truck {
       if (currentLocationLon != null) 'currentLocationLon': currentLocationLon,
       if (imei != null) 'imei': imei,
       if (gpsProvider != null) 'gpsProvider': gpsProvider,
+      // P1-003 FIX: Include GPS tracking fields
+      if (lastLatitude != null) 'lastLatitude': lastLatitude,
+      if (lastLongitude != null) 'lastLongitude': lastLongitude,
+      if (heading != null) 'heading': heading,
+      if (speed != null) 'speed': speed,
       'carrierId': carrierId,
       if (ownerName != null) 'ownerName': ownerName,
       if (contactName != null) 'contactName': contactName,
@@ -229,6 +254,37 @@ class Truck {
   bool get isApproved => approvalStatus == VerificationStatus.approved;
   bool get isPending => approvalStatus == VerificationStatus.pending;
   bool get isRejected => approvalStatus == VerificationStatus.rejected;
+
+  // P1-003 FIX: GPS tracking helpers
+  bool get hasGpsLocation => lastLatitude != null && lastLongitude != null;
+
+  /// Get current GPS position (prefers lastLatitude/Longitude, fallback to currentLocation)
+  (double lat, double lng)? get gpsPosition {
+    if (lastLatitude != null && lastLongitude != null) {
+      return (lastLatitude!, lastLongitude!);
+    }
+    if (currentLocationLat != null && currentLocationLon != null) {
+      return (currentLocationLat!, currentLocationLon!);
+    }
+    return null;
+  }
+
+  /// Speed display in km/h
+  String get speedDisplay => speed != null ? '${speed!.toStringAsFixed(0)} km/h' : 'N/A';
+
+  /// Heading display as cardinal direction
+  String get headingDisplay {
+    if (heading == null) return 'N/A';
+    final h = heading!;
+    if (h >= 337.5 || h < 22.5) return 'N';
+    if (h >= 22.5 && h < 67.5) return 'NE';
+    if (h >= 67.5 && h < 112.5) return 'E';
+    if (h >= 112.5 && h < 157.5) return 'SE';
+    if (h >= 157.5 && h < 202.5) return 'S';
+    if (h >= 202.5 && h < 247.5) return 'SW';
+    if (h >= 247.5 && h < 292.5) return 'W';
+    return 'NW';
+  }
 
   String get truckTypeDisplay {
     switch (truckType) {

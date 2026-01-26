@@ -483,32 +483,64 @@ class _PostedLoadCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
+              // Request count indicator
+              if (requestCount > 0)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.people, size: 16, color: AppColors.primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        '$requestCount carrier request${requestCount > 1 ? 's' : ''}',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    'No requests yet',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              // Action buttons - matching web app parity
               Row(
                 children: [
-                  if (requestCount > 0)
-                    Text(
-                      '$requestCount carrier request${requestCount > 1 ? 's' : ''}',
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
+                  // Find Trucks button - PARITY with web app
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => context.push(
+                        '/shipper/trucks?origin=${Uri.encodeComponent(load.pickupCity ?? '')}&destination=${Uri.encodeComponent(load.deliveryCity ?? '')}&loadId=${load.id}',
                       ),
-                    )
-                  else
-                    Text(
-                      'No requests yet',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
+                      icon: const Icon(Icons.search, size: 18),
+                      label: const Text('Find Trucks'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
                       ),
                     ),
-                  const Spacer(),
-                  if (requestCount > 0)
-                    OutlinedButton(
-                      onPressed: () =>
-                          context.push('/shipper/loads/${load.id}/requests'),
-                      child: const Text('View Requests'),
-                    ),
+                  ),
                   const SizedBox(width: 8),
-                  ElevatedButton(
+                  // View Requests button (if has requests)
+                  if (requestCount > 0) ...[
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () =>
+                            context.push('/shipper/loads/${load.id}/requests'),
+                        child: Text('Requests ($requestCount)'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  // View Details button
+                  OutlinedButton(
                     onPressed: () => context.push('/shipper/loads/${load.id}'),
                     child: const Text('View'),
                   ),
@@ -623,14 +655,18 @@ class _CompletedLoadCard extends StatelessWidget {
                       color: AppColors.textSecondary,
                     ),
                     const SizedBox(width: 4),
-                    Text(
-                      load.assignedTruck!.ownerName ?? 'Unknown Carrier',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
+                    Expanded(
+                      child: Text(
+                        load.assignedTruck!.ownerName ?? 'Unknown Carrier',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     Icon(
                       Icons.local_shipping,
                       size: 14,

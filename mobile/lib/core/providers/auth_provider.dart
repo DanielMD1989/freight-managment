@@ -68,15 +68,25 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
 
     if (result.success && result.data != null) {
-      state = AuthState(user: result.data);
-      return true;
-    } else {
-      state = state.copyWith(
-        isLoading: false,
-        error: result.error ?? 'Login failed',
-      );
-      return false;
+      // LoginResult contains the user - extract it
+      final loginResult = result.data!;
+      if (loginResult.user != null) {
+        state = AuthState(user: loginResult.user);
+        return true;
+      } else if (loginResult.mfaRequired) {
+        // MFA required - handle separately if needed
+        state = state.copyWith(
+          isLoading: false,
+          error: 'MFA verification required',
+        );
+        return false;
+      }
     }
+    state = state.copyWith(
+      isLoading: false,
+      error: result.error ?? 'Login failed',
+    );
+    return false;
   }
 
   /// Register
