@@ -179,28 +179,33 @@ describe('Functional Web Tests', () => {
   // 2. MFA FLOW
   // ============================================================================
   describe('2. MFA Flow (Enable → Disable → Validate)', () => {
-    it('should enable MFA for user', async () => {
-      // Update user to have MFA enabled
-      const updatedUser = await db.user.update({
-        where: { id: testUser.id },
-        data: {
-          mfaEnabled: true,
-          mfaSecret: 'JBSWY3DPEHPK3PXP', // Test secret
+    it('should enable MFA for user via UserMFA table', async () => {
+      // MFA is stored in a separate UserMFA table, not on User model
+      // Check if UserMFA record can be created
+      const userMFA = await db.userMFA.upsert({
+        where: { userId: testUser.id },
+        create: {
+          userId: testUser.id,
+          enabled: true,
+          phone: '+251900000002',
+        },
+        update: {
+          enabled: true,
         },
       });
 
-      expect(updatedUser.mfaEnabled).toBe(true);
-      expect(updatedUser.mfaSecret).toBeDefined();
+      expect(userMFA.enabled).toBe(true);
+      expect(userMFA.userId).toBe(testUser.id);
     });
 
     it('should generate recovery codes on MFA enable', async () => {
       // In production, recovery codes would be generated
-      // For this test, verify the MFA setup flow
-      const user = await db.user.findUnique({
-        where: { id: testUser.id },
+      // For this test, verify the MFA setup flow via UserMFA table
+      const userMFA = await db.userMFA.findUnique({
+        where: { userId: testUser.id },
       });
 
-      expect(user?.mfaEnabled).toBe(true);
+      expect(userMFA?.enabled).toBe(true);
     });
 
     it('should validate MFA token format', () => {
@@ -218,39 +223,36 @@ describe('Functional Web Tests', () => {
     });
 
     it('should disable MFA for user', async () => {
-      const updatedUser = await db.user.update({
-        where: { id: testUser.id },
+      const userMFA = await db.userMFA.update({
+        where: { userId: testUser.id },
         data: {
-          mfaEnabled: false,
-          mfaSecret: null,
+          enabled: false,
         },
       });
 
-      expect(updatedUser.mfaEnabled).toBe(false);
-      expect(updatedUser.mfaSecret).toBeNull();
+      expect(userMFA.enabled).toBe(false);
     });
 
     it('should require MFA validation when enabled', async () => {
       // Re-enable for this test
-      await db.user.update({
-        where: { id: testUser.id },
+      await db.userMFA.update({
+        where: { userId: testUser.id },
         data: {
-          mfaEnabled: true,
-          mfaSecret: 'JBSWY3DPEHPK3PXP',
+          enabled: true,
         },
       });
 
-      const user = await db.user.findUnique({
-        where: { id: testUser.id },
+      const userMFA = await db.userMFA.findUnique({
+        where: { userId: testUser.id },
       });
 
       // If MFA is enabled, login should require additional validation
-      expect(user?.mfaEnabled).toBe(true);
+      expect(userMFA?.enabled).toBe(true);
 
       // Cleanup
-      await db.user.update({
-        where: { id: testUser.id },
-        data: { mfaEnabled: false, mfaSecret: null },
+      await db.userMFA.update({
+        where: { userId: testUser.id },
+        data: { enabled: false },
       });
     });
   });

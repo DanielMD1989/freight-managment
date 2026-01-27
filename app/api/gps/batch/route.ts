@@ -116,21 +116,24 @@ async function postHandler(request: NextRequest) {
       loadId: activeLoad?.id || null,
     }));
 
-    await db.gpsPosition.createMany({
-      data: createData,
-    });
-
-    // Update truck's current location with the most recent position
+    // HIGH FIX #1: Wrap GPS batch + truck update in transaction for atomicity
     const latestPosition = sortedPositions[sortedPositions.length - 1];
-    await db.truck.update({
-      where: { id: data.truckId },
-      data: {
-        currentLocationLat: latestPosition.latitude,
-        currentLocationLon: latestPosition.longitude,
-        locationUpdatedAt: new Date(latestPosition.timestamp),
-        gpsLastSeenAt: new Date(),
-        gpsStatus: 'ACTIVE',
-      },
+    await db.$transaction(async (tx) => {
+      await tx.gpsPosition.createMany({
+        data: createData,
+      });
+
+      // Update truck's current location with the most recent position
+      await tx.truck.update({
+        where: { id: data.truckId },
+        data: {
+          currentLocationLat: latestPosition.latitude,
+          currentLocationLon: latestPosition.longitude,
+          locationUpdatedAt: new Date(latestPosition.timestamp),
+          gpsLastSeenAt: new Date(),
+          gpsStatus: 'ACTIVE',
+        },
+      });
     });
 
     // Broadcast the latest position via WebSocket

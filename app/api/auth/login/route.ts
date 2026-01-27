@@ -257,10 +257,8 @@ export async function POST(request: NextRequest) {
           console.error('[Login MFA] Failed to send OTP:', result.error);
           // Still allow login if SMS fails - fallback to recovery codes
         }
-      } else if (process.env.NODE_ENV !== 'production') {
-        // Development only: Log OTP (NEVER in production)
-        console.log(`[LOGIN MFA DEV] OTP for ${user.email}: ${otp}`);
       }
+      // SECURITY: OTP is never logged - use SMS service for delivery
 
       return addCorsHeaders(NextResponse.json({
         mfaRequired: true,

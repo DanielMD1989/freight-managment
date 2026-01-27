@@ -152,9 +152,7 @@ export async function POST(request: NextRequest) {
     // TODO: Send email with OTP
     // In production, use email service (SendGrid, SES, etc.)
     // The OTP should ONLY be sent via email, never in API response
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`[PASSWORD RESET DEV] OTP for ${user.email}: ${otp}`);
-    }
+    // SECURITY: OTP is never logged - use email service for delivery
 
     // SECURITY: Never expose OTP in API response, even in development
     // Use console logs or email service for testing

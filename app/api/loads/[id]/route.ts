@@ -345,65 +345,75 @@ export async function PATCH(
       }
     }
 
-    const load = await db.load.update({
-      where: { id },
-      data: {
-        ...validatedData,
-        ...additionalData,
-      },
-    });
+    // HIGH FIX #7: Wrap Load update + Trip sync in transaction for atomicity
+    const { load, tripSynced } = await db.$transaction(async (tx) => {
+      const load = await tx.load.update({
+        where: { id },
+        data: {
+          ...validatedData,
+          ...additionalData,
+        },
+      });
 
-    // Sync Trip status when Load status changes
-    if (validatedData.status) {
-      const tripStatusMap: Record<string, string> = {
-        'ASSIGNED': 'ASSIGNED',
-        'PICKUP_PENDING': 'PICKUP_PENDING',
-        'IN_TRANSIT': 'IN_TRANSIT',
-        'DELIVERED': 'DELIVERED',
-        'COMPLETED': 'COMPLETED',
-        'CANCELLED': 'CANCELLED',
-      };
+      // Sync Trip status when Load status changes
+      let tripSynced = false;
+      if (validatedData.status) {
+        const tripStatusMap: Record<string, string> = {
+          'ASSIGNED': 'ASSIGNED',
+          'PICKUP_PENDING': 'PICKUP_PENDING',
+          'IN_TRANSIT': 'IN_TRANSIT',
+          'DELIVERED': 'DELIVERED',
+          'COMPLETED': 'COMPLETED',
+          'CANCELLED': 'CANCELLED',
+        };
 
-      const newTripStatus = tripStatusMap[validatedData.status];
-      if (newTripStatus) {
-        // Find and update associated Trip
-        const trip = await db.trip.findUnique({
-          where: { loadId: id },
-        });
-
-        if (trip) {
-          const tripUpdateData: any = {
-            status: newTripStatus,
-          };
-
-          // Set appropriate timestamps based on status transition
-          if (validatedData.status === 'PICKUP_PENDING' && !trip.startedAt) {
-            tripUpdateData.startedAt = new Date();
-          }
-          if (validatedData.status === 'IN_TRANSIT' && !trip.pickedUpAt) {
-            tripUpdateData.pickedUpAt = new Date();
-          }
-          if (validatedData.status === 'DELIVERED' && !trip.deliveredAt) {
-            tripUpdateData.deliveredAt = new Date();
-          }
-          if (validatedData.status === 'COMPLETED' && !trip.completedAt) {
-            tripUpdateData.completedAt = new Date();
-            tripUpdateData.trackingEnabled = false;
-          }
-          if (validatedData.status === 'CANCELLED' && !trip.cancelledAt) {
-            tripUpdateData.cancelledAt = new Date();
-            tripUpdateData.cancelledBy = session.userId;
-            tripUpdateData.trackingEnabled = false;
-          }
-
-          await db.trip.update({
+        const newTripStatus = tripStatusMap[validatedData.status];
+        if (newTripStatus) {
+          // Find and update associated Trip inside transaction
+          const trip = await tx.trip.findUnique({
             where: { loadId: id },
-            data: tripUpdateData,
           });
 
-          console.log(`[LoadAPI] Synced Trip status to ${newTripStatus} for load ${id}`);
+          if (trip) {
+            const tripUpdateData: any = {
+              status: newTripStatus,
+            };
+
+            // Set appropriate timestamps based on status transition
+            if (validatedData.status === 'PICKUP_PENDING' && !trip.startedAt) {
+              tripUpdateData.startedAt = new Date();
+            }
+            if (validatedData.status === 'IN_TRANSIT' && !trip.pickedUpAt) {
+              tripUpdateData.pickedUpAt = new Date();
+            }
+            if (validatedData.status === 'DELIVERED' && !trip.deliveredAt) {
+              tripUpdateData.deliveredAt = new Date();
+            }
+            if (validatedData.status === 'COMPLETED' && !trip.completedAt) {
+              tripUpdateData.completedAt = new Date();
+              tripUpdateData.trackingEnabled = false;
+            }
+            if (validatedData.status === 'CANCELLED' && !trip.cancelledAt) {
+              tripUpdateData.cancelledAt = new Date();
+              tripUpdateData.cancelledBy = session.userId;
+              tripUpdateData.trackingEnabled = false;
+            }
+
+            await tx.trip.update({
+              where: { loadId: id },
+              data: tripUpdateData,
+            });
+
+            tripSynced = true;
+          }
         }
       }
+
+      return { load, tripSynced };
+    });
+
+    if (tripSynced) {
+      console.log(`[LoadAPI] Synced Trip status to ${validatedData.status} for load ${id}`);
     }
 
     // Log truck unassignment if it happened

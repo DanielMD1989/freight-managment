@@ -12,6 +12,7 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { createNotification, NotificationType } from '@/lib/notifications';
 import { releaseFundsFromEscrow } from '@/lib/escrowManagement';
+import { CacheInvalidation } from '@/lib/cache';
 
 /**
  * POST /api/trips/[tripId]/confirm
@@ -112,44 +113,53 @@ export async function POST(
       );
     }
 
-    // Update trip with confirmation
-    const updatedTrip = await db.trip.update({
-      where: { id: tripId },
-      data: {
-        shipperConfirmed: true,
-        shipperConfirmedAt: new Date(),
-        shipperConfirmedBy: session.userId,
-        status: 'COMPLETED',
-        completedAt: new Date(),
-        trackingEnabled: false, // GPS stops on completion
-      },
-    });
-
-    // Update Load model for backward compatibility
-    await db.load.update({
-      where: { id: trip.loadId },
-      data: {
-        status: 'COMPLETED',
-        podVerified: true,
-        podVerifiedAt: new Date(),
-      },
-    });
-
-    // Create load event
-    await db.loadEvent.create({
-      data: {
-        loadId: trip.loadId,
-        eventType: 'DELIVERY_CONFIRMED',
-        description: confirmationNotes
-          ? `Delivery confirmed by shipper. Notes: ${confirmationNotes}`
-          : 'Delivery confirmed by shipper',
-        userId: session.userId,
-        metadata: {
-          tripId,
-          confirmedAt: new Date().toISOString(),
+    // CRITICAL FIX: Wrap all state changes in a transaction for atomicity
+    const updatedTrip = await db.$transaction(async (tx) => {
+      // Update trip with confirmation
+      const updatedTrip = await tx.trip.update({
+        where: { id: tripId },
+        data: {
+          shipperConfirmed: true,
+          shipperConfirmedAt: new Date(),
+          shipperConfirmedBy: session.userId,
+          status: 'COMPLETED',
+          completedAt: new Date(),
+          trackingEnabled: false, // GPS stops on completion
         },
-      },
+      });
+
+      // Update Load model for backward compatibility
+      await tx.load.update({
+        where: { id: trip.loadId },
+        data: {
+          status: 'COMPLETED',
+          podVerified: true,
+          podVerifiedAt: new Date(),
+        },
+      });
+
+      // Create load event inside transaction
+      await tx.loadEvent.create({
+        data: {
+          loadId: trip.loadId,
+          eventType: 'DELIVERY_CONFIRMED',
+          description: confirmationNotes
+            ? `Delivery confirmed by shipper. Notes: ${confirmationNotes}`
+            : 'Delivery confirmed by shipper',
+          userId: session.userId,
+          metadata: {
+            tripId,
+            confirmedAt: new Date().toISOString(),
+          },
+        },
+      });
+
+      return updatedTrip;
     });
+
+    // Cache invalidation after transaction commits
+    await CacheInvalidation.trip(tripId, trip.carrier?.id || '', trip.shipperId || '');
+    await CacheInvalidation.load(trip.loadId, trip.shipperId || '');
 
     // Notify carrier that delivery has been confirmed
     const carrierUserId = trip.carrier?.users?.[0]?.id;

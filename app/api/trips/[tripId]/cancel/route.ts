@@ -11,6 +11,8 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { createNotification, NotificationType } from '@/lib/notifications';
 import { z } from 'zod';
+import { CacheInvalidation } from '@/lib/cache';
+import { refundEscrowFunds } from '@/lib/escrowManagement';
 
 const cancelTripSchema = z.object({
   reason: z.string().min(1, 'Cancellation reason is required').max(500),
@@ -109,43 +111,52 @@ export async function POST(
     // Determine who is cancelling for notification purposes
     const cancelledByRole = isCarrier ? 'Carrier' : isShipper ? 'Shipper' : 'Admin';
 
-    // Update trip status to CANCELLED
-    const updatedTrip = await db.trip.update({
-      where: { id: tripId },
-      data: {
-        status: 'CANCELLED',
-        cancelledAt: new Date(),
-        cancelledBy: session.userId,
-        cancelReason: validatedData.reason,
-        trackingEnabled: false,
-      },
-    });
-
-    // Update Load status back to POSTED or CANCELLED
-    await db.load.update({
-      where: { id: trip.loadId },
-      data: {
-        status: 'CANCELLED',
-        assignedTruckId: null,
-        assignedAt: null,
-      },
-    });
-
-    // Create load event
-    await db.loadEvent.create({
-      data: {
-        loadId: trip.loadId,
-        eventType: 'TRIP_CANCELLED',
-        description: `Trip cancelled by ${cancelledByRole}. Reason: ${validatedData.reason}`,
-        userId: session.userId,
-        metadata: {
-          tripId,
-          cancelledBy: cancelledByRole,
-          reason: validatedData.reason,
-          previousStatus: trip.status,
+    // CRITICAL FIX: Wrap all state changes in a transaction for atomicity
+    const updatedTrip = await db.$transaction(async (tx) => {
+      // Update trip status to CANCELLED
+      const updatedTrip = await tx.trip.update({
+        where: { id: tripId },
+        data: {
+          status: 'CANCELLED',
+          cancelledAt: new Date(),
+          cancelledBy: session.userId,
+          cancelReason: validatedData.reason,
+          trackingEnabled: false,
         },
-      },
+      });
+
+      // Update Load status back to CANCELLED
+      await tx.load.update({
+        where: { id: trip.loadId },
+        data: {
+          status: 'CANCELLED',
+          assignedTruckId: null,
+          assignedAt: null,
+        },
+      });
+
+      // Create load event inside transaction
+      await tx.loadEvent.create({
+        data: {
+          loadId: trip.loadId,
+          eventType: 'TRIP_CANCELLED',
+          description: `Trip cancelled by ${cancelledByRole}. Reason: ${validatedData.reason}`,
+          userId: session.userId,
+          metadata: {
+            tripId,
+            cancelledBy: cancelledByRole,
+            reason: validatedData.reason,
+            previousStatus: trip.status,
+          },
+        },
+      });
+
+      return updatedTrip;
     });
+
+    // Cache invalidation after transaction commits
+    await CacheInvalidation.trip(tripId, trip.carrierId, trip.shipperId);
+    await CacheInvalidation.load(trip.loadId, trip.shipperId);
 
     // Notify the other party
     if (isCarrier || isAdmin) {
@@ -178,18 +189,42 @@ export async function POST(
 
     // Handle escrow refund if applicable
     let escrowRefunded = false;
+    let escrowRefundError: string | undefined;
     if (trip.load?.escrowFunded && trip.load?.escrowAmount) {
-      // TODO: Implement escrow refund logic
-      // For now, just log that refund is needed
-      await db.loadEvent.create({
-        data: {
-          loadId: trip.loadId,
-          eventType: 'ESCROW_REFUND_PENDING',
-          description: `Escrow refund pending: ${Number(trip.load.escrowAmount).toFixed(2)} ETB`,
-          userId: session.userId,
-        },
-      });
-      escrowRefunded = true;
+      // HIGH FIX #16: Implement escrow refund logic
+      const refundResult = await refundEscrowFunds(trip.loadId);
+
+      if (refundResult.success) {
+        escrowRefunded = true;
+        await db.loadEvent.create({
+          data: {
+            loadId: trip.loadId,
+            eventType: 'ESCROW_REFUNDED',
+            description: `Escrow refunded: ${refundResult.escrowAmount.toFixed(2)} ETB returned to shipper`,
+            userId: session.userId,
+            metadata: {
+              escrowAmount: refundResult.escrowAmount.toFixed(2),
+              newShipperBalance: refundResult.shipperBalance.toFixed(2),
+              transactionId: refundResult.transactionId,
+            },
+          },
+        });
+      } else {
+        // Log failed refund attempt
+        escrowRefundError = refundResult.error;
+        await db.loadEvent.create({
+          data: {
+            loadId: trip.loadId,
+            eventType: 'ESCROW_REFUND_FAILED',
+            description: `Escrow refund failed: ${refundResult.error}`,
+            userId: session.userId,
+            metadata: {
+              error: refundResult.error,
+              escrowAmount: Number(trip.load.escrowAmount).toFixed(2),
+            },
+          },
+        });
+      }
     }
 
     return NextResponse.json({
@@ -200,7 +235,8 @@ export async function POST(
         cancelledAt: updatedTrip.cancelledAt,
         cancelReason: updatedTrip.cancelReason,
       },
-      escrowRefundPending: escrowRefunded,
+      escrowRefunded,
+      ...(escrowRefundError && { escrowRefundError }),
     });
   } catch (error) {
     console.error('Cancel trip error:', error);

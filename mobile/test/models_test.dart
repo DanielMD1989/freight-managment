@@ -160,7 +160,7 @@ void main() {
 
     test('ServiceFeeStatus should match web schema', () {
       expect(serviceFeeStatusFromString('PENDING'), equals(ServiceFeeStatus.pending));
-      expect(serviceFeeStatusFromString('PAID'), equals(ServiceFeeStatus.paid));
+      expect(serviceFeeStatusFromString('DEDUCTED'), equals(ServiceFeeStatus.deducted));
       expect(serviceFeeStatusFromString('WAIVED'), equals(ServiceFeeStatus.waived));
       expect(serviceFeeStatusFromString('REFUNDED'), equals(ServiceFeeStatus.refunded));
     });

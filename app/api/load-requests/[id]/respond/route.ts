@@ -375,32 +375,36 @@ export async function POST(
         throw error; // Re-throw for generic error handling
       }
     } else {
-      // REJECT
-      const updatedRequest = await db.loadRequest.update({
-        where: { id: requestId },
-        data: {
-          status: 'REJECTED',
-          respondedAt: new Date(),
-          responseNotes: data.responseNotes,
-          respondedById: session.userId,
-        },
-      });
-
-      // Create load event
-      await db.loadEvent.create({
-        data: {
-          loadId: loadRequest.loadId,
-          eventType: 'LOAD_REQUEST_REJECTED',
-          description: `Load request from ${loadRequest.carrier.name} was rejected`,
-          userId: session.userId,
-          metadata: {
-            loadRequestId: requestId,
-            rejectionReason: data.responseNotes,
+      // HIGH FIX #5: Wrap REJECT path in transaction for atomicity
+      const updatedRequest = await db.$transaction(async (tx) => {
+        const updatedRequest = await tx.loadRequest.update({
+          where: { id: requestId },
+          data: {
+            status: 'REJECTED',
+            respondedAt: new Date(),
+            responseNotes: data.responseNotes,
+            respondedById: session.userId,
           },
-        },
+        });
+
+        // Create load event inside transaction
+        await tx.loadEvent.create({
+          data: {
+            loadId: loadRequest.loadId,
+            eventType: 'LOAD_REQUEST_REJECTED',
+            description: `Load request from ${loadRequest.carrier.name} was rejected`,
+            userId: session.userId,
+            metadata: {
+              loadRequestId: requestId,
+              rejectionReason: data.responseNotes,
+            },
+          },
+        });
+
+        return updatedRequest;
       });
 
-      // Notify carrier users
+      // Non-critical: Notify carrier users (fire-and-forget, outside transaction)
       const carrierUsers = await db.user.findMany({
         where: {
           organizationId: loadRequest.carrierId,
@@ -410,7 +414,7 @@ export async function POST(
       });
 
       for (const user of carrierUsers) {
-        await createNotification({
+        createNotification({
           userId: user.id,
           type: 'LOAD_REQUEST_REJECTED',
           title: 'Load Request Rejected',
@@ -420,7 +424,7 @@ export async function POST(
             loadId: loadRequest.loadId,
             reason: data.responseNotes,
           },
-        });
+        }).catch(err => console.error('Failed to notify carrier:', err));
       }
 
       return NextResponse.json({

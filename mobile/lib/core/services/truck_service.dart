@@ -619,13 +619,19 @@ class TruckService {
       if (ownerName != null) data['ownerName'] = ownerName;
       if (notes != null) data['notes'] = notes;
 
-      // Debug logging
-      print('[TruckService] Creating truck posting with data: $data');
+      // Debug logging (only in debug mode)
+      assert(() {
+        print('[TruckService] Creating truck posting with data: $data');
+        return true;
+      }());
 
       final response = await _apiClient.dio.post('/api/truck-postings', data: data);
 
-      print('[TruckService] Response status: ${response.statusCode}');
-      print('[TruckService] Response data: ${response.data}');
+      assert(() {
+        print('[TruckService] Response status: ${response.statusCode}');
+        print('[TruckService] Response data: ${response.data}');
+        return true;
+      }());
 
       if (response.statusCode == 201) {
         final posting = TruckPosting.fromJson(response.data['truckPosting'] ?? response.data);

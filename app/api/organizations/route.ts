@@ -37,38 +37,43 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createOrganizationSchema.parse(body);
 
-    // Create organization and link user to it
-    const organization = await db.organization.create({
-      data: {
-        ...validatedData,
-        users: {
-          connect: { id: session.userId },
-        },
-      },
-      include: {
-        users: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            role: true,
-          },
-        },
-      },
-    });
-
-    // Create financial accounts for the organization
+    // HIGH FIX #4: Wrap organization + financial account creation in transaction
     const accountType =
       validatedData.type === "SHIPPER" ? "SHIPPER_WALLET" : "CARRIER_WALLET";
 
-    await db.financialAccount.create({
-      data: {
-        accountType,
-        organizationId: organization.id,
-        balance: 0,
-        currency: "ETB",
-      },
+    const organization = await db.$transaction(async (tx) => {
+      // Create organization and link user to it
+      const organization = await tx.organization.create({
+        data: {
+          ...validatedData,
+          users: {
+            connect: { id: session.userId },
+          },
+        },
+        include: {
+          users: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              role: true,
+            },
+          },
+        },
+      });
+
+      // Create financial accounts for the organization
+      await tx.financialAccount.create({
+        data: {
+          accountType,
+          organizationId: organization.id,
+          balance: 0,
+          currency: "ETB",
+        },
+      });
+
+      return organization;
     });
 
     return NextResponse.json(

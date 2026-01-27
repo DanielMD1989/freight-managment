@@ -386,32 +386,36 @@ export async function POST(
         throw error; // Re-throw for generic error handling
       }
     } else {
-      // REJECT
-      const updatedRequest = await db.truckRequest.update({
-        where: { id: requestId },
-        data: {
-          status: 'REJECTED',
-          respondedAt: new Date(),
-          responseNotes: data.responseNotes,
-          respondedById: session.userId,
-        },
-      });
-
-      // Create load event
-      await db.loadEvent.create({
-        data: {
-          loadId: truckRequest.loadId,
-          eventType: 'REQUEST_REJECTED',
-          description: `Truck request rejected by carrier. Truck: ${truckRequest.truck.licensePlate}`,
-          userId: session.userId,
-          metadata: {
-            requestId: requestId,
-            rejectionReason: data.responseNotes,
+      // HIGH FIX #6: Wrap REJECT path in transaction for atomicity
+      const updatedRequest = await db.$transaction(async (tx) => {
+        const updatedRequest = await tx.truckRequest.update({
+          where: { id: requestId },
+          data: {
+            status: 'REJECTED',
+            respondedAt: new Date(),
+            responseNotes: data.responseNotes,
+            respondedById: session.userId,
           },
-        },
+        });
+
+        // Create load event inside transaction
+        await tx.loadEvent.create({
+          data: {
+            loadId: truckRequest.loadId,
+            eventType: 'REQUEST_REJECTED',
+            description: `Truck request rejected by carrier. Truck: ${truckRequest.truck.licensePlate}`,
+            userId: session.userId,
+            metadata: {
+              requestId: requestId,
+              rejectionReason: data.responseNotes,
+            },
+          },
+        });
+
+        return updatedRequest;
       });
 
-      // Send notification to shipper about rejection
+      // Non-critical: Send notification to shipper (fire-and-forget, outside transaction)
       if (truckRequest.shipper?.id) {
         notifyTruckRequestResponse({
           shipperId: truckRequest.shipper.id,
@@ -419,7 +423,7 @@ export async function POST(
           truckPlate: truckRequest.truck.licensePlate,
           approved: false,
           requestId: requestId,
-          loadId: truckRequest.loadId, // Include loadId for context
+          loadId: truckRequest.loadId,
         }).catch((err) => console.error('Failed to send notification:', err));
       }
 

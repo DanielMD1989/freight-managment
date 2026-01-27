@@ -89,36 +89,41 @@ async function postHandler(request: NextRequest) {
       select: { id: true },
     });
 
-    // Update truck's current location
-    await db.truck.update({
-      where: { id: data.truckId },
-      data: {
-        currentLocationLat: data.latitude,
-        currentLocationLon: data.longitude,
-        locationUpdatedAt: new Date(),
-        gpsLastSeenAt: new Date(),
-        gpsStatus: 'ACTIVE',
-      },
-    });
-
-    // Create GPS position record if device exists
-    let positionRecord = null;
-    if (truck.gpsDeviceId) {
-      positionRecord = await db.gpsPosition.create({
+    // HIGH FIX #2: Wrap truck update + GPS position in transaction for atomicity
+    const positionRecord = await db.$transaction(async (tx) => {
+      // Update truck's current location
+      await tx.truck.update({
+        where: { id: data.truckId },
         data: {
-          truckId: data.truckId,
-          deviceId: truck.gpsDeviceId,
-          latitude: data.latitude,
-          longitude: data.longitude,
-          speed: data.speed,
-          heading: data.heading,
-          altitude: data.altitude,
-          accuracy: data.accuracy,
-          timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
-          loadId: activeLoad?.id || null,
+          currentLocationLat: data.latitude,
+          currentLocationLon: data.longitude,
+          locationUpdatedAt: new Date(),
+          gpsLastSeenAt: new Date(),
+          gpsStatus: 'ACTIVE',
         },
       });
-    }
+
+      // Create GPS position record if device exists
+      if (truck.gpsDeviceId) {
+        return await tx.gpsPosition.create({
+          data: {
+            truckId: data.truckId,
+            deviceId: truck.gpsDeviceId,
+            latitude: data.latitude,
+            longitude: data.longitude,
+            speed: data.speed,
+            heading: data.heading,
+            altitude: data.altitude,
+            accuracy: data.accuracy,
+            timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
+            loadId: activeLoad?.id || null,
+          },
+          select: { id: true },
+        });
+      }
+
+      return null;
+    });
 
     // Broadcast GPS position update via WebSocket (Phase 3)
     try {

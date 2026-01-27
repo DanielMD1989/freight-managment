@@ -173,15 +173,7 @@ class LoadService {
 
       // Pricing is optional - shippers and carriers agree outside the platform
 
-      // Debug logging
-      print('[LoadService] Creating load with data: $data');
-      print('[LoadService] API Base URL: ${_apiClient.dio.options.baseUrl}');
-      print('[LoadService] Full URL: ${_apiClient.dio.options.baseUrl}/api/loads');
-
       final response = await _apiClient.dio.post('/api/loads', data: data);
-
-      print('[LoadService] Response status: ${response.statusCode}');
-      print('[LoadService] Response data: ${response.data}');
 
       if (response.statusCode == 201) {
         // API returns { load: {...} }

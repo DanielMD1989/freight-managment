@@ -88,11 +88,31 @@ async function getHandler(request: NextRequest) {
 // Apply RPS rate limiting to GET (100 RPS with 20 burst)
 export const GET = withRpsLimit(RPS_CONFIGS.gps, getHandler);
 
-// POST /api/gps/positions - Receive GPS data from devices
+/**
+ * POST /api/gps/positions - Receive GPS data from GPS hardware devices
+ *
+ * HIGH FIX #10: Security Model Documentation
+ *
+ * INTENTIONAL DESIGN: This endpoint uses DEVICE-BASED authentication (IMEI lookup)
+ * instead of user authentication because:
+ *
+ * 1. GPS hardware devices cannot perform OAuth/session authentication
+ * 2. IMEI serves as a device identifier that must be pre-registered in our system
+ * 3. Rate limiting per IMEI prevents abuse (12 updates/hour max)
+ * 4. Device must be registered AND assigned to a truck to submit data
+ *
+ * Security measures in place:
+ * - IMEI must exist in GpsDevice table (pre-registered)
+ * - Device must be assigned to a truck (truck relation required)
+ * - Rate limiting: 12 requests/hour per IMEI + 100 RPS burst limit
+ * - Invalid IMEI returns 404 (doesn't reveal whether device exists)
+ *
+ * For user-authenticated GPS updates, use /api/gps/position (requires session)
+ */
 async function postHandler(request: NextRequest) {
   try {
-    // This would be called by GPS hardware devices
-    // For MVP, we'll allow simple position updates
+    // Device-based authentication: GPS hardware devices use IMEI as identifier
+    // This is intentional - hardware cannot perform session auth
 
     const body = await request.json();
     const { imei, latitude, longitude, speed, heading, altitude, timestamp } = body;

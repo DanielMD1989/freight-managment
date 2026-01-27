@@ -251,29 +251,40 @@ export async function PATCH(
       timestamp: new Date().toISOString(),
     });
 
-    // Service Fee Implementation: Handle service fee based on new status
+    // HIGH FIX #3: Service Fee Implementation with idempotency check
+    // NOTE: Service fee operations are intentionally outside the main transaction because:
+    // 1. They may call external payment services (cannot be rolled back)
+    // 2. Status change should succeed even if fee processing fails
+    // 3. deductServiceFee/refundServiceFee have internal idempotency checks
     let serviceFeeResult = null;
     if (newStatus === 'COMPLETED') {
       // Deduct service fees from both shipper and carrier on completion
       try {
-        serviceFeeResult = await deductServiceFee(loadId);
+        // Check if fee already deducted (idempotency)
+        const existingFeeEvent = await db.loadEvent.findFirst({
+          where: { loadId, eventType: 'SERVICE_FEE_DEDUCTED' },
+        });
 
-        if (serviceFeeResult.success && serviceFeeResult.transactionId) {
-          await db.loadEvent.create({
-            data: {
-              loadId,
-              eventType: 'SERVICE_FEE_DEDUCTED',
-              description: `Service fees deducted - Shipper: ${serviceFeeResult.shipperFee.toFixed(2)} ETB, Carrier: ${serviceFeeResult.carrierFee.toFixed(2)} ETB, Total: ${serviceFeeResult.totalPlatformFee.toFixed(2)} ETB`,
-              userId: session.userId,
-              metadata: {
-                shipperFee: serviceFeeResult.shipperFee.toFixed(2),
-                carrierFee: serviceFeeResult.carrierFee.toFixed(2),
-                totalPlatformFee: serviceFeeResult.totalPlatformFee.toFixed(2),
-                transactionId: serviceFeeResult.transactionId,
-                details: serviceFeeResult.details,
+        if (!existingFeeEvent) {
+          serviceFeeResult = await deductServiceFee(loadId);
+
+          if (serviceFeeResult.success && serviceFeeResult.transactionId) {
+            await db.loadEvent.create({
+              data: {
+                loadId,
+                eventType: 'SERVICE_FEE_DEDUCTED',
+                description: `Service fees deducted - Shipper: ${serviceFeeResult.shipperFee.toFixed(2)} ETB, Carrier: ${serviceFeeResult.carrierFee.toFixed(2)} ETB, Total: ${serviceFeeResult.totalPlatformFee.toFixed(2)} ETB`,
+                userId: session.userId,
+                metadata: {
+                  shipperFee: serviceFeeResult.shipperFee.toFixed(2),
+                  carrierFee: serviceFeeResult.carrierFee.toFixed(2),
+                  totalPlatformFee: serviceFeeResult.totalPlatformFee.toFixed(2),
+                  transactionId: serviceFeeResult.transactionId,
+                  details: serviceFeeResult.details,
+                },
               },
-            },
-          });
+            });
+          }
         }
       } catch (error) {
         console.error('Service fee deduction error:', error);
@@ -281,21 +292,28 @@ export async function PATCH(
     } else if (newStatus === 'CANCELLED') {
       // Refund service fee to shipper on cancellation
       try {
-        serviceFeeResult = await refundServiceFee(loadId);
+        // Check if fee already refunded (idempotency)
+        const existingRefundEvent = await db.loadEvent.findFirst({
+          where: { loadId, eventType: 'SERVICE_FEE_REFUNDED' },
+        });
 
-        if (serviceFeeResult.success && serviceFeeResult.transactionId) {
-          await db.loadEvent.create({
-            data: {
-              loadId,
-              eventType: 'SERVICE_FEE_REFUNDED',
-              description: `Service fee refunded: ${serviceFeeResult.serviceFee.toFixed(2)} ETB`,
-              userId: session.userId,
-              metadata: {
-                serviceFee: serviceFeeResult.serviceFee.toFixed(2),
-                transactionId: serviceFeeResult.transactionId,
+        if (!existingRefundEvent) {
+          serviceFeeResult = await refundServiceFee(loadId);
+
+          if (serviceFeeResult.success && serviceFeeResult.transactionId) {
+            await db.loadEvent.create({
+              data: {
+                loadId,
+                eventType: 'SERVICE_FEE_REFUNDED',
+                description: `Service fee refunded: ${serviceFeeResult.serviceFee.toFixed(2)} ETB`,
+                userId: session.userId,
+                metadata: {
+                  serviceFee: serviceFeeResult.serviceFee.toFixed(2),
+                  transactionId: serviceFeeResult.transactionId,
+                },
               },
-            },
-          });
+            });
+          }
         }
       } catch (error) {
         console.error('Service fee refund error:', error);

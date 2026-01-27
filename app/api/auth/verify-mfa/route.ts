@@ -20,6 +20,7 @@ import { jwtVerify } from 'jose';
 import { logAuthSuccess, logAuthFailure } from '@/lib/auditLog';
 import { logSecurityEvent, SecurityEventType } from '@/lib/security-events';
 import { getClientIP } from '@/lib/security';
+import { checkRateLimit, RATE_LIMIT_AUTH } from '@/lib/rateLimit';
 
 // MFA token secret (must match login route)
 const MFA_TOKEN_SECRET = new TextEncoder().encode(
@@ -37,6 +38,26 @@ export async function POST(request: NextRequest) {
   try {
     const clientIp = getClientIP(request.headers);
     const userAgent = request.headers.get('user-agent');
+
+    // HIGH FIX #12: IP-based rate limiting to prevent MFA brute force attacks
+    // 5 attempts per 15 minutes per IP
+    const rateLimitResult = await checkRateLimit(RATE_LIMIT_AUTH, clientIp);
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Too many MFA verification attempts. Please try again later.',
+          retryAfter: rateLimitResult.retryAfter,
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'Retry-After': rateLimitResult.retryAfter?.toString() || '900',
+          },
+        }
+      );
+    }
 
     const body = await request.json();
     const { mfaToken, otp, recoveryCode } = body;

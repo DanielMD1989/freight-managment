@@ -143,10 +143,8 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         );
       }
-    } else if (process.env.NODE_ENV !== 'production') {
-      // Development only: Log OTP (NEVER in production)
-      console.log(`[MFA DEV] OTP for ${session.userId}: ${otp}`);
     }
+    // SECURITY: OTP is never logged - use SMS service for delivery
 
     return NextResponse.json({
       success: true,

@@ -323,39 +323,57 @@ export async function POST(
     await CacheInvalidation.load(loadId, load.shipperId);
     await CacheInvalidation.truck(truckId, truck.carrierId);
 
-    // Non-critical: Escrow hold (outside transaction, fire-and-forget)
+    // HIGH FIX #8: Non-critical financial operations with idempotency checks
+    // NOTE: These are intentionally outside the main transaction because:
+    // 1. Assignment should succeed even if escrow/fee operations fail
+    // 2. These operations have internal idempotency - calling twice won't double-charge
+    // 3. LoadEvents serve as idempotency markers to prevent duplicate processing
+
+    // Escrow hold with idempotency check
     let escrowResult = null;
     try {
-      escrowResult = await holdFundsInEscrow(loadId);
-      if (escrowResult.success) {
-        await db.loadEvent.create({
-          data: {
-            loadId,
-            eventType: 'ESCROW_FUNDED',
-            description: `Funds held in escrow: ${escrowResult.escrowAmount.toFixed(2)} ETB`,
-            userId: session.userId,
-            metadata: { escrowAmount: escrowResult.escrowAmount.toFixed(2), transactionId: escrowResult.transactionId },
-          },
-        });
+      const existingEscrowEvent = await db.loadEvent.findFirst({
+        where: { loadId, eventType: 'ESCROW_FUNDED' },
+      });
+
+      if (!existingEscrowEvent) {
+        escrowResult = await holdFundsInEscrow(loadId);
+        if (escrowResult.success) {
+          await db.loadEvent.create({
+            data: {
+              loadId,
+              eventType: 'ESCROW_FUNDED',
+              description: `Funds held in escrow: ${escrowResult.escrowAmount.toFixed(2)} ETB`,
+              userId: session.userId,
+              metadata: { escrowAmount: escrowResult.escrowAmount.toFixed(2), transactionId: escrowResult.transactionId },
+            },
+          });
+        }
       }
     } catch (error) {
       console.error('Escrow hold error:', error);
     }
 
-    // Non-critical: Service fee reservation (outside transaction, fire-and-forget)
+    // Service fee reservation with idempotency check
     let serviceFeeResult = null;
     try {
-      serviceFeeResult = await reserveServiceFee(loadId);
-      if (serviceFeeResult.success && serviceFeeResult.transactionId) {
-        await db.loadEvent.create({
-          data: {
-            loadId,
-            eventType: 'SERVICE_FEE_RESERVED',
-            description: `Service fee reserved: ${serviceFeeResult.serviceFee.toFixed(2)} ETB`,
-            userId: session.userId,
-            metadata: { serviceFee: serviceFeeResult.serviceFee.toFixed(2), transactionId: serviceFeeResult.transactionId },
-          },
-        });
+      const existingFeeEvent = await db.loadEvent.findFirst({
+        where: { loadId, eventType: 'SERVICE_FEE_RESERVED' },
+      });
+
+      if (!existingFeeEvent) {
+        serviceFeeResult = await reserveServiceFee(loadId);
+        if (serviceFeeResult.success && serviceFeeResult.transactionId) {
+          await db.loadEvent.create({
+            data: {
+              loadId,
+              eventType: 'SERVICE_FEE_RESERVED',
+              description: `Service fee reserved: ${serviceFeeResult.serviceFee.toFixed(2)} ETB`,
+              userId: session.userId,
+              metadata: { serviceFee: serviceFeeResult.serviceFee.toFixed(2), transactionId: serviceFeeResult.transactionId },
+            },
+          });
+        }
       }
     } catch (error) {
       console.error('Service fee reserve error:', error);

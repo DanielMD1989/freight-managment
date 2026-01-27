@@ -373,16 +373,16 @@ void main() {
         pushEnabled: true,
         emailEnabled: true,
         smsEnabled: false,
-        loadRequests: true,
         loadUpdates: true,
-        paymentUpdates: true,
-        systemAlerts: true,
+        newLoads: true,
+        payments: true,
+        gpsAlerts: true,
       );
 
       expect(prefs.pushEnabled, isTrue);
       expect(prefs.emailEnabled, isTrue);
       expect(prefs.smsEnabled, isFalse);
-      expect(prefs.loadRequests, isTrue);
+      expect(prefs.loadUpdates, isTrue);
     });
   });
 
@@ -457,7 +457,7 @@ void main() {
       expect(UserRole.values.length, greaterThanOrEqualTo(4));
       expect(UserRole.shipper.name, isNotNull);
       expect(UserRole.carrier.name, isNotNull);
-      expect(UserRole.driver.name, isNotNull);
+      expect(UserRole.dispatcher.name, isNotNull);
       expect(UserRole.admin.name, isNotNull);
     });
 
@@ -532,7 +532,7 @@ void main() {
 
     test('ServiceFeeStatus should match web schema', () {
       expect(serviceFeeStatusFromString('PENDING'), equals(ServiceFeeStatus.pending));
-      expect(serviceFeeStatusFromString('PAID'), equals(ServiceFeeStatus.paid));
+      expect(serviceFeeStatusFromString('DEDUCTED'), equals(ServiceFeeStatus.deducted));
       expect(serviceFeeStatusFromString('WAIVED'), equals(ServiceFeeStatus.waived));
       expect(serviceFeeStatusFromString('REFUNDED'), equals(ServiceFeeStatus.refunded));
     });

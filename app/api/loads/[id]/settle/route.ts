@@ -96,24 +96,68 @@ export async function POST(
       );
     }
 
-    // IDEMPOTENCY: Atomically mark settlement as IN_PROGRESS to prevent race conditions
-    // If another request already started processing, this will fail (count = 0)
-    const lockResult = await db.load.updateMany({
-      where: {
-        id: loadId,
-        settlementStatus: { not: 'IN_PROGRESS' }, // Only if not already processing
-        status: 'DELIVERED',
-        podVerified: true,
-      },
-      data: {
-        settlementStatus: 'IN_PROGRESS',
-      },
-    });
+    // HIGH FIX #9: Use transaction with fresh re-fetch for atomic lock acquisition
+    // This prevents race conditions where two requests could both succeed in updateMany
+    let lockAcquired = false;
+    try {
+      await db.$transaction(async (tx) => {
+        // Fresh re-fetch inside transaction to get current state
+        const freshLoad = await tx.load.findUnique({
+          where: { id: loadId },
+          select: { settlementStatus: true, status: true, podVerified: true },
+        });
 
-    if (lockResult.count === 0) {
-      // Another process is already settling this load or it was already settled
+        if (!freshLoad) {
+          throw new Error('LOAD_NOT_FOUND');
+        }
+
+        // Check if already processing or completed
+        if (freshLoad.settlementStatus === 'IN_PROGRESS') {
+          throw new Error('SETTLEMENT_IN_PROGRESS');
+        }
+        if (freshLoad.settlementStatus === 'PAID') {
+          throw new Error('SETTLEMENT_COMPLETED');
+        }
+        if (freshLoad.status !== 'DELIVERED' || !freshLoad.podVerified) {
+          throw new Error('SETTLEMENT_REQUIREMENTS_NOT_MET');
+        }
+
+        // Atomically acquire lock
+        await tx.load.update({
+          where: { id: loadId },
+          data: { settlementStatus: 'IN_PROGRESS' },
+        });
+
+        lockAcquired = true;
+      });
+    } catch (error: any) {
+      if (error.message === 'LOAD_NOT_FOUND') {
+        return NextResponse.json({ error: 'Load not found' }, { status: 404 });
+      }
+      if (error.message === 'SETTLEMENT_IN_PROGRESS') {
+        return NextResponse.json(
+          { error: 'Settlement already in progress', code: 'IDEMPOTENCY_CONFLICT' },
+          { status: 409 }
+        );
+      }
+      if (error.message === 'SETTLEMENT_COMPLETED') {
+        return NextResponse.json(
+          { error: 'Settlement already completed', code: 'IDEMPOTENCY_CONFLICT' },
+          { status: 409 }
+        );
+      }
+      if (error.message === 'SETTLEMENT_REQUIREMENTS_NOT_MET') {
+        return NextResponse.json(
+          { error: 'Settlement requirements not met', code: 'REQUIREMENTS_NOT_MET' },
+          { status: 400 }
+        );
+      }
+      throw error;
+    }
+
+    if (!lockAcquired) {
       return NextResponse.json(
-        { error: 'Settlement already in progress or completed', code: 'IDEMPOTENCY_CONFLICT' },
+        { error: 'Failed to acquire settlement lock', code: 'LOCK_FAILED' },
         { status: 409 }
       );
     }

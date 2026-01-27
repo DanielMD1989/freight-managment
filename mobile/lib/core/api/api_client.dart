@@ -34,8 +34,11 @@ class ApiClient {
   SharedPreferences? _webPrefs;
 
   ApiClient._internal() {
-    print('[API] Initializing ApiClient with baseUrl: ${ApiConfig.baseUrl}');
-    print('[API] Running on web: $kIsWeb');
+    assert(() {
+      print('[API] Initializing ApiClient with baseUrl: ${ApiConfig.baseUrl}');
+      print('[API] Running on web: $kIsWeb');
+      return true;
+    }());
 
     _dio = Dio(BaseOptions(
       baseUrl: ApiConfig.baseUrl,
@@ -128,24 +131,29 @@ class ApiClient {
     );
   }
 
-  /// Logging interceptor for debugging
+  /// Logging interceptor for debugging (only in debug mode)
   Interceptor _loggingInterceptor() {
     return InterceptorsWrapper(
       onRequest: (options, handler) {
-        print('[API REQUEST] ${options.method} ${options.uri}');
-        print('[API REQUEST HEADERS] ${options.headers}');
+        assert(() {
+          print('[API REQUEST] ${options.method} ${options.uri}');
+          return true;
+        }());
         handler.next(options);
       },
       onResponse: (response, handler) {
-        print('[API RESPONSE] ${response.statusCode} ${response.requestOptions.uri}');
-        print('[API RESPONSE DATA] ${response.data}');
+        assert(() {
+          print('[API RESPONSE] ${response.statusCode} ${response.requestOptions.uri}');
+          return true;
+        }());
         handler.next(response);
       },
       onError: (error, handler) {
-        print('[API ERROR] ${error.type}: ${error.message}');
-        print('[API ERROR] Request: ${error.requestOptions.method} ${error.requestOptions.uri}');
-        print('[API ERROR] Response: ${error.response?.statusCode} ${error.response?.data}');
-        print('[API ERROR] Stack: ${error.stackTrace}');
+        assert(() {
+          print('[API ERROR] ${error.type}: ${error.message}');
+          print('[API ERROR] Request: ${error.requestOptions.method} ${error.requestOptions.uri}');
+          return true;
+        }());
         handler.next(error);
       },
     );
@@ -254,8 +262,11 @@ class ApiResponse<T> {
 /// Extension for Dio error handling
 extension DioErrorExtension on DioException {
   String get friendlyMessage {
-    // Log the actual error for debugging
-    print('[API Error] Type: $type, Message: $message, Error: $error');
+    // Debug logging only in development
+    assert(() {
+      print('[API Error] Type: $type, Message: $message');
+      return true;
+    }());
 
     switch (type) {
       case DioExceptionType.connectionTimeout:
