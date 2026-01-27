@@ -17,6 +17,8 @@ import { createNotification } from '@/lib/notifications';
 import { enableTrackingForLoad } from '@/lib/gpsTracking';
 import { UserRole, Prisma } from '@prisma/client';
 import crypto from 'crypto';
+// P0-003 FIX: Import CacheInvalidation for post-approval cache clearing
+import { CacheInvalidation } from '@/lib/cache';
 
 // Validation schema for load request response
 const LoadRequestResponseSchema = z.object({
@@ -302,6 +304,12 @@ export async function POST(
 
           return { request: updatedRequest, load: updatedLoad, trip };
         });
+
+        // P0-003 FIX: Invalidate cache after approval to prevent stale data
+        // This ensures the load no longer appears as available in searches
+        // Note: truck() invalidation also clears matching:* and truck-postings:* caches
+        await CacheInvalidation.load(loadRequest.loadId, loadRequest.load.shipperId);
+        await CacheInvalidation.truck(loadRequest.truckId, loadRequest.truck.carrierId);
 
         // Non-critical: Enable GPS tracking outside transaction (fire-and-forget)
         let trackingUrl: string | null = result.trip?.trackingUrl || null;

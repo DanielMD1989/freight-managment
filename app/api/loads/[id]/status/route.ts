@@ -8,6 +8,7 @@ import { db } from '@/lib/db';
 import { requireAuth, requireActiveUser } from '@/lib/auth';
 import { z } from 'zod';
 import { validateStateTransition, LoadStatus, getStatusDescription } from '@/lib/loadStateMachine';
+import { TripStatus } from '@prisma/client'; // P0-001 FIX: Import TripStatus enum
 import { deductServiceFee, refundServiceFee } from '@/lib/serviceFeeManagement'; // Service Fee Implementation
 // CRITICAL FIX: Import CacheInvalidation for status changes
 import { CacheInvalidation } from '@/lib/cache';
@@ -51,7 +52,7 @@ export async function PATCH(
     const body = await request.json();
     const { status: newStatus, reason, notes } = updateStatusSchema.parse(body);
 
-    // Get current load
+    // Get current load with trip information for P0-001 fix
     const load = await db.load.findUnique({
       where: { id: loadId },
       select: {
@@ -69,6 +70,13 @@ export async function PATCH(
             id: true,
             email: true,
             role: true,
+          },
+        },
+        // P0-001 FIX: Include trip for status sync
+        trip: {
+          select: {
+            id: true,
+            status: true,
           },
         },
       },
@@ -144,40 +152,92 @@ export async function PATCH(
     const terminalStatuses = ['COMPLETED', 'DELIVERED', 'CANCELLED', 'EXPIRED'];
     const shouldUnassignTruck = terminalStatuses.includes(newStatus) && load.assignedTruckId;
 
-    // Update load status
-    const updatedLoad = await db.load.update({
-      where: { id: loadId },
-      data: {
-        status: newStatus,
-        updatedAt: new Date(),
-        // Unassign truck when load reaches terminal state
-        ...(shouldUnassignTruck && {
-          assignedTruckId: null,
-          trackingEnabled: false,
-        }),
-      },
-      select: {
-        id: true,
-        status: true,
-        pickupCity: true,
-        deliveryCity: true,
-        shipperId: true,
-        assignedTruckId: true,
-        updatedAt: true,
-      },
-    });
+    // P0-001 FIX: Map Load status to Trip status for synchronization
+    const loadStatusToTripStatus: Record<string, TripStatus | null> = {
+      'ASSIGNED': TripStatus.ASSIGNED,
+      'PICKUP_PENDING': TripStatus.PICKUP_PENDING,
+      'IN_TRANSIT': TripStatus.IN_TRANSIT,
+      'DELIVERED': TripStatus.DELIVERED,
+      'COMPLETED': TripStatus.COMPLETED,
+      'CANCELLED': TripStatus.CANCELLED,
+      'EXPIRED': TripStatus.CANCELLED,
+      'EXCEPTION': null, // Don't change trip status for exceptions
+    };
 
-    // Log truck unassignment if it happened
-    if (shouldUnassignTruck) {
-      await db.loadEvent.create({
+    // P0-001 FIX: Use transaction to ensure atomic Load + Trip status update
+    const { updatedLoad, tripUpdated } = await db.$transaction(async (tx) => {
+      // Update load status
+      const updatedLoad = await tx.load.update({
+        where: { id: loadId },
         data: {
-          loadId,
-          eventType: 'UNASSIGNED',
-          description: `Truck automatically unassigned - load status changed to ${newStatus}`,
-          userId: session.userId,
+          status: newStatus,
+          updatedAt: new Date(),
+          // Unassign truck when load reaches terminal state
+          ...(shouldUnassignTruck && {
+            assignedTruckId: null,
+            trackingEnabled: false,
+          }),
+        },
+        select: {
+          id: true,
+          status: true,
+          pickupCity: true,
+          deliveryCity: true,
+          shipperId: true,
+          assignedTruckId: true,
+          updatedAt: true,
         },
       });
-    }
+
+      // P0-001 FIX: Sync Trip status if trip exists and status mapping exists
+      let tripUpdated = false;
+      const tripStatus = loadStatusToTripStatus[newStatus];
+      if (load.trip?.id && tripStatus && load.trip.status !== tripStatus) {
+        await tx.trip.update({
+          where: { id: load.trip.id },
+          data: {
+            status: tripStatus,
+            updatedAt: new Date(),
+            // Set completion time for terminal states
+            ...(tripStatus === 'COMPLETED' && { completedAt: new Date() }),
+            ...(tripStatus === 'CANCELLED' && { cancelledAt: new Date() }),
+          },
+        });
+
+        // Log trip status sync in LoadEvent (no TripEvent model exists)
+        await tx.loadEvent.create({
+          data: {
+            loadId,
+            eventType: 'TRIP_STATUS_SYNCED',
+            description: `Trip status synced to ${tripStatus} (Load status: ${newStatus})`,
+            userId: session.userId,
+            metadata: {
+              tripId: load.trip.id,
+              previousTripStatus: load.trip.status,
+              newTripStatus: tripStatus,
+              triggeredBy: 'load_status_change',
+              loadStatus: newStatus,
+            },
+          },
+        });
+
+        tripUpdated = true;
+      }
+
+      // Log truck unassignment if it happened (inside transaction)
+      if (shouldUnassignTruck) {
+        await tx.loadEvent.create({
+          data: {
+            loadId,
+            eventType: 'UNASSIGNED',
+            description: `Truck automatically unassigned - load status changed to ${newStatus}`,
+            userId: session.userId,
+          },
+        });
+      }
+
+      return { updatedLoad, tripUpdated };
+    });
 
     // Log the status change
     console.log(`Load ${loadId} status updated: ${load.status} → ${newStatus}`, {
@@ -354,6 +414,8 @@ export async function PATCH(
       description: getStatusDescription(newStatus as LoadStatus),
       load: updatedLoad,
       serviceFee: serviceFeeResponse,
+      // P0-001 FIX: Include trip sync status in response
+      tripSynced: tripUpdated,
     });
 
   } catch (error) {

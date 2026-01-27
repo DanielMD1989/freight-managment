@@ -937,8 +937,9 @@ model GpsPosition {
   loadId String? // Link to active load (if truck is on a delivery)
 
   // Trip relation - GPS positions are linked to trips for route history
+  // P1-004 FIX: SetNull on trip delete (GPS data preserved, trip reference cleared)
   tripId String?
-  trip   Trip?   @relation(fields: [tripId], references: [id])
+  trip   Trip?   @relation(fields: [tripId], references: [id], onDelete: SetNull)
 
   // Relations
   truckId String
@@ -1385,12 +1386,14 @@ model MatchProposal {
   status ProposalStatus @default(PENDING)
 
   // Load being proposed
+  // P1-004 FIX: Cascade delete proposals when load is deleted
   loadId String
-  load   Load   @relation(fields: [loadId], references: [id])
+  load   Load   @relation(fields: [loadId], references: [id], onDelete: Cascade)
 
   // Truck being proposed
+  // P1-004 FIX: Cascade delete proposals when truck is deleted
   truckId String
-  truck   Truck  @relation(fields: [truckId], references: [id])
+  truck   Truck  @relation(fields: [truckId], references: [id], onDelete: Cascade)
 
   // Carrier who owns the truck (must approve)
   carrierId String
@@ -1436,12 +1439,14 @@ model TruckRequest {
   status RequestStatus @default(PENDING)
 
   // Load for which truck is requested
+  // P1-004 FIX: Cascade delete requests when load is deleted
   loadId String
-  load   Load   @relation(fields: [loadId], references: [id])
+  load   Load   @relation(fields: [loadId], references: [id], onDelete: Cascade)
 
   // Truck being requested
+  // P1-004 FIX: Cascade delete requests when truck is deleted
   truckId String
-  truck   Truck  @relation(fields: [truckId], references: [id])
+  truck   Truck  @relation(fields: [truckId], references: [id], onDelete: Cascade)
 
   // Shipper who made the request
   shipperId     String
@@ -1489,12 +1494,14 @@ model LoadRequest {
   status RequestStatus @default(PENDING)
 
   // Load being requested by carrier
+  // P1-004 FIX: Cascade delete requests when load is deleted
   loadId String
-  load   Load   @relation("LoadRequests", fields: [loadId], references: [id])
+  load   Load   @relation("LoadRequests", fields: [loadId], references: [id], onDelete: Cascade)
 
   // Truck carrier wants to use
+  // P1-004 FIX: Cascade delete requests when truck is deleted
   truckId String
-  truck   Truck  @relation(fields: [truckId], references: [id])
+  truck   Truck  @relation(fields: [truckId], references: [id], onDelete: Cascade)
 
   // Carrier making the request
   carrierId     String

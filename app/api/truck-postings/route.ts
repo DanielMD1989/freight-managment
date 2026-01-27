@@ -43,6 +43,8 @@ import {
   RULE_ONE_ACTIVE_POST_PER_TRUCK,
   validateOneActivePostPerTruck,
 } from '@/lib/foundation-rules';
+// P1-001 FIX: Import CacheInvalidation for post-creation cache clearing
+import { CacheInvalidation } from '@/lib/cache';
 
 // Validation schema for truck posting
 const TruckPostingSchema = z.object({
@@ -195,10 +197,10 @@ export async function POST(request: NextRequest) {
             select: { isActive: true },
           })
         : Promise.resolve(null),
-      // Validate truck exists
+      // Validate truck exists and is approved
       db.truck.findUnique({
         where: { id: data.truckId },
-        select: { carrierId: true, isAvailable: true },
+        select: { carrierId: true, isAvailable: true, approvalStatus: true },
       }),
       // PHASE 2: Check for existing active posting (ONE_ACTIVE_POST_PER_TRUCK rule)
       db.truckPosting.findFirst({
@@ -228,6 +230,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Truck not found' },
         { status: 404 }
+      );
+    }
+
+    // P0-002 FIX: Validate truck approval status before allowing posting
+    // Only approved trucks can be posted to the loadboard
+    if (truck.approvalStatus !== 'APPROVED') {
+      return NextResponse.json(
+        {
+          error: 'Only approved trucks can be posted to the loadboard',
+          currentStatus: truck.approvalStatus,
+          hint: 'Please wait for admin approval before posting this truck',
+        },
+        { status: 403 }
       );
     }
 
@@ -313,6 +328,10 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // P1-001 FIX: Cache invalidation after posting creation
+    // Ensures new postings appear immediately in searches and matching
+    await CacheInvalidation.truck(data.truckId, carrierId);
 
     const response = NextResponse.json(posting, { status: 201 });
 

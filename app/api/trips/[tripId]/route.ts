@@ -10,6 +10,8 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { TripStatus, LoadStatus } from '@prisma/client';
 import { z } from 'zod';
+// P1-002 FIX: Import CacheInvalidation for post-update cache clearing
+import { CacheInvalidation } from '@/lib/cache';
 
 const updateTripSchema = z.object({
   status: z.enum(['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED', 'CANCELLED']).optional(),
@@ -266,47 +268,63 @@ export async function PATCH(
       }
     }
 
-    // Update trip
-    const updatedTrip = await db.trip.update({
-      where: { id: tripId },
-      data: updateData,
-      include: {
-        load: true,
-        truck: true,
-        carrier: true,
-        shipper: true,
-      },
-    });
-
-    // Sync trip status with load status
-    if (validatedData.status) {
-      const loadStatus = mapTripStatusToLoadStatus(validatedData.status);
-      if (loadStatus) {
-        await db.load.update({
-          where: { id: trip.loadId },
-          data: { status: loadStatus },
-        });
-      }
-    }
-
-    // Create load event
-    await db.loadEvent.create({
-      data: {
-        loadId: trip.loadId,
-        eventType: 'TRIP_STATUS_UPDATED',
-        description: `Trip status changed to ${validatedData.status}`,
-        userId: session.userId,
-        metadata: {
-          tripId,
-          previousStatus: trip.status,
-          newStatus: validatedData.status,
+    // P1-002 FIX: Wrap trip update and load sync in single transaction
+    // to ensure atomic status synchronization
+    const { updatedTrip, loadSynced } = await db.$transaction(async (tx) => {
+      // Update trip
+      const updatedTrip = await tx.trip.update({
+        where: { id: tripId },
+        data: updateData,
+        include: {
+          load: true,
+          truck: true,
+          carrier: true,
+          shipper: true,
         },
-      },
+      });
+
+      // Sync trip status with load status (inside transaction)
+      let loadSynced = false;
+      if (validatedData.status) {
+        const loadStatus = mapTripStatusToLoadStatus(validatedData.status);
+        if (loadStatus) {
+          await tx.load.update({
+            where: { id: trip.loadId },
+            data: { status: loadStatus },
+          });
+          loadSynced = true;
+        }
+      }
+
+      // Create load event inside transaction
+      await tx.loadEvent.create({
+        data: {
+          loadId: trip.loadId,
+          eventType: 'TRIP_STATUS_UPDATED',
+          description: `Trip status changed to ${validatedData.status}`,
+          userId: session.userId,
+          metadata: {
+            tripId,
+            previousStatus: trip.status,
+            newStatus: validatedData.status,
+            loadStatusSynced: loadSynced,
+          },
+        },
+      });
+
+      return { updatedTrip, loadSynced };
     });
+
+    // P1-002 FIX: Cache invalidation after transaction commits
+    await CacheInvalidation.trip(tripId, trip.carrierId, trip.shipperId);
+    if (loadSynced) {
+      await CacheInvalidation.load(trip.loadId, trip.shipperId);
+    }
 
     return NextResponse.json({
       message: 'Trip updated successfully',
       trip: updatedTrip,
+      loadSynced,
     });
   } catch (error) {
     console.error('Update trip error:', error);

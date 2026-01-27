@@ -89,22 +89,27 @@ String loadStatusToString(LoadStatus status) {
   }
 }
 
-/// Service fee status
+/// Service fee status - matches Prisma ServiceFeeStatus enum
 enum ServiceFeeStatus {
-  pending,
-  paid,
-  waived,
-  refunded,
+  pending,   // PENDING - Not yet calculated/reserved
+  reserved,  // RESERVED - Held from wallet when trip starts
+  deducted,  // DEDUCTED - Moved to platform revenue on completion
+  refunded,  // REFUNDED - Returned to shipper on cancellation
+  waived,    // WAIVED - Admin waived the fee
 }
 
 ServiceFeeStatus serviceFeeStatusFromString(String? value) {
   switch (value?.toUpperCase()) {
-    case 'PAID':
-      return ServiceFeeStatus.paid;
-    case 'WAIVED':
-      return ServiceFeeStatus.waived;
+    case 'PENDING':
+      return ServiceFeeStatus.pending;
+    case 'RESERVED':
+      return ServiceFeeStatus.reserved;
+    case 'DEDUCTED':
+      return ServiceFeeStatus.deducted;
     case 'REFUNDED':
       return ServiceFeeStatus.refunded;
+    case 'WAIVED':
+      return ServiceFeeStatus.waived;
     default:
       return ServiceFeeStatus.pending;
   }

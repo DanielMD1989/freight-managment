@@ -10,6 +10,9 @@ import { holdFundsInEscrow, refundEscrowFunds } from '@/lib/escrowManagement'; /
 import { RULE_CARRIER_FINAL_AUTHORITY } from '@/lib/foundation-rules'; // Phase 2
 import { reserveServiceFee } from '@/lib/serviceFeeManagement'; // Service Fee Implementation
 import { createTripForLoad } from '@/lib/tripManagement'; // Trip Management
+// P0-005 FIX: Import CacheInvalidation for post-assignment cache clearing
+import { CacheInvalidation } from '@/lib/cache';
+import crypto from 'crypto';
 
 const assignLoadSchema = z.object({
   truckId: z.string(),
@@ -134,7 +137,7 @@ export async function POST(
       }
     }
 
-    // Sprint 4: Check for assignment conflicts
+    // Sprint 4: Check for assignment conflicts (pre-transaction check)
     const conflictCheck = await checkAssignmentConflicts(
       truckId,
       loadId,
@@ -158,142 +161,212 @@ export async function POST(
       console.warn(`Assignment warnings for load ${loadId}:`, conflictCheck.warnings);
     }
 
-    // Assign truck to load
-    const updatedLoad = await db.load.update({
-      where: { id: loadId },
-      data: {
-        assignedTruckId: truckId,
-        assignedAt: new Date(),
-        status: 'ASSIGNED', // Sprint 3: State machine validated transition
-      },
-    });
+    // P0-005 & P0-006 FIX: Wrap all critical operations in a single transaction
+    // with fresh re-fetch to prevent race conditions
+    let result: { load: any; trip: any; trackingUrl: string | null };
 
-    // Create assignment event
-    await db.loadEvent.create({
-      data: {
-        loadId,
-        eventType: 'ASSIGNED',
-        description: `Load assigned to truck ${truck.licensePlate}`,
-        userId: session.userId,
-      },
-    });
-
-    // Sprint 8: Hold funds in escrow
-    let escrowResult = null;
     try {
-      escrowResult = await holdFundsInEscrow(loadId);
+      result = await db.$transaction(async (tx) => {
+        // P0-006 FIX: Fresh re-fetch load inside transaction to prevent race condition
+        const freshLoad = await tx.load.findUnique({
+          where: { id: loadId },
+          select: {
+            id: true,
+            status: true,
+            shipperId: true,
+            assignedTruckId: true,
+            pickupCity: true,
+            deliveryCity: true,
+            pickupAddress: true,
+            deliveryAddress: true,
+            originLat: true,
+            originLon: true,
+            destinationLat: true,
+            destinationLon: true,
+            tripKm: true,
+            estimatedTripKm: true,
+          },
+        });
 
-      if (!escrowResult.success) {
-        console.warn(`Escrow hold failed for load ${loadId}:`, escrowResult.error);
+        if (!freshLoad) {
+          throw new Error('LOAD_NOT_FOUND');
+        }
 
-        // Create warning event
-        await db.loadEvent.create({
+        // Check load is still available (race condition protection)
+        if (freshLoad.assignedTruckId) {
+          throw new Error('LOAD_ALREADY_ASSIGNED');
+        }
+
+        const availableStatuses = ['POSTED', 'SEARCHING', 'OFFERED'];
+        if (!availableStatuses.includes(freshLoad.status)) {
+          throw new Error(`LOAD_NOT_AVAILABLE:${freshLoad.status}`);
+        }
+
+        // Check truck is not already busy with an active load
+        const truckBusy = await tx.load.findFirst({
+          where: {
+            assignedTruckId: truckId,
+            status: { in: ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT'] },
+          },
+          select: { id: true, pickupCity: true, deliveryCity: true },
+        });
+
+        if (truckBusy) {
+          throw new Error(`TRUCK_ALREADY_BUSY:${truckBusy.pickupCity}:${truckBusy.deliveryCity}`);
+        }
+
+        // Unassign truck from any completed loads (cleanup)
+        await tx.load.updateMany({
+          where: {
+            assignedTruckId: truckId,
+            status: { in: ['DELIVERED', 'COMPLETED', 'CANCELLED', 'EXPIRED'] },
+          },
+          data: { assignedTruckId: null },
+        });
+
+        // Assign truck to load
+        const updatedLoad = await tx.load.update({
+          where: { id: loadId },
+          data: {
+            assignedTruckId: truckId,
+            assignedAt: new Date(),
+            status: 'ASSIGNED',
+          },
+        });
+
+        // Create Trip record inside transaction (atomic with assignment)
+        const trackingUrl = `trip-${loadId.slice(-6)}-${crypto.randomBytes(12).toString('hex')}`;
+
+        const trip = await tx.trip.create({
+          data: {
+            loadId: loadId,
+            truckId: truckId,
+            carrierId: truck.carrierId,
+            shipperId: freshLoad.shipperId,
+            status: 'ASSIGNED',
+            pickupLat: freshLoad.originLat,
+            pickupLng: freshLoad.originLon,
+            pickupAddress: freshLoad.pickupAddress,
+            pickupCity: freshLoad.pickupCity,
+            deliveryLat: freshLoad.destinationLat,
+            deliveryLng: freshLoad.destinationLon,
+            deliveryAddress: freshLoad.deliveryAddress,
+            deliveryCity: freshLoad.deliveryCity,
+            estimatedDistanceKm: freshLoad.tripKm || freshLoad.estimatedTripKm,
+            trackingUrl,
+            trackingEnabled: true,
+          },
+        });
+
+        // Create assignment event inside transaction
+        await tx.loadEvent.create({
           data: {
             loadId,
-            eventType: 'ESCROW_HOLD_FAILED',
-            description: `Escrow hold failed: ${escrowResult.error}`,
+            eventType: 'ASSIGNED',
+            description: `Load assigned to truck ${truck.licensePlate}`,
             userId: session.userId,
             metadata: {
-              error: escrowResult.error,
-              escrowAmount: escrowResult.escrowAmount.toFixed(2),
-              shipperBalance: escrowResult.shipperBalance.toFixed(2),
+              truckId,
+              tripId: trip.id,
+              assignedViaDirectAssign: true,
             },
           },
         });
-      } else {
-        // Create success event
+
+        // Cancel other pending requests for this load
+        await tx.loadRequest.updateMany({
+          where: { loadId: loadId, status: 'PENDING' },
+          data: { status: 'CANCELLED' },
+        });
+
+        await tx.truckRequest.updateMany({
+          where: { loadId: loadId, status: 'PENDING' },
+          data: { status: 'CANCELLED' },
+        });
+
+        await tx.matchProposal.updateMany({
+          where: { loadId: loadId, status: 'PENDING' },
+          data: { status: 'CANCELLED' },
+        });
+
+        return { load: updatedLoad, trip, trackingUrl };
+      });
+    } catch (error: any) {
+      // Handle specific transaction errors
+      if (error.message === 'LOAD_NOT_FOUND') {
+        return NextResponse.json({ error: 'Load not found' }, { status: 404 });
+      }
+      if (error.message === 'LOAD_ALREADY_ASSIGNED') {
+        return NextResponse.json(
+          { error: 'Load has already been assigned to another truck. Please refresh and try again.' },
+          { status: 409 }
+        );
+      }
+      if (error.message.startsWith('LOAD_NOT_AVAILABLE:')) {
+        const status = error.message.split(':')[1];
+        return NextResponse.json(
+          { error: `Load is no longer available (status: ${status})` },
+          { status: 400 }
+        );
+      }
+      if (error.message.startsWith('TRUCK_ALREADY_BUSY:')) {
+        const [, pickup, delivery] = error.message.split(':');
+        return NextResponse.json(
+          { error: `This truck is already assigned to an active load (${pickup} → ${delivery})` },
+          { status: 409 }
+        );
+      }
+      throw error; // Re-throw for generic error handling
+    }
+
+    // P0-005 FIX: Cache invalidation after transaction commits (fire-and-forget)
+    await CacheInvalidation.load(loadId, load.shipperId);
+    await CacheInvalidation.truck(truckId, truck.carrierId);
+
+    // Non-critical: Escrow hold (outside transaction, fire-and-forget)
+    let escrowResult = null;
+    try {
+      escrowResult = await holdFundsInEscrow(loadId);
+      if (escrowResult.success) {
         await db.loadEvent.create({
           data: {
             loadId,
             eventType: 'ESCROW_FUNDED',
             description: `Funds held in escrow: ${escrowResult.escrowAmount.toFixed(2)} ETB`,
             userId: session.userId,
-            metadata: {
-              escrowAmount: escrowResult.escrowAmount.toFixed(2),
-              transactionId: escrowResult.transactionId,
-            },
+            metadata: { escrowAmount: escrowResult.escrowAmount.toFixed(2), transactionId: escrowResult.transactionId },
           },
         });
       }
     } catch (error) {
       console.error('Escrow hold error:', error);
-      // Continue - assignment succeeded, escrow can be handled manually if needed
     }
 
-    // Service Fee Implementation: Reserve service fee from shipper wallet
+    // Non-critical: Service fee reservation (outside transaction, fire-and-forget)
     let serviceFeeResult = null;
     try {
       serviceFeeResult = await reserveServiceFee(loadId);
-
-      if (!serviceFeeResult.success && serviceFeeResult.error) {
-        console.warn(`Service fee reserve failed for load ${loadId}:`, serviceFeeResult.error);
-
-        // Create warning event (non-blocking)
-        await db.loadEvent.create({
-          data: {
-            loadId,
-            eventType: 'SERVICE_FEE_RESERVE_FAILED',
-            description: `Service fee reserve failed: ${serviceFeeResult.error}`,
-            userId: session.userId,
-            metadata: {
-              error: serviceFeeResult.error,
-              serviceFee: serviceFeeResult.serviceFee.toFixed(2),
-            },
-          },
-        });
-      } else if (serviceFeeResult.success && serviceFeeResult.transactionId) {
-        // Create success event
+      if (serviceFeeResult.success && serviceFeeResult.transactionId) {
         await db.loadEvent.create({
           data: {
             loadId,
             eventType: 'SERVICE_FEE_RESERVED',
             description: `Service fee reserved: ${serviceFeeResult.serviceFee.toFixed(2)} ETB`,
             userId: session.userId,
-            metadata: {
-              serviceFee: serviceFeeResult.serviceFee.toFixed(2),
-              transactionId: serviceFeeResult.transactionId,
-            },
+            metadata: { serviceFee: serviceFeeResult.serviceFee.toFixed(2), transactionId: serviceFeeResult.transactionId },
           },
         });
       }
     } catch (error) {
       console.error('Service fee reserve error:', error);
-      // Continue - assignment succeeded, service fee can be handled manually if needed
     }
 
-    // Create Trip record for this load assignment
-    let trip = null;
-    try {
-      trip = await createTripForLoad(loadId, truckId, session.userId);
-
-      if (trip) {
-        // Create trip created event
-        await db.loadEvent.create({
-          data: {
-            loadId,
-            eventType: 'TRIP_CREATED',
-            description: `Trip created: ${trip.id}`,
-            userId: session.userId,
-            metadata: {
-              tripId: trip.id,
-              trackingUrl: trip.trackingUrl,
-            },
-          },
-        });
-      }
-    } catch (error) {
-      console.error('Trip creation error:', error);
-      // Continue - assignment succeeded, trip can be created manually if needed
-    }
-
-    // Sprint 16: Enable GPS tracking if truck has GPS
-    let trackingUrl: string | null = trip?.trackingUrl || null;
-
+    // Non-critical: Enable GPS tracking (outside transaction, fire-and-forget)
+    let trackingUrl: string | null = result.trackingUrl;
     if (truck.imei && truck.gpsVerifiedAt) {
       try {
-        trackingUrl = await enableTrackingForLoad(loadId, truckId);
-
-        // Create tracking event
+        const gpsUrl = await enableTrackingForLoad(loadId, truckId);
+        if (gpsUrl) trackingUrl = gpsUrl;
         await db.loadEvent.create({
           data: {
             loadId,
@@ -304,12 +377,12 @@ export async function POST(
         });
       } catch (error) {
         console.error('Failed to enable GPS tracking:', error);
-        // Continue even if tracking fails - assignment is still successful
       }
     }
 
     return NextResponse.json({
-      load: updatedLoad,
+      load: result.load,
+      trip: result.trip,
       trackingUrl,
       escrow: escrowResult
         ? {
@@ -495,6 +568,15 @@ export async function DELETE(
       }
     }
 
+    // Store previous truck ID for cache invalidation
+    const previousTruckId = load.assignedTruckId;
+
+    // Get truck carrier ID for cache invalidation
+    const previousTruck = await db.truck.findUnique({
+      where: { id: previousTruckId! },
+      select: { carrierId: true },
+    });
+
     // Unassign truck
     const updatedLoad = await db.load.update({
       where: { id: loadId },
@@ -514,8 +596,18 @@ export async function DELETE(
         eventType: 'UNASSIGNED',
         description: 'Load unassigned from truck',
         userId: session.userId,
+        metadata: {
+          previousTruckId,
+          newStatus: targetStatus,
+        },
       },
     });
+
+    // P1-003 FIX: Cache invalidation after unassignment
+    await CacheInvalidation.load(loadId, load.shipperId);
+    if (previousTruckId && previousTruck?.carrierId) {
+      await CacheInvalidation.truck(previousTruckId, previousTruck.carrierId);
+    }
 
     return NextResponse.json({
       load: updatedLoad,
