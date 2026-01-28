@@ -54,7 +54,7 @@ class CarrierMapScreen extends StatelessWidget {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 10,
                       offset: const Offset(0, -2),
                     ),
@@ -115,8 +115,8 @@ class CarrierMapScreen extends StatelessWidget {
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                   color: isActive
-                                      ? AppColors.success.withOpacity(0.1)
-                                      : Colors.grey.withOpacity(0.1),
+                                      ? AppColors.success.withValues(alpha: 0.1)
+                                      : Colors.grey.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(
@@ -169,7 +169,7 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(

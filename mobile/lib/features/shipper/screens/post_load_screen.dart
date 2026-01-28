@@ -376,7 +376,7 @@ class _PostLoadScreenState extends ConsumerState<PostLoadScreen> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<TruckType>(
-          value: _truckType,
+          initialValue: _truckType,
           decoration: const InputDecoration(
             prefixIcon: Icon(Icons.local_shipping),
           ),

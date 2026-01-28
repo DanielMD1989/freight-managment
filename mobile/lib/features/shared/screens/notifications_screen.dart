@@ -652,13 +652,13 @@ class _NotificationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: notification.isUnread ? AppColors.primary.withOpacity(0.05) : null,
+      color: notification.isUnread ? AppColors.primary.withValues(alpha: 0.05) : null,
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: _iconColor.withOpacity(0.1),
+            color: _iconColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(_icon, color: _iconColor, size: 24),
@@ -772,7 +772,7 @@ class _EmptyState extends StatelessWidget {
                   Icon(
                     icon,
                     size: 64,
-                    color: AppColors.textSecondary.withOpacity(0.5),
+                    color: AppColors.textSecondary.withValues(alpha: 0.5),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -787,7 +787,7 @@ class _EmptyState extends StatelessWidget {
                     Text(
                       subtitle!,
                       style: TextStyle(
-                        color: AppColors.textSecondary.withOpacity(0.7),
+                        color: AppColors.textSecondary.withValues(alpha: 0.7),
                         fontSize: 14,
                       ),
                     ),

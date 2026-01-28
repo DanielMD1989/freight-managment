@@ -235,7 +235,7 @@ class _StatusCard extends StatelessWidget {
                   width: 64,
                   height: 64,
                   decoration: BoxDecoration(
-                    color: _getStatusColor().withOpacity(0.1),
+                    color: _getStatusColor().withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Icon(
@@ -375,7 +375,7 @@ class _ConfirmationSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: AppColors.accent.withOpacity(0.05),
+      color: AppColors.accent.withValues(alpha: 0.05),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -452,7 +452,7 @@ class _TrackingSection extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.success.withOpacity(0.1),
+                      color: AppColors.success.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -706,7 +706,7 @@ class _CarrierSection extends StatelessWidget {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.business, color: AppColors.primary),
@@ -744,7 +744,7 @@ class _CarrierSection extends StatelessWidget {
                         onPressed: onCall,
                         icon: const Icon(Icons.phone),
                         style: IconButton.styleFrom(
-                          backgroundColor: AppColors.success.withOpacity(0.1),
+                          backgroundColor: AppColors.success.withValues(alpha: 0.1),
                           foregroundColor: AppColors.success,
                           minimumSize: const Size(48, 48),
                         ),
@@ -831,9 +831,9 @@ class _PodItem extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.success.withOpacity(0.05),
+        color: AppColors.success.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.success.withOpacity(0.2)),
+        border: Border.all(color: AppColors.success.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
@@ -841,7 +841,7 @@ class _PodItem extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.success.withOpacity(0.1),
+              color: AppColors.success.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(

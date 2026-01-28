@@ -371,7 +371,7 @@ class _FiltersPanel extends StatelessWidget {
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: params.truckType,
+                  initialValue: params.truckType,
                   decoration: const InputDecoration(
                     labelText: 'Truck Type',
                     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -391,7 +391,7 @@ class _FiltersPanel extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: params.fullPartial,
+                  initialValue: params.fullPartial,
                   decoration: const InputDecoration(
                     labelText: 'Load Type',
                     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -693,7 +693,7 @@ class _AgeIndicator extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -961,7 +961,7 @@ class _RequestLoadModalState extends State<_RequestLoadModal> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: _selectedTruckId,
+              initialValue: _selectedTruckId,
               decoration: const InputDecoration(
                 contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               ),

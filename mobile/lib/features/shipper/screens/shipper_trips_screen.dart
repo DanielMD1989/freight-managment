@@ -197,7 +197,7 @@ class _FilterChip extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 48), // Minimum touch target
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? chipColor : chipColor.withOpacity(0.1),
+            color: isSelected ? chipColor : chipColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(24),
           ),
           child: Row(
@@ -214,7 +214,7 @@ class _FilterChip extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.white.withOpacity(0.25) : chipColor.withOpacity(0.15),
+                  color: isSelected ? Colors.white.withValues(alpha: 0.25) : chipColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -367,7 +367,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(

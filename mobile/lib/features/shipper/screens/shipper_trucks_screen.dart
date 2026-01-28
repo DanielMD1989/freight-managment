@@ -281,7 +281,7 @@ class _FilterChip extends StatelessWidget {
             Icon(
               Icons.close,
               size: 16,
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
             ),
           ],
         ],
@@ -305,7 +305,7 @@ class _FilterOptionChip extends StatelessWidget {
       label: Text(label),
       selected: isSelected,
       onSelected: (selected) {},
-      selectedColor: AppColors.primary.withOpacity(0.2),
+      selectedColor: AppColors.primary.withValues(alpha: 0.2),
       checkmarkColor: AppColors.primary,
     );
   }
@@ -348,7 +348,7 @@ class _TruckCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -379,8 +379,8 @@ class _TruckCard extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: isAvailableNow
-                                  ? AppColors.success.withOpacity(0.1)
-                                  : AppColors.warning.withOpacity(0.1),
+                                  ? AppColors.success.withValues(alpha: 0.1)
+                                  : AppColors.warning.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(

@@ -192,7 +192,7 @@ class _ShipperTruckDetailsScreenState
         border: Border(top: BorderSide(color: AppColors.border)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -380,8 +380,8 @@ class _TruckHeader extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: truck.isAvailable
-                          ? AppColors.success.withOpacity(0.1)
-                          : AppColors.error.withOpacity(0.1),
+                          ? AppColors.success.withValues(alpha: 0.1)
+                          : AppColors.error.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
@@ -811,7 +811,7 @@ class _BookTruckModalState extends State<_BookTruckModal> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: _selectedLoadId,
+              initialValue: _selectedLoadId,
               decoration: const InputDecoration(
                 contentPadding:
                     EdgeInsets.symmetric(horizontal: 12, vertical: 12),

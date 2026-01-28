@@ -130,7 +130,7 @@ class _WelcomeCard extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 24,
-            backgroundColor: Colors.white.withOpacity(0.2),
+            backgroundColor: Colors.white.withValues(alpha: 0.2),
             child: Text(
               user?.fullName?.substring(0, 1).toUpperCase() ?? 'C',
               style: const TextStyle(
@@ -148,7 +148,7 @@ class _WelcomeCard extends StatelessWidget {
                 Text(
                   'Welcome back,',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                     fontSize: 14,
                   ),
                 ),
@@ -259,7 +259,7 @@ class _StatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -430,7 +430,7 @@ class _QuickActionButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.1),
+          color: AppColors.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -497,7 +497,7 @@ class _TripCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: _getStatusColor(trip.status).withOpacity(0.2),
+          backgroundColor: _getStatusColor(trip.status).withValues(alpha: 0.2),
           child: Icon(
             Icons.local_shipping,
             color: _getStatusColor(trip.status),
@@ -577,7 +577,7 @@ class _TruckCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: _getStatusColor().withOpacity(0.2),
+          backgroundColor: _getStatusColor().withValues(alpha: 0.2),
           child: Icon(Icons.local_shipping, color: _getStatusColor()),
         ),
         title: Text(truck.licensePlate),
@@ -612,7 +612,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(

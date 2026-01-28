@@ -260,7 +260,7 @@ class _ActiveLoadCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
+                      color: statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -443,8 +443,8 @@ class _PostedLoadCard extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: load.status == LoadStatus.offered
-                          ? AppColors.success.withOpacity(0.1)
-                          : AppColors.warning.withOpacity(0.1),
+                          ? AppColors.success.withValues(alpha: 0.1)
+                          : AppColors.warning.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -623,7 +623,7 @@ class _CompletedLoadCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
+                      color: statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -837,7 +837,7 @@ class _LoadSummaryCard extends StatelessWidget {
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: statusColor.withOpacity(0.1),
+            color: statusColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Text(

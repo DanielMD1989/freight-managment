@@ -184,7 +184,7 @@ class _TabButton extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.white.withOpacity(0.2) : AppColors.slate200,
+                color: isSelected ? Colors.white.withValues(alpha: 0.2) : AppColors.slate200,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
@@ -326,7 +326,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(

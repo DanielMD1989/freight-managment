@@ -248,7 +248,7 @@ class _EditTruckScreenState extends ConsumerState<EditTruckScreen> {
 
             // Truck Type
             DropdownButtonFormField<TruckType>(
-              value: _selectedTruckType,
+              initialValue: _selectedTruckType,
               decoration: const InputDecoration(
                 labelText: 'Truck Type *',
                 prefixIcon: Icon(Icons.local_shipping),

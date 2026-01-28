@@ -250,9 +250,9 @@ class _ShipperTruckboardScreenState
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 border: Border(
-                  bottom: BorderSide(color: AppColors.primary.withOpacity(0.2)),
+                  bottom: BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
                 ),
               ),
               child: Row(
@@ -562,7 +562,7 @@ class _FiltersPanel extends StatelessWidget {
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: params.truckType,
+                  initialValue: params.truckType,
                   decoration: const InputDecoration(
                     labelText: 'Truck Type',
                     contentPadding:
@@ -586,7 +586,7 @@ class _FiltersPanel extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: params.fullPartial,
+                  initialValue: params.fullPartial,
                   decoration: const InputDecoration(
                     labelText: 'Full/Partial',
                     contentPadding:
@@ -780,7 +780,7 @@ class _TruckCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.success.withOpacity(0.1),
+                        color: AppColors.success.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: const Row(
@@ -1025,7 +1025,7 @@ class _TruckPostingCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.accent.withOpacity(0.1),
+                      color: AppColors.accent.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
@@ -1411,7 +1411,7 @@ class _BookTruckModalState extends State<_BookTruckModal> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: _selectedLoadId,
+              initialValue: _selectedLoadId,
               decoration: const InputDecoration(
                 contentPadding:
                     EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -1590,7 +1590,7 @@ class _BookTruckPostingModalState extends State<_BookTruckPostingModal> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.accent.withOpacity(0.1),
+                          color: AppColors.accent.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -1637,7 +1637,7 @@ class _BookTruckPostingModalState extends State<_BookTruckPostingModal> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: _selectedLoadId,
+              initialValue: _selectedLoadId,
               decoration: const InputDecoration(
                 contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               ),

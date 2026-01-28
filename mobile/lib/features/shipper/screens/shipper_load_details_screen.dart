@@ -139,7 +139,7 @@ class _ShipperLoadDetailsScreenState
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: _getStatusColor(load.status).withOpacity(0.1),
+                color: _getStatusColor(load.status).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -471,7 +471,7 @@ class _ShipperLoadDetailsScreenState
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.warning.withOpacity(0.1),
+                        color: AppColors.warning.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Row(
@@ -500,7 +500,7 @@ class _ShipperLoadDetailsScreenState
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.info.withOpacity(0.1),
+                        color: AppColors.info.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Row(
@@ -797,7 +797,7 @@ class _ShipperLoadDetailsScreenState
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.warning.withOpacity(0.1),
+                  color: AppColors.warning.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(

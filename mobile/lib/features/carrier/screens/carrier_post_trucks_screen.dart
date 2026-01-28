@@ -440,7 +440,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -632,7 +632,7 @@ class _PostTruckModalState extends ConsumerState<_PostTruckModal> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               DropdownButtonFormField<String>(
-                                value: _selectedTruckId,
+                                initialValue: _selectedTruckId,
                                 isExpanded: true,
                                 decoration: InputDecoration(
                                   hintText: 'Select an approved truck',
@@ -670,10 +670,10 @@ class _PostTruckModalState extends ConsumerState<_PostTruckModal> {
                                 Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: AppColors.warning.withOpacity(0.1),
+                                    color: AppColors.warning.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                      color: AppColors.warning.withOpacity(0.3),
+                                      color: AppColors.warning.withValues(alpha: 0.3),
                                     ),
                                   ),
                                   child: Row(
@@ -703,7 +703,7 @@ class _PostTruckModalState extends ConsumerState<_PostTruckModal> {
                                               style: TextStyle(
                                                 fontSize: 12,
                                                 color:
-                                                    AppColors.warning.withOpacity(0.8),
+                                                    AppColors.warning.withValues(alpha: 0.8),
                                               ),
                                             ),
                                           ],
@@ -729,7 +729,7 @@ class _PostTruckModalState extends ConsumerState<_PostTruckModal> {
                       const SizedBox(height: 8),
                       locationsAsync.when(
                         data: (locations) => DropdownButtonFormField<String>(
-                          value: _selectedOriginCityId,
+                          initialValue: _selectedOriginCityId,
                           isExpanded: true,
                           decoration: const InputDecoration(
                             hintText: 'Where is the truck available?',
@@ -762,7 +762,7 @@ class _PostTruckModalState extends ConsumerState<_PostTruckModal> {
                       const SizedBox(height: 8),
                       locationsAsync.when(
                         data: (locations) => DropdownButtonFormField<String>(
-                          value: _selectedDestinationCityId,
+                          initialValue: _selectedDestinationCityId,
                           isExpanded: true,
                           decoration: const InputDecoration(
                             hintText: 'Preferred destination',
@@ -1369,7 +1369,7 @@ class _MatchingLoadCard extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.success.withOpacity(0.1),
+                      color: AppColors.success.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(

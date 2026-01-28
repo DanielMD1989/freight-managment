@@ -251,7 +251,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                               color: (_currentPage == onboardingPages.length - 1
                                       ? AppColors.accent600
                                       : AppColors.primary600)
-                                  .withOpacity(0.35),
+                                  .withValues(alpha: 0.35),
                               blurRadius: 16,
                               offset: const Offset(0, 6),
                             ),
@@ -361,8 +361,8 @@ class _OnboardingPageView extends StatelessWidget {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      page.iconColor.withOpacity(0.3),
-                      page.iconColor.withOpacity(0),
+                      page.iconColor.withValues(alpha: 0.3),
+                      page.iconColor.withValues(alpha: 0),
                     ],
                   ),
                 ),
@@ -376,7 +376,7 @@ class _OnboardingPageView extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: page.iconColor.withOpacity(0.3),
+                      color: page.iconColor.withValues(alpha: 0.3),
                       blurRadius: 24,
                       offset: const Offset(0, 8),
                     ),
@@ -427,7 +427,7 @@ class _OnboardingPageView extends StatelessWidget {
                       width: 24,
                       height: 24,
                       decoration: BoxDecoration(
-                        color: page.iconColor.withOpacity(0.2),
+                        color: page.iconColor.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
