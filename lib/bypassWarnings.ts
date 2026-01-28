@@ -9,6 +9,7 @@
 import { db } from './db';
 import { createNotification } from './notifications';
 import { sendEmail, EmailTemplate } from './emailService';
+import { sendSms } from './sms';
 
 /**
  * Warning types for bypass detection
@@ -188,7 +189,7 @@ async function sendEmailNotification(
 /**
  * Send SMS notification
  *
- * Placeholder for SMS integration (Twilio, AWS SNS, etc.)
+ * TD-011 FIX: Integrated with Twilio SMS service
  */
 async function sendSmsNotification(
   organizationId: string,
@@ -215,18 +216,17 @@ async function sendSmsNotification(
       return;
     }
 
-    // Create short SMS version
-    const smsText = `FreightET URGENT: Your account has been flagged for suspicious activity. Please check your email and contact support immediately. ${message.actionRequired}`;
+    // Create short SMS version (max 160 chars for single SMS)
+    const smsText = `FreightET URGENT: Your account has been flagged. Check your email and contact support immediately. Ref: ${organizationId.slice(-8)}`;
 
-    // TODO: Integrate with SMS service (Twilio, AWS SNS, etc.)
-    console.log(`📱 SMS would be sent to: ${organization.contactPhone}`);
-    console.log(`Message: ${smsText}`);
+    // Send SMS via Twilio
+    const result = await sendSms(organization.contactPhone, smsText);
 
-    // Example integration:
-    // await sendSms({
-    //   to: organization.contactPhone,
-    //   message: smsText,
-    // });
+    if (result.success) {
+      console.log(`📱 SMS sent to: ${organization.contactPhone} (ID: ${result.messageId})`);
+    } else {
+      console.error(`📱 SMS failed to: ${organization.contactPhone} - ${result.error}`);
+    }
   } catch (error) {
     console.error('Failed to send SMS notification:', error);
   }

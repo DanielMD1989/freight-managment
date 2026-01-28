@@ -19,6 +19,221 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 
 /**
+ * TD-012 FIX: Error tracking integration (Sentry)
+ *
+ * Environment variables:
+ * - SENTRY_DSN: Sentry Data Source Name
+ * - SENTRY_ENVIRONMENT: Environment name (production, staging, development)
+ * - SENTRY_RELEASE: Release version (optional)
+ *
+ * To enable Sentry:
+ * 1. npm install @sentry/nextjs
+ * 2. Set SENTRY_DSN in environment variables
+ * 3. Call initErrorTracking() during app startup
+ */
+
+// Sentry client interface (lazy-loaded to avoid import issues)
+interface SentryClient {
+  init: (options: Record<string, unknown>) => void;
+  captureException: (error: Error, context?: Record<string, unknown>) => string;
+  captureMessage: (message: string, context?: Record<string, unknown>) => string;
+  setUser: (user: Record<string, unknown>) => void;
+  setTag: (key: string, value: string) => void;
+}
+
+let sentryClient: SentryClient | null = null;
+let sentryInitialized = false;
+
+/**
+ * Initialize Sentry error tracking
+ *
+ * Call this during application startup.
+ */
+export async function initErrorTracking(): Promise<void> {
+  if (sentryInitialized) {
+    return;
+  }
+
+  sentryInitialized = true;
+  const dsn = process.env.SENTRY_DSN;
+
+  if (!dsn) {
+    console.log('[ERROR TRACKING] Sentry DSN not configured, error tracking disabled');
+    return;
+  }
+
+  try {
+    // Dynamic import to avoid bundling issues when @sentry/nextjs is not installed
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    let Sentry: any;
+    try {
+      Sentry = require('@sentry/nextjs');
+    } catch {
+      console.log('[ERROR TRACKING] @sentry/nextjs not installed. Run: npm install @sentry/nextjs');
+      return;
+    }
+
+    Sentry.init({
+      dsn,
+      environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV || 'development',
+      release: process.env.SENTRY_RELEASE,
+      tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+      debug: process.env.NODE_ENV !== 'production',
+
+      // Filter out sensitive data
+      beforeSend(event: Record<string, unknown>) {
+        // Remove sensitive headers
+        const request = event.request as Record<string, unknown> | undefined;
+        if (request?.headers) {
+          const headers = request.headers as Record<string, unknown>;
+          delete headers['authorization'];
+          delete headers['cookie'];
+          delete headers['x-csrf-token'];
+        }
+
+        // Remove sensitive data from breadcrumbs
+        const breadcrumbs = event.breadcrumbs as Array<Record<string, unknown>> | undefined;
+        if (breadcrumbs) {
+          event.breadcrumbs = breadcrumbs.map((breadcrumb: Record<string, unknown>) => {
+            const data = breadcrumb.data as Record<string, unknown> | undefined;
+            if (data) {
+              delete data.password;
+              delete data.token;
+              delete data.apiKey;
+            }
+            return breadcrumb;
+          });
+        }
+
+        return event;
+      },
+
+      // Ignore certain errors
+      ignoreErrors: [
+        // Browser extensions
+        'top.GLOBALS',
+        // Network errors
+        'Network request failed',
+        'Failed to fetch',
+        // Rate limiting (expected behavior)
+        'Rate limit exceeded',
+      ],
+    });
+
+    sentryClient = Sentry as unknown as SentryClient;
+    console.log('[ERROR TRACKING] Sentry initialized successfully');
+  } catch (error) {
+    console.error('[ERROR TRACKING] Failed to initialize Sentry:', error);
+  }
+}
+
+/**
+ * Send error to tracking service
+ *
+ * @param error Error to track
+ * @param context Additional context
+ */
+export function captureError(
+  error: Error,
+  context?: {
+    userId?: string;
+    organizationId?: string;
+    requestId?: string;
+    tags?: Record<string, string>;
+    extra?: Record<string, any>;
+  }
+): string | null {
+  // Always log to console
+  console.error('[ERROR]', error.message, context);
+
+  // If Sentry is not initialized, return null
+  if (!sentryClient) {
+    return null;
+  }
+
+  const client = sentryClient;
+
+  try {
+    // Set user context
+    if (context?.userId) {
+      client.setUser({
+        id: context.userId,
+        organizationId: context.organizationId,
+      });
+    }
+
+    // Set tags
+    if (context?.tags) {
+      Object.entries(context.tags).forEach(([key, value]) => {
+        client.setTag(key, value);
+      });
+    }
+
+    // Set request ID tag
+    if (context?.requestId) {
+      client.setTag('requestId', context.requestId);
+    }
+
+    // Capture the exception
+    const eventId = client.captureException(error, {
+      extra: context?.extra,
+    });
+
+    return eventId;
+  } catch (captureError) {
+    console.error('[ERROR TRACKING] Failed to capture error:', captureError);
+    return null;
+  }
+}
+
+/**
+ * Send message to tracking service
+ *
+ * @param message Message to track
+ * @param level Severity level
+ * @param context Additional context
+ */
+export function captureMessage(
+  message: string,
+  level: 'info' | 'warning' | 'error' = 'info',
+  context?: {
+    userId?: string;
+    tags?: Record<string, string>;
+    extra?: Record<string, any>;
+  }
+): string | null {
+  // If Sentry is not initialized, just log
+  if (!sentryClient) {
+    console.log(`[${level.toUpperCase()}]`, message, context);
+    return null;
+  }
+
+  const client = sentryClient;
+
+  try {
+    if (context?.userId) {
+      client.setUser({ id: context.userId });
+    }
+
+    if (context?.tags) {
+      Object.entries(context.tags).forEach(([key, value]) => {
+        client.setTag(key, value);
+      });
+    }
+
+    const eventId = client.captureMessage(message, {
+      level,
+      extra: context?.extra,
+    });
+
+    return eventId;
+  } catch (err) {
+    console.error('[ERROR TRACKING] Failed to capture message:', err);
+    return null;
+  }
+}
+
+/**
  * Standard error codes for the application
  */
 export enum ErrorCode {
@@ -376,13 +591,24 @@ export function logDetailedError(
     },
   };
 
-  // Log to console (in production, send to logging service)
+  // Log to console
   console.error('[ERROR]', JSON.stringify(detailedError, null, 2));
 
-  // TODO: Send to error tracking service (Sentry, Datadog, etc.)
-  // if (process.env.NODE_ENV === 'production') {
-  //   sendToErrorTracking(detailedError);
-  // }
+  // TD-012 FIX: Send to error tracking service (Sentry)
+  captureError(error, {
+    userId,
+    organizationId,
+    requestId,
+    tags: {
+      method: request.method,
+      errorCode: error.code || 'UNKNOWN',
+    },
+    extra: {
+      url: request.url,
+      statusCode: error.statusCode || 500,
+      role,
+    },
+  });
 }
 
 /**
