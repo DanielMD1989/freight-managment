@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { CacheInvalidation } from '@/lib/cache';
 import { createNotification, NotificationType } from '@/lib/notifications';
 import { uploadPOD } from '@/lib/storage';
 
@@ -175,6 +176,10 @@ export async function POST(
         },
       },
     });
+
+    // TD-008 FIX: Invalidate cache after POD upload
+    await CacheInvalidation.load(trip.loadId, trip.load?.shipperId);
+    await CacheInvalidation.trip(tripId, trip.carrierId, trip.shipperId);
 
     // Notify shipper that POD has been submitted
     const shipperUserId = trip.shipper?.users?.[0]?.id;

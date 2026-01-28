@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
+import { CacheInvalidation } from "@/lib/cache";
 import { z } from "zod";
 
 const dispatchSchema = z.object({
@@ -206,6 +207,10 @@ export async function POST(request: NextRequest) {
 
       return updated;
     });
+
+    // TD-005 FIX: Invalidate cache after assignment
+    await CacheInvalidation.load(loadId, load.shipperId);
+    await CacheInvalidation.truck(truckId, truck.carrierId);
 
     return NextResponse.json({
       message: "Load dispatched successfully",

@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requirePermission, Permission } from '@/lib/rbac';
+import { CacheInvalidation } from '@/lib/cache';
 
 /**
  * POST /api/loads/[id]/duplicate
@@ -141,6 +142,9 @@ export async function POST(
         },
       },
     });
+
+    // TD-009 FIX: Invalidate cache after duplicate creation
+    await CacheInvalidation.load(duplicateLoad.id, session.organizationId!);
 
     return NextResponse.json({
       message: 'Load duplicated successfully',

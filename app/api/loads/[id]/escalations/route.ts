@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { CacheInvalidation } from '@/lib/cache';
 import { z } from 'zod';
 import { validateStateTransition, LoadStatus } from '@/lib/loadStateMachine';
 
@@ -159,6 +160,9 @@ export async function POST(
 
       return esc;
     });
+
+    // TD-006 FIX: Invalidate cache after escalation/EXCEPTION status change
+    await CacheInvalidation.load(loadId, load.shipperId);
 
     // TODO: Send notification to assigned dispatcher
     // TODO: Send notification to relevant parties

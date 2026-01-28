@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { CacheInvalidation } from '@/lib/cache';
 import { createNotification, NotificationType } from '@/lib/notifications';
 import { releaseFundsFromEscrow } from '@/lib/escrowManagement'; // Sprint 8
 import { uploadPOD } from '@/lib/storage';
@@ -148,6 +149,9 @@ export async function POST(
       },
     });
 
+    // TD-007 FIX: Invalidate cache after POD submission
+    await CacheInvalidation.load(loadId);
+
     // Notify shipper that POD has been submitted for verification
     const loadWithShipper = await db.load.findUnique({
       where: { id: loadId },
@@ -265,6 +269,9 @@ export async function PUT(
         userId: session.userId,
       },
     });
+
+    // TD-007 FIX: Invalidate cache after POD verification
+    await CacheInvalidation.load(loadId, load.shipperId);
 
     // Notify carrier that POD has been verified
     const loadWithCarrier = await db.load.findUnique({

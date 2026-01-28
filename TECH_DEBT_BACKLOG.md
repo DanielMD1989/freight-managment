@@ -10,11 +10,11 @@
 
 | Priority | Count | Blocks Production? |
 |----------|-------|-------------------|
-| Medium | 8 | No |
+| Medium | 3 | No |
 | Low | 3 | No |
-| **Total** | **11** | **No** |
+| **Total** | **6** | **No** |
 
-**Completed:** 4 (TD-001 to TD-004 - Transaction Safety)
+**Completed:** 9 (TD-001 to TD-009 - Transaction Safety + Cache Invalidation)
 
 ---
 
@@ -160,11 +160,11 @@ Sentry.captureException(error);
 | TD-002 | ✅ Done | Claude | Sprint 1 | 2026-01-28 |
 | TD-003 | ✅ Done | Claude | Sprint 1 | 2026-01-28 |
 | TD-004 | ✅ Done | Claude | Sprint 1 | 2026-01-28 |
-| TD-005 | 🔲 Open | | | |
-| TD-006 | 🔲 Open | | | |
-| TD-007 | 🔲 Open | | | |
-| TD-008 | 🔲 Open | | | |
-| TD-009 | 🔲 Open | | | |
+| TD-005 | ✅ Done | Claude | Sprint 1 | 2026-01-28 |
+| TD-006 | ✅ Done | Claude | Sprint 1 | 2026-01-28 |
+| TD-007 | ✅ Done | Claude | Sprint 1 | 2026-01-28 |
+| TD-008 | ✅ Done | Claude | Sprint 1 | 2026-01-28 |
+| TD-009 | ✅ Done | Claude | Sprint 1 | 2026-01-28 |
 | TD-010 | 🔲 Open | | | |
 | TD-011 | 🔲 Open | | | |
 | TD-012 | 🔲 Open | | | |
