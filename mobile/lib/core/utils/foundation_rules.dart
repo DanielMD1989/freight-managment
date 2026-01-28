@@ -17,7 +17,7 @@ import '../models/trip.dart';
 /// - Only carriers can create, edit, delete trucks
 /// - Truck ownership is permanent (carrierId on Truck model)
 /// - Other roles can VIEW trucks but never modify ownership
-const String RULE_CARRIER_OWNS_TRUCKS = 'CARRIER_OWNS_TRUCKS';
+const String ruleCarrierOwnsTrucks = 'CARRIER_OWNS_TRUCKS';
 
 // =============================================================================
 // RULE 2: POSTING = AVAILABILITY ONLY
@@ -26,7 +26,7 @@ const String RULE_CARRIER_OWNS_TRUCKS = 'CARRIER_OWNS_TRUCKS';
 /// - Posting does NOT create a truck (truck must exist first)
 /// - Location exists ONLY in TruckPosting, never in Truck master
 /// - Posting is ephemeral; trucks are permanent assets
-const String RULE_POSTING_IS_AVAILABILITY = 'POSTING_IS_AVAILABILITY';
+const String rulePostingIsAvailability = 'POSTING_IS_AVAILABILITY';
 
 // =============================================================================
 // RULE 3: DISPATCHER SEES AVAILABILITY, NOT OWNERSHIP
@@ -36,7 +36,7 @@ const String RULE_POSTING_IS_AVAILABILITY = 'POSTING_IS_AVAILABILITY';
 /// - Dispatcher can SEE loads
 /// - Dispatcher can PROPOSE matches
 /// - Dispatcher CANNOT assign, accept, or start trips
-const String RULE_DISPATCHER_COORDINATION_ONLY = 'DISPATCHER_COORDINATION_ONLY';
+const String ruleDispatcherCoordinationOnly = 'DISPATCHER_COORDINATION_ONLY';
 
 // =============================================================================
 // RULE 4: ONE TRUCK → ONE ACTIVE POST
@@ -44,7 +44,7 @@ const String RULE_DISPATCHER_COORDINATION_ONLY = 'DISPATCHER_COORDINATION_ONLY';
 /// A truck can only have one active posting at a time.
 /// - Prevents double-booking and confusion
 /// - When creating new post, previous active post must be expired/cancelled
-const String RULE_ONE_ACTIVE_POST_PER_TRUCK = 'ONE_ACTIVE_POST_PER_TRUCK';
+const String ruleOneActivePostPerTruck = 'ONE_ACTIVE_POST_PER_TRUCK';
 
 // =============================================================================
 // RULE 5: LOCATION ONLY IN DYNAMIC TABLES
@@ -53,7 +53,7 @@ const String RULE_ONE_ACTIVE_POST_PER_TRUCK = 'ONE_ACTIVE_POST_PER_TRUCK';
 /// - Truck master table: NO location fields
 /// - TruckPosting: contains current location at time of posting
 /// - GPSUpdate: contains real-time location during trips
-const String RULE_LOCATION_IN_DYNAMIC_TABLES = 'LOCATION_IN_DYNAMIC_TABLES';
+const String ruleLocationInDynamicTables = 'LOCATION_IN_DYNAMIC_TABLES';
 
 // =============================================================================
 // RULE 6: CARRIER IS FINAL AUTHORITY ON EXECUTION
@@ -63,7 +63,7 @@ const String RULE_LOCATION_IN_DYNAMIC_TABLES = 'LOCATION_IN_DYNAMIC_TABLES';
 /// - Dispatcher can PROPOSE a match
 /// - Carrier must APPROVE before load is assigned
 /// - Carrier starts the trip
-const String RULE_CARRIER_FINAL_AUTHORITY = 'CARRIER_FINAL_AUTHORITY';
+const String ruleCarrierFinalAuthority = 'CARRIER_FINAL_AUTHORITY';
 
 // =============================================================================
 // RULE 7: SHIPPER POSTS LOADS, DOES NOT BROWSE TRUCKS
@@ -73,7 +73,7 @@ const String RULE_CARRIER_FINAL_AUTHORITY = 'CARRIER_FINAL_AUTHORITY';
 /// - Shipper can search available trucks to REQUEST them
 /// - Shipper cannot browse carrier fleet details
 /// - Shipper sees only own loads
-const String RULE_SHIPPER_DEMAND_FOCUS = 'SHIPPER_DEMAND_FOCUS';
+const String ruleShipperDemandFocus = 'SHIPPER_DEMAND_FOCUS';
 
 // =============================================================================
 // USER ROLE ENUM
@@ -114,14 +114,14 @@ UserRole userRoleFromString(String? role) {
 // =============================================================================
 
 /// Check if a role can modify truck ownership
-/// Per RULE_CARRIER_OWNS_TRUCKS: Only CARRIER can own/modify trucks
+/// Per ruleCarrierOwnsTrucks: Only CARRIER can own/modify trucks
 bool canModifyTruckOwnership(UserRole role) {
   return role == UserRole.carrier;
 }
 
 /// Check if a role can directly assign loads (commit trucks)
-/// Per RULE_DISPATCHER_COORDINATION_ONLY: Dispatcher CANNOT assign
-/// Per RULE_CARRIER_FINAL_AUTHORITY: Only CARRIER commits
+/// Per ruleDispatcherCoordinationOnly: Dispatcher CANNOT assign
+/// Per ruleCarrierFinalAuthority: Only CARRIER commits
 bool canDirectlyAssignLoads(UserRole role) {
   return role == UserRole.carrier ||
       role == UserRole.admin ||
@@ -129,7 +129,7 @@ bool canDirectlyAssignLoads(UserRole role) {
 }
 
 /// Check if a role can propose matches (without execution)
-/// Per RULE_DISPATCHER_COORDINATION_ONLY: Dispatcher can propose
+/// Per ruleDispatcherCoordinationOnly: Dispatcher can propose
 bool canProposeMatches(UserRole role) {
   return role == UserRole.dispatcher ||
       role == UserRole.admin ||
@@ -137,13 +137,13 @@ bool canProposeMatches(UserRole role) {
 }
 
 /// Check if a role can start trips
-/// Per RULE_CARRIER_FINAL_AUTHORITY: Only carrier executes
+/// Per ruleCarrierFinalAuthority: Only carrier executes
 bool canStartTrips(UserRole role) {
   return role == UserRole.carrier;
 }
 
 /// Check if a role can accept load requests
-/// Per RULE_CARRIER_FINAL_AUTHORITY: Only carrier accepts
+/// Per ruleCarrierFinalAuthority: Only carrier accepts
 bool canAcceptLoadRequests(UserRole role) {
   return role == UserRole.carrier;
 }
@@ -479,7 +479,7 @@ class FoundationRuleViolation implements Exception {
 void assertCanModifyTruck(UserRole role) {
   if (!canModifyTruckOwnership(role)) {
     throw FoundationRuleViolation(
-      ruleId: RULE_CARRIER_OWNS_TRUCKS,
+      ruleId: ruleCarrierOwnsTrucks,
       message: 'Only carriers can create, edit, or delete trucks',
       attemptedAction: 'modify truck',
     );
@@ -491,7 +491,7 @@ void assertCanModifyTruck(UserRole role) {
 void assertCanStartTrip(UserRole role) {
   if (!canStartTrips(role)) {
     throw FoundationRuleViolation(
-      ruleId: RULE_CARRIER_FINAL_AUTHORITY,
+      ruleId: ruleCarrierFinalAuthority,
       message: 'Only carriers can start trips',
       attemptedAction: 'start trip',
     );
@@ -503,7 +503,7 @@ void assertCanStartTrip(UserRole role) {
 void assertCanRespondToLoadRequest(UserRole role) {
   if (!canAcceptLoadRequests(role)) {
     throw FoundationRuleViolation(
-      ruleId: RULE_CARRIER_FINAL_AUTHORITY,
+      ruleId: ruleCarrierFinalAuthority,
       message: 'Only carriers can respond to load requests',
       attemptedAction: 'respond to load request',
     );
@@ -515,7 +515,7 @@ void assertCanRespondToLoadRequest(UserRole role) {
 void assertCanRespondToTruckRequest(UserRole role) {
   if (!canAcceptTruckRequests(role)) {
     throw FoundationRuleViolation(
-      ruleId: RULE_SHIPPER_DEMAND_FOCUS,
+      ruleId: ruleShipperDemandFocus,
       message: 'Only shippers can respond to truck requests',
       attemptedAction: 'respond to truck request',
     );
@@ -527,7 +527,7 @@ void assertCanRespondToTruckRequest(UserRole role) {
 void assertCanAssignLoads(UserRole role) {
   if (!canDirectlyAssignLoads(role)) {
     throw FoundationRuleViolation(
-      ruleId: RULE_DISPATCHER_COORDINATION_ONLY,
+      ruleId: ruleDispatcherCoordinationOnly,
       message: 'You cannot directly assign loads',
       attemptedAction: 'assign load',
     );
@@ -539,7 +539,7 @@ void assertCanAssignLoads(UserRole role) {
 void assertDispatcherCannotExecute(UserRole role, String action) {
   if (role == UserRole.dispatcher) {
     throw FoundationRuleViolation(
-      ruleId: RULE_DISPATCHER_COORDINATION_ONLY,
+      ruleId: ruleDispatcherCoordinationOnly,
       message: 'Dispatchers can only propose matches, not execute assignments',
       attemptedAction: action,
     );

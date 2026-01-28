@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import '../api/api_client.dart';
 import '../models/truck.dart';
 import '../utils/foundation_rules.dart';
@@ -621,15 +622,15 @@ class TruckService {
 
       // Debug logging (only in debug mode)
       assert(() {
-        print('[TruckService] Creating truck posting with data: $data');
+        debugPrint('[TruckService] Creating truck posting with data: $data');
         return true;
       }());
 
       final response = await _apiClient.dio.post('/api/truck-postings', data: data);
 
       assert(() {
-        print('[TruckService] Response status: ${response.statusCode}');
-        print('[TruckService] Response data: ${response.data}');
+        debugPrint('[TruckService] Response status: ${response.statusCode}');
+        debugPrint('[TruckService] Response data: ${response.data}');
         return true;
       }());
 

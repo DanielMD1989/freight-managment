@@ -197,6 +197,8 @@ class _CarrierPostTrucksScreenState
       final service = TruckService();
       final result = await service.deleteTruckPosting(posting.id);
 
+      if (!mounted) return;
+
       if (result.success) {
         ref.invalidate(myTruckPostingsProvider);
         ScaffoldMessenger.of(context).showSnackBar(

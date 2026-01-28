@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:geolocator/geolocator.dart';
 import '../api/api_client.dart';
 
@@ -51,7 +52,7 @@ class GpsService {
       _lastPosition = position;
       return position;
     } catch (e) {
-      print('[GPS] Error getting position: $e');
+      debugPrint('[GPS] Error getting position: $e');
       return null;
     }
   }
@@ -76,7 +77,7 @@ class GpsService {
       ).listen(
         _onPositionUpdate,
         onError: (error) {
-          print('[GPS] Position stream error: $error');
+          debugPrint('[GPS] Position stream error: $error');
         },
       );
 
@@ -86,10 +87,10 @@ class GpsService {
         (_) => _uploadCurrentPosition(),
       );
 
-      print('[GPS] Tracking started for truck $truckId');
+      debugPrint('[GPS] Tracking started for truck $truckId');
       return true;
     } catch (e) {
-      print('[GPS] Error starting tracking: $e');
+      debugPrint('[GPS] Error starting tracking: $e');
       return false;
     }
   }
@@ -104,13 +105,13 @@ class GpsService {
 
     _currentTruckId = null;
 
-    print('[GPS] Tracking stopped');
+    debugPrint('[GPS] Tracking stopped');
   }
 
   /// Handle position update
   void _onPositionUpdate(Position position) {
     _lastPosition = position;
-    print('[GPS] Position update: ${position.latitude}, ${position.longitude}');
+    debugPrint('[GPS] Position update: ${position.latitude}, ${position.longitude}');
 
     // Upload immediately on significant movement
     _uploadPosition(position);
@@ -135,9 +136,9 @@ class GpsService {
         },
       );
 
-      print('[GPS] Position uploaded successfully');
+      debugPrint('[GPS] Position uploaded successfully');
     } catch (e) {
-      print('[GPS] Error uploading position: $e');
+      debugPrint('[GPS] Error uploading position: $e');
       // Store locally for later sync if offline
       // TODO: Implement offline queue
     }

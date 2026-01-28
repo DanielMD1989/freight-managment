@@ -409,6 +409,8 @@ class _ShipperTruckboardScreenState
       }
     }
 
+    if (!mounted) return;
+
     if (loads.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

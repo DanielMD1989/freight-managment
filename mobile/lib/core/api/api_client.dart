@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -35,8 +35,8 @@ class ApiClient {
 
   ApiClient._internal() {
     assert(() {
-      print('[API] Initializing ApiClient with baseUrl: ${ApiConfig.baseUrl}');
-      print('[API] Running on web: $kIsWeb');
+      debugPrint('[API] Initializing ApiClient with baseUrl: ${ApiConfig.baseUrl}');
+      debugPrint('[API] Running on web: $kIsWeb');
       return true;
     }());
 
@@ -136,22 +136,22 @@ class ApiClient {
     return InterceptorsWrapper(
       onRequest: (options, handler) {
         assert(() {
-          print('[API REQUEST] ${options.method} ${options.uri}');
+          debugPrint('[API REQUEST] ${options.method} ${options.uri}');
           return true;
         }());
         handler.next(options);
       },
       onResponse: (response, handler) {
         assert(() {
-          print('[API RESPONSE] ${response.statusCode} ${response.requestOptions.uri}');
+          debugPrint('[API RESPONSE] ${response.statusCode} ${response.requestOptions.uri}');
           return true;
         }());
         handler.next(response);
       },
       onError: (error, handler) {
         assert(() {
-          print('[API ERROR] ${error.type}: ${error.message}');
-          print('[API ERROR] Request: ${error.requestOptions.method} ${error.requestOptions.uri}');
+          debugPrint('[API ERROR] ${error.type}: ${error.message}');
+          debugPrint('[API ERROR] Request: ${error.requestOptions.method} ${error.requestOptions.uri}');
           return true;
         }());
         handler.next(error);
@@ -264,7 +264,7 @@ extension DioErrorExtension on DioException {
   String get friendlyMessage {
     // Debug logging only in development
     assert(() {
-      print('[API Error] Type: $type, Message: $message');
+      debugPrint('[API Error] Type: $type, Message: $message');
       return true;
     }());
 
