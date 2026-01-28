@@ -167,10 +167,10 @@ class _PodUploadScreenState extends ConsumerState<PodUploadScreen> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppColors.primary200),
                   ),
-                  child: Row(
+                  child: const Row(
                     children: [
                       Icon(Icons.info_outline, color: AppColors.primary700),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           'Upload proof of delivery photos (signed receipt, delivery photos, etc.) to complete this trip.',
@@ -410,7 +410,7 @@ class _ExistingPodItem extends StatelessWidget {
           DateFormat('MMM d, yyyy h:mm a').format(pod.uploadedAt),
           style: TextStyle(fontSize: 12, color: Colors.grey[600]),
         ),
-        trailing: Icon(Icons.check_circle, color: AppColors.success),
+        trailing: const Icon(Icons.check_circle, color: AppColors.success),
       ),
     );
   }

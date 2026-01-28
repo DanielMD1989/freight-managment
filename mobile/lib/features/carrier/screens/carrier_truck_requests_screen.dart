@@ -70,10 +70,10 @@ class _CarrierTruckRequestsScreenState
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.error_outline,
+                    const Icon(Icons.error_outline,
                         size: 48, color: AppColors.textSecondary),
                     const SizedBox(height: 16),
-                    Text(
+                    const Text(
                       'Failed to load requests',
                       style: TextStyle(color: AppColors.textSecondary),
                     ),
@@ -206,7 +206,7 @@ class _FilterSection extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColors.surface,
         border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
@@ -368,7 +368,7 @@ class _RequestCard extends StatelessWidget {
                         ),
                         Text(
                           request.truck!.truckTypeDisplay,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 13,
                           ),
@@ -402,11 +402,11 @@ class _RequestCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    const Row(
                       children: [
                         Icon(Icons.inventory_2,
                             size: 16, color: AppColors.primary),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         Text(
                           'Load to Transport',
                           style: TextStyle(
@@ -428,24 +428,24 @@ class _RequestCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(Icons.scale,
+                        const Icon(Icons.scale,
                             size: 14, color: AppColors.textSecondary),
                         const SizedBox(width: 4),
                         Text(
                           request.load!.weightDisplay,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 13,
                           ),
                         ),
                         if (request.load!.truckType != null) ...[
                           const SizedBox(width: 12),
-                          Icon(Icons.local_shipping,
+                          const Icon(Icons.local_shipping,
                               size: 14, color: AppColors.textSecondary),
                           const SizedBox(width: 4),
                           Text(
                             request.load!.truckType!,
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 13,
                             ),
@@ -472,7 +472,7 @@ class _RequestCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Note from shipper',
                       style: TextStyle(
                         color: AppColors.textSecondary,
@@ -493,12 +493,12 @@ class _RequestCard extends StatelessWidget {
             // Request time and expiration
             Row(
               children: [
-                Icon(Icons.access_time,
+                const Icon(Icons.access_time,
                     size: 14, color: AppColors.textSecondary),
                 const SizedBox(width: 4),
                 Text(
                   'Requested ${dateFormat.format(request.createdAt)}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
                   ),
@@ -516,11 +516,11 @@ class _RequestCard extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.timer, size: 14, color: AppColors.warning),
+                    const Icon(Icons.timer, size: 14, color: AppColors.warning),
                     const SizedBox(width: 4),
                     Text(
                       'Expires ${dateFormat.format(request.expiresAt!)}',
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppColors.warning,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
@@ -545,7 +545,7 @@ class _RequestCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                       child: isProcessing
-                          ? SizedBox(
+                          ? const SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
@@ -715,7 +715,7 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               title,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
@@ -724,7 +724,7 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppColors.textSecondary,
               ),
               textAlign: TextAlign.center,

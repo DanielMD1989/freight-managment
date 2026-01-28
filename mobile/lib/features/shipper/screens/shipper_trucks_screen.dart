@@ -42,11 +42,11 @@ class ShipperTrucksScreen extends StatelessWidget {
             child: ListView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
+              children: const [
                 _FilterChip(label: 'Dry Van', isSelected: true),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 _FilterChip(label: 'Addis Ababa', isSelected: true),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 _FilterChip(label: '> 5000 kg', isSelected: false),
               ],
             ),
@@ -59,7 +59,7 @@ class ShipperTrucksScreen extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
+                const Text(
                   '12 trucks available',
                   style: TextStyle(
                     color: AppColors.textSecondary,
@@ -144,7 +144,7 @@ class ShipperTrucksScreen extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
-                Wrap(
+                const Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
@@ -351,7 +351,7 @@ class _TruckCard extends StatelessWidget {
                     color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.local_shipping,
                     color: AppColors.primary,
                     size: 28,
@@ -399,7 +399,7 @@ class _TruckCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         '$type • $capacity',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppColors.textSecondary,
                         ),
                       ),
@@ -413,7 +413,7 @@ class _TruckCard extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.location_on,
                   size: 16,
                   color: AppColors.textSecondary,
@@ -421,13 +421,13 @@ class _TruckCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(
                   location,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 13,
                   ),
                 ),
                 const SizedBox(width: 16),
-                Icon(
+                const Icon(
                   Icons.business,
                   size: 16,
                   color: AppColors.textSecondary,
@@ -435,13 +435,13 @@ class _TruckCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(
                   carrier,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 13,
                   ),
                 ),
                 const Spacer(),
-                Icon(
+                const Icon(
                   Icons.star,
                   size: 16,
                   color: Colors.amber,
@@ -449,7 +449,7 @@ class _TruckCard extends StatelessWidget {
                 const SizedBox(width: 2),
                 Text(
                   '$rating ($reviews)',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 13,
                   ),

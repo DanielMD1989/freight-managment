@@ -381,11 +381,11 @@ class _ConfirmationSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
                 Icon(Icons.task_alt, color: AppColors.accent),
-                const SizedBox(width: 8),
-                const Text(
+                SizedBox(width: 8),
+                Text(
                   'Action Required',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
@@ -441,7 +441,7 @@ class _TrackingSection extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.gps_fixed, size: 20, color: AppColors.primary),
+                const Icon(Icons.gps_fixed, size: 20, color: AppColors.primary),
                 const SizedBox(width: 8),
                 const Text(
                   'Live Tracking',
@@ -591,11 +591,11 @@ class _RouteSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
                 Icon(Icons.route, size: 20, color: AppColors.primary),
-                const SizedBox(width: 8),
-                const Text(
+                SizedBox(width: 8),
+                Text(
                   'Route',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
@@ -687,11 +687,11 @@ class _CarrierSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
                 Icon(Icons.local_shipping, size: 20, color: AppColors.primary),
-                const SizedBox(width: 8),
-                const Text(
+                SizedBox(width: 8),
+                Text(
                   'Carrier',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
@@ -724,7 +724,7 @@ class _CarrierSection extends StatelessWidget {
                             ),
                             if (trip.carrier!.isVerified) ...[
                               const SizedBox(width: 4),
-                              Icon(Icons.verified, size: 16, color: AppColors.primary),
+                              const Icon(Icons.verified, size: 16, color: AppColors.primary),
                             ],
                           ],
                         ),
@@ -774,11 +774,11 @@ class _PodSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
                 Icon(Icons.description, size: 20, color: AppColors.primary),
-                const SizedBox(width: 8),
-                const Text(
+                SizedBox(width: 8),
+                Text(
                   'Proof of Delivery',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
@@ -867,7 +867,7 @@ class _PodItem extends StatelessWidget {
               ],
             ),
           ),
-          Icon(Icons.check_circle, color: AppColors.success, size: 20),
+          const Icon(Icons.check_circle, color: AppColors.success, size: 20),
         ],
       ),
     );
@@ -888,11 +888,11 @@ class _ReceiverSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
                 Icon(Icons.person_pin, size: 20, color: AppColors.primary),
-                const SizedBox(width: 8),
-                const Text(
+                SizedBox(width: 8),
+                Text(
                   'Receiver',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
@@ -951,11 +951,11 @@ class _TimelineSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
                 Icon(Icons.timeline, size: 20, color: AppColors.primary),
-                const SizedBox(width: 8),
-                const Text(
+                SizedBox(width: 8),
+                Text(
                   'Timeline',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),

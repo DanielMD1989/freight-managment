@@ -10,6 +10,7 @@
 /// 7. Push notification receipt
 /// 8. Offline mode flow
 /// 9. API schema alignment with web
+library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:freight_management_mobile/core/api/api_client.dart';
@@ -75,7 +76,7 @@ void main() {
       // Interceptor adds "Bearer {token}" to requests
       // Verify the expected format
       const token = 'test-jwt-token';
-      final header = 'Bearer $token';
+      const header = 'Bearer $token';
       expect(header, startsWith('Bearer '));
       expect(header, contains(token));
     });

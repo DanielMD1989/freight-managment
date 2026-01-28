@@ -427,7 +427,7 @@ class FreightManagementApp extends ConsumerWidget {
         onPrimary: AppColors.slate900,
         secondary: AppColors.accent400,
         onSecondary: AppColors.slate900,
-        error: Color(0xFFF87171),
+        error: const Color(0xFFF87171),
         surface: AppColors.slate900,
         onSurface: AppColors.slate100,
       ),

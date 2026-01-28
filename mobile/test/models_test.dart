@@ -4,6 +4,7 @@
 /// - Load, Truck, Trip, User models
 /// - Enum values alignment
 /// - JSON serialization/deserialization
+library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:freight_management_mobile/core/models/load.dart';

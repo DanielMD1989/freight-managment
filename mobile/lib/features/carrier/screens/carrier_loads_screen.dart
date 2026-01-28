@@ -47,12 +47,12 @@ class _AvailableLoadsTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                const Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       'Addis Ababa → Dire Dawa',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 16,
                       ),
@@ -67,12 +67,12 @@ class _AvailableLoadsTab extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Row(
+                const Row(
                   children: [
                     _InfoChip(Icons.calendar_today, 'Jan 15'),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     _InfoChip(Icons.straighten, '520 km'),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     _InfoChip(Icons.scale, '8,000 kg'),
                   ],
                 ),
@@ -85,7 +85,7 @@ class _AvailableLoadsTab extends StatelessWidget {
                         color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Text(
+                      child: const Text(
                         'Dry Van',
                         style: TextStyle(
                           color: AppColors.primary,
@@ -161,7 +161,7 @@ class _MyLoadsTab extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(
+                const Text(
                   'Addis Ababa → Hawassa',
                   style: TextStyle(color: AppColors.textSecondary),
                 ),
@@ -211,7 +211,7 @@ class _InfoChip extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             color: AppColors.textSecondary,
             fontSize: 12,
           ),

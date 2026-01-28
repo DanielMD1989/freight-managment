@@ -31,7 +31,7 @@ class ProfileScreen extends ConsumerWidget {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
                     AppColors.primary,
@@ -110,7 +110,7 @@ class ProfileScreen extends ConsumerWidget {
                             color: AppColors.secondary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(
+                          child: const Icon(
                             Icons.business,
                             color: AppColors.secondary,
                           ),
@@ -127,7 +127,7 @@ class ProfileScreen extends ConsumerWidget {
                                   fontSize: 16,
                                 ),
                               ),
-                              Text(
+                              const Text(
                                 'Organization',
                                 style: TextStyle(
                                   color: AppColors.textSecondary,
@@ -136,7 +136,7 @@ class ProfileScreen extends ConsumerWidget {
                             ],
                           ),
                         ),
-                        Icon(
+                        const Icon(
                           Icons.chevron_right,
                           color: AppColors.textSecondary,
                         ),
@@ -153,7 +153,7 @@ class ProfileScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'Account',
                     style: TextStyle(
                       color: AppColors.textSecondary,
@@ -183,7 +183,7 @@ class ProfileScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  Text(
+                  const Text(
                     'Preferences',
                     style: TextStyle(
                       color: AppColors.textSecondary,
@@ -217,7 +217,7 @@ class ProfileScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  Text(
+                  const Text(
                     'Support',
                     style: TextStyle(
                       color: AppColors.textSecondary,
@@ -268,7 +268,7 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Center(
+                  const Center(
                     child: Text(
                       'Version 1.0.0',
                       style: TextStyle(
@@ -328,7 +328,7 @@ class _MenuCard extends StatelessWidget {
           for (int i = 0; i < items.length; i++) ...[
             items[i],
             if (i < items.length - 1)
-              Divider(height: 1, indent: 56, color: AppColors.border),
+              const Divider(height: 1, indent: 56, color: AppColors.border),
           ],
         ],
       ),
@@ -358,7 +358,7 @@ class _MenuItem extends StatelessWidget {
       title: Text(title),
       subtitle: subtitle != null ? Text(subtitle!) : null,
       trailing: trailing ??
-          Icon(
+          const Icon(
             Icons.chevron_right,
             color: AppColors.textSecondary,
           ),

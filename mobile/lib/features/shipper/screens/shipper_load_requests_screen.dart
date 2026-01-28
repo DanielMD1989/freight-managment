@@ -79,10 +79,10 @@ class _ShipperLoadRequestsScreenState
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.error_outline,
+                    const Icon(Icons.error_outline,
                         size: 48, color: AppColors.textSecondary),
                     const SizedBox(height: 16),
-                    Text(
+                    const Text(
                       'Failed to load requests',
                       style: TextStyle(color: AppColors.textSecondary),
                     ),
@@ -199,7 +199,7 @@ class _LoadSummaryHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColors.surface,
         border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
@@ -211,7 +211,7 @@ class _LoadSummaryHeader extends StatelessWidget {
               color: AppColors.primary100,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.inventory_2,
               color: AppColors.primary,
               size: 20,
@@ -234,7 +234,7 @@ class _LoadSummaryHeader extends StatelessWidget {
                   children: [
                     Text(
                       load.weightDisplay,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
                       ),
@@ -243,7 +243,7 @@ class _LoadSummaryHeader extends StatelessWidget {
                     Container(
                       width: 4,
                       height: 4,
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: AppColors.textSecondary,
                         shape: BoxShape.circle,
                       ),
@@ -251,7 +251,7 @@ class _LoadSummaryHeader extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       load.truckTypeDisplay,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
                       ),
@@ -264,7 +264,7 @@ class _LoadSummaryHeader extends StatelessWidget {
           if (load.totalFareEtb != null)
             Text(
               '${load.totalFareEtb!.toStringAsFixed(0)} ETB',
-              style: TextStyle(
+              style: const TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 16,
                 color: AppColors.primary,
@@ -330,15 +330,15 @@ class _RequestCard extends StatelessWidget {
                         ),
                         Text(
                           request.truck!.truckTypeDisplay,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 13,
                           ),
                         ),
                       ] else
-                        Text(
+                        const Text(
                           'Truck Request',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 16,
                           ),
@@ -382,7 +382,7 @@ class _RequestCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Note from carrier',
                       style: TextStyle(
                         color: AppColors.textSecondary,
@@ -411,11 +411,11 @@ class _RequestCard extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.payments, size: 16, color: AppColors.primary),
+                    const Icon(Icons.payments, size: 16, color: AppColors.primary),
                     const SizedBox(width: 8),
                     Text(
                       'Proposed: ${request.proposedRate!.toStringAsFixed(0)} ETB',
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w600,
                       ),
@@ -429,22 +429,22 @@ class _RequestCard extends StatelessWidget {
             // Request time
             Row(
               children: [
-                Icon(Icons.access_time, size: 14, color: AppColors.textSecondary),
+                const Icon(Icons.access_time, size: 14, color: AppColors.textSecondary),
                 const SizedBox(width: 4),
                 Text(
                   'Requested ${dateFormat.format(request.createdAt)}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
                 if (request.expiresAt != null) ...[
                   const SizedBox(width: 12),
-                  Icon(Icons.timer, size: 14, color: AppColors.warning),
+                  const Icon(Icons.timer, size: 14, color: AppColors.warning),
                   const SizedBox(width: 4),
                   Text(
                     'Expires ${dateFormat.format(request.expiresAt!)}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.warning,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
@@ -468,7 +468,7 @@ class _RequestCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                       child: isProcessing
-                          ? SizedBox(
+                          ? const SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
@@ -612,7 +612,7 @@ class _DetailRow extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           '$label: ',
-          style: TextStyle(
+          style: const TextStyle(
             color: AppColors.textSecondary,
             fontSize: 13,
           ),
@@ -632,9 +632,9 @@ class _DetailRow extends StatelessWidget {
 class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return const Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: EdgeInsets.all(32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -643,7 +643,7 @@ class _EmptyState extends StatelessWidget {
               size: 64,
               color: AppColors.textSecondary,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text(
               'No Requests Yet',
               style: TextStyle(
@@ -652,7 +652,7 @@ class _EmptyState extends StatelessWidget {
                 color: AppColors.textPrimary,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(
               'When carriers request this load, their requests will appear here.',
               style: TextStyle(

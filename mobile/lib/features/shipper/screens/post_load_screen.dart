@@ -354,8 +354,8 @@ class _PostLoadScreenState extends ConsumerState<PostLoadScreen> {
           ),
         ),
         if (_deliveryDate.isBefore(_pickupDate))
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
             child: Text(
               'Delivery date must be after pickup date',
               style: TextStyle(color: AppColors.error, fontSize: 12),
@@ -592,11 +592,11 @@ class _PostLoadScreenState extends ConsumerState<PostLoadScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
+              const Row(
                 children: [
-                  const Icon(Icons.info, color: AppColors.primary, size: 20),
-                  const SizedBox(width: 8),
-                  const Text(
+                  Icon(Icons.info, color: AppColors.primary, size: 20),
+                  SizedBox(width: 8),
+                  Text(
                     'Load Summary',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,

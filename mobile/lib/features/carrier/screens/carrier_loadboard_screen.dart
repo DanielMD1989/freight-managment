@@ -331,7 +331,7 @@ class _FiltersPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColors.surface,
         border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
@@ -492,7 +492,7 @@ class _FilterChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 13,
           color: AppColors.primary700,
           fontWeight: FontWeight.w500,
@@ -578,7 +578,7 @@ class _LoadCard extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.radio_button_checked,
+                            const Icon(Icons.radio_button_checked,
                                 size: 14, color: AppColors.primary),
                             const SizedBox(width: 6),
                             Expanded(
@@ -598,7 +598,7 @@ class _LoadCard extends StatelessWidget {
                         ),
                         Row(
                           children: [
-                            Icon(Icons.location_on, size: 14, color: AppColors.accent),
+                            const Icon(Icons.location_on, size: 14, color: AppColors.accent),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(

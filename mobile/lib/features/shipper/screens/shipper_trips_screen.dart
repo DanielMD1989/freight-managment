@@ -120,7 +120,7 @@ class _FilterSection extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColors.surface,
         border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
@@ -330,7 +330,7 @@ class _ShipmentCard extends StatelessWidget {
                     ),
                     if (trip.carrier!.isVerified) ...[
                       const SizedBox(width: 4),
-                      Icon(Icons.verified, size: 14, color: AppColors.primary),
+                      const Icon(Icons.verified, size: 14, color: AppColors.primary),
                     ],
                     if (trip.truck != null) ...[
                       const SizedBox(width: 8),
@@ -421,7 +421,7 @@ class _ShipmentProgress extends StatelessWidget {
             ),
             Text(
               '${(progress * 100).toInt()}%',
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
                 color: AppColors.primary,
@@ -433,7 +433,7 @@ class _ShipmentProgress extends StatelessWidget {
         LinearProgressIndicator(
           value: progress,
           backgroundColor: AppColors.slate200,
-          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+          valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
           minHeight: 6,
           borderRadius: BorderRadius.circular(3),
         ),

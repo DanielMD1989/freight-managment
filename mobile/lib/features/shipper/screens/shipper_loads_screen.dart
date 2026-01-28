@@ -79,10 +79,10 @@ class _ShipperLoadsScreenState extends ConsumerState<ShipperLoadsScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline,
+              const Icon(Icons.error_outline,
                   size: 48, color: AppColors.textSecondary),
               const SizedBox(height: 16),
-              Text(
+              const Text(
                 'Failed to load your loads',
                 style: TextStyle(color: AppColors.textSecondary),
               ),
@@ -174,7 +174,7 @@ class _ActiveLoadsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loads.isEmpty) {
-      return _EmptyState(
+      return const _EmptyState(
         icon: Icons.local_shipping_outlined,
         title: 'No active loads',
         subtitle: 'Loads being transported will appear here',
@@ -249,7 +249,7 @@ class _ActiveLoadCard extends StatelessWidget {
                 children: [
                   Text(
                     'LOAD-${load.id.substring(0, 8).toUpperCase()}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,
                     ),
@@ -286,7 +286,7 @@ class _ActiveLoadCard extends StatelessWidget {
               if (load.assignedTruck != null) ...[
                 Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.business,
                       size: 14,
                       color: AppColors.textSecondary,
@@ -295,7 +295,7 @@ class _ActiveLoadCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         load.assignedTruck!.ownerName ?? 'Unknown Carrier',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 13,
                         ),
@@ -303,7 +303,7 @@ class _ActiveLoadCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 16),
-                    Icon(
+                    const Icon(
                       Icons.local_shipping,
                       size: 14,
                       color: AppColors.textSecondary,
@@ -311,7 +311,7 @@ class _ActiveLoadCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       load.assignedTruck!.licensePlate,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
                       ),
@@ -431,7 +431,7 @@ class _PostedLoadCard extends StatelessWidget {
                 children: [
                   Text(
                     'LOAD-${load.id.substring(0, 8).toUpperCase()}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,
                     ),
@@ -489,11 +489,11 @@ class _PostedLoadCard extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Row(
                     children: [
-                      Icon(Icons.people, size: 16, color: AppColors.primary),
+                      const Icon(Icons.people, size: 16, color: AppColors.primary),
                       const SizedBox(width: 6),
                       Text(
                         '$requestCount carrier request${requestCount > 1 ? 's' : ''}',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppColors.primary,
                           fontWeight: FontWeight.w600,
                         ),
@@ -502,8 +502,8 @@ class _PostedLoadCard extends StatelessWidget {
                   ),
                 )
               else
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
                   child: Text(
                     'No requests yet',
                     style: TextStyle(
@@ -566,7 +566,7 @@ class _CompletedLoadsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loads.isEmpty) {
-      return _EmptyState(
+      return const _EmptyState(
         icon: Icons.check_circle_outline,
         title: 'No completed loads',
         subtitle: 'Completed deliveries will appear here',
@@ -612,7 +612,7 @@ class _CompletedLoadCard extends StatelessWidget {
                 children: [
                   Text(
                     'LOAD-${load.id.substring(0, 8).toUpperCase()}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,
                     ),
@@ -649,7 +649,7 @@ class _CompletedLoadCard extends StatelessWidget {
               if (load.assignedTruck != null)
                 Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.business,
                       size: 14,
                       color: AppColors.textSecondary,
@@ -658,7 +658,7 @@ class _CompletedLoadCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         load.assignedTruck!.ownerName ?? 'Unknown Carrier',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 13,
                         ),
@@ -667,7 +667,7 @@ class _CompletedLoadCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Icon(
+                    const Icon(
                       Icons.local_shipping,
                       size: 14,
                       color: AppColors.textSecondary,
@@ -675,7 +675,7 @@ class _CompletedLoadCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       load.assignedTruck!.licensePlate,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
                       ),
@@ -810,22 +810,22 @@ class _LoadSummaryCard extends StatelessWidget {
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.calendar_today,
+                const Icon(Icons.calendar_today,
                     size: 12, color: AppColors.textSecondary),
                 const SizedBox(width: 4),
                 Text(
                   dateFormat.format(load.pickupDate),
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
                 const SizedBox(width: 12),
-                Icon(Icons.scale, size: 12, color: AppColors.textSecondary),
+                const Icon(Icons.scale, size: 12, color: AppColors.textSecondary),
                 const SizedBox(width: 4),
                 Text(
                   load.weightDisplay,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
                   ),
@@ -879,7 +879,7 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               title,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
@@ -888,7 +888,7 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppColors.textSecondary,
               ),
               textAlign: TextAlign.center,
@@ -919,7 +919,7 @@ class _InfoChip extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             color: AppColors.textSecondary,
             fontSize: 12,
           ),

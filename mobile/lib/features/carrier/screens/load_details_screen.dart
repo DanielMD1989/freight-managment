@@ -200,7 +200,7 @@ class _LoadDetailsScreenState extends ConsumerState<LoadDetailsScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.border)),
+        border: const Border(top: BorderSide(color: AppColors.border)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -467,7 +467,7 @@ class _RouteCard extends StatelessWidget {
                 Container(
                   width: 32,
                   height: 32,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.primary100,
                     shape: BoxShape.circle,
                   ),
@@ -545,7 +545,7 @@ class _RouteCard extends StatelessWidget {
                 Container(
                   width: 32,
                   height: 32,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.accent100,
                     shape: BoxShape.circle,
                   ),
@@ -904,13 +904,13 @@ class _RequirementsCard extends StatelessWidget {
               runSpacing: 8,
               children: [
                 if (load.isFragile)
-                  _RequirementChip(
+                  const _RequirementChip(
                     icon: Icons.warning_amber,
                     label: 'Fragile',
                     color: AppColors.warning,
                   ),
                 if (load.requiresRefrigeration)
-                  _RequirementChip(
+                  const _RequirementChip(
                     icon: Icons.ac_unit,
                     label: 'Refrigerated',
                     color: AppColors.info,

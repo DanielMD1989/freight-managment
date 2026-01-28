@@ -320,12 +320,12 @@ class _WelcomeCardError extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          Row(
+          const Row(
             children: [
               _StatCard(value: '-', label: 'Active', icon: Icons.local_shipping),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               _StatCard(value: '-', label: 'In Transit', icon: Icons.route),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               _StatCard(value: '-', label: 'Delivered', icon: Icons.check_circle),
             ],
           ),
@@ -471,7 +471,7 @@ class _ShipmentCard extends StatelessWidget {
                 children: [
                   Text(
                     'TRIP-${trip.id.substring(0, 8).toUpperCase()}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,
                     ),
@@ -506,25 +506,25 @@ class _ShipmentCard extends StatelessWidget {
               if (trip.truck != null)
                 Row(
                   children: [
-                    Icon(Icons.local_shipping,
+                    const Icon(Icons.local_shipping,
                         size: 14, color: AppColors.textSecondary),
                     const SizedBox(width: 4),
                     Text(
                       trip.truck!.licensePlate,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
                       ),
                     ),
                     if (trip.carrier != null) ...[
                       const SizedBox(width: 12),
-                      Icon(Icons.business,
+                      const Icon(Icons.business,
                           size: 14, color: AppColors.textSecondary),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           trip.carrier!.name,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 13,
                           ),

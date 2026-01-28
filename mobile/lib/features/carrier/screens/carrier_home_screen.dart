@@ -475,7 +475,7 @@ class _ActiveTripsSection extends StatelessWidget {
           ],
         ),
         if (trips.isEmpty)
-          _EmptyState(
+          const _EmptyState(
             icon: Icons.route,
             message: 'No active trips',
           )

@@ -510,7 +510,7 @@ class _ActionButton extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: AppColors.primary100,
                   shape: BoxShape.circle,
                 ),
@@ -570,7 +570,7 @@ class _TransactionItem extends StatelessWidget {
         ),
         subtitle: Text(
           transaction.description ?? DateFormat('MMM d, yyyy').format(transaction.createdAt),
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
         ),
         trailing: Text(
           '${isCredit ? '+' : ''}${_formatCurrency(transaction.amount)}',

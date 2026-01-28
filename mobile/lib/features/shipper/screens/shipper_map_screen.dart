@@ -270,7 +270,7 @@ class _ShipperMapScreenState extends ConsumerState<ShipperMapScreen> {
                               Container(
                                 width: 8,
                                 height: 8,
-                                decoration: BoxDecoration(
+                                decoration: const BoxDecoration(
                                   color: AppColors.success,
                                   shape: BoxShape.circle,
                                 ),
@@ -416,7 +416,7 @@ class _ShipperMapScreenState extends ConsumerState<ShipperMapScreen> {
             children: [
               Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
               const SizedBox(height: 16),
-              Text('Failed to load shipments'),
+              const Text('Failed to load shipments'),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => ref.invalidate(shipmentTripsProvider),

@@ -2,6 +2,7 @@
 ///
 /// Import all models from this single file:
 /// import 'package:freight_mobile/core/models/models.dart';
+library;
 
 export 'user.dart';
 export 'load.dart';

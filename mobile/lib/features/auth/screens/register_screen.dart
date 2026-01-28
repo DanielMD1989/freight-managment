@@ -322,7 +322,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
+                    const Text(
                       'Already have an account? ',
                       style: TextStyle(color: AppColors.textSecondary),
                     ),
@@ -388,7 +388,7 @@ class _RoleCard extends StatelessWidget {
             ),
             Text(
               subtitle,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
                 color: AppColors.textSecondary,
               ),

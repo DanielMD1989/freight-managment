@@ -68,10 +68,10 @@ class _ShipperTruckRequestsScreenState
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.error_outline,
+                    const Icon(Icons.error_outline,
                         size: 48, color: AppColors.textSecondary),
                     const SizedBox(height: 16),
-                    Text(
+                    const Text(
                       'Failed to load bookings',
                       style: TextStyle(color: AppColors.textSecondary),
                     ),
@@ -219,7 +219,7 @@ class _FilterSection extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColors.surface,
         border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
@@ -384,7 +384,7 @@ class _RequestCard extends StatelessWidget {
                           ),
                           Text(
                             request.truck!.truckTypeDisplay,
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 13,
                             ),
@@ -418,7 +418,7 @@ class _RequestCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'For Load',
                         style: TextStyle(
                           color: AppColors.textSecondary,
@@ -435,7 +435,7 @@ class _RequestCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         request.load!.weightDisplay,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 13,
                         ),
@@ -451,12 +451,12 @@ class _RequestCard extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.notes, size: 16, color: AppColors.textSecondary),
+                    const Icon(Icons.notes, size: 16, color: AppColors.textSecondary),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         request.notes!,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 13,
                         ),
@@ -470,12 +470,12 @@ class _RequestCard extends StatelessWidget {
               // Time info
               Row(
                 children: [
-                  Icon(Icons.access_time,
+                  const Icon(Icons.access_time,
                       size: 14, color: AppColors.textSecondary),
                   const SizedBox(width: 4),
                   Text(
                     'Requested ${dateFormat.format(request.createdAt)}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,
                     ),
@@ -535,7 +535,7 @@ class _RequestCard extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.timer,
                           size: 18,
                           color: AppColors.warning,
@@ -543,7 +543,7 @@ class _RequestCard extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           'Expires ${dateFormat.format(request.expiresAt!)}',
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppColors.warning,
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
@@ -676,7 +676,7 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               title,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
@@ -685,7 +685,7 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppColors.textSecondary,
               ),
               textAlign: TextAlign.center,

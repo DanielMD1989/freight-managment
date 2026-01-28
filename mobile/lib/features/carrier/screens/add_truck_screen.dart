@@ -87,8 +87,8 @@ class _AddTruckScreenState extends ConsumerState<AddTruckScreen> {
         ref.invalidate(trucksListProvider);
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Truck added successfully! Pending approval.'),
+          const SnackBar(
+            content: Text('Truck added successfully! Pending approval.'),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
           ),
@@ -143,10 +143,10 @@ class _AddTruckScreenState extends ConsumerState<AddTruckScreen> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.primary200),
               ),
-              child: Row(
+              child: const Row(
                 children: [
                   Icon(Icons.info_outline, color: AppColors.primary),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'Your truck will be reviewed by our team before it can be posted on the loadboard.',
@@ -162,7 +162,7 @@ class _AddTruckScreenState extends ConsumerState<AddTruckScreen> {
             const SizedBox(height: 24),
 
             // Section: Basic Information
-            _SectionHeader(title: 'Basic Information'),
+            const _SectionHeader(title: 'Basic Information'),
             const SizedBox(height: 16),
 
             // License Plate
@@ -211,7 +211,7 @@ class _AddTruckScreenState extends ConsumerState<AddTruckScreen> {
             const SizedBox(height: 24),
 
             // Section: Capacity
-            _SectionHeader(title: 'Capacity'),
+            const _SectionHeader(title: 'Capacity'),
             const SizedBox(height: 16),
 
             // Capacity (tons)
@@ -300,7 +300,7 @@ class _AddTruckScreenState extends ConsumerState<AddTruckScreen> {
             const SizedBox(height: 24),
 
             // Section: Current Location
-            _SectionHeader(title: 'Current Location'),
+            const _SectionHeader(title: 'Current Location'),
             const SizedBox(height: 16),
 
             // Current City
@@ -328,7 +328,7 @@ class _AddTruckScreenState extends ConsumerState<AddTruckScreen> {
             const SizedBox(height: 24),
 
             // Section: Contact Information
-            _SectionHeader(title: 'Contact Information'),
+            const _SectionHeader(title: 'Contact Information'),
             const SizedBox(height: 16),
 
             // Owner Name

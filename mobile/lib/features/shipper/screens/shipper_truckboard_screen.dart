@@ -257,12 +257,12 @@ class _ShipperTruckboardScreenState
               ),
               child: Row(
                 children: [
-                  Icon(Icons.local_shipping, size: 18, color: AppColors.primary),
+                  const Icon(Icons.local_shipping, size: 18, color: AppColors.primary),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Finding trucks for: ${widget.origin ?? ''} → ${widget.destination ?? ''}',
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
@@ -380,34 +380,6 @@ class _ShipperTruckboardScreenState
         params.ageHours != null;
   }
 
-  Future<void> _showBookingModal(Truck truck) async {
-    final loadsAsync = ref.read(shipperPostedLoadsProvider);
-    final loads = loadsAsync.valueOrNull ?? [];
-
-    if (loads.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('You need at least one posted load to book a truck'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
-    }
-
-    final result = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => _BookTruckModal(
-        truck: truck,
-        loads: loads,
-      ),
-    );
-
-    if (result != null && mounted) {
-      await _submitBooking(truck.id, result);
-    }
-  }
-
   /// WEB PARITY: Booking modal for truck postings
   /// SINGLE SOURCE OF TRUTH: Uses widget.loadId if provided (from Find Trucks button)
   Future<void> _showPostingBookingModal(TruckPosting posting) async {
@@ -520,7 +492,7 @@ class _FiltersPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColors.surface,
         border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
@@ -711,7 +683,7 @@ class _FilterChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 13,
           color: AppColors.primary700,
           fontWeight: FontWeight.w500,
@@ -721,177 +693,7 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-/// Truck card
-class _TruckCard extends StatelessWidget {
-  final Truck truck;
-  final bool isRequested;
-  final VoidCallback onTap;
-  final VoidCallback onBook;
-
-  const _TruckCard({
-    required this.truck,
-    required this.isRequested,
-    required this.onTap,
-    required this.onBook,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with truck type and availability
-              Row(
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary100,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.local_shipping,
-                            size: 14, color: AppColors.primary),
-                        const SizedBox(width: 4),
-                        Text(
-                          truck.truckTypeDisplay,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  if (truck.isAvailable)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.success.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.check_circle,
-                              size: 12, color: AppColors.success),
-                          SizedBox(width: 4),
-                          Text(
-                            'Available',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.success,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  const Spacer(),
-                  Text(
-                    truck.licensePlate,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Carrier and location
-              Row(
-                children: [
-                  if (truck.ownerName != null) ...[
-                    Icon(Icons.business, size: 14, color: Colors.grey[500]),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        truck.ownerName!,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              if (truck.currentCity != null) ...[
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Icon(Icons.location_on, size: 14, color: AppColors.accent),
-                    const SizedBox(width: 4),
-                    Text(
-                      truck.currentCity!,
-                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 12),
-
-              // Specs row
-              Row(
-                children: [
-                  _SpecChip(
-                    icon: Icons.scale,
-                    label: truck.capacityDisplay,
-                  ),
-                  const SizedBox(width: 8),
-                  if (truck.volume != null)
-                    _SpecChip(
-                      icon: Icons.straighten,
-                      label: '${truck.volume!.toStringAsFixed(0)} m³',
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Action button
-              SizedBox(
-                width: double.infinity,
-                child: isRequested
-                    ? OutlinedButton.icon(
-                        onPressed: null,
-                        icon: const Icon(Icons.check, size: 18),
-                        label: const Text('REQUEST SENT'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.success,
-                          side: const BorderSide(color: AppColors.success),
-                        ),
-                      )
-                    : ElevatedButton.icon(
-                        onPressed: onBook,
-                        icon: const Icon(Icons.bookmark_add, size: 18),
-                        label: const Text('Book Truck'),
-                      ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Spec chip
+/// Spec chip for displaying truck specifications
 class _SpecChip extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -915,36 +717,6 @@ class _SpecChip extends StatelessWidget {
             label,
             style: TextStyle(fontSize: 12, color: Colors.grey[700]),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Pagination info (legacy)
-class _PaginationInfo extends StatelessWidget {
-  final TruckSearchResult result;
-  final VoidCallback? onLoadMore;
-
-  const _PaginationInfo({required this.result, this.onLoadMore});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          Text(
-            'Showing ${result.trucks.length} of ${result.total} trucks',
-            style: TextStyle(color: Colors.grey[600], fontSize: 13),
-          ),
-          if (onLoadMore != null) ...[
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: onLoadMore,
-              child: const Text('Load More'),
-            ),
-          ],
         ],
       ),
     );
@@ -1030,7 +802,7 @@ class _TruckPostingCard extends StatelessWidget {
                     ),
                     child: Text(
                       posting.fullPartialDisplay,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: AppColors.accent,
@@ -1041,7 +813,7 @@ class _TruckPostingCard extends StatelessWidget {
                   // WEB PARITY: Availability indicator
                   Text(
                     'Avail: ${posting.availabilityDisplay}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 11,
                       color: AppColors.success,
                       fontWeight: FontWeight.w500,
@@ -1087,8 +859,8 @@ class _TruckPostingCard extends StatelessWidget {
                       ),
                     ),
                     // Arrow indicator
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
                       child: Icon(
                         Icons.arrow_forward,
                         color: AppColors.primary,
@@ -1146,7 +918,7 @@ class _TruckPostingCard extends StatelessWidget {
                         ),
                         if (posting.carrierIsVerified == true) ...[
                           const SizedBox(width: 4),
-                          Icon(Icons.verified, size: 14, color: AppColors.primary),
+                          const Icon(Icons.verified, size: 14, color: AppColors.primary),
                         ],
                       ],
                     ),
@@ -1595,7 +1367,7 @@ class _BookTruckPostingModalState extends State<_BookTruckPostingModal> {
                         ),
                         child: Text(
                           widget.posting.fullPartialDisplay,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: AppColors.accent,
@@ -1615,9 +1387,9 @@ class _BookTruckPostingModalState extends State<_BookTruckPostingModal> {
                         style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                       ),
                       const SizedBox(width: 8),
-                      Icon(Icons.arrow_forward, size: 14, color: AppColors.primary),
+                      const Icon(Icons.arrow_forward, size: 14, color: AppColors.primary),
                       const SizedBox(width: 8),
-                      Icon(Icons.location_on, size: 16, color: AppColors.accent),
+                      const Icon(Icons.location_on, size: 16, color: AppColors.accent),
                       const SizedBox(width: 4),
                       Text(
                         widget.posting.destinationCityName ?? 'Any',

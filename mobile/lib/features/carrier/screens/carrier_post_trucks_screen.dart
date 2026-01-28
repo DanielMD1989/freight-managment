@@ -292,7 +292,7 @@ class _TruckPostingCard extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.radio_button_checked,
+                          const Icon(Icons.radio_button_checked,
                               size: 14, color: AppColors.primary),
                           const SizedBox(width: 6),
                           Expanded(
@@ -314,7 +314,7 @@ class _TruckPostingCard extends StatelessWidget {
                       ),
                       Row(
                         children: [
-                          Icon(Icons.location_on,
+                          const Icon(Icons.location_on,
                               size: 14, color: AppColors.accent),
                           const SizedBox(width: 6),
                           Expanded(

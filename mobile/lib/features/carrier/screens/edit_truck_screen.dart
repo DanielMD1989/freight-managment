@@ -219,7 +219,7 @@ class _EditTruckScreenState extends ConsumerState<EditTruckScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             // Section: Basic Information
-            _SectionHeader(title: 'Basic Information'),
+            const _SectionHeader(title: 'Basic Information'),
             const SizedBox(height: 16),
 
             // License Plate
@@ -268,7 +268,7 @@ class _EditTruckScreenState extends ConsumerState<EditTruckScreen> {
             const SizedBox(height: 24),
 
             // Section: Capacity
-            _SectionHeader(title: 'Capacity'),
+            const _SectionHeader(title: 'Capacity'),
             const SizedBox(height: 16),
 
             // Capacity (tons)
@@ -357,7 +357,7 @@ class _EditTruckScreenState extends ConsumerState<EditTruckScreen> {
             const SizedBox(height: 24),
 
             // Section: Current Location
-            _SectionHeader(title: 'Current Location'),
+            const _SectionHeader(title: 'Current Location'),
             const SizedBox(height: 16),
 
             // Current City
@@ -385,7 +385,7 @@ class _EditTruckScreenState extends ConsumerState<EditTruckScreen> {
             const SizedBox(height: 24),
 
             // Section: Contact Information
-            _SectionHeader(title: 'Contact Information'),
+            const _SectionHeader(title: 'Contact Information'),
             const SizedBox(height: 16),
 
             // Owner Name

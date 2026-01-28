@@ -103,7 +103,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
+                    const Text(
                       "Ethiopia's Leading Freight Platform",
                       style: TextStyle(
                         fontSize: 14,
@@ -190,7 +190,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ],
 
                           // Email field
-                          Text(
+                          const Text(
                             'Email address',
                             style: TextStyle(
                               fontSize: 14,
@@ -214,11 +214,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppColors.slate300),
+                                borderSide: const BorderSide(color: AppColors.slate300),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppColors.slate300),
+                                borderSide: const BorderSide(color: AppColors.slate300),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -245,7 +245,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           const SizedBox(height: 20),
 
                           // Password field
-                          Text(
+                          const Text(
                             'Password',
                             style: TextStyle(
                               fontSize: 14,
@@ -270,11 +270,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppColors.slate300),
+                                borderSide: const BorderSide(color: AppColors.slate300),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppColors.slate300),
+                                borderSide: const BorderSide(color: AppColors.slate300),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -353,11 +353,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           const SizedBox(height: 24),
 
                           // Divider
-                          Row(
+                          const Row(
                             children: [
                               Expanded(child: Divider(color: AppColors.slate200)),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                padding: EdgeInsets.symmetric(horizontal: 16),
                                 child: Text(
                                   'New to FreightFlow?',
                                   style: TextStyle(
@@ -376,7 +376,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             onPressed: () => context.go('/register'),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              side: BorderSide(
+                              side: const BorderSide(
                                 color: AppColors.primary200,
                                 width: 1.5,
                               ),
@@ -385,7 +385,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                               backgroundColor: AppColors.primary50,
                             ),
-                            child: Text(
+                            child: const Text(
                               'Create an account',
                               style: TextStyle(
                                 fontSize: 16,

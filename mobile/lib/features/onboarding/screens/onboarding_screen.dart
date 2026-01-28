@@ -170,7 +170,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     if (_currentPage < onboardingPages.length - 1)
                       TextButton(
                         onPressed: _completeOnboarding,
-                        child: Text(
+                        child: const Text(
                           'Skip',
                           style: TextStyle(
                             color: AppColors.primary300,
@@ -300,7 +300,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
+                          const Text(
                             'Already have an account? ',
                             style: TextStyle(
                               color: AppColors.slate500,
@@ -309,7 +309,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           ),
                           GestureDetector(
                             onTap: _completeOnboarding,
-                            child: Text(
+                            child: const Text(
                               'Sign In',
                               style: TextStyle(
                                 color: AppColors.primary600,
@@ -408,7 +408,7 @@ class _OnboardingPageView extends StatelessWidget {
           // Description
           Text(
             page.description,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 16,
               color: AppColors.slate300,
               height: 1.5,
@@ -439,7 +439,7 @@ class _OnboardingPageView extends StatelessWidget {
                     const SizedBox(width: 12),
                     Text(
                       feature,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 15,
                         color: AppColors.slate200,
                         fontWeight: FontWeight.w500,

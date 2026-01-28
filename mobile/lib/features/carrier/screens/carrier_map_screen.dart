@@ -72,12 +72,12 @@ class CarrierMapScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Trucks',
                             style: TextStyle(
                               fontSize: 18,
@@ -90,7 +90,7 @@ class CarrierMapScreen extends StatelessWidget {
                                 color: AppColors.success,
                                 label: '2 Active',
                               ),
-                              const SizedBox(width: 8),
+                              SizedBox(width: 8),
                               _StatusChip(
                                 color: AppColors.warning,
                                 label: '1 Offline',
@@ -135,7 +135,7 @@ class CarrierMapScreen extends StatelessWidget {
                                       : AppColors.error,
                                 ),
                               ),
-                              trailing: Icon(
+                              trailing: const Icon(
                                 Icons.chevron_right,
                                 color: AppColors.textSecondary,
                               ),

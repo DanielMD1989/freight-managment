@@ -354,7 +354,7 @@ class _NotificationSettingsTabState extends ConsumerState<_NotificationSettingsT
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Text(
+                  const Text(
                     'Notification Types',
                     style: TextStyle(
                       color: AppColors.textSecondary,
@@ -425,7 +425,7 @@ class _NotificationSettingsTabState extends ConsumerState<_NotificationSettingsT
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Text(
+                  const Text(
                     'Quiet Hours',
                     style: TextStyle(
                       color: AppColors.textSecondary,
@@ -449,7 +449,7 @@ class _NotificationSettingsTabState extends ConsumerState<_NotificationSettingsT
                           title: const Text('Start Time'),
                           trailing: Text(
                             prefs.quietHoursStart ?? '10:00 PM',
-                            style: TextStyle(color: AppColors.textSecondary),
+                            style: const TextStyle(color: AppColors.textSecondary),
                           ),
                           onTap: prefs.quietHoursEnabled ? () => _selectTime(true) : null,
                           enabled: prefs.quietHoursEnabled,
@@ -459,7 +459,7 @@ class _NotificationSettingsTabState extends ConsumerState<_NotificationSettingsT
                           title: const Text('End Time'),
                           trailing: Text(
                             prefs.quietHoursEnd ?? '7:00 AM',
-                            style: TextStyle(color: AppColors.textSecondary),
+                            style: const TextStyle(color: AppColors.textSecondary),
                           ),
                           onTap: prefs.quietHoursEnabled ? () => _selectTime(false) : null,
                           enabled: prefs.quietHoursEnabled,
@@ -568,7 +568,7 @@ class _DateHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Text(
         date,
-        style: TextStyle(
+        style: const TextStyle(
           color: AppColors.textSecondary,
           fontWeight: FontWeight.w600,
           fontSize: 13,
@@ -677,7 +677,7 @@ class _NotificationTile extends StatelessWidget {
               Container(
                 width: 8,
                 height: 8,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: AppColors.primary,
                   shape: BoxShape.circle,
                 ),
@@ -692,7 +692,7 @@ class _NotificationTile extends StatelessWidget {
               notification.message,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
               ),
@@ -700,7 +700,7 @@ class _NotificationTile extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               notification.timeAgo,
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 12,
               ),
@@ -733,7 +733,7 @@ class _SettingTile extends StatelessWidget {
       title: Text(title),
       subtitle: Text(
         subtitle,
-        style: TextStyle(
+        style: const TextStyle(
           color: AppColors.textSecondary,
           fontSize: 13,
         ),
@@ -777,7 +777,7 @@ class _EmptyState extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     message,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 16,
                     ),
@@ -819,13 +819,13 @@ class _ErrorState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            const Icon(
               Icons.error_outline,
               size: 48,
               color: AppColors.error,
             ),
             const SizedBox(height: 16),
-            Text(
+            const Text(
               'Failed to load notifications',
               style: TextStyle(
                 color: AppColors.textPrimary,
@@ -837,7 +837,7 @@ class _ErrorState extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 14,
               ),

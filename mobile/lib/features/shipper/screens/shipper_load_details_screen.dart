@@ -66,10 +66,10 @@ class _ShipperLoadDetailsScreenState
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline,
+              const Icon(Icons.error_outline,
                   size: 48, color: AppColors.textSecondary),
               const SizedBox(height: 16),
-              Text(
+              const Text(
                 'Failed to load details',
                 style: TextStyle(color: AppColors.textSecondary),
               ),
@@ -155,7 +155,7 @@ class _ShipperLoadDetailsScreenState
                 children: [
                   Text(
                     'LOAD-${load.id.substring(0, 8).toUpperCase()}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,
                     ),
@@ -176,7 +176,7 @@ class _ShipperLoadDetailsScreenState
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
+                  const Text(
                     'Posted',
                     style: TextStyle(
                       color: AppColors.textSecondary,
@@ -226,7 +226,7 @@ class _ShipperLoadDetailsScreenState
                     ),
                     child: Text(
                       load.distanceDisplay,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppColors.primary,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -244,7 +244,7 @@ class _ShipperLoadDetailsScreenState
                     Container(
                       width: 12,
                       height: 12,
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: AppColors.success,
                         shape: BoxShape.circle,
                       ),
@@ -257,7 +257,7 @@ class _ShipperLoadDetailsScreenState
                     Container(
                       width: 12,
                       height: 12,
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: AppColors.error,
                         shape: BoxShape.circle,
                       ),
@@ -269,7 +269,7 @@ class _ShipperLoadDetailsScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Pickup',
                         style: TextStyle(
                           color: AppColors.textSecondary,
@@ -286,13 +286,13 @@ class _ShipperLoadDetailsScreenState
                       if (load.pickupAddress != null)
                         Text(
                           load.pickupAddress!,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 13,
                           ),
                         ),
                       const SizedBox(height: 20),
-                      Text(
+                      const Text(
                         'Delivery',
                         style: TextStyle(
                           color: AppColors.textSecondary,
@@ -309,7 +309,7 @@ class _ShipperLoadDetailsScreenState
                       if (load.deliveryAddress != null)
                         Text(
                           load.deliveryAddress!,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 13,
                           ),
@@ -334,8 +334,8 @@ class _ShipperLoadDetailsScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: const [
+            const Row(
+              children: [
                 Icon(Icons.calendar_today, size: 20),
                 SizedBox(width: 8),
                 Text(
@@ -354,7 +354,7 @@ class _ShipperLoadDetailsScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Pickup Date',
                         style: TextStyle(
                           color: AppColors.textSecondary,
@@ -372,7 +372,7 @@ class _ShipperLoadDetailsScreenState
                         const SizedBox(height: 2),
                         Text(
                           'Hours: ${load.pickupDockHours}',
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 12,
                           ),
@@ -385,7 +385,7 @@ class _ShipperLoadDetailsScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Delivery Date',
                         style: TextStyle(
                           color: AppColors.textSecondary,
@@ -403,7 +403,7 @@ class _ShipperLoadDetailsScreenState
                         const SizedBox(height: 2),
                         Text(
                           'Hours: ${load.deliveryDockHours}',
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 12,
                           ),
@@ -427,8 +427,8 @@ class _ShipperLoadDetailsScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: const [
+            const Row(
+              children: [
                 Icon(Icons.inventory_2, size: 20),
                 SizedBox(width: 8),
                 Text(
@@ -474,12 +474,12 @@ class _ShipperLoadDetailsScreenState
                         color: AppColors.warning.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.warning_amber,
                               size: 14, color: AppColors.warning),
-                          const SizedBox(width: 4),
+                          SizedBox(width: 4),
                           Text(
                             'Fragile',
                             style: TextStyle(
@@ -503,11 +503,11 @@ class _ShipperLoadDetailsScreenState
                         color: AppColors.info.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.ac_unit, size: 14, color: AppColors.info),
-                          const SizedBox(width: 4),
+                          SizedBox(width: 4),
                           Text(
                             'Refrigerated',
                             style: TextStyle(
@@ -535,8 +535,8 @@ class _ShipperLoadDetailsScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: const [
+            const Row(
+              children: [
                 Icon(Icons.payments, size: 20),
                 SizedBox(width: 8),
                 Text(
@@ -569,7 +569,7 @@ class _ShipperLoadDetailsScreenState
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
+                  const Text(
                     'Base Fare',
                     style: TextStyle(color: AppColors.textSecondary),
                   ),
@@ -582,7 +582,7 @@ class _ShipperLoadDetailsScreenState
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
+                  const Text(
                     'Per Km Rate',
                     style: TextStyle(color: AppColors.textSecondary),
                   ),
@@ -593,7 +593,7 @@ class _ShipperLoadDetailsScreenState
             if (load.totalFareEtb == null &&
                 load.baseFareEtb == null &&
                 load.perKmEtb == null)
-              Text(
+              const Text(
                 'Price to be negotiated',
                 style: TextStyle(color: AppColors.textSecondary),
               ),
@@ -610,8 +610,8 @@ class _ShipperLoadDetailsScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: const [
+            const Row(
+              children: [
                 Icon(Icons.local_shipping, size: 20),
                 SizedBox(width: 8),
                 Text(
@@ -632,7 +632,7 @@ class _ShipperLoadDetailsScreenState
                     color: AppColors.primary100,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.local_shipping,
                     color: AppColors.primary,
                     size: 24,
@@ -652,7 +652,7 @@ class _ShipperLoadDetailsScreenState
                       ),
                       Text(
                         truck.truckTypeDisplay,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 13,
                         ),
@@ -664,8 +664,8 @@ class _ShipperLoadDetailsScreenState
             ),
             if (truck.ownerName != null || truck.contactPhone != null) ...[
               const Divider(height: 24),
-              Row(
-                children: const [
+              const Row(
+                children: [
                   Icon(Icons.person, size: 18),
                   SizedBox(width: 8),
                   Text(
@@ -684,12 +684,12 @@ class _ShipperLoadDetailsScreenState
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(Icons.phone,
+                    const Icon(Icons.phone,
                         size: 14, color: AppColors.textSecondary),
                     const SizedBox(width: 4),
                     Text(
                       truck.contactPhone!,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
                       ),
@@ -711,8 +711,8 @@ class _ShipperLoadDetailsScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: const [
+            const Row(
+              children: [
                 Icon(Icons.people, size: 20),
                 SizedBox(width: 8),
                 Text(
@@ -732,7 +732,7 @@ class _ShipperLoadDetailsScreenState
                   child: CircularProgressIndicator(),
                 ),
               ),
-              error: (_, __) => Text(
+              error: (_, __) => const Text(
                 'Failed to load requests',
                 style: TextStyle(color: AppColors.textSecondary),
               ),
@@ -741,7 +741,7 @@ class _ShipperLoadDetailsScreenState
                     requests.where((r) => r.isPending).toList();
 
                 if (pendingRequests.isEmpty) {
-                  return Text(
+                  return const Text(
                     'No pending requests',
                     style: TextStyle(color: AppColors.textSecondary),
                   );
@@ -782,7 +782,7 @@ class _ShipperLoadDetailsScreenState
                 const SizedBox(width: 8),
                 Text(
                   request.truck!.truckTypeDisplay,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 13,
                   ),
@@ -800,7 +800,7 @@ class _ShipperLoadDetailsScreenState
                   color: AppColors.warning.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Text(
+                child: const Text(
                   'Pending',
                   style: TextStyle(
                     color: AppColors.warning,
@@ -815,7 +815,7 @@ class _ShipperLoadDetailsScreenState
             const SizedBox(height: 8),
             Text(
               request.notes!,
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
               ),
@@ -825,7 +825,7 @@ class _ShipperLoadDetailsScreenState
             const SizedBox(height: 8),
             Text(
               'Proposed: ${request.proposedRate!.toStringAsFixed(0)} ETB',
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppColors.primary,
                 fontWeight: FontWeight.w600,
               ),
@@ -872,8 +872,8 @@ class _ShipperLoadDetailsScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: const [
+            const Row(
+              children: [
                 Icon(Icons.notes, size: 20),
                 SizedBox(width: 8),
                 Text(
@@ -887,7 +887,7 @@ class _ShipperLoadDetailsScreenState
             ),
             const SizedBox(height: 16),
             if (load.specialInstructions != null) ...[
-              Text(
+              const Text(
                 'Special Instructions',
                 style: TextStyle(
                   color: AppColors.textSecondary,
@@ -899,7 +899,7 @@ class _ShipperLoadDetailsScreenState
               const SizedBox(height: 12),
             ],
             if (load.safetyNotes != null) ...[
-              Text(
+              const Text(
                 'Safety Notes',
                 style: TextStyle(
                   color: AppColors.textSecondary,
@@ -923,7 +923,7 @@ class _ShipperLoadDetailsScreenState
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColors.surface,
         border: Border(
           top: BorderSide(color: AppColors.border),
@@ -1038,7 +1038,7 @@ class _ShipperLoadDetailsScreenState
           const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               color: AppColors.textSecondary,
               fontSize: 13,
             ),
