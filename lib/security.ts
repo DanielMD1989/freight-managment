@@ -290,7 +290,21 @@ export function hasSQLInjectionPattern(input: string): boolean {
 }
 
 /**
+ * Security event type mapping to database event types
+ */
+const SECURITY_EVENT_TYPE_MAP: Record<string, string> = {
+  'RATE_LIMIT': 'SECURITY_RATE_LIMIT',
+  'SQL_INJECTION': 'SECURITY_SQL_INJECTION',
+  'XSS_ATTEMPT': 'SECURITY_XSS_ATTEMPT',
+  'UNAUTHORIZED_ACCESS': 'SECURITY_UNAUTHORIZED_ACCESS',
+  'CSRF_FAILURE': 'SECURITY_CSRF_FAILURE',
+  'BRUTE_FORCE': 'SECURITY_BRUTE_FORCE',
+  'IP_BLOCKED': 'SECURITY_IP_BLOCKED',
+};
+
+/**
  * Log security event
+ * Stores in database for audit trail when userId is available
  */
 export async function logSecurityEvent(event: {
   type: 'RATE_LIMIT' | 'SQL_INJECTION' | 'XSS_ATTEMPT' | 'UNAUTHORIZED_ACCESS' | 'CSRF_FAILURE' | 'BRUTE_FORCE' | 'IP_BLOCKED';
@@ -299,14 +313,36 @@ export async function logSecurityEvent(event: {
   userId?: string;
   details?: any;
 }) {
-  // In production, send to logging service (DataDog, Sentry, etc.)
+  const timestamp = new Date().toISOString();
+
+  // Always log to console (for log aggregation services like DataDog, Sentry)
   console.warn('[SECURITY]', {
-    timestamp: new Date().toISOString(),
+    timestamp,
     ...event,
   });
 
-  // TODO: Store in database for audit trail
-  // await db.securityEvent.create({ data: event });
+  // Store in database for audit trail when userId is available
+  // SecurityEvent model requires a valid userId foreign key
+  if (event.userId) {
+    try {
+      // Dynamic import to avoid circular dependencies
+      const { db } = await import('./db');
+
+      await db.securityEvent.create({
+        data: {
+          userId: event.userId,
+          eventType: SECURITY_EVENT_TYPE_MAP[event.type] || event.type,
+          ipAddress: event.ip,
+          userAgent: event.userAgent || null,
+          success: false, // Security events are typically failures/threats
+          metadata: event.details ? event.details : null,
+        },
+      });
+    } catch (error) {
+      // Don't let audit trail failures break the application
+      console.error('[SECURITY] Failed to store audit event:', error);
+    }
+  }
 }
 
 /**

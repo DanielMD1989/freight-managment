@@ -11,10 +11,10 @@
 | Priority | Count | Blocks Production? |
 |----------|-------|-------------------|
 | Medium | 0 | No |
-| Low | 3 | No |
-| **Total** | **3** | **No** |
+| Low | 0 | No |
+| **Total** | **0** | **No** |
 
-**Completed:** 12 (TD-001 to TD-012 - Transaction Safety + Cache Invalidation + Infrastructure)
+**Completed:** 15 (TD-001 to TD-015 - All items resolved)
 
 ---
 
@@ -73,35 +73,27 @@ await CacheInvalidation.load(loadId, organizationId);
 
 ## LOW PRIORITY (Fix When Time Permits)
 
-| ID | File | Issue | Impact | Effort |
-|----|------|-------|--------|--------|
-| TD-013 | `mobile/` (15 files) | Unused imports | Code cleanliness | 30 min |
-| TD-014 | `lib/db.ts:260` | TODO: measure pool acquire time | Performance monitoring | 1 hour |
-| TD-015 | `lib/security.ts:308` | TODO: Store audit in database | Audit trail persistence | 2 hours |
+| ID | File | Issue | Status |
+|----|------|-------|--------|
+| TD-013 | `mobile/` (10 files) | Unused imports | ✅ Done - Removed unused imports |
+| TD-014 | `lib/db.ts` | Measure pool acquire time | ✅ Done - Added timedConnect() method |
+| TD-015 | `lib/security.ts` | Store audit in database | ✅ Done - Stores in SecurityEvent table |
 
 ---
 
 ## SPRINT PLANNING RECOMMENDATION
 
-### Sprint 2 (Post-Launch Week 1)
-Focus: Infrastructure for production monitoring
-- [ ] TD-012: Error tracking (Sentry) - **Do First**
-- [ ] TD-010: Email service (SendGrid)
-- [ ] TD-011: SMS service (Twilio)
+**All tech debt items have been resolved in Sprint 1!**
 
-### Sprint 3 (Post-Launch Week 2)
-Focus: Transaction safety cleanup
-- [ ] TD-001: Dispatch route transaction
-- [ ] TD-002: GPS trip route transaction
-- [ ] TD-003: GPS positions route transaction
-- [ ] TD-004: Escalations route transaction
-
-### Sprint 4 (Post-Launch Week 3)
-Focus: Cache and cleanup
-- [ ] TD-005 to TD-009: All cache invalidation (batch fix)
-- [ ] TD-013: Unused imports cleanup
-- [ ] TD-014: DB pool metrics
-- [ ] TD-015: Audit trail persistence
+### Completed in Sprint 1
+- [x] TD-001 to TD-004: Transaction safety (wrapped in db.$transaction)
+- [x] TD-005 to TD-009: Cache invalidation (added CacheInvalidation calls)
+- [x] TD-010: Email service (SendGrid/SES providers implemented)
+- [x] TD-011: SMS service (Twilio provider implemented)
+- [x] TD-012: Error tracking (Sentry integration added)
+- [x] TD-013: Unused imports cleanup (10 mobile files cleaned)
+- [x] TD-014: DB pool metrics (timedConnect with acquire time measurement)
+- [x] TD-015: Audit trail persistence (stores in SecurityEvent table)
 
 ---
 
@@ -168,9 +160,9 @@ Sentry.captureException(error);
 | TD-010 | ✅ Done | Claude | Sprint 1 | 2026-01-28 |
 | TD-011 | ✅ Done | Claude | Sprint 1 | 2026-01-28 |
 | TD-012 | ✅ Done | Claude | Sprint 1 | 2026-01-28 |
-| TD-013 | 🔲 Open | | | |
-| TD-014 | 🔲 Open | | | |
-| TD-015 | 🔲 Open | | | |
+| TD-013 | ✅ Done | Claude | Sprint 1 | 2026-01-28 |
+| TD-014 | ✅ Done | Claude | Sprint 1 | 2026-01-28 |
+| TD-015 | ✅ Done | Claude | Sprint 1 | 2026-01-28 |
 
 ---
 

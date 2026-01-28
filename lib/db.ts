@@ -257,7 +257,8 @@ class DatabaseManager {
     });
 
     this.pool.on("acquire", () => {
-      this.metrics.recordAcquire(0); // TODO: measure actual acquire time
+      // Note: Pool 'acquire' event doesn't provide timing info
+      // Actual acquire time is measured in timedConnect() method
     });
 
     this.pool.on("release", () => {
@@ -311,27 +312,51 @@ class DatabaseManager {
   }
 
   /**
+   * Get a connection from the pool with timing measurement
+   * Records actual acquire time for metrics
+   */
+  private async timedConnect(): Promise<{ client: PoolClient; acquireTimeMs: number }> {
+    if (!this.pool) {
+      throw new Error("Pool not initialized");
+    }
+
+    const start = Date.now();
+    const client = await this.pool.connect();
+    const acquireTimeMs = Date.now() - start;
+
+    // Record actual acquire time
+    this.metrics.recordAcquire(acquireTimeMs);
+
+    return { client, acquireTimeMs };
+  }
+
+  /**
    * Perform health check
    */
-  async healthCheck(): Promise<{ healthy: boolean; latencyMs: number; error?: string }> {
+  async healthCheck(): Promise<{ healthy: boolean; latencyMs: number; acquireTimeMs?: number; error?: string }> {
     if (!this.pool) {
       return { healthy: false, latencyMs: 0, error: "Pool not initialized" };
     }
 
     const start = Date.now();
     let client: PoolClient | null = null;
+    let acquireTimeMs = 0;
 
     try {
-      client = await this.pool.connect();
+      const result = await this.timedConnect();
+      client = result.client;
+      acquireTimeMs = result.acquireTimeMs;
+
       await client.query("SELECT 1");
       const latencyMs = Date.now() - start;
       this.metrics.recordHealthCheck(true);
-      return { healthy: true, latencyMs };
+      return { healthy: true, latencyMs, acquireTimeMs };
     } catch (error) {
       this.metrics.recordHealthCheck(false);
       return {
         healthy: false,
         latencyMs: Date.now() - start,
+        acquireTimeMs,
         error: error instanceof Error ? error.message : "Unknown error",
       };
     } finally {
@@ -427,6 +452,7 @@ class DatabaseManager {
 
   /**
    * Execute raw query with automatic connection handling
+   * Uses timedConnect for accurate acquire time metrics
    */
   async executeRaw<T>(
     query: string,
@@ -436,7 +462,7 @@ class DatabaseManager {
       throw new Error("Database not initialized");
     }
 
-    const client = await this.pool.connect();
+    const { client } = await this.timedConnect();
     try {
       const result = await client.query(query, params);
       return result.rows as T[];

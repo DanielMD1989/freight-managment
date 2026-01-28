@@ -25,7 +25,6 @@ import 'features/shipper/screens/shipper_home_screen.dart';
 import 'features/shipper/screens/shipper_trips_screen.dart';
 import 'features/shipper/screens/shipper_trip_details_screen.dart';
 import 'features/shipper/screens/shipper_loads_screen.dart';
-import 'features/shipper/screens/shipper_trucks_screen.dart';
 import 'features/shipper/screens/shipper_truckboard_screen.dart';
 import 'features/shipper/screens/shipper_truck_details_screen.dart';
 import 'features/shipper/screens/post_load_screen.dart';

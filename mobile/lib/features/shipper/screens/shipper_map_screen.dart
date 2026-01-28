@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../app.dart';
 import '../../../core/api/api_client.dart';
-import 'package:dio/dio.dart';
 
 /// Trip progress model
 class TripProgress {

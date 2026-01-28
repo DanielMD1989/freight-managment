@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import '../../../app.dart';
 import '../../../core/models/truck.dart';
 import '../../../core/services/truck_service.dart';
-import '../../../core/utils/foundation_rules.dart';
 
 /// Provider for Ethiopian locations
 final ethiopianLocationsProvider =

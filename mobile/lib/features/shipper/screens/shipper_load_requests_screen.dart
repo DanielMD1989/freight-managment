@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../app.dart';
 import '../../../core/models/load.dart';
-import '../../../core/models/truck.dart';
 import '../../../core/services/load_service.dart';
 
 /// Provider for fetching load requests for a specific load
