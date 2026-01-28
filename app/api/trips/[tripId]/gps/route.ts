@@ -117,72 +117,77 @@ async function postHandler(
 
     const now = validatedData.timestamp ? new Date(validatedData.timestamp) : new Date();
 
-    // Get or create GPS device ID (use truck's GPS device or create placeholder)
-    let deviceId = trip.truck.gpsDeviceId;
-    if (!deviceId) {
-      // Create a placeholder GPS device for this truck
-      const device = await db.gpsDevice.create({
+    // TD-002 FIX: Wrap all GPS updates in a transaction for atomicity
+    const gpsPosition = await db.$transaction(async (tx) => {
+      // Get or create GPS device ID (use truck's GPS device or create placeholder)
+      let deviceId = trip.truck.gpsDeviceId;
+      if (!deviceId) {
+        // Create a placeholder GPS device for this truck
+        const device = await tx.gpsDevice.create({
+          data: {
+            imei: `TRUCK-${trip.truck.id}`,
+            status: 'ACTIVE',
+            lastSeenAt: now,
+          },
+        });
+        deviceId = device.id;
+
+        // Link device to truck
+        await tx.truck.update({
+          where: { id: trip.truck.id },
+          data: { gpsDeviceId: device.id },
+        });
+      }
+
+      // Create GPS position record linked to trip
+      const position = await tx.gpsPosition.create({
         data: {
-          imei: `TRUCK-${trip.truck.id}`,
-          status: 'ACTIVE',
-          lastSeenAt: now,
+          truckId: trip.truckId,
+          tripId: tripId,
+          loadId: trip.loadId,
+          deviceId: deviceId,
+          latitude: new Prisma.Decimal(validatedData.latitude),
+          longitude: new Prisma.Decimal(validatedData.longitude),
+          speed: validatedData.speed ? new Prisma.Decimal(validatedData.speed) : null,
+          heading: validatedData.heading ? new Prisma.Decimal(validatedData.heading) : null,
+          altitude: validatedData.altitude ? new Prisma.Decimal(validatedData.altitude) : null,
+          accuracy: validatedData.accuracy ? new Prisma.Decimal(validatedData.accuracy) : null,
+          timestamp: now,
         },
       });
-      deviceId = device.id;
 
-      // Link device to truck
-      await db.truck.update({
-        where: { id: trip.truck.id },
-        data: { gpsDeviceId: device.id },
+      // Update trip's current location
+      await tx.trip.update({
+        where: { id: tripId },
+        data: {
+          currentLat: new Prisma.Decimal(validatedData.latitude),
+          currentLng: new Prisma.Decimal(validatedData.longitude),
+          currentLocationUpdatedAt: now,
+        },
       });
-    }
 
-    // Create GPS position record linked to trip
-    const gpsPosition = await db.gpsPosition.create({
-      data: {
-        truckId: trip.truckId,
-        tripId: tripId,
-        loadId: trip.loadId,
-        deviceId: deviceId,
-        latitude: new Prisma.Decimal(validatedData.latitude),
-        longitude: new Prisma.Decimal(validatedData.longitude),
-        speed: validatedData.speed ? new Prisma.Decimal(validatedData.speed) : null,
-        heading: validatedData.heading ? new Prisma.Decimal(validatedData.heading) : null,
-        altitude: validatedData.altitude ? new Prisma.Decimal(validatedData.altitude) : null,
-        accuracy: validatedData.accuracy ? new Prisma.Decimal(validatedData.accuracy) : null,
-        timestamp: now,
-      },
-    });
+      // Update truck's current location
+      await tx.truck.update({
+        where: { id: trip.truckId },
+        data: {
+          currentLocationLat: new Prisma.Decimal(validatedData.latitude),
+          currentLocationLon: new Prisma.Decimal(validatedData.longitude),
+          locationUpdatedAt: now,
+          gpsLastSeenAt: now,
+          gpsStatus: 'ACTIVE',
+        },
+      });
 
-    // Update trip's current location
-    await db.trip.update({
-      where: { id: tripId },
-      data: {
-        currentLat: new Prisma.Decimal(validatedData.latitude),
-        currentLng: new Prisma.Decimal(validatedData.longitude),
-        currentLocationUpdatedAt: now,
-      },
-    });
+      // Update GPS device last seen
+      await tx.gpsDevice.update({
+        where: { id: deviceId },
+        data: {
+          lastSeenAt: now,
+          status: 'ACTIVE',
+        },
+      });
 
-    // Update truck's current location
-    await db.truck.update({
-      where: { id: trip.truckId },
-      data: {
-        currentLocationLat: new Prisma.Decimal(validatedData.latitude),
-        currentLocationLon: new Prisma.Decimal(validatedData.longitude),
-        locationUpdatedAt: now,
-        gpsLastSeenAt: now,
-        gpsStatus: 'ACTIVE',
-      },
-    });
-
-    // Update GPS device last seen
-    await db.gpsDevice.update({
-      where: { id: deviceId },
-      data: {
-        lastSeenAt: now,
-        status: 'ACTIVE',
-      },
+      return position;
     });
 
     return NextResponse.json({

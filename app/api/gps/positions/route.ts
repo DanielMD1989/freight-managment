@@ -190,37 +190,42 @@ async function postHandler(request: NextRequest) {
       select: { id: true },
     });
 
-    // Create GPS position
-    const position = await db.gpsPosition.create({
-      data: {
-        deviceId: device.id,
-        truckId,
-        latitude,
-        longitude,
-        speed: speed || null,
-        heading: heading || null,
-        altitude: altitude || null,
-        timestamp: positionTimestamp,
-        loadId: activeLoad?.id || null,
-      },
-    });
+    // TD-003 FIX: Wrap all GPS position updates in a transaction for atomicity
+    const position = await db.$transaction(async (tx) => {
+      // Create GPS position
+      const pos = await tx.gpsPosition.create({
+        data: {
+          deviceId: device.id,
+          truckId,
+          latitude,
+          longitude,
+          speed: speed || null,
+          heading: heading || null,
+          altitude: altitude || null,
+          timestamp: positionTimestamp,
+          loadId: activeLoad?.id || null,
+        },
+      });
 
-    // Update device last seen
-    await db.gpsDevice.update({
-      where: { id: device.id },
-      data: { lastSeenAt: new Date() },
-    });
+      // Update device last seen
+      await tx.gpsDevice.update({
+        where: { id: device.id },
+        data: { lastSeenAt: new Date() },
+      });
 
-    // Update truck's current location
-    await db.truck.update({
-      where: { id: truckId },
-      data: {
-        currentLocationLat: latitude,
-        currentLocationLon: longitude,
-        locationUpdatedAt: positionTimestamp,
-        gpsLastSeenAt: new Date(),
-        gpsStatus: "ACTIVE",
-      },
+      // Update truck's current location
+      await tx.truck.update({
+        where: { id: truckId },
+        data: {
+          currentLocationLat: latitude,
+          currentLocationLon: longitude,
+          locationUpdatedAt: positionTimestamp,
+          gpsLastSeenAt: new Date(),
+          gpsStatus: "ACTIVE",
+        },
+      });
+
+      return pos;
     });
 
     // Broadcast the position via WebSocket for real-time updates

@@ -88,72 +88,77 @@ export async function POST(
       priority = 'CRITICAL';
     }
 
-    // Create escalation
-    const escalation = await db.loadEscalation.create({
-      data: {
-        loadId,
-        escalationType: validatedData.escalationType,
-        priority,
-        title: validatedData.title,
-        description: validatedData.description,
-        notes: validatedData.notes,
-        createdBy: session.userId,
-        assignedTo: validatedData.assignedTo,
-        assignedAt: validatedData.assignedTo ? new Date() : null,
-        status: validatedData.assignedTo ? 'ASSIGNED' : 'OPEN',
-      },
-      include: {
-        load: {
-          select: {
-            id: true,
-            status: true,
-            pickupCity: true,
-            deliveryCity: true,
-          },
-        },
-      },
-    });
-
-    // Create load event
-    await db.loadEvent.create({
-      data: {
-        loadId,
-        eventType: 'ESCALATION_CREATED',
-        description: `Escalation created: ${validatedData.title}`,
-        userId: session.userId,
-        metadata: {
-          escalationId: escalation.id,
+    // TD-004 FIX: Wrap all escalation operations in a transaction for atomicity
+    const escalation = await db.$transaction(async (tx) => {
+      // Create escalation
+      const esc = await tx.loadEscalation.create({
+        data: {
+          loadId,
           escalationType: validatedData.escalationType,
           priority,
+          title: validatedData.title,
+          description: validatedData.description,
+          notes: validatedData.notes,
+          createdBy: session.userId,
+          assignedTo: validatedData.assignedTo,
+          assignedAt: validatedData.assignedTo ? new Date() : null,
+          status: validatedData.assignedTo ? 'ASSIGNED' : 'OPEN',
         },
-      },
-    });
-
-    // Update load status to EXCEPTION if not already
-    if (load.status !== 'EXCEPTION' && load.status !== 'CANCELLED' && load.status !== 'COMPLETED') {
-      // Validate state transition
-      const stateValidation = validateStateTransition(
-        load.status,
-        LoadStatus.EXCEPTION,
-        session.role
-      );
-
-      if (stateValidation.valid) {
-        await db.load.update({
-          where: { id: loadId },
-          data: { status: 'EXCEPTION' },
-        });
-
-        await db.loadEvent.create({
-          data: {
-            loadId,
-            eventType: 'STATUS_CHANGED',
-            description: `Status changed to EXCEPTION due to escalation`,
-            userId: session.userId,
+        include: {
+          load: {
+            select: {
+              id: true,
+              status: true,
+              pickupCity: true,
+              deliveryCity: true,
+            },
           },
-        });
+        },
+      });
+
+      // Create load event
+      await tx.loadEvent.create({
+        data: {
+          loadId,
+          eventType: 'ESCALATION_CREATED',
+          description: `Escalation created: ${validatedData.title}`,
+          userId: session.userId,
+          metadata: {
+            escalationId: esc.id,
+            escalationType: validatedData.escalationType,
+            priority,
+          },
+        },
+      });
+
+      // Update load status to EXCEPTION if not already
+      if (load.status !== 'EXCEPTION' && load.status !== 'CANCELLED' && load.status !== 'COMPLETED') {
+        // Validate state transition
+        const stateValidation = validateStateTransition(
+          load.status,
+          LoadStatus.EXCEPTION,
+          session.role
+        );
+
+        if (stateValidation.valid) {
+          await tx.load.update({
+            where: { id: loadId },
+            data: { status: 'EXCEPTION' },
+          });
+
+          await tx.loadEvent.create({
+            data: {
+              loadId,
+              eventType: 'STATUS_CHANGED',
+              description: `Status changed to EXCEPTION due to escalation`,
+              userId: session.userId,
+            },
+          });
+        }
       }
-    }
+
+      return esc;
+    });
 
     // TODO: Send notification to assigned dispatcher
     // TODO: Send notification to relevant parties

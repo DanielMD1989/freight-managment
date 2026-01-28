@@ -146,12 +146,7 @@ export async function POST(request: NextRequest) {
     if (existingAssignment) {
       // If the existing load is completed/delivered/cancelled, unassign it first
       const inactiveStatuses = ['DELIVERED', 'COMPLETED', 'CANCELLED', 'EXPIRED'];
-      if (inactiveStatuses.includes(existingAssignment.status)) {
-        await db.load.update({
-          where: { id: existingAssignment.id },
-          data: { assignedTruckId: null },
-        });
-      } else {
+      if (!inactiveStatuses.includes(existingAssignment.status)) {
         return NextResponse.json(
           {
             error: `This truck is already assigned to an active load (${existingAssignment.pickupCity} → ${existingAssignment.deliveryCity})`,
@@ -163,40 +158,53 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Assign truck to load
-    const updatedLoad = await db.load.update({
-      where: { id: loadId },
-      data: {
-        assignedTruckId: truckId,
-        assignedAt: new Date(),
-        status: "ASSIGNED",
-        escrowFunded: true,
-        escrowAmount,
-      },
-    });
+    // TD-001 FIX: Wrap all mutations in a transaction for atomicity
+    const updatedLoad = await db.$transaction(async (tx) => {
+      // Clear old assignment if exists
+      if (existingAssignment) {
+        await tx.load.update({
+          where: { id: existingAssignment.id },
+          data: { assignedTruckId: null },
+        });
+      }
 
-    // Create load event
-    await db.loadEvent.create({
-      data: {
-        loadId,
-        eventType: "ASSIGNED",
-        description: `Load assigned to truck ${truck.licensePlate}`,
-        userId: session.userId,
-        metadata: {
-          truckId,
-          licensePlate: truck.licensePlate,
+      // Assign truck to load
+      const updated = await tx.load.update({
+        where: { id: loadId },
+        data: {
+          assignedTruckId: truckId,
+          assignedAt: new Date(),
+          status: "ASSIGNED",
+          escrowFunded: true,
+          escrowAmount,
         },
-      },
-    });
+      });
 
-    // Fund escrow (simplified for MVP)
-    await db.financialAccount.update({
-      where: { id: shipperWallet.id },
-      data: {
-        balance: {
-          decrement: escrowAmount,
+      // Create load event
+      await tx.loadEvent.create({
+        data: {
+          loadId,
+          eventType: "ASSIGNED",
+          description: `Load assigned to truck ${truck.licensePlate}`,
+          userId: session.userId,
+          metadata: {
+            truckId,
+            licensePlate: truck.licensePlate,
+          },
         },
-      },
+      });
+
+      // Fund escrow (simplified for MVP)
+      await tx.financialAccount.update({
+        where: { id: shipperWallet.id },
+        data: {
+          balance: {
+            decrement: escrowAmount,
+          },
+        },
+      });
+
+      return updated;
     });
 
     return NextResponse.json({
