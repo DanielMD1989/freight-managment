@@ -962,17 +962,17 @@ Can I reproduce it? Yes / No / Sometimes
 ### Load Status Flow:
 ```
 DRAFT → POSTED → SEARCHING → OFFERED → ASSIGNED → PICKUP_PENDING → IN_TRANSIT → DELIVERED → COMPLETED
-                                           ↓                              ↓
-                                      CANCELLED                       EXCEPTION
-                                                                          ↓
-                                                                     (Resolved)
+                                          ↓                              ↓
+                                     CANCELLED                       EXCEPTION
+                                                                         ↓
+                                                                    (Resolved)
 ```
 
 ### Trip Status Flow:
 ```
 ASSIGNED → PICKUP_PENDING → IN_TRANSIT → DELIVERED → COMPLETED
-     ↓            ↓
-  CANCELLED   CANCELLED
+    ↓            ↓
+ CANCELLED   CANCELLED
 ```
 
 ### Request Status Flow:
@@ -984,7 +984,9 @@ REJECTED / CANCELLED / EXPIRED
 
 ---
 
-## COVERAGE SUMMARY
+## UPDATED COVERAGE SUMMARY
+
+After adding these tests:
 
 | Category | Coverage |
 |----------|----------|
@@ -1002,7 +1004,7 @@ REJECTED / CANCELLED / EXPIRED
 
 ---
 
-## FINAL CHECKLIST
+## FINAL CHECKLIST (UPDATED)
 
 ### All User Roles Tested
 - [ ] Shipper
