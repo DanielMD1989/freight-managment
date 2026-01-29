@@ -650,6 +650,41 @@ class _LoadCard extends StatelessWidget {
                     ),
                 ],
               ),
+              const SizedBox(height: 10),
+
+              // Service fee display (read-only)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.receipt_long, size: 14, color: AppColors.primary.withValues(alpha: 0.8)),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Service Fee: ${load.serviceFeeEtb != null ? '${load.serviceFeeEtb!.toStringAsFixed(0)} ETB' : 'Calculated on booking'}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary.withValues(alpha: 0.9),
+                      ),
+                    ),
+                    if (load.tripKm != null || load.estimatedTripKm != null) ...[
+                      const Spacer(),
+                      Text(
+                        '${(load.tripKm ?? load.estimatedTripKm)!.toStringAsFixed(0)} km',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
               const SizedBox(height: 12),
 
               // Action button

@@ -632,6 +632,55 @@ class _PostLoadScreenState extends ConsumerState<PostLoadScreen> {
             ],
           ),
         ),
+
+        const SizedBox(height: 16),
+
+        // Service fee info box (read-only display)
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.accent.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.accent.withValues(alpha: 0.25)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.info_outline, color: AppColors.accent.withValues(alpha: 0.9), size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Platform Service Fee',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.accent.withValues(alpha: 0.9),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Fee = Distance × Corridor Rate (ETB/km)\nCalculated after posting based on your route.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[700],
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'You negotiate freight price directly with carriers.',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[500],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }

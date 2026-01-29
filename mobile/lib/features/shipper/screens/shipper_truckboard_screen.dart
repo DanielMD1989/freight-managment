@@ -941,6 +941,32 @@ class _TruckPostingCard extends StatelessWidget {
                     _SpecChip(icon: Icons.fitness_center, label: posting.weightDisplay!),
                 ],
               ),
+              const SizedBox(height: 10),
+
+              // Service fee info (read-only display)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 14, color: AppColors.accent.withValues(alpha: 0.8)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Service fee calculated on booking (Distance × Rate)',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.accent.withValues(alpha: 0.9),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 12),
 
               // Action button
