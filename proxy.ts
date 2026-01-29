@@ -120,7 +120,7 @@ const CSRF_EXEMPT_ROUTES = [
 // State-changing HTTP methods that require CSRF protection
 const STATE_CHANGING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const startTime = Date.now();
   const { pathname } = request.nextUrl;
   const method = request.method;

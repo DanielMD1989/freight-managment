@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // CORS is handled dynamically in middleware.ts
+  // CORS is handled dynamically in proxy.ts
 
   // PHASE 4: Production optimizations
   compress: true, // Enable gzip compression (default: true in production)

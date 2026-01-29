@@ -439,8 +439,11 @@ class DatabaseManager {
       console.log("[DB] Shutdown complete");
     };
 
-    process.on("SIGTERM", () => shutdown("SIGTERM"));
-    process.on("SIGINT", () => shutdown("SIGINT"));
+    // Guard for Edge Runtime compatibility (Edge Runtime doesn't support process.on)
+    if (typeof process !== 'undefined' && typeof process.on === 'function') {
+      process.on("SIGTERM", () => shutdown("SIGTERM"));
+      process.on("SIGINT", () => shutdown("SIGINT"));
+    }
   }
 
   /**
