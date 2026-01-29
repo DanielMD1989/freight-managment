@@ -58,7 +58,7 @@ const ETHIOPIAN_CITIES = Object.keys(ETHIOPIAN_CITIES_DATA);
 const STEPS = [
   { num: 1, label: 'Route', icon: '📍' },
   { num: 2, label: 'Cargo', icon: '📦' },
-  { num: 3, label: 'Pricing', icon: '💰' },
+  { num: 3, label: 'Options', icon: '⚙️' },
   { num: 4, label: 'Review', icon: '✓' },
 ];
 
@@ -87,7 +87,6 @@ export default function LoadCreationForm() {
     fullPartial: 'FULL',
     isFragile: false,
     requiresRefrigeration: false,
-    rate: '',
     bookMode: 'REQUEST',
     isAnonymous: false,
     shipperContactName: '',
@@ -95,6 +94,16 @@ export default function LoadCreationForm() {
     specialInstructions: '',
     status: 'DRAFT',
   });
+
+  // Service fee preview (fetched from corridor pricing)
+  const [serviceFee, setServiceFee] = useState<{
+    corridorName: string;
+    distanceKm: number;
+    pricePerKm: number;
+    totalFee: number;
+    loading: boolean;
+    error: string | null;
+  } | null>(null);
 
   const updateField = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -129,10 +138,7 @@ export default function LoadCreationForm() {
         return false;
       }
     } else if (step === 3) {
-      if (!formData.rate || parseFloat(formData.rate) <= 0) {
-        setError('Valid rate is required');
-        return false;
-      }
+      // No rate validation needed - price negotiation happens outside platform
     }
     return true;
   };
@@ -185,7 +191,7 @@ export default function LoadCreationForm() {
       const submitData = {
         ...formData,
         weight: parseFloat(formData.weight),
-        rate: parseFloat(formData.rate),
+        // No rate field - price negotiation happens outside platform
         status: isDraft ? 'DRAFT' : 'POSTED',
         tripKm,
       };
@@ -522,27 +528,42 @@ export default function LoadCreationForm() {
           </div>
         )}
 
-        {/* Step 3: Pricing */}
+        {/* Step 3: Options */}
         {step === 3 && (
           <div className="space-y-4">
-            {/* Rate Input */}
-            <div>
-              <label className="block text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--foreground-muted)' }}>
-                Your Rate (ETB)
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium" style={{ color: 'var(--foreground-muted)' }}>ETB</span>
-                <input
-                  type="number"
-                  value={formData.rate}
-                  onChange={(e) => updateField('rate', e.target.value)}
-                  min="0"
-                  placeholder="0"
-                  className="w-full pl-12 pr-3 py-3 text-lg font-semibold rounded-lg border focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  style={inputStyle}
-                />
+            {/* Service Fee Preview */}
+            {formData.pickupCity && formData.deliveryCity && (
+              <div
+                className="rounded-lg p-4"
+                style={{ background: 'var(--bg-tinted)', border: '1px solid var(--border)' }}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className="w-5 h-5" style={{ color: 'var(--primary-500)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                  <span className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>Platform Service Fee</span>
+                </div>
+                <div className="text-xs mb-2" style={{ color: 'var(--foreground-muted)' }}>
+                  Fee is calculated based on route distance and corridor pricing set by the platform.
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm" style={{ color: 'var(--foreground-muted)' }}>
+                      {formData.pickupCity} → {formData.deliveryCity}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs" style={{ color: 'var(--foreground-muted)' }}>
+                      Fee will be shown after posting
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-2 text-[10px] p-2 rounded" style={{ background: 'var(--card)', color: 'var(--foreground-muted)' }}>
+                  <strong>Note:</strong> You negotiate the freight rate directly with carriers (outside the platform).
+                  The platform only charges a service fee based on: Distance × Corridor Rate (ETB/km).
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Booking Mode */}
             <div>
@@ -681,12 +702,12 @@ export default function LoadCreationForm() {
                 </div>
               </div>
 
-              {/* Rate */}
+              {/* Service Fee Notice */}
               <div className="p-3 flex items-center justify-between" style={{ borderTop: '1px solid var(--border)' }}>
                 <div>
-                  <div className="text-[10px] font-medium uppercase" style={{ color: 'var(--foreground-muted)' }}>Rate</div>
-                  <div className="text-xl font-bold" style={{ color: 'var(--primary-500)' }}>
-                    {parseFloat(formData.rate || '0').toLocaleString()} ETB
+                  <div className="text-[10px] font-medium uppercase" style={{ color: 'var(--foreground-muted)' }}>Platform Fee</div>
+                  <div className="text-sm" style={{ color: 'var(--foreground)' }}>
+                    Based on corridor rate
                   </div>
                 </div>
                 <div
@@ -695,6 +716,19 @@ export default function LoadCreationForm() {
                 >
                   {formData.bookMode === 'INSTANT' ? 'Instant Book' : 'Request Mode'}
                 </div>
+              </div>
+            </div>
+
+            {/* Price Negotiation Note */}
+            <div
+              className="rounded-lg p-3 flex items-start gap-2"
+              style={{ background: 'var(--bg-tinted)', border: '1px solid var(--border)' }}
+            >
+              <svg className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: 'var(--primary-500)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="text-xs" style={{ color: 'var(--foreground-muted)' }}>
+                <strong>Price Negotiation:</strong> You will negotiate the freight rate directly with carriers after they show interest in your load. The platform only charges a service fee based on distance.
               </div>
             </div>
 

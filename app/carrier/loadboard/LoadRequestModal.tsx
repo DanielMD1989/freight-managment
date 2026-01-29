@@ -42,7 +42,7 @@ interface Props {
 export default function LoadRequestModal({ isOpen, onClose, load, onRequestSent }: Props) {
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [selectedTruckId, setSelectedTruckId] = useState<string>('');
-  const [proposedRate, setProposedRate] = useState<string>('');
+  // No proposedRate - price negotiation happens outside platform
   const [notes, setNotes] = useState<string>('');
   const [expiryHours, setExpiryHours] = useState<string>('24');
   const [loading, setLoading] = useState(false);
@@ -57,10 +57,9 @@ export default function LoadRequestModal({ isOpen, onClose, load, onRequestSent 
       setError(null);
       setSuccess(false);
       setSelectedTruckId('');
-      setProposedRate(load?.rate?.toString() || '');
       setNotes('');
     }
-  }, [isOpen, load?.rate]);
+  }, [isOpen]);
 
   const fetchTrucks = async () => {
     setLoadingTrucks(true);
@@ -93,7 +92,7 @@ export default function LoadRequestModal({ isOpen, onClose, load, onRequestSent 
           loadId: load.id,
           truckId: selectedTruckId,
           notes: notes || undefined,
-          proposedRate: proposedRate ? parseFloat(proposedRate) : undefined,
+          // No proposedRate - price negotiation happens outside platform
           expiresInHours: parseInt(expiryHours, 10),
         }),
       });
@@ -281,25 +280,20 @@ export default function LoadRequestModal({ isOpen, onClose, load, onRequestSent 
               </div>
             )}
 
-            {/* Proposed Rate */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Proposed Rate (ETB)
-              </label>
-              <input
-                type="number"
-                value={proposedRate}
-                onChange={(e) => setProposedRate(e.target.value)}
-                min="0"
-                step="0.01"
-                placeholder={load.rate?.toString() || 'Enter your rate'}
-                className="w-full px-3 py-2 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99] dark:bg-slate-700 dark:text-white"
-              />
-              <p className="text-xs text-[#064d51]/60 mt-1">
-                {load.rate
-                  ? `Shipper's posted rate: ${load.rate.toLocaleString()} ETB`
-                  : 'Leave empty to accept shipper\'s rate'}
-              </p>
+            {/* Service Fee Info */}
+            <div className="bg-teal-50 dark:bg-teal-900/20 rounded-lg p-3 border border-teal-200 dark:border-teal-800">
+              <div className="flex items-start gap-2">
+                <svg className="w-5 h-5 text-teal-600 dark:text-teal-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <h4 className="text-sm font-semibold text-teal-800 dark:text-teal-200">Price Negotiation</h4>
+                  <p className="text-xs text-teal-700 dark:text-teal-300 mt-1">
+                    You will negotiate the freight rate directly with the shipper after your request is approved.
+                    The platform only charges a service fee based on distance.
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Request Expiry */}

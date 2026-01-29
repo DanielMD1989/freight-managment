@@ -32,8 +32,7 @@ export default function CreateLoadPage() {
     // [NEW] Cargo Details
     lengthM: "",
     casesCount: "",
-    // Pricing
-    rate: "",
+    // Options (no rate - price negotiation happens outside platform)
     bookMode: "REQUEST" as "REQUEST" | "INSTANT",  // [NEW]
     // SPRINT 8: Market pricing removed per TRD requirements
     // Privacy & Safety
@@ -111,8 +110,7 @@ export default function CreateLoadPage() {
         // [NEW] Cargo Details
         lengthM: formData.lengthM ? parseFloat(formData.lengthM) : undefined,
         casesCount: formData.casesCount ? parseInt(formData.casesCount) : undefined,
-        // Pricing
-        rate: parseFloat(formData.rate),
+        // Options (no rate - price negotiation happens outside platform)
         bookMode: formData.bookMode,  // [NEW]
         // SPRINT 8: Market pricing removed per TRD requirements
         // Privacy & Safety
@@ -427,21 +425,21 @@ export default function CreateLoadPage() {
                 placeholder="Describe the cargo..."
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Rate (ETB) *
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                required
-                value={formData.rate}
-                onChange={(e) =>
-                  setFormData({ ...formData, rate: e.target.value })
-                }
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                placeholder="e.g., 15000"
-              />
+            {/* Service Fee Info - Rate negotiation happens outside platform */}
+            <div className="md:col-span-2 rounded-lg bg-teal-50 p-4 border border-teal-200">
+              <div className="flex items-start gap-2">
+                <svg className="w-5 h-5 text-teal-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <h4 className="text-sm font-semibold text-teal-800">Platform Service Fee</h4>
+                  <p className="text-xs text-teal-700 mt-1">
+                    You negotiate the freight rate directly with carriers (outside the platform).
+                    The platform only charges a service fee based on: <strong>Distance × Corridor Rate (ETB/km)</strong>.
+                    The fee will be calculated based on your route after posting.
+                  </p>
+                </div>
+              </div>
             </div>
             <div className="flex items-center">
               <label className="flex items-center">

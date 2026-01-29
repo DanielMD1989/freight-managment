@@ -19,11 +19,11 @@ import { createNotification } from '@/lib/notifications';
 import { UserRole } from '@prisma/client';
 
 // Validation schema for load request
+// Note: No proposedRate field - price negotiation happens outside platform
 const LoadRequestSchema = z.object({
   loadId: z.string().min(1, 'Load ID is required'),
   truckId: z.string().min(1, 'Truck ID is required'),
   notes: z.string().max(500).optional(),
-  proposedRate: z.number().positive().optional(),
   expiresInHours: z.number().min(1).max(72).default(24),
 });
 
@@ -195,7 +195,7 @@ export async function POST(request: NextRequest) {
         requestedById: session.userId,
         shipperId: load.shipperId!,
         notes: data.notes,
-        proposedRate: data.proposedRate,
+        // No proposedRate - price negotiation happens outside platform
         expiresAt,
       },
       include: {

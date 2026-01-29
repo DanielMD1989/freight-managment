@@ -41,9 +41,8 @@ class _PostLoadScreenState extends ConsumerState<PostLoadScreen> {
   bool _isFragile = false;
   bool _requiresRefrigeration = false;
 
-  // Pricing (required by API)
+  // Distance (for service fee calculation - price negotiation happens outside platform)
   final _tripKmController = TextEditingController();
-  final _rateController = TextEditingController();
 
   // Step 4: Additional Info
   final _safetyNotesController = TextEditingController();
@@ -68,7 +67,6 @@ class _PostLoadScreenState extends ConsumerState<PostLoadScreen> {
     _contactNameController.dispose();
     _contactPhoneController.dispose();
     _tripKmController.dispose();
-    _rateController.dispose();
     super.dispose();
   }
 
