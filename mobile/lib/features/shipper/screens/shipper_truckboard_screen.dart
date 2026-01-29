@@ -900,31 +900,46 @@ class _TruckPostingCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              // WEB PARITY: Company and specs row
+              // WEB PARITY: Company and specs row with verified badge
               Row(
                 children: [
                   Icon(Icons.business, size: 14, color: Colors.grey[500]),
                   const SizedBox(width: 4),
                   Expanded(
-                    child: Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            posting.companyDisplay,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (posting.carrierIsVerified == true) ...[
-                          const SizedBox(width: 4),
-                          const Icon(Icons.verified, size: 14, color: AppColors.primary),
-                        ],
-                      ],
+                    child: Text(
+                      posting.companyDisplay,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  if (posting.carrierIsVerified == true) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.verified, size: 12, color: AppColors.primary),
+                          SizedBox(width: 3),
+                          Text(
+                            'Verified',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 8),

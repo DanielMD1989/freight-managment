@@ -254,6 +254,8 @@ class Load {
 
   // Relationships
   final String shipperId;
+  final String? shipperName;
+  final bool shipperIsVerified;
   final String? createdById;
   final String? assignedTruckId;
   final Truck? assignedTruck;
@@ -331,6 +333,8 @@ class Load {
     this.tripProgressPercent = 0,
     this.remainingDistanceKm,
     required this.shipperId,
+    this.shipperName,
+    this.shipperIsVerified = false,
     this.createdById,
     this.assignedTruckId,
     this.assignedTruck,
@@ -448,6 +452,8 @@ class Load {
       tripProgressPercent: parseInt(json['tripProgressPercent']),
       remainingDistanceKm: parseDoubleOrNull(json['remainingDistanceKm']),
       shipperId: json['shipperId'] ?? '',
+      shipperName: json['shipper'] is Map ? json['shipper']['name'] : null,
+      shipperIsVerified: json['shipper'] is Map ? (json['shipper']['isVerified'] ?? false) : false,
       createdById: json['createdById'],
       assignedTruckId: json['assignedTruckId'],
       assignedTruck: json['assignedTruck'] != null

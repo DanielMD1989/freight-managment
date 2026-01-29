@@ -652,6 +652,59 @@ class _LoadCard extends StatelessWidget {
               ),
               const SizedBox(height: 10),
 
+              // Shipper info with verified badge (read-only display)
+              if (load.shipperName != null && load.shipperName!.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.slate100,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.business, size: 14, color: Colors.grey[600]),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          load.shipperName!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (load.shipperIsVerified) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.verified, size: 12, color: AppColors.primary),
+                              SizedBox(width: 3),
+                              Text(
+                                'Verified',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              if (load.shipperName != null && load.shipperName!.isNotEmpty)
+                const SizedBox(height: 10),
+
               // Service fee display (read-only)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
