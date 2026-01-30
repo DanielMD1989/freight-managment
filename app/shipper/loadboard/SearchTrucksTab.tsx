@@ -428,6 +428,16 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
       sortable: true,
       render: (value: number) => value ? `${value.toLocaleString()}kg` : 'N/A',
     },
+    {
+      key: 'serviceFee',
+      label: 'Service Fee',
+      width: '140px',
+      render: () => (
+        <span className="text-xs text-slate-500 dark:text-slate-400 italic">
+          Calculated on booking
+        </span>
+      ),
+    },
   ], []);
 
   /**

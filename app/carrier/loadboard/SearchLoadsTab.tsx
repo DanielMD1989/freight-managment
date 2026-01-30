@@ -581,6 +581,18 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
       sortable: true,
       render: (value: number) => value ? `${value.toLocaleString()}kg` : 'N/A',
     },
+    {
+      key: 'serviceFeeEtb',
+      label: 'Service Fee',
+      width: '110px',
+      align: 'right' as const,
+      sortable: true,
+      render: (value: number, row: any) => (
+        <span className="text-teal-600 dark:text-teal-400 font-medium">
+          {value ? `${value.toLocaleString()} ETB` : row.tripKm ? `~${Math.round(row.tripKm * 15)} ETB` : '—'}
+        </span>
+      ),
+    },
   ], []);
 
   /**

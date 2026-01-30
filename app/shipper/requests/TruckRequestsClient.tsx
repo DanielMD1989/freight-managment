@@ -37,6 +37,7 @@ interface TruckRequest {
       id: string;
       name: string;
       isVerified: boolean;
+      phone?: string;
     };
   };
   requestedBy: {
@@ -308,6 +309,52 @@ export default function TruckRequestsClient({ requests: initialRequests }: Props
                   </p>
                 )}
               </div>
+
+              {/* Contact to Negotiate - Shown when APPROVED */}
+              {request.status === 'APPROVED' && (
+                <div className="mt-4 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-800 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-emerald-800 dark:text-emerald-200">Contact to Negotiate Price</h4>
+                      <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-1">
+                        Request approved! Contact the carrier directly to negotiate the freight price.
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {request.truck.carrier.phone && (
+                          <>
+                            <a
+                              href={`tel:${request.truck.carrier.phone}`}
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium transition-colors"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                              </svg>
+                              Call
+                            </a>
+                            <a
+                              href={`sms:${request.truck.carrier.phone}`}
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-white text-emerald-700 border border-emerald-300 rounded-lg hover:bg-emerald-50 text-sm font-medium transition-colors"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                              </svg>
+                              Message
+                            </a>
+                          </>
+                        )}
+                      </div>
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2">
+                        {request.truck.carrier.name} • {request.truck.carrier.phone || 'Contact via platform'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
