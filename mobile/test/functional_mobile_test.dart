@@ -363,7 +363,7 @@ void main() {
       final notification = AppNotification.fromJson(json);
 
       expect(notification.id, equals('notif-123'));
-      expect(notification.type, equals('LOAD_REQUEST'));
+      expect(notification.type, equals(NotificationType.loadRequest));
       expect(notification.title, equals('New Load Request'));
       expect(notification.message, equals('You have a new load request'));
       expect(notification.isUnread, isTrue);
