@@ -58,6 +58,9 @@ class _CarrierPostTrucksScreenState
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
+  /// Track expanded cards (UI state only - not business logic)
+  final Set<String> _expandedCards = {};
+
   @override
   void initState() {
     super.initState();
@@ -81,15 +84,22 @@ class _CarrierPostTrucksScreenState
   Widget build(BuildContext context) {
     final postingsAsync = ref.watch(myTruckPostingsProvider);
 
+    // Get count for current tab from existing provider (no new API calls)
+    final currentCount = postingsAsync.maybeWhen(
+      data: (result) => result.total,
+      orElse: () => 0,
+    );
+    final currentStatus = ref.watch(postingStatusFilterProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Post Trucks'),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'POSTED'),
-            Tab(text: 'UNPOSTED'),
-            Tab(text: 'EXPIRED'),
+          tabs: [
+            _buildTabWithBadge('POSTED', currentStatus == 'ACTIVE' ? currentCount : null),
+            _buildTabWithBadge('UNPOSTED', currentStatus == 'UNPOSTED' ? currentCount : null),
+            _buildTabWithBadge('EXPIRED', currentStatus == 'EXPIRED' ? currentCount : null),
           ],
         ),
         actions: [
@@ -117,6 +127,16 @@ class _CarrierPostTrucksScreenState
                 final posting = result.postings[index];
                 return _TruckPostingCard(
                   posting: posting,
+                  isExpanded: _expandedCards.contains(posting.id),
+                  onToggleExpand: () {
+                    setState(() {
+                      if (_expandedCards.contains(posting.id)) {
+                        _expandedCards.remove(posting.id);
+                      } else {
+                        _expandedCards.add(posting.id);
+                      }
+                    });
+                  },
                   onViewMatches: () => _showMatchingLoads(posting),
                   onEdit: () => _showEditPostingModal(posting),
                   onDelete: () => _confirmDelete(posting),
@@ -135,6 +155,36 @@ class _CarrierPostTrucksScreenState
         onPressed: () => _showPostTruckModal(context),
         icon: const Icon(Icons.add),
         label: const Text('Post Truck'),
+      ),
+    );
+  }
+
+  /// Build tab with optional count badge
+  Widget _buildTabWithBadge(String label, int? count) {
+    if (count == null || count == 0) {
+      return Tab(text: label);
+    }
+    return Tab(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label),
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              count.toString(),
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -219,15 +269,19 @@ class _CarrierPostTrucksScreenState
   }
 }
 
-/// Truck posting card
+/// Truck posting card with expand/collapse
 class _TruckPostingCard extends StatelessWidget {
   final TruckPosting posting;
+  final bool isExpanded;
+  final VoidCallback onToggleExpand;
   final VoidCallback onViewMatches;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _TruckPostingCard({
     required this.posting,
+    required this.isExpanded,
+    required this.onToggleExpand,
     required this.onViewMatches,
     required this.onEdit,
     required this.onDelete,
@@ -236,184 +290,320 @@ class _TruckPostingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final truck = posting.truck;
+    final origin = posting.originCityName ?? 'Any';
+    final destination = posting.destinationCityName ?? 'Any';
+    final dateRange = posting.availableTo != null
+        ? '${DateFormat('MMM d').format(posting.availableFrom)} - ${DateFormat('MMM d').format(posting.availableTo!)}'
+        : DateFormat('MMM d').format(posting.availableFrom);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with truck info
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary100,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.local_shipping,
-                    color: AppColors.primary,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        truck?.licensePlate ?? 'Unknown Truck',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      Text(
-                        '${truck?.truckTypeDisplay ?? 'N/A'} - ${truck?.capacityDisplay ?? 'N/A'}',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _StatusBadge(status: posting.status),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Route
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.radio_button_checked,
-                              size: 14, color: AppColors.primary),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              posting.originCityName ?? 'Any Origin',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w600),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        margin:
-                            const EdgeInsets.only(left: 6, top: 2, bottom: 2),
-                        width: 1,
-                        height: 16,
-                        color: AppColors.slate300,
-                      ),
-                      Row(
-                        children: [
-                          const Icon(Icons.location_on,
-                              size: 14, color: AppColors.accent),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              posting.destinationCityName ?? 'Any Destination',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w600),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Availability dates
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.slate100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          // COLLAPSED VIEW (always visible) - tap to expand
+          InkWell(
+            onTap: onToggleExpand,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Available: ${DateFormat('MMM d').format(posting.availableFrom)}',
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                  if (posting.availableTo != null) ...[
-                    const Text(' - ', style: TextStyle(fontSize: 13)),
-                    Text(
-                      DateFormat('MMM d').format(posting.availableTo!),
-                      style: const TextStyle(fontSize: 13),
-                    ),
-                  ],
-                  const Spacer(),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: posting.fullPartial == 'FULL'
-                          ? AppColors.primary100
-                          : AppColors.accent100,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      posting.fullPartial ?? 'FULL',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: posting.fullPartial == 'FULL'
-                            ? AppColors.primary
-                            : AppColors.accent,
+                  // Header row: icon + plate + type + status + expand icon
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.local_shipping,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  truck?.licensePlate ?? 'Unknown',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.slate100,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '${truck?.truckTypeDisplay ?? 'N/A'} ${truck?.capacityDisplay ?? ''}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            // Summary line: route + dates
+                            Text(
+                              '$origin → $destination  •  $dateRange',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[600],
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _StatusBadge(status: posting.status),
+                      const SizedBox(width: 4),
+                      AnimatedRotation(
+                        turns: isExpanded ? 0.5 : 0,
+                        duration: const Duration(milliseconds: 200),
+                        child: Icon(
+                          Icons.keyboard_arrow_down,
+                          color: Colors.grey[400],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+          ),
 
-            // Action buttons
-            Row(
+          // EXPANDED VIEW (animated)
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 200),
+            crossFadeState:
+                isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            firstChild: const SizedBox.shrink(),
+            secondChild: _buildExpandedContent(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExpandedContent(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.slate50,
+        border: Border(
+          top: BorderSide(color: AppColors.slate200),
+        ),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Route section
+          _buildSection(
+            icon: Icons.route,
+            title: 'Route',
+            child: Row(
               children: [
+                const Icon(Icons.radio_button_checked,
+                    size: 12, color: AppColors.primary),
+                const SizedBox(width: 6),
+                Text(
+                  posting.originCityName ?? 'Any Origin',
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Icon(Icons.arrow_forward, size: 14, color: Colors.grey),
+                ),
+                const Icon(Icons.location_on, size: 12, color: AppColors.accent),
+                const SizedBox(width: 4),
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: onViewMatches,
-                    icon: const Icon(Icons.local_shipping_outlined, size: 18),
-                    label: const Text('View Matches'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                    ),
+                  child: Text(
+                    posting.destinationCityName ?? 'Any Destination',
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: onEdit,
-                  icon: const Icon(Icons.edit_outlined),
-                  tooltip: 'Edit',
-                ),
-                IconButton(
-                  onPressed: onDelete,
-                  icon: const Icon(Icons.delete_outline),
-                  color: AppColors.error,
-                  tooltip: 'Delete',
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 12),
+
+          // Availability section
+          _buildSection(
+            icon: Icons.calendar_today,
+            title: 'Availability',
+            child: Row(
+              children: [
+                Text(
+                  DateFormat('MMM d, yyyy').format(posting.availableFrom),
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                if (posting.availableTo != null) ...[
+                  const Text(' - '),
+                  Text(
+                    DateFormat('MMM d, yyyy').format(posting.availableTo!),
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ],
+                const Spacer(),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: posting.fullPartial == 'FULL'
+                        ? AppColors.primary100
+                        : AppColors.accent100,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    posting.fullPartial == 'FULL' ? 'Full Load' : 'Partial Load',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: posting.fullPartial == 'FULL'
+                          ? AppColors.primary
+                          : AppColors.accent,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Contact section (if available)
+          if (posting.contactName != null || posting.contactPhone != null)
+            _buildSection(
+              icon: Icons.person,
+              title: 'Contact',
+              child: Row(
+                children: [
+                  if (posting.contactName != null)
+                    Text(
+                      posting.contactName!,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  if (posting.contactName != null && posting.contactPhone != null)
+                    const Text('  •  '),
+                  if (posting.contactPhone != null)
+                    Text(
+                      posting.contactPhone!,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+          if (posting.contactName != null || posting.contactPhone != null)
+            const SizedBox(height: 12),
+
+          // Notes section (if available)
+          if (posting.notes != null && posting.notes!.isNotEmpty) ...[
+            _buildSection(
+              icon: Icons.notes,
+              title: 'Notes',
+              child: Text(
+                posting.notes!,
+                style: TextStyle(color: Colors.grey[700]),
+              ),
+            ),
+            const SizedBox(height: 12),
           ],
-        ),
+
+          // Action buttons
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: FilledButton.icon(
+                  onPressed: onViewMatches,
+                  icon: const Icon(Icons.search, size: 18),
+                  label: const Text('View Matches'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onEdit,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Edit'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onDelete,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    side: const BorderSide(color: AppColors.error),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Delete'),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildSection({
+    required IconData icon,
+    required String title,
+    required Widget child,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: Colors.grey[500]),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[500],
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 4),
+              child,
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
