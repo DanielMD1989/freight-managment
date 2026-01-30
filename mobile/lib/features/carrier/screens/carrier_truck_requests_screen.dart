@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../app.dart';
 import '../../../core/services/truck_service.dart';
 
@@ -619,6 +620,16 @@ class _RequestCard extends StatelessWidget {
                 ),
               ),
             ],
+
+            // Contact to negotiate (only for approved requests)
+            if (request.isApproved) ...[
+              const SizedBox(height: 12),
+              _ContactToNegotiateBox(
+                contactName: request.shipper?.name ?? 'Shipper',
+                contactPhone: request.shipper?.phone,
+                isCarrier: false,
+              ),
+            ],
           ],
         ),
       ),
@@ -761,6 +772,154 @@ class _EmptyState extends StatelessWidget {
           'Rejected or expired bookings will appear here.',
           Icons.cancel_outlined,
         );
+    }
+  }
+}
+
+/// Contact to negotiate box - shown when request is approved
+class _ContactToNegotiateBox extends StatelessWidget {
+  final String contactName;
+  final String? contactPhone;
+  final bool isCarrier;
+
+  const _ContactToNegotiateBox({
+    required this.contactName,
+    this.contactPhone,
+    required this.isCarrier,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.success.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.handshake, size: 20, color: AppColors.success),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Contact to Negotiate',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.success,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isCarrier
+                ? 'Contact the carrier to negotiate freight price and finalize pickup details.'
+                : 'Contact the shipper to negotiate freight price and finalize delivery details.',
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Contact info
+          Row(
+            children: [
+              Icon(
+                isCarrier ? Icons.local_shipping : Icons.business,
+                size: 16,
+                color: Colors.grey[600],
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  contactName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (contactPhone != null && contactPhone!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.phone, size: 16, color: Colors.grey[600]),
+                const SizedBox(width: 8),
+                Text(
+                  contactPhone!,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Action buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _makeCall(contactPhone!),
+                    icon: const Icon(Icons.phone, size: 18),
+                    label: const Text('Call'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: const BorderSide(color: AppColors.primary),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _sendMessage(contactPhone!),
+                    icon: const Icon(Icons.message, size: 18),
+                    label: const Text('Message'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.accent,
+                      side: const BorderSide(color: AppColors.accent),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            const SizedBox(height: 8),
+            Text(
+              'No phone number available',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[500],
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _makeCall(String phone) async {
+    final uri = Uri.parse('tel:$phone');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  Future<void> _sendMessage(String phone) async {
+    final uri = Uri.parse('sms:$phone');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
     }
   }
 }

@@ -435,6 +435,30 @@ class LoadSearchResult {
   bool get hasMore => page < pages;
 }
 
+/// Simple organization info for contact display
+class LoadRequestOrganization {
+  final String id;
+  final String name;
+  final String? phone;
+  final String? email;
+
+  LoadRequestOrganization({
+    required this.id,
+    required this.name,
+    this.phone,
+    this.email,
+  });
+
+  factory LoadRequestOrganization.fromJson(Map<String, dynamic> json) {
+    return LoadRequestOrganization(
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      phone: json['phone'] ?? json['contactPhone'],
+      email: json['email'] ?? json['contactEmail'],
+    );
+  }
+}
+
 /// Load request model
 class LoadRequest {
   final String id;
@@ -451,6 +475,8 @@ class LoadRequest {
   final DateTime createdAt;
   final Load? load;
   final Truck? truck;
+  final LoadRequestOrganization? shipper;
+  final LoadRequestOrganization? carrier;
 
   LoadRequest({
     required this.id,
@@ -467,6 +493,8 @@ class LoadRequest {
     required this.createdAt,
     this.load,
     this.truck,
+    this.shipper,
+    this.carrier,
   });
 
   factory LoadRequest.fromJson(Map<String, dynamic> json) {
@@ -491,6 +519,12 @@ class LoadRequest {
           : DateTime.now(),
       load: json['load'] != null ? Load.fromJson(json['load']) : null,
       truck: json['truck'] != null ? Truck.fromJson(json['truck']) : null,
+      shipper: json['shipper'] != null
+          ? LoadRequestOrganization.fromJson(json['shipper'])
+          : null,
+      carrier: json['carrier'] != null
+          ? LoadRequestOrganization.fromJson(json['carrier'])
+          : null,
     );
   }
 

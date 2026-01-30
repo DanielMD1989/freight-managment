@@ -842,6 +842,30 @@ class EthiopianLocation {
   String toString() => name;
 }
 
+/// Simple organization info for contact display
+class TruckRequestOrganization {
+  final String id;
+  final String name;
+  final String? phone;
+  final String? email;
+
+  TruckRequestOrganization({
+    required this.id,
+    required this.name,
+    this.phone,
+    this.email,
+  });
+
+  factory TruckRequestOrganization.fromJson(Map<String, dynamic> json) {
+    return TruckRequestOrganization(
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      phone: json['phone'] ?? json['contactPhone'],
+      email: json['email'] ?? json['contactEmail'],
+    );
+  }
+}
+
 /// Truck request model
 class TruckRequest {
   final String id;
@@ -857,6 +881,8 @@ class TruckRequest {
   final DateTime createdAt;
   final Truck? truck;
   final TruckRequestLoad? load;
+  final TruckRequestOrganization? shipper;
+  final TruckRequestOrganization? carrier;
 
   TruckRequest({
     required this.id,
@@ -872,6 +898,8 @@ class TruckRequest {
     required this.createdAt,
     this.truck,
     this.load,
+    this.shipper,
+    this.carrier,
   });
 
   factory TruckRequest.fromJson(Map<String, dynamic> json) {
@@ -895,6 +923,12 @@ class TruckRequest {
           : DateTime.now(),
       truck: json['truck'] != null ? Truck.fromJson(json['truck']) : null,
       load: json['load'] != null ? TruckRequestLoad.fromJson(json['load']) : null,
+      shipper: json['shipper'] != null
+          ? TruckRequestOrganization.fromJson(json['shipper'])
+          : null,
+      carrier: json['carrier'] != null
+          ? TruckRequestOrganization.fromJson(json['carrier'])
+          : null,
     );
   }
 
