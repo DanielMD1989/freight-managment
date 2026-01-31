@@ -32,9 +32,7 @@ export async function GET(
         status: true,
         escrowFunded: true,
         escrowAmount: true,
-        shipperCommission: true,
-        carrierCommission: true,
-        platformCommission: true,
+        serviceFeeEtb: true,
         totalFareEtb: true,
         rate: true,
         podVerified: true,
@@ -128,14 +126,8 @@ export async function GET(
       escrow: {
         funded: load.escrowFunded,
         amount: load.escrowAmount ? Number(load.escrowAmount) : null,
-        shipperCommission: load.shipperCommission
-          ? Number(load.shipperCommission)
-          : null,
-        carrierCommission: load.carrierCommission
-          ? Number(load.carrierCommission)
-          : null,
-        platformRevenue: load.platformCommission
-          ? Number(load.platformCommission)
+        serviceFee: load.serviceFeeEtb
+          ? Number(load.serviceFeeEtb)
           : null,
       },
       settlement: {

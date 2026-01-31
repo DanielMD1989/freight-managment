@@ -324,13 +324,10 @@ export async function PUT(
             data: {
               loadId,
               eventType: 'ESCROW_RELEASED',
-              description: `Escrow funds released: Carrier received ${escrowReleaseResult.carrierPayout.toFixed(2)} ETB, Platform earned ${escrowReleaseResult.platformRevenue.toFixed(2)} ETB`,
+              description: `Escrow funds released: Carrier received ${escrowReleaseResult.carrierPayout.toFixed(2)} ETB`,
               userId: session.userId,
               metadata: {
                 carrierPayout: escrowReleaseResult.carrierPayout.toFixed(2),
-                platformRevenue: escrowReleaseResult.platformRevenue.toFixed(2),
-                shipperCommission: escrowReleaseResult.shipperCommission.toFixed(2),
-                carrierCommission: escrowReleaseResult.carrierCommission.toFixed(2),
                 transactionId: escrowReleaseResult.transactionId,
               },
             },

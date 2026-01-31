@@ -31,10 +31,6 @@ interface SystemSettings {
   emailNotifyLoadAssignment: boolean;
   emailNotifyPodVerification: boolean;
 
-  // Platform Fees
-  shipperCommissionRate: number;
-  carrierCommissionRate: number;
-
   // File Upload Limits
   maxFileUploadSizeMb: number;
   maxDocumentsPerEntity: number;
@@ -95,12 +91,6 @@ export default function SystemSettingsClient({
    * Validate settings before save
    */
   const validateSettings = (): string | null => {
-    // Validate commission rates
-    const totalCommission = settings.shipperCommissionRate + settings.carrierCommissionRate;
-    if (totalCommission > 100) {
-      return 'Total commission rates cannot exceed 100%';
-    }
-
     // Validate match score thresholds
     if (settings.matchScoreMinimum >= settings.matchScoreGood) {
       return 'Minimum match score must be less than good match score';
@@ -386,44 +376,33 @@ export default function SystemSettingsClient({
           {activeTab === 'fees' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Platform Commission Rates</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Service Fee Configuration</h3>
                 <p className="text-sm text-gray-600 mb-6">
-                  Set commission rates charged to shippers and carriers
+                  Service fees are configured per corridor based on distance and route.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <NumberInput
-                  label="Shipper Commission Rate"
-                  value={settings.shipperCommissionRate}
-                  onChange={(val) => handleNumberChange('shipperCommissionRate', val)}
-                  helperText="Percentage charged to shippers"
-                  min={0}
-                  max={100}
-                  step={0.1}
-                  suffix="%"
-                />
-
-                <NumberInput
-                  label="Carrier Commission Rate"
-                  value={settings.carrierCommissionRate}
-                  onChange={(val) => handleNumberChange('carrierCommissionRate', val)}
-                  helperText="Percentage charged to carriers"
-                  min={0}
-                  max={100}
-                  step={0.1}
-                  suffix="%"
-                />
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <p className="text-sm text-blue-800 mb-4">
+                  Service fees are calculated using the Corridor pricing system (ETB per kilometer).
+                  To configure service fees, manage corridors in the Corridors settings.
+                </p>
+                <a
+                  href="/admin/corridors"
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Manage Corridors →
+                </a>
               </div>
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-sm text-yellow-800">
-                  <strong>Total Commission:</strong>{' '}
-                  {(Number(settings.shipperCommissionRate) + Number(settings.carrierCommissionRate)).toFixed(1)}%
-                  {Number(settings.shipperCommissionRate) + Number(settings.carrierCommissionRate) > 100 && (
-                    <span className="text-red-600 ml-2">⚠ Cannot exceed 100%</span>
-                  )}
-                </p>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <h4 className="font-medium text-gray-900 mb-2">How Service Fees Work</h4>
+                <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                  <li>Fees are calculated as: Distance (km) × Price per km</li>
+                  <li>Separate rates can be set for shippers and carriers</li>
+                  <li>Promotional discounts can be applied per corridor</li>
+                  <li>Fees are deducted when a trip is completed</li>
+                </ul>
               </div>
             </div>
           )}

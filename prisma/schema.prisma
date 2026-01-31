@@ -596,11 +596,8 @@ model Load {
   specialInstructions String?
 
   // Escrow & Finance
-  escrowFunded       Boolean  @default(false)
-  escrowAmount       Decimal?
-  shipperCommission  Decimal?
-  carrierCommission  Decimal?
-  platformCommission Decimal?
+  escrowFunded Boolean  @default(false)
+  escrowAmount Decimal?
 
   // SPRINT 16: Story 16.7 - Commission & Settlement
   podUrl           String? // Proof of Delivery document URL
@@ -1105,23 +1102,6 @@ model FinancialAccount {
   @@index([accountType])
   @@index([organizationId])
   @@map("financial_accounts")
-}
-
-// SPRINT 16: Story 16.7 - Commission Configuration
-model CommissionRate {
-  id            String    @id @default(cuid())
-  shipperRate   Decimal   @default(5.0) // % of load value (default 5%)
-  carrierRate   Decimal   @default(5.0) // % of load value (default 5%)
-  effectiveFrom DateTime  @default(now())
-  effectiveTo   DateTime?
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  createdBy     String? // Admin user ID
-
-  @@index([isActive])
-  @@index([effectiveFrom])
-  @@map("commission_rates")
 }
 
 model JournalEntry {
@@ -1760,10 +1740,6 @@ model SystemSettings {
   emailNotifyDocumentRejection Boolean @default(true)
   emailNotifyLoadAssignment    Boolean @default(true)
   emailNotifyPodVerification   Boolean @default(true)
-
-  // Platform Fee Configuration (percentages)
-  shipperCommissionRate Decimal @default(5.0) @db.Decimal(5, 2)
-  carrierCommissionRate Decimal @default(5.0) @db.Decimal(5, 2)
 
   // File Upload Limits
   maxFileUploadSizeMb   Int @default(10) // Max file size in MB

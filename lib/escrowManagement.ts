@@ -3,13 +3,14 @@
  *
  * Automatic fund hold/release on load lifecycle
  * - Hold shipper funds in escrow when load is assigned
- * - Release funds to carrier (minus commission) when load is delivered
- * - Deduct platform commission during release
+ * - Release funds to carrier when load is delivered
+ *
+ * Note: Service fees are handled separately via Corridor-based pricing
+ * (see lib/serviceFeeManagement.ts)
  */
 
 import { db } from './db';
 import { Decimal } from 'decimal.js';
-import { calculateCommissionBreakdown } from './commissionCalculation';
 
 export interface EscrowHoldResult {
   success: boolean;
@@ -23,8 +24,6 @@ export interface EscrowReleaseResult {
   success: boolean;
   carrierPayout: Decimal;
   platformRevenue: Decimal;
-  shipperCommission: Decimal;
-  carrierCommission: Decimal;
   error?: string;
   transactionId?: string;
 }
@@ -33,7 +32,7 @@ export interface EscrowReleaseResult {
  * Hold funds in escrow when load is assigned
  *
  * Flow:
- * 1. Calculate total amount needed (fare + shipper commission)
+ * 1. Get total fare amount
  * 2. Check shipper wallet balance
  * 3. Debit shipper wallet
  * 4. Credit escrow account
@@ -85,12 +84,8 @@ export async function holdFundsInEscrow(loadId: string): Promise<EscrowHoldResul
     ? new Decimal(load.totalFareEtb)
     : new Decimal(load.rate);
 
-  // Calculate commission breakdown
-  const breakdown = await calculateCommissionBreakdown(totalFare);
-
-  // Total amount to hold = fare + shipper commission
-  // (Shipper pays the commission upfront)
-  const escrowAmount = totalFare.add(breakdown.shipperCommission);
+  // Escrow amount = just the fare (service fees are handled separately)
+  const escrowAmount = totalFare;
 
   // Get shipper wallet
   const shipperWallet = await db.financialAccount.findFirst({
@@ -161,7 +156,6 @@ export async function holdFundsInEscrow(loadId: string): Promise<EscrowHoldResul
       loadId,
       metadata: {
         totalFare: totalFare.toFixed(2),
-        shipperCommission: breakdown.shipperCommission.toFixed(2),
         escrowAmount: escrowAmount.toFixed(2),
       },
       lines: {
@@ -206,15 +200,12 @@ export async function holdFundsInEscrow(loadId: string): Promise<EscrowHoldResul
     }),
   ]);
 
-  // Update load escrow status and commission amounts
+  // Update load escrow status
   await db.load.update({
     where: { id: loadId },
     data: {
       escrowFunded: true,
       escrowAmount: escrowAmount.toNumber(),
-      shipperCommission: breakdown.shipperCommission.toNumber(),
-      carrierCommission: breakdown.carrierCommission.toNumber(),
-      platformCommission: breakdown.platformRevenue.toNumber(),
     },
   });
 
@@ -231,11 +222,11 @@ export async function holdFundsInEscrow(loadId: string): Promise<EscrowHoldResul
  *
  * Flow:
  * 1. Verify load is delivered and POD verified
- * 2. Calculate carrier payout (fare - carrier commission)
- * 3. Debit escrow account
- * 4. Credit carrier wallet (payout)
- * 5. Credit platform revenue (total commissions)
- * 6. Update load.settlementStatus = 'PAID'
+ * 2. Debit escrow account
+ * 3. Credit carrier wallet (full fare)
+ * 4. Update load.settlementStatus = 'PAID'
+ *
+ * Note: Service fees are deducted separately via lib/serviceFeeManagement.ts
  *
  * @param loadId - Load ID to release funds for
  * @returns EscrowReleaseResult with success status and amounts
@@ -262,9 +253,6 @@ export async function releaseFundsFromEscrow(loadId: string): Promise<EscrowRele
       rate: true,
       escrowFunded: true,
       escrowAmount: true,
-      shipperCommission: true,
-      carrierCommission: true,
-      platformCommission: true,
       podVerified: true,
       status: true,
       settlementStatus: true,
@@ -276,8 +264,6 @@ export async function releaseFundsFromEscrow(loadId: string): Promise<EscrowRele
       success: false,
       carrierPayout: new Decimal(0),
       platformRevenue: new Decimal(0),
-      shipperCommission: new Decimal(0),
-      carrierCommission: new Decimal(0),
       error: 'Load not found',
     };
   }
@@ -288,8 +274,6 @@ export async function releaseFundsFromEscrow(loadId: string): Promise<EscrowRele
       success: false,
       carrierPayout: new Decimal(0),
       platformRevenue: new Decimal(0),
-      shipperCommission: new Decimal(0),
-      carrierCommission: new Decimal(0),
       error: 'Load not funded in escrow',
     };
   }
@@ -299,8 +283,6 @@ export async function releaseFundsFromEscrow(loadId: string): Promise<EscrowRele
       success: false,
       carrierPayout: new Decimal(0),
       platformRevenue: new Decimal(0),
-      shipperCommission: new Decimal(0),
-      carrierCommission: new Decimal(0),
       error: 'POD not verified - cannot release funds',
     };
   }
@@ -310,8 +292,6 @@ export async function releaseFundsFromEscrow(loadId: string): Promise<EscrowRele
       success: false,
       carrierPayout: new Decimal(0),
       platformRevenue: new Decimal(0),
-      shipperCommission: new Decimal(0),
-      carrierCommission: new Decimal(0),
       error: 'Load already settled',
     };
   }
@@ -321,25 +301,20 @@ export async function releaseFundsFromEscrow(loadId: string): Promise<EscrowRele
       success: false,
       carrierPayout: new Decimal(0),
       platformRevenue: new Decimal(0),
-      shipperCommission: new Decimal(0),
-      carrierCommission: new Decimal(0),
       error: 'No carrier assigned',
     };
   }
 
-  // Get amounts from load (already calculated during hold)
+  // Get total fare - carrier receives full amount
   const totalFare = load.totalFareEtb
     ? new Decimal(load.totalFareEtb)
     : new Decimal(load.rate);
-  const shipperCommission = new Decimal(load.shipperCommission || 0);
-  const carrierCommission = new Decimal(load.carrierCommission || 0);
-  const platformRevenue = new Decimal(load.platformCommission || 0);
 
-  // Carrier payout = fare - carrier commission
-  const carrierPayout = totalFare.sub(carrierCommission);
+  // Carrier payout = full fare (service fees are handled separately)
+  const carrierPayout = totalFare;
 
   // Get accounts
-  const [escrowAccount, carrierWallet, platformAccount] = await Promise.all([
+  const [escrowAccount, carrierWallet] = await Promise.all([
     db.financialAccount.findFirst({
       where: {
         accountType: 'ESCROW',
@@ -360,24 +335,13 @@ export async function releaseFundsFromEscrow(loadId: string): Promise<EscrowRele
         id: true,
       },
     }),
-    db.financialAccount.findFirst({
-      where: {
-        accountType: 'PLATFORM_REVENUE',
-        isActive: true,
-      },
-      select: {
-        id: true,
-      },
-    }),
   ]);
 
   if (!escrowAccount) {
     return {
       success: false,
       carrierPayout,
-      platformRevenue,
-      shipperCommission,
-      carrierCommission,
+      platformRevenue: new Decimal(0),
       error: 'Escrow account not found',
     };
   }
@@ -386,31 +350,12 @@ export async function releaseFundsFromEscrow(loadId: string): Promise<EscrowRele
     return {
       success: false,
       carrierPayout,
-      platformRevenue,
-      shipperCommission,
-      carrierCommission,
+      platformRevenue: new Decimal(0),
       error: 'Carrier wallet not found',
     };
   }
 
-  // Create or get platform revenue account
-  let platformAccountId = platformAccount?.id;
-  if (!platformAccountId) {
-    const newPlatformAccount = await db.financialAccount.create({
-      data: {
-        accountType: 'PLATFORM_REVENUE',
-        balance: 0,
-        currency: 'ETB',
-        isActive: true,
-      },
-      select: {
-        id: true,
-      },
-    });
-    platformAccountId = newPlatformAccount.id;
-  }
-
-  // Total amount to release from escrow (fare + shipper commission)
+  // Amount to release from escrow
   const escrowReleaseAmount = new Decimal(load.escrowAmount || 0);
 
   // Check escrow has sufficient balance
@@ -419,9 +364,7 @@ export async function releaseFundsFromEscrow(loadId: string): Promise<EscrowRele
     return {
       success: false,
       carrierPayout,
-      platformRevenue,
-      shipperCommission,
-      carrierCommission,
+      platformRevenue: new Decimal(0),
       error: `Insufficient escrow balance. Required: ${escrowReleaseAmount.toFixed(2)} ETB, Available: ${escrowBalance.toFixed(2)} ETB`,
     };
   }
@@ -436,9 +379,6 @@ export async function releaseFundsFromEscrow(loadId: string): Promise<EscrowRele
       metadata: {
         totalFare: totalFare.toFixed(2),
         carrierPayout: carrierPayout.toFixed(2),
-        shipperCommission: shipperCommission.toFixed(2),
-        carrierCommission: carrierCommission.toFixed(2),
-        platformRevenue: platformRevenue.toFixed(2),
       },
       lines: {
         create: [
@@ -448,17 +388,11 @@ export async function releaseFundsFromEscrow(loadId: string): Promise<EscrowRele
             isDebit: true,
             accountId: escrowAccount.id,
           },
-          // Credit carrier wallet (payout)
+          // Credit carrier wallet (full payout)
           {
             amount: carrierPayout,
             isDebit: false,
             accountId: carrierWallet.id,
-          },
-          // Credit platform revenue (total commissions)
-          {
-            amount: platformRevenue,
-            isDebit: false,
-            accountId: platformAccountId,
           },
         ],
       },
@@ -486,14 +420,6 @@ export async function releaseFundsFromEscrow(loadId: string): Promise<EscrowRele
         },
       },
     }),
-    db.financialAccount.update({
-      where: { id: platformAccountId },
-      data: {
-        balance: {
-          increment: platformRevenue.toNumber(),
-        },
-      },
-    }),
   ]);
 
   // Update load settlement status
@@ -508,9 +434,7 @@ export async function releaseFundsFromEscrow(loadId: string): Promise<EscrowRele
   return {
     success: true,
     carrierPayout,
-    platformRevenue,
-    shipperCommission,
-    carrierCommission,
+    platformRevenue: new Decimal(0), // Service fees handled separately
     transactionId: journalEntry.id,
   };
 }

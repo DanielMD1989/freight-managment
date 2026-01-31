@@ -12,8 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { requireCSRF } from '@/lib/csrf';
-import { processSettlement } from '@/lib/commissionCalculation';
-import { releaseFundsFromEscrow } from '@/lib/escrowManagement'; // Sprint 8
+import { releaseFundsFromEscrow } from '@/lib/escrowManagement';
 
 /**
  * POST /api/loads/[id]/settle
@@ -189,13 +188,10 @@ export async function POST(
           data: {
             loadId,
             eventType: 'ESCROW_RELEASED',
-            description: `Escrow funds released: Carrier received ${escrowResult.carrierPayout.toFixed(2)} ETB, Platform earned ${escrowResult.platformRevenue.toFixed(2)} ETB`,
+            description: `Escrow funds released: Carrier received ${escrowResult.carrierPayout.toFixed(2)} ETB`,
             userId: session.userId,
             metadata: {
               carrierPayout: escrowResult.carrierPayout.toFixed(2),
-              platformRevenue: escrowResult.platformRevenue.toFixed(2),
-              shipperCommission: escrowResult.shipperCommission.toFixed(2),
-              carrierCommission: escrowResult.carrierCommission.toFixed(2),
               transactionId: escrowResult.transactionId,
             },
           },
@@ -208,9 +204,6 @@ export async function POST(
             id: true,
             settlementStatus: true,
             settledAt: true,
-            shipperCommission: true,
-            carrierCommission: true,
-            platformCommission: true,
           },
         });
 
@@ -220,46 +213,38 @@ export async function POST(
             loadId: updatedLoad?.id,
             status: updatedLoad?.settlementStatus,
             settledAt: updatedLoad?.settledAt,
-            shipperCommission: escrowResult.shipperCommission.toNumber(),
-            carrierCommission: escrowResult.carrierCommission.toNumber(),
-            platformRevenue: escrowResult.platformRevenue.toNumber(),
             carrierPayout: escrowResult.carrierPayout.toNumber(),
             method: 'ESCROW_RELEASE',
           },
         });
       } else {
-        // Legacy: Use old commission deduction for non-escrow loads
-        await processSettlement(loadId);
+        // Non-escrow loads: Just mark as settled
+        // Service fees are handled separately by serviceFeeManagement.ts
+        await db.load.update({
+          where: { id: loadId },
+          data: {
+            settlementStatus: 'PAID',
+            settledAt: new Date(),
+          },
+        });
 
-        // Get updated load with commission details
+        // Get updated load
         const updatedLoad = await db.load.findUnique({
           where: { id: loadId },
           select: {
             id: true,
             settlementStatus: true,
             settledAt: true,
-            shipperCommission: true,
-            carrierCommission: true,
-            platformCommission: true,
           },
         });
 
         return NextResponse.json({
-          message: 'Settlement processed successfully via commission deduction (legacy)',
+          message: 'Settlement processed successfully',
           settlement: {
             loadId: updatedLoad?.id,
             status: updatedLoad?.settlementStatus,
             settledAt: updatedLoad?.settledAt,
-            shipperCommission: updatedLoad?.shipperCommission
-              ? Number(updatedLoad.shipperCommission)
-              : null,
-            carrierCommission: updatedLoad?.carrierCommission
-              ? Number(updatedLoad.carrierCommission)
-              : null,
-            platformRevenue: updatedLoad?.platformCommission
-              ? Number(updatedLoad.platformCommission)
-              : null,
-            method: 'COMMISSION_DEDUCTION',
+            method: 'DIRECT_SETTLEMENT',
           },
         });
       }
@@ -316,9 +301,7 @@ export async function GET(
         podUrl: true,
         settlementStatus: true,
         settledAt: true,
-        shipperCommission: true,
-        carrierCommission: true,
-        platformCommission: true,
+        serviceFeeEtb: true,
         totalFareEtb: true,
         rate: true,
         shipperId: true,
@@ -372,14 +355,8 @@ export async function GET(
         status: load.settlementStatus,
         settledAt: load.settledAt,
         canSettle,
-        shipperCommission: load.shipperCommission
-          ? Number(load.shipperCommission)
-          : null,
-        carrierCommission: load.carrierCommission
-          ? Number(load.carrierCommission)
-          : null,
-        platformRevenue: load.platformCommission
-          ? Number(load.platformCommission)
+        serviceFee: load.serviceFeeEtb
+          ? Number(load.serviceFeeEtb)
           : null,
         totalFare: load.totalFareEtb
           ? Number(load.totalFareEtb)

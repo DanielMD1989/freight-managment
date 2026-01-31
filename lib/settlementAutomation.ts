@@ -1,13 +1,14 @@
 /**
  * Settlement Automation Utilities
  *
- * Sprint 16 - Story 16.7: Commission & Revenue Model
+ * Sprint 16 - Story 16.7: Settlement Processing
  *
  * Automated workflows for POD verification and settlement processing
+ *
+ * Note: Service fees are handled via Corridor-based pricing in lib/serviceFeeManagement.ts
  */
 
 import { db } from './db';
-import { processSettlement } from './commissionCalculation';
 
 /**
  * Auto-verify POD after configured timeout if shipper hasn't responded
@@ -75,10 +76,26 @@ export async function autoVerifyExpiredPODs(): Promise<number> {
 }
 
 /**
+ * Mark a load as settled
+ *
+ * Simply marks the load's settlement status as PAID.
+ * Service fees are handled separately by serviceFeeManagement.ts
+ */
+async function markLoadAsSettled(loadId: string): Promise<void> {
+  await db.load.update({
+    where: { id: loadId },
+    data: {
+      settlementStatus: 'PAID',
+      settledAt: new Date(),
+    },
+  });
+}
+
+/**
  * Process settlements for loads with verified POD
  *
  * Finds loads that have verified POD and pending settlement,
- * then processes commission deduction and settlement.
+ * then marks them as settled. Service fees are handled separately.
  */
 export async function processReadySettlements(): Promise<number> {
   // Get system settings for batch size and automation toggle
@@ -162,7 +179,7 @@ export async function processReadySettlements(): Promise<number> {
 
   for (const load of loadsToSettle) {
     try {
-      await processSettlement(load.id);
+      await markLoadAsSettled(load.id);
       successCount++;
       console.log(`✓ Settled load ${load.id}`);
     } catch (error: any) {
@@ -193,7 +210,9 @@ export async function processReadySettlements(): Promise<number> {
  * 1. Updates load status to DELIVERED
  * 2. Waits for POD submission (carrier responsibility)
  * 3. Auto-verifies POD after 24h if shipper doesn't respond
- * 4. Processes settlement and commissions
+ * 4. Marks settlement as complete
+ *
+ * Note: Service fees are handled separately by serviceFeeManagement.ts
  *
  * @param loadId - Load ID to complete
  * @returns Promise<void>
@@ -237,10 +256,10 @@ export async function completeLoadWithSettlement(loadId: string): Promise<void> 
 
   // Step 2: Check if POD already submitted and verified
   if (load.podSubmitted && load.podVerified) {
-    console.log(`Load ${loadId} has verified POD, processing settlement...`);
+    console.log(`Load ${loadId} has verified POD, marking as settled...`);
 
     try {
-      await processSettlement(loadId);
+      await markLoadAsSettled(loadId);
       console.log(`✓ Load ${loadId} settlement processed`);
     } catch (error: any) {
       console.error(`✗ Settlement failed for load ${loadId}:`, error.message);

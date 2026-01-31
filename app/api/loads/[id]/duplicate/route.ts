@@ -107,9 +107,6 @@ export async function POST(
         // Reset escrow and assignment
         escrowFunded: false,
         escrowAmount: null,
-        shipperCommission: null,
-        carrierCommission: null,
-        platformCommission: null,
         assignedTruckId: null,
         assignedAt: null,
         postedAt: null,

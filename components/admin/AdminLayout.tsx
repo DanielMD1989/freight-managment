@@ -81,11 +81,6 @@ const navigationItems: NavItem[] = [
     icon: DollarSign,
   },
   {
-    label: 'Commission Rates',
-    href: '/admin/commission',
-    icon: TrendingUp,
-  },
-  {
     label: 'Corridor Pricing',
     href: '/admin/corridors',
     icon: Route,
