@@ -412,7 +412,7 @@ export function getPlatformBenefits(): Array<{
     {
       title: 'Payment Protection',
       description:
-        'Secure payment processing with commission-based settlement',
+        'Secure payment processing with corridor-based service fees',
       icon: '💳',
     },
     {
@@ -422,8 +422,8 @@ export function getPlatformBenefits(): Array<{
       icon: '⭐',
     },
     {
-      title: 'Commission Discounts',
-      description: 'Earn lower commission rates with >90% completion rate',
+      title: 'Transparent Pricing',
+      description: 'Clear, predictable corridor-based service fees',
       icon: '💰',
     },
     {
@@ -434,40 +434,3 @@ export function getPlatformBenefits(): Array<{
   ];
 }
 
-/**
- * Calculate commission discount based on completion rate
- *
- * Organizations with >90% completion rate get 10% off commission
- *
- * @param organizationId - Organization ID
- * @returns Discount percentage (0-10)
- */
-export async function calculateCommissionDiscount(
-  organizationId: string
-): Promise<number> {
-  const org = await db.organization.findUnique({
-    where: { id: organizationId },
-    select: {
-      completionRate: true,
-      isVerified: true,
-    },
-  });
-
-  if (!org) {
-    return 0;
-  }
-
-  const completionRate = org.completionRate ? Number(org.completionRate) : 0;
-
-  // 10% discount for >90% completion rate
-  if (completionRate > 90 && org.isVerified) {
-    return 10;
-  }
-
-  // 5% discount for >80% completion rate
-  if (completionRate > 80 && org.isVerified) {
-    return 5;
-  }
-
-  return 0;
-}

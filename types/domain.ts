@@ -212,12 +212,9 @@ export interface Load {
   carrierFeeStatus: ServiceFeeStatus;
   corridorId?: string | null;
 
-  // Escrow & Commissions
+  // Escrow & Settlement
   escrowFunded: boolean;
   escrowAmount?: number | null;
-  shipperCommission?: number | null;
-  carrierCommission?: number | null;
-  platformCommission?: number | null;
   settlementStatus?: string | null;
   settledAt?: Date | null;
 

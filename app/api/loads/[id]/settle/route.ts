@@ -1,9 +1,7 @@
 /**
  * Load Settlement API
  *
- * Sprint 16 - Story 16.7: Commission & Revenue Tracking
- *
- * Processes settlement and commission deduction after POD verification
+ * Processes settlement after POD verification using corridor-based service fees.
  *
  * SECURITY: Uses atomic update pattern to prevent double-settlement race conditions
  */

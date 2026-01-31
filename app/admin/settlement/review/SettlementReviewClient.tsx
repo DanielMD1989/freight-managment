@@ -63,9 +63,8 @@ interface Load {
   settlementRecord: {
     id: string;
     grossAmount: number;
-    commissionAmount: number;
+    serviceFeeAmount: number;
     netAmount: number;
-    commissionRate: number;
     paymentStatus: string;
     processedAt: Date;
   } | null;
@@ -121,13 +120,12 @@ export default function SettlementReviewClient() {
     return load.totalFareEtb || load.rate;
   };
 
-  const getCommissionAmount = (load: Load) => {
+  const getServiceFeeAmount = (load: Load) => {
     if (load.settlementRecord) {
-      return load.settlementRecord.commissionAmount;
+      return load.settlementRecord.serviceFeeAmount;
     }
-    // Default 15% commission if not settled yet
-    const grossAmount = load.totalFareEtb || load.rate;
-    return grossAmount * 0.15;
+    // Use corridor-based service fee if available
+    return load.baseFareEtb || 0;
   };
 
   const getNetAmount = (load: Load) => {
@@ -135,7 +133,8 @@ export default function SettlementReviewClient() {
       return load.settlementRecord.netAmount;
     }
     const grossAmount = load.totalFareEtb || load.rate;
-    return grossAmount * 0.85;
+    const serviceFee = load.baseFareEtb || 0;
+    return grossAmount - serviceFee;
   };
 
   const handleApproveSettlement = async (loadId: string) => {
@@ -258,10 +257,10 @@ export default function SettlementReviewClient() {
           </p>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
-          <p className="text-sm text-[#064d51]/70">Total Commission</p>
+          <p className="text-sm text-[#064d51]/70">Total Service Fees</p>
           <p className="text-3xl font-bold text-[#1e9c99] mt-1">
             {loads
-              .reduce((sum, load) => sum + getCommissionAmount(load), 0)
+              .reduce((sum, load) => sum + getServiceFeeAmount(load), 0)
               .toLocaleString()}{' '}
             ETB
           </p>
@@ -314,7 +313,7 @@ export default function SettlementReviewClient() {
                     Gross Amount
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
-                    Commission
+                    Service Fee
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
                     Net to Carrier
@@ -367,12 +366,10 @@ export default function SettlementReviewClient() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-[#1e9c99]">
-                        {getCommissionAmount(load).toLocaleString()} ETB
+                        {getServiceFeeAmount(load).toLocaleString()} ETB
                       </div>
                       <div className="text-xs text-[#064d51]/60">
-                        {load.settlementRecord
-                          ? `${(load.settlementRecord.commissionRate * 100).toFixed(1)}%`
-                          : '15%'}
+                        Corridor fee
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -536,14 +533,10 @@ export default function SettlementReviewClient() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-[#064d51]/70">
-                      Platform Commission (
-                      {selectedLoad.settlementRecord
-                        ? `${(selectedLoad.settlementRecord.commissionRate * 100).toFixed(1)}%`
-                        : '15%'}
-                      ):
+                      Platform Service Fee (Corridor-based):
                     </span>
                     <span className="font-medium text-rose-600">
-                      -{getCommissionAmount(selectedLoad).toLocaleString()} ETB
+                      -{getServiceFeeAmount(selectedLoad).toLocaleString()} ETB
                     </span>
                   </div>
                   <div className="border-t border-[#064d51]/20 pt-2 flex justify-between text-sm">

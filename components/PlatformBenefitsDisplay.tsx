@@ -47,7 +47,7 @@ export default function PlatformBenefitsDisplay({
     {
       title: 'Payment Protection',
       description:
-        'Secure payment processing with commission-based settlement',
+        'Secure payment processing with corridor-based service fees',
       icon: '💳',
     },
     {
@@ -57,8 +57,8 @@ export default function PlatformBenefitsDisplay({
       icon: '⭐',
     },
     {
-      title: 'Commission Discounts',
-      description: 'Earn lower commission rates with 90%+ completion rate',
+      title: 'Transparent Pricing',
+      description: 'Clear, predictable corridor-based service fees',
       icon: '💰',
     },
     {
@@ -88,8 +88,8 @@ export default function PlatformBenefitsDisplay({
               Why Use Our Platform?
             </h3>
             <p className="text-sm text-[#064d51]/80">
-              Get GPS tracking, dispute support, payment protection, and earn
-              commission discounts with high completion rates.
+              Get GPS tracking, dispute support, payment protection, and
+              transparent corridor-based pricing.
             </p>
           </div>
         </div>
@@ -154,10 +154,10 @@ export default function PlatformBenefitsDisplay({
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-semibold mb-1">
-                Start earning commission discounts today!
+                Build your reputation on our platform!
               </h3>
               <p className="text-sm text-white/80">
-                Companies with 90%+ completion rate get up to 10% off commission
+                Companies with high completion rates get priority listing and more business
               </p>
             </div>
             <svg
@@ -200,7 +200,7 @@ export function PlatformBenefitsBanner() {
           <div>
             <p className="font-semibold">
               Complete through platform to get GPS tracking, dispute support &
-              commission discounts
+              transparent pricing
             </p>
           </div>
         </div>

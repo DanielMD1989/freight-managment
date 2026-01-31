@@ -59,7 +59,6 @@ const notificationCategories: NotificationCategory[] = [
     description: 'Financial notifications',
     types: [
       { id: 'POD_SUBMITTED', label: 'POD Submitted', description: 'When proof of delivery is uploaded' },
-      { id: 'COMMISSION_DEDUCTED', label: 'Commission Deducted', description: 'When commission is deducted' },
       { id: 'SETTLEMENT_COMPLETED', label: 'Settlement Complete', description: 'When settlement is processed' },
     ],
   },

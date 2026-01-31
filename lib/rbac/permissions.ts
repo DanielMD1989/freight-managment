@@ -77,10 +77,10 @@ export enum Permission {
   APPROVE_WITHDRAWALS = "approve_withdrawals", // Admin
   MANAGE_ESCROW = "manage_escrow", // Admin
 
-  // Commission & Penalties
-  CONFIGURE_COMMISSION = "configure_commission", // Admin
+  // Service Fees & Penalties
+  CONFIGURE_SERVICE_FEES = "configure_service_fees", // Admin
   CONFIGURE_PENALTIES = "configure_penalties", // Admin
-  VIEW_COMMISSION_REPORTS = "view_commission_reports", // Admin, SuperAdmin
+  VIEW_SERVICE_FEE_REPORTS = "view_service_fee_reports", // Admin, SuperAdmin
 
   // Dispatch Operations
   DISPATCH_LOADS = "dispatch_loads", // Dispatcher
@@ -300,7 +300,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
    * Platform:
    * - Verify documents and organizations
    * - Manage wallet top-ups and adjustments
-   * - Configure commission and penalties
+   * - Configure service fees and penalties
    * - Resolve escalations and exceptions
    */
   ADMIN: [
@@ -334,10 +334,10 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.APPROVE_WITHDRAWALS,
     Permission.MANAGE_ESCROW,
 
-    // Commission & penalties
-    Permission.CONFIGURE_COMMISSION,
+    // Service fees & penalties
+    Permission.CONFIGURE_SERVICE_FEES,
     Permission.CONFIGURE_PENALTIES,
-    Permission.VIEW_COMMISSION_REPORTS,
+    Permission.VIEW_SERVICE_FEE_REPORTS,
 
     // Automation rules
     Permission.CONFIGURE_AUTOMATION_RULES,

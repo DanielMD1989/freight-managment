@@ -1,8 +1,6 @@
 /**
  * Settlement Automation API
  *
- * Sprint 16 - Story 16.7: Commission & Revenue Model
- *
  * Admin endpoint to trigger automated settlement workflows
  */
 

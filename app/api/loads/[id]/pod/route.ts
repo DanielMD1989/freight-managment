@@ -1,8 +1,6 @@
 /**
  * Proof of Delivery (POD) Upload API
  *
- * Sprint 16 - Story 16.7: Commission & Revenue Tracking
- *
  * Allows carriers to upload POD documents after delivery
  */
 

@@ -1,8 +1,6 @@
 /**
  * Wallet Transactions API
  *
- * Sprint 16 - Story 16.7: Commission & Revenue Tracking
- *
  * Get transaction history for organization's wallet
  */
 

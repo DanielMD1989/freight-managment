@@ -1,8 +1,6 @@
 /**
  * Wallet Widget Component
  *
- * Sprint 16 - Story 16.7: Commission & Revenue Tracking
- *
  * Compact wallet balance widget for dashboard
  */
 
@@ -21,7 +19,7 @@ interface WalletBalance {
   }>;
   totalBalance: number;
   currency: string;
-  recentCommissionsCount: number;
+  recentTransactionsCount: number;
 }
 
 export default function WalletWidget() {
@@ -129,8 +127,8 @@ export default function WalletWidget() {
         ))}
       </div>
 
-      {/* Recent Commissions Badge */}
-      {balance.recentCommissionsCount > 0 && (
+      {/* Recent Transactions Badge */}
+      {balance.recentTransactionsCount > 0 && (
         <div className="flex items-center gap-2 text-xs opacity-90 mb-4">
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
             <path
@@ -140,8 +138,8 @@ export default function WalletWidget() {
             />
           </svg>
           <span>
-            {balance.recentCommissionsCount} commission
-            {balance.recentCommissionsCount !== 1 ? 's' : ''} in last 30 days
+            {balance.recentTransactionsCount} transaction
+            {balance.recentTransactionsCount !== 1 ? 's' : ''} in last 30 days
           </span>
         </div>
       )}

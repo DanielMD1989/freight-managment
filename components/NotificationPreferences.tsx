@@ -56,12 +56,6 @@ export default function NotificationPreferences() {
       enabled: true,
     },
     {
-      type: 'COMMISSION_DEDUCTED',
-      label: 'Commission Deducted',
-      description: 'Notify when commission is deducted from settlement',
-      enabled: true,
-    },
-    {
       type: 'BYPASS_WARNING',
       label: 'Bypass Warnings',
       description: 'Notify about potential route bypasses',

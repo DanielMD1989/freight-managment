@@ -1,8 +1,6 @@
 /**
  * Wallet Balance API
  *
- * Sprint 16 - Story 16.7: Commission & Revenue Tracking
- *
  * Get current wallet balance for organization
  */
 
@@ -66,18 +64,18 @@ export async function GET(request: NextRequest) {
       0
     );
 
-    // Get recent statistics
-    const recentCommissions = await db.journalEntry.count({
+    // Get recent transaction count
+    const recentTransactions = await db.journalEntry.count({
       where: {
-        transactionType: 'COMMISSION',
         createdAt: {
           gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
         },
         lines: {
           some: {
-            creditAccount: {
-              organizationId: user.organizationId,
-            },
+            OR: [
+              { creditAccount: { organizationId: user.organizationId } },
+              { account: { organizationId: user.organizationId } },
+            ],
           },
         },
       },
@@ -93,7 +91,7 @@ export async function GET(request: NextRequest) {
       })),
       totalBalance,
       currency: walletAccounts[0]?.currency || 'ETB',
-      recentCommissionsCount: recentCommissions,
+      recentTransactionsCount: recentTransactions,
     });
   } catch (error) {
     console.error('Get wallet balance error:', error);

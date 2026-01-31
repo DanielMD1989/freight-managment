@@ -65,7 +65,7 @@ export default async function PlatformMetricsPage() {
               <li className="flex items-start gap-2">
                 <span className="font-bold">•</span>
                 <span>
-                  <strong>Financial Health:</strong> Total revenue, settlement status, and commission tracking
+                  <strong>Financial Health:</strong> Total revenue, settlement status, and service fee tracking
                 </span>
               </li>
               <li className="flex items-start gap-2">

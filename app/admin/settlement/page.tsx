@@ -1,8 +1,6 @@
 /**
  * Settlement Automation Dashboard
  *
- * Sprint 16 - Story 16.7: Commission & Revenue Model
- *
  * Admin dashboard for monitoring and managing automated settlements
  */
 

@@ -1,8 +1,6 @@
 /**
  * Admin GPS Management Page
  *
- * Sprint 16 - Story 16.9: Admin Tools for GPS & Commission Management
- *
  * Manage GPS devices, view status, and monitor truck tracking
  */
 

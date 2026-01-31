@@ -1,8 +1,6 @@
 /**
  * Settlement Automation Client Component
  *
- * Sprint 16 - Story 16.7: Commission & Revenue Model
- *
  * Client-side dashboard for settlement automation monitoring
  */
 
@@ -253,7 +251,7 @@ export default function SettlementAutomationClient() {
             </svg>
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            POD verified, processing commissions
+            POD verified, processing service fees
           </p>
         </div>
 
@@ -279,7 +277,7 @@ export default function SettlementAutomationClient() {
             </svg>
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            Commissions deducted successfully
+            Service fees deducted successfully
           </p>
         </div>
 
@@ -338,7 +336,7 @@ export default function SettlementAutomationClient() {
           <li className="flex items-start gap-2">
             <span className="font-bold">4.</span>
             <span>
-              Once POD is verified, commissions are calculated and deducted from
+              Once POD is verified, corridor-based service fees are deducted from
               wallets
             </span>
           </li>
