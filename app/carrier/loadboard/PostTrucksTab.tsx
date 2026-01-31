@@ -26,12 +26,14 @@ interface PostTrucksTabProps {
 
 type TruckStatus = 'POSTED' | 'UNPOSTED' | 'EXPIRED';
 type LoadTab = 'all' | 'preferred' | 'blocked';
+type MainTab = 'postings' | 'matching';
 
 export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   const toast = useToast();
   const [trucks, setTrucks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeStatus, setActiveStatus] = useState<TruckStatus>('POSTED');
+  const [activeMainTab, setActiveMainTab] = useState<MainTab>('postings');
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const [selectedTruckId, setSelectedTruckId] = useState<string | null>(null);
   const [expandedTruckId, setExpandedTruckId] = useState<string | null>(null);
@@ -346,6 +348,24 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       setMatchingLoads(sortedLoads);
     } catch (error) {
       console.error('Failed to fetch all matching loads:', error);
+      setMatchingLoads([]);
+    } finally {
+      setLoadingMatches(false);
+    }
+  };
+
+  /**
+   * Fetch matching loads for a specific truck
+   * Used when user clicks on a truck row - shows exact matches for that truck
+   */
+  const fetchMatchingLoadsForTruck = async (truckId: string) => {
+    setLoadingMatches(true);
+    try {
+      const response = await fetch(`/api/truck-postings/${truckId}/matching-loads`);
+      const data = await response.json();
+      setMatchingLoads(data.matches || []);
+    } catch (error) {
+      console.error('Failed to fetch matching loads for truck:', error);
       setMatchingLoads([]);
     } finally {
       setLoadingMatches(false);
@@ -684,12 +704,12 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   };
 
   /**
-   * Status tabs configuration - POSTED, UNPOSTED, EXPIRED only
+   * Status tabs configuration - Active, Unposted, Expired
    */
   const statusTabs: StatusTab[] = [
-    { key: 'POSTED', label: 'POSTED', count: statusCounts.POSTED },
-    { key: 'UNPOSTED', label: 'UNPOSTED', count: statusCounts.UNPOSTED },
-    { key: 'EXPIRED', label: 'EXPIRED', count: statusCounts.EXPIRED },
+    { key: 'POSTED', label: 'Active', count: statusCounts.POSTED },
+    { key: 'UNPOSTED', label: 'Unposted', count: statusCounts.UNPOSTED },
+    { key: 'EXPIRED', label: 'Expired', count: statusCounts.EXPIRED },
   ];
 
   /**
@@ -784,165 +804,214 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   };
 
   /**
-   * Truck table columns
+   * Helper: Get age color based on hours
+   */
+  const getAgeStyle = (date: string | Date | null): { bg: string; text: string; dot: string } => {
+    if (!date) return { bg: 'bg-slate-100', text: 'text-slate-500', dot: '●' };
+    const hours = (Date.now() - new Date(date).getTime()) / (1000 * 60 * 60);
+    if (hours < 24) return { bg: 'bg-green-100', text: 'text-green-700', dot: '●' }; // Fresh
+    if (hours < 72) return { bg: 'bg-yellow-100', text: 'text-yellow-700', dot: '●' }; // Recent
+    return { bg: 'bg-slate-100', text: 'text-slate-500', dot: '●' }; // Old
+  };
+
+  /**
+   * Helper: Format age text
+   */
+  const formatAge = (date: string | Date | null): string => {
+    if (!date) return '-';
+    const hours = (Date.now() - new Date(date).getTime()) / (1000 * 60 * 60);
+    if (hours < 1) return '<1h';
+    if (hours < 24) return `${Math.floor(hours)}h`;
+    const days = Math.floor(hours / 24);
+    return `${days}d`;
+  };
+
+  /**
+   * Helper: Get status badge style
+   */
+  const getStatusStyle = (status: string): { bg: string; text: string } => {
+    switch (status) {
+      case 'POSTED':
+      case 'ACTIVE':
+        return { bg: 'bg-green-100', text: 'text-green-700' };
+      case 'UNPOSTED':
+        return { bg: 'bg-slate-100', text: 'text-slate-600' };
+      case 'EXPIRED':
+        return { bg: 'bg-red-100', text: 'text-red-700' };
+      default:
+        return { bg: 'bg-slate-100', text: 'text-slate-500' };
+    }
+  };
+
+  /**
+   * Truck table columns - Consolidated design
    */
   const truckColumns: TableColumn[] = [
+    // Age column with color-coded badge
     {
       key: 'age',
       label: 'Age',
-      width: '50px',
-      render: (_, row) => <AgeIndicator date={row.postedAt || row.createdAt} />,
-    },
-    {
-      key: 'availableFrom',
-      label: 'Avail',
-      width: '75px',
-      render: (value, row) => {
-        const from = value ? new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Now';
-        return from;
+      width: '60px',
+      render: (_, row) => {
+        const style = getAgeStyle(row.postedAt || row.createdAt);
+        const age = formatAge(row.postedAt || row.createdAt);
+        return (
+          <span className={`${style.bg} ${style.text} px-2 py-1 rounded text-xs font-medium`}>
+            {style.dot} {age}
+          </span>
+        );
       },
     },
-    {
-      key: 'ownerName',
-      label: 'Owner',
-      width: '80px',
-      render: (value) => <span className="truncate">{value || '-'}</span>,
-    },
-    {
-      key: 'currentCity',
-      label: 'Origin',
-      width: '90px',
-      render: (value, row) => {
-        if (typeof value === 'object' && value?.name) return value.name;
-        if (row.originCity?.name) return row.originCity.name;
-        return value || 'N/A';
-      },
-    },
-    {
-      key: 'destinationCity',
-      label: 'Dest',
-      width: '90px',
-      render: (value, row) => {
-        if (typeof value === 'object' && value?.name) return value.name;
-        if (row.destinationCity?.name) return row.destinationCity.name;
-        return value || 'Any';
-      },
-    },
-    {
-      key: 'preferredDhToOriginKm',
-      label: 'DH-O',
-      width: '50px',
-      align: 'right' as const,
-      render: (value) => value ? `${value}` : '-',
-    },
-    {
-      key: 'preferredDhAfterDeliveryKm',
-      label: 'DH-D',
-      width: '50px',
-      align: 'right' as const,
-      render: (value) => value ? `${value}` : '-',
-    },
-    {
-      key: 'truckType',
-      label: 'Type',
-      width: '70px',
-      render: (value) => value?.replace('_', ' ') || 'N/A',
-    },
+    // Truck column - Combined plate + type + capacity
     {
       key: 'truck',
-      label: 'GPS',
-      width: '50px',
-      align: 'center' as const,
+      label: 'Truck',
+      width: '180px',
       render: (_, row) => {
         const truck = row.truck;
-        if (!truck || !truck.imei) {
-          return <span className="text-gray-400 text-xs">-</span>;
-        }
-        const statusDots: Record<string, string> = {
-          ACTIVE: '🟢',
-          SIGNAL_LOST: '🟡',
-          INACTIVE: '🔴',
-          MAINTENANCE: '⚪',
-        };
-        const status = truck.gpsStatus || 'INACTIVE';
-        return <span className="text-sm">{statusDots[status] || '⚫'}</span>;
+        const plate = truck?.licensePlate || 'N/A';
+        const type = (truck?.truckType || row.truckType || 'N/A').replace('_', ' ');
+        const capacity = truck?.capacity ? `${Math.round(truck.capacity / 1000)}T` : '';
+        return (
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-sky-500 to-sky-700 rounded-lg flex items-center justify-center text-white text-lg">
+              🚚
+            </div>
+            <div>
+              <div className="font-bold text-slate-900">{plate}</div>
+              <div className="text-sm text-slate-500">{type} {capacity && `• ${capacity}`}</div>
+            </div>
+          </div>
+        );
       },
     },
+    // Route column - Combined origin → destination
     {
-      key: 'availableLength',
-      label: 'Len',
-      width: '45px',
-      align: 'right' as const,
-      render: (value) => value ? `${value}m` : '-',
+      key: 'route',
+      label: 'Route',
+      width: '200px',
+      render: (_, row) => {
+        const origin = row.originCity?.name || 'N/A';
+        const destination = row.destinationCity?.name || 'Any';
+        const originRegion = row.originCity?.region || '';
+        const destRegion = row.destinationCity?.region || '';
+        return (
+          <div>
+            <div className="text-slate-700">
+              {origin} <span className="text-slate-400">→</span> {destination}
+            </div>
+            {(originRegion || destRegion) && (
+              <div className="text-xs text-slate-400">
+                {originRegion}{originRegion && destRegion && ' → '}{destRegion}
+              </div>
+            )}
+          </div>
+        );
+      },
     },
+    // Available column - Date range
     {
-      key: 'availableWeight',
-      label: 'Wt',
-      width: '55px',
-      align: 'right' as const,
-      render: (value) => value ? `${value}` : '-',
+      key: 'available',
+      label: 'Available',
+      width: '120px',
+      render: (_, row) => {
+        const from = row.availableFrom
+          ? new Date(row.availableFrom).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          : 'Now';
+        const to = row.availableTo
+          ? new Date(row.availableTo).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          : '';
+        return (
+          <span className="text-slate-700 text-sm">
+            {from}{to && ` - ${to}`}
+          </span>
+        );
+      },
     },
+    // Type column - FULL/PARTIAL badge
+    {
+      key: 'fullPartial',
+      label: 'Type',
+      width: '80px',
+      align: 'center' as const,
+      render: (value) => {
+        const isFull = value === 'FULL';
+        return (
+          <span className={`px-2 py-1 rounded text-xs font-semibold ${
+            isFull ? 'bg-sky-100 text-sky-700' : 'bg-amber-100 text-amber-700'
+          }`}>
+            {isFull ? 'FULL' : 'PARTIAL'}
+          </span>
+        );
+      },
+    },
+    // Status column - Active/Unposted/Expired badge
+    {
+      key: 'status',
+      label: 'Status',
+      width: '90px',
+      align: 'center' as const,
+      render: (value) => {
+        const style = getStatusStyle(value);
+        const label = value === 'ACTIVE' || value === 'POSTED' ? 'Active' : value === 'UNPOSTED' ? 'Unposted' : 'Expired';
+        return (
+          <span className={`${style.bg} ${style.text} px-3 py-1 rounded-full text-xs font-semibold uppercase`}>
+            {label}
+          </span>
+        );
+      },
+    },
+    // Matches column - Styled button
+    {
+      key: 'matchCount',
+      label: 'Matches',
+      width: '110px',
+      align: 'center' as const,
+      render: (value, row) => {
+        const count = value || 0;
+        if (count === 0) {
+          return (
+            <span className="bg-slate-100 text-slate-500 px-3 py-1.5 rounded-md text-sm">
+              0 matches
+            </span>
+          );
+        }
+        return (
+          <span className="bg-sky-600 text-white px-3 py-1.5 rounded-md text-sm font-semibold cursor-pointer">
+            {count} matches →
+          </span>
+        );
+      },
+    },
+    // Actions column - Edit/Cancel buttons
     {
       key: 'actions',
       label: 'Actions',
-      width: '180px',
+      width: '140px',
       align: 'center' as const,
       render: (_, row) => {
-        const isExpanded = expandedTruckId === row.id;
-        const isEditing = editingTruckId === row.id;
-
-        // Only show action buttons when row is expanded and not in editing mode
-        if (!isExpanded || isEditing) {
-          return null;
-        }
-
         return (
           <div
-            className="flex items-center gap-1"
+            className="flex items-center gap-2"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* POST button - only for unposted trucks */}
-            {row.status === 'UNPOSTED' && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePostTruckPosting(row);
-                }}
-                className="px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white text-xs font-semibold rounded-lg hover:from-emerald-700 hover:to-emerald-600 transition-all shadow-md shadow-emerald-500/25 cursor-pointer flex items-center gap-1"
-                title="Post this truck to make it visible to shippers"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                POST
-              </button>
-            )}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleEdit(row);
               }}
-              className="px-3 py-1.5 bg-teal-600 text-white text-xs font-semibold rounded-lg hover:bg-teal-700 transition-all cursor-pointer"
+              className="px-3 py-1 bg-sky-600 text-white text-xs font-semibold rounded hover:bg-sky-700 transition-colors"
             >
-              EDIT
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleCopy(row);
-              }}
-              className="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg hover:bg-slate-200 transition-all border border-slate-200 cursor-pointer"
-            >
-              COPY
+              Edit
             </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleDelete(row);
               }}
-              className="px-3 py-1.5 bg-rose-500 text-white text-xs font-semibold rounded-lg hover:bg-rose-600 transition-all cursor-pointer"
+              className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-semibold rounded hover:bg-slate-200 transition-colors border border-slate-200"
             >
-              DELETE
+              Cancel
             </button>
           </div>
         );
@@ -1209,11 +1278,11 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
    * Get selected truck's origin for filtering
    */
   const selectedTruck = selectedTruckId ? trucks.find(t => t.id === selectedTruckId) : null;
-  const selectedTruckOrigin = selectedTruck?.originCity?.name || selectedTruck?.origin || '';
 
   /**
-   * Filter matching loads based on active tab and truck origin
-   * Sorts by: loads within DH limits first, then DH-O, DH-D, then by recent (createdAt)
+   * Filter matching loads based on active tab only
+   * API already returns correctly matched loads - no need for city name filtering
+   * Sorts by: loads within DH limits first, then DH-O, then by match score
    */
   const filteredMatchingLoads = matchingLoads
     .map(match => {
@@ -1233,33 +1302,12 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     .filter(({ load }) => {
       if (!load) return false;
 
-      // Tab filtering
+      // Tab filtering (preferred/blocked companies - future feature)
       if (activeLoadTab === 'preferred') {
-        // TODO: Implement preferred company logic
-        return false;
+        return false; // TODO: Implement preferred company logic
       }
       if (activeLoadTab === 'blocked') {
-        // TODO: Implement blocked company logic
-        return false;
-      }
-
-      // Filter by truck origin - only show loads where pickup is near truck's origin
-      if (selectedTruckId && selectedTruckOrigin && load.pickupCity) {
-        const truckOriginLower = selectedTruckOrigin.toLowerCase().trim();
-        const loadOriginLower = load.pickupCity.toLowerCase().trim();
-
-        // Check if origins match or are related
-        const originsMatch =
-          truckOriginLower === loadOriginLower ||
-          truckOriginLower.includes(loadOriginLower) ||
-          loadOriginLower.includes(truckOriginLower);
-
-        // Also allow loads with low DH-O (within reasonable distance) or within declared limits
-        const dhOk = (load.dhToOriginKm || 0) <= 200 || load.withinDhLimits;
-
-        if (!originsMatch && !dhOk) {
-          return false;
-        }
+        return false; // TODO: Implement blocked company logic
       }
 
       return true;
@@ -1308,27 +1356,73 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     })
     .map(match => match.load); // Return just the load object for the table
 
-  return (
-    <div className="space-y-4 pt-10">
-      {/* Header Row - NEW TRUCK POST on left, Status Tabs on right */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => setShowNewTruckForm(!showNewTruckForm)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-sm font-bold rounded-xl hover:from-teal-700 hover:to-teal-600 transition-all shadow-md shadow-teal-500/25"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          NEW TRUCK POST
-        </button>
+  // Get selected truck details for matching tab header
+  const selectedTruckDetails = selectedTruckId
+    ? trucks.find(t => t.id === selectedTruckId)
+    : null;
 
-        {/* Status Filter Tabs - Right Side */}
-        <StatusTabs
-          tabs={statusTabs}
-          activeTab={activeStatus}
-          onTabChange={(tab) => setActiveStatus(tab as TruckStatus)}
-        />
+  return (
+    <div className="space-y-4 pt-6">
+      {/* Main Tab Navigation - Pill Style */}
+      <div className="flex gap-1 bg-slate-200 p-1 rounded-xl w-fit">
+        <button
+          onClick={() => setActiveMainTab('postings')}
+          className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all ${
+            activeMainTab === 'postings'
+              ? 'bg-white text-sky-600 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <span>📋</span>
+          My Postings
+          <span className={`px-2 py-0.5 rounded-full text-sm ${
+            activeMainTab === 'postings' ? 'bg-sky-100 text-sky-600' : 'bg-slate-300 text-slate-600'
+          }`}>
+            {trucks.length}
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveMainTab('matching')}
+          className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all ${
+            activeMainTab === 'matching'
+              ? 'bg-white text-sky-600 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <span>🔍</span>
+          Matching Loads
+          <span className={`px-2 py-0.5 rounded-full text-sm ${
+            activeMainTab === 'matching' ? 'bg-sky-100 text-sky-600' : 'bg-slate-300 text-slate-600'
+          }`}>
+            {filteredMatchingLoads.length}
+          </span>
+        </button>
       </div>
+
+      {/* ============================================================ */}
+      {/* TAB 1: MY POSTINGS                                           */}
+      {/* ============================================================ */}
+      {activeMainTab === 'postings' && (
+        <>
+          {/* Header Row - NEW TRUCK POST on left, Status Tabs on right */}
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setShowNewTruckForm(!showNewTruckForm)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-sm font-bold rounded-xl hover:from-teal-700 hover:to-teal-600 transition-all shadow-md shadow-teal-500/25"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              NEW TRUCK POST
+            </button>
+
+            {/* Status Filter Tabs - Right Side */}
+            <StatusTabs
+              tabs={statusTabs}
+              activeTab={activeStatus}
+              onTabChange={(tab) => setActiveStatus(tab as TruckStatus)}
+            />
+          </div>
 
       {/* New Truck Posting Form - Clean Organized Layout */}
       {showNewTruckForm && (
@@ -1651,19 +1745,10 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
           rowKey="id"
           expandable={true}
           onRowClick={(truck) => {
-            // Toggle expanded state
-            if (expandedTruckId === truck.id) {
-              setExpandedTruckId(null);
-              setSelectedTruckId(null);
-              setEditingTruckId(null); // Reset editing state when collapsing
-              setEditForm({}); // Clear edit form data
-              fetchAllMatchingLoads(); // Show all loads when deselected
-            } else {
-              setExpandedTruckId(truck.id);
-              setEditingTruckId(null); // Ensure editing is closed when expanding a new row
-              setEditForm({}); // Clear any previous edit form data
-              handleTruckClick(truck); // Fetch loads for this specific truck
-            }
+            // Click row → switch to Matching Loads tab and fetch loads for THIS truck
+            setSelectedTruckId(truck.id);
+            setActiveMainTab('matching');
+            fetchMatchingLoadsForTruck(truck.id);
           }}
           renderExpandedRow={(truck) => {
             const notesLines = truck.notes?.split('\n') || [];
@@ -1911,32 +1996,94 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
           }}
         />
       </div>
+        </>
+      )}
 
-      {/* Matching Loads Section */}
-      <div className="bg-white rounded-2xl overflow-hidden mt-6 border border-slate-200/60 shadow-sm">
-        {/* Header with Total Count and Tabs */}
-        <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-teal-600 to-teal-500">
-          <div className="flex items-center gap-4">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+      {/* ============================================================ */}
+      {/* TAB 2: MATCHING LOADS                                        */}
+      {/* ============================================================ */}
+      {activeMainTab === 'matching' && (
+        <>
+          {/* Back Button + Selected Truck Info */}
+          <div className="flex items-center justify-between bg-white rounded-xl border border-slate-200 p-4">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveMainTab('postings');
+                setSelectedTruckId(null);
+              }}
+              className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-sky-600 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
-              {filteredMatchingLoads.length} Matching Loads
-              {selectedTruckId && (
-                <span className="ml-2 font-normal text-sm text-teal-100">
-                  (for selected truck)
-                </span>
-              )}
-            </h3>
-            {selectedTruckId && (
-              <button
-                onClick={() => {
-                  setSelectedTruckId(null);
-                  setExpandedTruckId(null);
-                  fetchAllMatchingLoads();
-                }}
-                className="text-xs text-white/80 hover:text-white underline"
-              >
+              ← Back to My Postings
+            </button>
+            {selectedTruckDetails ? (
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-sky-500 to-sky-700 rounded-lg flex items-center justify-center text-white text-xl">
+                  🚚
+                </div>
+                <div>
+                  <div className="font-bold text-slate-900 text-lg">
+                    {selectedTruckDetails.truck?.licensePlate || 'Unknown Truck'}
+                  </div>
+                  <div className="text-sm text-slate-500">
+                    {(selectedTruckDetails.truck?.truckType || selectedTruckDetails.truckType || 'N/A').replace('_', ' ')}
+                    {selectedTruckDetails.truck?.capacity && ` • ${Math.round(selectedTruckDetails.truck.capacity / 1000)}T`}
+                    {' • '}
+                    {selectedTruckDetails.originCity?.name || 'N/A'} → {selectedTruckDetails.destinationCity?.name || 'Any'}
+                    {selectedTruckDetails.availableFrom && (
+                      <span className="ml-2 text-slate-400">
+                        • Available {new Date(selectedTruckDetails.availableFrom).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {selectedTruckDetails.availableTo && ` - ${new Date(selectedTruckDetails.availableTo).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedTruckId(null);
+                    fetchAllMatchingLoads();
+                  }}
+                  className="ml-4 px-3 py-1.5 text-sm text-sky-600 hover:text-sky-700 hover:bg-sky-50 rounded-md transition-colors"
+                >
+                  Show all trucks
+                </button>
+              </div>
+            ) : (
+              <div className="text-sm text-slate-500">
+                Showing matches for all posted trucks
+              </div>
+            )}
+          </div>
+
+          {/* Matching Loads Section */}
+          <div className="bg-white rounded-2xl overflow-hidden border border-slate-200/60 shadow-sm">
+            {/* Header with Total Count and Tabs */}
+            <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-teal-600 to-teal-500">
+              <div className="flex items-center gap-4">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                  {filteredMatchingLoads.length} Matching Loads
+                  {selectedTruckId && (
+                    <span className="ml-2 font-normal text-sm text-teal-100">
+                      (for selected truck)
+                    </span>
+                  )}
+                </h3>
+                {selectedTruckId && (
+                  <button
+                    onClick={() => {
+                      setSelectedTruckId(null);
+                      setExpandedTruckId(null);
+                      fetchAllMatchingLoads();
+                    }}
+                    className="text-xs text-white/80 hover:text-white underline"
+                  >
                 Show all loads
               </button>
             )}
@@ -1977,17 +2124,19 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
           </div>
         </div>
 
-        {/* Matching Loads Table */}
-        <div className="p-0">
-          <DataTable
-            columns={loadColumns}
-            data={filteredMatchingLoads}
-            loading={loadingMatches}
-            emptyMessage="No matching loads found. Post a truck to see matching loads."
-            rowKey="id"
-          />
+          {/* Matching Loads Table */}
+          <div className="p-0">
+            <DataTable
+              columns={loadColumns}
+              data={filteredMatchingLoads}
+              loading={loadingMatches}
+              emptyMessage="No matching loads found. Post a truck to see matching loads."
+              rowKey="id"
+            />
+          </div>
         </div>
-      </div>
+        </>
+      )}
 
       {/* Sprint 18: Load Request Modal */}
       {requestModalOpen && selectedLoadForRequest && (
