@@ -87,14 +87,11 @@ export async function POST(
       data: {
         loadId,
         eventType: 'ESCROW_RELEASED',
-        description: `Manual escrow release: Carrier received ${result.carrierPayout.toFixed(2)} ETB, Platform earned ${result.platformRevenue.toFixed(2)} ETB (Admin: ${session.userId})`,
+        description: `Manual escrow release: Carrier received ${result.carrierPayout.toFixed(2)} ETB (Admin: ${session.userId})`,
         userId: session.userId,
         metadata: {
           manual: true,
           carrierPayout: result.carrierPayout.toFixed(2),
-          platformRevenue: result.platformRevenue.toFixed(2),
-          shipperCommission: result.shipperCommission.toFixed(2),
-          carrierCommission: result.carrierCommission.toFixed(2),
           transactionId: result.transactionId,
           podVerified: load.podVerified,
         },
@@ -105,9 +102,6 @@ export async function POST(
       message: 'Escrow release successful',
       release: {
         carrierPayout: result.carrierPayout.toFixed(2),
-        platformRevenue: result.platformRevenue.toFixed(2),
-        shipperCommission: result.shipperCommission.toFixed(2),
-        carrierCommission: result.carrierCommission.toFixed(2),
         transactionId: result.transactionId,
       },
       warning: !load.podVerified

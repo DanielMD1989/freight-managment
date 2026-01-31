@@ -30,10 +30,6 @@ const settingsSchema = z.object({
   emailNotifyLoadAssignment: z.boolean().optional(),
   emailNotifyPodVerification: z.boolean().optional(),
 
-  // Platform Fees (percentages)
-  shipperCommissionRate: z.number().min(0).max(100).optional(),
-  carrierCommissionRate: z.number().min(0).max(100).optional(),
-
   // File Upload Limits (in MB)
   maxFileUploadSizeMb: z.number().int().min(1).max(100).optional(),
   maxDocumentsPerEntity: z.number().int().min(1).max(50).optional(),
@@ -91,10 +87,6 @@ export async function GET(request: NextRequest) {
           emailNotifyLoadAssignment: true,
           emailNotifyPodVerification: true,
 
-          // Platform Fees defaults (5% each)
-          shipperCommissionRate: 5.0,
-          carrierCommissionRate: 5.0,
-
           // File Upload defaults
           maxFileUploadSizeMb: 10,
           maxDocumentsPerEntity: 20,
@@ -143,16 +135,6 @@ export async function PATCH(request: NextRequest) {
 
     const body = await request.json();
     const validatedData = settingsSchema.parse(body);
-
-    // Validate commission rates don't exceed 100% total
-    if (validatedData.shipperCommissionRate !== undefined && validatedData.carrierCommissionRate !== undefined) {
-      if (validatedData.shipperCommissionRate + validatedData.carrierCommissionRate > 100) {
-        return NextResponse.json(
-          { error: 'Total commission rates cannot exceed 100%' },
-          { status: 400 }
-        );
-      }
-    }
 
     // Validate match score thresholds are in ascending order
     if (

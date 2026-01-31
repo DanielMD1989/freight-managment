@@ -31,10 +31,6 @@ interface SystemSettings {
   emailNotifyLoadAssignment: boolean;
   emailNotifyPodVerification: boolean;
 
-  // Platform Fees
-  shipperCommissionRate: number;
-  carrierCommissionRate: number;
-
   // File Upload Limits
   maxFileUploadSizeMb: number;
   maxDocumentsPerEntity: number;

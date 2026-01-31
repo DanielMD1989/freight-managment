@@ -10,7 +10,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requirePermission, Permission } from '@/lib/rbac';
 import { db } from '@/lib/db';
-import { processSettlement } from '@/lib/commissionCalculation';
 
 /**
  * POST /api/admin/settlements/[id]/approve
@@ -90,8 +89,15 @@ export async function POST(
       );
     }
 
-    // Process the settlement
-    await processSettlement(loadId);
+    // Mark settlement as complete
+    // Service fees are handled separately by serviceFeeManagement.ts
+    await db.load.update({
+      where: { id: loadId },
+      data: {
+        settlementStatus: 'PAID',
+        settledAt: new Date(),
+      },
+    });
 
     // Fetch updated load data
     const updatedLoad = await db.load.findUnique({
@@ -100,9 +106,7 @@ export async function POST(
         id: true,
         settlementStatus: true,
         settledAt: true,
-        shipperCommission: true,
-        carrierCommission: true,
-        platformCommission: true,
+        serviceFeeEtb: true,
         totalFareEtb: true,
         rate: true,
       },
@@ -125,9 +129,7 @@ export async function POST(
         status: updatedLoad?.settlementStatus,
         settledAt: updatedLoad?.settledAt,
         grossAmount: Number(updatedLoad?.totalFareEtb || updatedLoad?.rate),
-        shipperCommission: Number(updatedLoad?.shipperCommission),
-        carrierCommission: Number(updatedLoad?.carrierCommission),
-        platformRevenue: Number(updatedLoad?.platformCommission),
+        serviceFee: Number(updatedLoad?.serviceFeeEtb || 0),
       },
     });
   } catch (error) {
