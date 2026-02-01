@@ -16,10 +16,18 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth, validatePasswordPolicy, verifyPassword, hashPassword, revokeAllSessions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { logSecurityEvent, SecurityEventType } from '@/lib/security-events';
 import { requireCSRF } from '@/lib/csrf';
+
+// Request body schema
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: z.string().min(8, 'New password must be at least 8 characters'),
+  logoutOtherSessions: z.boolean().optional().default(true),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,15 +42,17 @@ export async function POST(request: NextRequest) {
     const userAgent = request.headers.get('user-agent');
 
     const body = await request.json();
-    const { currentPassword, newPassword, logoutOtherSessions = true } = body;
 
-    // Validate inputs
-    if (!currentPassword || !newPassword) {
+    // Validate request body with Zod
+    const parseResult = changePasswordSchema.safeParse(body);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'Current password and new password are required' },
+        { error: parseResult.error.issues[0]?.message || 'Invalid input' },
         { status: 400 }
       );
     }
+
+    const { currentPassword, newPassword, logoutOtherSessions } = parseResult.data;
 
     // Get user with password hash
     const user = await db.user.findUnique({

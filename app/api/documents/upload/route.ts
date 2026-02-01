@@ -20,6 +20,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { db } from '@/lib/db';
 import {
   saveFile,
@@ -35,6 +36,15 @@ import {
   RATE_LIMIT_DOCUMENT_UPLOAD,
 } from '@/lib/rateLimit';
 import { requireCSRF } from '@/lib/csrf';
+
+// Form data schema for document upload
+const documentUploadSchema = z.object({
+  type: z.string().min(1, 'Document type is required'),
+  entityType: z.enum(['company', 'truck'], {
+    message: 'Entity type must be "company" or "truck"'
+  }),
+  entityId: z.string().min(1, 'Entity ID is required'),
+});
 
 /**
  * POST /api/documents/upload
@@ -93,11 +103,11 @@ export async function POST(request: NextRequest) {
     // Parse form data
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
-    const type = formData.get('type') as string | null;
-    const entityType = formData.get('entityType') as 'company' | 'truck' | null;
-    const entityId = formData.get('entityId') as string | null;
+    const typeRaw = formData.get('type') as string | null;
+    const entityTypeRaw = formData.get('entityType') as string | null;
+    const entityIdRaw = formData.get('entityId') as string | null;
 
-    // Validate required fields
+    // Validate file separately (Zod doesn't handle File objects directly)
     if (!file) {
       return NextResponse.json(
         { error: 'File is required' },
@@ -105,26 +115,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!type) {
+    // Validate form fields with Zod
+    const parseResult = documentUploadSchema.safeParse({
+      type: typeRaw,
+      entityType: entityTypeRaw,
+      entityId: entityIdRaw,
+    });
+
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'Document type is required' },
+        { error: parseResult.error.issues[0]?.message || 'Invalid input' },
         { status: 400 }
       );
     }
 
-    if (!entityType || !['company', 'truck'].includes(entityType)) {
-      return NextResponse.json(
-        { error: 'Entity type must be "company" or "truck"' },
-        { status: 400 }
-      );
-    }
-
-    if (!entityId) {
-      return NextResponse.json(
-        { error: 'Entity ID is required' },
-        { status: 400 }
-      );
-    }
+    const { type, entityType, entityId } = parseResult.data;
 
     // Validate entity ID format
     const idValidation = validateIdFormat(entityId, 'Entity ID');

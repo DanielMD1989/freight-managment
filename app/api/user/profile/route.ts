@@ -12,10 +12,22 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { logSecurityEvent, SecurityEventType } from '@/lib/security-events';
 import { requireCSRF } from '@/lib/csrf';
+import { phoneSchema } from '@/lib/validation';
+
+// Request body schema for profile update
+const updateProfileSchema = z.object({
+  firstName: z.string().min(1, 'First name cannot be empty').max(100, 'First name is too long').optional(),
+  lastName: z.string().min(1, 'Last name cannot be empty').max(100, 'Last name is too long').optional(),
+  phone: z.union([phoneSchema, z.null()]).optional(),
+}).refine(
+  (data) => data.firstName !== undefined || data.lastName !== undefined || data.phone !== undefined,
+  { message: 'No fields to update' }
+);
 
 /**
  * GET /api/user/profile
@@ -90,50 +102,33 @@ export async function PATCH(request: NextRequest) {
     const userAgent = request.headers.get('user-agent');
 
     const body = await request.json();
-    const { firstName, lastName, phone } = body;
 
-    // Validate inputs
-    if (!firstName && !lastName && phone === undefined) {
+    // Validate request body with Zod
+    const validation = updateProfileSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'No fields to update' },
+        { error: validation.error.issues[0]?.message || 'Invalid input' },
         { status: 400 }
       );
     }
+
+    const { firstName, lastName, phone } = validation.data;
 
     // Build update data
     const updateData: Record<string, string | null> = {};
     const changes: string[] = [];
 
     if (firstName !== undefined) {
-      if (typeof firstName !== 'string' || firstName.trim().length === 0) {
-        return NextResponse.json(
-          { error: 'First name cannot be empty' },
-          { status: 400 }
-        );
-      }
       updateData.firstName = firstName.trim();
       changes.push('firstName');
     }
 
     if (lastName !== undefined) {
-      if (typeof lastName !== 'string' || lastName.trim().length === 0) {
-        return NextResponse.json(
-          { error: 'Last name cannot be empty' },
-          { status: 400 }
-        );
-      }
       updateData.lastName = lastName.trim();
       changes.push('lastName');
     }
 
     if (phone !== undefined) {
-      // Phone can be null to remove it
-      if (phone !== null && typeof phone !== 'string') {
-        return NextResponse.json(
-          { error: 'Invalid phone number format' },
-          { status: 400 }
-        );
-      }
       updateData.phone = phone ? phone.trim() : null;
       changes.push('phone');
     }

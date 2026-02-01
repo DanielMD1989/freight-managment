@@ -14,9 +14,16 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { db } from '@/lib/db';
 import { generateOTP, hashPassword } from '@/lib/auth';
 import { logSecurityEvent, SecurityEventType } from '@/lib/security-events';
+import { emailSchema } from '@/lib/validation';
+
+// Request body schema
+const forgotPasswordSchema = z.object({
+  email: emailSchema,
+});
 
 // Rate limiting: Max 3 requests per email per hour
 const RATE_LIMIT_WINDOW_HOURS = 1;
@@ -38,17 +45,18 @@ export async function POST(request: NextRequest) {
     const userAgent = request.headers.get('user-agent');
 
     const body = await request.json();
-    const { email } = body;
 
-    if (!email) {
+    // Validate request body with Zod
+    const validation = forgotPasswordSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Email is required' },
+        { error: validation.error.issues[0]?.message || 'Invalid email' },
         { status: 400 }
       );
     }
 
-    // Normalize email
-    const normalizedEmail = email.toLowerCase().trim();
+    // Email is already normalized (lowercase) by the schema
+    const normalizedEmail = validation.data.email.trim();
 
     // Rate limiting FIRST (before user lookup to prevent timing attacks)
     const rateLimitWindowStart = new Date();

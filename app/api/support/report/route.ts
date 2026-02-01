@@ -7,16 +7,24 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 
-interface ReportBody {
-  type: 'BUG' | 'MISCONDUCT' | 'FEEDBACK' | 'OTHER';
-  subject: string;
-  description: string;
-  entityType?: string;
-  entityId?: string;
-}
+// Request body schema for support report
+const supportReportSchema = z.object({
+  type: z.enum(['BUG', 'MISCONDUCT', 'FEEDBACK', 'OTHER'], {
+    message: 'Invalid report type'
+  }),
+  subject: z.string()
+    .min(3, 'Subject must be at least 3 characters')
+    .max(200, 'Subject must not exceed 200 characters'),
+  description: z.string()
+    .min(10, 'Description must be at least 10 characters')
+    .max(5000, 'Description must not exceed 5000 characters'),
+  entityType: z.string().optional(),
+  entityId: z.string().optional(),
+});
 
 /**
  * POST /api/support/report
@@ -28,40 +36,18 @@ export async function POST(request: NextRequest) {
     const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip');
     const userAgent = request.headers.get('user-agent');
 
-    const body = await request.json() as ReportBody;
-    const { type, subject, description, entityType, entityId } = body;
+    const body = await request.json();
 
-    // Validate inputs
-    if (!type || !subject || !description) {
+    // Validate request body with Zod
+    const validation = supportReportSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Type, subject, and description are required' },
+        { error: validation.error.issues[0]?.message || 'Invalid input' },
         { status: 400 }
       );
     }
 
-    // Validate type
-    const validTypes = ['BUG', 'MISCONDUCT', 'FEEDBACK', 'OTHER'];
-    if (!validTypes.includes(type)) {
-      return NextResponse.json(
-        { error: 'Invalid report type' },
-        { status: 400 }
-      );
-    }
-
-    // Validate subject and description length
-    if (subject.length < 3 || subject.length > 200) {
-      return NextResponse.json(
-        { error: 'Subject must be between 3 and 200 characters' },
-        { status: 400 }
-      );
-    }
-
-    if (description.length < 10 || description.length > 5000) {
-      return NextResponse.json(
-        { error: 'Description must be between 10 and 5000 characters' },
-        { status: 400 }
-      );
-    }
+    const { type, subject, description, entityType, entityId } = validation.data;
 
     // Get user details
     const user = await db.user.findUnique({

@@ -13,9 +13,18 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { db } from '@/lib/db';
 import { hashPassword, validatePasswordPolicy, revokeAllSessions, verifyPassword } from '@/lib/auth';
 import { logSecurityEvent, SecurityEventType } from '@/lib/security-events';
+import { emailSchema } from '@/lib/validation';
+
+// Request body schema
+const resetPasswordSchema = z.object({
+  email: emailSchema,
+  otp: z.string().min(1, 'OTP is required').max(10, 'OTP is too long'),
+  newPassword: z.string().min(8, 'Password must be at least 8 characters'),
+});
 
 // Max OTP verification attempts per token
 const MAX_OTP_ATTEMPTS = 5;
@@ -30,18 +39,20 @@ export async function POST(request: NextRequest) {
     const userAgent = request.headers.get('user-agent');
 
     const body = await request.json();
-    const { email, otp, newPassword } = body;
 
-    // Validate inputs
-    if (!email || !otp || !newPassword) {
+    // Validate request body with Zod
+    const parseResult = resetPasswordSchema.safeParse(body);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'Email, OTP, and new password are required' },
+        { error: parseResult.error.issues[0]?.message || 'Invalid input' },
         { status: 400 }
       );
     }
 
-    // Normalize inputs
-    const normalizedEmail = email.toLowerCase().trim();
+    const { email, otp, newPassword } = parseResult.data;
+
+    // Normalize inputs (email already lowercase from schema)
+    const normalizedEmail = email.trim();
     const normalizedOTP = otp.trim();
 
     // Find user by email
