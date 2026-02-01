@@ -412,7 +412,7 @@ export default function DispatcherDashboardClient({
               </p>
             </div>
           ) : activeTab === 'loads' ? (
-            <LoadsTable loads={loads} onRefresh={fetchLoads} />
+            <LoadsTable loads={loads} onRefresh={fetchLoads} userRole={user.role} />
           ) : (
             <TrucksTable trucks={trucks} onRefresh={fetchTrucks} />
           )}
@@ -596,7 +596,7 @@ export default function DispatcherDashboardClient({
 }
 
 // Loads Table Component
-function LoadsTable({ loads, onRefresh }: { loads: any[]; onRefresh: () => void }) {
+function LoadsTable({ loads, onRefresh, userRole }: { loads: any[]; onRefresh: () => void; userRole: string }) {
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [selectedLoad, setSelectedLoad] = useState<any>(null);
@@ -666,6 +666,7 @@ function LoadsTable({ loads, onRefresh }: { loads: any[]; onRefresh: () => void 
             weight: selectedLoad.weight,
           }}
           onAssignSuccess={handleAssignSuccess}
+          userRole={userRole}
         />
       )}
 

@@ -22,10 +22,12 @@ interface QuickAssignModalProps {
     weight: number;
   };
   onAssignSuccess: () => void;
+  userRole?: string; // DISPATCHER can only propose, ADMIN can assign directly
 }
 
 interface AvailableTruck {
-  id: string;
+  id: string; // truckPosting ID (for direct assignment)
+  truckId: string; // actual truck ID (for match proposals)
   licensePlate: string;
   truckType: string;
   carrier: {
@@ -43,7 +45,10 @@ export default function QuickAssignModal({
   loadId,
   loadDetails,
   onAssignSuccess,
+  userRole = 'DISPATCHER',
 }: QuickAssignModalProps) {
+  // Determine if user can directly assign (only ADMIN/SUPER_ADMIN)
+  const canDirectAssign = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
   const [trucks, setTrucks] = useState<AvailableTruck[]>([]);
   const [selectedTruckId, setSelectedTruckId] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -72,7 +77,8 @@ export default function QuickAssignModal({
 
       const data = await response.json();
       setTrucks(data.matches?.map((m: any) => ({
-        id: m.truckPosting.id,
+        id: m.truckPosting.id, // truckPosting ID for direct assignment
+        truckId: m.truckPosting.truck.id, // actual truck ID for match proposals
         licensePlate: m.truckPosting.truck.licensePlate,
         truckType: m.truckPosting.truck.truckType,
         carrier: m.truckPosting.truck.carrier,
@@ -98,28 +104,55 @@ export default function QuickAssignModal({
 
     try {
       const csrfToken = await getCSRFToken();
-      const response = await fetch(`/api/loads/${loadId}/assign`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
-        },
-        body: JSON.stringify({
-          truckPostingId: selectedTruckId,
-        }),
-      });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to assign load');
+      // Find the selected truck to get both IDs
+      const selectedTruck = trucks.find(t => t.id === selectedTruckId);
+
+      if (canDirectAssign) {
+        // ADMIN/SUPER_ADMIN: Direct assignment
+        const response = await fetch(`/api/loads/${loadId}/assign`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+          },
+          body: JSON.stringify({
+            truckPostingId: selectedTruckId,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to assign load');
+        }
+      } else {
+        // DISPATCHER: Create match proposal (carrier must approve)
+        // Foundation Rule: DISPATCHER_COORDINATION_ONLY
+        const response = await fetch('/api/match-proposals', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+          },
+          body: JSON.stringify({
+            loadId,
+            truckId: selectedTruck?.truckId,
+            notes: `Proposed via Quick Assign for ${loadDetails.pickupCity} → ${loadDetails.deliveryCity}`,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to create match proposal');
+        }
       }
 
       // Success
       onAssignSuccess();
       onClose();
     } catch (err: any) {
-      console.error('Error assigning load:', err);
-      setError(err.message || 'Failed to assign load');
+      console.error(canDirectAssign ? 'Error assigning load:' : 'Error creating proposal:', err);
+      setError(err.message || (canDirectAssign ? 'Failed to assign load' : 'Failed to create match proposal'));
     } finally {
       setAssigning(false);
     }
@@ -142,7 +175,7 @@ export default function QuickAssignModal({
           <div className="px-6 py-4 border-b border-[#064d51]/15">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-[#064d51]">
-                Quick Assign Load
+                {canDirectAssign ? 'Quick Assign Load' : 'Propose Load Match'}
               </h3>
               <button
                 onClick={onClose}
@@ -192,7 +225,7 @@ export default function QuickAssignModal({
             {/* Truck Selection */}
             <div>
               <label className="block text-sm font-medium text-[#064d51]/80 mb-2">
-                Select Truck to Assign
+                {canDirectAssign ? 'Select Truck to Assign' : 'Select Truck to Propose'}
               </label>
 
               {loading ? (
@@ -270,7 +303,9 @@ export default function QuickAssignModal({
               disabled={assigning || !selectedTruckId || loading}
               className="px-4 py-2 bg-[#1e9c99] text-white rounded-md hover:bg-[#064d51] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {assigning ? 'Assigning...' : 'Assign Load'}
+              {assigning
+                ? (canDirectAssign ? 'Assigning...' : 'Proposing...')
+                : (canDirectAssign ? 'Assign Load' : 'Propose Match')}
             </button>
           </div>
         </div>
