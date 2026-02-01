@@ -604,8 +604,8 @@ export function createDocumentApprovalEmail(params: {
       all platform features associated with verified accounts.
     </p>
 
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://freight-platform.com'}/dashboard" class="button">
-      Go to Dashboard
+    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://freight-platform.com'}/" class="button">
+      Go to Portal
     </a>
 
     <p>
@@ -675,8 +675,8 @@ export function createDocumentRejectionEmail(params: {
       <li>Upload the new document through your dashboard</li>
     </ul>
 
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://freight-platform.com'}/dashboard/documents" class="button">
-      Upload Corrected Document
+    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://freight-platform.com'}/" class="button">
+      Go to Portal
     </a>
 
     <p>

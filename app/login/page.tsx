@@ -9,7 +9,7 @@ import { setCSRFToken } from "@/lib/csrfFetch";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/dashboard";
+  const redirect = searchParams.get("redirect") || "/";
   const toast = useToast();
 
   const [email, setEmail] = useState("");

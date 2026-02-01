@@ -24,7 +24,7 @@ export default async function CarrierLoadboardPage() {
 
   // Verify carrier role
   if (session.role !== 'CARRIER' && session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
-    redirect('/dashboard');
+    redirect('/unauthorized');
   }
 
   // Pass user data to client component

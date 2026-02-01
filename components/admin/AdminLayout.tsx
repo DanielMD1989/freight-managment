@@ -161,11 +161,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           {/* Footer */}
           <div className="border-t border-[#064d51]/15 p-4">
             <Link
-              href="/dashboard"
+              href="/admin"
               className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[#064d51]/80 hover:bg-[#f0fdfa]"
             >
               <LayoutDashboard className="h-5 w-5" />
-              <span>Back to Dashboard</span>
+              <span>Admin Dashboard</span>
             </Link>
           </div>
         </div>

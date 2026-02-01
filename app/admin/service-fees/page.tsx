@@ -239,7 +239,7 @@ export default function ServiceFeeDashboard() {
                   <tr key={tx.loadId} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Link
-                        href={`/dashboard/loads/${tx.loadId}`}
+                        href={`/shipper/loads/${tx.loadId}`}
                         className="text-sm font-medium text-blue-600 hover:text-blue-800"
                       >
                         {tx.loadId.slice(0, 8)}...

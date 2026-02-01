@@ -54,10 +54,10 @@ export default function UnauthorizedPage() {
             Go to Homepage
           </Link>
           <Link
-            href="/dashboard"
+            href="/"
             className="block w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
           >
-            Go to Dashboard
+            Go to Portal
           </Link>
           <button
             onClick={() => window.history.back()}

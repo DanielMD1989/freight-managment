@@ -235,7 +235,7 @@ function getEmailTemplate(
             <p><strong>Load Amount:</strong> ${data.totalAmount} ETB</p>
             <p><strong>Net Amount:</strong> ${(data.totalAmount || 0) - (data.amount || 0)} ETB</p>
             <p style="margin-top: 30px;">
-              <a href="${baseUrl}/dashboard/wallet"
+              <a href="${baseUrl}/"
                  style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
                 View Wallet
               </a>
@@ -245,7 +245,7 @@ function getEmailTemplate(
             </p>
           </div>
         `,
-        text: `Service Fee Deducted\n\nHello ${recipientName},\n\nA service fee of ${data.amount} ETB has been deducted for Load #${data.loadId?.slice(-8)}.\n\nLoad Amount: ${data.totalAmount} ETB\nNet Amount: ${(data.totalAmount || 0) - (data.amount || 0)} ETB\n\nView Wallet: ${baseUrl}/dashboard/wallet\n\nFreightET Platform`,
+        text: `Service Fee Deducted\n\nHello ${recipientName},\n\nA service fee of ${data.amount} ETB has been deducted for Load #${data.loadId?.slice(-8)}.\n\nLoad Amount: ${data.totalAmount} ETB\nNet Amount: ${(data.totalAmount || 0) - (data.amount || 0)} ETB\n\nView Wallet: ${baseUrl}/\n\nFreightET Platform`,
       };
 
     case EmailTemplate.SETTLEMENT_COMPLETE:
@@ -259,7 +259,7 @@ function getEmailTemplate(
             <p><strong>Settlement Amount:</strong> ${data.amount} ETB</p>
             <p><strong>Status:</strong> PAID</p>
             <p style="margin-top: 30px;">
-              <a href="${baseUrl}/dashboard/wallet"
+              <a href="${baseUrl}/"
                  style="background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
                 View Transaction History
               </a>
@@ -269,7 +269,7 @@ function getEmailTemplate(
             </p>
           </div>
         `,
-        text: `Settlement Complete\n\nHello ${recipientName},\n\nThe settlement for Load #${data.loadId?.slice(-8)} has been completed.\n\nSettlement Amount: ${data.amount} ETB\nStatus: PAID\n\nView Transaction History: ${baseUrl}/dashboard/wallet\n\nFreightET Platform`,
+        text: `Settlement Complete\n\nHello ${recipientName},\n\nThe settlement for Load #${data.loadId?.slice(-8)} has been completed.\n\nSettlement Amount: ${data.amount} ETB\nStatus: PAID\n\nView Transaction History: ${baseUrl}/\n\nFreightET Platform`,
       };
 
     case EmailTemplate.ACCOUNT_FLAGGED:

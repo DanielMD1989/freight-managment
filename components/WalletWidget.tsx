@@ -146,7 +146,7 @@ export default function WalletWidget() {
 
       {/* View Details Link */}
       <Link
-        href="/dashboard/wallet"
+        href="/shipper/wallet"
         className="inline-flex items-center gap-1 text-sm font-medium hover:opacity-80 transition-opacity"
       >
         <span>View transactions</span>

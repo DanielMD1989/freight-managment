@@ -7,7 +7,16 @@ export default async function Home() {
   const session = await getSession();
 
   if (session) {
-    redirect("/dashboard");
+    // Redirect to role-appropriate portal
+    if (session.role === 'CARRIER' || session.role === 'DISPATCHER') {
+      redirect("/carrier");
+    } else if (session.role === 'SHIPPER') {
+      redirect("/shipper");
+    } else if (session.role === 'ADMIN' || session.role === 'SUPER_ADMIN') {
+      redirect("/admin");
+    } else {
+      redirect("/login");
+    }
   }
 
   return (

@@ -119,10 +119,10 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
                 Try Again
               </button>
               <button
-                onClick={() => window.location.href = '/dashboard'}
+                onClick={() => window.location.href = '/'}
                 className="px-6 py-2 bg-[#064d51]/10 text-[#064d51]/80 rounded-md hover:bg-[#064d51]/20 transition-colors font-medium"
               >
-                Go to Dashboard
+                Go to Home
               </button>
             </div>
 

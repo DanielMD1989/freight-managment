@@ -13,9 +13,9 @@ export default async function VerificationPendingPage() {
     redirect('/login');
   }
 
-  // If user is already ACTIVE, redirect to dashboard
+  // If user is already ACTIVE, redirect to portal
   if (session.status === 'ACTIVE') {
-    redirect('/dashboard');
+    redirect('/');
   }
 
   return (

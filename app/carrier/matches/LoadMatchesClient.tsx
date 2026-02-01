@@ -149,7 +149,7 @@ export default function LoadMatchesClient({
             Create a truck posting to find matching loads.
           </p>
           <Link
-            href="/carrier/postings/create"
+            href="/carrier/loadboard"
             className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
           >
             Create Posting

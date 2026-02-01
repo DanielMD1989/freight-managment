@@ -24,7 +24,7 @@ export default async function ShipperLoadboardPage() {
 
   // Verify shipper role
   if (session.role !== 'SHIPPER' && session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
-    redirect('/dashboard');
+    redirect('/unauthorized');
   }
 
   // Pass user data to client component
