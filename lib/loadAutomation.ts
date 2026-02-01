@@ -39,8 +39,6 @@ export async function expireOldLoads() {
       },
     });
 
-    console.log(`Found ${loadsToExpire.length} loads to expire`);
-
     // Update loads to EXPIRED status
     for (const load of loadsToExpire) {
       await db.load.update({
@@ -106,8 +104,6 @@ export async function autoSettleCompletedLoads() {
         },
       },
     });
-
-    console.log(`Found ${loadsToSettle.length} loads ready for settlement`);
 
     let settledCount = 0;
 
@@ -193,11 +189,8 @@ export async function cleanupOldData() {
     // Delete old notifications (already implemented in cleanupOldNotifications)
 
     // Delete old audit logs
-    // const deletedLogs = await db.auditLog.deleteMany({
     //   where: {
     //     createdAt: { lt: cleanupThreshold },
-    //   },
-    // });
 
     return {
       success: true,

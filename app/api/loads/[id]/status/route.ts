@@ -240,17 +240,6 @@ export async function PATCH(
     });
 
     // Log the status change
-    console.log(`Load ${loadId} status updated: ${load.status} → ${newStatus}`, {
-      loadId,
-      previousStatus: load.status,
-      newStatus,
-      updatedBy: session.userId,
-      userRole: session.role,
-      reason,
-      notes,
-      timestamp: new Date().toISOString(),
-    });
-
     // HIGH FIX #3: Service Fee Implementation with idempotency check
     // NOTE: Service fee operations are intentionally outside the main transaction because:
     // 1. They may call external payment services (cannot be rolled back)

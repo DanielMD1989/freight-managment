@@ -360,8 +360,7 @@ export async function PATCH(
     });
 
     if (tripSynced) {
-      console.log(`[LoadAPI] Synced Trip status to ${validatedData.status} for load ${id}`);
-    }
+      }
 
     // Log truck unassignment if it happened
     const terminalStatuses = ['DELIVERED', 'COMPLETED', 'CANCELLED', 'EXPIRED'];

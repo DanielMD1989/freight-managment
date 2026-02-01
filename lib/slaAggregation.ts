@@ -469,8 +469,6 @@ export async function runDailySLAAggregation(): Promise<{
   error?: string;
 }> {
   try {
-    console.log('[SLA] Starting daily SLA aggregation...');
-
     // Calculate yesterday's metrics
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
@@ -495,14 +493,6 @@ export async function runDailySLAAggregation(): Promise<{
       cancellation,
       exceptions,
     };
-
-    console.log('[SLA] Daily aggregation complete:', {
-      date: yesterday.toISOString().split('T')[0],
-      pickupRate: `${pickup.rate}%`,
-      deliveryRate: `${delivery.rate}%`,
-      cancellationRate: `${cancellation.rate}%`,
-      avgMTTR: exceptions.avgMTTR ? `${exceptions.avgMTTR}h` : 'N/A',
-    });
 
     return { success: true, metrics };
   } catch (error) {

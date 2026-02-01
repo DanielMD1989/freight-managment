@@ -211,10 +211,7 @@ async function sendPickupArrivalNotification(
     });
   }
 
-  console.log(
-    `[Geofence] Pickup arrival notification sent for Load #${load.id.slice(-8)}`
-  );
-}
+  }
 
 /**
  * Send notification when truck arrives at delivery location
@@ -312,10 +309,7 @@ async function sendDeliveryArrivalNotification(
     });
   }
 
-  console.log(
-    `[Geofence] Delivery arrival notification sent for Load #${load.id.slice(-8)}`
-  );
-}
+  }
 
 /**
  * Clean up old geofence events from cache
@@ -336,10 +330,7 @@ function cleanupGeofenceEventCache(): void {
   keysToDelete.forEach((key) => recentGeofenceEvents.delete(key));
 
   if (keysToDelete.length > 0) {
-    console.log(
-      `[Geofence] Cleaned up ${keysToDelete.length} old geofence event records`
-    );
-  }
+    }
 }
 
 /**

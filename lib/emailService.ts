@@ -309,16 +309,7 @@ function getEmailTemplate(
  * Send email via console (development/testing)
  */
 async function sendViaConsole(message: EmailMessage): Promise<void> {
-  console.log('\n📧 ========== EMAIL (Console Mode) ==========');
-  console.log(`To: ${message.to}`);
-  console.log(`From: ${message.from || 'noreply@freightet.com'}`);
-  console.log(`Subject: ${message.subject}`);
-  console.log('\n--- Plain Text Version ---');
-  console.log(message.text);
-  console.log('\n--- HTML Version ---');
-  console.log(message.html);
-  console.log('📧 ========================================\n');
-}
+  }
 
 /**
  * Send email via SendGrid
@@ -333,18 +324,14 @@ async function sendViaSendGrid(message: EmailMessage): Promise<void> {
 
   try {
     // In production, use @sendgrid/mail
-    // const sgMail = require('@sendgrid/mail');
     // sgMail.setApiKey(apiKey);
-    // await sgMail.send({
     //   to: message.to,
     //   from: message.from || 'noreply@freightet.com',
     //   subject: message.subject,
     //   text: message.text,
     //   html: message.html,
-    // });
 
-    console.log(`✅ Email sent via SendGrid to ${message.to}`);
-  } catch (error) {
+    } catch (error) {
     console.error('SendGrid email failed:', error);
     throw error;
   }
@@ -363,9 +350,6 @@ async function sendViaAwsSes(message: EmailMessage): Promise<void> {
 
   try {
     // In production, use AWS SDK
-    // const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
-    // const client = new SESClient({ region });
-    // const command = new SendEmailCommand({
     //   Source: message.from || 'noreply@freightet.com',
     //   Destination: { ToAddresses: [message.to] },
     //   Message: {
@@ -373,13 +357,8 @@ async function sendViaAwsSes(message: EmailMessage): Promise<void> {
     //     Body: {
     //       Text: { Data: message.text },
     //       Html: { Data: message.html },
-    //     },
-    //   },
-    // });
-    // await client.send(command);
 
-    console.log(`✅ Email sent via AWS SES to ${message.to}`);
-  } catch (error) {
+    } catch (error) {
     console.error('AWS SES email failed:', error);
     throw error;
   }
@@ -398,18 +377,13 @@ async function sendViaResend(message: EmailMessage): Promise<void> {
 
   try {
     // In production, use resend package
-    // const { Resend } = require('resend');
-    // const resend = new Resend(apiKey);
-    // await resend.emails.send({
     //   from: message.from || 'FreightET <noreply@freightet.com>',
     //   to: message.to,
     //   subject: message.subject,
     //   text: message.text,
     //   html: message.html,
-    // });
 
-    console.log(`✅ Email sent via Resend to ${message.to}`);
-  } catch (error) {
+    } catch (error) {
     console.error('Resend email failed:', error);
     throw error;
   }

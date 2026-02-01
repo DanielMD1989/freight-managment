@@ -78,7 +78,6 @@ function getRedisConfig(): RedisConfigOptions {
           return null; // Stop retrying
         }
         const delay = Math.min(times * 200, 2000);
-        console.log(`[Redis] Retrying connection in ${delay}ms (attempt ${times})`);
         return delay;
       },
       reconnectOnError: (err: Error) => {
@@ -102,7 +101,6 @@ function getRedisConfig(): RedisConfigOptions {
         return null;
       }
       const delay = Math.min(times * 200, 2000);
-      console.log(`[Redis] Retrying connection in ${delay}ms (attempt ${times})`);
       return delay;
     },
   };
@@ -139,7 +137,6 @@ function createRedisClient(): any | null {
   }
 
   if (!isRedisEnabled()) {
-    console.log('[Redis] Disabled - using in-memory fallback');
     return null;
   }
 
@@ -154,13 +151,11 @@ function createRedisClient(): any | null {
 
   // Event handlers
   client.on('connect', () => {
-    console.log('[Redis] Connected');
     globalForRedis.redisConnected = true;
   });
 
   client.on('ready', () => {
-    console.log('[Redis] Ready');
-  });
+    });
 
   client.on('error', (err: Error) => {
     console.error('[Redis] Error:', err.message);
@@ -168,13 +163,11 @@ function createRedisClient(): any | null {
   });
 
   client.on('close', () => {
-    console.log('[Redis] Connection closed');
     globalForRedis.redisConnected = false;
   });
 
   client.on('reconnecting', () => {
-    console.log('[Redis] Reconnecting...');
-  });
+    });
 
   globalForRedis.redis = client;
 

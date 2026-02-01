@@ -901,7 +901,6 @@ function calcLoadTruckMatchScore(
   }
 
   // ============================================
-  // SCORING (truck passed all filters)
   // ============================================
 
   // Route score (30%)
@@ -991,7 +990,7 @@ export function findMatchingLoads<T extends LoadMatchCriteria>(
     })
     .filter(load => !load._excluded && load.matchScore >= minScore)
     .sort((a, b) => b.matchScore - a.matchScore)
-    .map(({ _excluded, _excludeReason, ...rest }) => rest);
+    .map(({ _excluded, _excludeReason, ...rest }) => rest as T & { matchScore: number; matchReasons: string[]; isExactMatch: boolean; dhOriginKm: number });
 }
 
 /**
@@ -1023,5 +1022,5 @@ export function findMatchingTrucks<T extends TruckMatchCriteria>(
     })
     .filter(truck => !truck._excluded && truck.matchScore >= minScore)
     .sort((a, b) => b.matchScore - a.matchScore)
-    .map(({ _excluded, _excludeReason, ...rest }) => rest);
+    .map(({ _excluded, _excludeReason, ...rest }) => rest as T & { matchScore: number; matchReasons: string[]; isExactMatch: boolean; dhOriginKm: number });
 }

@@ -112,7 +112,6 @@ export async function GET(
         fileSize: Number(document.fileSize),
       });
     } else {
-      // entityType === 'truck'
       const document = await db.truckDocument.findUnique({
         where: { id },
         include: {
@@ -290,7 +289,6 @@ export async function PATCH(
         document: updated,
       });
     } else {
-      // entityType === 'truck'
       const updated = await db.truckDocument.update({
         where: { id },
         data: {
@@ -468,7 +466,6 @@ export async function DELETE(
         message: 'Company document deleted successfully',
       });
     } else {
-      // entityType === 'truck'
       const document = await db.truckDocument.findUnique({
         where: { id },
         select: {

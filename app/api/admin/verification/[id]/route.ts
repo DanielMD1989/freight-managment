@@ -119,10 +119,7 @@ export async function PATCH(
       });
 
       // Log action in audit trail (could be extended to a separate audit table)
-      console.log(
-        `[AUDIT] Document ${id} (Company) ${verificationStatus} by user ${session.userId} at ${new Date().toISOString()}`
-      );
-    } else {
+      } else {
       // Truck document
       const existingDoc = await db.truckDocument.findUnique({
         where: { id },
@@ -164,10 +161,7 @@ export async function PATCH(
       });
 
       // Log action in audit trail
-      console.log(
-        `[AUDIT] Document ${id} (Truck) ${verificationStatus} by user ${session.userId} at ${new Date().toISOString()}`
-      );
-    }
+      }
 
     // TODO: Send email notification to organization
     // This can be implemented later with an email service

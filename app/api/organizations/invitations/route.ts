@@ -98,7 +98,6 @@ export async function POST(request: NextRequest) {
     });
 
     // TODO: Send invitation email with link containing token
-    // await sendInvitationEmail(invitation.email, invitation.token, organization.name);
 
     return NextResponse.json({
       message: 'Invitation sent successfully',

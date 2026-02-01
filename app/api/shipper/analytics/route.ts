@@ -79,7 +79,6 @@ export async function GET(request: NextRequest) {
       // Wallet balance
       walletAccount,
 
-      // Spending (service fees paid)
       totalServiceFees,
       serviceFeesInPeriod,
 

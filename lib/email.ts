@@ -64,15 +64,8 @@ interface EmailProvider {
  */
 class ConsoleEmailProvider implements EmailProvider {
   async send(message: EmailMessage): Promise<EmailResult> {
-    console.log('\n========== EMAIL (Console Mode) ==========');
-    console.log('To:', message.to);
-    console.log('Subject:', message.subject);
-    console.log('HTML:', message.html);
     if (message.text) {
-      console.log('Text:', message.text);
-    }
-    console.log('==========================================\n');
-
+      }
     return {
       success: true,
       messageId: `console-${Date.now()}`,

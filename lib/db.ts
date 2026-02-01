@@ -232,11 +232,6 @@ class DatabaseManager {
       throw new Error("DATABASE_URL is not defined");
     }
 
-    console.log(
-      `[DB] Initializing pool: min=${this.config.min}, max=${this.config.max}, ` +
-        `pgbouncer=${process.env.PGBOUNCER_ENABLED === "true"}`
-    );
-
     // Create the connection pool
     this.pool = new Pool({
       connectionString,
@@ -276,8 +271,7 @@ class DatabaseManager {
     });
 
     this.pool.on("remove", () => {
-      console.log("[DB Pool] Connection removed from pool");
-    });
+      });
 
     // Create Prisma client with pg adapter
     const adapter = new PrismaPg(this.pool);
@@ -397,13 +391,10 @@ class DatabaseManager {
    * Attempt to recover from connection errors
    */
   private async attemptRecovery(): Promise<void> {
-    console.log("[DB] Attempting recovery...");
-
     try {
       const result = await this.healthCheck();
       if (result.healthy) {
-        console.log("[DB] Recovery successful");
-      } else {
+        } else {
         console.error("[DB] Recovery failed:", result.error);
       }
     } catch (error) {
@@ -418,8 +409,6 @@ class DatabaseManager {
     const shutdown = async (signal: string) => {
       if (this.isShuttingDown) return;
       this.isShuttingDown = true;
-
-      console.log(`[DB] Received ${signal}, shutting down gracefully...`);
 
       // Stop health monitoring
       if (this.healthCheckInterval) {
@@ -436,8 +425,7 @@ class DatabaseManager {
         await this.pool.end();
       }
 
-      console.log("[DB] Shutdown complete");
-    };
+      };
 
     // Guard for Edge Runtime compatibility (Edge Runtime doesn't support process.on)
     if (typeof process !== 'undefined' && typeof process.on === 'function') {

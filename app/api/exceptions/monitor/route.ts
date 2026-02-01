@@ -36,8 +36,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log(`Running exception detection on ${activeLoads.length} active loads...`);
-
     // Run exception detection on each load
     const results = await Promise.allSettled(
       activeLoads.map((load) => autoCreateEscalations(load.id, 'SYSTEM'))

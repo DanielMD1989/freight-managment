@@ -285,14 +285,6 @@ async function executeSendEmail(
   const body = action.emailBody || result.reason || 'Automated email notification';
 
   // Log the email (would actually send in production)
-  console.log('Email would be sent:', {
-    to: action.emailTo,
-    subject,
-    body,
-    loadId,
-    ruleId: result.ruleId,
-  });
-
   return {
     action,
     success: true,

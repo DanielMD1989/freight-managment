@@ -141,10 +141,7 @@ export async function sendGpsOfflineAlert(truckId: string): Promise<void> {
     });
   }
 
-  console.log(
-    `[GPS Alert] Offline alert sent for truck ${truck.licensePlate} (Load #${truck.assignedLoad.id.slice(-8)})`
-  );
-}
+  }
 
 /**
  * Send GPS back online alert
@@ -234,10 +231,7 @@ export async function sendGpsBackOnlineAlert(truckId: string): Promise<void> {
     });
   }
 
-  console.log(
-    `[GPS Alert] Back online alert sent for truck ${truck.licensePlate}`
-  );
-}
+  }
 
 /**
  * Check if a truck just went offline (status changed to SIGNAL_LOST)

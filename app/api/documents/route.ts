@@ -123,7 +123,6 @@ export async function GET(request: NextRequest) {
         entityId,
       });
     } else {
-      // entityType === 'truck'
       const where: any = {
         truckId: entityId,
       };

@@ -118,8 +118,6 @@ export async function pollGpsDevice(device: GpsDeviceData): Promise<void> {
   // For now, we'll simulate or skip actual polling
 
   // Example for production:
-  // const position = await fetchGpsProviderApi(device.imei, device.provider);
-  // await ingestGpsData(device.imei, position);
 
   // MVP: Skip actual polling, devices will be updated when they push data
   // or when testing APIs are called manually
@@ -164,13 +162,10 @@ export async function fetchGpsProviderApi(
   // Production implementation would switch based on provider
   switch (provider) {
     case 'TELTONIKA':
-      // return await fetchTeltonikaApi(imei);
       break;
     case 'CONCOX':
-      // return await fetchConcoxApi(imei);
       break;
     case 'QUECLINK':
-      // return await fetchQueclinkApi(imei);
       break;
     default:
       // Generic GPS provider API call

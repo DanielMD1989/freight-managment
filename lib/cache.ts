@@ -977,16 +977,13 @@ export async function warmCache(
     corridors?: () => Promise<unknown[]>;
   }
 ): Promise<void> {
-  console.log('[Cache] Warming cache...');
-
   const promises: Promise<void>[] = [];
 
   if (fetchers.locations) {
     promises.push(
       fetchers.locations().then(async (locations) => {
         await GeoCache.setLocations(locations);
-        console.log(`[Cache] Warmed ${locations.length} locations`);
-      })
+        })
     );
   }
 
@@ -994,11 +991,9 @@ export async function warmCache(
     promises.push(
       fetchers.corridors().then(async (corridors) => {
         await GeoCache.setAllCorridors(corridors);
-        console.log(`[Cache] Warmed ${corridors.length} corridors`);
-      })
+        })
     );
   }
 
   await Promise.all(promises);
-  console.log('[Cache] Cache warming complete');
-}
+  }

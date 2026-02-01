@@ -102,12 +102,6 @@ export async function expireOldTruckPostings(): Promise<ExpirePostingsResult> {
       },
     });
 
-    console.log(`[TruckPostingAutomation] Expired ${postingsToExpire.length} truck postings:`, {
-      expiredByAvailableTo,
-      expiredByExpiresAt,
-      postingIds,
-    });
-
     return {
       success: true,
       expiredCount: postingsToExpire.length,
@@ -166,8 +160,6 @@ export async function expireOldRequests(): Promise<{
         updatedAt: now,
       },
     });
-
-    console.log(`[TruckPostingAutomation] Expired ${loadRequestResult.count} load requests and ${truckRequestResult.count} truck requests`);
 
     return {
       success: true,

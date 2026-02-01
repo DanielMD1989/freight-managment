@@ -205,8 +205,7 @@ export async function writeAuditLog(entry: AuditLogEntry): Promise<void> {
       console.warn(logPrefix, JSON.stringify(logData, null, 2));
       break;
     default:
-      console.log(logPrefix, JSON.stringify(logData, null, 2));
-  }
+      }
 
   // Database storage (async, doesn't block)
   await writeAuditLogToDatabase(entry);

@@ -256,8 +256,7 @@ class Logger {
       } else if (level === 'warn') {
         console.warn(formatted);
       } else {
-        console.log(formatted);
-      }
+        }
     }
   }
 

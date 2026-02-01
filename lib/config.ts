@@ -393,7 +393,6 @@ export async function loadSecrets(): Promise<Record<string, string>> {
     if (response.SecretString) {
       secretsCache = JSON.parse(response.SecretString);
       secretsCacheTime = Date.now();
-      console.log('[Config] Loaded secrets from AWS Secrets Manager');
       return secretsCache!;
     }
 
@@ -571,20 +570,7 @@ export function validateConfigOrThrow(): void {
  */
 export function logConfig(): void {
   const c = config;
-  console.log('[Config] Current configuration:');
-  console.log(`  Version: ${c.version}`);
-  console.log(`  Environment: ${c.app.nodeEnv}`);
-  console.log(`  Port: ${c.app.port}`);
-  console.log(`  Database: ${c.database.url ? '***configured***' : 'NOT SET'}`);
-  console.log(`  Database Pool: min=${c.database.poolMin}, max=${c.database.poolMax}`);
-  console.log(`  PgBouncer: ${c.database.pgBouncerEnabled}`);
-  console.log(`  Redis: ${c.redis.enabled ? 'enabled' : 'disabled'}`);
-  console.log(`  Storage: ${c.storage.provider}`);
-  console.log(`  CDN: ${c.storage.cdnEnabled ? c.storage.cdnDomain : 'disabled'}`);
-  console.log(`  Email: ${c.email.provider}`);
-  console.log(`  Monitoring: ${c.monitoring.enabled ? 'enabled' : 'disabled'}`);
-  console.log(`  Logging: level=${c.logging.level}, format=${c.logging.format}`);
-}
+  }
 
 // =============================================================================
 // CONFIGURATION EXPORT UTILITIES

@@ -31,7 +31,6 @@ export async function createTripForLoad(
     });
 
     if (existingTrip) {
-      console.log(`Trip already exists for load ${loadId}: ${existingTrip.id}`);
       return existingTrip;
     }
 
@@ -92,7 +91,6 @@ export async function createTripForLoad(
       },
     });
 
-    console.log(`Trip created for load ${loadId}: ${trip.id}`);
     return trip;
   } catch (error) {
     console.error('Failed to create trip:', error);

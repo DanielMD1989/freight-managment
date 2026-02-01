@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
-import { generateRequestId } from "@/lib/errorHandler";
+
+// Generate unique request ID (inline since errorHandler was removed)
+function generateRequestId(): string {
+  return `req_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+
 // Note: isIPBlocked removed - uses Redis which is incompatible with Edge Runtime
 // IP blocking is handled at the API route level instead
 import {

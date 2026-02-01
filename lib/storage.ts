@@ -742,8 +742,6 @@ export async function migrateAllFilesToS3(options?: {
   let successful = 0;
   let failed = 0;
 
-  console.log(`[Storage Migration] Found ${files.length} files to migrate`);
-
   // Process in batches
   for (let i = 0; i < files.length; i += batchSize) {
     const batch = files.slice(i, i + batchSize);
@@ -765,8 +763,7 @@ export async function migrateAllFilesToS3(options?: {
       onProgress(Math.min(i + batchSize, files.length), files.length);
     }
 
-    console.log(`[Storage Migration] Progress: ${Math.min(i + batchSize, files.length)}/${files.length}`);
-  }
+    }
 
   return {
     total: files.length,

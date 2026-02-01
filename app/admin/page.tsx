@@ -78,7 +78,6 @@ async function getDashboardStats(): Promise<DashboardStats | null> {
   }
 }
 
-
 /**
  * Load Status Breakdown
  */

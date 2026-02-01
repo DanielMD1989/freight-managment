@@ -345,8 +345,6 @@ async function processPdfGenerate(
     await updateProgress(80);
 
     // Upload to storage if needed
-    // const { uploadFile } = await import('../storage');
-    // const url = await uploadFile(pdfBuffer, `pdfs/${filename}`, 'application/pdf');
 
     await updateProgress(100);
 

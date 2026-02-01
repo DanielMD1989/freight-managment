@@ -95,8 +95,6 @@ export async function GET(
     }
 
     // Audit log file access
-    console.log(`[FILE ACCESS] User ${session.userId} accessed file: ${path.join('/')}`);
-
     // Construct file path
     const UPLOAD_DIR = process.env.UPLOAD_DIR || join(process.cwd(), 'uploads');
     const filePath = join(UPLOAD_DIR, ...path);

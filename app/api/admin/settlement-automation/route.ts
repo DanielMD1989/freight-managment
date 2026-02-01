@@ -61,7 +61,6 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'auto-verify':
-        console.log('Running auto-verify only...');
         const autoVerifiedCount = await autoVerifyExpiredPODs();
         result = {
           action: 'auto-verify',
@@ -70,7 +69,6 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'process-settlements':
-        console.log('Running settlement processing only...');
         const settledCount = await processReadySettlements();
         result = {
           action: 'process-settlements',
@@ -80,7 +78,6 @@ export async function POST(request: NextRequest) {
 
       case 'full':
       default:
-        console.log('Running full settlement automation...');
         const automationResult = await runSettlementAutomation();
         result = {
           action: 'full',

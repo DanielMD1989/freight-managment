@@ -140,8 +140,7 @@ function logSecurityEvent(
     resourceId,
     reason,
   };
-  console.log(`[WS Security] ${JSON.stringify(logEntry)}`);
-}
+  }
 
 export interface NotificationPayload {
   id: string;
@@ -177,7 +176,6 @@ async function initializeRedisAdapter(socketServer: SocketIOServer): Promise<boo
 
   const redisUrl = process.env.REDIS_URL;
   if (!isRedisEnabled() || !redisUrl) {
-    console.log('[WebSocket] Redis not enabled - using in-memory adapter (single instance only)');
     return false;
   }
 
@@ -193,8 +191,6 @@ async function initializeRedisAdapter(socketServer: SocketIOServer): Promise<boo
     socketServer.adapter(createAdapter(pubClient, subClient));
 
     redisAdapterInitialized = true;
-    console.log('[WebSocket] Redis adapter initialized - horizontal scaling enabled');
-
     // Handle Redis client errors
     pubClient.on('error', (err) => {
       console.error('[WebSocket Redis Pub] Error:', err.message);
@@ -217,7 +213,6 @@ async function initializeRedisAdapter(socketServer: SocketIOServer): Promise<boo
  */
 export async function initializeWebSocketServer(httpServer: HTTPServer): Promise<SocketIOServer> {
   if (io) {
-    console.log('WebSocket server already initialized');
     return io;
   }
 
@@ -256,8 +251,6 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
   await initializeRedisAdapter(io);
 
   // Log allowed origins on startup
-  console.log('[WebSocket] Allowed origins:', getAllowedOrigins());
-
   io.on('connection', (socket) => {
     // Log connection with origin info for security audit
     const origin = socket.handshake.headers.origin || 'unknown';
@@ -265,8 +258,6 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
       || socket.handshake.headers['x-real-ip']
       || socket.handshake.address
       || 'unknown';
-    console.log(`[WebSocket] Client connected: ${socket.id} from origin: ${origin}, IP: ${clientIP}`);
-
     // Authenticate user and store session data for permission checks
     // Accepts either: { userId: string, token?: string } or just userId string (legacy)
     socket.on('authenticate', async (authData: string | { userId: string; token?: string }) => {
@@ -352,8 +343,6 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
 
       // Join user-specific room
       socket.join(`user:${userId}`);
-      console.log(`[WS] User ${userId} (${user.role}) authenticated and joined room`);
-
       // Send any unread notifications
       const unreadNotifications = await db.notification.findMany({
         where: {
@@ -371,8 +360,7 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
 
     // Handle disconnect
     socket.on('disconnect', () => {
-      console.log(`Client disconnected: ${socket.id}`);
-    });
+      });
 
     // Ping/pong for connection health
     socket.on('ping', () => {
@@ -449,7 +437,6 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
           code: 'PERMISSION_DENIED',
           message: permissionResult.reason || 'You do not have permission to track this load',
         });
-        console.log(`[WS] DENIED: User ${session.userId} (${session.role}) tried to subscribe to trip ${loadId}: ${permissionResult.reason}`);
         return;
       }
 
@@ -468,8 +455,6 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
 
       // Join trip room
       socket.join(`trip:${loadId}`);
-      console.log(`[WS] User ${session.userId} (${session.role}) subscribed to trip ${loadId}`);
-
       // Send current position if available
       if (load.assignedTruck) {
         const truck = load.assignedTruck;
@@ -489,8 +474,7 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
     socket.on('unsubscribe-trip', (loadId: string) => {
       const session = socket.data.session as SocketSessionData | undefined;
       socket.leave(`trip:${loadId}`);
-      console.log(`[WS] User ${session?.userId || 'unknown'} unsubscribed from trip ${loadId}`);
-    });
+      });
 
     /**
      * Subscribe to all GPS updates for a carrier's fleet
@@ -521,7 +505,6 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
       if (isPrivilegedRole) {
         // Admin/Dispatcher can access any fleet
         socket.join(`fleet:${organizationId}`);
-        console.log(`[WS] Admin/Dispatcher ${session.userId} subscribed to fleet ${organizationId}`);
         return;
       }
 
@@ -539,7 +522,6 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
           code: 'ORGANIZATION_MISMATCH',
           message: 'You can only subscribe to your own organization\'s fleet',
         });
-        console.log(`[WS] DENIED: User ${session.userId} (org: ${session.organizationId}) tried to subscribe to fleet ${organizationId}`);
         return;
       }
 
@@ -565,15 +547,13 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
       }
 
       socket.join(`fleet:${organizationId}`);
-      console.log(`[WS] User ${session.userId} (${session.role}) subscribed to fleet ${organizationId}`);
-    });
+      });
 
     // Unsubscribe from fleet updates
     socket.on('unsubscribe-fleet', (organizationId: string) => {
       const session = socket.data.session as SocketSessionData | undefined;
       socket.leave(`fleet:${organizationId}`);
-      console.log(`[WS] User ${session?.userId || 'unknown'} unsubscribed from fleet ${organizationId}`);
-    });
+      });
 
     /**
      * Subscribe to all GPS updates (admin/dispatcher only)
@@ -597,23 +577,19 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
           code: 'ADMIN_REQUIRED',
           message: 'Only administrators and dispatchers can subscribe to all GPS updates',
         });
-        console.log(`[WS] DENIED: User ${session.userId} (${session.role}) tried to subscribe to all-gps`);
         return;
       }
 
       socket.join('all-gps');
-      console.log(`[WS] Admin/Dispatcher ${session.userId} (${session.role}) subscribed to all GPS updates`);
-    });
+      });
 
     // Unsubscribe from all GPS updates
     socket.on('unsubscribe-all-gps', () => {
       const session = socket.data.session as SocketSessionData | undefined;
       socket.leave('all-gps');
-      console.log(`[WS] User ${session?.userId || 'unknown'} unsubscribed from all GPS updates`);
-    });
+      });
   });
 
-  console.log('WebSocket server initialized');
   return io;
 }
 
@@ -638,8 +614,7 @@ export async function sendRealtimeNotification(
 
   // Send to user's room
   io.to(`user:${userId}`).emit('notification', notification);
-  console.log(`Real-time notification sent to user ${userId}`);
-}
+  }
 
 /**
  * Broadcast notification to all users with specific role
@@ -667,8 +642,7 @@ export async function broadcastToRole(
     });
   });
 
-  console.log(`Broadcast sent to ${users.length} users with role ${role}`);
-}
+  }
 
 /**
  * Broadcast notification to all connected clients
@@ -682,8 +656,7 @@ export async function broadcastToAll(
   }
 
   io.emit('notification', notification);
-  console.log('Broadcast sent to all connected clients');
-}
+  }
 
 /**
  * Get connected users count
@@ -735,8 +708,7 @@ export async function broadcastGpsPosition(
   // Broadcast to admin/dispatcher all-gps room
   io.to('all-gps').emit('gps-position', position);
 
-  console.log(`GPS position broadcast for truck ${truckId}`);
-}
+  }
 
 /**
  * Broadcast trip status change
@@ -766,8 +738,7 @@ export async function broadcastTripStatusChange(
     ...metadata,
   });
 
-  console.log(`Trip status broadcast: ${loadId} -> ${status}`);
-}
+  }
 
 /**
  * Broadcast GPS device status change
@@ -795,8 +766,7 @@ export async function broadcastGpsDeviceStatus(
   // Broadcast to admin/dispatcher
   io.to('all-gps').emit('gps-device-status', payload);
 
-  console.log(`GPS device status broadcast: truck ${truckId} -> ${status}`);
-}
+  }
 
 /**
  * Get count of subscribers for a trip

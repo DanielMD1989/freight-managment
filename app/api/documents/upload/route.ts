@@ -59,7 +59,6 @@ import { requireCSRF } from '@/lib/csrf';
 export async function POST(request: NextRequest) {
   try {
     // Allow document upload for users in registration flow
-    // (REGISTERED, PENDING_VERIFICATION, and ACTIVE users)
     const session = await requireRegistrationAccess();
     const userId = session.userId;
     const userOrgId = session.organizationId;
@@ -208,7 +207,6 @@ export async function POST(request: NextRequest) {
         );
       }
     } else {
-      // entityType === 'truck'
       const truck = await db.truck.findUnique({
         where: { id: entityId },
         select: { id: true, carrierId: true },
@@ -286,7 +284,6 @@ export async function POST(request: NextRequest) {
 
       return response;
     } else {
-      // entityType === 'truck'
       const document = await db.truckDocument.create({
         data: {
           type: type as TruckDocumentType,

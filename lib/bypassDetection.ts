@@ -163,8 +163,7 @@ export async function flagUserForReview(
     await sendBypassWarning(organizationId, BypassWarningType.ACCOUNT_FLAGGED, {
       reason,
     });
-    console.log(`✓ Flagged warning sent to organization ${organizationId}`);
-  } catch (error) {
+    } catch (error) {
     console.error('Failed to send flagged warning:', error);
     // Don't throw - flagging succeeded even if warning failed
   }
@@ -238,8 +237,7 @@ export async function recordBypassReport(
       reportedAt: new Date(),
       reason,
     });
-    console.log(`✓ Bypass report warning sent to organization ${load.shipperId}`);
-  } catch (error) {
+    } catch (error) {
     console.error('Failed to send bypass report warning:', error);
   }
 
@@ -317,10 +315,7 @@ export async function incrementSuspiciousCancellation(
         { count }
       );
     }
-    console.log(
-      `✓ Suspicious cancellation warning sent (count: ${count}) to organization ${organizationId}`
-    );
-  } catch (error) {
+    } catch (error) {
     console.error('Failed to send suspicious cancellation warning:', error);
   }
 

@@ -179,7 +179,6 @@ export async function getSessionAny(authHeader?: string | null): Promise<Session
       const headerStore = await headers();
       authorizationHeader = headerStore.get('authorization');
     } catch {
-      // headers() may throw outside of request context
     }
   }
 

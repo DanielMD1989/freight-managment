@@ -113,8 +113,6 @@ export async function POST(request: NextRequest) {
     });
 
     // TODO: In production, send notification to support team
-    console.log(`[SUPPORT REPORT] New ${type} report from ${user.email}: ${subject}`);
-
     return NextResponse.json({
       success: true,
       message: 'Report submitted successfully. Our support team will review it.',

@@ -209,7 +209,6 @@ function checkRateLimitInMemory(
 }
 
 // =============================================================================
-// RPS (REQUESTS PER SECOND) LIMITING
 // =============================================================================
 
 /**
@@ -695,7 +694,6 @@ export const RPS_CONFIGS: Record<string, RpsConfig> = {
     rps: 50,
     burst: 20,
   },
-  // Marketplace (loads) - shared config for all loads endpoints
   // Used for GET /api/loads, GET /api/loads/{id}, POST /api/loads, PATCH /api/loads/{id}
   marketplace: {
     endpoint: '/api/loads',
@@ -708,7 +706,6 @@ export const RPS_CONFIGS: Record<string, RpsConfig> = {
     rps: 50,
     burst: 20,
   },
-  // Fleet (trucks) - shared config for all trucks endpoints
   // Used for GET /api/trucks, GET /api/trucks/{id}, POST /api/trucks, PATCH /api/trucks/{id}, DELETE /api/trucks/{id}
   fleet: {
     endpoint: '/api/trucks',

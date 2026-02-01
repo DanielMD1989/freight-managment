@@ -270,15 +270,6 @@ export async function PATCH(
     });
 
     // Log the action
-    console.log(`User ${userId} updated by ${session.userId}:`, {
-      targetUserId: userId,
-      targetUserEmail: targetUser.email,
-      updatedBy: session.userId,
-      changes,
-      reason: validatedData.reason,
-      timestamp: new Date().toISOString(),
-    });
-
     return NextResponse.json({
       message: 'User updated successfully',
       user: updatedUser,
@@ -392,14 +383,6 @@ export async function DELETE(
     });
 
     // Log the deletion
-    console.log(`User ${userId} deleted by ${session.userId}:`, {
-      deletedUserId: userId,
-      deletedUserEmail: targetUser.email,
-      deletedUserRole: targetUser.role,
-      deletedBy: session.userId,
-      timestamp: new Date().toISOString(),
-    });
-
     return NextResponse.json({
       message: 'User deleted successfully',
       user: deletedUser,

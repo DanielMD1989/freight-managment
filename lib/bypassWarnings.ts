@@ -111,15 +111,10 @@ async function sendInAppNotification(
     });
 
     if (users.length === 0) {
-      console.log(`No active users found for organization ${organizationId}`);
       return;
     }
 
     // Create notification for each user
-    console.log(`📬 In-app notification sent to ${users.length} users of organization ${organizationId}`);
-    console.log(`Subject: ${message.subject}`);
-    console.log(`Severity: ${message.severity}`);
-
     // Create actual notification records using the notification system
     await Promise.all(
       users.map((user) =>
@@ -162,7 +157,6 @@ async function sendEmailNotification(
     });
 
     if (!organization?.contactEmail) {
-      console.log(`No contact email for organization ${organizationId}`);
       return;
     }
 
@@ -180,8 +174,7 @@ async function sendEmailNotification(
       });
     }
 
-    console.log(`📧 Bypass warning email sent to: ${organization.contactEmail}`);
-  } catch (error) {
+    } catch (error) {
     console.error('Failed to send email notification:', error);
   }
 }
@@ -212,7 +205,6 @@ async function sendSmsNotification(
     });
 
     if (!organization?.contactPhone) {
-      console.log(`No contact phone for organization ${organizationId}`);
       return;
     }
 
@@ -223,8 +215,7 @@ async function sendSmsNotification(
     const result = await sendSms(organization.contactPhone, smsText);
 
     if (result.success) {
-      console.log(`📱 SMS sent to: ${organization.contactPhone} (ID: ${result.messageId})`);
-    } else {
+      } else {
       console.error(`📱 SMS failed to: ${organization.contactPhone} - ${result.error}`);
     }
   } catch (error) {
@@ -258,10 +249,6 @@ export async function sendBypassWarning(
     // Get warning message
     const message = getWarningMessage(type, organization.name, details);
 
-    console.log(`\n🚨 Sending bypass warning to ${organization.name}`);
-    console.log(`Type: ${type}`);
-    console.log(`Severity: ${message.severity}`);
-
     // Send multi-channel notifications
     await Promise.all([
       sendInAppNotification(organizationId, type, message),
@@ -269,8 +256,7 @@ export async function sendBypassWarning(
       sendSmsNotification(organizationId, type, message),
     ]);
 
-    console.log(`✓ Bypass warning sent successfully to ${organization.name}\n`);
-  } catch (error) {
+    } catch (error) {
     console.error('Failed to send bypass warning:', error);
     throw error;
   }
@@ -349,8 +335,7 @@ export async function reportBypassAttempt(
       )
     );
 
-    console.log(`Bypass report submitted for load ${loadId}`);
-  } catch (error) {
+    } catch (error) {
     console.error('Failed to report bypass attempt:', error);
     throw error;
   }
@@ -366,8 +351,6 @@ export async function checkAndSendWarnings(): Promise<{
   warningsSent: number;
   organizationsWarned: string[];
 }> {
-  console.log('=== Checking for organizations needing bypass warnings ===');
-
   const organizationsWarned: string[] = [];
 
   // Find organizations with 1-2 suspicious cancellations (send info warning)
@@ -441,8 +424,6 @@ export async function checkAndSendWarnings(): Promise<{
     });
     organizationsWarned.push(org.name);
   }
-
-  console.log(`=== Warning check complete: ${organizationsWarned.length} warnings sent ===`);
 
   return {
     warningsSent: organizationsWarned.length,

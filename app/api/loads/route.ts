@@ -22,7 +22,6 @@ const createLoadSchema = z.object({
   deliveryDockHours: z.string().optional(),  // Changed to single field (string)
   deliveryDate: z.string(),
 
-  // [NEW] Logistics & Distance
   tripKm: z.number().positive().optional(),  // Required for POSTED status
   dhToOriginKm: z.number().positive().optional(),
   dhAfterDeliveryKm: z.number().positive().optional(),
@@ -41,14 +40,12 @@ const createLoadSchema = z.object({
   isFragile: z.boolean().default(false),
   requiresRefrigeration: z.boolean().default(false),
 
-  // [NEW] Cargo Details
   lengthM: z.number().positive().optional(),
   casesCount: z.number().int().positive().optional(),
 
   // Pricing is negotiated off-platform
   bookMode: z.enum(["REQUEST", "INSTANT"]).default("REQUEST"),  // [NEW]
 
-  // [NEW] Market Pricing
   dtpReference: z.string().optional(),
   factorRating: z.string().optional(),
 
@@ -117,7 +114,6 @@ export async function POST(request: NextRequest) {
         ...validatedData,
         pickupDate: new Date(validatedData.pickupDate),
         deliveryDate: new Date(validatedData.deliveryDate),
-        // [NEW] Set postedAt when status is POSTED
         postedAt: validatedData.status === "POSTED" ? new Date() : null,
         shipperId: user.organizationId,
         createdById: session.userId,
@@ -229,7 +225,6 @@ export async function GET(request: NextRequest) {
     const myLoads = searchParams.get("myLoads") === "true";
     const myTrips = searchParams.get("myTrips") === "true"; // For carriers - loads assigned to their trucks
 
-    // [NEW] Additional filters
     const tripKmMin = searchParams.get("tripKmMin");
     const tripKmMax = searchParams.get("tripKmMax");
     const fullPartial = searchParams.get("fullPartial");
@@ -307,7 +302,6 @@ export async function GET(request: NextRequest) {
       where.truckType = truckType;
     }
 
-    // [NEW] Trip distance range filter
     if (tripKmMin || tripKmMax) {
       where.tripKm = {};
       if (tripKmMin) {
@@ -318,17 +312,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // [NEW] Full/Partial filter
     if (fullPartial && (fullPartial === "FULL" || fullPartial === "PARTIAL")) {
       where.fullPartial = fullPartial;
     }
 
-    // [NEW] Book mode filter
     if (bookMode && (bookMode === "REQUEST" || bookMode === "INSTANT")) {
       where.bookMode = bookMode;
     }
 
-    // [NEW] Sorting support
     const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
 
@@ -373,7 +364,6 @@ export async function GET(request: NextRequest) {
           deliveryAddress: true,
           deliveryDockHours: true,  // [NEW]
           deliveryDate: true,
-          // [NEW] Logistics
           tripKm: true,
           dhToOriginKm: true,
           dhAfterDeliveryKm: true,
@@ -390,7 +380,6 @@ export async function GET(request: NextRequest) {
           fullPartial: true,  // [NEW]
           isFragile: true,
           requiresRefrigeration: true,
-          // [NEW] Cargo Details
           lengthM: true,
           casesCount: true,
           // Settings
@@ -441,7 +430,6 @@ export async function GET(request: NextRequest) {
       db.load.count({ where }),
     ]);
 
-    // [NEW] Transform loads with computed fields and masking
     const loadsWithComputed = loads.map((load) => {
       // Compute age
       const ageMinutes = calculateAge(load.postedAt, load.createdAt);
@@ -456,7 +444,6 @@ export async function GET(request: NextRequest) {
 
       return {
         ...load,
-        // [NEW] Computed fields
         ageMinutes,
         // Replace shipper with masked version
         shipper: maskedShipper,

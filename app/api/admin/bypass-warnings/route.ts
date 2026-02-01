@@ -50,7 +50,6 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Automated warning check for all organizations
-      console.log('Running automated bypass warning check...');
       const result = await checkAndSendWarnings();
 
       return NextResponse.json({

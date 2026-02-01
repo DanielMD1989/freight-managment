@@ -64,14 +64,6 @@ export async function POST(
     });
 
     // Log the verification action
-    console.log(`User ${userId} status updated: ${user.status} → ${status}`, {
-      userId,
-      previousStatus: user.status,
-      newStatus: status,
-      reason,
-      timestamp: new Date().toISOString(),
-    });
-
     // TODO: Send notification to user about status change
     // TODO: Send email notification
 

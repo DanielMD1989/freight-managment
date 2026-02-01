@@ -28,7 +28,6 @@ export async function autoVerifyExpiredPODs(): Promise<number> {
 
   // If auto-verify is disabled, return early
   if (!settings?.autoVerifyPodEnabled) {
-    console.log('Auto-verify POD is disabled in system settings');
     return 0;
   }
 
@@ -55,8 +54,6 @@ export async function autoVerifyExpiredPODs(): Promise<number> {
     return 0;
   }
 
-  console.log(`Auto-verifying ${loadsToVerify.length} expired PODs...`);
-
   // Update all to verified
   await db.load.updateMany({
     where: {
@@ -69,8 +66,6 @@ export async function autoVerifyExpiredPODs(): Promise<number> {
       podVerifiedAt: new Date(),
     },
   });
-
-  console.log(`✓ Auto-verified ${loadsToVerify.length} PODs`);
 
   return loadsToVerify.length;
 }
@@ -111,7 +106,6 @@ export async function processReadySettlements(): Promise<number> {
 
   // If settlement automation is disabled, return early
   if (!settings?.settlementAutomationEnabled) {
-    console.log('Settlement automation is disabled in system settings');
     return 0;
   }
 
@@ -152,8 +146,6 @@ export async function processReadySettlements(): Promise<number> {
     return 0;
   }
 
-  console.log(`Processing ${loadsToSettle.length} ready settlements...`);
-
   let successCount = 0;
   let errorCount = 0;
 
@@ -161,8 +153,7 @@ export async function processReadySettlements(): Promise<number> {
     try {
       await markLoadAsSettled(load.id);
       successCount++;
-      console.log(`✓ Settled load ${load.id}`);
-    } catch (error: any) {
+      } catch (error: any) {
       errorCount++;
       console.error(`✗ Failed to settle load ${load.id}:`, error.message);
 
@@ -220,7 +211,6 @@ export async function completeLoadWithSettlement(loadId: string): Promise<void> 
   }
 
   if (load.status === 'DELIVERED') {
-    console.log(`Load ${loadId} already marked as delivered`);
     return;
   }
 
@@ -232,16 +222,11 @@ export async function completeLoadWithSettlement(loadId: string): Promise<void> 
     },
   });
 
-  console.log(`✓ Load ${loadId} marked as DELIVERED`);
-
   // Step 2: Check if POD already submitted and verified
   if (load.podSubmitted && load.podVerified) {
-    console.log(`Load ${loadId} has verified POD, marking as settled...`);
-
     try {
       await markLoadAsSettled(loadId);
-      console.log(`✓ Load ${loadId} settlement processed`);
-    } catch (error: any) {
+      } catch (error: any) {
       console.error(`✗ Settlement failed for load ${loadId}:`, error.message);
 
       // Mark as dispute if settlement fails
@@ -253,13 +238,7 @@ export async function completeLoadWithSettlement(loadId: string): Promise<void> 
       });
     }
   } else {
-    console.log(
-      `Load ${loadId} waiting for POD submission and verification before settlement`
-    );
-    console.log(
-      `POD will auto-verify after 24 hours if shipper doesn't respond`
-    );
-  }
+    }
 }
 
 /**
@@ -274,18 +253,11 @@ export async function runSettlementAutomation(): Promise<{
   autoVerifiedCount: number;
   settledCount: number;
 }> {
-  console.log('=== Running Settlement Automation ===');
-  console.log(`Timestamp: ${new Date().toISOString()}`);
-
   // Step 1: Auto-verify expired PODs
   const autoVerifiedCount = await autoVerifyExpiredPODs();
 
   // Step 2: Process ready settlements
   const settledCount = await processReadySettlements();
-
-  console.log('=== Settlement Automation Complete ===');
-  console.log(`Auto-verified PODs: ${autoVerifiedCount}`);
-  console.log(`Processed settlements: ${settledCount}`);
 
   return {
     autoVerifiedCount,
