@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     // Check if user has permission (carrier self-dispatch or ops dispatch)
     const hasOpsPermission = await (async () => {
       try {
-        await requirePermission(Permission.DISPATCH_LOADS);
+        await requirePermission(Permission.VIEW_DISPATCH_QUEUE);
         return true;
       } catch {
         return false;

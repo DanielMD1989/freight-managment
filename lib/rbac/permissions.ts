@@ -83,7 +83,7 @@ export enum Permission {
   VIEW_SERVICE_FEE_REPORTS = "view_service_fee_reports", // Admin, SuperAdmin
 
   // Dispatch Operations
-  DISPATCH_LOADS = "dispatch_loads", // Dispatcher
+  VIEW_DISPATCH_QUEUE = "view_dispatch_queue", // Dispatcher - view loads needing assignment
   VIEW_UNASSIGNED_LOADS = "view_unassigned_loads", // Dispatcher
   VIEW_REJECTED_LOADS = "view_rejected_loads", // Dispatcher
   ESCALATE_TO_ADMIN = "escalate_to_admin", // Dispatcher
@@ -252,7 +252,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     // Load visibility (read-only coordination)
     Permission.VIEW_ALL_LOADS,
     Permission.VIEW_LOADS,
-    Permission.DISPATCH_LOADS,
+    Permission.VIEW_DISPATCH_QUEUE,
 
     // Match proposal (NOT assignment - carrier must approve)
     Permission.PROPOSE_MATCH,
