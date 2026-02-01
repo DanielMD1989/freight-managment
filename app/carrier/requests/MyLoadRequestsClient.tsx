@@ -28,7 +28,6 @@ interface LoadRequest {
     pickupCity: string;
     deliveryCity: string;
     pickupDate: string;
-    rate: number | null;
   };
   truck: {
     id: string;
@@ -268,11 +267,6 @@ export default function MyLoadRequestsClient({ requests }: Props) {
                     <p className="text-[#064d51]/70 dark:text-gray-400">
                       Pickup: {new Date(request.load.pickupDate).toLocaleDateString()}
                     </p>
-                    {request.load.rate && (
-                      <p className="text-green-600 dark:text-green-400 font-medium">
-                        Rate: {request.load.rate.toLocaleString()} ETB
-                      </p>
-                    )}
                   </div>
                 </div>
 

@@ -37,10 +37,6 @@ interface Load {
   pickupCity: string | null;
   deliveryCity: string | null;
   cargoDescription: string;
-  rate: number;
-  totalFareEtb: number | null;
-  baseFareEtb: number | null;
-  perKmEtb: number | null;
   status: string;
   settlementStatus: string;
   podSubmittedAt: Date | null;
@@ -117,24 +113,21 @@ export default function SettlementReviewClient() {
     if (load.settlementRecord) {
       return load.settlementRecord.grossAmount;
     }
-    return load.totalFareEtb || load.rate;
+    return 0; // Freight price negotiated off-platform
   };
 
   const getServiceFeeAmount = (load: Load) => {
     if (load.settlementRecord) {
       return load.settlementRecord.serviceFeeAmount;
     }
-    // Use corridor-based service fee if available
-    return load.baseFareEtb || 0;
+    return 0;
   };
 
   const getNetAmount = (load: Load) => {
     if (load.settlementRecord) {
       return load.settlementRecord.netAmount;
     }
-    const grossAmount = load.totalFareEtb || load.rate;
-    const serviceFee = load.baseFareEtb || 0;
-    return grossAmount - serviceFee;
+    return 0; // Will be calculated when settlement record is created
   };
 
   const handleApproveSettlement = async (loadId: string) => {

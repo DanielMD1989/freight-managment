@@ -204,7 +204,6 @@ export async function GET(
         isAnonymous: load.isAnonymous,
         shipperContactName: load.shipperContactName,
         shipperContactPhone: load.shipperContactPhone,
-        rate: load.rate,
         currency: load.currency,
         createdAt: load.createdAt,
         status: load.status,

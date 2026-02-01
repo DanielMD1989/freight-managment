@@ -24,7 +24,6 @@ export interface ReturnLoadMatch {
   deliveryRegion: string;
   weight: number;
   truckType: string;
-  rate: number;
   distanceKm: number;
   matchScore: number;
   postedAt: Date;
@@ -123,7 +122,6 @@ export async function findReturnLoads(
       deliveryRegion: load.deliveryLocation?.region || '',
       weight: Number(load.weight),
       truckType: load.truckType,
-      rate: Number(load.totalFareEtb || load.rate),
       distanceKm,
       matchScore: Math.round(matchScore),
       postedAt: load.postedAt || new Date(),
@@ -269,7 +267,7 @@ export async function notifyCarrierOfReturnLoads(
   // Create notification with matched loads
   const topLoads = returnLoads.slice(0, 3);
   const loadSummary = topLoads
-    .map((l) => `${l.pickupCity} → ${l.deliveryCity} (${l.rate.toLocaleString()} ETB)`)
+    .map((l) => `${l.pickupCity} → ${l.deliveryCity} (${l.distanceKm.toFixed(0)} km)`)
     .join('\n• ');
 
   const notification = await createNotification({

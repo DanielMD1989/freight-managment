@@ -350,35 +350,6 @@ export default async function CarrierLoadDetailsPage({ params }: LoadDetailsProp
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Earnings/Pricing */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              {isAssignedCarrier ? 'Your Earnings' : 'Load Rate'}
-            </h2>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Total Rate</span>
-                <span className="font-bold text-lg text-green-600">
-                  {formatCurrency(Number(load.rate || 0))}
-                </span>
-              </div>
-              {load.baseFareEtb && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Base Fare</span>
-                  <span>{formatCurrency(Number(load.baseFareEtb))}</span>
-                </div>
-              )}
-              {load.perKmEtb && load.tripKm && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">
-                    Distance ({Number(load.tripKm).toFixed(0)} km)
-                  </span>
-                  <span>{formatCurrency(Number(load.perKmEtb) * Number(load.tripKm))}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Service Fee - Platform fee info for carrier */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">

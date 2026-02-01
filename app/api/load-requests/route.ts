@@ -205,7 +205,6 @@ export async function POST(request: NextRequest) {
             pickupCity: true,
             deliveryCity: true,
             truckType: true,
-            rate: true,
           },
         },
         truck: {
@@ -350,7 +349,6 @@ export async function GET(request: NextRequest) {
               deliveryCity: true,
               pickupDate: true,
               truckType: true,
-              rate: true,
               status: true,
             },
           },

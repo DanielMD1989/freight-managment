@@ -76,8 +76,7 @@ async function main() {
       requiresRefrigeration: false,
       lengthM: 12.5,
       casesCount: 50,
-      // Pricing
-      rate: 25000,
+      // Pricing removed - rate negotiated off-platform
       bookMode: BookMode.REQUEST,
       // SPRINT 8: Market pricing (dtpReference, factorRating) removed per TRD
       // Privacy & Safety
@@ -121,7 +120,6 @@ async function main() {
       requiresRefrigeration: true,
       lengthM: 11.0,
       casesCount: 150,
-      rate: 45000,
       bookMode: BookMode.INSTANT,
       // SPRINT 8: Market pricing removed per TRD
       isAnonymous: false,
@@ -163,7 +161,6 @@ async function main() {
       requiresRefrigeration: false,
       lengthM: 4.5,
       casesCount: 25,
-      rate: 8500,
       bookMode: BookMode.REQUEST,
       // SPRINT 8: Market pricing removed per TRD
       isAnonymous: true, // Anonymous shipper
@@ -203,7 +200,6 @@ async function main() {
       isFragile: false,
       requiresRefrigeration: false,
       lengthM: 10.0,
-      rate: 35000,
       bookMode: BookMode.INSTANT,
       // SPRINT 8: Market pricing removed per TRD
       isAnonymous: false,
@@ -243,7 +239,6 @@ async function main() {
       requiresRefrigeration: false,
       lengthM: 12.2,
       casesCount: 200,
-      rate: 12000,
       bookMode: BookMode.REQUEST,
       // SPRINT 8: Market pricing removed per TRD
       isAnonymous: false,

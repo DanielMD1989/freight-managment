@@ -40,8 +40,8 @@ export async function GET(request: NextRequest) {
       totalTrucks,
       activeTrucks,
 
-      // Financial Metrics
-      totalRevenue,
+      // Financial Metrics (service fee based)
+      totalServiceFees,
       pendingSettlements,
       paidSettlements,
 
@@ -81,10 +81,10 @@ export async function GET(request: NextRequest) {
       db.truck.count(),
       db.truck.count({ where: { isAvailable: true } }),
 
-      // Financial - aggregate total load value
+      // Financial - aggregate total service fees collected
       db.load.aggregate({
-        _sum: { rate: true },
-        where: { status: 'COMPLETED' },
+        _sum: { serviceFeeEtb: true },
+        where: { serviceFeeStatus: 'DEDUCTED' },
       }),
       db.load.count({
         where: {
@@ -183,7 +183,7 @@ export async function GET(request: NextRequest) {
           active: activeTrucks,
         },
         financial: {
-          totalRevenue: Number(totalRevenue._sum.rate || 0),
+          totalServiceFees: Number(totalServiceFees._sum.serviceFeeEtb || 0),
           pendingSettlements: pendingSettlements,
           paidSettlements: paidSettlements,
         },

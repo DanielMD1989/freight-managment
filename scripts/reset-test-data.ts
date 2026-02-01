@@ -290,8 +290,6 @@ async function main() {
           deliveryDate: deliveryDate,
           truckType: truckTypes[i % truckTypes.length],
           weight: 5000 + (i * 1000),
-          rate: 15000 + (i * 2000),
-          totalFareEtb: 15000 + (i * 2000),
           cargoDescription: `Test cargo ${i + 1} from ${shipper.name}`,
           shipperContactName: user?.firstName || 'Contact',
           shipperContactPhone: shipper.contactPhone || '0914444444',

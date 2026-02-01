@@ -19,7 +19,6 @@ interface Load {
   deliveryDate: string;
   truckType: string;
   weight: number;
-  rate: number;
   status: string;
 }
 
@@ -41,7 +40,6 @@ async function getPostedLoads(organizationId: string): Promise<Load[]> {
         deliveryDate: true,
         truckType: true,
         weight: true,
-        rate: true,
         status: true,
       },
       orderBy: {
@@ -52,7 +50,6 @@ async function getPostedLoads(organizationId: string): Promise<Load[]> {
     return loads.map((load) => ({
       ...load,
       weight: Number(load.weight),
-      rate: Number(load.rate),
       pickupDate: load.pickupDate.toISOString(),
       deliveryDate: load.deliveryDate.toISOString(),
       truckType: load.truckType.toString(),

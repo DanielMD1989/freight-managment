@@ -86,10 +86,6 @@ export async function GET(request: NextRequest) {
       // Match proposals received
       totalProposals,
       proposalsInPeriod,
-
-      // Load value stats
-      loadValueStats,
-      loadValueInPeriod,
     ] = await Promise.all([
       // Total loads
       db.load.count({
@@ -187,23 +183,6 @@ export async function GET(request: NextRequest) {
           createdAt: { gte: start, lte: end },
         },
       }),
-
-      // Total load value
-      db.load.aggregate({
-        where: { shipperId },
-        _sum: { rate: true },
-        _avg: { rate: true },
-      }),
-
-      // Load value in period
-      db.load.aggregate({
-        where: {
-          shipperId,
-          createdAt: { gte: start, lte: end },
-        },
-        _sum: { rate: true },
-        _avg: { rate: true },
-      }),
     ]);
 
     // Get loads over time for charts
@@ -276,9 +255,6 @@ export async function GET(request: NextRequest) {
           currency: walletAccount?.currency || 'ETB',
           totalServiceFees: Number(totalServiceFees._sum.serviceFeeEtb || 0),
           serviceFeesInPeriod: Number(serviceFeesInPeriod._sum.serviceFeeEtb || 0),
-          totalLoadValue: Number(loadValueStats._sum.rate || 0),
-          avgLoadValue: Number(loadValueStats._avg.rate || 0),
-          loadValueInPeriod: Number(loadValueInPeriod._sum.rate || 0),
         },
         matches: {
           totalProposals,

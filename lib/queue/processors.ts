@@ -572,7 +572,6 @@ async function processAutoSettle(
       select: {
         id: true,
         status: true,
-        totalFareEtb: true,
         deliveryDate: true,
       },
     });

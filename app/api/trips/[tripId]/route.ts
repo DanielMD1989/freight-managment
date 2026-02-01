@@ -60,8 +60,6 @@ export async function GET(
             cargoDescription: true,
             weight: true,
             truckType: true,
-            totalFareEtb: true,
-            rate: true,
             podUrl: true,
             podSubmitted: true,
             podVerified: true,

@@ -14,8 +14,6 @@ export interface LoadSearchFilters {
   loadType?: string;
   minWeight?: number;
   maxWeight?: number;
-  minRate?: number;
-  maxRate?: number;
   pickupDateFrom?: Date;
   pickupDateTo?: Date;
   status?: string[];
@@ -65,17 +63,6 @@ export function buildLoadSearchWhere(filters: LoadSearchFilters): Prisma.LoadWhe
     }
     if (filters.maxWeight !== undefined) {
       where.weight.lte = filters.maxWeight;
-    }
-  }
-
-  // Rate filters
-  if (filters.minRate !== undefined || filters.maxRate !== undefined) {
-    where.totalFareEtb = {};
-    if (filters.minRate !== undefined) {
-      where.totalFareEtb.gte = filters.minRate;
-    }
-    if (filters.maxRate !== undefined) {
-      where.totalFareEtb.lte = filters.maxRate;
     }
   }
 

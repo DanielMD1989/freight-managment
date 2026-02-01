@@ -133,7 +133,7 @@ export default function ServiceFeeDashboard() {
           <dd className="mt-2 text-3xl font-semibold text-yellow-600">
             {metrics ? formatCurrency(metrics.summary.totalFeesReserved) : "-"}
           </dd>
-          <p className="mt-1 text-xs text-gray-500">Held in escrow for active loads</p>
+          <p className="mt-1 text-xs text-gray-500">Reserved for active loads</p>
         </div>
         <div className="rounded-lg bg-white p-6 shadow">
           <dt className="text-sm font-medium text-gray-500">Total Refunded</dt>

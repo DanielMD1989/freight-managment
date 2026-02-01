@@ -197,10 +197,6 @@ export interface Load {
   actualTripKm?: number | null;
 
   // Pricing
-  baseFareEtb?: number | null;
-  perKmEtb?: number | null;
-  totalFareEtb?: number | null;
-  rate: number;
   currency: string;
   bookMode: BookMode;
 
@@ -212,9 +208,7 @@ export interface Load {
   carrierFeeStatus: ServiceFeeStatus;
   corridorId?: string | null;
 
-  // Escrow & Settlement
-  escrowFunded: boolean;
-  escrowAmount?: number | null;
+  // Settlement
   settlementStatus?: string | null;
   settledAt?: Date | null;
 

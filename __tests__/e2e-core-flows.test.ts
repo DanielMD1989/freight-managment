@@ -137,13 +137,8 @@ describe('E2E Core Business Flows', () => {
           isFullLoad: true,
           fullPartial: 'FULL',
 
-          // Sprint 16: Base + Per-KM Pricing
-          baseFareEtb: 5000,
-          perKmEtb: 50,
+          // Pricing fields removed - negotiated off-platform
           estimatedTripKm: 300,
-          totalFareEtb: 20000, // 5000 + (300 * 50)
-
-          rate: 20000,
 
           shipperId: shipperOrg.id,
           createdById: shipperUser.id,
@@ -154,9 +149,7 @@ describe('E2E Core Business Flows', () => {
       expect(load).toBeDefined();
       expect(load.status).toBe('POSTED');
       expect(load.shipperId).toBe(shipperOrg.id);
-      expect(Number(load.baseFareEtb)).toBe(5000);
-      expect(Number(load.perKmEtb)).toBe(50);
-      expect(Number(load.totalFareEtb)).toBe(20000);
+      expect(Number(load.estimatedTripKm)).toBe(300);
     });
   });
 
@@ -496,12 +489,8 @@ describe('E2E Core Business Flows', () => {
         where: { id: load.id },
       });
 
-      if (testLoad?.baseFareEtb && testLoad?.perKmEtb && testLoad?.estimatedTripKm) {
-        const calculatedTotal = Number(testLoad.baseFareEtb) +
-          (Number(testLoad.perKmEtb) * Number(testLoad.estimatedTripKm));
-
-        expect(Number(testLoad.totalFareEtb)).toBeCloseTo(calculatedTotal, 2);
-      }
+      // Note: Pricing fields removed - pricing is negotiated off-platform
+      // Platform only tracks service fees based on corridors
     });
   });
 });

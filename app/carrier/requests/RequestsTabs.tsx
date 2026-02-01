@@ -69,7 +69,6 @@ interface LoadRequest {
     pickupCity: string;
     deliveryCity: string;
     pickupDate: string;
-    rate: number | null;
   };
   truck: {
     id: string;

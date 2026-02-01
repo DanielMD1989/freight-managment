@@ -20,7 +20,7 @@ import {
  */
 export async function GET(request: NextRequest) {
   try {
-    await requirePermission(Permission.MANAGE_ESCROW);
+    await requirePermission(Permission.MANAGE_SETTLEMENTS);
 
     const stats = await getSettlementStats();
 
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    await requirePermission(Permission.MANAGE_ESCROW);
+    await requirePermission(Permission.MANAGE_SETTLEMENTS);
 
     const { searchParams } = request.nextUrl;
     const action = searchParams.get('action') || 'full';

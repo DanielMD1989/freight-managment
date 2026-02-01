@@ -125,7 +125,6 @@ export default async function RequestDetailPage({
       deliveryDate: request.load.deliveryDate?.toISOString() || null,
       pickupAddress: request.load.pickupAddress,
       deliveryAddress: request.load.deliveryAddress,
-      rate: request.load.totalFareEtb ? Number(request.load.totalFareEtb) : (request.load.rate ? Number(request.load.rate) : null),
       cargoDescription: request.load.cargoDescription,
       isAssigned: request.load.status !== 'DRAFT' && request.load.status !== 'SEARCHING',
       assignedTruck: request.load.assignedTruck

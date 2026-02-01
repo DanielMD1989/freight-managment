@@ -26,7 +26,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requirePermission(Permission.MANAGE_ESCROW);
+    await requirePermission(Permission.MANAGE_SETTLEMENTS);
 
     const { id: loadId } = await params;
 
@@ -40,8 +40,7 @@ export async function POST(
         settlementStatus: true,
         pickupCity: true,
         deliveryCity: true,
-        totalFareEtb: true,
-        rate: true,
+        serviceFeeEtb: true,
         shipper: {
           select: {
             id: true,
@@ -107,8 +106,6 @@ export async function POST(
         settlementStatus: true,
         settledAt: true,
         serviceFeeEtb: true,
-        totalFareEtb: true,
-        rate: true,
       },
     });
 
@@ -128,7 +125,6 @@ export async function POST(
         loadId: updatedLoad?.id,
         status: updatedLoad?.settlementStatus,
         settledAt: updatedLoad?.settledAt,
-        grossAmount: Number(updatedLoad?.totalFareEtb || updatedLoad?.rate),
         serviceFee: Number(updatedLoad?.serviceFeeEtb || 0),
       },
     });

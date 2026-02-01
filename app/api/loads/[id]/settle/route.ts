@@ -10,7 +10,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { requireCSRF } from '@/lib/csrf';
-import { releaseFundsFromEscrow } from '@/lib/escrowManagement';
 
 /**
  * POST /api/loads/[id]/settle
@@ -58,8 +57,6 @@ export async function POST(
         podSubmitted: true,
         podVerified: true,
         settlementStatus: true,
-        totalFareEtb: true,
-        rate: true,
       },
     });
 
@@ -159,93 +156,44 @@ export async function POST(
       );
     }
 
-    // Sprint 8: Check if load was funded via escrow
-    const loadEscrowStatus = await db.load.findUnique({
-      where: { id: loadId },
-      select: { escrowFunded: true },
-    });
-
-    // Process settlement
+    // Process settlement - mark as settled and service fees are handled separately
     try {
-      if (loadEscrowStatus?.escrowFunded) {
-        // Sprint 8: Use escrow release for escrow-funded loads
-        const escrowResult = await releaseFundsFromEscrow(loadId);
+      await db.load.update({
+        where: { id: loadId },
+        data: {
+          settlementStatus: 'PAID',
+          settledAt: new Date(),
+        },
+      });
 
-        if (!escrowResult.success) {
-          return NextResponse.json(
-            {
-              error: 'Escrow release failed',
-              details: escrowResult.error,
-            },
-            { status: 400 }
-          );
-        }
+      // Create load event
+      await db.loadEvent.create({
+        data: {
+          loadId,
+          eventType: 'SETTLEMENT_COMPLETED',
+          description: 'Settlement processed successfully',
+          userId: session.userId,
+        },
+      });
 
-        // Create load event
-        await db.loadEvent.create({
-          data: {
-            loadId,
-            eventType: 'ESCROW_RELEASED',
-            description: `Escrow funds released: Carrier received ${escrowResult.carrierPayout.toFixed(2)} ETB`,
-            userId: session.userId,
-            metadata: {
-              carrierPayout: escrowResult.carrierPayout.toFixed(2),
-              transactionId: escrowResult.transactionId,
-            },
-          },
-        });
+      // Get updated load
+      const updatedLoad = await db.load.findUnique({
+        where: { id: loadId },
+        select: {
+          id: true,
+          settlementStatus: true,
+          settledAt: true,
+        },
+      });
 
-        // Get updated load
-        const updatedLoad = await db.load.findUnique({
-          where: { id: loadId },
-          select: {
-            id: true,
-            settlementStatus: true,
-            settledAt: true,
-          },
-        });
-
-        return NextResponse.json({
-          message: 'Settlement processed successfully via escrow release',
-          settlement: {
-            loadId: updatedLoad?.id,
-            status: updatedLoad?.settlementStatus,
-            settledAt: updatedLoad?.settledAt,
-            carrierPayout: escrowResult.carrierPayout.toNumber(),
-            method: 'ESCROW_RELEASE',
-          },
-        });
-      } else {
-        // Non-escrow loads: Just mark as settled
-        // Service fees are handled separately by serviceFeeManagement.ts
-        await db.load.update({
-          where: { id: loadId },
-          data: {
-            settlementStatus: 'PAID',
-            settledAt: new Date(),
-          },
-        });
-
-        // Get updated load
-        const updatedLoad = await db.load.findUnique({
-          where: { id: loadId },
-          select: {
-            id: true,
-            settlementStatus: true,
-            settledAt: true,
-          },
-        });
-
-        return NextResponse.json({
-          message: 'Settlement processed successfully',
-          settlement: {
-            loadId: updatedLoad?.id,
-            status: updatedLoad?.settlementStatus,
-            settledAt: updatedLoad?.settledAt,
-            method: 'DIRECT_SETTLEMENT',
-          },
-        });
-      }
+      return NextResponse.json({
+        message: 'Settlement processed successfully',
+        settlement: {
+          loadId: updatedLoad?.id,
+          status: updatedLoad?.settlementStatus,
+          settledAt: updatedLoad?.settledAt,
+        },
+      });
     } catch (settlementError: any) {
       console.error('Settlement processing error:', settlementError);
 
@@ -299,9 +247,6 @@ export async function GET(
         podUrl: true,
         settlementStatus: true,
         settledAt: true,
-        serviceFeeEtb: true,
-        totalFareEtb: true,
-        rate: true,
         shipperId: true,
         assignedTruck: {
           select: {
@@ -353,12 +298,6 @@ export async function GET(
         status: load.settlementStatus,
         settledAt: load.settledAt,
         canSettle,
-        serviceFee: load.serviceFeeEtb
-          ? Number(load.serviceFeeEtb)
-          : null,
-        totalFare: load.totalFareEtb
-          ? Number(load.totalFareEtb)
-          : Number(load.rate),
       },
     });
   } catch (error) {

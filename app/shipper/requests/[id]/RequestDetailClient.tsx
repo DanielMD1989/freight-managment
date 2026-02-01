@@ -34,7 +34,6 @@ interface RequestData {
     deliveryDate: string | null;
     pickupAddress: string | null;
     deliveryAddress: string | null;
-    rate: number | null;
     cargoDescription: string | null;
     isAssigned: boolean;
     assignedTruck: {
@@ -344,12 +343,6 @@ export default function RequestDetailClient({ request }: Props) {
                   <p className="text-sm text-slate-500 dark:text-slate-400">Truck Type</p>
                   <p className="font-semibold text-slate-800 dark:text-white">{request.load.truckType}</p>
                 </div>
-                {request.load.rate && (
-                  <div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Listed Rate</p>
-                    <p className="font-semibold text-emerald-600">{request.load.rate.toLocaleString()} ETB</p>
-                  </div>
-                )}
                 {request.proposedRate && (
                   <div>
                     <p className="text-sm text-slate-500 dark:text-slate-400">Proposed Rate</p>

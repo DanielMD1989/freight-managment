@@ -10,7 +10,7 @@ interface AnalyticsData {
   summary: {
     revenue: {
       platformBalance: number;
-      escrowBalance: number;
+      activeTripsCount: number;
       serviceFeeCollected: number;
       transactionsInPeriod: number;
       transactionVolume: number;
@@ -300,10 +300,10 @@ export default function AdminAnalyticsClient() {
           trend="up"
         />
         <StatCard
-          title="Escrow Balance"
-          value={formatCurrency(data.summary.revenue.escrowBalance)}
-          subtitle="Held for settlement"
-          icon="🔒"
+          title="Active Trips"
+          value={data.summary.revenue.activeTripsCount}
+          subtitle="Currently in transit"
+          icon="🚚"
         />
         <StatCard
           title="Transaction Volume"

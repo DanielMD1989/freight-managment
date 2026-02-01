@@ -315,33 +315,6 @@ export default async function LoadDetailsPage({ params }: LoadDetailsProps) {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Pricing */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Pricing</h2>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Rate</span>
-                <span className="font-bold text-lg">
-                  {formatCurrency(Number(load.rate || 0))}
-                </span>
-              </div>
-              {load.baseFareEtb && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Base Fare</span>
-                  <span>{formatCurrency(Number(load.baseFareEtb))}</span>
-                </div>
-              )}
-              {load.perKmEtb && load.tripKm && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">
-                    Per Km ({Number(load.tripKm).toFixed(0)} km)
-                  </span>
-                  <span>{formatCurrency(Number(load.perKmEtb) * Number(load.tripKm))}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Service Fee */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">

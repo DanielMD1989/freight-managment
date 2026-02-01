@@ -38,8 +38,6 @@ interface CompletedTrip {
   load?: {
     weight?: number;
     cargoDescription?: string;
-    totalFareEtb?: number;
-    rate?: number;
   };
 }
 
@@ -238,11 +236,6 @@ export default function TripHistoryPage() {
                         </div>
                       )}
 
-                      {trip.load?.totalFareEtb && (
-                        <div className="flex items-center gap-1 text-green-600 dark:text-green-400 font-medium">
-                          <span>{Number(trip.load.totalFareEtb).toLocaleString()} ETB</span>
-                        </div>
-                      )}
                     </div>
                   </div>
 

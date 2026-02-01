@@ -6,7 +6,6 @@ import { enableTrackingForLoad } from '@/lib/gpsTracking';
 import { canAssignLoads } from '@/lib/dispatcherPermissions';
 import { validateStateTransition, LoadStatus } from '@/lib/loadStateMachine';
 import { checkAssignmentConflicts } from '@/lib/assignmentConflictDetection'; // Sprint 4
-import { holdFundsInEscrow, refundEscrowFunds } from '@/lib/escrowManagement'; // Sprint 8
 import { RULE_CARRIER_FINAL_AUTHORITY } from '@/lib/foundation-rules'; // Phase 2
 import { reserveServiceFee } from '@/lib/serviceFeeManagement'; // Service Fee Implementation
 import { createTripForLoad } from '@/lib/tripManagement'; // Trip Management
@@ -323,37 +322,6 @@ export async function POST(
     await CacheInvalidation.load(loadId, load.shipperId);
     await CacheInvalidation.truck(truckId, truck.carrierId);
 
-    // HIGH FIX #8: Non-critical financial operations with idempotency checks
-    // NOTE: These are intentionally outside the main transaction because:
-    // 1. Assignment should succeed even if escrow/fee operations fail
-    // 2. These operations have internal idempotency - calling twice won't double-charge
-    // 3. LoadEvents serve as idempotency markers to prevent duplicate processing
-
-    // Escrow hold with idempotency check
-    let escrowResult = null;
-    try {
-      const existingEscrowEvent = await db.loadEvent.findFirst({
-        where: { loadId, eventType: 'ESCROW_FUNDED' },
-      });
-
-      if (!existingEscrowEvent) {
-        escrowResult = await holdFundsInEscrow(loadId);
-        if (escrowResult.success) {
-          await db.loadEvent.create({
-            data: {
-              loadId,
-              eventType: 'ESCROW_FUNDED',
-              description: `Funds held in escrow: ${escrowResult.escrowAmount.toFixed(2)} ETB`,
-              userId: session.userId,
-              metadata: { escrowAmount: escrowResult.escrowAmount.toFixed(2), transactionId: escrowResult.transactionId },
-            },
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Escrow hold error:', error);
-    }
-
     // Service fee reservation with idempotency check
     let serviceFeeResult = null;
     try {
@@ -402,13 +370,6 @@ export async function POST(
       load: result.load,
       trip: result.trip,
       trackingUrl,
-      escrow: escrowResult
-        ? {
-            success: escrowResult.success,
-            amount: escrowResult.escrowAmount.toFixed(2),
-            error: escrowResult.error,
-          }
-        : null,
       serviceFee: serviceFeeResult
         ? {
             success: serviceFeeResult.success,
@@ -555,37 +516,6 @@ export async function DELETE(
       );
     }
 
-    // Sprint 8: Refund escrowed funds if load was funded
-    const loadDetails = await db.load.findUnique({
-      where: { id: loadId },
-      select: { escrowFunded: true },
-    });
-
-    let refundResult = null;
-    if (loadDetails?.escrowFunded) {
-      try {
-        refundResult = await refundEscrowFunds(loadId);
-
-        if (refundResult.success) {
-          await db.loadEvent.create({
-            data: {
-              loadId,
-              eventType: 'ESCROW_REFUNDED',
-              description: `Escrow funds refunded: ${refundResult.escrowAmount.toFixed(2)} ETB`,
-              userId: session.userId,
-              metadata: {
-                escrowAmount: refundResult.escrowAmount.toFixed(2),
-                transactionId: refundResult.transactionId,
-              },
-            },
-          });
-        }
-      } catch (error) {
-        console.error('Escrow refund error:', error);
-        // Continue with unassignment even if refund fails
-      }
-    }
-
     // Store previous truck ID for cache invalidation
     const previousTruckId = load.assignedTruckId;
 
@@ -629,12 +559,6 @@ export async function DELETE(
 
     return NextResponse.json({
       load: updatedLoad,
-      refund: refundResult
-        ? {
-            success: refundResult.success,
-            amount: refundResult.escrowAmount.toFixed(2),
-          }
-        : null,
       message: 'Load unassigned successfully. GPS tracking disabled.',
     });
   } catch (error) {

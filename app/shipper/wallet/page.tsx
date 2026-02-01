@@ -49,24 +49,21 @@ export default async function WalletPage() {
     },
   });
 
-  // Get transaction summary for average calculation
-  const [totalSpent, completedLoads, recentTransactions] = await Promise.all([
-    // Total amount spent on completed loads
-    db.load.aggregate({
-      where: {
-        shipperId: session.organizationId,
-        status: 'DELIVERED',
-      },
-      _sum: {
-        rate: true,
-      },
-    }),
-
+  // Get load counts and recent activity
+  const [completedLoads, activeLoads, recentTransactions] = await Promise.all([
     // Count of completed loads
     db.load.count({
       where: {
         shipperId: session.organizationId,
         status: 'DELIVERED',
+      },
+    }),
+
+    // Count of active loads
+    db.load.count({
+      where: {
+        shipperId: session.organizationId,
+        status: { in: ['SEARCHING', 'ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT'] },
       },
     }),
 
@@ -80,7 +77,6 @@ export default async function WalletPage() {
         id: true,
         pickupCity: true,
         deliveryCity: true,
-        rate: true,
         status: true,
         createdAt: true,
       },
@@ -155,64 +151,6 @@ export default async function WalletPage() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        {/* Total Spent */}
-        <div
-          className="rounded-xl p-5"
-          style={{
-            background: 'var(--card)',
-            border: '1px solid var(--border)',
-          }}
-        >
-          <div
-            className="text-sm mb-1"
-            style={{ color: 'var(--foreground-muted)' }}
-          >
-            Total Spent
-          </div>
-          <div
-            className="text-2xl font-bold"
-            style={{ color: 'var(--foreground)' }}
-          >
-            {formatCurrency(Number(totalSpent._sum.rate || 0))}
-          </div>
-          <div
-            className="text-xs mt-1"
-            style={{ color: 'var(--foreground-muted)' }}
-          >
-            All time
-          </div>
-        </div>
-
-        {/* Average per Load */}
-        <div
-          className="rounded-xl p-5"
-          style={{
-            background: 'var(--card)',
-            border: '1px solid var(--border)',
-          }}
-        >
-          <div
-            className="text-sm mb-1"
-            style={{ color: 'var(--foreground-muted)' }}
-          >
-            Average per Load
-          </div>
-          <div
-            className="text-2xl font-bold"
-            style={{ color: 'var(--foreground)' }}
-          >
-            {completedLoads > 0
-              ? formatCurrency(Number(totalSpent._sum.rate || 0) / completedLoads)
-              : formatCurrency(0)}
-          </div>
-          <div
-            className="text-xs mt-1"
-            style={{ color: 'var(--foreground-muted)' }}
-          >
-            Based on {completedLoads} completed loads
-          </div>
-        </div>
-
         {/* Completed Loads */}
         <div
           className="rounded-xl p-5"
@@ -225,7 +163,7 @@ export default async function WalletPage() {
             className="text-sm mb-1"
             style={{ color: 'var(--foreground-muted)' }}
           >
-            Completed Loads
+            Completed Deliveries
           </div>
           <div
             className="text-2xl font-bold"
@@ -238,6 +176,62 @@ export default async function WalletPage() {
             style={{ color: 'var(--foreground-muted)' }}
           >
             Successfully delivered
+          </div>
+        </div>
+
+        {/* Active Loads */}
+        <div
+          className="rounded-xl p-5"
+          style={{
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          <div
+            className="text-sm mb-1"
+            style={{ color: 'var(--foreground-muted)' }}
+          >
+            Active Loads
+          </div>
+          <div
+            className="text-2xl font-bold"
+            style={{ color: 'var(--foreground)' }}
+          >
+            {activeLoads}
+          </div>
+          <div
+            className="text-xs mt-1"
+            style={{ color: 'var(--foreground-muted)' }}
+          >
+            Currently in progress
+          </div>
+        </div>
+
+        {/* Total Loads */}
+        <div
+          className="rounded-xl p-5"
+          style={{
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          <div
+            className="text-sm mb-1"
+            style={{ color: 'var(--foreground-muted)' }}
+          >
+            Total Loads
+          </div>
+          <div
+            className="text-2xl font-bold"
+            style={{ color: 'var(--foreground)' }}
+          >
+            {completedLoads + activeLoads}
+          </div>
+          <div
+            className="text-xs mt-1"
+            style={{ color: 'var(--foreground-muted)' }}
+          >
+            All time
           </div>
         </div>
       </div>
@@ -309,17 +303,14 @@ export default async function WalletPage() {
                 </div>
                 <div className="text-right">
                   <div
-                    className="font-semibold text-sm"
-                    style={{ color: 'var(--foreground)' }}
-                  >
-                    {formatCurrency(Number(load.rate || 0))}
-                  </div>
-                  <div
-                    className="text-xs capitalize"
+                    className="text-sm font-medium capitalize px-2 py-0.5 rounded-full"
                     style={{
                       color: load.status === 'DELIVERED' || load.status === 'COMPLETED'
-                        ? 'var(--success-500)'
-                        : 'var(--warning-500)',
+                        ? 'var(--success-600)'
+                        : 'var(--warning-600)',
+                      background: load.status === 'DELIVERED' || load.status === 'COMPLETED'
+                        ? 'var(--success-100)'
+                        : 'var(--warning-100)',
                     }}
                   >
                     {load.status.toLowerCase().replace('_', ' ')}

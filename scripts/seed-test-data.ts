@@ -431,28 +431,6 @@ async function main() {
     console.log('   [=] Platform revenue account exists');
   }
 
-  // Escrow Account (if not exists)
-  let escrowAccount = await prisma.financialAccount.findFirst({
-    where: {
-      accountType: 'ESCROW',
-      organizationId: null,
-    },
-  });
-
-  if (!escrowAccount) {
-    escrowAccount = await prisma.financialAccount.create({
-      data: {
-        accountType: 'ESCROW',
-        balance: 0,
-        currency: 'ETB',
-        isActive: true,
-      },
-    });
-    console.log('   [+] Created escrow account');
-  } else {
-    console.log('   [=] Escrow account exists');
-  }
-
   console.log('');
 
   // ============================================================================
@@ -489,7 +467,6 @@ async function main() {
   console.log(`  - Shipper Wallet: ${INITIAL_BALANCE} ETB`);
   console.log(`  - Carrier Wallet: ${INITIAL_BALANCE} ETB`);
   console.log('  - Platform Revenue: 0 ETB');
-  console.log('  - Escrow: 0 ETB');
   console.log('');
 
   console.log('========================================\n');

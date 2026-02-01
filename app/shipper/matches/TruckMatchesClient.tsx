@@ -22,7 +22,6 @@ interface Load {
   deliveryDate: string;
   truckType: string;
   weight: number;
-  rate: number;
   status: string;
 }
 
@@ -283,12 +282,6 @@ export default function TruckMatchesClient({
                   {currentLoad.weight.toLocaleString()} kg
                 </div>
               </div>
-              <div>
-                <div className="text-gray-500">Your Rate</div>
-                <div className="font-medium text-gray-900">
-                  {formatCurrency(currentLoad.rate)}
-                </div>
-              </div>
             </div>
           </div>
         )}
@@ -544,8 +537,8 @@ export default function TruckMatchesClient({
             </div>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
               <p className="text-sm text-blue-800">
-                <strong>Note:</strong> Once matched, the carrier will be notified and funds
-                will be held in escrow. You can unassign later if needed.
+                <strong>Note:</strong> Once matched, the carrier will be notified.
+                You can unassign later if needed.
               </p>
             </div>
             <div className="flex gap-3">

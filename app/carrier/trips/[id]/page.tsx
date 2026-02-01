@@ -275,7 +275,6 @@ export default async function TripDetailPage({
     deliveryAddress: tripData.deliveryAddress || load?.deliveryAddress,
     pickupDockHours: load?.pickupDockHours || null,
     deliveryDockHours: load?.deliveryDockHours || null,
-    rate: load?.totalFareEtb ? Number(load.totalFareEtb) : (load?.rate ? Number(load.rate) : null),
     cargoDescription: load?.cargoDescription || null,
     safetyNotes: load?.safetyNotes || null,
     shipperContactName: load?.shipperContactName || null,

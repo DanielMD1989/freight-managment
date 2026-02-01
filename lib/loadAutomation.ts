@@ -113,9 +113,7 @@ export async function autoSettleCompletedLoads() {
 
     for (const load of loadsToSettle) {
       try {
-        const totalFare = Number(load.totalFareEtb || 0);
-
-        // Service Fee Implementation: Deduct service fee to platform
+        // Service Fee Implementation: Deduct service fee to platform (Corridor-based per-KM)
         let serviceFeeAmount = 0;
         try {
           const serviceFeeResult = await deductServiceFee(load.id);
@@ -126,15 +124,11 @@ export async function autoSettleCompletedLoads() {
           console.error(`Service fee deduction error for load ${load.id}:`, error);
         }
 
-        // Carrier receives full fare (service fee is separate per-KM charge)
-        const carrierPay = totalFare;
-
         // Update load status
         await db.load.update({
           where: { id: load.id },
           data: {
             status: 'COMPLETED',
-            // settlementDate: new Date(), // Add to schema if needed
           },
         });
 
@@ -143,11 +137,10 @@ export async function autoSettleCompletedLoads() {
           await createNotification({
             userId: load.shipper.users[0].id,
             type: NotificationType.SETTLEMENT_COMPLETE,
-            title: 'Load Settled',
-            message: `Load from ${load.pickupCity} to ${load.deliveryCity} has been settled. Freight: ${totalFare.toFixed(2)} ETB, Service fee: ${serviceFeeAmount.toFixed(2)} ETB.`,
+            title: 'Load Completed',
+            message: `Load from ${load.pickupCity} to ${load.deliveryCity} has been completed. Platform service fee: ${serviceFeeAmount.toFixed(2)} ETB.`,
             metadata: {
               loadId: load.id,
-              totalFare,
               serviceFee: serviceFeeAmount,
             },
           });
@@ -158,11 +151,11 @@ export async function autoSettleCompletedLoads() {
           await createNotification({
             userId: load.assignedTruck.carrier.users[0].id,
             type: NotificationType.SETTLEMENT_COMPLETE,
-            title: 'Payment Processed',
-            message: `Payment for load to ${load.deliveryCity} has been processed. Amount: ${carrierPay.toFixed(2)} ETB.`,
+            title: 'Delivery Completed',
+            message: `Delivery to ${load.deliveryCity} has been completed. Platform service fee: ${serviceFeeAmount.toFixed(2)} ETB.`,
             metadata: {
               loadId: load.id,
-              carrierPay,
+              serviceFee: serviceFeeAmount,
             },
           });
         }

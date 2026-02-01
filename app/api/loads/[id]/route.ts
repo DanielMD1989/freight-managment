@@ -4,15 +4,9 @@ import { requireAuth } from "@/lib/auth";
 import { z } from "zod";
 import {
   calculateAge,
-  calculateRPM,
-  calculateTRPM,
   canSeeContact,
   maskCompany,
 } from "@/lib/loadUtils";
-import {
-  calculateTotalFare,
-  validatePricing,
-} from "@/lib/pricingCalculation";
 import {
   incrementCompletedLoads,
   incrementCancelledLoads,
@@ -71,10 +65,6 @@ const updateLoadSchema = z.object({
   fullPartial: z.enum(["FULL", "PARTIAL"]).optional(),
   tripKm: z.number().positive().optional(),
   estimatedTripKm: z.number().positive().optional(),
-  // Sprint 16: New pricing fields
-  baseFareEtb: z.number().positive().optional(),
-  perKmEtb: z.number().positive().optional(),
-  rate: z.number().positive().optional(),  // Legacy field
   currency: z.string().optional(),
   cargoDescription: z.string().optional().nullable(),
   specialInstructions: z.string().optional().nullable(),
@@ -153,15 +143,6 @@ export async function GET(
     // Compute age
     const ageMinutes = calculateAge(load.postedAt, load.createdAt);
 
-    // Compute RPM and tRPM
-    const rpmEtbPerKm = calculateRPM(load.rate, load.tripKm);
-    const trpmEtbPerKm = calculateTRPM(
-      load.rate,
-      load.tripKm,
-      load.dhToOriginKm,
-      load.dhAfterDeliveryKm
-    );
-
     // Determine if viewer can see contact information
     const userCanSeeContact = canSeeContact(
       load.assignedTruckId,
@@ -185,8 +166,6 @@ export async function GET(
       shipper: maskedShipper,
       // Computed fields
       ageMinutes,
-      rpmEtbPerKm,
-      trpmEtbPerKm,
       // Contact info - only include if authorized
       shipperContactName: userCanSeeContact ? load.shipperContactName : null,
       shipperContactPhone: userCanSeeContact ? load.shipperContactPhone : null,
@@ -224,9 +203,6 @@ export async function PATCH(
         status: true,
         createdById: true,
         assignedTruckId: true,
-        // Include pricing fields to avoid redundant query later
-        baseFareEtb: true,
-        perKmEtb: true,
         tripKm: true,
         estimatedTripKm: true,
         // Include carrier info for trust metrics
@@ -279,47 +255,18 @@ export async function PATCH(
     const body = await request.json();
     const validatedData = updateLoadSchema.parse(body);
 
-    // Sprint 16: Recalculate totalFareEtb if pricing fields changed
     let additionalData: any = {};
 
     // Update postedAt when status changes to POSTED
     if (validatedData.status === 'POSTED' && existingLoad.status !== 'POSTED') {
       additionalData.postedAt = new Date();
     }
-    const pricingFieldsChanged =
-      validatedData.baseFareEtb !== undefined ||
-      validatedData.perKmEtb !== undefined ||
-      validatedData.tripKm !== undefined ||
-      validatedData.estimatedTripKm !== undefined;
 
     // Sync tripKm and estimatedTripKm for backward compatibility
     if (validatedData.tripKm !== undefined && validatedData.estimatedTripKm === undefined) {
       additionalData.estimatedTripKm = validatedData.tripKm;
     } else if (validatedData.estimatedTripKm !== undefined && validatedData.tripKm === undefined) {
       additionalData.tripKm = validatedData.estimatedTripKm;
-    }
-
-    if (pricingFieldsChanged) {
-      // PHASE 4: Use existingLoad data instead of redundant query (N+1 fix)
-      const baseFare = validatedData.baseFareEtb ?? existingLoad.baseFareEtb;
-      const perKm = validatedData.perKmEtb ?? existingLoad.perKmEtb;
-      const tripKm = validatedData.estimatedTripKm ?? validatedData.tripKm ?? existingLoad.estimatedTripKm ?? existingLoad.tripKm;
-
-      // Calculate totalFareEtb if we have all required fields
-      if (baseFare && perKm && tripKm) {
-        try {
-          validatePricing(baseFare, perKm, tripKm);
-          const totalFare = calculateTotalFare(baseFare, perKm, tripKm);
-          additionalData.totalFareEtb = totalFare.toNumber();
-          // Update legacy rate field for backward compatibility
-          additionalData.rate = totalFare.toNumber();
-        } catch (error: any) {
-          return NextResponse.json(
-            { error: error.message || "Invalid pricing parameters" },
-            { status: 400 }
-          );
-        }
-      }
     }
 
     // Validate state transition if status is changing

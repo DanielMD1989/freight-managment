@@ -23,7 +23,7 @@ import { db } from '@/lib/db';
  */
 export async function GET(request: NextRequest) {
   try {
-    await requirePermission(Permission.MANAGE_ESCROW);
+    await requirePermission(Permission.MANAGE_SETTLEMENTS);
 
     const { searchParams } = request.nextUrl;
     const status = searchParams.get('status') || 'PENDING';

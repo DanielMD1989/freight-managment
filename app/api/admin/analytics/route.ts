@@ -63,7 +63,6 @@ export async function GET(request: NextRequest) {
     const [
       // Revenue stats
       platformRevenue,
-      escrowBalance,
 
       // Truck stats
       totalTrucks,
@@ -100,12 +99,6 @@ export async function GET(request: NextRequest) {
       // Platform revenue account
       db.financialAccount.findFirst({
         where: { accountType: 'PLATFORM_REVENUE' },
-        select: { balance: true },
-      }),
-
-      // Escrow balance
-      db.financialAccount.findFirst({
-        where: { accountType: 'ESCROW' },
         select: { balance: true },
       }),
 
@@ -258,7 +251,6 @@ export async function GET(request: NextRequest) {
       summary: {
         revenue: {
           platformBalance: Number(platformRevenue?.balance || 0),
-          escrowBalance: Number(escrowBalance?.balance || 0),
           serviceFeeCollected: Number(serviceFeeRevenue._sum.serviceFeeEtb || 0),
           transactionsInPeriod: transactionsInPeriod._count || 0,
           transactionVolume: 0, // Journal entries don't have amount sum

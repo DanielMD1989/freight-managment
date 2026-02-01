@@ -28,7 +28,6 @@ interface Trip {
   deliveryAddress: string | null;
   pickupDockHours: string | null;
   deliveryDockHours: string | null;
-  rate: number | null;
   cargoDescription: string | null;
   safetyNotes: string | null;
   shipperContactName: string | null;
@@ -626,14 +625,6 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
                   <p className="text-sm text-gray-500 dark:text-gray-400">Delivery Date</p>
                   <p className="font-medium text-gray-900 dark:text-white">
                     {formatDate(trip.deliveryDate)}
-                  </p>
-                </div>
-              )}
-              {trip.rate && (
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Rate</p>
-                  <p className="font-medium text-green-600 dark:text-green-400">
-                    {trip.rate.toLocaleString()} ETB
                   </p>
                 </div>
               )}

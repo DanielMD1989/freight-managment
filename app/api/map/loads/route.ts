@@ -78,7 +78,6 @@ export async function GET(request: NextRequest) {
         destinationLon: true,
         pickupDate: true,
         deliveryDate: true,
-        rate: true,
         truckType: true,
         shipper: {
           select: {
@@ -114,7 +113,6 @@ export async function GET(request: NextRequest) {
       } : null,
       pickupDate: load.pickupDate?.toISOString(),
       deliveryDate: load.deliveryDate?.toISOString(),
-      rate: load.rate ? Number(load.rate) : null,
       shipper: {
         id: load.shipper?.id,
         name: load.shipper?.name,

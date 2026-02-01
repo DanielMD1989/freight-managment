@@ -31,7 +31,6 @@ async function main() {
       pickupDate: new Date('2026-01-15'),
       deliveryDate: new Date('2026-01-17'),
       weight: 15000,
-      rate: 25000,
       truckType: 'DRY_VAN',
       fullPartial: 'FULL',
       status: 'POSTED',

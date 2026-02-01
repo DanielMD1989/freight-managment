@@ -234,7 +234,7 @@ export default async function Home() {
                   </svg>
                 ),
                 title: "Digital Payments",
-                description: "Secure escrow payments, instant settlements, and complete transaction history. No more cash disputes.",
+                description: "Secure payments, instant settlements, and complete transaction history. No more cash disputes.",
                 color: "primary",
               },
               {

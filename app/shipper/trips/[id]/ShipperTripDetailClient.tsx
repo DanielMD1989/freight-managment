@@ -44,7 +44,6 @@ interface Trip {
   deliveryAddress: string | null;
   pickupDockHours: string | null;
   deliveryDockHours: string | null;
-  rate: number | null;
   cargoDescription: string | null;
   specialInstructions: string | null;
   trackingEnabled: boolean;
@@ -548,10 +547,6 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
               <div>
                 <p className="text-sm text-slate-500">Truck Type</p>
                 <p className="font-semibold text-slate-800">{trip.truckType.replace(/_/g, ' ')}</p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-500">Rate</p>
-                <p className="font-semibold text-teal-600">{formatCurrency(trip.rate)}</p>
               </div>
               <div>
                 <p className="text-sm text-slate-500">Distance</p>

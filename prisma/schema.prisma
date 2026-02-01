@@ -79,7 +79,6 @@ enum BookMode {
 enum AccountType {
   SHIPPER_WALLET
   CARRIER_WALLET
-  ESCROW
   PLATFORM_REVENUE
 }
 
@@ -88,8 +87,6 @@ enum TransactionType {
   WITHDRAWAL
   COMMISSION
   SETTLEMENT
-  ESCROW_FUND
-  ESCROW_RELEASE
   REFUND
   // Service Fee Transactions (NEW - Service Fee Implementation)
   SERVICE_FEE_RESERVE // Reserve service fee from shipper wallet
@@ -574,14 +571,10 @@ model Load {
   lengthM    Decimal? // Cargo length in meters
   casesCount Int? // Number of cases/pallets
 
-  // Pricing - SPRINT 16: Base + Per-KM Model
-  baseFareEtb  Decimal? // Base fare component (ETB)
-  perKmEtb     Decimal? // Per-kilometer rate (ETB/km)
-  totalFareEtb Decimal? // Calculated: baseFareEtb + (estimatedTripKm × perKmEtb)
+  // Distance tracking
   actualTripKm Decimal? // GPS-computed actual trip distance (Phase 2)
 
-  // Legacy pricing field (deprecated - use baseFareEtb + perKmEtb instead)
-  rate     Decimal // in ETB - DEPRECATED: Use totalFareEtb
+  // Currency (pricing negotiated off-platform)
   currency String    @default("ETB")
   bookMode BookMode? @default(REQUEST) // [NEW] REQUEST | INSTANT
 
@@ -594,10 +587,6 @@ model Load {
   shipperContactPhone String? // [NEW] Hidden until assignment
   safetyNotes         String?
   specialInstructions String?
-
-  // Escrow & Finance
-  escrowFunded Boolean  @default(false)
-  escrowAmount Decimal?
 
   // SPRINT 16: Story 16.7 - Commission & Settlement
   podUrl           String? // Proof of Delivery document URL

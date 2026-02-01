@@ -100,8 +100,6 @@ export async function GET(request: NextRequest) {
               cargoDescription: true,
               weight: true,
               truckType: true,
-              totalFareEtb: true,
-              rate: true,
               pickupDate: true,
               deliveryDate: true,
               shipperContactName: true,
@@ -149,7 +147,6 @@ export async function GET(request: NextRequest) {
       pickupDate: trip.load?.pickupDate,
       deliveryDate: trip.load?.deliveryDate,
       distance: trip.estimatedDistanceKm ? Number(trip.estimatedDistanceKm) : null,
-      rate: trip.load?.totalFareEtb ? Number(trip.load.totalFareEtb) : (trip.load?.rate ? Number(trip.load.rate) : null),
     }));
 
     const response = {

@@ -8,7 +8,7 @@ interface DashboardStats {
   totalLoads: number;
   totalTrucks: number;
   totalRevenue: number;
-  totalEscrow: number;
+  activeTrips: number;
   loadsByStatus: Record<string, number>;
 }
 
@@ -105,10 +105,10 @@ export default function AdminFinancialsPage() {
             <div className="ml-5 w-0 flex-1">
               <dl>
                 <dt className="text-sm font-medium text-gray-500 truncate">
-                  Escrow Held
+                  Active Trips
                 </dt>
                 <dd className="text-2xl font-bold text-gray-900">
-                  ETB {stats.totalEscrow.toLocaleString()}
+                  {stats.activeTrips.toLocaleString()}
                 </dd>
               </dl>
             </div>
@@ -220,8 +220,8 @@ export default function AdminFinancialsPage() {
         </h2>
         <div className="rounded-md bg-blue-50 p-4">
           <p className="text-sm text-blue-700">
-            <strong>Platform Health:</strong> The platform is holding ETB{" "}
-            {stats.totalEscrow.toLocaleString()} in escrow for active loads. Total
+            <strong>Platform Health:</strong> There are{" "}
+            {stats.activeTrips.toLocaleString()} active trips in progress. Total
             revenue generated is ETB {stats.totalRevenue.toLocaleString()}.
           </p>
         </div>

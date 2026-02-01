@@ -4,7 +4,7 @@
  * Sprint 20 - Dashboard Visual Redesign
  * Clean, minimal, well-proportioned design
  *
- * Stats: Users, Organizations, Loads, Trucks, Revenue, Escrow, Withdrawals, Disputes
+ * Stats: Users, Organizations, Loads, Trucks, Revenue, Active Trips, Withdrawals, Disputes
  * Quick Actions: Manage Users, Verification, Organizations, Audit Logs
  * Sections: Load Status, Quick Actions, System Status
  */
@@ -38,7 +38,7 @@ interface DashboardStats {
   totalTrucks: number;
   activeLoads: number;
   totalRevenue: { balance: number };
-  escrowBalance: { balance: number };
+  activeTrips: number;
   pendingWithdrawals: number;
   openDisputes: number;
   loadsByStatus: Array<{ status: string; _count: number }>;
@@ -260,11 +260,11 @@ export default async function AdminDashboard() {
             trend={{ value: 'Total earnings', positive: true }}
           />
           <StatCard
-            title="Escrow Balance"
-            value={formatCurrency(stats.escrowBalance.balance)}
-            icon={<LockIcon />}
+            title="Active Trips"
+            value={stats.activeTrips}
+            icon={<TruckIcon />}
             color="secondary"
-            subtitle="Held in escrow"
+            subtitle="Currently in transit"
           />
           <StatCard
             title="Pending Withdrawals"

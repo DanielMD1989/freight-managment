@@ -13,8 +13,8 @@ export async function GET() {
       totalLoads,
       totalTrucks,
       activeLoads,
+      activeTrips,
       totalRevenue,
-      escrowBalance,
       pendingWithdrawals,
       openDisputes,
     ] = await Promise.all([
@@ -23,12 +23,9 @@ export async function GET() {
       db.load.count(),
       db.truck.count(),
       db.load.count({ where: { status: { in: ["POSTED", "ASSIGNED", "IN_TRANSIT"] } } }),
+      db.trip.count({ where: { status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] } } }),
       db.financialAccount.findFirst({
         where: { accountType: "PLATFORM_REVENUE" },
-        select: { balance: true },
-      }),
-      db.financialAccount.findFirst({
-        where: { accountType: "ESCROW" },
         select: { balance: true },
       }),
       db.withdrawalRequest.count({ where: { status: "PENDING" } }),
@@ -59,8 +56,8 @@ export async function GET() {
       totalLoads,
       totalTrucks,
       activeLoads,
+      activeTrips,
       totalRevenue: totalRevenue || { balance: 0 },
-      escrowBalance: escrowBalance || { balance: 0 },
       pendingWithdrawals,
       openDisputes,
       loadsByStatus: loadsByStatus.map((item) => ({

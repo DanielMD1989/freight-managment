@@ -99,23 +99,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validation: Shipper must have sufficient balance (MVP: simplified escrow)
-    const shipperWallet = load.shipper.financialAccounts[0];
-    if (!shipperWallet) {
-      return NextResponse.json(
-        { error: "Shipper wallet not found" },
-        { status: 400 }
-      );
-    }
-
-    const escrowAmount = load.rate; // Simplified: just the load rate
-    if (parseFloat(shipperWallet.balance.toString()) < parseFloat(escrowAmount.toString())) {
-      return NextResponse.json(
-        { error: "Shipper has insufficient balance for escrow" },
-        { status: 400 }
-      );
-    }
-
     // If self-dispatch, check if user owns the truck
     if (!hasOpsPermission) {
       const user = await db.user.findUnique({
@@ -176,8 +159,6 @@ export async function POST(request: NextRequest) {
           assignedTruckId: truckId,
           assignedAt: new Date(),
           status: "ASSIGNED",
-          escrowFunded: true,
-          escrowAmount,
         },
       });
 
@@ -191,16 +172,6 @@ export async function POST(request: NextRequest) {
           metadata: {
             truckId,
             licensePlate: truck.licensePlate,
-          },
-        },
-      });
-
-      // Fund escrow (simplified for MVP)
-      await tx.financialAccount.update({
-        where: { id: shipperWallet.id },
-        data: {
-          balance: {
-            decrement: escrowAmount,
           },
         },
       });

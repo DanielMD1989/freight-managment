@@ -18,7 +18,6 @@ interface AssignedLoad {
   deliveryDate: string;
   cargoDescription: string;
   weight: number;
-  rate: number;
   pickupCity: {
     name: string;
     latitude: number;
@@ -112,7 +111,6 @@ async function getDriverData(userId: string): Promise<{
       deliveryDate: load.deliveryDate.toISOString(),
       cargoDescription: load.cargoDescription,
       weight: Number(load.weight),
-      rate: Number(load.rate),
       pickupCity: load.pickupLocation
         ? {
             name: load.pickupLocation.name,
@@ -282,11 +280,6 @@ export default async function DriverDashboardPage() {
                       >
                         {load.status.replace(/_/g, ' ')}
                       </span>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-green-600">
-                        {formatCurrency(load.rate)}
-                      </div>
                     </div>
                   </div>
 

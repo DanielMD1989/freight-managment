@@ -75,7 +75,6 @@ export async function GET(request: NextRequest) {
         },
         weight: load.weight,
         truckType: load.truckType,
-        rate: load.rate,
         distanceKm: load.distanceKm,
         matchScore: load.matchScore,
         postedAt: load.postedAt,

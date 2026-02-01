@@ -11,7 +11,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { createNotification, NotificationType } from '@/lib/notifications';
-import { releaseFundsFromEscrow } from '@/lib/escrowManagement';
 import { CacheInvalidation } from '@/lib/cache';
 
 /**
@@ -45,7 +44,6 @@ export async function POST(
             id: true,
             pickupCity: true,
             deliveryCity: true,
-            escrowFunded: true,
             podSubmitted: true,
           },
         },
@@ -173,46 +171,8 @@ export async function POST(
       });
     }
 
-    // Attempt to release escrow if funded
-    let escrowReleaseResult = null;
-    if (trip.load?.escrowFunded) {
-      try {
-        escrowReleaseResult = await releaseFundsFromEscrow(trip.loadId);
-
-        if (escrowReleaseResult.success) {
-          await db.loadEvent.create({
-            data: {
-              loadId: trip.loadId,
-              eventType: 'ESCROW_RELEASED',
-              description: `Escrow funds released: Carrier received ${escrowReleaseResult.carrierPayout.toFixed(2)} ETB`,
-              userId: session.userId,
-              metadata: {
-                carrierPayout: escrowReleaseResult.carrierPayout.toFixed(2),
-                platformRevenue: escrowReleaseResult.platformRevenue.toFixed(2),
-                transactionId: escrowReleaseResult.transactionId,
-              },
-            },
-          });
-        } else {
-          console.warn(`Escrow release failed for trip ${tripId}:`, escrowReleaseResult.error);
-          await db.loadEvent.create({
-            data: {
-              loadId: trip.loadId,
-              eventType: 'ESCROW_RELEASE_FAILED',
-              description: `Escrow release failed: ${escrowReleaseResult.error}`,
-              userId: session.userId,
-            },
-          });
-        }
-      } catch (error) {
-        console.error('Escrow release error:', error);
-      }
-    }
-
     return NextResponse.json({
-      message: escrowReleaseResult?.success
-        ? 'Delivery confirmed. Funds released from escrow.'
-        : 'Delivery confirmed successfully. Trip completed.',
+      message: 'Delivery confirmed successfully. Trip completed.',
       trip: {
         id: updatedTrip.id,
         status: updatedTrip.status,
@@ -220,15 +180,6 @@ export async function POST(
         shipperConfirmedAt: updatedTrip.shipperConfirmedAt,
         completedAt: updatedTrip.completedAt,
       },
-      escrowRelease: escrowReleaseResult
-        ? {
-            success: escrowReleaseResult.success,
-            carrierPayout: escrowReleaseResult.success
-              ? escrowReleaseResult.carrierPayout.toFixed(2)
-              : null,
-            error: escrowReleaseResult.error,
-          }
-        : null,
     });
   } catch (error) {
     console.error('Confirm delivery error:', error);

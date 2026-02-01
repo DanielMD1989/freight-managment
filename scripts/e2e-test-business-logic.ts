@@ -760,7 +760,6 @@ async function main() {
             status: true,
             pickupCity: true,
             deliveryCity: true,
-            rate: true,
           }
         },
         truck: { select: { licensePlate: true, carrierId: true } },
@@ -775,7 +774,6 @@ async function main() {
       console.log('1. SHIPPER posted LOAD:');
       console.log(`   Shipper: ${completedTrip.shipper?.name}`);
       console.log(`   Load: ${completedTrip.load?.pickupCity} → ${completedTrip.load?.deliveryCity}`);
-      console.log(`   Rate: ${completedTrip.load?.rate} ETB`);
       console.log();
 
       console.log('2. CARRIER assigned TRUCK:');

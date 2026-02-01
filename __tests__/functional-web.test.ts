@@ -320,11 +320,7 @@ describe('Functional Web Tests', () => {
           cargoDescription: 'Test Cargo - Electronics',
           isFullLoad: true,
           fullPartial: 'FULL',
-          baseFareEtb: 5000,
-          perKmEtb: 50,
           estimatedTripKm: 300,
-          totalFareEtb: 20000,
-          rate: 20000,
           shipperId: testOrg.id,
           createdById: testUser.id,
           postedAt: new Date(),
@@ -349,15 +345,9 @@ describe('Functional Web Tests', () => {
       expect(createdLoad.cargoDescription).toBeDefined();
     });
 
-    it('should validate pricing fields', async () => {
-      expect(Number(createdLoad.baseFareEtb)).toBe(5000);
-      expect(Number(createdLoad.perKmEtb)).toBe(50);
+    it('should validate distance fields', async () => {
+      // Note: Pricing fields removed - negotiated off-platform
       expect(Number(createdLoad.estimatedTripKm)).toBe(300);
-      expect(Number(createdLoad.totalFareEtb)).toBe(20000);
-
-      // Verify calculation: baseFare + (perKm * estimatedKm)
-      const calculated = 5000 + (50 * 300);
-      expect(Number(createdLoad.totalFareEtb)).toBe(calculated);
     });
 
     it('should update load status', async () => {

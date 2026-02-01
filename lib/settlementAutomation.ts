@@ -116,34 +116,14 @@ export async function processReadySettlements(): Promise<number> {
   }
 
   const batchSize = settings.settlementBatchSize || 50;
-  const minAmount = Number(settings.autoSettlementMinAmount || 0);
-  const maxAmount = Number(settings.autoSettlementMaxAmount || 0);
 
-  // Build where clause with amount constraints
+  // Build where clause for loads ready for settlement
+  // Note: Amount constraints removed since pricing is negotiated off-platform
   const whereClause: any = {
     status: 'DELIVERED',
     podVerified: true,
     settlementStatus: 'PENDING',
   };
-
-  // Add amount constraints if configured
-  if (minAmount > 0) {
-    whereClause.OR = [
-      { totalFareEtb: { gte: minAmount } },
-      { AND: [{ totalFareEtb: null }, { rate: { gte: minAmount } }] },
-    ];
-  }
-
-  if (maxAmount > 0) {
-    whereClause.AND = [
-      {
-        OR: [
-          { totalFareEtb: { lte: maxAmount } },
-          { AND: [{ totalFareEtb: null }, { rate: { lte: maxAmount } }] },
-        ],
-      },
-    ];
-  }
 
   // Find loads ready for settlement
   const loadsToSettle = await db.load.findMany({

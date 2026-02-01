@@ -40,7 +40,6 @@ export async function POST(request: NextRequest) {
         pickupCity: true,
         deliveryCity: true,
         tripKm: true,
-        rate: true,
         originLat: true,
         originLon: true,
         destinationLat: true,
@@ -90,11 +89,9 @@ export async function POST(request: NextRequest) {
     // Calculate metrics
     const metrics = calculateDeadheadMetrics(dho, dhd, tripKm);
 
-    // Calculate revenue efficiency
-    const rate = Number(load.rate);
+    // Calculate total distance for efficiency metrics
     const totalDistance = dho + tripKm + dhd;
-    const revenuePerKm = rate / totalDistance;
-    const paidPercentage = (tripKm / totalDistance) * 100;
+    const paidPercentage = totalDistance > 0 ? (tripKm / totalDistance) * 100 : 0;
 
     return NextResponse.json({
       analysis: {
@@ -102,7 +99,6 @@ export async function POST(request: NextRequest) {
           id: loadId,
           route: `${load.pickupCity} → ${load.deliveryCity}`,
           tripKm,
-          rate,
         },
         deadhead: {
           dho: Math.round(dho * 10) / 10,
@@ -113,10 +109,8 @@ export async function POST(request: NextRequest) {
           ...metrics,
           paidPercentage: Math.round(paidPercentage * 10) / 10,
         },
-        revenue: {
+        distance: {
           totalDistance: Math.round(totalDistance * 10) / 10,
-          revenuePerKm: Math.round(revenuePerKm * 100) / 100,
-          totalRevenue: rate,
         },
         recommendation: getRecommendation(metrics.efficiency, metrics.totalDeadheadPercent),
       },

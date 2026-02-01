@@ -45,34 +45,18 @@ export default async function CarrierWalletPage() {
     },
   });
 
-  // Get earnings summary for average calculation
+  // Get earnings summary
   // Filter by loads assigned to trucks owned by this carrier
-  const [completedDeliveries, totalRevenue] = await Promise.all([
-    db.load.count({
-      where: {
-        status: 'DELIVERED',
-        assignedTruck: {
-          is: {
-            carrierId: session.organizationId,
-          },
+  const completedDeliveries = await db.load.count({
+    where: {
+      status: 'DELIVERED',
+      assignedTruck: {
+        is: {
+          carrierId: session.organizationId,
         },
       },
-    }),
-
-    db.load.aggregate({
-      where: {
-        status: 'DELIVERED',
-        assignedTruck: {
-          is: {
-            carrierId: session.organizationId,
-          },
-        },
-      },
-      _sum: {
-        rate: true,
-      },
-    }),
-  ]);
+    },
+  });
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-ET', {
@@ -114,14 +98,12 @@ export default async function CarrierWalletPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Average per Delivery */}
         <div className="bg-white rounded-xl shadow-sm border border-[var(--border)] p-6">
-          <div className="text-sm text-[#064d51]/70 mb-2">Average per Delivery</div>
+          <div className="text-sm text-[#064d51]/70 mb-2">Completed Deliveries</div>
           <div className="text-2xl font-bold text-[#064d51]">
-            {completedDeliveries > 0
-              ? formatCurrency(Number(totalRevenue._sum.rate || 0) / completedDeliveries)
-              : formatCurrency(0)}
+            {completedDeliveries}
           </div>
           <div className="text-xs text-[#064d51]/60 mt-1">
-            Based on {completedDeliveries} completed deliveries
+            Total loads delivered
           </div>
         </div>
 

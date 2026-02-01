@@ -95,10 +95,6 @@ export async function GET(request: NextRequest) {
       // Wallet balance
       walletAccount,
 
-      // Earnings (from completed loads)
-      totalEarnings,
-      earningsInPeriod,
-
       // Match proposals sent
       totalProposals,
       proposalsInPeriod,
@@ -218,29 +214,6 @@ export async function GET(request: NextRequest) {
         select: { balance: true, currency: true },
       }),
 
-      // Total earnings (rate from delivered loads)
-      truckIds.length > 0
-        ? db.load.aggregate({
-            where: {
-              assignedTruckId: { in: truckIds },
-              status: 'DELIVERED',
-            },
-            _sum: { rate: true },
-          })
-        : Promise.resolve({ _sum: { rate: null } }),
-
-      // Earnings in period
-      truckIds.length > 0
-        ? db.load.aggregate({
-            where: {
-              assignedTruckId: { in: truckIds },
-              status: 'DELIVERED',
-              updatedAt: { gte: start, lte: end },
-            },
-            _sum: { rate: true },
-          })
-        : Promise.resolve({ _sum: { rate: null } }),
-
       // Total match proposals sent
       db.matchProposal.count({
         where: {
@@ -278,21 +251,6 @@ export async function GET(request: NextRequest) {
     const deliveriesOverTime = truckIds.length > 0
       ? await db.$queryRaw<{ date: Date; count: bigint }[]>`
           SELECT DATE_TRUNC('day', l."updatedAt") as date, COUNT(*) as count
-          FROM loads l
-          JOIN trucks t ON l."assignedTruckId" = t.id
-          WHERE t."carrierId" = ${carrierId}
-            AND l.status = 'DELIVERED'
-            AND l."updatedAt" >= ${start}
-            AND l."updatedAt" <= ${end}
-          GROUP BY DATE_TRUNC('day', l."updatedAt")
-          ORDER BY date ASC
-        `
-      : [];
-
-    const earningsOverTime = truckIds.length > 0
-      ? await db.$queryRaw<{ date: Date; total: number }[]>`
-          SELECT DATE_TRUNC('day', l."updatedAt") as date,
-                 COALESCE(SUM(l.rate), 0) as total
           FROM loads l
           JOIN trucks t ON l."assignedTruckId" = t.id
           WHERE t."carrierId" = ${carrierId}
@@ -369,8 +327,6 @@ export async function GET(request: NextRequest) {
         financial: {
           walletBalance: Number(walletAccount?.balance || 0),
           currency: walletAccount?.currency || 'ETB',
-          totalEarnings: Number(totalEarnings._sum.rate || 0),
-          earningsInPeriod: Number(earningsInPeriod._sum.rate || 0),
         },
         proposals: {
           totalSent: totalProposals,
@@ -388,10 +344,6 @@ export async function GET(request: NextRequest) {
         deliveriesOverTime: deliveriesOverTime.map(item => ({
           date: item.date,
           count: Number(item.count),
-        })),
-        earningsOverTime: earningsOverTime.map(item => ({
-          date: item.date,
-          total: Number(item.total),
         })),
         proposalsOverTime: proposalsOverTime.map(item => ({
           date: item.date,

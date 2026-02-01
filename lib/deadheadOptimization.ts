@@ -249,7 +249,6 @@ export async function findLoadsWithMinimalDHO(
   pickupCity: string;
   deliveryCity: string;
   tripKm: number | null;
-  rate: number;
 }>> {
   // Get truck location
   const location = await getTruckCurrentLocation(truckId);
@@ -294,7 +293,6 @@ export async function findLoadsWithMinimalDHO(
       pickupCity: true,
       deliveryCity: true,
       tripKm: true,
-      rate: true,
       originLat: true,
       originLon: true,
       pickupLocation: {
@@ -339,7 +337,6 @@ export async function findLoadsWithMinimalDHO(
         pickupCity: load.pickupCity || '',
         deliveryCity: load.deliveryCity || '',
         tripKm: load.tripKm ? Number(load.tripKm) : null,
-        rate: Number(load.rate),
       };
     })
     .filter((item): item is NonNullable<typeof item> => item !== null)
@@ -368,7 +365,6 @@ export async function findNextLoadsWithMinimalDHD(
   pickupCity: string;
   deliveryCity: string;
   tripKm: number | null;
-  rate: number;
   pickupDate: Date;
 }>> {
   // Get current load delivery location
@@ -446,7 +442,6 @@ export async function findNextLoadsWithMinimalDHD(
       pickupCity: true,
       deliveryCity: true,
       tripKm: true,
-      rate: true,
       pickupDate: true,
       originLat: true,
       originLon: true,
@@ -487,7 +482,6 @@ export async function findNextLoadsWithMinimalDHD(
         pickupCity: load.pickupCity || '',
         deliveryCity: load.deliveryCity || '',
         tripKm: load.tripKm ? Number(load.tripKm) : null,
-        rate: Number(load.rate),
         pickupDate: load.pickupDate,
       };
     })

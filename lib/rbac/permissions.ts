@@ -75,7 +75,7 @@ export enum Permission {
   WITHDRAW_FUNDS = "withdraw_funds", // Shipper, Carrier
   VIEW_ALL_ACCOUNTS = "view_all_accounts", // Admin, SuperAdmin
   APPROVE_WITHDRAWALS = "approve_withdrawals", // Admin
-  MANAGE_ESCROW = "manage_escrow", // Admin
+  MANAGE_SETTLEMENTS = "manage_settlements", // Admin
 
   // Service Fees & Penalties
   CONFIGURE_SERVICE_FEES = "configure_service_fees", // Admin
@@ -332,7 +332,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.MANAGE_WALLET,
     Permission.VIEW_ALL_ACCOUNTS,
     Permission.APPROVE_WITHDRAWALS,
-    Permission.MANAGE_ESCROW,
+    Permission.MANAGE_SETTLEMENTS,
 
     // Service fees & penalties
     Permission.CONFIGURE_SERVICE_FEES,

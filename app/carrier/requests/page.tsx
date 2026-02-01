@@ -82,8 +82,6 @@ async function getLoadRequests(userId: string) {
           pickupCity: true,
           deliveryCity: true,
           pickupDate: true,
-          rate: true,
-          totalFareEtb: true,
           pickupLocation: {
             select: {
               name: true,
@@ -197,7 +195,6 @@ export default async function CarrierRequestsPage() {
       pickupCity: req.load.pickupLocation?.name || req.load.pickupCity || 'Unknown',
       deliveryCity: req.load.deliveryLocation?.name || req.load.deliveryCity || 'Unknown',
       pickupDate: req.load.pickupDate.toISOString(),
-      rate: req.load.totalFareEtb ? Number(req.load.totalFareEtb) : (req.load.rate ? Number(req.load.rate) : null),
     },
     truck: {
       id: req.truck.id,

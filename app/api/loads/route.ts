@@ -5,14 +5,8 @@ import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
 import {
   calculateAge,
-  calculateRPM,
-  calculateTRPM,
   maskCompany,
 } from "@/lib/loadUtils";
-import {
-  calculateTotalFare,
-  validatePricing,
-} from "@/lib/pricingCalculation";
 import { LoadCache, CacheInvalidation, CacheTTL } from "@/lib/cache";
 import { checkRpsLimit, RPS_CONFIGS, addRateLimitHeaders } from "@/lib/rateLimit";
 
@@ -51,11 +45,7 @@ const createLoadSchema = z.object({
   lengthM: z.number().positive().optional(),
   casesCount: z.number().int().positive().optional(),
 
-  // Pricing - Sprint 16: Base + Per-KM Model
-  baseFareEtb: z.number().positive().optional(),  // Base fare (ETB)
-  perKmEtb: z.number().positive().optional(),     // Per-km rate (ETB/km)
-  // Legacy pricing (backward compatibility)
-  rate: z.number().positive().optional(),          // DEPRECATED: Use baseFareEtb + perKmEtb
+  // Pricing is negotiated off-platform
   bookMode: z.enum(["REQUEST", "INSTANT"]).default("REQUEST"),  // [NEW]
 
   // [NEW] Market Pricing
@@ -121,39 +111,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createLoadSchema.parse(body);
 
-    // Pricing is optional - shippers and carriers agree on pricing outside the platform
-    const hasNewPricing = validatedData.baseFareEtb && validatedData.perKmEtb;
-    const hasLegacyPricing = validatedData.rate;
-
-    // Calculate totalFareEtb if using new pricing model (optional)
-    let totalFareEtb = null;
-    if (hasNewPricing && validatedData.tripKm) {
-      try {
-        validatePricing(
-          validatedData.baseFareEtb!,
-          validatedData.perKmEtb!,
-          validatedData.tripKm
-        );
-        totalFareEtb = calculateTotalFare(
-          validatedData.baseFareEtb!,
-          validatedData.perKmEtb!,
-          validatedData.tripKm
-        );
-      } catch (error: any) {
-        // Pricing calculation failed - proceed without calculated fare
-        console.warn("Pricing calculation failed:", error.message);
-      }
-    }
-
+    // Pricing is negotiated off-platform - platform only charges service fees
     const load = await db.load.create({
       data: {
         ...validatedData,
         pickupDate: new Date(validatedData.pickupDate),
         deliveryDate: new Date(validatedData.deliveryDate),
-        // Sprint 16: Add calculated totalFareEtb (optional)
-        totalFareEtb: totalFareEtb ? totalFareEtb.toNumber() : null,
-        // Pricing is optional - set rate if provided (schema requires non-null, default to 0)
-        rate: hasNewPricing && totalFareEtb ? totalFareEtb.toNumber() : (validatedData.rate || 0),
         // [NEW] Set postedAt when status is POSTED
         postedAt: validatedData.status === "POSTED" ? new Date() : null,
         shipperId: user.organizationId,
@@ -365,17 +328,6 @@ export async function GET(request: NextRequest) {
       where.bookMode = bookMode;
     }
 
-    // [NEW] Rate range filter
-    if (rateMin || rateMax) {
-      where.rate = {};
-      if (rateMin) {
-        where.rate.gte = parseFloat(rateMin);
-      }
-      if (rateMax) {
-        where.rate.lte = parseFloat(rateMax);
-      }
-    }
-
     // [NEW] Sorting support
     const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
@@ -394,9 +346,6 @@ export async function GET(request: NextRequest) {
         break;
       case "tripKm":
         orderBy = { tripKm: sortOrder };
-        break;
-      case "rate":
-        orderBy = { rate: sortOrder };
         break;
       case "pickupDate":
         orderBy = { pickupDate: sortOrder };
@@ -444,8 +393,7 @@ export async function GET(request: NextRequest) {
           // [NEW] Cargo Details
           lengthM: true,
           casesCount: true,
-          // Pricing
-          rate: true,
+          // Settings
           currency: true,
           bookMode: true,  // [NEW]
           // SPRINT 8: Market pricing (dtpReference, factorRating) removed per TRD
@@ -498,15 +446,6 @@ export async function GET(request: NextRequest) {
       // Compute age
       const ageMinutes = calculateAge(load.postedAt, load.createdAt);
 
-      // Compute RPM and tRPM
-      const rpmEtbPerKm = calculateRPM(load.rate, load.tripKm);
-      const trpmEtbPerKm = calculateTRPM(
-        load.rate,
-        load.tripKm,
-        load.dhToOriginKm,
-        load.dhAfterDeliveryKm
-      );
-
       // Apply company masking
       const maskedShipper = load.shipper
         ? {
@@ -519,28 +458,10 @@ export async function GET(request: NextRequest) {
         ...load,
         // [NEW] Computed fields
         ageMinutes,
-        rpmEtbPerKm,
-        trpmEtbPerKm,
         // Replace shipper with masked version
         shipper: maskedShipper,
       };
     });
-
-    // [NEW] Sort by computed fields (RPM, tRPM) if requested
-    // Note: Database sorting handles most fields, but RPM/tRPM need client-side sorting
-    if (sortBy === "rpm" || sortBy === "rpmEtbPerKm") {
-      loadsWithComputed.sort((a, b) => {
-        const aRpm = a.rpmEtbPerKm ?? -Infinity;
-        const bRpm = b.rpmEtbPerKm ?? -Infinity;
-        return sortOrder === "asc" ? aRpm - bRpm : bRpm - aRpm;
-      });
-    } else if (sortBy === "trpm" || sortBy === "trpmEtbPerKm") {
-      loadsWithComputed.sort((a, b) => {
-        const aTrpm = a.trpmEtbPerKm ?? -Infinity;
-        const bTrpm = b.trpmEtbPerKm ?? -Infinity;
-        return sortOrder === "asc" ? aTrpm - bTrpm : bTrpm - aTrpm;
-      });
-    }
 
     const response = {
       loads: loadsWithComputed,

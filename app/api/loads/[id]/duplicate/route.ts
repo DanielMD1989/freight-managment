@@ -93,7 +93,6 @@ export async function POST(
         requiresRefrigeration: originalLoad.requiresRefrigeration,
         lengthM: originalLoad.lengthM,
         casesCount: originalLoad.casesCount,
-        rate: originalLoad.rate,
         currency: originalLoad.currency,
         bookMode: originalLoad.bookMode,
         isAnonymous: originalLoad.isAnonymous,
@@ -104,9 +103,7 @@ export async function POST(
         // Set new ownership
         shipperId: session.organizationId!,
         createdById: session.userId,
-        // Reset escrow and assignment
-        escrowFunded: false,
-        escrowAmount: null,
+        // Reset assignment
         assignedTruckId: null,
         assignedAt: null,
         postedAt: null,
