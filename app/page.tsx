@@ -8,8 +8,10 @@ export default async function Home() {
 
   if (session) {
     // Redirect to role-appropriate portal
-    if (session.role === 'CARRIER' || session.role === 'DISPATCHER') {
+    if (session.role === 'CARRIER') {
       redirect("/carrier");
+    } else if (session.role === 'DISPATCHER') {
+      redirect("/dispatcher");
     } else if (session.role === 'SHIPPER') {
       redirect("/shipper");
     } else if (session.role === 'ADMIN' || session.role === 'SUPER_ADMIN') {
