@@ -124,6 +124,55 @@ async function getLoadRequests(userId: string) {
   return requests;
 }
 
+// Get match proposals from dispatchers
+async function getMatchProposals(userId: string) {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { organizationId: true },
+  });
+
+  if (!user?.organizationId) {
+    return [];
+  }
+
+  const proposals = await db.matchProposal.findMany({
+    where: {
+      carrierId: user.organizationId,
+    },
+    include: {
+      load: {
+        select: {
+          id: true,
+          status: true,
+          weight: true,
+          truckType: true,
+          pickupCity: true,
+          deliveryCity: true,
+          pickupDate: true,
+        },
+      },
+      truck: {
+        select: {
+          id: true,
+          licensePlate: true,
+          truckType: true,
+          capacity: true,
+        },
+      },
+      proposedBy: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return proposals;
+}
+
 export default async function CarrierRequestsPage() {
   const session = await requireAuth();
 
@@ -131,10 +180,11 @@ export default async function CarrierRequestsPage() {
     redirect('/carrier');
   }
 
-  // Fetch both types of requests in parallel
-  const [shipperRequests, loadRequests] = await Promise.all([
+  // Fetch all types of requests in parallel
+  const [shipperRequests, loadRequests, matchProposals] = await Promise.all([
     getShipperRequests(session.userId),
     getLoadRequests(session.userId),
+    getMatchProposals(session.userId),
   ]);
 
   // Transform shipper requests (incoming truck booking requests)
@@ -214,7 +264,41 @@ export default async function CarrierRequestsPage() {
       : null,
   }));
 
+  // Transform match proposals
+  const transformedMatchProposals = matchProposals.map((proposal) => ({
+    id: proposal.id,
+    status: proposal.status,
+    notes: proposal.notes,
+    proposedRate: proposal.proposedRate ? Number(proposal.proposedRate) : null,
+    expiresAt: proposal.expiresAt.toISOString(),
+    createdAt: proposal.createdAt.toISOString(),
+    respondedAt: proposal.respondedAt?.toISOString() || null,
+    load: {
+      id: proposal.load.id,
+      pickupCity: proposal.load.pickupCity || 'Unknown',
+      deliveryCity: proposal.load.deliveryCity || 'Unknown',
+      pickupDate: proposal.load.pickupDate.toISOString(),
+      weight: Number(proposal.load.weight),
+      truckType: proposal.load.truckType,
+      status: proposal.load.status,
+    },
+    truck: {
+      id: proposal.truck.id,
+      licensePlate: proposal.truck.licensePlate,
+      truckType: proposal.truck.truckType,
+      capacity: Number(proposal.truck.capacity),
+    },
+    proposedBy: proposal.proposedBy
+      ? {
+          name: [proposal.proposedBy.firstName, proposal.proposedBy.lastName]
+            .filter(Boolean)
+            .join(' ') || 'Dispatcher',
+        }
+      : null,
+  }));
+
   const pendingShipperRequests = transformedShipperRequests.filter(r => r.status === 'PENDING').length;
+  const pendingMatchProposals = transformedMatchProposals.filter(p => p.status === 'PENDING').length;
 
   return (
     <div className="p-6">
@@ -236,7 +320,9 @@ export default async function CarrierRequestsPage() {
         <RequestsTabs
           shipperRequests={transformedShipperRequests}
           loadRequests={transformedLoadRequests}
+          matchProposals={transformedMatchProposals}
           pendingShipperRequests={pendingShipperRequests}
+          pendingMatchProposals={pendingMatchProposals}
         />
       </Suspense>
     </div>

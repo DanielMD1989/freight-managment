@@ -4,6 +4,7 @@
  * Client component to switch between incoming and outgoing requests
  * - Shipper Requests: Incoming TruckRequests from shippers
  * - My Load Requests: Outgoing LoadRequests to shippers
+ * - Match Proposals: Incoming proposals from dispatchers
  */
 
 'use client';
@@ -12,6 +13,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import ShipperRequestsClient from './ShipperRequestsClient';
 import MyLoadRequestsClient from './MyLoadRequestsClient';
+import MatchProposalsClient from './MatchProposalsClient';
 
 interface TruckRequest {
   id: string;
@@ -88,30 +90,63 @@ interface LoadRequest {
   } | null;
 }
 
+interface MatchProposal {
+  id: string;
+  status: string;
+  notes: string | null;
+  proposedRate: number | null;
+  expiresAt: string;
+  createdAt: string;
+  respondedAt: string | null;
+  load: {
+    id: string;
+    pickupCity: string;
+    deliveryCity: string;
+    pickupDate: string;
+    weight: number;
+    truckType: string;
+    status: string;
+  };
+  truck: {
+    id: string;
+    licensePlate: string;
+    truckType: string;
+    capacity: number;
+  };
+  proposedBy: {
+    name: string;
+  } | null;
+}
+
 interface Props {
   shipperRequests: TruckRequest[];
   loadRequests: LoadRequest[];
+  matchProposals: MatchProposal[];
   pendingShipperRequests: number;
+  pendingMatchProposals: number;
 }
 
-type TabType = 'shipper-requests' | 'my-requests';
+type TabType = 'shipper-requests' | 'my-requests' | 'match-proposals';
 
 export default function RequestsTabs({
   shipperRequests,
   loadRequests,
+  matchProposals,
   pendingShipperRequests,
+  pendingMatchProposals,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab') as TabType | null;
 
   const [activeTab, setActiveTab] = useState<TabType>(
-    tabParam === 'my-requests' ? 'my-requests' : 'shipper-requests'
+    tabParam === 'my-requests' ? 'my-requests' :
+    tabParam === 'match-proposals' ? 'match-proposals' : 'shipper-requests'
   );
 
   // Sync tab with URL
   useEffect(() => {
-    if (tabParam && (tabParam === 'shipper-requests' || tabParam === 'my-requests')) {
+    if (tabParam && (tabParam === 'shipper-requests' || tabParam === 'my-requests' || tabParam === 'match-proposals')) {
       setActiveTab(tabParam);
     }
   }, [tabParam]);
@@ -124,7 +159,7 @@ export default function RequestsTabs({
   return (
     <div className="space-y-6">
       {/* Tab Navigation */}
-      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-1.5 inline-flex gap-1">
+      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-1.5 inline-flex gap-1 flex-wrap">
         <button
           onClick={() => handleTabChange('shipper-requests')}
           className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
@@ -144,6 +179,28 @@ export default function RequestsTabs({
                 : 'bg-amber-100 text-amber-700 animate-pulse'
             }`}>
               {pendingShipperRequests}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => handleTabChange('match-proposals')}
+          className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+            activeTab === 'match-proposals'
+              ? 'bg-gradient-to-r from-teal-600 to-teal-500 text-white shadow-md shadow-teal-500/25'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+          </svg>
+          Match Proposals
+          {pendingMatchProposals > 0 && (
+            <span className={`px-2 py-0.5 text-xs rounded-full font-bold ${
+              activeTab === 'match-proposals'
+                ? 'bg-white/20 text-white'
+                : 'bg-amber-100 text-amber-700 animate-pulse'
+            }`}>
+              {pendingMatchProposals}
             </span>
           )}
         </button>
@@ -176,6 +233,13 @@ export default function RequestsTabs({
             Truck booking requests from shippers who want to use your trucks
           </p>
           <ShipperRequestsClient requests={shipperRequests} />
+        </div>
+      ) : activeTab === 'match-proposals' ? (
+        <div>
+          <p className="text-sm text-slate-500 mb-4">
+            Load-truck match proposals from dispatchers. Accept to assign the load to your truck.
+          </p>
+          <MatchProposalsClient proposals={matchProposals} />
         </div>
       ) : (
         <div>
