@@ -109,44 +109,47 @@ export default function TruckDetailsPage({ params }: { params: Promise<{ id: str
     setDocuments((prev) => [...prev, document]);
   };
 
+  // Status colors from StatusBadge.tsx (source of truth)
   const getStatusColor = (status: string) => {
     switch (status) {
       case "ACTIVE":
-        return "bg-green-100 text-green-800";
+      case "AVAILABLE":
+        return "bg-emerald-500/10 text-emerald-600";
       case "IN_TRANSIT":
-        return "bg-blue-100 text-blue-800";
+      case "ON_JOB":
+        return "bg-indigo-500/10 text-indigo-600";
       case "MAINTENANCE":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-amber-500/10 text-amber-600";
       case "INACTIVE":
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-500/10 text-gray-600";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-slate-500/10 text-slate-600";
     }
   };
 
   const getApprovalStatusColor = (status: string) => {
     switch (status) {
       case "APPROVED":
-        return "bg-green-100 text-green-800";
+        return "bg-emerald-500/10 text-emerald-600";
       case "PENDING":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-amber-500/10 text-amber-600";
       case "REJECTED":
-        return "bg-red-100 text-red-800";
+        return "bg-rose-500/10 text-rose-600";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-slate-500/10 text-slate-600";
     }
   };
 
   const getVerificationStatusColor = (status: string) => {
     switch (status) {
       case "VERIFIED":
-        return "bg-green-100 text-green-800";
+        return "bg-emerald-500/10 text-emerald-600";
       case "PENDING":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-amber-500/10 text-amber-600";
       case "REJECTED":
-        return "bg-red-100 text-red-800";
+        return "bg-rose-500/10 text-rose-600";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-slate-500/10 text-slate-600";
     }
   };
 

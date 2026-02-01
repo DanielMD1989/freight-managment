@@ -94,15 +94,16 @@ export default function TruckRequestsClient({ requests: initialRequests }: Props
     }
   };
 
+  // Status colors from StatusBadge.tsx (source of truth)
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      PENDING: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      APPROVED: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      REJECTED: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      EXPIRED: 'bg-teal-700/10 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
-      CANCELLED: 'bg-teal-700/10 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+      PENDING: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+      APPROVED: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+      REJECTED: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
+      EXPIRED: 'bg-gray-500/10 text-gray-600 dark:text-gray-400',
+      CANCELLED: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
     };
-    return styles[status] || 'bg-teal-700/10 text-gray-800';
+    return styles[status] || 'bg-slate-500/10 text-slate-600';
   };
 
   const formatDate = (date: string) => {

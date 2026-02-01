@@ -23,13 +23,14 @@ interface StatusUpdateModalProps {
   onUpdateSuccess: () => void;
 }
 
+// Status colors from StatusBadge.tsx (source of truth)
 const STATUS_OPTIONS = [
-  { value: 'DRAFT', label: 'Draft', color: 'bg-[#064d51]/10 text-[#064d51]' },
-  { value: 'POSTED', label: 'Posted', color: 'bg-green-100 text-green-800' },
-  { value: 'ASSIGNED', label: 'Assigned', color: 'bg-[#1e9c99]/10 text-[#1e9c99]' },
-  { value: 'IN_TRANSIT', label: 'In Transit', color: 'bg-purple-100 text-purple-800' },
-  { value: 'DELIVERED', label: 'Delivered', color: 'bg-[#064d51]/10 text-[#064d51]' },
-  { value: 'CANCELLED', label: 'Cancelled', color: 'bg-red-100 text-red-800' },
+  { value: 'DRAFT', label: 'Draft', color: 'bg-slate-500/10 text-slate-600' },
+  { value: 'POSTED', label: 'Posted', color: 'bg-blue-500/10 text-blue-600' },
+  { value: 'ASSIGNED', label: 'Assigned', color: 'bg-amber-500/10 text-amber-600' },
+  { value: 'IN_TRANSIT', label: 'In Transit', color: 'bg-indigo-500/10 text-indigo-600' },
+  { value: 'DELIVERED', label: 'Delivered', color: 'bg-emerald-500/10 text-emerald-600' },
+  { value: 'CANCELLED', label: 'Cancelled', color: 'bg-rose-500/10 text-rose-600' },
 ];
 
 export default function StatusUpdateModal({

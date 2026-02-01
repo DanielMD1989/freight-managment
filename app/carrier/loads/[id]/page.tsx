@@ -119,37 +119,39 @@ export default async function CarrierLoadDetailsPage({ params }: LoadDetailsProp
     }).format(new Date(date));
   };
 
+  // Status colors from StatusBadge.tsx (source of truth)
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'POSTED':
-        return 'bg-green-100 text-green-800';
+        return 'bg-blue-500/10 text-blue-600';
       case 'ASSIGNED':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-amber-500/10 text-amber-600';
       case 'IN_TRANSIT':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-indigo-500/10 text-indigo-600';
       case 'DELIVERED':
-        return 'bg-purple-100 text-purple-800';
+        return 'bg-emerald-500/10 text-emerald-600';
       case 'CANCELLED':
-        return 'bg-red-100 text-red-800';
+        return 'bg-rose-500/10 text-rose-600';
       case 'DRAFT':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-slate-500/10 text-slate-600';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-slate-500/10 text-slate-600';
     }
   };
 
+  // Service fee status colors (consistent with StatusBadge.tsx pattern)
   const getServiceFeeStatusColor = (status: string) => {
     switch (status) {
       case 'PENDING':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-amber-500/10 text-amber-600';
       case 'RESERVED':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-indigo-500/10 text-indigo-600';
       case 'DEDUCTED':
-        return 'bg-green-100 text-green-800';
+        return 'bg-emerald-500/10 text-emerald-600';
       case 'REFUNDED':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-500/10 text-blue-600';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-slate-500/10 text-slate-600';
     }
   };
 
