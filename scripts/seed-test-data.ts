@@ -8,11 +8,13 @@
  *   npx ts-node scripts/seed-test-data.ts
  *
  * Creates:
- * - Test Users: shipper@test.com, carrier@test.com, admin@test.com
- * - Test Organizations: Test Shipper Co, Test Carrier Co
+ * - Test Users: shipper@test.com, carrier@test.com, dispatcher@test.com, admin@test.com
+ * - Test Organizations: Test Shipper Co, Test Carrier Co, Dispatch Center
  * - Test Corridors: Critical routes for service fee calculation
  * - Test Trucks: DRY_VAN, FLATBED, REFRIGERATED for carrier
- * - Financial Accounts: Wallet accounts with initial balance
+ * - Test Loads: Posted loads for shipper
+ * - Test Truck Postings: Available trucks for matching
+ * - Financial Accounts: Wallet accounts with initial balance (50,000 ETB)
  */
 
 import { PrismaClient } from '@prisma/client';
@@ -200,6 +202,66 @@ async function main() {
     console.log('   [=] User exists: admin@test.com (updated)');
   }
 
+  // --- Dispatcher User & Organization ---
+  let dispatchOrg = await prisma.organization.findFirst({
+    where: { name: 'Dispatch Center' },
+  });
+
+  if (!dispatchOrg) {
+    dispatchOrg = await prisma.organization.create({
+      data: {
+        name: 'Dispatch Center',
+        type: 'LOGISTICS_AGENT',
+        contactEmail: 'dispatcher@test.com',
+        contactPhone: '+251944444444',
+        isVerified: true,
+        verifiedAt: new Date(),
+      },
+    });
+    console.log('   [+] Created organization: Dispatch Center');
+  } else {
+    await prisma.organization.update({
+      where: { id: dispatchOrg.id },
+      data: {
+        isVerified: true,
+        verifiedAt: new Date(),
+      },
+    });
+    console.log('   [=] Organization exists: Dispatch Center (updated)');
+  }
+
+  let dispatcherUser = await prisma.user.findUnique({
+    where: { email: 'dispatcher@test.com' },
+  });
+
+  if (!dispatcherUser) {
+    dispatcherUser = await prisma.user.create({
+      data: {
+        email: 'dispatcher@test.com',
+        passwordHash: hashedPassword,
+        firstName: 'Test',
+        lastName: 'Dispatcher',
+        phone: '+251944444444',
+        role: 'DISPATCHER',
+        status: 'ACTIVE',
+        isActive: true,
+        organizationId: dispatchOrg.id,
+      },
+    });
+    console.log('   [+] Created user: dispatcher@test.com');
+  } else {
+    await prisma.user.update({
+      where: { id: dispatcherUser.id },
+      data: {
+        passwordHash: hashedPassword,
+        status: 'ACTIVE',
+        isActive: true,
+        organizationId: dispatchOrg.id,
+      },
+    });
+    console.log('   [=] User exists: dispatcher@test.com (updated)');
+  }
+
   console.log('');
 
   // ============================================================================
@@ -347,7 +409,7 @@ async function main() {
   // ============================================================================
   console.log('4. Creating financial accounts...\n');
 
-  const INITIAL_BALANCE = 10000;
+  const INITIAL_BALANCE = 50000;
 
   // Shipper Wallet
   let shipperWallet = await prisma.financialAccount.findFirst({
@@ -434,6 +496,172 @@ async function main() {
   console.log('');
 
   // ============================================================================
+  // 5. TEST LOADS (Posted by Shipper)
+  // ============================================================================
+  console.log('5. Creating test loads for shipper...\n');
+
+  const loadsData = [
+    {
+      pickupCity: 'Addis Ababa',
+      deliveryCity: 'Djibouti',
+      truckType: 'DRY_VAN' as const,
+      weight: 12000,
+      cargoDescription: 'Electronics and household goods',
+      pickupDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 days from now
+      deliveryDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 days from now
+    },
+    {
+      pickupCity: 'Addis Ababa',
+      deliveryCity: 'Dire Dawa',
+      truckType: 'FLATBED' as const,
+      weight: 18000,
+      cargoDescription: 'Construction materials',
+      pickupDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000), // 1 day from now
+      deliveryDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
+    },
+    {
+      pickupCity: 'Addis Ababa',
+      deliveryCity: 'Mekelle',
+      truckType: 'REFRIGERATED' as const,
+      weight: 8000,
+      cargoDescription: 'Fresh produce and dairy',
+      pickupDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
+      deliveryDate: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000), // 6 days from now
+    },
+  ];
+
+  const createdLoads: any[] = [];
+  for (const loadData of loadsData) {
+    const existingLoad = await prisma.load.findFirst({
+      where: {
+        shipperId: shipperOrg.id,
+        pickupCity: loadData.pickupCity,
+        deliveryCity: loadData.deliveryCity,
+        truckType: loadData.truckType,
+      },
+    });
+
+    if (!existingLoad) {
+      const load = await prisma.load.create({
+        data: {
+          shipperId: shipperOrg.id,
+          createdById: shipperUser.id,
+          pickupCity: loadData.pickupCity,
+          deliveryCity: loadData.deliveryCity,
+          truckType: loadData.truckType,
+          weight: loadData.weight,
+          cargoDescription: loadData.cargoDescription,
+          pickupDate: loadData.pickupDate,
+          deliveryDate: loadData.deliveryDate,
+          status: 'POSTED',
+          postedAt: new Date(),
+          bookMode: 'REQUEST',
+          fullPartial: 'FULL',
+        },
+      });
+      createdLoads.push(load);
+      console.log(`   [+] Created load: ${loadData.pickupCity} → ${loadData.deliveryCity} (${loadData.truckType})`);
+    } else {
+      await prisma.load.update({
+        where: { id: existingLoad.id },
+        data: {
+          status: 'POSTED',
+          postedAt: new Date(),
+        },
+      });
+      createdLoads.push(existingLoad);
+      console.log(`   [=] Load exists: ${loadData.pickupCity} → ${loadData.deliveryCity} (updated to POSTED)`);
+    }
+  }
+
+  console.log('');
+
+  // ============================================================================
+  // 6. ETHIOPIAN LOCATIONS (Required for TruckPostings)
+  // ============================================================================
+  console.log('6. Creating Ethiopian locations...\n');
+
+  const locationsData = [
+    { name: 'Addis Ababa', region: 'Addis Ababa', latitude: 9.0054, longitude: 38.7636 },
+    { name: 'Dire Dawa', region: 'Dire Dawa', latitude: 9.6011, longitude: 41.8505 },
+    { name: 'Mekelle', region: 'Tigray', latitude: 13.4967, longitude: 39.4753 },
+    { name: 'Djibouti', region: 'Djibouti', latitude: 11.5883, longitude: 43.1450 },
+  ];
+
+  const locationMap: Record<string, string> = {};
+
+  for (const locData of locationsData) {
+    let location = await prisma.ethiopianLocation.findFirst({
+      where: { name: locData.name, region: locData.region },
+    });
+
+    if (!location) {
+      location = await prisma.ethiopianLocation.create({
+        data: {
+          name: locData.name,
+          region: locData.region,
+          latitude: locData.latitude,
+          longitude: locData.longitude,
+          type: 'CITY',
+          isActive: true,
+        },
+      });
+      console.log(`   [+] Created location: ${locData.name}`);
+    } else {
+      console.log(`   [=] Location exists: ${locData.name}`);
+    }
+    locationMap[locData.name] = location.id;
+  }
+
+  console.log('');
+
+  // ============================================================================
+  // 7. TEST TRUCK POSTINGS (Posted by Carrier)
+  // ============================================================================
+  console.log('7. Creating truck postings for carrier...\n');
+
+  const trucks = await prisma.truck.findMany({
+    where: { carrierId: carrierOrg.id },
+  });
+
+  const addisAbabaId = locationMap['Addis Ababa'];
+  const direDawaId = locationMap['Dire Dawa'];
+
+  for (const truck of trucks) {
+    const existingPosting = await prisma.truckPosting.findFirst({
+      where: {
+        truckId: truck.id,
+        status: 'ACTIVE',
+      },
+    });
+
+    if (!existingPosting) {
+      // Determine origin based on truck's current city
+      const originCityId = truck.currentCity === 'Dire Dawa' ? direDawaId : addisAbabaId;
+
+      await prisma.truckPosting.create({
+        data: {
+          truckId: truck.id,
+          carrierId: carrierOrg.id,
+          createdById: carrierUser.id,
+          originCityId: originCityId,
+          availableFrom: new Date(),
+          availableTo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+          status: 'ACTIVE',
+          contactName: 'Test Driver',
+          contactPhone: '+251955555555',
+          fullPartial: 'FULL',
+        },
+      });
+      console.log(`   [+] Created posting for truck: ${truck.licensePlate}`);
+    } else {
+      console.log(`   [=] Posting exists for truck: ${truck.licensePlate}`);
+    }
+  }
+
+  console.log('');
+
+  // ============================================================================
   // SUMMARY
   // ============================================================================
   console.log('========================================');
@@ -441,14 +669,16 @@ async function main() {
   console.log('========================================\n');
 
   console.log('Test Users (password: password):');
-  console.log('  - shipper@test.com   (Shipper role)');
-  console.log('  - carrier@test.com   (Carrier role)');
-  console.log('  - admin@test.com     (Admin role)');
+  console.log('  - shipper@test.com    (Shipper role)');
+  console.log('  - carrier@test.com    (Carrier role)');
+  console.log('  - dispatcher@test.com (Dispatcher role)');
+  console.log('  - admin@test.com      (Admin role)');
   console.log('');
 
   console.log('Test Organizations:');
   console.log(`  - Test Shipper Co (ID: ${shipperOrg.id})`);
   console.log(`  - Test Carrier Co (ID: ${carrierOrg.id})`);
+  console.log(`  - Dispatch Center (ID: ${dispatchOrg.id})`);
   console.log('');
 
   console.log('Test Corridors:');
@@ -461,6 +691,21 @@ async function main() {
   console.log('  - TEST-DV-001 (DRY_VAN)');
   console.log('  - TEST-FB-002 (FLATBED)');
   console.log('  - TEST-RF-003 (REFRIGERATED)');
+  console.log('');
+
+  console.log('Test Loads (posted):');
+  console.log('  - Addis Ababa → Djibouti (DRY_VAN, 12000kg)');
+  console.log('  - Addis Ababa → Dire Dawa (FLATBED, 18000kg)');
+  console.log('  - Addis Ababa → Mekelle (REFRIGERATED, 8000kg)');
+  console.log('');
+
+  console.log('Test Locations:');
+  console.log('  - Addis Ababa, Dire Dawa, Mekelle, Djibouti');
+  console.log('');
+
+  console.log('Test Truck Postings:');
+  console.log('  - All 3 trucks posted as ACTIVE');
+  console.log('  - Available for matching');
   console.log('');
 
   console.log('Financial Accounts:');
