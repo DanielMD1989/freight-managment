@@ -533,7 +533,7 @@ export async function enhanceMatchesWithRoadDistances<T extends TruckMatch | Loa
 }
 
 // ============================================================================
-// In-Memory Matching Functions (Compatible with matchCalculation.ts interface)
+// In-Memory Matching Functions with Real-World Ethiopian Freight Logic
 // ============================================================================
 
 /**
@@ -567,41 +567,239 @@ interface TruckMatchCriteria {
 }
 
 /**
- * Simple match result for in-memory matching
+ * Match result with DH-O distance
  */
-interface SimpleMatchResult {
+interface MatchResult {
   score: number; // 0-100
   matchReasons: string[];
   isExactMatch: boolean;
+  dhOriginKm: number; // Deadhead to origin in km
+  excluded: boolean; // True if filtered out
+  excludeReason?: string;
 }
 
-/**
- * Calculate distance match score using city name comparison
- * Used when GPS coordinates are not available
- */
-function calculateCityDistanceScore(city1: string, city2: string): number {
-  if (!city1 || !city2) return 0;
+// ============================================================================
+// ETHIOPIAN CITY DISTANCE LOOKUP TABLE
+// Used when GPS coordinates are not available
+// Distances in kilometers (approximate road distances)
+// ============================================================================
+const ETHIOPIAN_CITY_DISTANCES: Record<string, Record<string, number>> = {
+  'addis ababa': {
+    'addis ababa': 0,
+    'dire dawa': 450,
+    'djibouti': 910,
+    'mekelle': 780,
+    'mekele': 780,
+    'hawassa': 275,
+    'bahir dar': 565,
+    'gondar': 740,
+    'jimma': 350,
+    'adama': 100,
+    'nazret': 100,
+  },
+  'dire dawa': {
+    'dire dawa': 0,
+    'addis ababa': 450,
+    'djibouti': 310,
+    'mekelle': 850,
+    'mekele': 850,
+    'hawassa': 725,
+    'harar': 55,
+  },
+  'djibouti': {
+    'djibouti': 0,
+    'addis ababa': 910,
+    'dire dawa': 310,
+    'mekelle': 1100,
+    'mekele': 1100,
+  },
+  'mekelle': {
+    'mekelle': 0,
+    'mekele': 0,
+    'addis ababa': 780,
+    'dire dawa': 850,
+    'djibouti': 1100,
+    'gondar': 440,
+    'bahir dar': 570,
+  },
+  'mekele': {
+    'mekele': 0,
+    'mekelle': 0,
+    'addis ababa': 780,
+    'dire dawa': 850,
+    'djibouti': 1100,
+  },
+  'hawassa': {
+    'hawassa': 0,
+    'addis ababa': 275,
+    'dire dawa': 725,
+    'djibouti': 1000,
+  },
+};
 
+/**
+ * Get distance between two Ethiopian cities in km
+ * Returns null if distance is unknown
+ */
+function getEthiopianCityDistance(city1: string, city2: string): number | null {
   const c1 = city1.toLowerCase().trim();
   const c2 = city2.toLowerCase().trim();
 
-  // Exact match
-  if (c1 === c2) return 100;
+  // Same city
+  if (c1 === c2) return 0;
 
-  // Partial match (same region/area)
-  if (c1.includes(c2) || c2.includes(c1)) return 70;
+  // Handle spelling variations
+  const normalize = (s: string) => s.replace(/e+l+e?$/i, 'elle'); // Mekele -> Mekelle
+  const n1 = normalize(c1);
+  const n2 = normalize(c2);
 
-  // Handle spelling variations (e.g., Mekelle/Mekele)
-  const simplify = (s: string) => s.replace(/(.)\1+/g, '$1');
-  if (simplify(c1) === simplify(c2)) return 90;
+  if (n1 === n2) return 0;
 
-  return 0;
+  // Look up in table
+  if (ETHIOPIAN_CITY_DISTANCES[n1]?.[n2] !== undefined) {
+    return ETHIOPIAN_CITY_DISTANCES[n1][n2];
+  }
+  if (ETHIOPIAN_CITY_DISTANCES[n2]?.[n1] !== undefined) {
+    return ETHIOPIAN_CITY_DISTANCES[n2][n1];
+  }
+
+  // Try original names too
+  if (ETHIOPIAN_CITY_DISTANCES[c1]?.[c2] !== undefined) {
+    return ETHIOPIAN_CITY_DISTANCES[c1][c2];
+  }
+  if (ETHIOPIAN_CITY_DISTANCES[c2]?.[c1] !== undefined) {
+    return ETHIOPIAN_CITY_DISTANCES[c2][c1];
+  }
+
+  return null; // Unknown distance
 }
 
 /**
- * Calculate date match score
+ * Check if two cities are the same (handling spelling variations)
  */
-function calculateSimpleDateScore(
+function isSameCity(city1: string, city2: string): boolean {
+  if (!city1 || !city2) return false;
+  const c1 = city1.toLowerCase().trim();
+  const c2 = city2.toLowerCase().trim();
+  if (c1 === c2) return true;
+
+  // Handle Mekelle/Mekele variations
+  const simplify = (s: string) => s.replace(/(.)\1+/g, '$1');
+  return simplify(c1) === simplify(c2);
+}
+
+// ============================================================================
+// HARD FILTER: Truck Type Compatibility
+// ============================================================================
+
+/**
+ * Compatible truck type groups for Ethiopian freight
+ * - General cargo: DRY_VAN, FLATBED, CONTAINER, VAN (interchangeable)
+ * - Temperature controlled: REFRIGERATED, REEFER (interchangeable)
+ * These groups are NOT compatible with each other
+ */
+const TRUCK_TYPE_GROUPS: Record<string, string[]> = {
+  'GENERAL': ['DRY_VAN', 'FLATBED', 'CONTAINER', 'VAN'],
+  'COLD_CHAIN': ['REFRIGERATED', 'REEFER'],
+};
+
+/**
+ * Check if truck type is compatible with load requirement
+ * Returns: 'exact' | 'compatible' | 'incompatible'
+ */
+function checkTruckTypeCompatibility(
+  loadType: string,
+  truckType: string
+): 'exact' | 'compatible' | 'incompatible' {
+  const loadNorm = loadType?.toUpperCase() || '';
+  const truckNorm = truckType?.toUpperCase() || '';
+
+  // Exact match
+  if (loadNorm === truckNorm) return 'exact';
+
+  // Find which group each type belongs to
+  let loadGroup: string | null = null;
+  let truckGroup: string | null = null;
+
+  for (const [group, types] of Object.entries(TRUCK_TYPE_GROUPS)) {
+    if (types.includes(loadNorm)) loadGroup = group;
+    if (types.includes(truckNorm)) truckGroup = group;
+  }
+
+  // Same group = compatible
+  if (loadGroup && truckGroup && loadGroup === truckGroup) {
+    return 'compatible';
+  }
+
+  // Different groups or unknown = incompatible
+  return 'incompatible';
+}
+
+// ============================================================================
+// SCORING FUNCTIONS
+// ============================================================================
+
+/**
+ * Calculate DH-O (Deadhead to Origin) score
+ * This is the distance from truck's current location to load's pickup
+ *
+ * Scoring:
+ * - 0-50km: 100 points (excellent, minimal deadhead)
+ * - 50-100km: 70 points (acceptable)
+ * - 100-200km: 30 points (marginal, heavily penalized)
+ * - >200km: EXCLUDED (not shown in results)
+ */
+function calculateDhOriginScore(dhKm: number): number {
+  if (dhKm <= 50) return 100;
+  if (dhKm <= 100) return 70;
+  if (dhKm <= 200) return 30;
+  return 0; // Should be filtered out before reaching here
+}
+
+/**
+ * Calculate route match score for in-memory matching (origin + destination alignment)
+ */
+function calcRouteMatchScore(
+  loadPickup: string,
+  loadDelivery: string,
+  truckOrigin: string,
+  truckDestination: string | null
+): number {
+  // Origin match (truck is at or near load pickup)
+  const originMatch = isSameCity(loadPickup, truckOrigin) ? 100 : 0;
+
+  // Destination match (if truck has a destination preference)
+  let destMatch = 70; // Default: flexible destination
+  if (truckDestination) {
+    destMatch = isSameCity(loadDelivery, truckDestination) ? 100 : 0;
+  }
+
+  // Origin is more important (60/40 split)
+  return Math.round(originMatch * 0.6 + destMatch * 0.4);
+}
+
+/**
+ * Calculate capacity score for in-memory matching
+ */
+function calcCapacityMatchScore(
+  loadWeight: number | null | undefined,
+  truckMaxWeight: number | null | undefined
+): number {
+  if (!loadWeight || !truckMaxWeight) return 50; // Neutral if not specified
+
+  if (truckMaxWeight < loadWeight) return 0; // Can't carry the load
+
+  const utilization = (loadWeight / truckMaxWeight) * 100;
+  if (utilization >= 80) return 100; // Good utilization
+  if (utilization >= 60) return 90;
+  if (utilization >= 40) return 70;
+  return 50; // Low utilization but fits
+}
+
+/**
+ * Calculate time/availability score for in-memory matching
+ */
+function calcTimeMatchScore(
   loadDate: Date | string | null | undefined,
   truckDate: Date | string | null | undefined
 ): number {
@@ -610,208 +808,220 @@ function calculateSimpleDateScore(
   const load = new Date(loadDate);
   const truck = new Date(truckDate);
 
-  // Same day
-  if (load.toDateString() === truck.toDateString()) return 100;
+  // Same day or truck available before load needs pickup
+  if (truck <= load) return 100;
 
-  const diffDays = Math.abs(load.getTime() - truck.getTime()) / (1000 * 60 * 60 * 24);
+  const diffDays = (truck.getTime() - load.getTime()) / (1000 * 60 * 60 * 24);
 
-  if (diffDays <= 1) return 90;
-  if (diffDays <= 3) return 70;
-  if (diffDays <= 7) return 50;
+  if (diffDays <= 1) return 80; // 1 day late
+  if (diffDays <= 3) return 50; // 2-3 days late
+  if (diffDays <= 7) return 20; // Week late
 
-  return 20;
+  return 0; // Too late
 }
 
 /**
- * Calculate truck type match score
+ * Calculate match score for a load-truck pair (in-memory version)
+ *
+ * HARD FILTERS (result in exclusion):
+ * 1. Incompatible truck type
+ * 2. DH-O > 200km
+ * 3. Truck can't carry the weight
+ *
+ * SCORING (for trucks that pass filters):
+ * - Route match: 30%
+ * - DH-O distance: 30%
+ * - Capacity: 20%
+ * - Time: 20%
  */
-function calculateTruckTypeScore(loadType: string, truckType: string): number {
-  const loadNorm = loadType?.toUpperCase() || '';
-  const truckNorm = truckType?.toUpperCase() || '';
-
-  if (loadNorm === truckNorm) return 100;
-
-  // Compatible types
-  const compatiblePairs: Record<string, string[]> = {
-    'DRY_VAN': ['VAN', 'FLATBED', 'CONTAINER'],
-    'VAN': ['DRY_VAN', 'CONTAINER'],
-    'FLATBED': ['DRY_VAN', 'CONTAINER'],
-    'REFRIGERATED': ['REEFER'],
-    'REEFER': ['REFRIGERATED'],
-  };
-
-  const compatible = compatiblePairs[loadNorm] || [];
-  if (compatible.includes(truckNorm)) return 70;
-
-  return 0;
-}
-
-/**
- * Calculate weight capacity score
- */
-function calculateSimpleWeightScore(
-  loadWeight: number | null | undefined,
-  truckMaxWeight: number | null | undefined
-): number {
-  if (!loadWeight || !truckMaxWeight) return 50;
-
-  if (truckMaxWeight >= loadWeight) {
-    const utilization = (loadWeight / truckMaxWeight) * 100;
-    if (utilization >= 90) return 100;
-    if (utilization >= 70) return 90;
-    if (utilization >= 50) return 70;
-    return 50;
-  }
-
-  return 0; // Truck cannot handle the load
-}
-
-/**
- * Calculate length match score
- */
-function calculateSimpleLengthScore(
-  loadLength: number | null | undefined,
-  truckLength: number | null | undefined
-): number {
-  if (!loadLength || !truckLength) return 50;
-  return truckLength >= loadLength ? 100 : 0;
-}
-
-/**
- * Calculate full/partial match score
- */
-function calculateFullPartialScore(
-  loadType: string | null | undefined,
-  truckType: string | null | undefined
-): number {
-  if (!loadType || !truckType) return 50;
-
-  const loadNorm = loadType.toUpperCase();
-  const truckNorm = truckType.toUpperCase();
-
-  if (loadNorm === truckNorm) return 100;
-  if (truckNorm === 'FULL' && loadNorm === 'PARTIAL') return 70;
-  if (truckNorm === 'PARTIAL' && loadNorm === 'FULL') return 30;
-
-  return 50;
-}
-
-/**
- * Calculate match score between a load and a truck (in-memory version)
- * Uses weighted scoring: Route 35%, Truck Type 25%, Capacity 20%, Time 20%
- */
-function calculateSimpleMatchScore(
+function calcLoadTruckMatchScore(
   load: LoadMatchCriteria,
   truck: TruckMatchCriteria
-): SimpleMatchResult {
+): MatchResult {
   const reasons: string[] = [];
 
-  // Route score (35% weight) - using city name comparison
-  const originScore = calculateCityDistanceScore(load.pickupCity, truck.currentCity);
-  const destScore = truck.destinationCity
-    ? calculateCityDistanceScore(load.deliveryCity, truck.destinationCity)
-    : 70; // Flexible destination gets 70%
-  const routeScore = (originScore * 0.6 + destScore * 0.4); // Origin more important
+  // ============================================
+  // HARD FILTER 1: Truck Type Compatibility
+  // ============================================
+  const typeCompat = checkTruckTypeCompatibility(load.truckType, truck.truckType);
 
-  if (originScore === 100) reasons.push('Exact origin match');
-  else if (originScore >= 70) reasons.push('Nearby origin');
+  if (typeCompat === 'incompatible') {
+    return {
+      score: 0,
+      matchReasons: [],
+      isExactMatch: false,
+      dhOriginKm: 9999,
+      excluded: true,
+      excludeReason: `Incompatible truck type: ${truck.truckType} cannot carry ${load.truckType} loads`,
+    };
+  }
 
-  if (destScore === 100) reasons.push('Exact destination match');
-  else if (destScore >= 70 && truck.destinationCity) reasons.push('Nearby destination');
+  // ============================================
+  // HARD FILTER 2: DH-O Distance
+  // ============================================
+  const dhOriginKm = getEthiopianCityDistance(truck.currentCity, load.pickupCity);
 
-  // Time score (20% weight)
-  const timeScore = calculateSimpleDateScore(load.pickupDate, truck.availableDate);
-  if (timeScore >= 90) reasons.push('Perfect timing');
-  else if (timeScore >= 70) reasons.push('Good timing');
+  // If we can't determine distance and cities are different, assume too far
+  if (dhOriginKm === null && !isSameCity(truck.currentCity, load.pickupCity)) {
+    return {
+      score: 0,
+      matchReasons: [],
+      isExactMatch: false,
+      dhOriginKm: 9999,
+      excluded: true,
+      excludeReason: `Unknown distance: ${truck.currentCity} to ${load.pickupCity}`,
+    };
+  }
 
-  // Capacity score (20% weight)
-  const weightScore = calculateSimpleWeightScore(load.weight, truck.maxWeight);
-  const lengthScore = calculateSimpleLengthScore(load.lengthM, truck.lengthM);
-  const fpScore = calculateFullPartialScore(load.fullPartial, truck.fullPartial);
-  const capacityScore = (weightScore * 0.5 + lengthScore * 0.25 + fpScore * 0.25);
+  const actualDhKm = dhOriginKm ?? 0;
 
-  if (weightScore === 100) reasons.push('Optimal weight utilization');
-  else if (weightScore === 0) reasons.push('Insufficient weight capacity');
-  if (lengthScore === 0 && load.lengthM && truck.lengthM) reasons.push('Insufficient length');
+  if (actualDhKm > 200) {
+    return {
+      score: 0,
+      matchReasons: [],
+      isExactMatch: false,
+      dhOriginKm: actualDhKm,
+      excluded: true,
+      excludeReason: `DH-O too far: ${actualDhKm}km (max 200km)`,
+    };
+  }
 
-  // Truck type score (25% weight) - higher weight to prioritize equipment compatibility
-  const typeScore = calculateTruckTypeScore(load.truckType, truck.truckType);
-  if (typeScore === 100) reasons.push('Perfect truck type match');
-  else if (typeScore === 0) reasons.push('Incompatible truck type - not recommended');
+  // ============================================
+  // HARD FILTER 3: Weight Capacity
+  // ============================================
+  if (load.weight && truck.maxWeight && truck.maxWeight < load.weight) {
+    return {
+      score: 0,
+      matchReasons: [],
+      isExactMatch: false,
+      dhOriginKm: actualDhKm,
+      excluded: true,
+      excludeReason: `Insufficient capacity: ${truck.maxWeight}kg < ${load.weight}kg needed`,
+    };
+  }
 
-  // Calculate final weighted score: Route 35%, Truck Type 25%, Capacity 20%, Time 20%
+  // ============================================
+  // SCORING (truck passed all filters)
+  // ============================================
+
+  // Route score (30%)
+  const routeScore = calcRouteMatchScore(
+    load.pickupCity,
+    load.deliveryCity,
+    truck.currentCity,
+    truck.destinationCity || null
+  );
+  if (routeScore === 100) reasons.push('Perfect route match');
+  else if (routeScore >= 60) reasons.push('Good route alignment');
+
+  // DH-O score (30%)
+  const dhScore = calculateDhOriginScore(actualDhKm);
+  if (actualDhKm === 0) reasons.push(`Same city pickup`);
+  else if (actualDhKm <= 50) reasons.push(`Nearby: ${actualDhKm}km to pickup`);
+  else if (actualDhKm <= 100) reasons.push(`Acceptable: ${actualDhKm}km to pickup`);
+  else reasons.push(`Far: ${actualDhKm}km to pickup`);
+
+  // Capacity score (20%)
+  const capacityScore = calcCapacityMatchScore(load.weight, truck.maxWeight);
+  if (capacityScore === 100) reasons.push('Optimal capacity utilization');
+  else if (capacityScore === 0) reasons.push('Insufficient capacity');
+
+  // Time score (20%)
+  const timeScore = calcTimeMatchScore(load.pickupDate, truck.availableDate);
+  if (timeScore === 100) reasons.push('Available on time');
+  else if (timeScore >= 50) reasons.push('Available soon');
+
+  // Truck type bonus/info
+  if (typeCompat === 'exact') {
+    reasons.push(`Exact ${truck.truckType} match`);
+  } else {
+    reasons.push(`Compatible: ${truck.truckType} for ${load.truckType}`);
+  }
+
+  // Calculate final score: Route 30%, DH-O 30%, Capacity 20%, Time 20%
   const finalScore = Math.round(
-    routeScore * 0.35 +
-    typeScore * 0.25 +
+    routeScore * 0.30 +
+    dhScore * 0.30 +
     capacityScore * 0.20 +
     timeScore * 0.20
   );
 
-  const isExactMatch = finalScore >= 85 && typeScore === 100 && originScore >= 70;
+  // Exact match: high score + exact type + same city
+  const isExactMatch = finalScore >= 85 && typeCompat === 'exact' && actualDhKm <= 50;
 
   if (isExactMatch) {
-    reasons.unshift('Exact Match');
+    reasons.unshift('⭐ Excellent Match');
   }
 
   return {
     score: finalScore,
     matchReasons: reasons,
     isExactMatch,
+    dhOriginKm: actualDhKm,
+    excluded: false,
   };
 }
 
 /**
  * Find matching loads for a truck (in-memory version)
- * Compatible with matchCalculation.ts interface
+ * Applies hard filters: truck type compatibility, DH-O distance
  *
  * @param truck - Truck criteria
  * @param loads - Array of load criteria
  * @param minScore - Minimum match score (default: 50)
- * @returns Array of loads with match scores
+ * @returns Array of loads with match scores (filtered and sorted)
  */
 export function findMatchingLoads<T extends LoadMatchCriteria>(
   truck: TruckMatchCriteria,
   loads: T[],
   minScore: number = 50
-): Array<T & { matchScore: number; matchReasons: string[]; isExactMatch: boolean }> {
+): Array<T & { matchScore: number; matchReasons: string[]; isExactMatch: boolean; dhOriginKm: number }> {
   return loads
     .map(load => {
-      const match = calculateSimpleMatchScore(load, truck);
+      const match = calcLoadTruckMatchScore(load, truck);
       return {
         ...load,
         matchScore: match.score,
         matchReasons: match.matchReasons,
         isExactMatch: match.isExactMatch,
+        dhOriginKm: match.dhOriginKm,
+        _excluded: match.excluded,
+        _excludeReason: match.excludeReason,
       };
     })
-    .filter(load => load.matchScore >= minScore)
-    .sort((a, b) => b.matchScore - a.matchScore);
+    .filter(load => !load._excluded && load.matchScore >= minScore)
+    .sort((a, b) => b.matchScore - a.matchScore)
+    .map(({ _excluded, _excludeReason, ...rest }) => rest);
 }
 
 /**
  * Find matching trucks for a load (in-memory version)
- * Compatible with matchCalculation.ts interface
+ * Applies hard filters: truck type compatibility, DH-O distance
  *
  * @param load - Load criteria
  * @param trucks - Array of truck criteria
  * @param minScore - Minimum match score (default: 50)
- * @returns Array of trucks with match scores
+ * @returns Array of trucks with match scores (filtered and sorted)
  */
 export function findMatchingTrucks<T extends TruckMatchCriteria>(
   load: LoadMatchCriteria,
   trucks: T[],
   minScore: number = 50
-): Array<T & { matchScore: number; matchReasons: string[]; isExactMatch: boolean }> {
+): Array<T & { matchScore: number; matchReasons: string[]; isExactMatch: boolean; dhOriginKm: number }> {
   return trucks
     .map(truck => {
-      const match = calculateSimpleMatchScore(load, truck);
+      const match = calcLoadTruckMatchScore(load, truck);
       return {
         ...truck,
         matchScore: match.score,
         matchReasons: match.matchReasons,
         isExactMatch: match.isExactMatch,
+        dhOriginKm: match.dhOriginKm,
+        _excluded: match.excluded,
+        _excludeReason: match.excludeReason,
       };
     })
-    .filter(truck => truck.matchScore >= minScore)
-    .sort((a, b) => b.matchScore - a.matchScore);
+    .filter(truck => !truck._excluded && truck.matchScore >= minScore)
+    .sort((a, b) => b.matchScore - a.matchScore)
+    .map(({ _excluded, _excludeReason, ...rest }) => rest);
 }

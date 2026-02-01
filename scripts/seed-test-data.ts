@@ -336,32 +336,51 @@ async function main() {
   console.log('');
 
   // ============================================================================
-  // 3. TEST TRUCKS (for Carrier)
+  // 3. TEST TRUCKS (12 trucks across different Ethiopian cities)
   // ============================================================================
-  console.log('3. Creating test trucks for carrier...\n');
+  console.log('3. Cleaning up and creating test trucks...\n');
+
+  // First, delete old test truck postings and trucks
+  await prisma.truckPosting.deleteMany({
+    where: {
+      truck: {
+        licensePlate: {
+          startsWith: 'TEST-',
+        },
+      },
+    },
+  });
+  await prisma.truck.deleteMany({
+    where: {
+      licensePlate: {
+        startsWith: 'TEST-',
+      },
+    },
+  });
+  console.log('   [x] Cleaned up old TEST-* trucks\n');
 
   const trucksData = [
-    {
-      licensePlate: 'TEST-DV-001',
-      truckType: 'DRY_VAN' as const,
-      capacity: 15000,
-      lengthM: 12,
-      currentCity: 'Addis Ababa',
-    },
-    {
-      licensePlate: 'TEST-FB-002',
-      truckType: 'FLATBED' as const,
-      capacity: 20000,
-      lengthM: 14,
-      currentCity: 'Addis Ababa',
-    },
-    {
-      licensePlate: 'TEST-RF-003',
-      truckType: 'REFRIGERATED' as const,
-      capacity: 12000,
-      lengthM: 10,
-      currentCity: 'Dire Dawa',
-    },
+    // Addis Ababa (4 trucks)
+    { licensePlate: 'AA-DV-001', truckType: 'DRY_VAN' as const, capacity: 15000, lengthM: 12, currentCity: 'Addis Ababa' },
+    { licensePlate: 'AA-FB-002', truckType: 'FLATBED' as const, capacity: 20000, lengthM: 14, currentCity: 'Addis Ababa' },
+    { licensePlate: 'AA-RF-003', truckType: 'REFRIGERATED' as const, capacity: 12000, lengthM: 10, currentCity: 'Addis Ababa' },
+    { licensePlate: 'AA-CT-004', truckType: 'CONTAINER' as const, capacity: 25000, lengthM: 12, currentCity: 'Addis Ababa' },
+
+    // Dire Dawa (3 trucks)
+    { licensePlate: 'DD-DV-001', truckType: 'DRY_VAN' as const, capacity: 18000, lengthM: 12, currentCity: 'Dire Dawa' },
+    { licensePlate: 'DD-FB-002', truckType: 'FLATBED' as const, capacity: 15000, lengthM: 13, currentCity: 'Dire Dawa' },
+    { licensePlate: 'DD-RF-003', truckType: 'REFRIGERATED' as const, capacity: 10000, lengthM: 9, currentCity: 'Dire Dawa' },
+
+    // Djibouti (2 trucks)
+    { licensePlate: 'DJ-DV-001', truckType: 'DRY_VAN' as const, capacity: 20000, lengthM: 13, currentCity: 'Djibouti' },
+    { licensePlate: 'DJ-CT-002', truckType: 'CONTAINER' as const, capacity: 30000, lengthM: 12, currentCity: 'Djibouti' },
+
+    // Mekelle (2 trucks)
+    { licensePlate: 'MK-FB-001', truckType: 'FLATBED' as const, capacity: 12000, lengthM: 11, currentCity: 'Mekelle' },
+    { licensePlate: 'MK-RF-002', truckType: 'REFRIGERATED' as const, capacity: 8000, lengthM: 8, currentCity: 'Mekelle' },
+
+    // Hawassa (1 truck)
+    { licensePlate: 'HW-DV-001', truckType: 'DRY_VAN' as const, capacity: 10000, lengthM: 10, currentCity: 'Hawassa' },
   ];
 
   for (const truckData of trucksData) {
@@ -496,82 +515,119 @@ async function main() {
   console.log('');
 
   // ============================================================================
-  // 5. TEST LOADS (Posted by Shipper)
+  // 5. TEST LOADS (8 loads across various Ethiopian routes)
   // ============================================================================
-  console.log('5. Creating test loads for shipper...\n');
+  console.log('5. Cleaning up and creating test loads...\n');
+
+  // Delete old test loads for the shipper (to start fresh)
+  await prisma.load.deleteMany({
+    where: {
+      shipperId: shipperOrg.id,
+      status: 'POSTED',
+    },
+  });
+  console.log('   [x] Cleaned up old test loads\n');
 
   const loadsData = [
+    // From Addis Ababa
     {
       pickupCity: 'Addis Ababa',
       deliveryCity: 'Djibouti',
       truckType: 'DRY_VAN' as const,
       weight: 12000,
-      cargoDescription: 'Electronics and household goods',
-      pickupDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 days from now
-      deliveryDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 days from now
+      cargoDescription: 'Electronics and household goods - export',
+      pickupDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      deliveryDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+    },
+    {
+      pickupCity: 'Addis Ababa',
+      deliveryCity: 'Djibouti',
+      truckType: 'CONTAINER' as const,
+      weight: 22000,
+      cargoDescription: 'Containerized export cargo',
+      pickupDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
+      deliveryDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
     },
     {
       pickupCity: 'Addis Ababa',
       deliveryCity: 'Dire Dawa',
       truckType: 'FLATBED' as const,
-      weight: 18000,
-      cargoDescription: 'Construction materials',
-      pickupDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000), // 1 day from now
-      deliveryDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
+      weight: 15000,
+      cargoDescription: 'Construction materials and machinery',
+      pickupDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
+      deliveryDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
     },
     {
       pickupCity: 'Addis Ababa',
       deliveryCity: 'Mekelle',
       truckType: 'REFRIGERATED' as const,
       weight: 8000,
-      cargoDescription: 'Fresh produce and dairy',
-      pickupDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
-      deliveryDate: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000), // 6 days from now
+      cargoDescription: 'Fresh produce and dairy products',
+      pickupDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+      deliveryDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+    },
+    // From Dire Dawa
+    {
+      pickupCity: 'Dire Dawa',
+      deliveryCity: 'Djibouti',
+      truckType: 'DRY_VAN' as const,
+      weight: 16000,
+      cargoDescription: 'Agricultural products for export',
+      pickupDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      deliveryDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+    },
+    {
+      pickupCity: 'Dire Dawa',
+      deliveryCity: 'Addis Ababa',
+      truckType: 'FLATBED' as const,
+      weight: 10000,
+      cargoDescription: 'Industrial equipment',
+      pickupDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
+      deliveryDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+    },
+    // From Mekelle
+    {
+      pickupCity: 'Mekelle',
+      deliveryCity: 'Addis Ababa',
+      truckType: 'DRY_VAN' as const,
+      weight: 14000,
+      cargoDescription: 'Textiles and garments',
+      pickupDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      deliveryDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
+    },
+    // From Djibouti (import)
+    {
+      pickupCity: 'Djibouti',
+      deliveryCity: 'Addis Ababa',
+      truckType: 'CONTAINER' as const,
+      weight: 20000,
+      cargoDescription: 'Imported containerized goods',
+      pickupDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
+      deliveryDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
     },
   ];
 
   const createdLoads: any[] = [];
   for (const loadData of loadsData) {
-    const existingLoad = await prisma.load.findFirst({
-      where: {
+    const load = await prisma.load.create({
+      data: {
         shipperId: shipperOrg.id,
+        createdById: shipperUser.id,
         pickupCity: loadData.pickupCity,
         deliveryCity: loadData.deliveryCity,
         truckType: loadData.truckType,
+        weight: loadData.weight,
+        cargoDescription: loadData.cargoDescription,
+        pickupDate: loadData.pickupDate,
+        deliveryDate: loadData.deliveryDate,
+        status: 'POSTED',
+        postedAt: new Date(),
+        bookMode: 'REQUEST',
+        fullPartial: 'FULL',
       },
     });
-
-    if (!existingLoad) {
-      const load = await prisma.load.create({
-        data: {
-          shipperId: shipperOrg.id,
-          createdById: shipperUser.id,
-          pickupCity: loadData.pickupCity,
-          deliveryCity: loadData.deliveryCity,
-          truckType: loadData.truckType,
-          weight: loadData.weight,
-          cargoDescription: loadData.cargoDescription,
-          pickupDate: loadData.pickupDate,
-          deliveryDate: loadData.deliveryDate,
-          status: 'POSTED',
-          postedAt: new Date(),
-          bookMode: 'REQUEST',
-          fullPartial: 'FULL',
-        },
-      });
-      createdLoads.push(load);
-      console.log(`   [+] Created load: ${loadData.pickupCity} → ${loadData.deliveryCity} (${loadData.truckType})`);
-    } else {
-      await prisma.load.update({
-        where: { id: existingLoad.id },
-        data: {
-          status: 'POSTED',
-          postedAt: new Date(),
-        },
-      });
-      createdLoads.push(existingLoad);
-      console.log(`   [=] Load exists: ${loadData.pickupCity} → ${loadData.deliveryCity} (updated to POSTED)`);
-    }
+    createdLoads.push(load);
+    console.log(`   [+] Created load: ${loadData.pickupCity} → ${loadData.deliveryCity} (${loadData.truckType}, ${loadData.weight / 1000}T)`);
   }
 
   console.log('');
@@ -586,6 +642,7 @@ async function main() {
     { name: 'Dire Dawa', region: 'Dire Dawa', latitude: 9.6011, longitude: 41.8505 },
     { name: 'Mekelle', region: 'Tigray', latitude: 13.4967, longitude: 39.4753 },
     { name: 'Djibouti', region: 'Djibouti', latitude: 11.5883, longitude: 43.1450 },
+    { name: 'Hawassa', region: 'SNNPR', latitude: 7.0624, longitude: 38.4764 },
   ];
 
   const locationMap: Record<string, string> = {};
@@ -616,47 +673,54 @@ async function main() {
   console.log('');
 
   // ============================================================================
-  // 7. TEST TRUCK POSTINGS (Posted by Carrier)
+  // 7. TEST TRUCK POSTINGS (Posted by Carrier - all 12 trucks)
   // ============================================================================
-  console.log('7. Creating truck postings for carrier...\n');
+  console.log('7. Creating truck postings for all trucks...\n');
 
   const trucks = await prisma.truck.findMany({
     where: { carrierId: carrierOrg.id },
   });
 
-  const addisAbabaId = locationMap['Addis Ababa'];
-  const direDawaId = locationMap['Dire Dawa'];
+  // City name to location ID mapping
+  const cityLocationMap: Record<string, string> = {
+    'Addis Ababa': locationMap['Addis Ababa'],
+    'Dire Dawa': locationMap['Dire Dawa'],
+    'Mekelle': locationMap['Mekelle'],
+    'Djibouti': locationMap['Djibouti'],
+    'Hawassa': locationMap['Hawassa'],
+  };
 
   for (const truck of trucks) {
-    const existingPosting = await prisma.truckPosting.findFirst({
-      where: {
-        truckId: truck.id,
-        status: 'ACTIVE',
-      },
+    // First, delete any existing postings for this truck (to reset state)
+    await prisma.truckPosting.deleteMany({
+      where: { truckId: truck.id },
     });
 
-    if (!existingPosting) {
-      // Determine origin based on truck's current city
-      const originCityId = truck.currentCity === 'Dire Dawa' ? direDawaId : addisAbabaId;
+    // Determine origin based on truck's current city
+    const originCityId = cityLocationMap[truck.currentCity || 'Addis Ababa'];
 
-      await prisma.truckPosting.create({
-        data: {
-          truckId: truck.id,
-          carrierId: carrierOrg.id,
-          createdById: carrierUser.id,
-          originCityId: originCityId,
-          availableFrom: new Date(),
-          availableTo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-          status: 'ACTIVE',
-          contactName: 'Test Driver',
-          contactPhone: '+251955555555',
-          fullPartial: 'FULL',
-        },
-      });
-      console.log(`   [+] Created posting for truck: ${truck.licensePlate}`);
-    } else {
-      console.log(`   [=] Posting exists for truck: ${truck.licensePlate}`);
+    if (!originCityId) {
+      console.log(`   [!] Warning: No location found for ${truck.currentCity}, skipping ${truck.licensePlate}`);
+      continue;
     }
+
+    await prisma.truckPosting.create({
+      data: {
+        truckId: truck.id,
+        carrierId: carrierOrg.id,
+        createdById: carrierUser.id,
+        originCityId: originCityId,
+        availableFrom: new Date(),
+        availableTo: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days (next week)
+        status: 'ACTIVE',
+        contactName: 'Test Driver',
+        contactPhone: '+251955555555',
+        fullPartial: 'FULL',
+        availableWeight: truck.capacity,
+        availableLength: truck.lengthM,
+      },
+    });
+    console.log(`   [+] Created posting: ${truck.licensePlate} (${truck.truckType}) in ${truck.currentCity}`);
   }
 
   console.log('');
@@ -687,25 +751,44 @@ async function main() {
   console.log('  - Addis Ababa -> Mekelle: 783km @ 2.50 ETB/km');
   console.log('');
 
-  console.log('Test Trucks (approved):');
-  console.log('  - TEST-DV-001 (DRY_VAN)');
-  console.log('  - TEST-FB-002 (FLATBED)');
-  console.log('  - TEST-RF-003 (REFRIGERATED)');
+  console.log('Test Trucks (12 total across cities):');
+  console.log('  Addis Ababa:');
+  console.log('    - AA-DV-001 (DRY_VAN, 15T)');
+  console.log('    - AA-FB-002 (FLATBED, 20T)');
+  console.log('    - AA-RF-003 (REFRIGERATED, 12T)');
+  console.log('    - AA-CT-004 (CONTAINER, 25T)');
+  console.log('  Dire Dawa:');
+  console.log('    - DD-DV-001 (DRY_VAN, 18T)');
+  console.log('    - DD-FB-002 (FLATBED, 15T)');
+  console.log('    - DD-RF-003 (REFRIGERATED, 10T)');
+  console.log('  Djibouti:');
+  console.log('    - DJ-DV-001 (DRY_VAN, 20T)');
+  console.log('    - DJ-CT-002 (CONTAINER, 30T)');
+  console.log('  Mekelle:');
+  console.log('    - MK-FB-001 (FLATBED, 12T)');
+  console.log('    - MK-RF-002 (REFRIGERATED, 8T)');
+  console.log('  Hawassa:');
+  console.log('    - HW-DV-001 (DRY_VAN, 10T)');
   console.log('');
 
-  console.log('Test Loads (posted):');
-  console.log('  - Addis Ababa → Djibouti (DRY_VAN, 12000kg)');
-  console.log('  - Addis Ababa → Dire Dawa (FLATBED, 18000kg)');
-  console.log('  - Addis Ababa → Mekelle (REFRIGERATED, 8000kg)');
+  console.log('Test Loads (8 total):');
+  console.log('  - Addis Ababa → Djibouti (DRY_VAN, 12T)');
+  console.log('  - Addis Ababa → Djibouti (CONTAINER, 22T)');
+  console.log('  - Addis Ababa → Dire Dawa (FLATBED, 15T)');
+  console.log('  - Addis Ababa → Mekelle (REFRIGERATED, 8T)');
+  console.log('  - Dire Dawa → Djibouti (DRY_VAN, 16T)');
+  console.log('  - Dire Dawa → Addis Ababa (FLATBED, 10T)');
+  console.log('  - Mekelle → Addis Ababa (DRY_VAN, 14T)');
+  console.log('  - Djibouti → Addis Ababa (CONTAINER, 20T)');
   console.log('');
 
   console.log('Test Locations:');
-  console.log('  - Addis Ababa, Dire Dawa, Mekelle, Djibouti');
+  console.log('  - Addis Ababa, Dire Dawa, Mekelle, Djibouti, Hawassa');
   console.log('');
 
   console.log('Test Truck Postings:');
-  console.log('  - All 3 trucks posted as ACTIVE');
-  console.log('  - Available for matching');
+  console.log('  - All 12 trucks posted as ACTIVE');
+  console.log('  - Available for next 7 days');
   console.log('');
 
   console.log('Financial Accounts:');
