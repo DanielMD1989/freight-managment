@@ -241,9 +241,9 @@ export default function DispatcherDashboardClient({
           </h2>
           <div className="flex flex-wrap gap-3">
             <QuickActionButton
-              href="/dispatcher/assign"
+              href="/dispatcher/loads"
               icon={<AssignIcon />}
-              label="Assign Load"
+              label="Find Matches"
               description="Match loads to trucks"
               variant="primary"
             />

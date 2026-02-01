@@ -219,7 +219,7 @@ export default function CarrierDashboardClient({
               variant="outline"
             />
             <QuickActionButton
-              href="/carrier/trucks/register"
+              href="/carrier/trucks/add"
               icon={<TruckIcon />}
               label="Register Truck"
               description="Add new vehicle"
@@ -556,7 +556,7 @@ export default function CarrierDashboardClient({
                     Add your first truck to start
                   </p>
                   <Link
-                    href="/carrier/trucks/register"
+                    href="/carrier/trucks/add"
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-lg bg-primary-500 hover:bg-primary-600 transition-colors"
                   >
                     <PlusIcon />

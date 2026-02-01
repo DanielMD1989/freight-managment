@@ -274,8 +274,8 @@ async function main() {
   console.log(`   - Request book: 3`);
   console.log(`   - Anonymous: 1`);
   console.log("\n🌐 Access the load board:");
-  console.log("   - Shipper: /dashboard/loads (My Loads)");
-  console.log("   - Carrier: /dashboard/loads/search (Find Loads)");
+  console.log("   - Shipper: /shipper/loads (My Loads)");
+  console.log("   - Carrier: /carrier/loadboard (Find Loads)");
   console.log("\n🧪 Test Features:");
   console.log("   ✓ Sort by: Age, Pickup Date, Trip Distance, Rate, RPM, tRPM");
   console.log("   ✓ Filter by: City, Truck Type, Load Type, Book Mode, Distance, Rate");
