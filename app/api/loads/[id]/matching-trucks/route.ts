@@ -87,9 +87,11 @@ export async function GET(
         },
         truck: {
           select: {
+            id: true,
             truckType: true,
             capacity: true,
             lengthM: true,
+            licensePlate: true,
           },
         },
       },

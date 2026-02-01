@@ -117,7 +117,10 @@ export default function FindMatchesModal({
       }
 
       const data = await response.json();
-      setMatches(data.matches || []);
+      // Handle both API response formats:
+      // - matching-trucks returns { trucks: [...] }
+      // - matching-loads returns { matches: [...] }
+      setMatches(data.matches || data.trucks || []);
     } catch (err: any) {
       setError(err.message || 'Failed to load matches');
     } finally {
@@ -127,14 +130,17 @@ export default function FindMatchesModal({
 
   const handleProposeMatch = async (match: any) => {
     const matchLoadId = type === 'trucks' ? loadId : match.load?.id;
-    const matchTruckId = type === 'trucks' ? match.truckPosting?.truck?.id : truckId;
+    // For trucks: API returns flat object with truck.id (not wrapped in truckPosting)
+    // For loads: truckId is passed as prop
+    const matchTruckId = type === 'trucks' ? match.truck?.id : truckId;
 
     if (!matchLoadId || !matchTruckId) {
       setError('Missing load or truck ID');
       return;
     }
 
-    setProposing(type === 'trucks' ? match.truckPosting?.id : match.load?.id);
+    // For trucks: match.id is the posting ID, for loads: match.load?.id
+    setProposing(type === 'trucks' ? match.id : match.load?.id);
     setError(null);
 
     try {
@@ -160,7 +166,7 @@ export default function FindMatchesModal({
       }
 
       // Mark as proposed
-      const proposedKey = type === 'trucks' ? match.truckPosting?.id : match.load?.id;
+      const proposedKey = type === 'trucks' ? match.id : match.load?.id;
       setProposedIds(prev => new Set([...prev, proposedKey]));
       onProposalCreated?.();
     } catch (err: any) {
@@ -240,7 +246,7 @@ export default function FindMatchesModal({
             ) : (
               <div className="space-y-3">
                 {matches.map((match, index) => {
-                  const itemId = type === 'trucks' ? match.truckPosting?.id : match.load?.id;
+                  const itemId = type === 'trucks' ? match.id : match.load?.id;
                   const isProposed = proposedIds.has(itemId);
                   const isProposing = proposing === itemId;
 
@@ -256,20 +262,20 @@ export default function FindMatchesModal({
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           {type === 'trucks' ? (
-                            // Truck match card
+                            // Truck match card - API returns flat structure with truck nested
                             <>
                               <div className="flex items-center gap-3 mb-2">
                                 <span className="font-semibold text-slate-800">
-                                  {match.truckPosting?.truck?.licensePlate}
+                                  {match.truck?.licensePlate}
                                 </span>
                                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getScoreColor(match.matchScore)}`}>
                                   {Math.round(match.matchScore)}% match
                                 </span>
                               </div>
                               <div className="text-sm text-slate-600 space-y-1">
-                                <p>{match.truckPosting?.truck?.truckType} • {match.truckPosting?.truck?.capacity?.toLocaleString()} kg</p>
-                                <p>Carrier: {match.truckPosting?.truck?.carrier?.name}</p>
-                                <p>Location: {match.truckPosting?.truck?.currentCity?.name || 'N/A'}</p>
+                                <p>{match.truck?.truckType} • {match.truck?.capacity?.toLocaleString()} kg</p>
+                                <p>Carrier: {match.carrier?.name}</p>
+                                <p>Location: {match.originCity?.name || match.currentCity || 'N/A'}</p>
                               </div>
                             </>
                           ) : (

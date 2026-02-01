@@ -2,10 +2,10 @@
  * Matching Engine - Truck/Load Bidirectional Matching
  *
  * Automatically matches available trucks with posted loads based on:
- * - Route compatibility (40%)
- * - Time window overlap (30%)
+ * - Route compatibility (35%)
+ * - Truck type match (25%)
  * - Capacity match (20%)
- * - Deadhead distance (10%)
+ * - Time window overlap (20%)
  *
  * Sprint 8 - Story 8.4: Truck/Load Matching Algorithm
  */
@@ -698,7 +698,7 @@ function calculateFullPartialScore(
 
 /**
  * Calculate match score between a load and a truck (in-memory version)
- * Uses weighted scoring: Route 40%, Time 30%, Capacity 20%, Type 10%
+ * Uses weighted scoring: Route 35%, Truck Type 25%, Capacity 20%, Time 20%
  */
 function calculateSimpleMatchScore(
   load: LoadMatchCriteria,
@@ -706,7 +706,7 @@ function calculateSimpleMatchScore(
 ): SimpleMatchResult {
   const reasons: string[] = [];
 
-  // Route score (40% weight) - using city name comparison
+  // Route score (35% weight) - using city name comparison
   const originScore = calculateCityDistanceScore(load.pickupCity, truck.currentCity);
   const destScore = truck.destinationCity
     ? calculateCityDistanceScore(load.deliveryCity, truck.destinationCity)
@@ -719,7 +719,7 @@ function calculateSimpleMatchScore(
   if (destScore === 100) reasons.push('Exact destination match');
   else if (destScore >= 70 && truck.destinationCity) reasons.push('Nearby destination');
 
-  // Time score (30% weight)
+  // Time score (20% weight)
   const timeScore = calculateSimpleDateScore(load.pickupDate, truck.availableDate);
   if (timeScore >= 90) reasons.push('Perfect timing');
   else if (timeScore >= 70) reasons.push('Good timing');
@@ -734,17 +734,17 @@ function calculateSimpleMatchScore(
   else if (weightScore === 0) reasons.push('Insufficient weight capacity');
   if (lengthScore === 0 && load.lengthM && truck.lengthM) reasons.push('Insufficient length');
 
-  // Type score (10% weight)
+  // Truck type score (25% weight) - higher weight to prioritize equipment compatibility
   const typeScore = calculateTruckTypeScore(load.truckType, truck.truckType);
   if (typeScore === 100) reasons.push('Perfect truck type match');
-  else if (typeScore === 0) reasons.push('Incompatible truck type');
+  else if (typeScore === 0) reasons.push('Incompatible truck type - not recommended');
 
-  // Calculate final weighted score (matching matchingEngine weights: Route 40%, Time 30%, Capacity 20%, Type 10%)
+  // Calculate final weighted score: Route 35%, Truck Type 25%, Capacity 20%, Time 20%
   const finalScore = Math.round(
-    routeScore * 0.40 +
-    timeScore * 0.30 +
+    routeScore * 0.35 +
+    typeScore * 0.25 +
     capacityScore * 0.20 +
-    typeScore * 0.10
+    timeScore * 0.20
   );
 
   const isExactMatch = finalScore >= 85 && typeScore === 100 && originScore >= 70;
