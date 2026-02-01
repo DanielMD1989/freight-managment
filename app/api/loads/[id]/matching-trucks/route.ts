@@ -40,8 +40,12 @@ export async function GET(
       );
     }
 
-    // Verify ownership (shipper owns load)
-    if (load.shipperId !== user.organizationId && user.role !== 'ADMIN') {
+    // Verify ownership (shipper owns load) or dispatcher/admin access
+    if (
+      load.shipperId !== user.organizationId &&
+      user.role !== 'ADMIN' &&
+      user.role !== 'DISPATCHER'
+    ) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }
