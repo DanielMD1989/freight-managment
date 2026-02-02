@@ -313,7 +313,6 @@ const navigationSections: Record<string, NavSection[]> = {
       title: 'Business',
       items: [
         { label: 'Wallet', href: '/shipper/wallet', icon: '💰', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
-        { label: 'Analytics', href: '/shipper/analytics', icon: '📈', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
         { label: 'Documents', href: '/shipper/documents', icon: '📁', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
         { label: 'Team', href: '/shipper/team', icon: '👥', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
       ],
@@ -324,6 +323,7 @@ const navigationSections: Record<string, NavSection[]> = {
       title: 'Overview',
       items: [
         { label: 'Dashboard', href: '/admin', icon: '📊', roles: ['ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Analytics', href: '/admin/analytics', icon: '📈', roles: ['ADMIN', 'SUPER_ADMIN'] },
         { label: 'Map', href: '/admin/map', icon: '🗺️', roles: ['ADMIN', 'SUPER_ADMIN', 'DISPATCHER'] },
         { label: 'Metrics', href: '/admin/platform-metrics', icon: '📈', roles: ['ADMIN', 'SUPER_ADMIN'] },
       ],
