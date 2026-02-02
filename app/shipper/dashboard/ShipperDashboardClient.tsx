@@ -260,16 +260,16 @@ export default function ShipperDashboardClient({
                             className="text-sm truncate"
                             style={{ color: 'var(--foreground-muted)' }}
                           >
-                            {trip.carrier.name}
+                            {trip.carrier?.name || 'Unknown Carrier'}
                           </span>
                         </div>
                         <div
                           className="text-xs flex items-center gap-2"
                           style={{ color: 'var(--foreground-muted)' }}
                         >
-                          <span>{trip.truck.plateNumber}</span>
+                          <span>{trip.truck?.plateNumber || '-'}</span>
                           <span>•</span>
-                          <span>{trip.truck.truckType}</span>
+                          <span>{trip.truck?.truckType || '-'}</span>
                         </div>
                       </div>
                       <StatusBadge status={trip.status} />
@@ -394,7 +394,7 @@ export default function ShipperDashboardClient({
                         >
                           <span>{load.truckType}</span>
                           <span>•</span>
-                          <span>{load.weight.toLocaleString()} kg</span>
+                          <span>{(load.weight || 0).toLocaleString()} kg</span>
                           <span>•</span>
                           <span>{new Date(load.pickupDate).toLocaleDateString()}</span>
                         </div>
@@ -404,7 +404,7 @@ export default function ShipperDashboardClient({
                           className="font-semibold text-sm"
                           style={{ color: 'var(--foreground)' }}
                         >
-                          {load.rate.toLocaleString()} ETB
+                          {(load.rate || 0).toLocaleString()} ETB
                         </div>
                       </div>
                     </Link>
@@ -544,7 +544,7 @@ export default function ShipperDashboardClient({
                         >
                           <span>{load.truckType}</span>
                           <span>•</span>
-                          <span>{load.weight.toLocaleString()} kg</span>
+                          <span>{(load.weight || 0).toLocaleString()} kg</span>
                           <span>•</span>
                           <span>Delivered {new Date(load.createdAt).toLocaleDateString()}</span>
                         </div>
@@ -554,7 +554,7 @@ export default function ShipperDashboardClient({
                           className="font-semibold text-sm"
                           style={{ color: 'var(--foreground)' }}
                         >
-                          {load.rate.toLocaleString()} ETB
+                          {(load.rate || 0).toLocaleString()} ETB
                         </span>
                         <StatusBadge status={load.status} />
                       </div>
