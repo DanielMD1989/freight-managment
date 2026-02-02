@@ -273,29 +273,17 @@ const navigationSections: Record<string, NavSection[]> = {
       ],
     },
     {
-      title: 'Fleet',
-      items: [
-        { label: 'My Trucks', href: '/carrier/trucks', icon: '🚛', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
-      ],
-    },
-    {
-      title: 'Financial',
-      items: [
-        { label: 'Wallet', href: '/carrier/wallet', icon: '💰', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
-      ],
-    },
-    {
-      title: 'Trips',
-      items: [
-        { label: 'Ready to Start', href: '/carrier/trips?tab=approved', icon: '✅', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
-        { label: 'Active Trips', href: '/carrier/trips?tab=active', icon: '🚚', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
-        { label: 'Trip History', href: '/carrier/trip-history', icon: '📜', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
-      ],
-    },
-    {
       title: 'Operations',
       items: [
+        { label: 'My Trucks', href: '/carrier/trucks', icon: '🚛', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Trips', href: '/carrier/trips', icon: '🚚', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
         { label: 'GPS Tracking', href: '/carrier/gps', icon: '📍', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
+      ],
+    },
+    {
+      title: 'Business',
+      items: [
+        { label: 'Wallet', href: '/carrier/wallet', icon: '💰', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
         { label: 'Documents', href: '/carrier/documents', icon: '📁', roles: ['CARRIER', 'ADMIN', 'SUPER_ADMIN'] },
       ],
     },
@@ -318,11 +306,11 @@ const navigationSections: Record<string, NavSection[]> = {
       title: 'Shipments',
       items: [
         { label: 'My Loads', href: '/shipper/loads', icon: '📦', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
-        { label: 'Active Trips', href: '/shipper/trips', icon: '🚚', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Trips', href: '/shipper/trips', icon: '🚚', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
       ],
     },
     {
-      title: 'Account',
+      title: 'Business',
       items: [
         { label: 'Wallet', href: '/shipper/wallet', icon: '💰', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
         { label: 'Analytics', href: '/shipper/analytics', icon: '📈', roles: ['SHIPPER', 'ADMIN', 'SUPER_ADMIN'] },
