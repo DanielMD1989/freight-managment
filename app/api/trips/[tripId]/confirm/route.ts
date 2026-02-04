@@ -12,6 +12,11 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { createNotification, NotificationType } from '@/lib/notifications';
 import { CacheInvalidation } from '@/lib/cache';
+import { z } from 'zod';
+
+const confirmSchema = z.object({
+  notes: z.string().max(1000).optional(),
+});
 
 /**
  * POST /api/trips/[tripId]/confirm
@@ -30,7 +35,14 @@ export async function POST(
     let confirmationNotes: string | null = null;
     try {
       const body = await request.json();
-      confirmationNotes = body.notes || null;
+      const result = confirmSchema.safeParse(body);
+      if (!result.success) {
+        return NextResponse.json(
+          { error: 'Validation failed', details: result.error.issues },
+          { status: 400 }
+        );
+      }
+      confirmationNotes = result.data.notes || null;
     } catch {
       // No body provided - that's fine
     }

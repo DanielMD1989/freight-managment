@@ -17,6 +17,17 @@ import { db } from "@/lib/db";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { VerificationStatus } from "@prisma/client";
 import { sanitizeRejectionReason, validateIdFormat } from "@/lib/validation";
+import { z } from "zod";
+
+const verifyDocumentSchema = z.object({
+  entityType: z.enum(["company", "truck"]),
+  verificationStatus: z.enum(["APPROVED", "REJECTED"]),
+  rejectionReason: z.string().optional(),
+  expiresAt: z.string().optional(),
+}).refine(
+  (data) => data.verificationStatus !== "REJECTED" || !!data.rejectionReason,
+  { message: "Rejection reason is required when rejecting a document", path: ["rejectionReason"] }
+);
 
 export async function PATCH(
   request: NextRequest,
@@ -38,38 +49,15 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const {
-      entityType,
-      verificationStatus,
-      rejectionReason,
-      expiresAt,
-    } = body;
-
-    // Validate required fields
-    if (!entityType || !["company", "truck"].includes(entityType)) {
+    const result = verifyDocumentSchema.safeParse(body);
+    if (!result.success) {
       return NextResponse.json(
-        { error: "Invalid entity type. Must be 'company' or 'truck'" },
+        { error: "Validation failed", details: result.error.issues },
         { status: 400 }
       );
     }
 
-    if (
-      !verificationStatus ||
-      !["APPROVED", "REJECTED"].includes(verificationStatus)
-    ) {
-      return NextResponse.json(
-        { error: "Invalid verification status. Must be 'APPROVED' or 'REJECTED'" },
-        { status: 400 }
-      );
-    }
-
-    // Require rejection reason if rejecting
-    if (verificationStatus === "REJECTED" && !rejectionReason) {
-      return NextResponse.json(
-        { error: "Rejection reason is required when rejecting a document" },
-        { status: 400 }
-      );
-    }
+    const { entityType, verificationStatus, rejectionReason, expiresAt } = result.data;
 
     // Sanitize rejection reason to prevent XSS
     const sanitizedReason = rejectionReason

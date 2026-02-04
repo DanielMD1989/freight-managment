@@ -9,6 +9,11 @@ import { requireAuth } from '@/lib/auth';
 import { requirePermission, Permission } from '@/lib/rbac';
 import { evaluateRule } from '@/lib/automationRules';
 import { executeAndRecordRuleActions } from '@/lib/automationActions';
+import { z } from 'zod';
+
+const executeRuleSchema = z.object({
+  loadId: z.string().min(1, 'loadId is required'),
+});
 
 // POST /api/automation/rules/[id]/execute - Manually execute rule
 export async function POST(
@@ -20,14 +25,15 @@ export async function POST(
 
     const { id: ruleId } = await params;
     const body = await request.json();
-    const { loadId } = body;
-
-    if (!loadId) {
+    const result = executeRuleSchema.safeParse(body);
+    if (!result.success) {
       return NextResponse.json(
-        { error: 'loadId is required for manual execution' },
+        { error: 'Validation failed', details: result.error.issues },
         { status: 400 }
       );
     }
+
+    const { loadId } = result.data;
 
     // Check if rule exists
     const rule = await db.automationRule.findUnique({

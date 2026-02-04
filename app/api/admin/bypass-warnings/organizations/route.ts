@@ -10,6 +10,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requirePermission, Permission } from '@/lib/rbac';
 import { db } from '@/lib/db';
+import { z } from 'zod';
+
+const updateFlagSchema = z.object({
+  organizationId: z.string().min(1),
+  isFlagged: z.boolean(),
+  flagReason: z.string().optional(),
+});
 
 /**
  * GET /api/admin/bypass-warnings/organizations
@@ -114,14 +121,15 @@ export async function PATCH(request: NextRequest) {
     await requirePermission(Permission.MANAGE_USERS);
 
     const body = await request.json();
-    const { organizationId, isFlagged, flagReason } = body;
-
-    if (!organizationId) {
+    const result = updateFlagSchema.safeParse(body);
+    if (!result.success) {
       return NextResponse.json(
-        { error: 'Organization ID is required' },
+        { error: 'Validation failed', details: result.error.issues },
         { status: 400 }
       );
     }
+
+    const { organizationId, isFlagged, flagReason } = result.data;
 
     const updated = await db.organization.update({
       where: { id: organizationId },

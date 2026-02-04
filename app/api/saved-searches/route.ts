@@ -9,6 +9,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { z } from 'zod';
+
+const createSavedSearchSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  type: z.enum(['LOADS', 'TRUCKS'], { message: 'Type must be LOADS or TRUCKS' }),
+  criteria: z.record(z.string(), z.any()).optional(),
+});
 
 /**
  * GET /api/saved-searches
@@ -53,24 +60,15 @@ export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth();
     const body = await request.json();
-
-    const { name, type, criteria } = body;
-
-    // Validate required fields
-    if (!name || !type) {
+    const result = createSavedSearchSchema.safeParse(body);
+    if (!result.success) {
       return NextResponse.json(
-        { error: 'Name and type are required' },
+        { error: 'Validation failed', details: result.error.issues },
         { status: 400 }
       );
     }
 
-    // Validate type
-    if (type !== 'LOADS' && type !== 'TRUCKS') {
-      return NextResponse.json(
-        { error: 'Type must be LOADS or TRUCKS' },
-        { status: 400 }
-      );
-    }
+    const { name, type, criteria } = result.data;
 
     // Create saved search
     const search = await db.savedSearch.create({

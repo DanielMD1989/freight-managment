@@ -11,6 +11,11 @@ import { requirePermission, Permission } from '@/lib/rbac';
 import { checkAndSendWarnings, sendBypassWarning, BypassWarningType } from '@/lib/bypassWarnings';
 import { z } from 'zod';
 
+const manualWarningSchema = z.object({
+  organizationId: z.string().min(1),
+  warningType: z.string().min(1),
+});
+
 /**
  * POST /api/admin/bypass-warnings
  *
@@ -31,10 +36,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => null);
 
     if (body?.organizationId && body?.warningType) {
-      // Manual warning to specific organization
-      const { organizationId, warningType } = body;
+      // Validate manual warning body
+      const result = manualWarningSchema.safeParse(body);
+      if (!result.success) {
+        return NextResponse.json(
+          { error: 'Validation failed', details: result.error.issues },
+          { status: 400 }
+        );
+      }
 
-      if (!Object.values(BypassWarningType).includes(warningType)) {
+      const { organizationId, warningType } = result.data;
+
+      if (!Object.values(BypassWarningType).includes(warningType as any)) {
         return NextResponse.json(
           { error: 'Invalid warning type' },
           { status: 400 }

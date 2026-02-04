@@ -11,6 +11,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { SearchType } from '@prisma/client';
+import { z } from 'zod';
+
+const updateSavedSearchSchema = z.object({
+  name: z.string().min(1).optional(),
+  criteria: z.record(z.string(), z.any()).optional(),
+});
 
 /**
  * PUT /api/saved-searches/[id]
@@ -57,9 +63,17 @@ export async function PUT(
       );
     }
 
-    // Parse request body
+    // Parse and validate request body
     const body = await request.json();
-    const { name, criteria } = body;
+    const result = updateSavedSearchSchema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: result.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const { name, criteria } = result.data;
 
     // Build update data
     const updateData: any = {};
