@@ -43,36 +43,68 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Start of current month for "this month" queries
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
     // Get statistics in parallel
     const [
       totalLoads,
       activeLoads,
-      completedLoads,
+      inTransitLoads,
+      deliveredLoads,
+      totalSpentResult,
+      pendingPaymentsResult,
       loadsByStatus,
       walletAccount,
-      recentLoads,
     ] = await Promise.all([
       // Total loads
       db.load.count({
         where: { shipperId: session.organizationId },
       }),
 
-      // Active loads (POSTED, ASSIGNED, IN_TRANSIT)
+      // Active loads (POSTED, ASSIGNED - not counting IN_TRANSIT separately)
       db.load.count({
         where: {
           shipperId: session.organizationId,
-          status: {
-            in: ['POSTED', 'ASSIGNED', 'IN_TRANSIT'],
-          },
+          status: { in: ['POSTED', 'ASSIGNED'] },
         },
       }),
 
-      // Completed loads
+      // In-transit loads
       db.load.count({
         where: {
           shipperId: session.organizationId,
-          status: 'DELIVERED',
+          status: 'IN_TRANSIT',
         },
+      }),
+
+      // Delivered this month (DELIVERED + COMPLETED)
+      db.load.count({
+        where: {
+          shipperId: session.organizationId,
+          status: { in: ['DELIVERED', 'COMPLETED'] },
+          updatedAt: { gte: startOfMonth },
+        },
+      }),
+
+      // Total spent: sum of shipperServiceFee where fee was deducted
+      db.load.aggregate({
+        where: {
+          shipperId: session.organizationId,
+          shipperFeeStatus: 'DEDUCTED',
+        },
+        _sum: { shipperServiceFee: true },
+      }),
+
+      // Pending payments: sum of shipperServiceFee for reserved (in-progress) loads
+      db.load.aggregate({
+        where: {
+          shipperId: session.organizationId,
+          shipperFeeStatus: 'RESERVED',
+        },
+        _sum: { shipperServiceFee: true },
       }),
 
       // Loads by status
@@ -93,41 +125,28 @@ export async function GET(request: NextRequest) {
           currency: true,
         },
       }),
-
-      // Recent loads (last 7 days)
-      db.load.count({
-        where: {
-          shipperId: session.organizationId,
-          createdAt: {
-            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-          },
-        },
-      }),
     ]);
 
-    // Get pending matches count (loads that are POSTED and have available trucks)
-    const postedLoads = await db.load.count({
-      where: {
-        shipperId: session.organizationId,
-        status: 'POSTED',
-      },
-    });
+    const totalSpent = Number(totalSpentResult._sum?.shipperServiceFee || 0);
+    const pendingPayments = Number(pendingPaymentsResult._sum?.shipperServiceFee || 0);
 
     return NextResponse.json({
-      totalLoads,
-      activeLoads,
-      completedLoads,
-      cancelledLoads: loadsByStatus.find((s) => s.status === 'CANCELLED')?._count || 0,
+      stats: {
+        totalLoads,
+        activeLoads,
+        inTransitLoads,
+        deliveredLoads,
+        totalSpent,
+        pendingPayments,
+      },
       loadsByStatus: loadsByStatus.map((s) => ({
         status: s.status,
         count: s._count,
       })),
       wallet: {
-        balance: walletAccount?.balance || 0,
+        balance: Number(walletAccount?.balance || 0),
         currency: walletAccount?.currency || 'ETB',
       },
-      pendingMatches: postedLoads,
-      recentLoads,
     });
   } catch (error) {
     console.error('Shipper dashboard error:', error);

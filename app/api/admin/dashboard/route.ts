@@ -57,7 +57,7 @@ export async function GET() {
       totalTrucks,
       activeLoads,
       activeTrips,
-      totalRevenue: totalRevenue || { balance: 0 },
+      totalRevenue: { balance: Number(totalRevenue?.balance || 0) },
       pendingWithdrawals,
       openDisputes,
       loadsByStatus: loadsByStatus.map((item) => ({

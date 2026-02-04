@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
       completedTrips,
       inTransitTrips,
       tripStats,
+      revenueResult,
       walletAccount,
       recentPostings,
       pendingApprovals,
@@ -95,7 +96,7 @@ export async function GET(request: NextRequest) {
         },
       }),
 
-      // Trip stats - distance only (revenue not implemented)
+      // Trip stats - distance
       db.trip.aggregate({
         where: {
           carrierId: session.organizationId,
@@ -105,6 +106,16 @@ export async function GET(request: NextRequest) {
           estimatedDistanceKm: true,
           actualDistanceKm: true,
         },
+      }),
+
+      // Total revenue: sum of carrierServiceFee from completed loads assigned to this carrier's trucks
+      db.load.aggregate({
+        where: {
+          assignedTruck: { carrierId: session.organizationId },
+          status: { in: ['DELIVERED', 'COMPLETED'] },
+          carrierFeeStatus: 'DEDUCTED',
+        },
+        _sum: { carrierServiceFee: true },
       }),
 
       // Wallet account
@@ -140,6 +151,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate total distance from trips
     const totalDistance = Number(tripStats._sum?.actualDistanceKm || tripStats._sum?.estimatedDistanceKm || 0);
+    const totalRevenue = Number(revenueResult._sum?.carrierServiceFee || 0);
 
     return NextResponse.json({
       totalTrucks,
@@ -147,10 +159,10 @@ export async function GET(request: NextRequest) {
       activePostings,
       completedDeliveries: completedTrips,
       inTransitTrips,
-      totalRevenue: 0, // Revenue tracking not implemented
+      totalRevenue,
       totalDistance,
       wallet: {
-        balance: walletAccount?.balance || 0,
+        balance: Number(walletAccount?.balance || 0),
         currency: walletAccount?.currency || 'ETB',
       },
       recentPostings,
