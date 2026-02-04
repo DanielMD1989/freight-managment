@@ -310,6 +310,8 @@ export default async function TripDetailPage({
     pickedUpAt: tripData.pickedUpAt?.toISOString() || null,
     deliveredAt: tripData.deliveredAt?.toISOString() || null,
     completedAt: tripData.completedAt?.toISOString() || null,
+    podSubmitted: load?.podSubmitted ?? false,
+    podVerified: load?.podVerified ?? false,
   };
 
   return (

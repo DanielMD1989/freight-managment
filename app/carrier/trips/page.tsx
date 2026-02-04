@@ -33,6 +33,8 @@ interface Trip {
     id: string;
     pickupCity?: string;
     deliveryCity?: string;
+    podSubmitted?: boolean;
+    podVerified?: boolean;
   };
   pickupCity: string;
   deliveryCity: string;
@@ -175,7 +177,28 @@ export default function CarrierTripsPage() {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, trip?: Trip) => {
+    // For DELIVERED status, check POD sub-states
+    if (status === 'DELIVERED' && trip) {
+      const podSubmitted = trip.load?.podSubmitted ?? false;
+      const podVerified = trip.load?.podVerified ?? false;
+
+      if (podVerified) {
+        return (
+          <span className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-green-50 text-green-700 border border-green-200">
+            POD Verified
+          </span>
+        );
+      }
+      if (podSubmitted) {
+        return (
+          <span className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 border border-blue-200">
+            POD Submitted
+          </span>
+        );
+      }
+    }
+
     const statusConfig: Record<string, { classes: string; label: string }> = {
       ASSIGNED: { classes: 'bg-teal-50 text-teal-700 border border-teal-200', label: 'Ready to Start' },
       PICKUP_PENDING: { classes: 'bg-amber-50 text-amber-700 border border-amber-200', label: 'Pickup Pending' },
@@ -235,7 +258,24 @@ export default function CarrierTripsPage() {
             </button>
           </div>
         );
-      case 'DELIVERED':
+      case 'DELIVERED': {
+        const podSubmitted = trip.load?.podSubmitted ?? false;
+        const podVerified = trip.load?.podVerified ?? false;
+
+        if (podVerified) {
+          return (
+            <span className="px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg">
+              Verified
+            </span>
+          );
+        }
+        if (podSubmitted) {
+          return (
+            <span className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg">
+              Awaiting Verification
+            </span>
+          );
+        }
         return (
           <button
             onClick={() => router.push(`/carrier/trips/${trip.loadId}?uploadPod=true`)}
@@ -244,6 +284,7 @@ export default function CarrierTripsPage() {
             Upload POD
           </button>
         );
+      }
       default:
         return null;
     }
@@ -452,7 +493,7 @@ export default function CarrierTripsPage() {
                     </div>
                   </td>
                   <td className="px-4 py-4">
-                    {getStatusBadge(trip.status)}
+                    {getStatusBadge(trip.status, trip)}
                   </td>
                   <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-2">

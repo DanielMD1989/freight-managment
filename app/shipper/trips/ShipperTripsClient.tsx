@@ -33,6 +33,8 @@ interface Trip {
     name: string;
     isVerified: boolean;
   } | null;
+  podSubmitted: boolean;
+  podVerified: boolean;
 }
 
 interface Pagination {
@@ -78,7 +80,11 @@ function formatCurrency(amount: number | null): string {
   }).format(amount);
 }
 
-function getStatusColor(status: string): string {
+function getStatusColor(status: string, trip?: Trip): string {
+  if (status === 'DELIVERED' && trip) {
+    if (trip.podVerified) return 'bg-green-50 text-green-700 border border-green-200';
+    if (trip.podSubmitted) return 'bg-purple-50 text-purple-700 border border-purple-200';
+  }
   const colors: Record<string, string> = {
     ASSIGNED: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
     PICKUP_PENDING: 'bg-purple-50 text-purple-700 border border-purple-200',
@@ -89,7 +95,11 @@ function getStatusColor(status: string): string {
   return colors[status] || 'bg-slate-50 text-slate-600 border border-slate-200';
 }
 
-function getStatusLabel(status: string): string {
+function getStatusLabel(status: string, trip?: Trip): string {
+  if (status === 'DELIVERED' && trip) {
+    if (trip.podVerified) return 'POD Verified';
+    if (trip.podSubmitted) return 'Verify POD';
+  }
   const labels: Record<string, string> = {
     ASSIGNED: 'Assigned',
     PICKUP_PENDING: 'Pickup Pending',
@@ -196,8 +206,8 @@ export default function ShipperTripsClient({
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(trip.status)}`}>
-                    {getStatusLabel(trip.status)}
+                  <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(trip.status, trip)}`}>
+                    {getStatusLabel(trip.status, trip)}
                   </span>
                   <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
                     {trip.referenceNumber}
@@ -214,6 +224,14 @@ export default function ShipperTripsClient({
                     </svg>
                     View Route
                   </Link>
+                  {trip.status === 'DELIVERED' && trip.podSubmitted && !trip.podVerified && (
+                    <Link
+                      href={`/shipper/trips/${trip.loadId}`}
+                      className="px-4 py-2 text-sm bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors font-medium"
+                    >
+                      Verify POD
+                    </Link>
+                  )}
                   <Link
                     href={`/shipper/trips/${trip.loadId}`}
                     className="px-4 py-2 text-sm rounded-lg transition-colors"

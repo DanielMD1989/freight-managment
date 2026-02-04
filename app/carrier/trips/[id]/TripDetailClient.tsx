@@ -70,6 +70,9 @@ interface Trip {
   pickedUpAt?: string | null;
   deliveredAt?: string | null;
   completedAt?: string | null;
+  // POD status
+  podSubmitted: boolean;
+  podVerified: boolean;
 }
 
 interface Props {
@@ -98,12 +101,12 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
 
-  // Auto-open POD upload modal if query param is present
+  // Auto-open POD upload modal if query param is present (only if POD not already submitted)
   useEffect(() => {
-    if (searchParams.get('uploadPod') === 'true' && trip.status === 'DELIVERED') {
+    if (searchParams.get('uploadPod') === 'true' && trip.status === 'DELIVERED' && !trip.podSubmitted) {
       setShowPodUpload(true);
     }
-  }, [searchParams, trip.status]);
+  }, [searchParams, trip.status, trip.podSubmitted]);
 
   const handleStatusChange = async (newStatus: string, additionalData?: Record<string, string>) => {
     setLoading(true);
@@ -240,6 +243,24 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
   };
 
   const getStatusBadge = (status: string) => {
+    // For DELIVERED status, check POD sub-states
+    if (status === 'DELIVERED') {
+      if (trip.podVerified) {
+        return (
+          <span className="px-3 py-1 text-sm font-medium rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+            POD Verified
+          </span>
+        );
+      }
+      if (trip.podSubmitted) {
+        return (
+          <span className="px-3 py-1 text-sm font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+            POD Submitted
+          </span>
+        );
+      }
+    }
+
     const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
       ASSIGNED: { bg: 'bg-teal-100 dark:bg-teal-900', text: 'text-teal-800 dark:text-teal-200', label: 'Ready to Start' },
       PICKUP_PENDING: { bg: 'bg-yellow-100 dark:bg-yellow-900', text: 'text-yellow-800 dark:text-yellow-200', label: 'Pickup Pending' },
@@ -349,13 +370,23 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
               </button>
             </>
           )}
-          {trip.status === 'DELIVERED' && (
+          {trip.status === 'DELIVERED' && !trip.podSubmitted && (
             <button
               onClick={() => setShowPodUpload(true)}
               className="px-6 py-2 text-white bg-purple-600 rounded-lg hover:bg-purple-700 font-medium"
             >
               Upload POD
             </button>
+          )}
+          {trip.status === 'DELIVERED' && trip.podSubmitted && !trip.podVerified && (
+            <span className="px-6 py-2 text-blue-700 bg-blue-50 border border-blue-200 rounded-lg font-medium">
+              Awaiting Shipper Verification
+            </span>
+          )}
+          {trip.status === 'DELIVERED' && trip.podVerified && (
+            <span className="px-6 py-2 text-green-700 bg-green-50 border border-green-200 rounded-lg font-medium">
+              POD Verified
+            </span>
           )}
           {trip.status === 'CANCELLED' && (
             <span className="px-6 py-2 text-red-600 bg-red-50 rounded-lg font-medium">

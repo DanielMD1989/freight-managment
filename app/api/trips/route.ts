@@ -104,6 +104,8 @@ export async function GET(request: NextRequest) {
               deliveryDate: true,
               shipperContactName: true,
               shipperContactPhone: true,
+              podSubmitted: true,
+              podVerified: true,
             },
           },
           truck: {

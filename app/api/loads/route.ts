@@ -391,6 +391,9 @@ export async function GET(request: NextRequest) {
           // NOTE: shipperContactName and shipperContactPhone are NEVER included in public list
           safetyNotes: true,
           specialInstructions: true,
+          // POD status
+          podSubmitted: true,
+          podVerified: true,
           // Timestamps
           createdAt: true,
           updatedAt: true,

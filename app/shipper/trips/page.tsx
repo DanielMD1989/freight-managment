@@ -33,6 +33,8 @@ interface Trip {
     name: string;
     isVerified: boolean;
   } | null;
+  podSubmitted: boolean;
+  podVerified: boolean;
 }
 
 interface TripsResponse {
@@ -151,6 +153,8 @@ export default async function ShipperTripsPage({
       name: load.assignedTruck.carrier.name,
       isVerified: load.assignedTruck.carrier.isVerified || false,
     } : null,
+    podSubmitted: load.podSubmitted ?? false,
+    podVerified: load.podVerified ?? false,
   }));
 
   if (!data) {
