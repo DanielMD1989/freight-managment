@@ -53,6 +53,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
   const toast = useToast();
   const [loads, setLoads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [activeStatus, setActiveStatus] = useState<LoadStatus>('POSTED');
   const [activeMainTab, setActiveMainTab] = useState<MainTab>('postings');
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
@@ -135,6 +136,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
    */
   const fetchLoads = async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const params = new URLSearchParams();
       params.append('myLoads', 'true');
@@ -143,6 +145,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       params.append('sortOrder', 'desc');
 
       const response = await fetch(`/api/loads?${params.toString()}`);
+      if (!response.ok) throw new Error('Failed to fetch loads');
       const data = await response.json();
       const loadsData = data.loads || [];
 
@@ -175,6 +178,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       setStatusCounts(counts);
     } catch (error) {
       console.error('Failed to fetch loads:', error);
+      setFetchError('Failed to load your loads. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -824,6 +828,19 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Error Banner */}
+          {fetchError && (
+            <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-red-200 bg-red-50 text-sm text-red-700">
+              <span>{fetchError}</span>
+              <button
+                onClick={fetchLoads}
+                className="ml-3 px-3 py-1 text-xs font-medium bg-red-100 hover:bg-red-200 rounded-lg transition-colors"
+              >
+                Retry
+              </button>
             </div>
           )}
 

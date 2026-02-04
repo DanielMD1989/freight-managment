@@ -45,6 +45,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   const [selectedTruckPosting, setSelectedTruckPosting] = useState<any>(null);
   const [editingSearch, setEditingSearch] = useState<SavedSearch | null>(null);
   const [pendingRequestTruckIds, setPendingRequestTruckIds] = useState<Set<string>>(new Set());
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   /**
    * Fetch trucks based on filters
@@ -52,6 +53,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
    */
   const fetchTrucks = async (overrideFilters?: Record<string, any>) => {
     setLoading(true);
+    setFetchError(null);
     try {
       // Use override filters if provided, otherwise use current state
       const currentFilters = overrideFilters || filterValues;
@@ -98,10 +100,12 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
 
       const url = `/api/truck-postings?${params.toString()}`;
       const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch trucks');
       const data = await response.json();
       setTrucks(data.truckPostings || []);
     } catch (error) {
       console.error('Failed to fetch trucks:', error);
+      setFetchError('Failed to load trucks. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -703,6 +707,19 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
             </div>
           </div>
         </div>
+        )}
+
+        {/* Error Banner */}
+        {fetchError && (
+          <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-red-200 bg-red-50 text-sm text-red-700">
+            <span>{fetchError}</span>
+            <button
+              onClick={() => fetchTrucks(filterValuesRef.current)}
+              className="ml-3 px-3 py-1 text-xs font-medium bg-red-100 hover:bg-red-200 rounded-lg transition-colors"
+            >
+              Retry
+            </button>
+          </div>
         )}
 
         {/* Results Section */}
