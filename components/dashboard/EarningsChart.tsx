@@ -124,6 +124,9 @@ export default function EarningsChart({ organizationId }: EarningsChartProps) {
 
   const maxAmount = Math.max(...earnings.map((e) => e.amount), 1);
 
+  // Deterministic skeleton heights to avoid hydration mismatch
+  const skeletonHeights = [45, 70, 35, 60, 80, 50, 65];
+
   if (loading) {
     return (
       <div className="animate-pulse">
@@ -136,7 +139,7 @@ export default function EarningsChart({ organizationId }: EarningsChartProps) {
             <div
               key={i}
               className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-t"
-              style={{ height: `${Math.random() * 80 + 20}%` }}
+              style={{ height: `${skeletonHeights[i % skeletonHeights.length]}%` }}
             />
           ))}
         </div>
