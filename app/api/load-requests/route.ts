@@ -253,20 +253,22 @@ export async function POST(request: NextRequest) {
       select: { id: true },
     });
 
-    for (const user of shipperUsers) {
-      await createNotification({
-        userId: user.id,
-        type: 'LOAD_REQUEST_RECEIVED',
-        title: 'New Load Request',
-        message: `${truck.carrier.name} wants to haul your load from ${load.pickupCity} to ${load.deliveryCity}`,
-        metadata: {
-          loadRequestId: loadRequest.id,
-          loadId: data.loadId,
-          truckId: data.truckId,
-          carrierName: truck.carrier.name,
-        },
-      });
-    }
+    await Promise.all(
+      shipperUsers.map(user =>
+        createNotification({
+          userId: user.id,
+          type: 'LOAD_REQUEST_RECEIVED',
+          title: 'New Load Request',
+          message: `${truck.carrier.name} wants to haul your load from ${load.pickupCity} to ${load.deliveryCity}`,
+          metadata: {
+            loadRequestId: loadRequest.id,
+            loadId: data.loadId,
+            truckId: data.truckId,
+            carrierName: truck.carrier.name,
+          },
+        })
+      )
+    );
 
     return NextResponse.json({
       loadRequest,

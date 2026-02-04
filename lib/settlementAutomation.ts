@@ -146,29 +146,33 @@ export async function processReadySettlements(): Promise<number> {
     return 0;
   }
 
+  // Process settlements in parallel instead of sequentially
+  const results = await Promise.allSettled(
+    loadsToSettle.map(load => markLoadAsSettled(load.id))
+  );
+
+  const errorIds: string[] = [];
   let successCount = 0;
-  let errorCount = 0;
 
-  for (const load of loadsToSettle) {
-    try {
-      await markLoadAsSettled(load.id);
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
       successCount++;
-      } catch (error: any) {
-      errorCount++;
-      console.error(`✗ Failed to settle load ${load.id}:`, error.message);
-
-      // Mark as DISPUTE if settlement fails
-      await db.load.update({
-        where: { id: load.id },
-        data: {
-          settlementStatus: 'DISPUTE',
-        },
-      });
+    } else {
+      errorIds.push(loadsToSettle[index].id);
+      console.error(`✗ Failed to settle load ${loadsToSettle[index].id}:`, result.reason?.message || result.reason);
     }
+  });
+
+  // Batch update all failed loads to DISPUTE (single query instead of N)
+  if (errorIds.length > 0) {
+    await db.load.updateMany({
+      where: { id: { in: errorIds } },
+      data: { settlementStatus: 'DISPUTE' },
+    });
   }
 
   console.log(
-    `Settlement batch complete: ${successCount} succeeded, ${errorCount} failed`
+    `Settlement batch complete: ${successCount} succeeded, ${errorIds.length} failed`
   );
 
   return successCount;

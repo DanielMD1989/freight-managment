@@ -39,24 +39,28 @@ export async function expireOldLoads() {
       },
     });
 
-    // Update loads to EXPIRED status
-    for (const load of loadsToExpire) {
-      await db.load.update({
-        where: { id: load.id },
+    // Batch update all loads to EXPIRED status (single query instead of N)
+    if (loadsToExpire.length > 0) {
+      await db.load.updateMany({
+        where: { id: { in: loadsToExpire.map(l => l.id) } },
         data: { status: 'EXPIRED' },
       });
-
-      // Notify shipper
-      if (load.shipper?.users?.[0]?.id) {
-        await createNotification({
-          userId: load.shipper.users[0].id,
-          type: 'LOAD_EXPIRED',
-          title: 'Load Expired',
-          message: `Your load from ${load.pickupCity} to ${load.deliveryCity} has expired due to no carrier assignment.`,
-          metadata: { loadId: load.id },
-        });
-      }
     }
+
+    // Batch notify shippers
+    await Promise.all(
+      loadsToExpire
+        .filter(load => load.shipper?.users?.[0]?.id)
+        .map(load =>
+          createNotification({
+            userId: load.shipper!.users[0].id,
+            type: 'LOAD_EXPIRED',
+            title: 'Load Expired',
+            message: `Your load from ${load.pickupCity} to ${load.deliveryCity} has expired due to no carrier assignment.`,
+            metadata: { loadId: load.id },
+          })
+        )
+    );
 
     return {
       success: true,
@@ -107,9 +111,11 @@ export async function autoSettleCompletedLoads() {
 
     let settledCount = 0;
 
+    // Process service fees per-load (financial operation must be individual)
+    const settledLoads: Array<{ load: typeof loadsToSettle[0]; serviceFeeAmount: number }> = [];
+
     for (const load of loadsToSettle) {
       try {
-        // Service Fee Implementation: Deduct service fee to platform (Corridor-based per-KM)
         let serviceFeeAmount = 0;
         try {
           const serviceFeeResult = await deductServiceFee(load.id);
@@ -120,47 +126,48 @@ export async function autoSettleCompletedLoads() {
           console.error(`Service fee deduction error for load ${load.id}:`, error);
         }
 
-        // Update load status
-        await db.load.update({
-          where: { id: load.id },
-          data: {
-            status: 'COMPLETED',
-          },
-        });
-
-        // Notify shipper
-        if (load.shipper?.users?.[0]?.id) {
-          await createNotification({
-            userId: load.shipper.users[0].id,
-            type: NotificationType.SETTLEMENT_COMPLETE,
-            title: 'Load Completed',
-            message: `Load from ${load.pickupCity} to ${load.deliveryCity} has been completed. Platform service fee: ${serviceFeeAmount.toFixed(2)} ETB.`,
-            metadata: {
-              loadId: load.id,
-              serviceFee: serviceFeeAmount,
-            },
-          });
-        }
-
-        // Notify carrier
-        if (load.assignedTruck?.carrier?.users?.[0]?.id) {
-          await createNotification({
-            userId: load.assignedTruck.carrier.users[0].id,
-            type: NotificationType.SETTLEMENT_COMPLETE,
-            title: 'Delivery Completed',
-            message: `Delivery to ${load.deliveryCity} has been completed. Platform service fee: ${serviceFeeAmount.toFixed(2)} ETB.`,
-            metadata: {
-              loadId: load.id,
-              serviceFee: serviceFeeAmount,
-            },
-          });
-        }
-
+        settledLoads.push({ load, serviceFeeAmount });
         settledCount++;
       } catch (error) {
         console.error(`Error settling load ${load.id}:`, error);
       }
     }
+
+    // Batch update all settled loads to COMPLETED (single query instead of N)
+    if (settledLoads.length > 0) {
+      await db.load.updateMany({
+        where: { id: { in: settledLoads.map(s => s.load.id) } },
+        data: { status: 'COMPLETED' },
+      });
+    }
+
+    // Batch send all notifications in parallel
+    const notificationPromises: Promise<any>[] = [];
+    for (const { load, serviceFeeAmount } of settledLoads) {
+      if (load.shipper?.users?.[0]?.id) {
+        notificationPromises.push(
+          createNotification({
+            userId: load.shipper.users[0].id,
+            type: NotificationType.SETTLEMENT_COMPLETE,
+            title: 'Load Completed',
+            message: `Load from ${load.pickupCity} to ${load.deliveryCity} has been completed. Platform service fee: ${serviceFeeAmount.toFixed(2)} ETB.`,
+            metadata: { loadId: load.id, serviceFee: serviceFeeAmount },
+          }).catch(console.error)
+        );
+      }
+      if (load.assignedTruck?.carrier?.users?.[0]?.id) {
+        notificationPromises.push(
+          createNotification({
+            userId: load.assignedTruck.carrier.users[0].id,
+            type: NotificationType.SETTLEMENT_COMPLETE,
+            title: 'Delivery Completed',
+            message: `Delivery to ${load.deliveryCity} has been completed. Platform service fee: ${serviceFeeAmount.toFixed(2)} ETB.`,
+            metadata: { loadId: load.id, serviceFee: serviceFeeAmount },
+          }).catch(console.error)
+        );
+      }
+    }
+    await Promise.all(notificationPromises);
 
     return {
       success: true,
@@ -245,33 +252,36 @@ export async function sendLoadReminders() {
       },
     });
 
-    let notificationsSent = 0;
+    // Batch all reminder notifications in parallel
+    const reminderPromises: Promise<any>[] = [];
 
     for (const load of upcomingLoads) {
-      // Notify shipper
       if (load.shipper?.users?.[0]?.id) {
-        await createNotification({
-          userId: load.shipper.users[0].id,
-          type: 'PICKUP_REMINDER',
-          title: 'Pickup Tomorrow',
-          message: `Reminder: Load pickup scheduled for tomorrow from ${load.pickupCity}.`,
-          metadata: { loadId: load.id },
-        });
-        notificationsSent++;
+        reminderPromises.push(
+          createNotification({
+            userId: load.shipper.users[0].id,
+            type: 'PICKUP_REMINDER',
+            title: 'Pickup Tomorrow',
+            message: `Reminder: Load pickup scheduled for tomorrow from ${load.pickupCity}.`,
+            metadata: { loadId: load.id },
+          })
+        );
       }
-
-      // Notify carrier
       if (load.assignedTruck?.carrier?.users?.[0]?.id) {
-        await createNotification({
-          userId: load.assignedTruck.carrier.users[0].id,
-          type: 'PICKUP_REMINDER',
-          title: 'Pickup Tomorrow',
-          message: `Reminder: Pickup scheduled for tomorrow from ${load.pickupCity}.`,
-          metadata: { loadId: load.id },
-        });
-        notificationsSent++;
+        reminderPromises.push(
+          createNotification({
+            userId: load.assignedTruck.carrier.users[0].id,
+            type: 'PICKUP_REMINDER',
+            title: 'Pickup Tomorrow',
+            message: `Reminder: Pickup scheduled for tomorrow from ${load.pickupCity}.`,
+            metadata: { loadId: load.id },
+          })
+        );
       }
     }
+
+    await Promise.all(reminderPromises);
+    const notificationsSent = reminderPromises.length;
 
     return {
       success: true,

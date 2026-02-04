@@ -173,43 +173,43 @@ async function sendPickupArrivalNotification(
     return;
   }
 
-  // Notify shipper
-  for (const user of load.shipper.users) {
-    await createNotification({
-      userId: user.id,
-      type: 'TRUCK_AT_PICKUP',
-      title: `Truck Arrived: Load #${load.id.slice(-8)}`,
-      message: `Truck ${load.assignedTruck.licensePlate} has arrived at the pickup location.`,
-      metadata: {
+  // Send all notifications and emails in parallel
+  await Promise.all([
+    // Shipper notifications + emails
+    ...load.shipper.users.flatMap(user => [
+      createNotification({
+        userId: user.id,
+        type: 'TRUCK_AT_PICKUP',
+        title: `Truck Arrived: Load #${load.id.slice(-8)}`,
+        message: `Truck ${load.assignedTruck!.licensePlate} has arrived at the pickup location.`,
+        metadata: {
+          loadId: load.id,
+          event: 'ARRIVED_AT_PICKUP',
+          location: alert.location,
+          timestamp: alert.timestamp,
+        },
+      }),
+      sendEmailToUser(user.id, EmailTemplate.TRUCK_AT_PICKUP, {
+        truckPlate: load.assignedTruck!.licensePlate,
         loadId: load.id,
-        event: 'ARRIVED_AT_PICKUP',
-        location: alert.location,
-        timestamp: alert.timestamp,
-      },
-    });
-
-    // Send email notification
-    await sendEmailToUser(user.id, EmailTemplate.TRUCK_AT_PICKUP, {
-      truckPlate: load.assignedTruck.licensePlate,
-      loadId: load.id,
-    });
-  }
-
-  // Notify carrier
-  for (const user of load.assignedTruck.carrier.users) {
-    await createNotification({
-      userId: user.id,
-      type: 'TRUCK_AT_PICKUP',
-      title: `Arrival Confirmed: ${load.assignedTruck.licensePlate}`,
-      message: `Your truck ${load.assignedTruck.licensePlate} has arrived at the pickup location for Load #${load.id.slice(-8)}.`,
-      metadata: {
-        loadId: load.id,
-        event: 'ARRIVED_AT_PICKUP',
-        location: alert.location,
-        timestamp: alert.timestamp,
-      },
-    });
-  }
+      }),
+    ]),
+    // Carrier notifications
+    ...load.assignedTruck.carrier.users.map(user =>
+      createNotification({
+        userId: user.id,
+        type: 'TRUCK_AT_PICKUP',
+        title: `Arrival Confirmed: ${load.assignedTruck!.licensePlate}`,
+        message: `Your truck ${load.assignedTruck!.licensePlate} has arrived at the pickup location for Load #${load.id.slice(-8)}.`,
+        metadata: {
+          loadId: load.id,
+          event: 'ARRIVED_AT_PICKUP',
+          location: alert.location,
+          timestamp: alert.timestamp,
+        },
+      })
+    ),
+  ]);
 
   }
 
@@ -271,43 +271,43 @@ async function sendDeliveryArrivalNotification(
     return;
   }
 
-  // Notify shipper
-  for (const user of load.shipper.users) {
-    await createNotification({
-      userId: user.id,
-      type: 'TRUCK_AT_DELIVERY',
-      title: `Delivery Imminent: Load #${load.id.slice(-8)}`,
-      message: `Truck ${load.assignedTruck.licensePlate} has arrived at the delivery location. Please prepare to receive the shipment.`,
-      metadata: {
+  // Send all notifications and emails in parallel
+  await Promise.all([
+    // Shipper notifications + emails
+    ...load.shipper.users.flatMap(user => [
+      createNotification({
+        userId: user.id,
+        type: 'TRUCK_AT_DELIVERY',
+        title: `Delivery Imminent: Load #${load.id.slice(-8)}`,
+        message: `Truck ${load.assignedTruck!.licensePlate} has arrived at the delivery location. Please prepare to receive the shipment.`,
+        metadata: {
+          loadId: load.id,
+          event: 'ARRIVED_AT_DESTINATION',
+          location: alert.location,
+          timestamp: alert.timestamp,
+        },
+      }),
+      sendEmailToUser(user.id, EmailTemplate.TRUCK_AT_DELIVERY, {
+        truckPlate: load.assignedTruck!.licensePlate,
         loadId: load.id,
-        event: 'ARRIVED_AT_DESTINATION',
-        location: alert.location,
-        timestamp: alert.timestamp,
-      },
-    });
-
-    // Send email notification
-    await sendEmailToUser(user.id, EmailTemplate.TRUCK_AT_DELIVERY, {
-      truckPlate: load.assignedTruck.licensePlate,
-      loadId: load.id,
-    });
-  }
-
-  // Notify carrier
-  for (const user of load.assignedTruck.carrier.users) {
-    await createNotification({
-      userId: user.id,
-      type: 'TRUCK_AT_DELIVERY',
-      title: `Destination Reached: ${load.assignedTruck.licensePlate}`,
-      message: `Your truck has arrived at the delivery location for Load #${load.id.slice(-8)}. Please complete POD submission.`,
-      metadata: {
-        loadId: load.id,
-        event: 'ARRIVED_AT_DESTINATION',
-        location: alert.location,
-        timestamp: alert.timestamp,
-      },
-    });
-  }
+      }),
+    ]),
+    // Carrier notifications
+    ...load.assignedTruck.carrier.users.map(user =>
+      createNotification({
+        userId: user.id,
+        type: 'TRUCK_AT_DELIVERY',
+        title: `Destination Reached: ${load.assignedTruck!.licensePlate}`,
+        message: `Your truck has arrived at the delivery location for Load #${load.id.slice(-8)}. Please complete POD submission.`,
+        metadata: {
+          loadId: load.id,
+          event: 'ARRIVED_AT_DESTINATION',
+          location: alert.location,
+          timestamp: alert.timestamp,
+        },
+      })
+    ),
+  ]);
 
   }
 

@@ -103,43 +103,43 @@ export async function sendGpsOfflineAlert(truckId: string): Promise<void> {
     ? Math.floor((Date.now() - truck.gpsLastSeenAt.getTime()) / (1000 * 60))
     : 0;
 
-  // Create notification for carrier organization
-  for (const user of truck.carrier.users) {
-    await createNotification({
-      userId: user.id,
-      type: 'GPS_OFFLINE',
-      title: `GPS Signal Lost: ${truck.licensePlate}`,
-      message: `Truck ${truck.licensePlate} on Load #${truck.assignedLoad.id.slice(-8)} has lost GPS signal (offline for ${minutesOffline} minutes).`,
-      metadata: {
-        truckId: truck.id,
-        loadId: truck.assignedLoad.id,
-        minutesOffline,
-        gpsStatus: truck.gpsStatus,
-      },
-    });
-
-    // Send email notification
-    await sendEmailToUser(user.id, EmailTemplate.GPS_OFFLINE, {
-      truckPlate: truck.licensePlate,
-      loadId: truck.assignedLoad.id,
-      lastLocation: 'Unknown', // Could be enhanced with actual location
-    });
-  }
-
-  // Create notification for shipper organization
-  for (const user of truck.assignedLoad.shipper.users) {
-    await createNotification({
-      userId: user.id,
-      type: 'GPS_OFFLINE',
-      title: `Tracking Alert: Load #${truck.assignedLoad.id.slice(-8)}`,
-      message: `GPS tracking for Load #${truck.assignedLoad.id.slice(-8)} is currently unavailable. The carrier has been notified.`,
-      metadata: {
-        truckId: truck.id,
-        loadId: truck.assignedLoad.id,
-        minutesOffline,
-      },
-    });
-  }
+  // Send all notifications and emails in parallel
+  await Promise.all([
+    // Carrier notifications + emails
+    ...truck.carrier.users.flatMap(user => [
+      createNotification({
+        userId: user.id,
+        type: 'GPS_OFFLINE',
+        title: `GPS Signal Lost: ${truck.licensePlate}`,
+        message: `Truck ${truck.licensePlate} on Load #${truck.assignedLoad!.id.slice(-8)} has lost GPS signal (offline for ${minutesOffline} minutes).`,
+        metadata: {
+          truckId: truck.id,
+          loadId: truck.assignedLoad!.id,
+          minutesOffline,
+          gpsStatus: truck.gpsStatus,
+        },
+      }),
+      sendEmailToUser(user.id, EmailTemplate.GPS_OFFLINE, {
+        truckPlate: truck.licensePlate,
+        loadId: truck.assignedLoad!.id,
+        lastLocation: 'Unknown',
+      }),
+    ]),
+    // Shipper notifications
+    ...truck.assignedLoad.shipper.users.map(user =>
+      createNotification({
+        userId: user.id,
+        type: 'GPS_OFFLINE',
+        title: `Tracking Alert: Load #${truck.assignedLoad!.id.slice(-8)}`,
+        message: `GPS tracking for Load #${truck.assignedLoad!.id.slice(-8)} is currently unavailable. The carrier has been notified.`,
+        metadata: {
+          truckId: truck.id,
+          loadId: truck.assignedLoad!.id,
+          minutesOffline,
+        },
+      })
+    ),
+  ]);
 
   }
 
@@ -197,39 +197,39 @@ export async function sendGpsBackOnlineAlert(truckId: string): Promise<void> {
     return;
   }
 
-  // Notify carrier
-  for (const user of truck.carrier.users) {
-    await createNotification({
-      userId: user.id,
-      type: 'GPS_BACK_ONLINE',
-      title: `GPS Restored: ${truck.licensePlate}`,
-      message: `GPS signal has been restored for truck ${truck.licensePlate}.`,
-      metadata: {
-        truckId: truck.id,
-        loadId: truck.assignedLoad.id,
-      },
-    });
-
-    // Send email notification
-    await sendEmailToUser(user.id, EmailTemplate.GPS_BACK_ONLINE, {
-      truckPlate: truck.licensePlate,
-      loadId: truck.assignedLoad.id,
-    });
-  }
-
-  // Notify shipper
-  for (const user of truck.assignedLoad.shipper.users) {
-    await createNotification({
-      userId: user.id,
-      type: 'GPS_BACK_ONLINE',
-      title: `Tracking Restored: Load #${truck.assignedLoad.id.slice(-8)}`,
-      message: `GPS tracking has been restored for Load #${truck.assignedLoad.id.slice(-8)}.`,
-      metadata: {
-        truckId: truck.id,
-        loadId: truck.assignedLoad.id,
-      },
-    });
-  }
+  // Send all notifications and emails in parallel
+  await Promise.all([
+    // Carrier notifications + emails
+    ...truck.carrier.users.flatMap(user => [
+      createNotification({
+        userId: user.id,
+        type: 'GPS_BACK_ONLINE',
+        title: `GPS Restored: ${truck.licensePlate}`,
+        message: `GPS signal has been restored for truck ${truck.licensePlate}.`,
+        metadata: {
+          truckId: truck.id,
+          loadId: truck.assignedLoad!.id,
+        },
+      }),
+      sendEmailToUser(user.id, EmailTemplate.GPS_BACK_ONLINE, {
+        truckPlate: truck.licensePlate,
+        loadId: truck.assignedLoad!.id,
+      }),
+    ]),
+    // Shipper notifications
+    ...truck.assignedLoad.shipper.users.map(user =>
+      createNotification({
+        userId: user.id,
+        type: 'GPS_BACK_ONLINE',
+        title: `Tracking Restored: Load #${truck.assignedLoad!.id.slice(-8)}`,
+        message: `GPS tracking has been restored for Load #${truck.assignedLoad!.id.slice(-8)}.`,
+        metadata: {
+          truckId: truck.id,
+          loadId: truck.assignedLoad!.id,
+        },
+      })
+    ),
+  ]);
 
   }
 

@@ -422,15 +422,17 @@ export async function PATCH(
           where: { organizationId: existingLoad.assignedTruck.carrierId, status: 'ACTIVE' },
           select: { id: true },
         });
-        for (const user of carrierUsers) {
-          await createNotification({
-            userId: user.id,
-            type: 'LOAD_STATUS_CHANGE',
-            title: `Load Status: ${validatedData.status}`,
-            message: `Load status changed to ${validatedData.status}`,
-            metadata: { loadId: id, status: validatedData.status },
-          }).catch(console.error);
-        }
+        await Promise.all(
+          carrierUsers.map(user =>
+            createNotification({
+              userId: user.id,
+              type: 'LOAD_STATUS_CHANGE',
+              title: `Load Status: ${validatedData.status}`,
+              message: `Load status changed to ${validatedData.status}`,
+              metadata: { loadId: id, status: validatedData.status },
+            }).catch(console.error)
+          )
+        );
       }
     }
 
@@ -552,16 +554,37 @@ export async function DELETE(
     // P1-007 FIX: Notify affected carriers about rejected requests (fire-and-forget)
     const notificationPromises: Promise<any>[] = [];
 
+    // Batch-fetch all carrier users instead of querying per-request (N+1 fix)
+    const allCarrierOrgIds = [
+      ...deletionResult.rejectedLoadRequests.map(r => r.carrierId),
+      ...deletionResult.rejectedTruckRequests
+        .filter(r => r.truck?.carrierId)
+        .map(r => r.truck!.carrierId),
+    ];
+    const uniqueCarrierOrgIds = [...new Set(allCarrierOrgIds)];
+
+    const allCarrierUsers = uniqueCarrierOrgIds.length > 0
+      ? await db.user.findMany({
+          where: { organizationId: { in: uniqueCarrierOrgIds }, status: 'ACTIVE' },
+          select: { id: true, organizationId: true },
+        })
+      : [];
+
+    // Group users by organizationId
+    const usersByOrgId = new Map<string, string[]>();
+    for (const u of allCarrierUsers) {
+      const orgId = u.organizationId!;
+      if (!usersByOrgId.has(orgId)) usersByOrgId.set(orgId, []);
+      usersByOrgId.get(orgId)!.push(u.id);
+    }
+
     // Notify carriers whose LoadRequests were rejected
     for (const req of deletionResult.rejectedLoadRequests) {
-      const carrierUsers = await db.user.findMany({
-        where: { organizationId: req.carrierId, status: 'ACTIVE' },
-        select: { id: true },
-      });
-      for (const u of carrierUsers) {
+      const userIds = usersByOrgId.get(req.carrierId) || [];
+      for (const userId of userIds) {
         notificationPromises.push(
           createNotification({
-            userId: u.id,
+            userId,
             type: 'LOAD_REQUEST_REJECTED',
             title: 'Load Request Cancelled',
             message: 'The load you requested has been deleted by the shipper.',
@@ -574,14 +597,11 @@ export async function DELETE(
     // Notify carriers whose TruckRequests were rejected
     for (const req of deletionResult.rejectedTruckRequests) {
       if (req.truck?.carrierId) {
-        const carrierUsers = await db.user.findMany({
-          where: { organizationId: req.truck.carrierId, status: 'ACTIVE' },
-          select: { id: true },
-        });
-        for (const u of carrierUsers) {
+        const userIds = usersByOrgId.get(req.truck.carrierId) || [];
+        for (const userId of userIds) {
           notificationPromises.push(
             createNotification({
-              userId: u.id,
+              userId,
               type: 'TRUCK_REQUEST_REJECTED',
               title: 'Truck Request Cancelled',
               message: 'The load for your truck request has been deleted by the shipper.',
