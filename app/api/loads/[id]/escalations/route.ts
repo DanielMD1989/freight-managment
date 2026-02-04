@@ -9,6 +9,7 @@ import { requireAuth } from '@/lib/auth';
 import { CacheInvalidation } from '@/lib/cache';
 import { z } from 'zod';
 import { validateStateTransition, LoadStatus } from '@/lib/loadStateMachine';
+import { createNotification, notifyExceptionAssigned, createNotificationForRole } from '@/lib/notifications';
 
 const createEscalationSchema = z.object({
   escalationType: z.enum([
@@ -164,8 +165,24 @@ export async function POST(
     // TD-006 FIX: Invalidate cache after escalation/EXCEPTION status change
     await CacheInvalidation.load(loadId, load.shipperId);
 
-    // TODO: Send notification to assigned dispatcher
-    // TODO: Send notification to relevant parties
+    // Send notification to assigned dispatcher
+    if (validatedData.assignedTo) {
+      await notifyExceptionAssigned({
+        userId: validatedData.assignedTo,
+        exceptionType: validatedData.escalationType,
+        loadReference: `${load.id.substring(0, 8)}`,
+        exceptionId: escalation.id,
+      });
+    }
+
+    // Notify all dispatchers and admins about new escalation
+    await createNotificationForRole({
+      role: 'DISPATCHER',
+      type: 'ESCALATION_ASSIGNED',
+      title: `New ${priority} Escalation: ${validatedData.escalationType.replace(/_/g, ' ')}`,
+      message: `Escalation "${validatedData.title}" created for load ${loadId.substring(0, 8)}. Priority: ${priority}.`,
+      metadata: { escalationId: escalation.id, loadId, priority },
+    });
 
     return NextResponse.json({
       message: 'Escalation created successfully',

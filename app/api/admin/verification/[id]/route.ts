@@ -18,6 +18,7 @@ import { requirePermission, Permission } from "@/lib/rbac";
 import { VerificationStatus } from "@prisma/client";
 import { sanitizeRejectionReason, validateIdFormat } from "@/lib/validation";
 import { z } from "zod";
+import { sendEmail, createDocumentApprovalEmail, createDocumentRejectionEmail } from "@/lib/email";
 
 const verifyDocumentSchema = z.object({
   entityType: z.enum(["company", "truck"]),
@@ -151,8 +152,41 @@ export async function PATCH(
       // Log action in audit trail
       }
 
-    // TODO: Send email notification to organization
-    // This can be implemented later with an email service
+    // Send email notification to organization
+    const contactEmail = entityType === 'company'
+      ? (updatedDocument as any)?.organization?.contactEmail
+      : (updatedDocument as any)?.truck?.carrier?.contactEmail;
+    const orgName = entityType === 'company'
+      ? (updatedDocument as any)?.organization?.name
+      : (updatedDocument as any)?.truck?.carrier?.name;
+
+    if (contactEmail) {
+      const docTypeName = entityType === 'company' ? 'Company Document' : 'Truck Document';
+      const fileName = (updatedDocument as any)?.fileName || 'Document';
+
+      if (verificationStatus === 'APPROVED') {
+        const emailMsg = createDocumentApprovalEmail({
+          recipientEmail: contactEmail,
+          recipientName: orgName || 'Organization',
+          documentType: docTypeName,
+          documentName: fileName,
+          verifiedAt: new Date(),
+          organizationName: orgName || 'Unknown',
+        });
+        sendEmail(emailMsg).catch((err) => console.error('Failed to send doc approval email:', err));
+      } else {
+        const emailMsg = createDocumentRejectionEmail({
+          recipientEmail: contactEmail,
+          recipientName: orgName || 'Organization',
+          documentType: docTypeName,
+          documentName: fileName,
+          rejectionReason: sanitizedReason || 'Not specified',
+          rejectedAt: new Date(),
+          organizationName: orgName || 'Unknown',
+        });
+        sendEmail(emailMsg).catch((err) => console.error('Failed to send doc rejection email:', err));
+      }
+    }
 
     return NextResponse.json({
       message: `Document ${verificationStatus.toLowerCase()} successfully`,

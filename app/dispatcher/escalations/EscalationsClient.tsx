@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 
 interface Escalation {
@@ -134,6 +134,31 @@ export default function EscalationsClient() {
     };
     return labels[type] || type;
   };
+
+  const handleEscalateToAdmin = useCallback(async (escalationId: string, title: string) => {
+    if (!confirm(`Escalate "${title}" to admin with CRITICAL priority?`)) return;
+
+    try {
+      const response = await fetch(`/api/escalations/${escalationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'ESCALATED',
+          priority: 'CRITICAL',
+          notes: 'Escalated to admin by dispatcher',
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to escalate');
+      }
+
+      fetchEscalations();
+    } catch (err: any) {
+      setError(err.message || 'Failed to escalate');
+    }
+  }, []);
 
   const page = Math.floor(offset / limit) + 1;
   const totalPages = Math.ceil(total / limit);
@@ -325,20 +350,16 @@ export default function EscalationsClient() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        {/* TODO: Create dispatcher-specific load detail view */}
                         <Link
                           href={`/carrier/loads/${escalation.load.id}`}
                           className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
                         >
                           View Load
                         </Link>
-                        {escalation.status === 'OPEN' && (
+                        {(escalation.status === 'OPEN' || escalation.status === 'IN_PROGRESS') && (
                           <button
                             className="px-3 py-1.5 text-xs font-medium text-white bg-amber-500 rounded-lg hover:bg-amber-600 transition-colors"
-                            onClick={() => {
-                              // TODO: Implement escalate to admin functionality
-                              alert('Escalate to Admin functionality coming soon');
-                            }}
+                            onClick={() => handleEscalateToAdmin(escalation.id, escalation.title)}
                           >
                             Escalate
                           </button>

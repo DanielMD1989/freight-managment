@@ -18,6 +18,7 @@ import { createNotification } from '@/lib/notifications';
 import { UserRole } from '@prisma/client';
 // P1-001-B FIX: Import CacheInvalidation for approval status changes
 import { CacheInvalidation } from '@/lib/cache';
+import { sendEmail, createEmailHTML } from '@/lib/email';
 
 // Validation schema for truck approval
 const TruckApprovalSchema = z.object({
@@ -142,7 +143,24 @@ export async function POST(
         });
       }
 
-      // TODO: Send email notification to carrier
+      // Send email notification to carrier organization
+      if (truck.carrier.contactEmail) {
+        const approvalContent = `
+          <h1>Truck Approved</h1>
+          <p>Dear ${truck.carrier.name},</p>
+          <p>Your truck <strong>${truck.licensePlate}</strong> has been approved and is now available for posting on the marketplace.</p>
+          <div class="status-badge status-approved">APPROVED</div>
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/carrier/loadboard" class="button">
+            Go to Loadboard
+          </a>
+        `;
+        sendEmail({
+          to: truck.carrier.contactEmail,
+          subject: `Truck Approved: ${truck.licensePlate}`,
+          html: createEmailHTML(approvalContent),
+          text: `Your truck ${truck.licensePlate} has been approved and is now available for posting.`,
+        }).catch((err) => console.error('Failed to send truck approval email:', err));
+      }
 
       // P1-001-B FIX: Invalidate cache after truck approval to update listings
       await CacheInvalidation.truck(updatedTruck.id, updatedTruck.carrierId, updatedTruck.carrierId);
@@ -193,7 +211,28 @@ export async function POST(
         });
       }
 
-      // TODO: Send email notification to carrier
+      // Send email notification to carrier organization
+      if (truck.carrier.contactEmail) {
+        const rejectionContent = `
+          <h1>Truck Registration Rejected</h1>
+          <p>Dear ${truck.carrier.name},</p>
+          <p>Your truck <strong>${truck.licensePlate}</strong> registration has been rejected.</p>
+          <div class="status-badge status-rejected">REJECTED</div>
+          <div class="info-section" style="border-left-color: #ef4444;">
+            <p><strong>Reason:</strong> ${data.reason}</p>
+          </div>
+          <p>Please address the issues and resubmit your truck for approval.</p>
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/carrier/loadboard" class="button">
+            Go to Dashboard
+          </a>
+        `;
+        sendEmail({
+          to: truck.carrier.contactEmail,
+          subject: `Truck Rejected: ${truck.licensePlate} - Action Required`,
+          html: createEmailHTML(rejectionContent),
+          text: `Your truck ${truck.licensePlate} has been rejected. Reason: ${data.reason}. Please resubmit.`,
+        }).catch((err) => console.error('Failed to send truck rejection email:', err));
+      }
 
       // P1-001-B FIX: Invalidate cache after truck rejection to update listings
       await CacheInvalidation.truck(updatedTruck.id, updatedTruck.carrierId, updatedTruck.carrierId);

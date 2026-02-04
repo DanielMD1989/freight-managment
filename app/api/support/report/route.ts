@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { createNotificationForRole } from '@/lib/notifications';
 
 // Request body schema for support report
 const supportReportSchema = z.object({
@@ -98,7 +99,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // TODO: In production, send notification to support team
+    // Notify admin/support team about new report
+    await createNotificationForRole({
+      role: 'ADMIN',
+      type: 'SUPPORT_REPORT',
+      title: `New Support Report: ${type}`,
+      message: `${user.firstName} ${user.lastName} (${user.email}) submitted a ${type.toLowerCase()} report: "${subject}"`,
+      metadata: { reportId, type, subject, userEmail: user.email },
+    }).catch((err) => console.error('Failed to notify admins about support report:', err));
+
     return NextResponse.json({
       success: true,
       message: 'Report submitted successfully. Our support team will review it.',

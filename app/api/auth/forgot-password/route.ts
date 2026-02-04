@@ -19,6 +19,7 @@ import { db } from '@/lib/db';
 import { generateOTP, hashPassword } from '@/lib/auth';
 import { logSecurityEvent, SecurityEventType } from '@/lib/security-events';
 import { emailSchema } from '@/lib/validation';
+import { sendEmail, createEmailHTML } from '@/lib/email';
 
 // Request body schema
 const forgotPasswordSchema = z.object({
@@ -157,13 +158,36 @@ export async function POST(request: NextRequest) {
       success: true,
     });
 
-    // TODO: Send email with OTP
-    // In production, use email service (SendGrid, SES, etc.)
-    // The OTP should ONLY be sent via email, never in API response
-    // SECURITY: OTP is never logged - use email service for delivery
+    // Send email with OTP via configured email provider
+    // SECURITY: OTP is ONLY delivered via email, never in API response
+    const recipientName = user.firstName || 'User';
+    const otpEmailContent = `
+      <h1>Password Reset Code</h1>
+      <p>Dear ${recipientName},</p>
+      <p>You requested a password reset for your FreightET account.</p>
+      <div class="info-section">
+        <p>Your verification code is:</p>
+        <p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center; color: #1f2937; margin: 16px 0;">${otp}</p>
+      </div>
+      <p>This code expires in <strong>${OTP_EXPIRY_MINUTES} minutes</strong>.</p>
+      <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
+        <p style="margin: 0; color: #856404;">
+          <strong>Didn't request this?</strong><br>
+          If you didn't request a password reset, you can safely ignore this email.
+        </p>
+      </div>
+    `;
 
-    // SECURITY: Never expose OTP in API response, even in development
-    // Use console logs or email service for testing
+    await sendEmail({
+      to: user.email,
+      subject: 'Password Reset Code - FreightET',
+      html: createEmailHTML(otpEmailContent),
+      text: `Your password reset code is: ${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes.\n\nIf you didn't request this, ignore this email.`,
+    }).catch((err) => {
+      // Log but don't fail the request — user should still get success response
+      console.error('Failed to send password reset email:', err);
+    });
+
     return NextResponse.json({
       success: true,
       message: 'If an account exists with this email, you will receive a password reset code.',

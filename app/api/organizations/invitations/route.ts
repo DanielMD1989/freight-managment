@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
+import { sendEmail, createEmailHTML } from '@/lib/email';
 
 const createInvitationSchema = z.object({
   email: z.string().email(),
@@ -97,7 +98,34 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // TODO: Send invitation email with link containing token
+    // Send invitation email with link containing token
+    const org = await db.organization.findUnique({
+      where: { id: data.organizationId },
+      select: { name: true },
+    });
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const inviteUrl = `${baseUrl}/register?invite=${invitation.id}&email=${encodeURIComponent(data.email)}`;
+    const inviteContent = `
+      <h1>You're Invited!</h1>
+      <p>You've been invited to join <strong>${org?.name || 'an organization'}</strong> on the FreightET platform as a <strong>${data.role}</strong>.</p>
+      <div class="info-section">
+        <p><strong>Organization:</strong> ${org?.name || 'Unknown'}</p>
+        <p><strong>Role:</strong> ${data.role}</p>
+        <p><strong>Expires:</strong> ${expiresAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+      </div>
+      <a href="${inviteUrl}" class="button">
+        Accept Invitation
+      </a>
+      <p style="color: #6b7280; font-size: 13px;">If you don't recognize this invitation, you can safely ignore this email.</p>
+    `;
+
+    sendEmail({
+      to: data.email,
+      subject: `You're invited to join ${org?.name || 'FreightET'}`,
+      html: createEmailHTML(inviteContent),
+      text: `You've been invited to join ${org?.name || 'an organization'} on FreightET as a ${data.role}. Accept here: ${inviteUrl}`,
+    }).catch((err) => console.error('Failed to send invitation email:', err));
 
     return NextResponse.json({
       message: 'Invitation sent successfully',
