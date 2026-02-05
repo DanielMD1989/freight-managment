@@ -90,18 +90,23 @@ export async function GET(request: NextRequest) {
         },
       }),
 
-      // Delivered loads (for on-time rate calculation) - last 30 days
-      db.load.findMany({
+      // Delivered trips (for on-time rate calculation) - last 30 days
+      // Use Trip.deliveredAt which is the actual delivery timestamp
+      db.trip.findMany({
         where: {
           status: { in: ['DELIVERED', 'COMPLETED'] },
-          updatedAt: {
+          deliveredAt: {
             gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
           },
         },
         select: {
           id: true,
-          deliveryDate: true,
-          updatedAt: true,
+          deliveredAt: true,
+          load: {
+            select: {
+              deliveryDate: true,
+            },
+          },
         },
       }),
 
@@ -143,10 +148,16 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    // Calculate on-time rate (using updatedAt as completion timestamp)
-    const onTimeDeliveries = deliveredLoads.filter((load) => {
-      if (!load.deliveryDate || !load.updatedAt) return true;
-      return new Date(load.updatedAt) <= new Date(load.deliveryDate);
+    // Calculate on-time rate using Trip.deliveredAt (actual delivery) vs Load.deliveryDate (target)
+    // Compare by day - delivery on target day or earlier counts as on-time
+    const onTimeDeliveries = deliveredLoads.filter((trip) => {
+      if (!trip.load?.deliveryDate || !trip.deliveredAt) return true;
+      const deliveredDate = new Date(trip.deliveredAt);
+      const targetDate = new Date(trip.load.deliveryDate);
+      // Compare dates at day precision (ignore time component)
+      deliveredDate.setHours(23, 59, 59, 999);
+      targetDate.setHours(23, 59, 59, 999);
+      return deliveredDate <= targetDate;
     }).length;
 
     const onTimeRate =
