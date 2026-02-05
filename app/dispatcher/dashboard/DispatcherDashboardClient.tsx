@@ -32,6 +32,30 @@ import StatusUpdateModal from '@/components/StatusUpdateModal';
 
 type DashboardTab = 'loads' | 'trucks';
 
+interface DashboardStats {
+  postedLoads: number;
+  assignedLoads: number;
+  inTransitLoads: number;
+  availableTrucks: number;
+  deliveriesToday: number;
+  onTimeRate: number;
+  alertCount: number;
+}
+
+interface PickupToday {
+  id: string;
+  pickupCity: string;
+  deliveryCity: string;
+  pickupDate: string;
+  status: string;
+  truckType: string;
+}
+
+interface DashboardData {
+  stats: DashboardStats;
+  pickupsToday: PickupToday[];
+}
+
 interface DispatcherDashboardClientProps {
   user: {
     userId: string;
@@ -39,10 +63,12 @@ interface DispatcherDashboardClientProps {
     role: string;
     name?: string;
   };
+  dashboardData?: DashboardData | null;
 }
 
 export default function DispatcherDashboardClient({
   user,
+  dashboardData,
 }: DispatcherDashboardClientProps) {
   const [activeTab, setActiveTab] = useState<DashboardTab>('loads');
   const [loads, setLoads] = useState<any[]>([]);
@@ -126,39 +152,19 @@ export default function DispatcherDashboardClient({
     }
   }, [activeTab, statusFilter, searchQuery]);
 
-  // Calculate stats
-  const postedLoads = loads.filter(l => l.status === 'POSTED').length;
-  const assignedLoads = loads.filter(l => l.status === 'ASSIGNED').length;
-  const inTransitLoads = loads.filter(l => l.status === 'IN_TRANSIT').length;
-  const availableTrucks = trucks.length;
+  // Use API-provided stats (accurate, full database counts) with fallback to client calculation
+  const stats = dashboardData?.stats;
+  const postedLoads = stats?.postedLoads ?? loads.filter(l => l.status === 'POSTED').length;
+  const assignedLoads = stats?.assignedLoads ?? loads.filter(l => l.status === 'ASSIGNED').length;
+  const inTransitLoads = stats?.inTransitLoads ?? loads.filter(l => l.status === 'IN_TRANSIT').length;
+  const availableTrucks = stats?.availableTrucks ?? trucks.length;
+  const deliveriesToday = stats?.deliveriesToday ?? 0;
+  const onTimeRate = stats?.onTimeRate ?? 100;
+  const alertCount = stats?.alertCount ?? 0;
 
-  // Calculate deliveries today
+  // Today's pickups - use API data when available
   const todayStr = new Date().toISOString().split('T')[0];
-  const deliveriesToday = loads.filter(l => {
-    const deliveryDate = l.deliveryDate ? new Date(l.deliveryDate).toISOString().split('T')[0] : null;
-    return deliveryDate === todayStr && (l.status === 'IN_TRANSIT' || l.status === 'ASSIGNED' || l.status === 'DELIVERED');
-  }).length;
-
-  // Calculate on-time rate (delivered on or before delivery date)
-  const deliveredLoads = loads.filter(l => l.status === 'DELIVERED' || l.status === 'COMPLETED');
-  const onTimeDeliveries = deliveredLoads.filter(l => {
-    if (!l.deliveryDate || !l.completedAt) return true; // Assume on-time if no data
-    return new Date(l.completedAt) <= new Date(l.deliveryDate);
-  }).length;
-  const onTimeRate = deliveredLoads.length > 0
-    ? Math.round((onTimeDeliveries / deliveredLoads.length) * 100)
-    : 100;
-
-  // Calculate alerts (issues/delays)
-  const lateLoads = loads.filter(l => {
-    if (l.status === 'DELIVERED' || l.status === 'CANCELLED' || l.status === 'COMPLETED') return false;
-    if (!l.deliveryDate) return false;
-    return new Date(l.deliveryDate) < new Date();
-  }).length;
-  const alertCount = lateLoads;
-
-  // Today's pickups
-  const pickupsToday = loads.filter(l => {
+  const pickupsToday = dashboardData?.pickupsToday ?? loads.filter(l => {
     const pickupDate = l.pickupDate ? new Date(l.pickupDate).toISOString().split('T')[0] : null;
     return pickupDate === todayStr && (l.status === 'ASSIGNED' || l.status === 'POSTED');
   });

@@ -122,8 +122,10 @@ export default function CarrierDashboardClient({
     pendingApprovals: 0,
   };
 
-  const availableTrucks = trucks.filter(t => t.isAvailable).length;
-  const trucksOnJob = trucks.length - availableTrucks;
+  // Use dashboard API data for accurate counts (trucks prop is limited to 5 for display)
+  const totalTrucks = data.totalTrucks;
+  const availableTrucks = data.activeTrucks;
+  const trucksOnJob = totalTrucks - availableTrucks;
   const firstName = user.name?.split(' ')[0] || user.email?.split('@')[0] || 'Carrier';
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -162,7 +164,7 @@ export default function CarrierDashboardClient({
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 lg:gap-5 mb-8">
           <StatCard
             title="Total Trucks"
-            value={trucks.length || data.totalTrucks}
+            value={totalTrucks}
             icon={<TruckIcon />}
             color="primary"
           />

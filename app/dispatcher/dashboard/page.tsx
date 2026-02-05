@@ -2,6 +2,7 @@
  * Dispatcher Dashboard
  *
  * Sprint 16 - Story 16.4: Dispatcher System
+ * Sprint 20 - Dashboard optimization: server-side data fetching
  *
  * System-wide view of all loads and trucks for dispatchers
  * - View all loads (any organization)
@@ -13,6 +14,7 @@
 
 import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { getCurrentUser } from '@/lib/auth';
 import DispatcherDashboardClient from './DispatcherDashboardClient';
 
@@ -20,6 +22,60 @@ export const metadata: Metadata = {
   title: 'Dispatcher Dashboard - Freight Management',
   description: 'System-wide dispatcher dashboard for load and truck management',
 };
+
+interface DashboardStats {
+  postedLoads: number;
+  assignedLoads: number;
+  inTransitLoads: number;
+  availableTrucks: number;
+  deliveriesToday: number;
+  onTimeRate: number;
+  alertCount: number;
+}
+
+interface PickupToday {
+  id: string;
+  pickupCity: string;
+  deliveryCity: string;
+  pickupDate: string;
+  status: string;
+  truckType: string;
+}
+
+interface DashboardData {
+  stats: DashboardStats;
+  pickupsToday: PickupToday[];
+}
+
+async function fetchDashboardData(): Promise<DashboardData | null> {
+  try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get('session');
+    const csrfCookie = cookieStore.get('csrf_token');
+
+    if (!sessionCookie) {
+      return null;
+    }
+
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/dispatcher/dashboard`, {
+      headers: {
+        Cookie: `session=${sessionCookie.value}${csrfCookie ? `; csrf_token=${csrfCookie.value}` : ''}`,
+      },
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      console.error('Failed to fetch dispatcher dashboard:', response.status);
+      return null;
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching dispatcher dashboard:', error);
+    return null;
+  }
+}
 
 export default async function DispatcherDashboardPage() {
   const user = await getCurrentUser();
@@ -36,6 +92,9 @@ export default async function DispatcherDashboardPage() {
   ) {
     redirect('/unauthorized');
   }
+
+  // Fetch dashboard data server-side
+  const dashboardData = await fetchDashboardData();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -58,6 +117,7 @@ export default async function DispatcherDashboardPage() {
             role: user.role,
             name: [user.firstName, user.lastName].filter(Boolean).join(' ') || undefined,
           }}
+          dashboardData={dashboardData}
         />
       </div>
     </div>

@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       lines: {
         some: {
           OR: [
-            { debitAccountId: { in: walletAccountIds } },
+            { accountId: { in: walletAccountIds } },
             { creditAccountId: { in: walletAccountIds } },
           ],
         },
