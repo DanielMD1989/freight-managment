@@ -387,8 +387,17 @@ export async function GET(request: NextRequest) {
     // Valid PostingStatus values
     const validStatuses = ['ACTIVE', 'EXPIRED', 'CANCELLED', 'MATCHED'];
 
-    // Validate status parameter - if invalid, default to ACTIVE
-    const validatedStatus = validStatuses.includes(status) ? status : 'ACTIVE';
+    // Validate status parameter - return error for invalid values (don't silently default)
+    if (status && !validStatuses.includes(status)) {
+      return NextResponse.json(
+        {
+          error: `Invalid status '${status}'. Valid values: ${validStatuses.join(', ')}`,
+          hint: 'For trucks without active postings, use /api/trucks?hasActivePosting=false'
+        },
+        { status: 400 }
+      );
+    }
+    const validatedStatus = status || 'ACTIVE';
 
     // If filtering by specific organization (for "my postings"), verify user has access
     if (organizationId) {

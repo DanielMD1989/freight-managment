@@ -148,19 +148,32 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   const fetchTrucks = async () => {
     setLoading(true);
     try {
-      // Fetch trucks for the active status tab
-      const params = new URLSearchParams();
-      params.append('includeMatchCount', 'true');
-      params.append('organizationId', user.organizationId); // Only show user's truck postings
+      let trucksData: any[] = [];
 
-      // Map status - POSTED maps to ACTIVE in the API
-      const apiStatus = activeStatus === 'POSTED' ? 'ACTIVE' : activeStatus;
-      params.append('status', apiStatus);
+      // UNPOSTED requires a different API - fetch trucks without active postings
+      if (activeStatus === 'UNPOSTED') {
+        const response = await fetch(`/api/trucks?myTrucks=true&hasActivePosting=false`);
+        const data = await response.json();
+        // Transform truck data to match expected format (add status field)
+        trucksData = (data.trucks || []).map((truck: any) => ({
+          ...truck,
+          status: 'UNPOSTED',
+          matchCount: 0, // Unposted trucks don't have matches
+        }));
+      } else {
+        // Fetch truck postings for POSTED (ACTIVE) or EXPIRED
+        const params = new URLSearchParams();
+        params.append('includeMatchCount', 'true');
+        params.append('organizationId', user.organizationId);
 
-      const response = await fetch(`/api/truck-postings?${params.toString()}`);
-      const data = await response.json();
+        // Map status - POSTED maps to ACTIVE in the API
+        const apiStatus = activeStatus === 'POSTED' ? 'ACTIVE' : activeStatus;
+        params.append('status', apiStatus);
 
-      const trucksData = data.truckPostings || [];
+        const response = await fetch(`/api/truck-postings?${params.toString()}`);
+        const data = await response.json();
+        trucksData = data.truckPostings || [];
+      }
 
       // Fetch match counts for POSTED/ACTIVE trucks in parallel
       const trucksWithMatchCounts = await Promise.all(
@@ -195,9 +208,9 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         EXPIRED: 0,
       };
 
-      const statusPromises = [
+      // Fetch POSTED (ACTIVE postings) and EXPIRED counts from truck-postings API
+      const postingStatusPromises = [
         { key: 'POSTED', apiStatus: 'ACTIVE' },
-        { key: 'UNPOSTED', apiStatus: 'UNPOSTED' },
         { key: 'EXPIRED', apiStatus: 'EXPIRED' },
       ].map(async ({ key, apiStatus }) => {
         const res = await fetch(`/api/truck-postings?organizationId=${user.organizationId}&status=${apiStatus}&limit=1`);
@@ -205,7 +218,14 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         counts[key] = json.pagination?.total || 0;
       });
 
-      await Promise.all(statusPromises);
+      // Fetch UNPOSTED count from trucks API (trucks without active postings)
+      const unpostedPromise = async () => {
+        const res = await fetch(`/api/trucks?myTrucks=true&hasActivePosting=false`);
+        const json = await res.json();
+        counts['UNPOSTED'] = json.pagination?.total || 0;
+      };
+
+      await Promise.all([...postingStatusPromises, unpostedPromise()]);
       setStatusCounts(counts);
     } catch (error) {
       console.error('Failed to fetch trucks:', error);

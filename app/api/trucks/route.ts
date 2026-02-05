@@ -199,11 +199,12 @@ export async function GET(request: NextRequest) {
     const myTrucks = searchParams.get("myTrucks") === "true";
     const carrierId = searchParams.get("carrierId"); // Admin filter
     const approvalStatus = searchParams.get("approvalStatus"); // Sprint 18: Filter by approval status
+    const hasActivePosting = searchParams.get("hasActivePosting"); // Filter by active posting status
 
     // PHASE 4: Build cache key from filter parameters
     const cacheFilters = {
       page, limit, truckType, isAvailable, myTrucks, carrierId,
-      approvalStatus, role: session.role, orgId: session.organizationId,
+      approvalStatus, hasActivePosting, role: session.role, orgId: session.organizationId,
     };
 
     // Try cache first for non-personalized queries
@@ -282,6 +283,21 @@ export async function GET(request: NextRequest) {
     // Sprint 18: Filter by approval status
     if (approvalStatus) {
       where.approvalStatus = approvalStatus;
+    }
+
+    // Filter by active posting status
+    // hasActivePosting=true: trucks with at least one ACTIVE posting
+    // hasActivePosting=false: trucks with NO active postings (unposted trucks)
+    if (hasActivePosting !== null && hasActivePosting !== undefined) {
+      if (hasActivePosting === 'true') {
+        where.postings = {
+          some: { status: 'ACTIVE' },
+        };
+      } else if (hasActivePosting === 'false') {
+        where.postings = {
+          none: { status: 'ACTIVE' },
+        };
+      }
     }
 
     const [trucks, total] = await Promise.all([
