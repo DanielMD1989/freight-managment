@@ -86,6 +86,7 @@ export async function GET(request: NextRequest) {
         revenue: {
           platformBalance: revenue.platformBalance,
           serviceFeeCollected: revenue.serviceFeeCollected,
+          pendingWithdrawals: revenue.pendingWithdrawals,
           transactionsInPeriod: transactionsInPeriod._count || 0,
           transactionVolume: 0, // Journal entries don't have amount sum
         },

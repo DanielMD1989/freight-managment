@@ -3,11 +3,11 @@
 /**
  * User Detail Client Component
  *
- * Interactive user detail view with edit functionality
+ * Interactive user detail view with edit functionality and wallet management
  * Sprint 10 - Story 10.2: User Management
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCSRFToken } from '@/lib/csrfFetch';
 
@@ -32,6 +32,21 @@ interface UserDetail {
   createdAt: string;
   updatedAt: string;
   lastLoginAt: string | null;
+}
+
+interface WalletData {
+  id: string;
+  balance: number;
+  currency: string;
+  accountType: string;
+}
+
+interface Transaction {
+  id: string;
+  amount: number;
+  type: string;
+  description: string;
+  createdAt: string;
 }
 
 const STATUS_OPTIONS = [
@@ -94,9 +109,111 @@ export default function UserDetailClient({
   const [phone, setPhone] = useState(user.phone || '');
   const [status, setStatus] = useState(user.status);
 
+  // Wallet state
+  const [wallet, setWallet] = useState<WalletData | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [walletLoading, setWalletLoading] = useState(true);
+  const [showTopUpModal, setShowTopUpModal] = useState(false);
+  const [topUpAmount, setTopUpAmount] = useState('');
+  const [topUpPaymentMethod, setTopUpPaymentMethod] = useState('BANK_TRANSFER');
+  const [topUpReference, setTopUpReference] = useState('');
+  const [topUpNote, setTopUpNote] = useState('');
+  const [topUpLoading, setTopUpLoading] = useState(false);
+
   // Check if current user can edit this user
   const canEdit = currentUserRole === 'SUPER_ADMIN' ||
     (currentUserRole === 'ADMIN' && !['ADMIN', 'SUPER_ADMIN'].includes(user.role));
+
+  // Check if user has a wallet (shippers and carriers have wallets)
+  const hasWallet = ['SHIPPER', 'CARRIER'].includes(user.role);
+
+  /**
+   * Fetch wallet data
+   */
+  useEffect(() => {
+    if (hasWallet && user.organizationId) {
+      fetchWalletData();
+    } else {
+      setWalletLoading(false);
+    }
+  }, [user.organizationId, hasWallet]);
+
+  const fetchWalletData = async () => {
+    try {
+      // Fetch wallet and transactions for the user
+      const response = await fetch(`/api/admin/users/${user.id}/wallet`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.wallet) {
+          setWallet(data.wallet);
+          setTransactions(data.transactions || []);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch wallet:', err);
+    } finally {
+      setWalletLoading(false);
+    }
+  };
+
+  /**
+   * Handle wallet top-up
+   */
+  const handleTopUp = async () => {
+    if (!wallet || !topUpAmount) return;
+
+    const amount = parseFloat(topUpAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setError('Please enter a valid amount');
+      return;
+    }
+
+    setTopUpLoading(true);
+    setError(null);
+
+    try {
+      const csrfToken = await getCSRFToken();
+      const response = await fetch(`/api/admin/users/${user.id}/wallet/topup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+        },
+        body: JSON.stringify({
+          amount,
+          paymentMethod: topUpPaymentMethod,
+          reference: topUpReference || undefined,
+          notes: topUpNote || undefined,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSuccess(`Successfully added ${formatCurrency(amount)} to wallet. New balance: ${formatCurrency(data.newBalance)}`);
+        setShowTopUpModal(false);
+        setTopUpAmount('');
+        setTopUpPaymentMethod('BANK_TRANSFER');
+        setTopUpReference('');
+        setTopUpNote('');
+        fetchWalletData(); // Refresh wallet data
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to top up wallet');
+      }
+    } catch (err) {
+      setError('An error occurred while processing top-up');
+    } finally {
+      setTopUpLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-ET', {
+      style: 'currency',
+      currency: 'ETB',
+      minimumFractionDigits: 2,
+    }).format(amount);
+  };
 
   /**
    * Handle save
@@ -417,6 +534,173 @@ export default function UserDetailClient({
           </div>
         )}
       </div>
+
+      {/* Wallet Section */}
+      {hasWallet && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-semibold text-gray-900">Wallet</h3>
+            {canEdit && wallet && (
+              <button
+                onClick={() => setShowTopUpModal(true)}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm"
+              >
+                Top Up
+              </button>
+            )}
+          </div>
+
+          {walletLoading ? (
+            <div className="text-center py-4 text-gray-500">Loading wallet...</div>
+          ) : wallet ? (
+            <div className="space-y-6">
+              {/* Balance Card */}
+              <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white">
+                <p className="text-sm opacity-80">Current Balance</p>
+                <p className="text-3xl font-bold mt-1">{formatCurrency(wallet.balance)}</p>
+                <p className="text-sm opacity-80 mt-2">
+                  {wallet.accountType.replace(/_/g, ' ')} Account
+                </p>
+              </div>
+
+              {/* Recent Transactions */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">
+                  Recent Transactions
+                </h4>
+                {transactions.length > 0 ? (
+                  <div className="space-y-2">
+                    {transactions.map((tx) => (
+                      <div
+                        key={tx.id}
+                        className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {tx.description || tx.type.replace(/_/g, ' ')}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatDate(tx.createdAt)}
+                          </p>
+                        </div>
+                        <span
+                          className={`text-sm font-semibold ${
+                            tx.amount >= 0 ? 'text-green-600' : 'text-red-600'
+                          }`}
+                        >
+                          {tx.amount >= 0 ? '+' : ''}
+                          {formatCurrency(tx.amount)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">No transactions yet</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4 text-gray-500">
+              No wallet found for this user's organization
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Top Up Modal */}
+      {showTopUpModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Manual Top-Up</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Add funds to {user.firstName || user.email}'s wallet
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Amount (ETB) *
+                </label>
+                <input
+                  type="number"
+                  value={topUpAmount}
+                  onChange={(e) => setTopUpAmount(e.target.value)}
+                  placeholder="Enter amount"
+                  min="0"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Payment Method *
+                </label>
+                <select
+                  value={topUpPaymentMethod}
+                  onChange={(e) => setTopUpPaymentMethod(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  <option value="BANK_TRANSFER">Bank Transfer</option>
+                  <option value="CASH">Cash</option>
+                  <option value="TELEBIRR">TeleBirr</option>
+                  <option value="CBE_BIRR">CBE Birr</option>
+                  <option value="MOBILE_MONEY">Other Mobile Money</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Reference Number
+                </label>
+                <input
+                  type="text"
+                  value={topUpReference}
+                  onChange={(e) => setTopUpReference(e.target.value)}
+                  placeholder="Bank slip #, receipt #, etc."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Notes (optional)
+                </label>
+                <textarea
+                  value={topUpNote}
+                  onChange={(e) => setTopUpNote(e.target.value)}
+                  placeholder="Additional notes..."
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowTopUpModal(false);
+                  setTopUpAmount('');
+                  setTopUpPaymentMethod('BANK_TRANSFER');
+                  setTopUpReference('');
+                  setTopUpNote('');
+                }}
+                disabled={topUpLoading}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleTopUp}
+                disabled={topUpLoading || !topUpAmount}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {topUpLoading ? 'Processing...' : 'Process Top-Up'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Back Link */}
       <div>

@@ -5,8 +5,12 @@ import { getAdminDashboardMetrics } from "@/lib/admin/metrics";
 /**
  * GET /api/admin/dashboard
  *
- * Get admin dashboard stats using centralized metrics.
- * Uses lib/admin/metrics.ts for single source of truth.
+ * @deprecated Use /api/admin/analytics instead.
+ * This endpoint is maintained for backwards compatibility only.
+ * The admin dashboard page now uses /api/admin/analytics as the
+ * single source of truth for all admin metrics.
+ *
+ * Uses lib/admin/metrics.ts for calculations.
  */
 export async function GET() {
   try {

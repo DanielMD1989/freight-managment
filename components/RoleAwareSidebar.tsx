@@ -325,7 +325,6 @@ const navigationSections: Record<string, NavSection[]> = {
         { label: 'Dashboard', href: '/admin', icon: '📊', roles: ['ADMIN', 'SUPER_ADMIN'] },
         { label: 'Analytics', href: '/admin/analytics', icon: '📈', roles: ['ADMIN', 'SUPER_ADMIN'] },
         { label: 'Map', href: '/admin/map', icon: '🗺️', roles: ['ADMIN', 'SUPER_ADMIN', 'DISPATCHER'] },
-        { label: 'Metrics', href: '/admin/platform-metrics', icon: '📈', roles: ['ADMIN', 'SUPER_ADMIN'] },
       ],
     },
     {
@@ -346,8 +345,7 @@ const navigationSections: Record<string, NavSection[]> = {
     {
       title: 'Financial',
       items: [
-        { label: 'Wallets', href: '/admin/wallets', icon: '💰', roles: ['ADMIN', 'SUPER_ADMIN'] },
-        { label: 'Service Fees', href: '/admin/service-fees', icon: '💵', roles: ['ADMIN', 'SUPER_ADMIN'] },
+        { label: 'Platform Revenue', href: '/admin/service-fees', icon: '💵', roles: ['ADMIN', 'SUPER_ADMIN'] },
         { label: 'Corridors', href: '/admin/corridors', icon: '🛤️', roles: ['ADMIN', 'SUPER_ADMIN'] },
         { label: 'Settlement', href: '/admin/settlement', icon: '💳', roles: ['ADMIN', 'SUPER_ADMIN'] },
       ],

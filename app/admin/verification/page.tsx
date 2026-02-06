@@ -107,11 +107,11 @@ async function getDocuments(
 export default async function AdminVerificationPage({
   searchParams,
 }: {
-  searchParams: {
+  searchParams: Promise<{
     page?: string;
     status?: string;
     entityType?: string;
-  };
+  }>;
 }) {
   // Verify authentication
   const cookieStore = await cookies();
@@ -127,10 +127,13 @@ export default async function AdminVerificationPage({
     redirect('/unauthorized');
   }
 
+  // Await searchParams (Next.js 15+)
+  const params = await searchParams;
+
   // Get query parameters
-  const page = parseInt(searchParams.page || '1');
-  const status = searchParams.status || 'PENDING';
-  const entityType = searchParams.entityType || 'all';
+  const page = parseInt(params.page || '1');
+  const status = params.status || 'PENDING';
+  const entityType = params.entityType || 'all';
 
   // Fetch documents
   const data = await getDocuments(page, status, entityType);

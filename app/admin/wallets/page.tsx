@@ -32,9 +32,9 @@ export default async function AdminWalletsPage() {
             </svg>
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-800 dark:text-white">All Wallets</h1>
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-white">User Wallets</h1>
             <p className="text-slate-500 dark:text-slate-400 text-sm">
-              Platform-wide view of all financial accounts
+              Manage shipper and carrier financial accounts
             </p>
           </div>
         </div>

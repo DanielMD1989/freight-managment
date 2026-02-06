@@ -94,9 +94,9 @@ export default function ServiceFeeDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Service Fee Dashboard</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Platform Revenue</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Monitor service fee collection and corridor performance
+            Monitor service fee collection, platform revenue, and corridor performance
           </p>
         </div>
         <div className="flex items-center gap-4">

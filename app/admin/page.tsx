@@ -30,6 +30,7 @@ import { formatCurrency } from '@/lib/formatters';
 
 /**
  * Dashboard Statistics Interface
+ * Mapped from /api/admin/analytics response
  */
 interface DashboardStats {
   totalUsers: number;
@@ -47,7 +48,8 @@ interface DashboardStats {
 }
 
 /**
- * Fetch dashboard statistics from API
+ * Fetch dashboard statistics from /api/admin/analytics
+ * Single source of truth for all admin metrics
  */
 async function getDashboardStats(): Promise<DashboardStats | null> {
   try {
@@ -59,7 +61,7 @@ async function getDashboardStats(): Promise<DashboardStats | null> {
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/admin/dashboard`, {
+    const response = await fetch(`${baseUrl}/api/admin/analytics?period=week`, {
       headers: {
         Cookie: `session=${sessionCookie.value}`,
       },
@@ -67,11 +69,30 @@ async function getDashboardStats(): Promise<DashboardStats | null> {
     });
 
     if (!response.ok) {
-      console.error('Failed to fetch dashboard stats:', response.status);
+      console.error('Failed to fetch analytics:', response.status);
       return null;
     }
 
-    return await response.json();
+    const data = await response.json();
+
+    // Map analytics response to dashboard stats format
+    return {
+      totalUsers: data.summary.users.total,
+      totalOrganizations: data.summary.organizations.total,
+      totalLoads: data.summary.loads.total,
+      totalTrucks: data.summary.trucks.total,
+      activeLoads: data.summary.loads.active + data.summary.loads.inProgress,
+      totalRevenue: { balance: data.summary.revenue.platformBalance },
+      activeTrips: data.summary.trips.active,
+      pendingWithdrawals: data.summary.revenue.pendingWithdrawals || 0,
+      openDisputes: data.summary.disputes.open,
+      loadsByStatus: data.charts.loadsByStatus.map((item: { status: string; count: number }) => ({
+        status: item.status,
+        _count: item.count,
+      })),
+      recentUsers: data.summary.users.newInPeriod,
+      recentLoads: data.summary.loads.newInPeriod,
+    };
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
     return null;
