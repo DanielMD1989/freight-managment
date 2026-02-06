@@ -1003,7 +1003,135 @@ async function main() {
   console.log('');
 
   // ============================================================================
-  // 11. SUMMARY
+  // 11. DOCUMENTS (Company & Truck Documents for Verification Queue)
+  // ============================================================================
+  console.log('11. Creating verification documents...\n');
+
+  // Track document counts
+  let companyDocsCreated = 0;
+  let truckDocsCreated = 0;
+
+  // Company Document Types (from CompanyDocumentType enum)
+  const companyDocTypes = [
+    'COMPANY_LICENSE',
+    'TIN_CERTIFICATE',
+    'BUSINESS_REGISTRATION',
+    'TRADE_LICENSE',
+  ] as const;
+
+  // Truck Document Types (from TruckDocumentType enum)
+  const truckDocTypes = [
+    'TITLE_DEED',
+    'REGISTRATION',
+    'INSURANCE',
+    'ROAD_WORTHINESS',
+  ] as const;
+
+  // Sample PDF URLs for demo documents (publicly accessible)
+  const samplePdfUrls = [
+    'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+    'https://www.africau.edu/images/default/sample.pdf',
+    'https://unec.edu.az/application/uploads/2014/12/pdf-sample.pdf',
+    'https://www.orimi.com/pdf-test.pdf',
+  ];
+
+  // Create company documents for each org (2 per org, varied statuses)
+  const allOrgs = [...shipperOrgs, ...carrierOrgs];
+  const statuses = ['PENDING', 'APPROVED', 'REJECTED'] as const;
+
+  for (let i = 0; i < allOrgs.length; i++) {
+    const org = allOrgs[i];
+    const userId = Object.values(userMap).find(u => u.id)?.id || allDemoUserIds[0];
+
+    // Create 2 documents per org
+    for (let j = 0; j < 2; j++) {
+      const docType = companyDocTypes[(i + j) % companyDocTypes.length];
+      const status = statuses[(i + j) % statuses.length];
+
+      // Check if document already exists
+      const existing = await prisma.companyDocument.findFirst({
+        where: {
+          organizationId: org.id,
+          type: docType,
+        },
+      });
+
+      if (!existing) {
+        await prisma.companyDocument.create({
+          data: {
+            organizationId: org.id,
+            type: docType,
+            fileName: `${org.name.toLowerCase().replace(/\s+/g, '-')}-${docType.toLowerCase()}.pdf`,
+            fileUrl: samplePdfUrls[(i + j) % samplePdfUrls.length],
+            fileSize: 50000 + Math.floor(Math.random() * 100000),
+            mimeType: 'application/pdf',
+            verificationStatus: status,
+            uploadedById: userId,
+            uploadedAt: daysAgo(10 + i),
+            verifiedById: status !== 'PENDING' ? (adminUser?.id || userId) : null,
+            verifiedAt: status !== 'PENDING' ? daysAgo(5 + i) : null,
+            rejectionReason: status === 'REJECTED' ? 'Document expired or illegible. Please upload a valid copy.' : null,
+            expiresAt: daysFromNow(365),
+          },
+        });
+        companyDocsCreated++;
+        console.log(`   [+] Company doc: ${org.name} - ${docType} (${status})`);
+      }
+    }
+  }
+
+  // Create truck documents for demo trucks (2 per truck, varied statuses)
+  const demoTruckList = Object.keys(truckMap);
+
+  for (let i = 0; i < Math.min(demoTruckList.length, 10); i++) {
+    const plate = demoTruckList[i];
+    const truckId = truckMap[plate];
+    const orgId = truckOrgMap[plate];
+    const userId = Object.values(userMap).find(u => u.id)?.id || allDemoUserIds[0];
+
+    // Create 2 documents per truck
+    for (let j = 0; j < 2; j++) {
+      const docType = truckDocTypes[(i + j) % truckDocTypes.length];
+      const status = statuses[(i + j) % statuses.length];
+
+      // Check if document already exists
+      const existing = await prisma.truckDocument.findFirst({
+        where: {
+          truckId: truckId,
+          type: docType,
+        },
+      });
+
+      if (!existing) {
+        await prisma.truckDocument.create({
+          data: {
+            truckId: truckId,
+            type: docType,
+            fileName: `${plate.toLowerCase()}-${docType.toLowerCase()}.pdf`,
+            fileUrl: samplePdfUrls[(i + j) % samplePdfUrls.length],
+            fileSize: 30000 + Math.floor(Math.random() * 80000),
+            mimeType: 'application/pdf',
+            verificationStatus: status,
+            uploadedById: userId,
+            uploadedAt: daysAgo(8 + i),
+            verifiedById: status !== 'PENDING' ? (adminUser?.id || userId) : null,
+            verifiedAt: status !== 'PENDING' ? daysAgo(3 + i) : null,
+            rejectionReason: status === 'REJECTED' ? 'Document does not match vehicle registration. Please re-upload.' : null,
+            expiresAt: daysFromNow(180),
+          },
+        });
+        truckDocsCreated++;
+        console.log(`   [+] Truck doc: ${plate} - ${docType} (${status})`);
+      }
+    }
+  }
+
+  console.log(`\n   Created ${companyDocsCreated} company docs, ${truckDocsCreated} truck docs`);
+
+  console.log('');
+
+  // ============================================================================
+  // 12. SUMMARY
   // ============================================================================
   console.log('========================================');
   console.log('  DEMO SEED COMPLETED SUCCESSFULLY');
@@ -1022,6 +1150,7 @@ async function main() {
   console.log(`  Truck Postings:  ${counts.postingsCreated} created`);
   console.log(`  Match Proposals: ${counts.proposalsCreated} created`);
   console.log(`  Notifications:   ${counts.notificationsCreated} created`);
+  console.log(`  Documents:       ${companyDocsCreated} company, ${truckDocsCreated} truck`);
   console.log('');
 
   console.log('Demo Shipper Users (password: password):');
