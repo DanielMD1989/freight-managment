@@ -342,7 +342,7 @@ export default function UserManagementClient({
                       View
                     </button>
                     <button
-                      onClick={() => alert(`Edit functionality coming soon for user ${user.id}`)}
+                      onClick={() => router.push(`/admin/users/${user.id}`)}
                       className="text-gray-600 hover:text-gray-900"
                     >
                       Edit

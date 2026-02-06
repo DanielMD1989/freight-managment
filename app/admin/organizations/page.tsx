@@ -63,7 +63,7 @@ async function getOrganizations(
     if (type) params.append('type', type);
     if (search) params.append('search', search);
 
-    const response = await fetch(`${baseUrl}/api/organizations?${params}`, {
+    const response = await fetch(`${baseUrl}/api/admin/organizations?${params}`, {
       headers: {
         Cookie: `session=${sessionCookie.value}`,
       },

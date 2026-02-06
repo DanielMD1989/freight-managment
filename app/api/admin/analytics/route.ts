@@ -5,51 +5,26 @@
  *
  * Provides comprehensive analytics for admin dashboard
  * Supports time period filtering: day, week, month, year
+ *
+ * Uses lib/admin/metrics.ts for consistent metric calculations.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requirePermission, Permission } from '@/lib/rbac';
 import { db } from '@/lib/db';
-import { getSLASummary, getSLATrends, calculateSLAMetrics } from '@/lib/slaAggregation';
-
-type TimePeriod = 'day' | 'week' | 'month' | 'year';
-
-function getDateRange(period: TimePeriod): { start: Date; end: Date } {
-  const end = new Date();
-  const start = new Date();
-
-  switch (period) {
-    case 'day':
-      start.setHours(0, 0, 0, 0);
-      break;
-    case 'week':
-      start.setDate(start.getDate() - 7);
-      break;
-    case 'month':
-      start.setMonth(start.getMonth() - 1);
-      break;
-    case 'year':
-      start.setFullYear(start.getFullYear() - 1);
-      break;
-  }
-
-  return { start, end };
-}
-
-function getGroupByFormat(period: TimePeriod): string {
-  switch (period) {
-    case 'day':
-      return 'hour';
-    case 'week':
-      return 'day';
-    case 'month':
-      return 'day';
-    case 'year':
-      return 'month';
-    default:
-      return 'day';
-  }
-}
+import { getSLATrends, calculateSLAMetrics } from '@/lib/slaAggregation';
+import {
+  getLoadMetrics,
+  getTripMetrics,
+  getTruckMetrics,
+  getRevenueMetrics,
+  getDisputeMetrics,
+  getCountMetrics,
+  getPeriodMetrics,
+  getChartData,
+  getDateRangeForPeriod,
+  type TimePeriod,
+} from '@/lib/admin/metrics';
 
 export async function GET(request: NextRequest) {
   try {
@@ -57,124 +32,35 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     const period = (searchParams.get('period') || 'month') as TimePeriod;
-    const { start, end } = getDateRange(period);
+    const dateRange = getDateRangeForPeriod(period);
+    const { start, end } = dateRange;
 
-    // Get all stats in parallel
+    // Get all stats using centralized metrics functions
     const [
-      // Revenue stats
-      platformRevenue,
-
-      // Truck stats
-      totalTrucks,
-      trucksByStatus,
-      newTrucksInPeriod,
-
-      // Load stats
-      totalLoads,
-      loadsByStatus,
-      newLoadsInPeriod,
-
-      // Trip/Delivery stats
-      completedTrips,
-      inTransitTrips,
-      cancelledTrips,
-
-      // User stats
-      totalUsers,
-      newUsersInPeriod,
-
-      // Organization stats
-      totalOrganizations,
-
-      // Financial transactions in period
+      counts,
+      loads,
+      trips,
+      trucks,
+      revenue,
+      disputes,
+      periodMetrics,
+      charts,
       transactionsInPeriod,
-
-      // Disputes
-      openDisputes,
       resolvedDisputesInPeriod,
-
-      // Service fees collected
-      serviceFeeRevenue,
     ] = await Promise.all([
-      // Platform revenue account
-      db.financialAccount.findFirst({
-        where: { accountType: 'PLATFORM_REVENUE' },
-        select: { balance: true },
-      }),
-
-      // Total trucks
-      db.truck.count(),
-
-      // Trucks by approval status
-      db.truck.groupBy({
-        by: ['approvalStatus'],
-        _count: true,
-      }),
-
-      // New trucks in period
-      db.truck.count({
-        where: { createdAt: { gte: start, lte: end } },
-      }),
-
-      // Total loads
-      db.load.count(),
-
-      // Loads by status
-      db.load.groupBy({
-        by: ['status'],
-        _count: true,
-      }),
-
-      // New loads in period
-      db.load.count({
-        where: { createdAt: { gte: start, lte: end } },
-      }),
-
-      // Completed trips (delivered loads) in period
-      db.load.count({
-        where: {
-          status: 'DELIVERED',
-          updatedAt: { gte: start, lte: end },
-        },
-      }),
-
-      // In transit trips
-      db.load.count({
-        where: { status: 'IN_TRANSIT' },
-      }),
-
-      // Cancelled trips in period
-      db.load.count({
-        where: {
-          status: 'CANCELLED',
-          updatedAt: { gte: start, lte: end },
-        },
-      }),
-
-      // Total users
-      db.user.count(),
-
-      // New users in period
-      db.user.count({
-        where: { createdAt: { gte: start, lte: end } },
-      }),
-
-      // Total organizations
-      db.organization.count(),
-
-      // Financial journal entries in period
+      getCountMetrics(),
+      getLoadMetrics(),
+      getTripMetrics(),
+      getTruckMetrics(),
+      getRevenueMetrics(dateRange),
+      getDisputeMetrics(),
+      getPeriodMetrics(dateRange),
+      getChartData(dateRange),
+      // Financial transactions in period
       db.journalEntry.aggregate({
-        where: {
-          createdAt: { gte: start, lte: end },
-        },
+        where: { createdAt: { gte: start, lte: end } },
         _count: true,
       }),
-
-      // Open disputes
-      db.dispute.count({
-        where: { status: { in: ['OPEN', 'UNDER_REVIEW'] } },
-      }),
-
       // Resolved disputes in period
       db.dispute.count({
         where: {
@@ -182,79 +68,7 @@ export async function GET(request: NextRequest) {
           updatedAt: { gte: start, lte: end },
         },
       }),
-
-      // Service fee revenue in period
-      db.load.aggregate({
-        where: {
-          serviceFeeStatus: 'DEDUCTED',
-          serviceFeeDeductedAt: { gte: start, lte: end },
-        },
-        _sum: { serviceFeeEtb: true },
-        _count: true,
-      }),
     ]);
-
-    // Get daily/periodic breakdown for charts
-    const loadsOverTime = await db.$queryRaw<{ date: Date; count: bigint }[]>`
-      SELECT DATE_TRUNC('day', "createdAt") as date, COUNT(*) as count
-      FROM loads
-      WHERE "createdAt" >= ${start} AND "createdAt" <= ${end}
-      GROUP BY DATE_TRUNC('day', "createdAt")
-      ORDER BY date ASC
-    `;
-
-    const revenueOverTime = await db.$queryRaw<{ date: Date; total: number }[]>`
-      SELECT DATE_TRUNC('day', "serviceFeeDeductedAt") as date,
-             COALESCE(SUM("serviceFeeEtb"), 0) as total
-      FROM loads
-      WHERE "serviceFeeStatus" = 'DEDUCTED'
-        AND "serviceFeeDeductedAt" >= ${start}
-        AND "serviceFeeDeductedAt" <= ${end}
-      GROUP BY DATE_TRUNC('day', "serviceFeeDeductedAt")
-      ORDER BY date ASC
-    `;
-
-    const tripsOverTime = await db.$queryRaw<{ date: Date; completed: bigint; cancelled: bigint }[]>`
-      SELECT
-        DATE_TRUNC('day', "updatedAt") as date,
-        COUNT(*) FILTER (WHERE status = 'DELIVERED') as completed,
-        COUNT(*) FILTER (WHERE status = 'CANCELLED') as cancelled
-      FROM loads
-      WHERE "updatedAt" >= ${start} AND "updatedAt" <= ${end}
-        AND status IN ('DELIVERED', 'CANCELLED')
-      GROUP BY DATE_TRUNC('day', "updatedAt")
-      ORDER BY date ASC
-    `;
-
-    // Calculate summary statistics
-    // Include ALL LoadStatus values so math adds up: sum of categories = total
-    type LoadStatusGroup = { status: string; _count: number };
-    const getStatusCount = (status: string) =>
-      loadsByStatus.find((s: LoadStatusGroup) => s.status === status)?._count || 0;
-
-    // Primary statuses (shown individually)
-    const draftLoads = getStatusCount('DRAFT');
-    const postedLoads = getStatusCount('POSTED');
-    const searchingLoads = getStatusCount('SEARCHING');
-    const offeredLoads = getStatusCount('OFFERED');
-    const assignedLoads = getStatusCount('ASSIGNED');
-    const pickupPendingLoads = getStatusCount('PICKUP_PENDING');
-    const inTransitLoadsCount = getStatusCount('IN_TRANSIT');
-    const deliveredLoads = getStatusCount('DELIVERED');
-    const completedLoadsCount = getStatusCount('COMPLETED');
-    const exceptionLoads = getStatusCount('EXCEPTION');
-    const cancelledLoads = getStatusCount('CANCELLED');
-    const expiredLoads = getStatusCount('EXPIRED');
-    const unpostedLoads = getStatusCount('UNPOSTED');
-
-    // Group for display: active = POSTED + SEARCHING + OFFERED
-    // in_progress = ASSIGNED + PICKUP_PENDING + IN_TRANSIT
-    // terminal = DELIVERED + COMPLETED + CANCELLED + EXPIRED + UNPOSTED
-    const activeLoads = postedLoads + searchingLoads + offeredLoads;
-    const inProgressLoads = assignedLoads + pickupPendingLoads + inTransitLoadsCount;
-
-    const approvedTrucks = trucksByStatus.find((t: { approvalStatus: string; _count: number }) => t.approvalStatus === 'APPROVED')?._count || 0;
-    const pendingTrucks = trucksByStatus.find((t: { approvalStatus: string; _count: number }) => t.approvalStatus === 'PENDING')?._count || 0;
 
     // Get comprehensive SLA metrics for admin (platform-wide)
     const slaPeriod = period === 'year' ? 'month' : period === 'day' ? 'day' : 'week';
@@ -267,82 +81,77 @@ export async function GET(request: NextRequest) {
       period,
       dateRange: { start, end },
 
-      // Summary stats
+      // Summary stats - using centralized metrics
       summary: {
         revenue: {
-          platformBalance: Number(platformRevenue?.balance || 0),
-          serviceFeeCollected: Number(serviceFeeRevenue._sum.serviceFeeEtb || 0),
+          platformBalance: revenue.platformBalance,
+          serviceFeeCollected: revenue.serviceFeeCollected,
           transactionsInPeriod: transactionsInPeriod._count || 0,
           transactionVolume: 0, // Journal entries don't have amount sum
         },
         trucks: {
-          total: totalTrucks,
-          approved: approvedTrucks,
-          pending: pendingTrucks,
-          newInPeriod: newTrucksInPeriod,
+          total: trucks.total,
+          approved: trucks.byApprovalStatus['APPROVED'] || 0,
+          pending: trucks.byApprovalStatus['PENDING'] || 0,
+          available: trucks.available,
+          unavailable: trucks.unavailable,
+          newInPeriod: periodMetrics.newTrucks,
         },
         loads: {
-          total: totalLoads,
+          total: loads.total,
           // Grouped counts for quick overview
-          active: activeLoads,        // POSTED + SEARCHING + OFFERED
-          inProgress: inProgressLoads, // ASSIGNED + PICKUP_PENDING + IN_TRANSIT
-          delivered: deliveredLoads,
-          completed: completedLoadsCount,
-          cancelled: cancelledLoads,
+          active: loads.active,        // POSTED + SEARCHING + OFFERED
+          inProgress: loads.inProgress, // ASSIGNED + PICKUP_PENDING + IN_TRANSIT
+          delivered: loads.delivered,
+          completed: loads.completed,
+          cancelled: loads.cancelled,
           // Individual status counts for detailed view
           byStatus: {
-            draft: draftLoads,
-            posted: postedLoads,
-            searching: searchingLoads,
-            offered: offeredLoads,
-            assigned: assignedLoads,
-            pickupPending: pickupPendingLoads,
-            inTransit: inTransitLoadsCount,
-            delivered: deliveredLoads,
-            completed: completedLoadsCount,
-            exception: exceptionLoads,
-            cancelled: cancelledLoads,
-            expired: expiredLoads,
-            unposted: unpostedLoads,
+            draft: loads.byStatus['DRAFT'] || 0,
+            posted: loads.byStatus['POSTED'] || 0,
+            searching: loads.byStatus['SEARCHING'] || 0,
+            offered: loads.byStatus['OFFERED'] || 0,
+            assigned: loads.byStatus['ASSIGNED'] || 0,
+            pickupPending: loads.byStatus['PICKUP_PENDING'] || 0,
+            inTransit: loads.byStatus['IN_TRANSIT'] || 0,
+            delivered: loads.byStatus['DELIVERED'] || 0,
+            completed: loads.byStatus['COMPLETED'] || 0,
+            exception: loads.byStatus['EXCEPTION'] || 0,
+            cancelled: loads.byStatus['CANCELLED'] || 0,
+            expired: loads.byStatus['EXPIRED'] || 0,
+            unposted: loads.byStatus['UNPOSTED'] || 0,
           },
-          newInPeriod: newLoadsInPeriod,
+          newInPeriod: periodMetrics.newLoads,
         },
+        // Uses Trip model for trip metrics (consistent with dashboard)
         trips: {
-          completed: completedTrips,
-          inTransit: inTransitTrips,
-          cancelled: cancelledTrips,
+          total: trips.total,
+          active: trips.active,
+          completed: periodMetrics.completedTrips,
+          cancelled: periodMetrics.cancelledTrips,
+          byStatus: trips.byStatus,
         },
         users: {
-          total: totalUsers,
-          newInPeriod: newUsersInPeriod,
+          total: counts.totalUsers,
+          newInPeriod: periodMetrics.newUsers,
         },
         organizations: {
-          total: totalOrganizations,
+          total: counts.totalOrganizations,
         },
         disputes: {
-          open: openDisputes,
+          open: disputes.open + disputes.underReview,
           resolvedInPeriod: resolvedDisputesInPeriod,
         },
       },
 
-      // Charts data
+      // Charts data - from centralized chart data function
       charts: {
-        loadsOverTime: loadsOverTime.map(item => ({
-          date: item.date,
-          count: Number(item.count),
-        })),
-        revenueOverTime: revenueOverTime.map(item => ({
-          date: item.date,
-          total: Number(item.total),
-        })),
-        tripsOverTime: tripsOverTime.map(item => ({
-          date: item.date,
-          completed: Number(item.completed),
-          cancelled: Number(item.cancelled),
-        })),
-        loadsByStatus: loadsByStatus.map((s: LoadStatusGroup) => ({
-          status: s.status,
-          count: s._count,
+        loadsOverTime: charts.loadsOverTime,
+        revenueOverTime: charts.revenueOverTime,
+        tripsOverTime: charts.tripsOverTime,
+        loadsByStatus: Object.entries(loads.byStatus).map(([status, count]) => ({
+          status,
+          count,
         })),
         slaTrends: slaTrends.map(t => ({
           date: t.date,

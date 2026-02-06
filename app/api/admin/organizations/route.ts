@@ -63,9 +63,12 @@ export async function GET(request: NextRequest) {
           id: true,
           name: true,
           type: true,
+          description: true,
           isVerified: true,
+          verifiedAt: true,
           contactEmail: true,
           contactPhone: true,
+          city: true,
           isFlagged: true,
           flagReason: true,
           createdAt: true,
@@ -85,21 +88,30 @@ export async function GET(request: NextRequest) {
       db.organization.count({ where }),
     ]);
 
-    // Format response
+    // Format response - match the format expected by OrganizationManagementClient
     const formattedOrgs = organizations.map((org) => ({
       id: org.id,
       name: org.name,
       type: org.type,
+      description: org.description,
       isVerified: org.isVerified,
+      verifiedAt: org.verifiedAt,
       contactEmail: org.contactEmail,
       contactPhone: org.contactPhone,
+      city: org.city,
       isFlagged: org.isFlagged,
       flagReason: org.flagReason,
       createdAt: org.createdAt,
       updatedAt: org.updatedAt,
+      // Include both formats for flexibility
       userCount: org._count.users,
       loadCount: org._count.loads,
       truckCount: org._count.trucks,
+      _count: {
+        users: org._count.users,
+        trucks: org._count.trucks,
+        loads: org._count.loads,
+      },
     }));
 
     return NextResponse.json({

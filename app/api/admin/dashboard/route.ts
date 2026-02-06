@@ -1,71 +1,71 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
 import { requirePermission, Permission } from "@/lib/rbac";
+import { getAdminDashboardMetrics } from "@/lib/admin/metrics";
 
-// GET /api/admin/dashboard - Get admin dashboard stats
+/**
+ * GET /api/admin/dashboard
+ *
+ * Get admin dashboard stats using centralized metrics.
+ * Uses lib/admin/metrics.ts for single source of truth.
+ */
 export async function GET() {
   try {
     await requirePermission(Permission.VIEW_DASHBOARD);
 
-    const [
-      totalUsers,
-      totalOrganizations,
-      totalLoads,
-      totalTrucks,
-      activeLoads,
-      activeTrips,
-      totalRevenue,
-      pendingWithdrawals,
-      openDisputes,
-    ] = await Promise.all([
-      db.user.count(),
-      db.organization.count(),
-      db.load.count(),
-      db.truck.count(),
-      db.load.count({ where: { status: { in: ["POSTED", "ASSIGNED", "IN_TRANSIT"] } } }),
-      db.trip.count({ where: { status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] } } }),
-      db.financialAccount.findFirst({
-        where: { accountType: "PLATFORM_REVENUE" },
-        select: { balance: true },
-      }),
-      db.withdrawalRequest.count({ where: { status: "PENDING" } }),
-      db.dispute.count({ where: { status: { in: ["OPEN", "UNDER_REVIEW"] } } }),
-    ]);
+    const metrics = await getAdminDashboardMetrics();
 
-    // Get load stats by status
-    const loadsByStatus = await db.load.groupBy({
-      by: ["status"],
-      _count: true,
-    });
-
-    // Get recent users (last 7 days)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-    const recentUsers = await db.user.count({
-      where: { createdAt: { gte: sevenDaysAgo } },
-    });
-
-    const recentLoads = await db.load.count({
-      where: { createdAt: { gte: sevenDaysAgo } },
-    });
-
+    // Return in the format expected by existing frontend
     return NextResponse.json({
-      totalUsers,
-      totalOrganizations,
-      totalLoads,
-      totalTrucks,
-      activeLoads,
-      activeTrips,
-      totalRevenue: { balance: Number(totalRevenue?.balance || 0) },
-      pendingWithdrawals,
-      openDisputes,
-      loadsByStatus: loadsByStatus.map((item) => ({
-        status: item.status,
-        _count: item._count,
+      // Entity counts
+      totalUsers: metrics.counts.totalUsers,
+      totalOrganizations: metrics.counts.totalOrganizations,
+      totalLoads: metrics.counts.totalLoads,
+      totalTrucks: metrics.counts.totalTrucks,
+
+      // Active counts - uses consistent definitions from metrics module
+      activeLoads: metrics.loads.active + metrics.loads.inProgress,
+      activeTrips: metrics.trips.active, // Uses Trip model, not Load model
+
+      // Revenue from PLATFORM_REVENUE account
+      totalRevenue: { balance: metrics.revenue.platformBalance },
+      pendingWithdrawals: metrics.revenue.pendingWithdrawals,
+
+      // Disputes
+      openDisputes: metrics.disputes.open + metrics.disputes.underReview,
+
+      // Load breakdown by status
+      loadsByStatus: Object.entries(metrics.loads.byStatus).map(([status, count]) => ({
+        status,
+        _count: count,
       })),
-      recentUsers,
-      recentLoads,
+
+      // Recent activity
+      recentUsers: metrics.recentActivity.usersLast7Days,
+      recentLoads: metrics.recentActivity.loadsLast7Days,
+
+      // Additional metrics for enhanced dashboard
+      trucks: {
+        total: metrics.trucks.total,
+        available: metrics.trucks.available,
+        unavailable: metrics.trucks.unavailable,
+        byApprovalStatus: metrics.trucks.byApprovalStatus,
+      },
+      trips: {
+        total: metrics.trips.total,
+        active: metrics.trips.active,
+        completed: metrics.trips.completed,
+        cancelled: metrics.trips.cancelled,
+        byStatus: metrics.trips.byStatus,
+      },
+      loads: {
+        total: metrics.loads.total,
+        active: metrics.loads.active,
+        inProgress: metrics.loads.inProgress,
+        delivered: metrics.loads.delivered,
+        completed: metrics.loads.completed,
+        cancelled: metrics.loads.cancelled,
+        byStatus: metrics.loads.byStatus,
+      },
     });
   } catch (error) {
     console.error("Dashboard stats error:", error);
