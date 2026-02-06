@@ -17,27 +17,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { calculateDistanceKm } from '@/lib/geo';
 
 // Cache for distance calculations
 const distanceCache = new Map<string, { distance: number; duration: number; timestamp: number }>();
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 
-/**
- * Calculate Haversine distance
- */
-function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
+// Use centralized haversine from lib/geo.ts
+const haversineDistance = calculateDistanceKm;
 
 /**
  * Fetch distance from Google API

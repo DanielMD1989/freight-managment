@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth, requireActiveUser } from '@/lib/auth';
+import { getAccessRoles } from '@/lib/rbac';
 import { z } from 'zod';
 import { validateStateTransition, LoadStatus, getStatusDescription } from '@/lib/loadStateMachine';
 import { TripStatus } from '@prisma/client'; // P0-001 FIX: Import TripStatus enum

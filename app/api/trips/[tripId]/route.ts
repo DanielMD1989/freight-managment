@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { getAccessRoles } from '@/lib/rbac';
 import { TripStatus, LoadStatus } from '@prisma/client';
 import { z } from 'zod';
 // P1-002 FIX: Import CacheInvalidation for post-update cache clearing
@@ -113,13 +114,13 @@ export async function GET(
       );
     }
 
-    // Check permissions
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
-    const isDispatcher = session.role === 'DISPATCHER';
-    const isCarrier = session.role === 'CARRIER' && trip.carrierId === session.organizationId;
-    const isShipper = session.role === 'SHIPPER' && trip.shipperId === session.organizationId;
+    // Check permissions using centralized access helper
+    const { isAdmin, isDispatcher, isCarrier, isShipper, hasAccess } = getAccessRoles(session, {
+      shipperOrgId: trip.shipperId,
+      carrierOrgId: trip.carrierId,
+    });
 
-    if (!isAdmin && !isDispatcher && !isCarrier && !isShipper) {
+    if (!hasAccess) {
       return NextResponse.json(
         { error: 'You do not have permission to view this trip' },
         { status: 403 }

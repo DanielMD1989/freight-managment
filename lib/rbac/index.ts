@@ -9,6 +9,15 @@ import {
 
 export { Permission } from "./permissions";
 export type { Role } from "./permissions";
+export {
+  getAccessRoles,
+  canView,
+  canModify,
+  isAdminRole,
+  isSuperAdminRole,
+  type SessionInfo,
+  type AccessRoles,
+} from "./accessHelpers";
 
 export class UnauthorizedError extends Error {
   constructor(message: string = "Unauthorized") {

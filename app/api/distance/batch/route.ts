@@ -22,6 +22,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
+import { calculateDistanceKm } from '@/lib/geo';
 
 // Cache TTL in milliseconds (24 hours)
 const CACHE_TTL = 24 * 60 * 60 * 1000;
@@ -44,22 +45,8 @@ const batchRequestSchema = z.object({
   pairs: z.array(pairSchema).min(1).max(25), // Max 25 pairs per batch (Google API limit)
 });
 
-/**
- * Calculate Haversine (straight-line) distance
- */
-function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
+// Use centralized haversine from lib/geo.ts
+const haversineDistance = calculateDistanceKm;
 
 /**
  * Generate cache key

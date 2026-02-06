@@ -72,3 +72,9 @@ export function calculateDistanceMeters(
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
+
+/**
+ * Alias for calculateDistanceKm for backward compatibility
+ * Use calculateDistanceKm for new code
+ */
+export const haversineDistance = calculateDistanceKm;

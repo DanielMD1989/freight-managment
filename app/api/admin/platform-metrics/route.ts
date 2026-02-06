@@ -5,11 +5,15 @@
  * Task 16.9A.8: Platform Metrics Dashboard
  *
  * SuperAdmin endpoint to view comprehensive platform metrics
+ *
+ * NOTE: This endpoint now uses centralized metrics from lib/admin/metrics.ts
+ * for consistency with other admin endpoints.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requirePermission, Permission } from '@/lib/rbac';
 import { db } from '@/lib/db';
+import { ACTIVE_TRIP_STATUSES } from '@/lib/tripStateMachine';
 
 /**
  * GET /api/admin/platform-metrics
@@ -32,7 +36,7 @@ export async function GET(request: NextRequest) {
 
       // Load Metrics
       totalLoads,
-      activeLoads,
+      activeTrips, // Changed from activeLoads - now uses Trip model
       completedLoads,
       cancelledLoads,
 
@@ -67,10 +71,12 @@ export async function GET(request: NextRequest) {
 
       // Loads
       db.load.count(),
-      db.load.count({
+      // FIX: Use Trip model for active trips (not Load model)
+      // This matches the centralized metrics in lib/admin/metrics.ts
+      db.trip.count({
         where: {
           status: {
-            in: ['IN_TRANSIT', 'PICKUP_PENDING', 'ASSIGNED'],
+            in: ACTIVE_TRIP_STATUSES,
           },
         },
       }),
@@ -168,7 +174,7 @@ export async function GET(request: NextRequest) {
         },
         loads: {
           total: totalLoads,
-          active: activeLoads,
+          active: activeTrips, // Now correctly uses Trip model count
           completed: completedLoads,
           cancelled: cancelledLoads,
           completionRate: loadCompletionRate,
