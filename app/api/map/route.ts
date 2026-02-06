@@ -25,6 +25,11 @@ interface MapMarker {
   lon: number;
   title: string;
   subtitle?: string;
+  // For trucks: loadStatus is the actual LoadStatus enum (null if no assigned load)
+  // truckAvailability is a display field for map styling ('available' | 'busy')
+  loadStatus?: string | null;
+  truckAvailability?: 'available' | 'busy';
+  // For loads/trips: status is the actual LoadStatus
   status?: string;
   metadata?: Record<string, any>;
 }
@@ -180,7 +185,10 @@ export async function GET(request: NextRequest) {
             lon,
             title: truck.licensePlate,
             subtitle: truck.truckType,
-            status: truck.assignedLoad?.status || (truck.isAvailable ? 'AVAILABLE' : 'UNAVAILABLE'),
+            // loadStatus is the actual LoadStatus enum (null if no assigned load)
+            // truckAvailability is a display-only field for map rendering
+            loadStatus: truck.assignedLoad?.status || null,
+            truckAvailability: truck.isAvailable ? 'available' : 'busy',
             metadata: {
               truckType: truck.truckType,
               carrier: truck.carrier?.name,

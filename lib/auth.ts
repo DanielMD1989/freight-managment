@@ -214,13 +214,24 @@ export async function setSession(payload: SessionPayload): Promise<void> {
   }
 
   // Also cache user profile for fast access
+  // SECURITY: Do NOT default to ACTIVE - if status is missing, treat as PENDING_VERIFICATION
+  // This prevents unauthorized access if JWT is malformed or tampered with
+  const validStatuses = ['ACTIVE', 'PENDING_VERIFICATION', 'SUSPENDED', 'REJECTED'];
+  const userStatus = payload.status && validStatuses.includes(payload.status)
+    ? payload.status
+    : 'PENDING_VERIFICATION';
+
+  if (!payload.status || !validStatuses.includes(payload.status)) {
+    console.warn(`[AUTH] Invalid or missing status in JWT for user ${payload.userId}. Defaulting to PENDING_VERIFICATION.`);
+  }
+
   await UserCache.set(payload.userId, {
     id: payload.userId,
     email: payload.email,
     firstName: payload.firstName || "",
     lastName: payload.lastName || "",
     role: payload.role,
-    status: payload.status || "ACTIVE",
+    status: userStatus,
     organizationId: payload.organizationId,
   });
 }

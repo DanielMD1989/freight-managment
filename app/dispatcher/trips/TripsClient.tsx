@@ -50,7 +50,8 @@ interface Trip {
   };
 }
 
-type StatusFilter = 'ALL' | 'ASSIGNED' | 'PICKUP_PENDING' | 'IN_TRANSIT' | 'DELIVERED';
+// All TripStatus values from Prisma schema + 'ALL' for filter
+type StatusFilter = 'ALL' | 'ASSIGNED' | 'PICKUP_PENDING' | 'IN_TRANSIT' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED';
 
 export default function TripsClient() {
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -164,12 +165,15 @@ export default function TripsClient() {
     return <span className="text-xs text-slate-400">No data</span>;
   };
 
+  // All TripStatus values so dispatchers can see complete trip history
   const statusTabs: { value: StatusFilter; label: string }[] = [
     { value: 'ALL', label: 'All' },
     { value: 'ASSIGNED', label: 'Assigned' },
     { value: 'PICKUP_PENDING', label: 'Pickup' },
     { value: 'IN_TRANSIT', label: 'In Transit' },
     { value: 'DELIVERED', label: 'Delivered' },
+    { value: 'COMPLETED', label: 'Completed' },
+    { value: 'CANCELLED', label: 'Cancelled' },
   ];
 
   return (

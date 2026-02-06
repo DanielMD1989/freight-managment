@@ -9,7 +9,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-type LoadStatus = 'ALL' | 'POSTED' | 'ASSIGNED' | 'PICKUP_PENDING' | 'IN_TRANSIT' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED';
+// All valid LoadStatus values from Prisma schema + 'ALL' for filter
+type LoadStatus = 'ALL' | 'DRAFT' | 'POSTED' | 'SEARCHING' | 'OFFERED' | 'ASSIGNED' |
+  'PICKUP_PENDING' | 'IN_TRANSIT' | 'DELIVERED' | 'COMPLETED' |
+  'EXCEPTION' | 'CANCELLED' | 'EXPIRED' | 'UNPOSTED';
 
 interface Load {
   id: string;
@@ -32,25 +35,38 @@ interface Load {
   } | null;
 }
 
+// All LoadStatus tabs - admins need to see ALL statuses
 const STATUS_TABS: { key: LoadStatus; label: string }[] = [
   { key: 'ALL', label: 'All' },
+  { key: 'DRAFT', label: 'Draft' },
   { key: 'POSTED', label: 'Posted' },
+  { key: 'SEARCHING', label: 'Searching' },
+  { key: 'OFFERED', label: 'Offered' },
   { key: 'ASSIGNED', label: 'Assigned' },
+  { key: 'PICKUP_PENDING', label: 'Pickup' },
   { key: 'IN_TRANSIT', label: 'In Transit' },
   { key: 'DELIVERED', label: 'Delivered' },
   { key: 'COMPLETED', label: 'Completed' },
+  { key: 'EXCEPTION', label: 'Exception' },
   { key: 'CANCELLED', label: 'Cancelled' },
+  { key: 'EXPIRED', label: 'Expired' },
+  { key: 'UNPOSTED', label: 'Unposted' },
 ];
 
 const STATUS_COLORS: Record<string, string> = {
+  DRAFT: 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300',
   POSTED: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  UNPOSTED: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300',
+  SEARCHING: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
+  OFFERED: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
   ASSIGNED: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
   PICKUP_PENDING: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
   IN_TRANSIT: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
   DELIVERED: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300',
   COMPLETED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  EXCEPTION: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
   CANCELLED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  EXPIRED: 'bg-stone-100 text-stone-800 dark:bg-stone-900/30 dark:text-stone-300',
+  UNPOSTED: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300',
 };
 
 export default function AdminLoadsClient() {

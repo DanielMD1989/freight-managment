@@ -280,7 +280,7 @@ async function getHandler(request: NextRequest) {
         lng: Number(truck.currentLocationLon),
         updatedAt: truck.locationUpdatedAt?.toISOString(),
       } : null,
-      gpsStatus: truck.gpsStatus || 'NO_DEVICE',
+      gpsStatus: truck.gpsStatus || 'INACTIVE',
       lastSeen: truck.gpsLastSeenAt?.toISOString(),
     });
   } catch (error) {

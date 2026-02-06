@@ -97,31 +97,32 @@ export async function GET(request: NextRequest) {
     });
 
     // Determine GPS status for each truck
+    // Valid GpsDeviceStatus: ACTIVE, INACTIVE, SIGNAL_LOST, MAINTENANCE
     const now = new Date();
     const OFFLINE_THRESHOLD_MS = 15 * 60 * 1000; // 15 minutes
 
     const vehicles = trucks.map((truck) => {
-      let computedGpsStatus: 'ACTIVE' | 'OFFLINE' | 'NO_DEVICE' = 'NO_DEVICE';
+      // Map to valid GpsDeviceStatus enum values
+      let computedGpsStatus: 'ACTIVE' | 'INACTIVE' | 'SIGNAL_LOST' = 'INACTIVE';
 
       if (truck.currentLocationLat && truck.currentLocationLon) {
         if (truck.locationUpdatedAt) {
           const lastUpdate = new Date(truck.locationUpdatedAt);
           const timeDiff = now.getTime() - lastUpdate.getTime();
-          computedGpsStatus = timeDiff < OFFLINE_THRESHOLD_MS ? 'ACTIVE' : 'OFFLINE';
+          // ACTIVE = recent position, SIGNAL_LOST = stale position
+          computedGpsStatus = timeDiff < OFFLINE_THRESHOLD_MS ? 'ACTIVE' : 'SIGNAL_LOST';
         } else {
-          computedGpsStatus = 'OFFLINE';
+          computedGpsStatus = 'SIGNAL_LOST';
         }
       }
-
-      // Determine truck status based on availability and GPS
-      const status = truck.isAvailable ? 'AVAILABLE' : 'IN_TRANSIT';
 
       return {
         id: truck.id,
         plateNumber: truck.licensePlate,
         truckType: truck.truckType,
         capacity: Number(truck.capacity),
-        status,
+        // truckAvailability is a display field, not LoadStatus
+        truckAvailability: truck.isAvailable ? 'available' : 'busy',
         isActive: truck.isAvailable,
         gpsStatus: computedGpsStatus,
         currentLocation: truck.currentLocationLat && truck.currentLocationLon ? {
@@ -141,11 +142,13 @@ export async function GET(request: NextRequest) {
       total: vehicles.length,
       stats: {
         total: vehicles.length,
-        active: vehicles.filter((v) => v.gpsStatus === 'ACTIVE').length,
-        offline: vehicles.filter((v) => v.gpsStatus === 'OFFLINE').length,
-        noDevice: vehicles.filter((v) => v.gpsStatus === 'NO_DEVICE').length,
-        available: vehicles.filter((v) => v.status === 'AVAILABLE').length,
-        inTransit: vehicles.filter((v) => v.status === 'IN_TRANSIT').length,
+        // GPS status using valid GpsDeviceStatus enum values
+        gpsActive: vehicles.filter((v) => v.gpsStatus === 'ACTIVE').length,
+        gpsSignalLost: vehicles.filter((v) => v.gpsStatus === 'SIGNAL_LOST').length,
+        gpsInactive: vehicles.filter((v) => v.gpsStatus === 'INACTIVE').length,
+        // Availability status
+        available: vehicles.filter((v) => v.truckAvailability === 'available').length,
+        busy: vehicles.filter((v) => v.truckAvailability === 'busy').length,
       },
     });
   } catch (error) {

@@ -227,11 +227,31 @@ export async function GET(request: NextRequest) {
     `;
 
     // Calculate summary statistics
+    // Include ALL LoadStatus values so math adds up: sum of categories = total
     type LoadStatusGroup = { status: string; _count: number };
-    const postedLoads = loadsByStatus.find((s: LoadStatusGroup) => s.status === 'POSTED')?._count || 0;
-    const assignedLoads = loadsByStatus.find((s: LoadStatusGroup) => s.status === 'ASSIGNED')?._count || 0;
-    const deliveredLoads = loadsByStatus.find((s: LoadStatusGroup) => s.status === 'DELIVERED')?._count || 0;
-    const cancelledLoads = loadsByStatus.find((s: LoadStatusGroup) => s.status === 'CANCELLED')?._count || 0;
+    const getStatusCount = (status: string) =>
+      loadsByStatus.find((s: LoadStatusGroup) => s.status === status)?._count || 0;
+
+    // Primary statuses (shown individually)
+    const draftLoads = getStatusCount('DRAFT');
+    const postedLoads = getStatusCount('POSTED');
+    const searchingLoads = getStatusCount('SEARCHING');
+    const offeredLoads = getStatusCount('OFFERED');
+    const assignedLoads = getStatusCount('ASSIGNED');
+    const pickupPendingLoads = getStatusCount('PICKUP_PENDING');
+    const inTransitLoadsCount = getStatusCount('IN_TRANSIT');
+    const deliveredLoads = getStatusCount('DELIVERED');
+    const completedLoadsCount = getStatusCount('COMPLETED');
+    const exceptionLoads = getStatusCount('EXCEPTION');
+    const cancelledLoads = getStatusCount('CANCELLED');
+    const expiredLoads = getStatusCount('EXPIRED');
+    const unpostedLoads = getStatusCount('UNPOSTED');
+
+    // Group for display: active = POSTED + SEARCHING + OFFERED
+    // in_progress = ASSIGNED + PICKUP_PENDING + IN_TRANSIT
+    // terminal = DELIVERED + COMPLETED + CANCELLED + EXPIRED + UNPOSTED
+    const activeLoads = postedLoads + searchingLoads + offeredLoads;
+    const inProgressLoads = assignedLoads + pickupPendingLoads + inTransitLoadsCount;
 
     const approvedTrucks = trucksByStatus.find((t: { approvalStatus: string; _count: number }) => t.approvalStatus === 'APPROVED')?._count || 0;
     const pendingTrucks = trucksByStatus.find((t: { approvalStatus: string; _count: number }) => t.approvalStatus === 'PENDING')?._count || 0;
@@ -263,11 +283,28 @@ export async function GET(request: NextRequest) {
         },
         loads: {
           total: totalLoads,
-          posted: postedLoads,
-          assigned: assignedLoads,
-          inTransit: inTransitTrips,
+          // Grouped counts for quick overview
+          active: activeLoads,        // POSTED + SEARCHING + OFFERED
+          inProgress: inProgressLoads, // ASSIGNED + PICKUP_PENDING + IN_TRANSIT
           delivered: deliveredLoads,
+          completed: completedLoadsCount,
           cancelled: cancelledLoads,
+          // Individual status counts for detailed view
+          byStatus: {
+            draft: draftLoads,
+            posted: postedLoads,
+            searching: searchingLoads,
+            offered: offeredLoads,
+            assigned: assignedLoads,
+            pickupPending: pickupPendingLoads,
+            inTransit: inTransitLoadsCount,
+            delivered: deliveredLoads,
+            completed: completedLoadsCount,
+            exception: exceptionLoads,
+            cancelled: cancelledLoads,
+            expired: expiredLoads,
+            unposted: unpostedLoads,
+          },
           newInPeriod: newLoadsInPeriod,
         },
         trips: {

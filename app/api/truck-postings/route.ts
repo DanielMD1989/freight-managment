@@ -379,24 +379,27 @@ export async function GET(request: NextRequest) {
     const destination = searchParams.get('destination'); // City name search
     const truckType = searchParams.get('truckType');
     const fullPartial = searchParams.get('fullPartial');
-    const status = searchParams.get('status') || 'ACTIVE';
+    const statusParam = searchParams.get('status');
     const limitParam = searchParams.get('limit');
     const offsetParam = searchParams.get('offset');
     const includeMatchCount = searchParams.get('includeMatchCount') === 'true';
 
-    // Valid PostingStatus values
-    const validStatuses = ['ACTIVE', 'EXPIRED', 'CANCELLED', 'MATCHED'];
+    // Valid PostingStatus values from Prisma schema
+    const validStatuses = ['ACTIVE', 'EXPIRED', 'CANCELLED', 'MATCHED'] as const;
 
-    // Validate status parameter - return error for invalid values (don't silently default)
-    if (status && !validStatuses.includes(status)) {
+    // Validate status BEFORE using it - fail fast on invalid input
+    if (statusParam && !validStatuses.includes(statusParam as typeof validStatuses[number])) {
       return NextResponse.json(
         {
-          error: `Invalid status '${status}'. Valid values: ${validStatuses.join(', ')}`,
+          error: `Invalid status '${statusParam}'. Valid values: ${validStatuses.join(', ')}`,
           hint: 'For trucks without active postings, use /api/trucks?hasActivePosting=false'
         },
         { status: 400 }
       );
     }
+
+    // Default to ACTIVE only after validation passes
+    const status = statusParam || 'ACTIVE';
     const validatedStatus = status || 'ACTIVE';
 
     // If filtering by specific organization (for "my postings"), verify user has access

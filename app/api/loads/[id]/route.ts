@@ -99,6 +99,12 @@ export async function GET(
       },
     });
 
+    // Fail if user not found - don't default to any role
+    if (!user) {
+      console.error(`[SECURITY] User not found in database after requireAuth: ${session.userId}`);
+      return NextResponse.json({ error: 'User not found' }, { status: 401 });
+    }
+
     const load = await db.load.findUnique({
       where: { id },
       include: {
@@ -144,11 +150,12 @@ export async function GET(
     const ageMinutes = calculateAge(load.postedAt, load.createdAt);
 
     // Determine if viewer can see contact information
+    // user is guaranteed to exist at this point (checked above)
     const userCanSeeContact = canSeeContact(
       load.assignedTruckId,
-      user?.organizationId || null,
+      user.organizationId,
       load.assignedTruck?.carrier?.id || null,
-      user?.role || "SHIPPER"
+      user.role
     );
 
     // Apply company masking

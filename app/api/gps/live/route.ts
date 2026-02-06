@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
           lat: Number(truck.currentLocationLat),
           lng: Number(truck.currentLocationLon),
           updatedAt: truck.locationUpdatedAt?.toISOString(),
-          gpsStatus: truck.gpsStatus || 'UNKNOWN',
+          gpsStatus: truck.gpsStatus || 'INACTIVE',
         } : null,
       });
     }
@@ -169,7 +169,7 @@ export async function GET(request: NextRequest) {
           lat: Number(truck.currentLocationLat),
           lng: Number(truck.currentLocationLon),
           updatedAt: truck.locationUpdatedAt?.toISOString(),
-          gpsStatus: truck.gpsStatus || 'UNKNOWN',
+          gpsStatus: truck.gpsStatus || 'INACTIVE',
         } : null,
       }));
 
@@ -229,7 +229,7 @@ export async function GET(request: NextRequest) {
         lat: Number(load.assignedTruck.currentLocationLat),
         lng: Number(load.assignedTruck.currentLocationLon),
         updatedAt: load.assignedTruck.locationUpdatedAt?.toISOString(),
-        gpsStatus: load.assignedTruck.gpsStatus || 'UNKNOWN',
+        gpsStatus: load.assignedTruck.gpsStatus || 'INACTIVE',
       } : null,
     }));
 
