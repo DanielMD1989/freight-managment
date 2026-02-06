@@ -326,7 +326,7 @@ export default function TrucksClient() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Link
-                          href={`/carrier/loadboard`}
+                          href={`/dispatcher/trucks/${posting.truck?.id || posting.id}`}
                           className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
                         >
                           View

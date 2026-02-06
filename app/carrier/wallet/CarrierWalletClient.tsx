@@ -7,9 +7,10 @@
  * - Balance display
  * - Earnings summary cards
  * - Transaction history with filtering and pagination
+ * - Load more functionality for full transaction history
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
 
 type TransactionFilter = 'ALL' | 'SETTLEMENT' | 'WITHDRAWAL' | 'DEPOSIT' | 'REFUND';
@@ -87,9 +88,46 @@ function formatTime(dateString: string): string {
 export default function CarrierWalletClient({ walletData }: { walletData: WalletData }) {
   const [filterType, setFilterType] = useState<TransactionFilter>('ALL');
   const [page, setPage] = useState(1);
+  const [transactions, setTransactions] = useState<Transaction[]>(walletData.transactions);
+  const [hasMore, setHasMore] = useState(walletData.transactions.length >= 50);
+  const [loadingMore, setLoadingMore] = useState(false);
   const pageSize = 10;
 
-  const filteredTransactions = walletData.transactions.filter((t) => {
+  const loadMoreTransactions = useCallback(async () => {
+    setLoadingMore(true);
+    try {
+      const response = await fetch(
+        `/api/wallet/transactions?offset=${transactions.length}&limit=50`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        if (data.transactions && data.transactions.length > 0) {
+          // Transform API response to match local format
+          const newTransactions = data.transactions.map((tx: any) => ({
+            id: tx.id,
+            date: tx.createdAt,
+            type: tx.type,
+            description: tx.description,
+            reference: tx.reference,
+            amount: Math.abs(tx.amount),
+            isDebit: tx.amount < 0,
+            loadId: tx.loadId,
+            loadRoute: null,
+          }));
+          setTransactions(prev => [...prev, ...newTransactions]);
+          setHasMore(data.pagination?.hasMore ?? false);
+        } else {
+          setHasMore(false);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load more transactions:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [transactions.length]);
+
+  const filteredTransactions = transactions.filter((t) => {
     if (filterType === 'ALL') return true;
     if (filterType === 'REFUND') return t.type === 'REFUND' || t.type === 'SERVICE_FEE_REFUND';
     return t.type === filterType;
@@ -309,27 +347,51 @@ export default function CarrierWalletClient({ walletData }: { walletData: Wallet
           </div>
         )}
 
-        {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, filteredTransactions.length)} of {filteredTransactions.length}
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-              >
-                Previous
-              </button>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-              >
-                Next
-              </button>
+        {(totalPages > 1 || hasMore) && (
+          <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, filteredTransactions.length)} of {filteredTransactions.length}
+                {hasMore && ' (more available)'}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Next
+                </button>
+              </div>
             </div>
+            {hasMore && (
+              <div className="text-center">
+                <button
+                  onClick={loadMoreTransactions}
+                  disabled={loadingMore}
+                  className="px-4 py-2 text-sm font-medium rounded-lg bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loadingMore ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Loading...
+                    </span>
+                  ) : (
+                    'Load More Transactions'
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

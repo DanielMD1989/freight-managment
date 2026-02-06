@@ -351,7 +351,7 @@ export default function TripsClient() {
                       <div className="flex items-center gap-2">
                         {trip.load?.id && (
                           <Link
-                            href={`/carrier/loads/${trip.load.id}`}
+                            href={`/dispatcher/loads/${trip.load.id}`}
                             className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
                           >
                             Details

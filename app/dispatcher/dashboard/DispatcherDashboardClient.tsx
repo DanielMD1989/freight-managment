@@ -480,7 +480,7 @@ export default function DispatcherDashboardClient({
                 {pickupsToday.slice(0, 4).map((load: any) => (
                   <Link
                     key={load.id}
-                    href={`/carrier/loads/${load.id}`}
+                    href={`/dispatcher/loads/${load.id}`}
                     className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[var(--bg-tinted)]"
                   >
                     <div
@@ -543,7 +543,7 @@ export default function DispatcherDashboardClient({
                   .map((load: any) => (
                     <Link
                       key={load.id}
-                      href={`/carrier/loads/${load.id}`}
+                      href={`/dispatcher/loads/${load.id}`}
                       className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[var(--bg-tinted)]"
                     >
                       <div
@@ -835,7 +835,7 @@ function LoadsTable({ loads, onRefresh, userRole }: { loads: any[]; onRefresh: (
                       </Link>
                     )}
                     <Link
-                      href={`/carrier/loads/${load.id}`}
+                      href={`/dispatcher/loads/${load.id}`}
                       className="text-xs font-medium px-2.5 py-1 rounded-md transition-colors"
                       style={{
                         background: 'var(--bg-tinted)',
@@ -1000,7 +1000,7 @@ function TrucksTable({ trucks, onRefresh }: { trucks: any[]; onRefresh: () => vo
               </td>
               <td className="px-4 py-3">
                 <Link
-                  href="/carrier/loadboard"
+                  href={`/dispatcher/trucks/${posting.truck?.id || posting.id}`}
                   className="text-xs font-medium px-2.5 py-1 rounded-md transition-colors"
                   style={{
                     background: 'var(--bg-tinted)',
