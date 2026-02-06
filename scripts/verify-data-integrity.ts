@@ -350,37 +350,55 @@ async function testAdminTotalsConsistency(groundTruth: Awaited<ReturnType<typeof
 async function testNoOrphanedReferences() {
   console.log('\n🔍 Test 9: No Orphaned References\n');
 
-  // Loads without valid shipper
-  const loadsWithoutShipper = await prisma.load.count({
-    where: { shipper: null },
+  // Note: shipperId, carrierId, loadId are required fields in the schema,
+  // so Prisma enforces referential integrity. We verify the counts match.
+
+  // Count loads and verify all have shipper relations
+  const totalLoads = await prisma.load.count();
+  const loadsWithShipper = await prisma.load.count({
+    where: {
+      shipper: {
+        id: { not: '' }, // Has a valid shipper with non-empty ID
+      },
+    },
   });
 
-  if (loadsWithoutShipper === 0) {
-    pass('Load-Shipper Integrity', 'All loads have valid shipper references');
+  if (loadsWithShipper === totalLoads) {
+    pass('Load-Shipper Integrity', `All ${totalLoads} loads have valid shipper references`);
   } else {
-    fail('Load-Shipper Integrity', `${loadsWithoutShipper} loads have no shipper`);
+    fail('Load-Shipper Integrity', `${totalLoads - loadsWithShipper} of ${totalLoads} loads missing shipper`);
   }
 
-  // Trucks without valid carrier
-  const trucksWithoutCarrier = await prisma.truck.count({
-    where: { carrier: null },
+  // Count trucks and verify all have carrier relations
+  const totalTrucks = await prisma.truck.count();
+  const trucksWithCarrier = await prisma.truck.count({
+    where: {
+      carrier: {
+        id: { not: '' },
+      },
+    },
   });
 
-  if (trucksWithoutCarrier === 0) {
-    pass('Truck-Carrier Integrity', 'All trucks have valid carrier references');
+  if (trucksWithCarrier === totalTrucks) {
+    pass('Truck-Carrier Integrity', `All ${totalTrucks} trucks have valid carrier references`);
   } else {
-    fail('Truck-Carrier Integrity', `${trucksWithoutCarrier} trucks have no carrier`);
+    fail('Truck-Carrier Integrity', `${totalTrucks - trucksWithCarrier} of ${totalTrucks} trucks missing carrier`);
   }
 
-  // Trips without valid load
-  const tripsWithoutLoad = await prisma.trip.count({
-    where: { load: null },
+  // Count trips and verify all have load relations
+  const totalTrips = await prisma.trip.count();
+  const tripsWithLoad = await prisma.trip.count({
+    where: {
+      load: {
+        id: { not: '' },
+      },
+    },
   });
 
-  if (tripsWithoutLoad === 0) {
-    pass('Trip-Load Integrity', 'All trips have valid load references');
+  if (tripsWithLoad === totalTrips) {
+    pass('Trip-Load Integrity', `All ${totalTrips} trips have valid load references`);
   } else {
-    fail('Trip-Load Integrity', `${tripsWithoutLoad} trips have no load`);
+    fail('Trip-Load Integrity', `${totalTrips - tripsWithLoad} of ${totalTrips} trips missing load`);
   }
 }
 
