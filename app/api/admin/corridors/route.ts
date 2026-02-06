@@ -11,6 +11,11 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
 import { Decimal } from 'decimal.js';
+import { calculateFeePreview } from '@/lib/serviceFeeCalculation';
+
+// Use centralized fee preview functions
+const calculatePartyFeePreview = calculateFeePreview;
+const calculateServiceFeePreview = calculateFeePreview;
 
 // Define the enum values directly to avoid Prisma import issues at module load time
 const CORRIDOR_DIRECTIONS = ['ONE_WAY', 'ROUND_TRIP', 'BIDIRECTIONAL'] as const;
@@ -371,61 +376,5 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * Calculate fee preview for a single party (shipper or carrier)
- */
-function calculatePartyFeePreview(
-  distanceKm: number,
-  pricePerKm: number,
-  promoFlag: boolean,
-  promoDiscountPct: number | null
-): {
-  baseFee: number;
-  discount: number;
-  finalFee: number;
-} {
-  if (pricePerKm <= 0) {
-    return { baseFee: 0, discount: 0, finalFee: 0 };
-  }
-
-  const baseFee = distanceKm * pricePerKm;
-  let discount = 0;
-
-  if (promoFlag && promoDiscountPct && promoDiscountPct > 0) {
-    discount = baseFee * (promoDiscountPct / 100);
-  }
-
-  return {
-    baseFee: Math.round(baseFee * 100) / 100,
-    discount: Math.round(discount * 100) / 100,
-    finalFee: Math.round((baseFee - discount) * 100) / 100,
-  };
-}
-
-/**
- * Calculate service fee preview (legacy - shipper only)
- * @deprecated Use calculatePartyFeePreview for both parties
- */
-function calculateServiceFeePreview(
-  distanceKm: number,
-  pricePerKm: number,
-  promoFlag: boolean,
-  promoDiscountPct: number | null
-): {
-  baseFee: number;
-  discount: number;
-  finalFee: number;
-} {
-  const baseFee = distanceKm * pricePerKm;
-  let discount = 0;
-
-  if (promoFlag && promoDiscountPct && promoDiscountPct > 0) {
-    discount = baseFee * (promoDiscountPct / 100);
-  }
-
-  return {
-    baseFee: Math.round(baseFee * 100) / 100,
-    discount: Math.round(discount * 100) / 100,
-    finalFee: Math.round((baseFee - discount) * 100) / 100,
-  };
-}
+// Fee preview functions imported from lib/serviceFeeCalculation.ts
+// See import at top of file

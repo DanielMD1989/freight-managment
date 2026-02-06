@@ -401,3 +401,71 @@ export async function getAllCorridorsWithFees(): Promise<Array<{
     };
   });
 }
+
+// ============================================================================
+// FEE PREVIEW FUNCTIONS
+// Simplified interfaces for corridor management UI previews
+// ============================================================================
+
+export interface FeePreview {
+  baseFee: number;
+  discount: number;
+  finalFee: number;
+}
+
+export interface DualPartyFeePreview {
+  shipper: FeePreview;
+  carrier: FeePreview;
+  totalPlatformFee: number;
+}
+
+/**
+ * Calculate a simple fee preview for a single party
+ * Used by corridor management UI for quick fee display
+ */
+export function calculateFeePreview(
+  distanceKm: number,
+  pricePerKm: number,
+  promoFlag: boolean,
+  promoDiscountPct: number | null
+): FeePreview {
+  if (pricePerKm <= 0) {
+    return { baseFee: 0, discount: 0, finalFee: 0 };
+  }
+
+  const baseFee = distanceKm * pricePerKm;
+  let discount = 0;
+
+  if (promoFlag && promoDiscountPct && promoDiscountPct > 0) {
+    discount = baseFee * (promoDiscountPct / 100);
+  }
+
+  return {
+    baseFee: Math.round(baseFee * 100) / 100,
+    discount: Math.round(discount * 100) / 100,
+    finalFee: Math.round((baseFee - discount) * 100) / 100,
+  };
+}
+
+/**
+ * Calculate fee previews for both shipper and carrier
+ * Used by corridor management UI for dual-party fee display
+ */
+export function calculateDualPartyFeePreview(
+  distanceKm: number,
+  shipperPricePerKm: number,
+  shipperPromoFlag: boolean,
+  shipperPromoPct: number | null,
+  carrierPricePerKm: number,
+  carrierPromoFlag: boolean,
+  carrierPromoPct: number | null
+): DualPartyFeePreview {
+  const shipper = calculateFeePreview(distanceKm, shipperPricePerKm, shipperPromoFlag, shipperPromoPct);
+  const carrier = calculateFeePreview(distanceKm, carrierPricePerKm, carrierPromoFlag, carrierPromoPct);
+
+  return {
+    shipper,
+    carrier,
+    totalPlatformFee: shipper.finalFee + carrier.finalFee,
+  };
+}

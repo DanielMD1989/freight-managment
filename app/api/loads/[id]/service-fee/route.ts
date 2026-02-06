@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { calculateFeePreview } from '@/lib/serviceFeeCalculation';
 
 /**
  * GET /api/loads/[id]/service-fee
@@ -75,18 +76,18 @@ export async function GET(
       );
     }
 
-    // Calculate fee breakdown if corridor exists
+    // Calculate fee breakdown if corridor exists (using centralized function)
     let feeBreakdown = null;
     if (load.corridor) {
-      const baseFee = Number(load.corridor.distanceKm) * Number(load.corridor.pricePerKm);
-      const discount = load.corridor.promoFlag && load.corridor.promoDiscountPct
-        ? baseFee * (Number(load.corridor.promoDiscountPct) / 100)
-        : 0;
+      const preview = calculateFeePreview(
+        Number(load.corridor.distanceKm),
+        Number(load.corridor.pricePerKm),
+        load.corridor.promoFlag,
+        load.corridor.promoDiscountPct ? Number(load.corridor.promoDiscountPct) : null
+      );
 
       feeBreakdown = {
-        baseFee: Math.round(baseFee * 100) / 100,
-        discount: Math.round(discount * 100) / 100,
-        finalFee: Math.round((baseFee - discount) * 100) / 100,
+        ...preview,
         promoApplied: load.corridor.promoFlag && !!load.corridor.promoDiscountPct,
       };
     }

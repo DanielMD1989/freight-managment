@@ -12,6 +12,10 @@ import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
 import { Decimal } from 'decimal.js';
 import { CorridorDirection } from '@prisma/client';
+import {
+  calculateFeePreview,
+  calculateDualPartyFeePreview,
+} from '@/lib/serviceFeeCalculation';
 
 // Ethiopian regions for validation
 const ETHIOPIAN_REGIONS = [
@@ -418,71 +422,5 @@ export async function DELETE(
   }
 }
 
-/**
- * Calculate service fee preview for one party
- */
-function calculatePartyFeePreview(
-  distanceKm: number,
-  pricePerKm: number,
-  promoFlag: boolean,
-  promoDiscountPct: number | null
-): {
-  baseFee: number;
-  discount: number;
-  finalFee: number;
-} {
-  const baseFee = distanceKm * pricePerKm;
-  let discount = 0;
-
-  if (promoFlag && promoDiscountPct && promoDiscountPct > 0) {
-    discount = baseFee * (promoDiscountPct / 100);
-  }
-
-  return {
-    baseFee: Math.round(baseFee * 100) / 100,
-    discount: Math.round(discount * 100) / 100,
-    finalFee: Math.round((baseFee - discount) * 100) / 100,
-  };
-}
-
-/**
- * Calculate dual-party service fee preview (shipper + carrier)
- */
-function calculateDualPartyFeePreview(
-  distanceKm: number,
-  shipperPricePerKm: number,
-  shipperPromoFlag: boolean,
-  shipperPromoPct: number | null,
-  carrierPricePerKm: number,
-  carrierPromoFlag: boolean,
-  carrierPromoPct: number | null
-): {
-  shipper: { baseFee: number; discount: number; finalFee: number };
-  carrier: { baseFee: number; discount: number; finalFee: number };
-  totalPlatformFee: number;
-} {
-  const shipper = calculatePartyFeePreview(distanceKm, shipperPricePerKm, shipperPromoFlag, shipperPromoPct);
-  const carrier = calculatePartyFeePreview(distanceKm, carrierPricePerKm, carrierPromoFlag, carrierPromoPct);
-
-  return {
-    shipper,
-    carrier,
-    totalPlatformFee: Math.round((shipper.finalFee + carrier.finalFee) * 100) / 100,
-  };
-}
-
-/**
- * Legacy: Calculate service fee preview (kept for backward compatibility)
- */
-function calculateServiceFeePreview(
-  distanceKm: number,
-  pricePerKm: number,
-  promoFlag: boolean,
-  promoDiscountPct: number | null
-): {
-  baseFee: number;
-  discount: number;
-  finalFee: number;
-} {
-  return calculatePartyFeePreview(distanceKm, pricePerKm, promoFlag, promoDiscountPct);
-}
+// Fee preview functions imported from lib/serviceFeeCalculation.ts
+// See import at top of file
