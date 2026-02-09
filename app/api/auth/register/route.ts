@@ -118,20 +118,41 @@ export async function POST(request: NextRequest) {
     // Determine if we need to create an organization
     let organizationId = validatedData.organizationId;
 
-    // Create organization for shippers and carriers with company name
+    // CRITICAL FIX (ISSUE #1): Create organization AND wallet atomically in a transaction
+    // This ensures that every organization has a wallet from the start
     if ((validatedData.role === "SHIPPER" || validatedData.role === "CARRIER") && validatedData.companyName) {
       const orgType = getOrganizationType(validatedData.role, validatedData.carrierType);
 
-      const organization = await db.organization.create({
-        data: {
-          name: validatedData.companyName,
-          type: orgType as any,
-          contactEmail: validatedData.email, // Use user's email as contact
-          contactPhone: validatedData.phone || "N/A",
-          isVerified: false, // Pending verification
-          // For individual carriers joining an association
-          associationId: validatedData.carrierType === "CARRIER_INDIVIDUAL" ? validatedData.associationId || null : null,
-        },
+      // Determine wallet type based on organization type
+      const walletType = orgType === "SHIPPER" ? "SHIPPER_WALLET" : "CARRIER_WALLET";
+
+      const { organization } = await db.$transaction(async (tx) => {
+        // 1. Create organization
+        const organization = await tx.organization.create({
+          data: {
+            name: validatedData.companyName!,
+            type: orgType as any,
+            contactEmail: validatedData.email,
+            contactPhone: validatedData.phone || "N/A",
+            isVerified: false,
+            associationId: validatedData.carrierType === "CARRIER_INDIVIDUAL"
+              ? validatedData.associationId || null
+              : null,
+          },
+        });
+
+        // 2. Create wallet atomically with organization
+        await tx.financialAccount.create({
+          data: {
+            organizationId: organization.id,
+            accountType: walletType as any,
+            balance: 0,
+            currency: "ETB",
+            isActive: true,
+          },
+        });
+
+        return { organization };
       });
 
       organizationId = organization.id;

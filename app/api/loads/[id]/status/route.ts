@@ -165,6 +165,47 @@ export async function PATCH(
       'EXCEPTION': null, // Don't change trip status for exceptions
     };
 
+    // CRITICAL FIX (ISSUE #2): If transitioning to COMPLETED, deduct fees FIRST
+    // If fee deduction fails, block the status change
+    let serviceFeeResult: any = null;
+    if (newStatus === 'COMPLETED') {
+      // Check if fee already deducted (idempotency)
+      const existingFeeEvent = await db.loadEvent.findFirst({
+        where: { loadId, eventType: 'SERVICE_FEE_DEDUCTED' },
+      });
+
+      if (!existingFeeEvent) {
+        try {
+          serviceFeeResult = await deductServiceFee(loadId);
+
+          if (!serviceFeeResult.success) {
+            // Fee deduction failed - block completion
+            return NextResponse.json(
+              {
+                error: 'Cannot complete trip: fee deduction failed',
+                details: serviceFeeResult.error || 'Unknown fee deduction error',
+                feeDetails: {
+                  shipperFee: serviceFeeResult.shipperFee?.toFixed(2),
+                  carrierFee: serviceFeeResult.carrierFee?.toFixed(2),
+                },
+              },
+              { status: 400 }
+            );
+          }
+        } catch (feeError: any) {
+          // Exception during fee deduction - block completion
+          console.error('Service fee deduction exception:', feeError);
+          return NextResponse.json(
+            {
+              error: 'Cannot complete trip: fee deduction failed',
+              details: feeError.message || 'Fee deduction exception',
+            },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     // P0-001 FIX: Use transaction to ensure atomic Load + Trip status update
     const { updatedLoad, tripUpdated } = await db.$transaction(async (tx) => {
       // Update load status
@@ -240,51 +281,91 @@ export async function PATCH(
       return { updatedLoad, tripUpdated };
     });
 
-    // Log the status change
-    // HIGH FIX #3: Service Fee Implementation with idempotency check
-    // NOTE: Service fee operations are intentionally outside the main transaction because:
-    // 1. They may call external payment services (cannot be rolled back)
-    // 2. Status change should succeed even if fee processing fails
-    // 3. deductServiceFee/refundServiceFee have internal idempotency checks
-    let serviceFeeResult = null;
-    if (newStatus === 'COMPLETED') {
-      // Deduct service fees from both shipper and carrier on completion
-      try {
-        // Check if fee already deducted (idempotency)
-        const existingFeeEvent = await db.loadEvent.findFirst({
-          where: { loadId, eventType: 'SERVICE_FEE_DEDUCTED' },
+    // Log the service fee deduction event (fee was already deducted before transaction)
+    // ISSUE #2 FIX: Fee deduction now happens BEFORE status update and blocks on failure
+    if (newStatus === 'COMPLETED' && serviceFeeResult?.success && serviceFeeResult.transactionId) {
+      // Check if event already logged (idempotency)
+      const existingFeeEvent = await db.loadEvent.findFirst({
+        where: { loadId, eventType: 'SERVICE_FEE_DEDUCTED' },
+      });
+
+      if (!existingFeeEvent) {
+        await db.loadEvent.create({
+          data: {
+            loadId,
+            eventType: 'SERVICE_FEE_DEDUCTED',
+            description: `Service fees deducted - Shipper: ${serviceFeeResult.shipperFee.toFixed(2)} ETB, Carrier: ${serviceFeeResult.carrierFee.toFixed(2)} ETB, Total: ${serviceFeeResult.totalPlatformFee.toFixed(2)} ETB`,
+            userId: session.userId,
+            metadata: {
+              shipperFee: serviceFeeResult.shipperFee.toFixed(2),
+              carrierFee: serviceFeeResult.carrierFee.toFixed(2),
+              totalPlatformFee: serviceFeeResult.totalPlatformFee.toFixed(2),
+              transactionId: serviceFeeResult.transactionId,
+              details: serviceFeeResult.details,
+            },
+          },
         });
-
-        if (!existingFeeEvent) {
-          serviceFeeResult = await deductServiceFee(loadId);
-
-          if (serviceFeeResult.success && serviceFeeResult.transactionId) {
-            await db.loadEvent.create({
-              data: {
-                loadId,
-                eventType: 'SERVICE_FEE_DEDUCTED',
-                description: `Service fees deducted - Shipper: ${serviceFeeResult.shipperFee.toFixed(2)} ETB, Carrier: ${serviceFeeResult.carrierFee.toFixed(2)} ETB, Total: ${serviceFeeResult.totalPlatformFee.toFixed(2)} ETB`,
-                userId: session.userId,
-                metadata: {
-                  shipperFee: serviceFeeResult.shipperFee.toFixed(2),
-                  carrierFee: serviceFeeResult.carrierFee.toFixed(2),
-                  totalPlatformFee: serviceFeeResult.totalPlatformFee.toFixed(2),
-                  transactionId: serviceFeeResult.transactionId,
-                  details: serviceFeeResult.details,
-                },
-              },
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Service fee deduction error:', error);
       }
     }
+
+    // CRITICAL FIX (ISSUE #3): Auto-reset truck availability after trip completion or cancellation
+    // When trip ends (COMPLETED or CANCELLED), make the truck available again
+    if ((newStatus === 'COMPLETED' || newStatus === 'CANCELLED') && load.trip?.id) {
+      try {
+        // Get the truck that was assigned to this trip
+        const trip = await db.trip.findUnique({
+          where: { id: load.trip.id },
+          select: { truckId: true },
+        });
+
+        if (trip?.truckId) {
+          // Reset truck availability
+          await db.truck.update({
+            where: { id: trip.truckId },
+            data: {
+              isAvailable: true,
+              updatedAt: new Date(),
+            },
+          });
+
+          // Also update any MATCHED postings for this truck to EXPIRED/completed
+          await db.truckPosting.updateMany({
+            where: {
+              truckId: trip.truckId,
+              status: 'MATCHED',
+            },
+            data: {
+              status: 'EXPIRED',
+              updatedAt: new Date(),
+            },
+          });
+
+          // Log the truck availability reset
+          await db.loadEvent.create({
+            data: {
+              loadId,
+              eventType: 'TRUCK_AVAILABILITY_RESET',
+              description: `Truck availability reset to available after trip ${newStatus.toLowerCase()}`,
+              userId: session.userId,
+              metadata: {
+                truckId: trip.truckId,
+                tripId: load.trip.id,
+                reason: newStatus === 'COMPLETED' ? 'trip_completed' : 'trip_cancelled',
+              },
+            },
+          });
+        }
+      } catch (truckError) {
+        // Non-blocking: Log error but don't fail the status update
+        console.error('Failed to reset truck availability:', truckError);
+      }
+    }
+
     // SERVICE FEE NOTE: No refund needed on CANCELLED.
     // Fees are only deducted on COMPLETED, so if we reach CANCELLED,
     // no money was ever taken from wallets. The current flow is:
     // - Trip acceptance: Validate wallet balances (no deduction)
-    // - Trip completion: Deduct fees from both wallets
+    // - Trip completion: Deduct fees from both wallets (blocks if fails)
     // - Trip cancellation: No action needed (nothing was taken)
 
     // CRITICAL FIX: Invalidate cache after status change
