@@ -1,8 +1,12 @@
 /**
  * Map Vehicles API
  *
- * Get vehicles/trucks for map visualization with role-based filtering
- * MAP + GPS Implementation
+ * Get vehicles/trucks for map visualization with role-based filtering.
+ *
+ * USES SHARED TYPE CONTRACT: lib/types/vehicle.ts
+ * - VehicleMapData: Shape of each vehicle
+ * - VehicleMapStats: Shape of stats object
+ * - VehicleMapResponse: Complete response shape
  *
  * GET /api/map/vehicles - Get vehicles for map display
  *
@@ -16,6 +20,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import {
+  VehicleMapData,
+  VehicleMapStats,
+  VehicleMapResponse,
+  GpsDisplayStatus,
+  TruckAvailabilityStatus,
+  mapGpsStatus,
+  mapTruckStatus,
+} from '@/lib/types/vehicle';
+
+/** Threshold for considering GPS data stale (15 minutes) */
+const GPS_OFFLINE_THRESHOLD_MS = 15 * 60 * 1000;
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,11 +40,10 @@ export async function GET(request: NextRequest) {
 
     const status = searchParams.get('status');
     const truckType = searchParams.get('truckType');
-    const includeAll = searchParams.get('includeAll') === 'true';
     const carrierId = searchParams.get('carrierId');
 
     // Build where clause based on role
-    const where: any = {};
+    const where: Record<string, unknown> = {};
 
     const role = session.role;
 
@@ -40,13 +55,23 @@ export async function GET(request: NextRequest) {
       });
 
       if (!user?.organizationId) {
-        return NextResponse.json({ vehicles: [] });
+        const emptyResponse: VehicleMapResponse = {
+          vehicles: [],
+          total: 0,
+          stats: { total: 0, active: 0, offline: 0, noDevice: 0, available: 0, inTransit: 0 },
+        };
+        return NextResponse.json(emptyResponse);
       }
 
       where.carrierId = user.organizationId;
     } else if (role === 'SHIPPER') {
       // Shippers cannot see vehicles directly (only through trips)
-      return NextResponse.json({ vehicles: [] });
+      const emptyResponse: VehicleMapResponse = {
+        vehicles: [],
+        total: 0,
+        stats: { total: 0, active: 0, offline: 0, noDevice: 0, available: 0, inTransit: 0 },
+      };
+      return NextResponse.json(emptyResponse);
     } else if (role === 'DISPATCHER' || role === 'ADMIN' || role === 'SUPER_ADMIN') {
       // Admin/Dispatcher can see all vehicles
       if (carrierId) {
@@ -58,7 +83,7 @@ export async function GET(request: NextRequest) {
 
     // Status filter
     if (status) {
-      where.status = status;
+      where.isAvailable = status === 'AVAILABLE';
     }
 
     // Truck type filter
@@ -66,10 +91,7 @@ export async function GET(request: NextRequest) {
       where.truckType = truckType;
     }
 
-    // Only available trucks by default (unless includeAll)
-    // Note: We don't filter by isAvailable to show all trucks on map
-
-    // Fetch trucks
+    // Fetch trucks from database
     const trucks = await db.truck.findMany({
       where,
       select: {
@@ -96,61 +118,68 @@ export async function GET(request: NextRequest) {
       take: 500, // Limit for performance
     });
 
-    // Determine GPS status for each truck
-    // Valid GpsDeviceStatus: ACTIVE, INACTIVE, SIGNAL_LOST, MAINTENANCE
     const now = new Date();
-    const OFFLINE_THRESHOLD_MS = 15 * 60 * 1000; // 15 minutes
 
-    const vehicles = trucks.map((truck) => {
-      // Map to valid GpsDeviceStatus enum values
-      let computedGpsStatus: 'ACTIVE' | 'INACTIVE' | 'SIGNAL_LOST' = 'INACTIVE';
+    // Transform database records to VehicleMapData using shared type contract
+    const vehicles: VehicleMapData[] = trucks.map((truck) => {
+      // Determine if truck has GPS location data
+      const hasLocation = !!(truck.currentLocationLat && truck.currentLocationLon);
 
-      if (truck.currentLocationLat && truck.currentLocationLon) {
-        if (truck.locationUpdatedAt) {
-          const lastUpdate = new Date(truck.locationUpdatedAt);
-          const timeDiff = now.getTime() - lastUpdate.getTime();
-          // ACTIVE = recent position, SIGNAL_LOST = stale position
-          computedGpsStatus = timeDiff < OFFLINE_THRESHOLD_MS ? 'ACTIVE' : 'SIGNAL_LOST';
-        } else {
-          computedGpsStatus = 'SIGNAL_LOST';
-        }
+      // Determine if GPS data is recent (within threshold)
+      let isRecent = false;
+      if (hasLocation && truck.locationUpdatedAt) {
+        const lastUpdate = new Date(truck.locationUpdatedAt);
+        const timeDiff = now.getTime() - lastUpdate.getTime();
+        isRecent = timeDiff < GPS_OFFLINE_THRESHOLD_MS;
       }
 
-      return {
+      // Use helper functions from shared types
+      const gpsStatus: GpsDisplayStatus = mapGpsStatus(truck.gpsStatus, hasLocation, isRecent);
+      const truckStatus: TruckAvailabilityStatus = mapTruckStatus(truck.isAvailable);
+
+      // Build VehicleMapData object matching the type contract exactly
+      const vehicleData: VehicleMapData = {
         id: truck.id,
         plateNumber: truck.licensePlate,
         truckType: truck.truckType,
         capacity: Number(truck.capacity),
-        // truckAvailability is a display field, not LoadStatus
-        truckAvailability: truck.isAvailable ? 'available' : 'busy',
-        isActive: truck.isAvailable,
-        gpsStatus: computedGpsStatus,
-        currentLocation: truck.currentLocationLat && truck.currentLocationLon ? {
-          lat: Number(truck.currentLocationLat),
-          lng: Number(truck.currentLocationLon),
-          updatedAt: truck.locationUpdatedAt?.toISOString(),
-        } : null,
+        status: truckStatus,
+        isAvailable: truck.isAvailable,
+        gpsStatus: gpsStatus,
+        currentLocation: hasLocation
+          ? {
+              lat: Number(truck.currentLocationLat),
+              lng: Number(truck.currentLocationLon),
+              updatedAt: truck.locationUpdatedAt?.toISOString(),
+            }
+          : null,
         carrier: {
-          id: truck.carrier?.id,
-          name: truck.carrier?.name,
+          id: truck.carrier?.id ?? '',
+          name: truck.carrier?.name ?? 'Unknown',
         },
       };
+
+      return vehicleData;
     });
 
-    return NextResponse.json({
+    // Calculate stats matching VehicleMapStats type contract exactly
+    const stats: VehicleMapStats = {
+      total: vehicles.length,
+      active: vehicles.filter((v) => v.gpsStatus === 'ACTIVE').length,
+      offline: vehicles.filter((v) => v.gpsStatus === 'OFFLINE').length,
+      noDevice: vehicles.filter((v) => v.gpsStatus === 'NO_DEVICE').length,
+      available: vehicles.filter((v) => v.status === 'AVAILABLE').length,
+      inTransit: vehicles.filter((v) => v.status === 'IN_TRANSIT').length,
+    };
+
+    // Build response matching VehicleMapResponse type contract exactly
+    const response: VehicleMapResponse = {
       vehicles,
       total: vehicles.length,
-      stats: {
-        total: vehicles.length,
-        // GPS status using valid GpsDeviceStatus enum values
-        gpsActive: vehicles.filter((v) => v.gpsStatus === 'ACTIVE').length,
-        gpsSignalLost: vehicles.filter((v) => v.gpsStatus === 'SIGNAL_LOST').length,
-        gpsInactive: vehicles.filter((v) => v.gpsStatus === 'INACTIVE').length,
-        // Availability status
-        available: vehicles.filter((v) => v.truckAvailability === 'available').length,
-        busy: vehicles.filter((v) => v.truckAvailability === 'busy').length,
-      },
-    });
+      stats,
+    };
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Map vehicles API error:', error);
     return NextResponse.json(
