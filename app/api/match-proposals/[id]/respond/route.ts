@@ -17,7 +17,7 @@ import { canApproveRequests } from '@/lib/dispatcherPermissions';
 import { RULE_CARRIER_FINAL_AUTHORITY } from '@/lib/foundation-rules';
 import { UserRole } from '@prisma/client';
 import { enableTrackingForLoad } from '@/lib/gpsTracking';
-import { reserveServiceFee } from '@/lib/serviceFeeManagement'; // Service Fee Implementation
+import { validateWalletBalancesForTrip } from '@/lib/serviceFeeManagement'; // Service Fee Implementation
 // P0-007 FIX: Import CacheInvalidation for post-acceptance cache clearing
 import { CacheInvalidation } from '@/lib/cache';
 import crypto from 'crypto';
@@ -141,6 +141,28 @@ export async function POST(
     const data = validationResult.data;
 
     if (data.action === 'ACCEPT') {
+      // SERVICE FEE: Validate wallet balances before acceptance
+      // This is validation only - fees are deducted on trip completion
+      const walletValidation = await validateWalletBalancesForTrip(
+        proposal.loadId,
+        proposal.truck.carrierId
+      );
+      if (!walletValidation.valid) {
+        return NextResponse.json(
+          {
+            error: 'Insufficient wallet balance for trip service fees',
+            details: walletValidation.errors,
+            fees: {
+              shipperFee: walletValidation.shipperFee,
+              carrierFee: walletValidation.carrierFee,
+              shipperBalance: walletValidation.shipperBalance,
+              carrierBalance: walletValidation.carrierBalance,
+            },
+          },
+          { status: 400 }
+        );
+      }
+
       // P0-007 FIX: All checks and operations now inside atomic transaction
       // with fresh re-fetch to prevent race conditions
       let result: { proposal: any; load: any; trip: any };
@@ -319,28 +341,9 @@ export async function POST(
       await CacheInvalidation.load(proposal.loadId, proposal.load.shipperId);
       await CacheInvalidation.truck(proposal.truckId, proposal.truck.carrierId);
 
-      // Non-critical: Service fee reservation (outside transaction, fire-and-forget)
-      let serviceFeeResult = null;
-      try {
-        serviceFeeResult = await reserveServiceFee(proposal.loadId);
-
-        if (serviceFeeResult.success && serviceFeeResult.transactionId) {
-          await db.loadEvent.create({
-            data: {
-              loadId: proposal.loadId,
-              eventType: 'SERVICE_FEE_RESERVED',
-              description: `Service fee reserved: ${serviceFeeResult.serviceFee.toFixed(2)} ETB`,
-              userId: session.userId,
-              metadata: {
-                serviceFee: serviceFeeResult.serviceFee.toFixed(2),
-                transactionId: serviceFeeResult.transactionId,
-              },
-            },
-          });
-        }
-      } catch (error) {
-        console.error('Service fee reserve error:', error);
-      }
+      // SERVICE FEE NOTE: Wallet balances were validated before acceptance.
+      // Actual fee deduction happens on trip completion (deductServiceFee).
+      // No reservation/hold is needed - validation ensures balance is sufficient.
 
       // Non-critical: Enable GPS tracking (outside transaction, fire-and-forget)
       let trackingUrl: string | null = result.trip?.trackingUrl || null;
@@ -358,13 +361,13 @@ export async function POST(
         load: result.load,
         trip: result.trip,
         trackingUrl,
-        serviceFee: serviceFeeResult
-          ? {
-              success: serviceFeeResult.success,
-              amount: serviceFeeResult.serviceFee.toFixed(2),
-              error: serviceFeeResult.error,
-            }
-          : null,
+        // Wallet validation passed - fees will be deducted on trip completion
+        walletValidation: {
+          validated: true,
+          shipperFee: walletValidation.shipperFee.toFixed(2),
+          carrierFee: walletValidation.carrierFee.toFixed(2),
+          note: 'Fees will be deducted on trip completion',
+        },
         message: 'Proposal accepted. Load has been assigned to your truck.',
         rule: RULE_CARRIER_FINAL_AUTHORITY.id,
       });

@@ -7,7 +7,7 @@ import { canAssignLoads } from '@/lib/dispatcherPermissions';
 import { validateStateTransition, LoadStatus } from '@/lib/loadStateMachine';
 import { checkAssignmentConflicts } from '@/lib/assignmentConflictDetection'; // Sprint 4
 import { RULE_CARRIER_FINAL_AUTHORITY } from '@/lib/foundation-rules'; // Phase 2
-import { reserveServiceFee } from '@/lib/serviceFeeManagement'; // Service Fee Implementation
+import { validateWalletBalancesForTrip } from '@/lib/serviceFeeManagement'; // Service Fee Implementation
 import { createTripForLoad } from '@/lib/tripManagement'; // Trip Management
 // P0-005 FIX: Import CacheInvalidation for post-assignment cache clearing
 import { CacheInvalidation } from '@/lib/cache';
@@ -158,6 +158,25 @@ export async function POST(
     // Log warnings if any (but don't block assignment)
     if (conflictCheck.warnings.length > 0) {
       console.warn(`Assignment warnings for load ${loadId}:`, conflictCheck.warnings);
+    }
+
+    // SERVICE FEE: Validate wallet balances before assignment
+    // This is validation only - fees are deducted on trip completion
+    const walletValidation = await validateWalletBalancesForTrip(loadId, truck.carrierId);
+    if (!walletValidation.valid) {
+      return NextResponse.json(
+        {
+          error: 'Insufficient wallet balance for trip service fees',
+          details: walletValidation.errors,
+          fees: {
+            shipperFee: walletValidation.shipperFee,
+            carrierFee: walletValidation.carrierFee,
+            shipperBalance: walletValidation.shipperBalance,
+            carrierBalance: walletValidation.carrierBalance,
+          },
+        },
+        { status: 400 }
+      );
     }
 
     // P0-005 & P0-006 FIX: Wrap all critical operations in a single transaction
@@ -322,30 +341,9 @@ export async function POST(
     await CacheInvalidation.load(loadId, load.shipperId);
     await CacheInvalidation.truck(truckId, truck.carrierId);
 
-    // Service fee reservation with idempotency check
-    let serviceFeeResult = null;
-    try {
-      const existingFeeEvent = await db.loadEvent.findFirst({
-        where: { loadId, eventType: 'SERVICE_FEE_RESERVED' },
-      });
-
-      if (!existingFeeEvent) {
-        serviceFeeResult = await reserveServiceFee(loadId);
-        if (serviceFeeResult.success && serviceFeeResult.transactionId) {
-          await db.loadEvent.create({
-            data: {
-              loadId,
-              eventType: 'SERVICE_FEE_RESERVED',
-              description: `Service fee reserved: ${serviceFeeResult.serviceFee.toFixed(2)} ETB`,
-              userId: session.userId,
-              metadata: { serviceFee: serviceFeeResult.serviceFee.toFixed(2), transactionId: serviceFeeResult.transactionId },
-            },
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Service fee reserve error:', error);
-    }
+    // SERVICE FEE NOTE: Wallet balances were validated before assignment.
+    // Actual fee deduction happens on trip completion (deductServiceFee).
+    // No reservation/hold is needed - validation ensures balance is sufficient.
 
     // Non-critical: Enable GPS tracking (outside transaction, fire-and-forget)
     let trackingUrl: string | null = result.trackingUrl;
@@ -370,13 +368,13 @@ export async function POST(
       load: result.load,
       trip: result.trip,
       trackingUrl,
-      serviceFee: serviceFeeResult
-        ? {
-            success: serviceFeeResult.success,
-            amount: serviceFeeResult.serviceFee.toFixed(2),
-            error: serviceFeeResult.error,
-          }
-        : null,
+      // Wallet validation passed - fees will be deducted on trip completion
+      walletValidation: {
+        validated: true,
+        shipperFee: walletValidation.shipperFee.toFixed(2),
+        carrierFee: walletValidation.carrierFee.toFixed(2),
+        note: 'Fees will be deducted on trip completion',
+      },
       message: trackingUrl
         ? 'Load assigned successfully. GPS tracking enabled.'
         : 'Load assigned successfully. GPS tracking not available for this truck.',

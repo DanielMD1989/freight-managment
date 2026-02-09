@@ -10,7 +10,7 @@ import { getAccessRoles } from '@/lib/rbac';
 import { z } from 'zod';
 import { validateStateTransition, LoadStatus, getStatusDescription } from '@/lib/loadStateMachine';
 import { TripStatus } from '@prisma/client'; // P0-001 FIX: Import TripStatus enum
-import { deductServiceFee, refundServiceFee } from '@/lib/serviceFeeManagement'; // Service Fee Implementation
+import { deductServiceFee } from '@/lib/serviceFeeManagement'; // Service Fee Implementation
 // CRITICAL FIX: Import CacheInvalidation for status changes
 import { CacheInvalidation } from '@/lib/cache';
 // CRITICAL FIX: Import notification helper for status change notifications
@@ -279,36 +279,13 @@ export async function PATCH(
       } catch (error) {
         console.error('Service fee deduction error:', error);
       }
-    } else if (newStatus === 'CANCELLED') {
-      // Refund service fee to shipper on cancellation
-      try {
-        // Check if fee already refunded (idempotency)
-        const existingRefundEvent = await db.loadEvent.findFirst({
-          where: { loadId, eventType: 'SERVICE_FEE_REFUNDED' },
-        });
-
-        if (!existingRefundEvent) {
-          serviceFeeResult = await refundServiceFee(loadId);
-
-          if (serviceFeeResult.success && serviceFeeResult.transactionId) {
-            await db.loadEvent.create({
-              data: {
-                loadId,
-                eventType: 'SERVICE_FEE_REFUNDED',
-                description: `Service fee refunded: ${serviceFeeResult.serviceFee.toFixed(2)} ETB`,
-                userId: session.userId,
-                metadata: {
-                  serviceFee: serviceFeeResult.serviceFee.toFixed(2),
-                  transactionId: serviceFeeResult.transactionId,
-                },
-              },
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Service fee refund error:', error);
-      }
     }
+    // SERVICE FEE NOTE: No refund needed on CANCELLED.
+    // Fees are only deducted on COMPLETED, so if we reach CANCELLED,
+    // no money was ever taken from wallets. The current flow is:
+    // - Trip acceptance: Validate wallet balances (no deduction)
+    // - Trip completion: Deduct fees from both wallets
+    // - Trip cancellation: No action needed (nothing was taken)
 
     // CRITICAL FIX: Invalidate cache after status change
     await CacheInvalidation.load(loadId, load.shipperId);

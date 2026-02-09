@@ -14,6 +14,24 @@
  * 5. Deduct fees from respective wallets
  * 6. Credit total to platform revenue
  * 7. Store fees on Load record
+ *
+ * LEGACY FIELD POLICY (2026-02-07):
+ * ----------------------------------
+ * AUTHORITATIVE (use these for new code):
+ * - shipperServiceFee: Shipper's service fee amount
+ * - carrierServiceFee: Carrier's service fee amount
+ * - shipperFeeStatus: Shipper fee status enum
+ * - carrierFeeStatus: Carrier fee status enum
+ * - estimatedTripKm: Map-estimated distance
+ * - actualTripKm: GPS-computed actual distance
+ *
+ * LEGACY (READ-ONLY for backward compatibility):
+ * - serviceFeeEtb: Legacy shipper fee (synced from shipperServiceFee)
+ * - serviceFeeStatus: Legacy status (synced from shipperFeeStatus)
+ * - tripKm: Legacy distance (synced from estimatedTripKm)
+ *
+ * Write operations sync legacy fields for backward compatibility.
+ * New code MUST use authoritative fields.
  */
 
 import { db } from './db';
@@ -349,90 +367,136 @@ export async function deductServiceFee(loadId: string): Promise<ServiceFeeDeduct
     });
   }
 
-  // Create journal entry if there are fees to process
+  // ATOMICITY FIX (2026-02-08):
+  // All financial operations MUST be in a single transaction.
+  // This ensures journal entry, balance updates, and load updates
+  // either ALL succeed or ALL fail together.
+  //
+  // Previous issue: Journal entry created first, then balance updates
+  // in Promise.all. If one balance update failed, state was inconsistent.
+
   let transactionId: string | undefined;
+
   if (journalLines.length > 0 && totalDeducted > 0) {
-    const journalEntry = await db.journalEntry.create({
-      data: {
-        transactionType: 'SERVICE_FEE_DEDUCT',
-        description: `Service fees for load ${loadId}: Shipper ${load.shipper.name} (${shipperFeeCalc.finalFee.toFixed(2)} ETB), Carrier ${load.assignedTruck?.carrier?.name || 'N/A'} (${carrierFeeCalc.finalFee.toFixed(2)} ETB)`,
-        reference: loadId,
-        loadId,
-        metadata: {
-          shipperFee: shipperFeeCalc.finalFee.toFixed(2),
-          carrierFee: carrierFeeCalc.finalFee.toFixed(2),
-          totalPlatformFee: totalPlatformFee.toFixed(2),
-          corridorId,
-          distanceKm,
-          distanceSource, // Track which distance field was used
-          corridorDistanceKm: Number(corridor.distanceKm),
-          shipperPricePerKm,
-          carrierPricePerKm,
-        },
-        lines: {
-          create: journalLines.map((line) => ({
-            amount: line.amount,
-            isDebit: line.isDebit,
-            accountId: line.accountId,
-          })),
-        },
-      },
-      select: { id: true },
-    });
-    transactionId = journalEntry.id;
+    // Verify balances one more time inside transaction (double-check)
+    // This prevents race conditions where balance changed between check and deduct
+    const result = await db.$transaction(async (tx) => {
+      // Re-verify shipper balance inside transaction
+      if (shipperDeducted && shipperWallet && shipperFeeCalc.finalFee > 0) {
+        const currentShipperWallet = await tx.financialAccount.findUnique({
+          where: { id: shipperWallet.id },
+          select: { balance: true },
+        });
+        if (!currentShipperWallet ||
+            new Decimal(currentShipperWallet.balance).lessThan(shipperFeeCalc.finalFee)) {
+          throw new Error(`Insufficient shipper balance for fee deduction`);
+        }
+      }
 
-    // Update wallet balances
-    const balanceUpdates = [];
+      // Re-verify carrier balance inside transaction
+      if (carrierDeducted && carrierWallet && carrierFeeCalc.finalFee > 0) {
+        const currentCarrierWallet = await tx.financialAccount.findUnique({
+          where: { id: carrierWallet.id },
+          select: { balance: true },
+        });
+        if (!currentCarrierWallet ||
+            new Decimal(currentCarrierWallet.balance).lessThan(carrierFeeCalc.finalFee)) {
+          throw new Error(`Insufficient carrier balance for fee deduction`);
+        }
+      }
 
-    if (shipperDeducted && shipperWallet && shipperFeeCalc.finalFee > 0) {
-      balanceUpdates.push(
-        db.financialAccount.update({
+      // 1. Create journal entry with all lines
+      const journalEntry = await tx.journalEntry.create({
+        data: {
+          transactionType: 'SERVICE_FEE_DEDUCT',
+          description: `Service fees for load ${loadId}: Shipper ${load.shipper.name} (${shipperFeeCalc.finalFee.toFixed(2)} ETB), Carrier ${load.assignedTruck?.carrier?.name || 'N/A'} (${carrierFeeCalc.finalFee.toFixed(2)} ETB)`,
+          reference: loadId,
+          loadId,
+          metadata: {
+            shipperFee: shipperFeeCalc.finalFee.toFixed(2),
+            carrierFee: carrierFeeCalc.finalFee.toFixed(2),
+            totalPlatformFee: totalPlatformFee.toFixed(2),
+            corridorId,
+            distanceKm,
+            distanceSource,
+            corridorDistanceKm: Number(corridor.distanceKm),
+            shipperPricePerKm,
+            carrierPricePerKm,
+          },
+          lines: {
+            create: journalLines.map((line) => ({
+              amount: line.amount,
+              isDebit: line.isDebit,
+              accountId: line.accountId,
+            })),
+          },
+        },
+        select: { id: true },
+      });
+
+      // 2. Update shipper wallet balance (atomic with journal)
+      if (shipperDeducted && shipperWallet && shipperFeeCalc.finalFee > 0) {
+        await tx.financialAccount.update({
           where: { id: shipperWallet.id },
           data: { balance: { decrement: shipperFeeCalc.finalFee } },
-        })
-      );
-    }
+        });
+      }
 
-    if (carrierDeducted && carrierWallet && carrierFeeCalc.finalFee > 0) {
-      balanceUpdates.push(
-        db.financialAccount.update({
+      // 3. Update carrier wallet balance (atomic with journal)
+      if (carrierDeducted && carrierWallet && carrierFeeCalc.finalFee > 0) {
+        await tx.financialAccount.update({
           where: { id: carrierWallet.id },
           data: { balance: { decrement: carrierFeeCalc.finalFee } },
-        })
-      );
-    }
+        });
+      }
 
-    if (totalDeducted > 0) {
-      balanceUpdates.push(
-        db.financialAccount.update({
+      // 4. Credit platform revenue (atomic with journal)
+      if (totalDeducted > 0) {
+        await tx.financialAccount.update({
           where: { id: platformAccountId },
           data: { balance: { increment: totalDeducted } },
-        })
-      );
-    }
+        });
+      }
 
-    await Promise.all(balanceUpdates);
+      // 5. Update load with fee information (atomic with journal)
+      await tx.load.update({
+        where: { id: loadId },
+        data: {
+          corridorId,
+          // Shipper fee
+          shipperServiceFee: shipperFeeCalc.finalFee,
+          shipperFeeStatus: shipperDeducted ? 'DEDUCTED' : 'PENDING',
+          shipperFeeDeductedAt: shipperDeducted ? new Date() : null,
+          // Carrier fee
+          carrierServiceFee: carrierFeeCalc.finalFee,
+          carrierFeeStatus: carrierDeducted ? 'DEDUCTED' : 'PENDING',
+          carrierFeeDeductedAt: carrierDeducted ? new Date() : null,
+          // Legacy fields
+          serviceFeeEtb: totalPlatformFee,
+          serviceFeeStatus: shipperDeducted && carrierDeducted ? 'DEDUCTED' : 'PENDING',
+          serviceFeeDeductedAt: shipperDeducted && carrierDeducted ? new Date() : null,
+        },
+      });
+
+      return journalEntry.id;
+    });
+
+    transactionId = result;
+  } else {
+    // No fees to process - just update load with calculated fees
+    await db.load.update({
+      where: { id: loadId },
+      data: {
+        corridorId,
+        shipperServiceFee: shipperFeeCalc.finalFee,
+        shipperFeeStatus: shipperDeducted ? 'DEDUCTED' : 'PENDING',
+        carrierServiceFee: carrierFeeCalc.finalFee,
+        carrierFeeStatus: carrierDeducted ? 'DEDUCTED' : 'PENDING',
+        serviceFeeEtb: totalPlatformFee,
+        serviceFeeStatus: shipperDeducted && carrierDeducted ? 'DEDUCTED' : 'PENDING',
+      },
+    });
   }
-
-  // Update load with fee information
-  await db.load.update({
-    where: { id: loadId },
-    data: {
-      corridorId,
-      // Shipper fee
-      shipperServiceFee: shipperFeeCalc.finalFee,
-      shipperFeeStatus: shipperDeducted ? 'DEDUCTED' : 'PENDING',
-      shipperFeeDeductedAt: shipperDeducted ? new Date() : null,
-      // Carrier fee
-      carrierServiceFee: carrierFeeCalc.finalFee,
-      carrierFeeStatus: carrierDeducted ? 'DEDUCTED' : 'PENDING',
-      carrierFeeDeductedAt: carrierDeducted ? new Date() : null,
-      // Legacy fields
-      serviceFeeEtb: totalPlatformFee,
-      serviceFeeStatus: shipperDeducted && carrierDeducted ? 'DEDUCTED' : 'PENDING',
-      serviceFeeDeductedAt: shipperDeducted && carrierDeducted ? new Date() : null,
-    },
-  });
 
   return {
     success: true,
@@ -543,83 +607,261 @@ export async function refundServiceFee(loadId: string): Promise<ServiceFeeRefund
     };
   }
 
-  // Create journal entry for refund
-  const journalEntry = await db.journalEntry.create({
-    data: {
-      transactionType: 'SERVICE_FEE_REFUND',
-      description: `Service fee refund for cancelled load ${loadId} - ${load.shipper.name}`,
-      reference: loadId,
-      loadId,
-      metadata: {
-        serviceFee: feeToRefund.toFixed(2),
-        reason: 'Load cancelled',
-      },
-      lines: {
-        create: [
-          // Debit platform revenue
-          {
-            amount: feeToRefund,
-            isDebit: true,
-            accountId: platformAccount.id,
-          },
-          // Credit shipper wallet
-          {
-            amount: feeToRefund,
-            isDebit: false,
-            accountId: shipperWallet.id,
-          },
-        ],
-      },
-    },
-    select: { id: true },
-  });
+  // ATOMICITY FIX (2026-02-08):
+  // All refund operations MUST be in a single transaction.
+  // This ensures journal entry, balance updates, and load updates
+  // either ALL succeed or ALL fail together.
 
-  // Update balances
-  await Promise.all([
-    db.financialAccount.update({
+  const { journalEntryId, newShipperBalance } = await db.$transaction(async (tx) => {
+    // Verify platform has sufficient balance for refund
+    const currentPlatformAccount = await tx.financialAccount.findUnique({
+      where: { id: platformAccount.id },
+      select: { balance: true },
+    });
+    if (!currentPlatformAccount ||
+        new Decimal(currentPlatformAccount.balance).lessThan(feeToRefund)) {
+      throw new Error('Insufficient platform balance for refund');
+    }
+
+    // 1. Create journal entry for refund
+    const journalEntry = await tx.journalEntry.create({
+      data: {
+        transactionType: 'SERVICE_FEE_REFUND',
+        description: `Service fee refund for cancelled load ${loadId} - ${load.shipper.name}`,
+        reference: loadId,
+        loadId,
+        metadata: {
+          serviceFee: feeToRefund.toFixed(2),
+          reason: 'Load cancelled',
+        },
+        lines: {
+          create: [
+            // Debit platform revenue
+            {
+              amount: feeToRefund,
+              isDebit: true,
+              accountId: platformAccount.id,
+            },
+            // Credit shipper wallet
+            {
+              amount: feeToRefund,
+              isDebit: false,
+              accountId: shipperWallet.id,
+            },
+          ],
+        },
+      },
+      select: { id: true },
+    });
+
+    // 2. Debit platform revenue (atomic with journal)
+    await tx.financialAccount.update({
       where: { id: platformAccount.id },
       data: { balance: { decrement: feeToRefund.toNumber() } },
-    }),
-    db.financialAccount.update({
+    });
+
+    // 3. Credit shipper wallet (atomic with journal)
+    const updatedShipperWallet = await tx.financialAccount.update({
       where: { id: shipperWallet.id },
       data: { balance: { increment: feeToRefund.toNumber() } },
-    }),
-  ]);
+      select: { balance: true },
+    });
 
-  // Update load
-  await db.load.update({
-    where: { id: loadId },
-    data: {
-      shipperFeeStatus: 'REFUNDED',
-      serviceFeeStatus: 'REFUNDED',
-      serviceFeeRefundedAt: new Date(),
-    },
+    // 4. Update load (atomic with journal)
+    await tx.load.update({
+      where: { id: loadId },
+      data: {
+        shipperFeeStatus: 'REFUNDED',
+        serviceFeeStatus: 'REFUNDED',
+        serviceFeeRefundedAt: new Date(),
+      },
+    });
+
+    return {
+      journalEntryId: journalEntry.id,
+      newShipperBalance: new Decimal(updatedShipperWallet.balance),
+    };
   });
-
-  const newBalance = new Decimal(shipperWallet.balance).add(feeToRefund);
 
   return {
     success: true,
     serviceFee: feeToRefund,
-    shipperBalance: newBalance,
-    transactionId: journalEntry.id,
+    shipperBalance: newShipperBalance,
+    transactionId: journalEntryId,
   };
 }
 
 /**
- * Reserve service fee from shipper wallet when load is assigned
- * (Legacy function - kept for backward compatibility but no longer used in new flow)
+ * Validate wallet balances before trip acceptance
  *
- * @deprecated New flow deducts fees directly on completion
+ * CURRENT FLOW (2026-02-08):
+ * - Trip acceptance: VALIDATE both wallet balances (no deduction)
+ * - Trip completion: DEDUCT fees from both wallets
+ * - Trip cancellation: NO refund needed (nothing was taken)
+ *
+ * This function checks that both shipper and carrier have sufficient
+ * balance to cover their respective service fees. This is validation only,
+ * no money is moved.
+ *
+ * @param loadId - Load ID to validate
+ * @param carrierId - Carrier organization ID accepting the load
+ * @returns Validation result with fee amounts and any errors
+ */
+export async function validateWalletBalancesForTrip(
+  loadId: string,
+  carrierId: string
+): Promise<{
+  valid: boolean;
+  shipperFee: number;
+  carrierFee: number;
+  shipperBalance: number;
+  carrierBalance: number;
+  errors: string[];
+}> {
+  const errors: string[] = [];
+
+  // Get load with corridor info
+  const load = await db.load.findUnique({
+    where: { id: loadId },
+    select: {
+      id: true,
+      shipperId: true,
+      corridorId: true,
+      estimatedTripKm: true,
+      tripKm: true,
+      corridor: {
+        select: {
+          distanceKm: true,
+          shipperPricePerKm: true,
+          carrierPricePerKm: true,
+          pricePerKm: true,
+          shipperPromoFlag: true,
+          shipperPromoPct: true,
+          carrierPromoFlag: true,
+          carrierPromoPct: true,
+          promoFlag: true,
+          promoDiscountPct: true,
+        },
+      },
+    },
+  });
+
+  if (!load) {
+    return {
+      valid: false,
+      shipperFee: 0,
+      carrierFee: 0,
+      shipperBalance: 0,
+      carrierBalance: 0,
+      errors: ['Load not found'],
+    };
+  }
+
+  // If no corridor, fees will be waived - validation passes
+  if (!load.corridor) {
+    return {
+      valid: true,
+      shipperFee: 0,
+      carrierFee: 0,
+      shipperBalance: 0,
+      carrierBalance: 0,
+      errors: [],
+    };
+  }
+
+  // Calculate expected fees
+  const distanceKm = load.estimatedTripKm
+    ? Number(load.estimatedTripKm)
+    : load.tripKm
+      ? Number(load.tripKm)
+      : Number(load.corridor.distanceKm);
+
+  const shipperPricePerKm = load.corridor.shipperPricePerKm
+    ? Number(load.corridor.shipperPricePerKm)
+    : Number(load.corridor.pricePerKm);
+  const shipperPromoFlag = load.corridor.shipperPromoFlag || load.corridor.promoFlag || false;
+  const shipperPromoPct = load.corridor.shipperPromoPct
+    ? Number(load.corridor.shipperPromoPct)
+    : load.corridor.promoDiscountPct
+      ? Number(load.corridor.promoDiscountPct)
+      : null;
+
+  const carrierPricePerKm = load.corridor.carrierPricePerKm
+    ? Number(load.corridor.carrierPricePerKm)
+    : 0;
+  const carrierPromoFlag = load.corridor.carrierPromoFlag || false;
+  const carrierPromoPct = load.corridor.carrierPromoPct
+    ? Number(load.corridor.carrierPromoPct)
+    : null;
+
+  const shipperFeeCalc = calculatePartyFee(distanceKm, shipperPricePerKm, shipperPromoFlag, shipperPromoPct);
+  const carrierFeeCalc = calculatePartyFee(distanceKm, carrierPricePerKm, carrierPromoFlag, carrierPromoPct);
+
+  // Get wallet balances
+  const [shipperWallet, carrierWallet] = await Promise.all([
+    db.financialAccount.findFirst({
+      where: {
+        organizationId: load.shipperId,
+        accountType: 'SHIPPER_WALLET',
+        isActive: true,
+      },
+      select: { balance: true },
+    }),
+    db.financialAccount.findFirst({
+      where: {
+        organizationId: carrierId,
+        accountType: 'CARRIER_WALLET',
+        isActive: true,
+      },
+      select: { balance: true },
+    }),
+  ]);
+
+  const shipperBalance = shipperWallet ? Number(shipperWallet.balance) : 0;
+  const carrierBalance = carrierWallet ? Number(carrierWallet.balance) : 0;
+
+  // Validate shipper balance
+  if (shipperFeeCalc.finalFee > 0 && shipperBalance < shipperFeeCalc.finalFee) {
+    errors.push(
+      `Shipper has insufficient wallet balance for this trip. Required: ${shipperFeeCalc.finalFee.toFixed(2)} ETB, Available: ${shipperBalance.toFixed(2)} ETB`
+    );
+  }
+
+  // Validate carrier balance
+  if (carrierFeeCalc.finalFee > 0 && carrierBalance < carrierFeeCalc.finalFee) {
+    errors.push(
+      `Carrier has insufficient wallet balance for this trip. Required: ${carrierFeeCalc.finalFee.toFixed(2)} ETB, Available: ${carrierBalance.toFixed(2)} ETB`
+    );
+  }
+
+  return {
+    valid: errors.length === 0,
+    shipperFee: shipperFeeCalc.finalFee,
+    carrierFee: carrierFeeCalc.finalFee,
+    shipperBalance,
+    carrierBalance,
+    errors,
+  };
+}
+
+/**
+ * @deprecated REMOVED - No longer used. Use validateWalletBalancesForTrip() instead.
+ *
+ * The reservation flow has been removed. The current flow is:
+ * 1. Trip acceptance: validateWalletBalancesForTrip() (validation only)
+ * 2. Trip completion: deductServiceFee() (actual deduction)
+ * 3. Trip cancellation: No action needed (nothing was taken)
+ *
+ * This function is kept as a no-op for backward compatibility with any
+ * code that may still call it. It returns success with zero values.
  */
 export async function reserveServiceFee(loadId: string): Promise<ServiceFeeReserveResult> {
-  // In the new flow, we don't reserve fees upfront
-  // Fees are calculated and deducted when trip completes
+  console.warn(`reserveServiceFee(${loadId}) called but is deprecated. Use validateWalletBalancesForTrip() instead.`);
   return {
     success: true,
     serviceFee: new Decimal(0),
     shipperBalance: new Decimal(0),
-    error: 'Reserve flow deprecated - fees are deducted on completion',
+    error: 'Reserve flow removed - use validateWalletBalancesForTrip() for validation',
   };
 }
 
