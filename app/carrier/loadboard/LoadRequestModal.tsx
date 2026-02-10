@@ -65,7 +65,7 @@ export default function LoadRequestModal({ isOpen, onClose, load, onRequestSent 
     setLoadingTrucks(true);
     try {
       // Fetch trucks with active postings
-      const response = await fetch('/api/trucks?status=APPROVED&hasActivePosting=true&limit=100');
+      const response = await fetch('/api/trucks?approvalStatus=APPROVED&hasActivePosting=true&limit=100');
       if (response.ok) {
         const data = await response.json();
         setTrucks(data.trucks || []);

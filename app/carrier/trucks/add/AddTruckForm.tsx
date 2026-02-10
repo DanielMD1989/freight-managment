@@ -295,12 +295,13 @@ export default function AddTruckForm() {
       });
 
       if (response.ok) {
-        const truckData = await response.json();
+        const responseData = await response.json();
+        const createdTruck = responseData.truck;
 
         // Upload queued documents if any
         if (queuedDocuments.length > 0) {
           toast.info('Uploading documents...');
-          const docsUploaded = await uploadQueuedDocuments(truckData.id);
+          const docsUploaded = await uploadQueuedDocuments(createdTruck.id);
           if (!docsUploaded) {
             toast.warning('Truck created but some documents failed to upload. You can upload them later.');
           } else {

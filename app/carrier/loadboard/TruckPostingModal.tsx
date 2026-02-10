@@ -76,6 +76,28 @@ export default function TruckPostingModal({
         return;
       }
 
+      // Look up EthiopianLocation IDs from city names
+      const originCity = ethiopianCities.find(
+        (c: any) => c.name?.toLowerCase() === formData.origin.toLowerCase()
+      );
+      const destinationCity = formData.destination
+        ? ethiopianCities.find(
+            (c: any) => c.name?.toLowerCase() === formData.destination.toLowerCase()
+          )
+        : null;
+
+      if (!originCity) {
+        alert('Origin city not found in Ethiopian locations. Please select a valid city from the suggestions.');
+        setLoading(false);
+        return;
+      }
+
+      // Convert date to ISO datetime format (API expects datetime, not just date)
+      const availableFromISO = new Date(formData.availableFrom + 'T00:00:00').toISOString();
+      const availableToISO = formData.availableTo
+        ? new Date(formData.availableTo + 'T23:59:59').toISOString()
+        : null;
+
       const response = await fetch('/api/truck-postings', {
         method: 'POST',
         headers: {
@@ -84,10 +106,10 @@ export default function TruckPostingModal({
         },
         body: JSON.stringify({
           truckId: userTruck.id,
-          originCityId: formData.origin,
-          destinationCityId: formData.destination || null,
-          availableFrom: formData.availableFrom,
-          availableTo: formData.availableTo || null,
+          originCityId: originCity.id,
+          destinationCityId: destinationCity?.id || null,
+          availableFrom: availableFromISO,
+          availableTo: availableToISO,
           fullPartial: formData.fullPartial,
           availableLength: formData.lengthM ? parseFloat(formData.lengthM) : null,
           availableWeight: formData.weight ? parseFloat(formData.weight) : null,

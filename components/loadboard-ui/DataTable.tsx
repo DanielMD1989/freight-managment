@@ -33,6 +33,8 @@ interface ExtendedDataTableProps<T> extends DataTableProps<T> {
   cardTitleColumn?: string;
   // Subtitle column for card
   cardSubtitleColumn?: string;
+  // Externally controlled expanded row IDs (merged with internal state)
+  expandedRowIds?: string[];
 }
 
 export default function DataTable<T = any>({
@@ -54,6 +56,7 @@ export default function DataTable<T = any>({
   cardPrimaryColumns,
   cardTitleColumn,
   cardSubtitleColumn,
+  expandedRowIds = [],
 }: ExtendedDataTableProps<T>) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [sortColumn, setSortColumn] = useState<string | null>(null);
@@ -485,7 +488,8 @@ export default function DataTable<T = any>({
           <tbody className="divide-y divide-slate-100 dark:divide-slate-700" role="rowgroup">
             {sortedData.map((row, rowIndex) => {
               const rowId = getRowId(row);
-              const isExpanded = expandedRows.has(rowId);
+              // Check both internal state and externally controlled expansion
+              const isExpanded = expandedRows.has(rowId) || expandedRowIds.includes(rowId);
               const isSelected = selectedRows.includes(rowId);
 
               return (

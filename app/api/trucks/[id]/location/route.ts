@@ -111,6 +111,55 @@ export async function GET(
     const session = await requireAuth();
     const { id: truckId } = await params;
 
+    // Get truck details and verify ownership
+    const truck = await db.truck.findUnique({
+      where: { id: truckId },
+      select: {
+        id: true,
+        licensePlate: true,
+        carrierId: true,
+        currentCity: true,
+        currentRegion: true,
+        locationUpdatedAt: true,
+      },
+    });
+
+    if (!truck) {
+      return NextResponse.json(
+        { error: 'Truck not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check ownership: carrier who owns truck, shipper with active load, or admin
+    const user = await db.user.findUnique({
+      where: { id: session.userId },
+      select: { organizationId: true, role: true },
+    });
+
+    const isOwner = user?.organizationId === truck.carrierId;
+    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+
+    // Shippers can view location if truck is on their active load
+    let isShipperWithActiveLoad = false;
+    if (user?.role === 'SHIPPER' && user?.organizationId) {
+      const activeLoad = await db.load.findFirst({
+        where: {
+          assignedTruckId: truckId,
+          shipperId: user.organizationId,
+          status: 'IN_TRANSIT',
+        },
+      });
+      isShipperWithActiveLoad = !!activeLoad;
+    }
+
+    if (!isOwner && !isAdmin && !isShipperWithActiveLoad) {
+      return NextResponse.json(
+        { error: 'You do not have permission to view this truck\'s location' },
+        { status: 403 }
+      );
+    }
+
     // Get truck location (from GPS or database)
     const location = await getTruckCurrentLocation(truckId);
 
@@ -120,18 +169,6 @@ export async function GET(
         { status: 404 }
       );
     }
-
-    // Get truck details
-    const truck = await db.truck.findUnique({
-      where: { id: truckId },
-      select: {
-        id: true,
-        licensePlate: true,
-        currentCity: true,
-        currentRegion: true,
-        locationUpdatedAt: true,
-      },
-    });
 
     return NextResponse.json({
       truckId,

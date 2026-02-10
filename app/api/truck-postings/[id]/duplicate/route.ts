@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { requireCSRF } from '@/lib/csrf';
 
 export async function POST(
   request: NextRequest,
@@ -17,6 +18,19 @@ export async function POST(
   try {
     // Authenticate user
     const user = await requireAuth();
+
+    // CSRF protection for state-changing operation
+    // Skip for mobile clients using Bearer token authentication
+    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
+    const hasBearerAuth = request.headers.get('authorization')?.startsWith('Bearer ');
+
+    if (!isMobileClient && !hasBearerAuth) {
+      const csrfError = await requireCSRF(request);
+      if (csrfError) {
+        return csrfError;
+      }
+    }
+
     const { id } = await params;
 
     // Fetch original truck posting

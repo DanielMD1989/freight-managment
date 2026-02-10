@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { findLoadsWithMinimalDHO } from '@/lib/deadheadOptimization';
 
@@ -16,16 +17,70 @@ export async function GET(
     const session = await requireAuth();
     const { id: truckId } = await params;
 
-    // Parse query parameters
+    // Verify truck exists and user has permission
+    const truck = await db.truck.findUnique({
+      where: { id: truckId },
+      select: { id: true, carrierId: true },
+    });
+
+    if (!truck) {
+      return NextResponse.json(
+        { error: 'Truck not found' },
+        { status: 404 }
+      );
+    }
+
+    // Get user's organization for access control
+    const user = await db.user.findUnique({
+      where: { id: session.userId },
+      select: { organizationId: true, role: true },
+    });
+
+    // Only truck owner or admin can access nearby loads
+    const canAccess =
+      user?.role === 'SUPER_ADMIN' ||
+      user?.role === 'ADMIN' ||
+      truck.carrierId === user?.organizationId;
+
+    if (!canAccess) {
+      return NextResponse.json(
+        { error: 'You do not have permission to access this truck\'s nearby loads' },
+        { status: 403 }
+      );
+    }
+
+    // Parse query parameters with validation
     const { searchParams } = new URL(request.url);
-    const maxDHO = parseInt(searchParams.get('maxDHO') || '200', 10); // km
+
+    // Parse and validate maxDHO (1-2000 km range)
+    const maxDHORaw = parseInt(searchParams.get('maxDHO') || '200', 10);
+    const maxDHO = isNaN(maxDHORaw) ? 200 : Math.max(1, Math.min(maxDHORaw, 2000));
+
     const truckType = searchParams.get('truckType') || undefined;
-    const minTripKm = searchParams.get('minTripKm')
+
+    // Parse and validate trip distances (positive values only)
+    const minTripKmRaw = searchParams.get('minTripKm')
       ? parseFloat(searchParams.get('minTripKm')!)
       : undefined;
-    const maxTripKm = searchParams.get('maxTripKm')
+    const minTripKm = minTripKmRaw !== undefined && !isNaN(minTripKmRaw) && minTripKmRaw >= 0
+      ? minTripKmRaw
+      : undefined;
+
+    const maxTripKmRaw = searchParams.get('maxTripKm')
       ? parseFloat(searchParams.get('maxTripKm')!)
       : undefined;
+    const maxTripKm = maxTripKmRaw !== undefined && !isNaN(maxTripKmRaw) && maxTripKmRaw >= 0
+      ? maxTripKmRaw
+      : undefined;
+
+    // Validate minTripKm <= maxTripKm if both provided
+    if (minTripKm !== undefined && maxTripKm !== undefined && minTripKm > maxTripKm) {
+      return NextResponse.json(
+        { error: 'minTripKm must be less than or equal to maxTripKm' },
+        { status: 400 }
+      );
+    }
+
     const pickupAfter = searchParams.get('pickupAfter')
       ? new Date(searchParams.get('pickupAfter')!)
       : undefined;

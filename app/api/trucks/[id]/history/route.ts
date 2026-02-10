@@ -7,6 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { getPositionHistory } from '@/lib/gpsQuery';
 
@@ -21,7 +22,49 @@ export async function GET(
 ) {
   try {
     const { id: truckId } = await params;
-    await requireAuth();
+    const session = await requireAuth();
+
+    // Verify truck exists and user has access
+    const truck = await db.truck.findUnique({
+      where: { id: truckId },
+      select: { id: true, carrierId: true },
+    });
+
+    if (!truck) {
+      return NextResponse.json(
+        { error: 'Truck not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check ownership: carrier who owns truck, shipper with active load, or admin
+    const user = await db.user.findUnique({
+      where: { id: session.userId },
+      select: { organizationId: true, role: true },
+    });
+
+    const isOwner = user?.organizationId === truck.carrierId;
+    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+
+    // Shippers can view history if truck is on their active load
+    let isShipperWithActiveLoad = false;
+    if (user?.role === 'SHIPPER' && user?.organizationId) {
+      const activeLoad = await db.load.findFirst({
+        where: {
+          assignedTruckId: truckId,
+          shipperId: user.organizationId,
+          status: 'IN_TRANSIT',
+        },
+      });
+      isShipperWithActiveLoad = !!activeLoad;
+    }
+
+    if (!isOwner && !isAdmin && !isShipperWithActiveLoad) {
+      return NextResponse.json(
+        { error: 'You do not have permission to view this truck\'s GPS history' },
+        { status: 403 }
+      );
+    }
 
     const { searchParams } = new URL(request.url);
     const startParam = searchParams.get('start');
@@ -34,7 +77,7 @@ export async function GET(
 
     const startDate = startParam ? new Date(startParam) : defaultStart;
     const endDate = endParam ? new Date(endParam) : now;
-    const limit = limitParam ? parseInt(limitParam) : 1000;
+    const limit = Math.min(limitParam ? parseInt(limitParam) : 1000, 1000);
 
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
       return NextResponse.json(
@@ -46,6 +89,15 @@ export async function GET(
     if (startDate > endDate) {
       return NextResponse.json(
         { error: 'Start date must be before end date' },
+        { status: 400 }
+      );
+    }
+
+    // Limit date range to 7 days max to prevent excessive queries
+    const maxRangeMs = 7 * 24 * 60 * 60 * 1000; // 7 days
+    if (endDate.getTime() - startDate.getTime() > maxRangeMs) {
+      return NextResponse.json(
+        { error: 'Date range cannot exceed 7 days' },
         { status: 400 }
       );
     }

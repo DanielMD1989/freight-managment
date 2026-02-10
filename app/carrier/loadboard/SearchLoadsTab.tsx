@@ -14,6 +14,7 @@ import DataTable from '@/components/loadboard-ui/DataTable';
 import { TableColumn, RowAction, StatusTab, SavedSearch, SavedSearchCriteria } from '@/types/loadboard-ui';
 import LoadRequestModal from './LoadRequestModal';
 import { getCSRFToken } from '@/lib/csrfFetch';
+import { calculateDistanceKm } from '@/lib/geo';
 
 interface SearchLoadsTabProps {
   user: any;
@@ -22,22 +23,19 @@ interface SearchLoadsTabProps {
 type ResultsFilter = 'all' | 'PREFERRED' | 'BLOCKED';
 
 /**
+ * COLLAPSED TO SINGLE SOURCE OF TRUTH (2026-02-06)
+ * Now delegates to lib/geo.ts:calculateDistanceKm with Math.round wrapper.
+ * Preserves original INTEGER return behavior for backward compatibility.
+ *
  * Calculate distance between two coordinates using Haversine formula
- * Returns distance in kilometers
+ * Returns distance in kilometers (rounded to integer)
  */
 function haversineDistance(
   lat1: number, lon1: number,
   lat2: number, lon2: number
 ): number {
-  const R = 6371; // Earth's radius in km
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return Math.round(R * c);
+  // Delegates to single source of truth, preserves integer rounding behavior
+  return Math.round(calculateDistanceKm(lat1, lon1, lat2, lon2));
 }
 
 export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
@@ -618,7 +616,8 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
       key: 'pending',
       label: 'Pending',
       variant: 'secondary',
-      onClick: () => {},
+      disabled: true,  // Status indicator - request already sent
+      onClick: () => {},  // No action needed - just shows status
       show: (row: any) => pendingRequestLoadIds.has(row.id),
     },
   ], [pendingRequestLoadIds]);

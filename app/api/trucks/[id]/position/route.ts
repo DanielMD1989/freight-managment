@@ -7,6 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { getLatestPosition } from '@/lib/gpsQuery';
 
@@ -21,7 +22,49 @@ export async function GET(
 ) {
   try {
     const { id: truckId } = await params;
-    await requireAuth();
+    const session = await requireAuth();
+
+    // Verify truck exists and user has access
+    const truck = await db.truck.findUnique({
+      where: { id: truckId },
+      select: { id: true, carrierId: true },
+    });
+
+    if (!truck) {
+      return NextResponse.json(
+        { error: 'Truck not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check ownership: carrier who owns truck, shipper with active load, or admin
+    const user = await db.user.findUnique({
+      where: { id: session.userId },
+      select: { organizationId: true, role: true },
+    });
+
+    const isOwner = user?.organizationId === truck.carrierId;
+    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+
+    // Shippers can view position if truck is on their active load
+    let isShipperWithActiveLoad = false;
+    if (user?.role === 'SHIPPER' && user?.organizationId) {
+      const activeLoad = await db.load.findFirst({
+        where: {
+          assignedTruckId: truckId,
+          shipperId: user.organizationId,
+          status: 'IN_TRANSIT',
+        },
+      });
+      isShipperWithActiveLoad = !!activeLoad;
+    }
+
+    if (!isOwner && !isAdmin && !isShipperWithActiveLoad) {
+      return NextResponse.json(
+        { error: 'You do not have permission to view this truck\'s position' },
+        { status: 403 }
+      );
+    }
 
     const position = await getLatestPosition(truckId);
 

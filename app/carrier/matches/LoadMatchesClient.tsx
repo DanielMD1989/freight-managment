@@ -84,6 +84,7 @@ export default function LoadMatchesClient({
   const [selectedPosting, setSelectedPosting] = useState<string>('');
   const [matches, setMatches] = useState<LoadMatch[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [minScore, setMinScore] = useState(40);
 
   /**
@@ -92,6 +93,7 @@ export default function LoadMatchesClient({
   const fetchMatches = async (postingId: string) => {
     setIsLoading(true);
     setMatches([]);
+    setError(null);
 
     try {
       const response = await fetch(
@@ -103,9 +105,11 @@ export default function LoadMatchesClient({
         setMatches(data.matches || []);
       } else {
         console.error('Failed to fetch matches');
+        setError('Failed to load matching loads. Please try again.');
       }
-    } catch (error) {
-      console.error('Error fetching matches:', error);
+    } catch (err) {
+      console.error('Error fetching matches:', err);
+      setError('Network error. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -208,8 +212,23 @@ export default function LoadMatchesClient({
             </div>
           )}
 
+          {/* Error State */}
+          {error && !isLoading && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+              <div className="text-4xl mb-4">⚠️</div>
+              <p className="text-red-800 font-medium mb-2">Unable to Load Matches</p>
+              <p className="text-red-600 text-sm">{error}</p>
+              <button
+                onClick={() => selectedPosting && fetchMatches(selectedPosting)}
+                className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+              >
+                Try Again
+              </button>
+            </div>
+          )}
+
           {/* Matches List */}
-          {!isLoading && selectedPosting && (
+          {!isLoading && !error && selectedPosting && (
             <div className="bg-white rounded-lg shadow overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h2 className="text-xl font-semibold text-gray-900">

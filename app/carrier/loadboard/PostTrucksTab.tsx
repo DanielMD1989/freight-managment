@@ -19,6 +19,7 @@ import { TableColumn, StatusTab, RowAction } from '@/types/loadboard-ui';
 import PlacesAutocomplete, { PlaceResult } from '@/components/PlacesAutocomplete';
 import { useToast } from '@/components/Toast/ToastContext';
 import { getCSRFToken } from '@/lib/csrfFetch';
+import { calculateDistanceKm } from '@/lib/geo';
 
 interface PostTrucksTabProps {
   user: any;
@@ -80,7 +81,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   const [selectedLoadForRequest, setSelectedLoadForRequest] = useState<any>(null);
   const [selectedTruckForRequest, setSelectedTruckForRequest] = useState<string>('');
   const [requestNotes, setRequestNotes] = useState('');
-  const [requestProposedRate, setRequestProposedRate] = useState('');
+  // Note: proposedRate removed - price negotiation happens outside platform
   const [submittingRequest, setSubmittingRequest] = useState(false);
 
   // Track which loads have already been requested by this carrier
@@ -252,22 +253,19 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   };
 
   /**
+   * COLLAPSED TO SINGLE SOURCE OF TRUTH (2026-02-06)
+   * Now delegates to lib/geo.ts:calculateDistanceKm with Math.round wrapper.
+   * Preserves original INTEGER return behavior for backward compatibility.
+   *
    * Calculate distance between two coordinates using Haversine formula
-   * Returns distance in kilometers
+   * Returns distance in kilometers (rounded to integer)
    */
   const haversineDistance = (
     lat1: number, lon1: number,
     lat2: number, lon2: number
   ): number => {
-    const R = 6371; // Earth's radius in km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return Math.round(R * c); // Return rounded km
+    // Delegates to single source of truth, preserves integer rounding behavior
+    return Math.round(calculateDistanceKm(lat1, lon1, lat2, lon2));
   };
 
   /**
@@ -753,7 +751,6 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       setSelectedTruckForRequest(postedTrucks[0].truck?.id || '');
     }
     setRequestNotes('');
-    setRequestProposedRate('');
     setRequestModalOpen(true);
   };
 
@@ -786,7 +783,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
           loadId: selectedLoadForRequest.id,
           truckId: selectedTruckForRequest,
           notes: requestNotes || undefined,
-          proposedRate: requestProposedRate ? parseFloat(requestProposedRate) : undefined,
+          // No proposedRate - price negotiation happens outside platform
         }),
       });
 
@@ -804,7 +801,6 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       setSelectedLoadForRequest(null);
       setSelectedTruckForRequest('');
       setRequestNotes('');
-      setRequestProposedRate('');
     } catch (error: any) {
       console.error('Load request error:', error);
       toast.error(error.message || 'Failed to submit load request');
@@ -1764,6 +1760,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
           emptyMessage="No truck postings found. Click NEW TRUCK POST to create one."
           rowKey="id"
           expandable={true}
+          expandedRowIds={editingTruckId ? [editingTruckId] : []}
           onRowClick={(truck) => {
             // Click row → switch to Matching Loads tab and fetch loads for THIS truck
             setSelectedTruckId(truck.id);
@@ -2234,18 +2231,20 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
               )}
             </div>
 
-            {/* Proposed Rate (Optional) */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Proposed Rate (ETB) <span className="text-slate-400 font-normal">(Optional)</span>
-              </label>
-              <input
-                type="number"
-                value={requestProposedRate}
-                onChange={(e) => setRequestProposedRate(e.target.value)}
-                placeholder="Leave blank to accept posted rate"
-                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all"
-              />
+            {/* Price Negotiation Info */}
+            <div className="mb-4 bg-teal-50 rounded-xl p-3 border border-teal-200">
+              <div className="flex items-start gap-2">
+                <svg className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <h4 className="text-sm font-semibold text-teal-800">Price Negotiation</h4>
+                  <p className="text-xs text-teal-700 mt-1">
+                    You will negotiate the freight rate directly with the shipper after your request is approved.
+                    The platform only charges a service fee based on distance.
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Notes */}
