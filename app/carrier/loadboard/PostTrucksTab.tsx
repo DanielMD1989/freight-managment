@@ -88,6 +88,29 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   const [requestedLoadIds, setRequestedLoadIds] = useState<Set<string>>(new Set());
 
   /**
+   * Reset new truck form to initial state
+   */
+  const resetNewTruckForm = () => {
+    setNewTruckForm({
+      truckId: '',
+      availableFrom: '',
+      availableTo: '',
+      origin: '',
+      destination: '',
+      declaredDhO: '',
+      declaredDhD: '',
+      fullPartial: 'FULL',
+      lengthM: '',
+      weight: '',
+      contactPhone: '',
+      comments1: '',
+      comments2: '',
+      originCoordinates: undefined,
+      destinationCoordinates: undefined,
+    });
+  };
+
+  /**
    * Fetch Ethiopian cities
    */
   const fetchEthiopianCities = async () => {
@@ -1456,7 +1479,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
               </div>
             </div>
             <button
-              onClick={() => setShowNewTruckForm(false)}
+              onClick={() => { resetNewTruckForm(); setShowNewTruckForm(false); }}
               className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1722,7 +1745,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
               {/* Submit Button */}
               <div className="flex gap-3 justify-end">
                 <button
-                  onClick={() => setShowNewTruckForm(false)}
+                  onClick={() => { resetNewTruckForm(); setShowNewTruckForm(false); }}
                   className="px-6 py-2 border border-[#064d51]/30 text-[#064d51] rounded-lg hover:bg-[#064d51]/5 font-medium transition-colors"
                 >
                   Cancel

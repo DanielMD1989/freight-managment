@@ -26,6 +26,7 @@ export default function TruckPostingModal({
   ethiopianCities,
 }: TruckPostingModalProps) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     availableFrom: '',
     availableTo: '',
@@ -48,10 +49,11 @@ export default function TruckPostingModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
     // Validate required fields
     if (!formData.origin || !formData.availableFrom || !formData.truckType || !formData.contactPhone) {
-      alert('Please fill in all required fields: Origin, Available Date, Truck Type, and Contact Phone');
+      setError('Please fill in all required fields: Origin, Available Date, Truck Type, and Contact Phone');
       return;
     }
 
@@ -60,7 +62,7 @@ export default function TruckPostingModal({
       // Get CSRF token for secure submission
       const csrfToken = await getCSRFToken();
       if (!csrfToken) {
-        alert('Failed to get security token. Please refresh and try again.');
+        setError('Failed to get security token. Please refresh and try again.');
         setLoading(false);
         return;
       }
@@ -71,7 +73,7 @@ export default function TruckPostingModal({
       const userTruck = trucksData.trucks?.[0];
 
       if (!userTruck) {
-        alert('No truck found for your organization. Please add a truck first.');
+        setError('No truck found for your organization. Please add a truck first.');
         setLoading(false);
         return;
       }
@@ -87,7 +89,7 @@ export default function TruckPostingModal({
         : null;
 
       if (!originCity) {
-        alert('Origin city not found in Ethiopian locations. Please select a valid city from the suggestions.');
+        setError('Origin city not found in Ethiopian locations. Please select a valid city from the suggestions.');
         setLoading(false);
         return;
       }
@@ -125,12 +127,11 @@ export default function TruckPostingModal({
         throw new Error(error.error || 'Failed to create truck posting');
       }
 
-      alert('Truck posting created successfully!');
       onSuccess();
       onClose();
     } catch (error: any) {
       console.error('Create truck posting error:', error);
-      alert(error.message || 'Failed to create truck posting');
+      setError(error.message || 'Failed to create truck posting');
     } finally {
       setLoading(false);
     }
@@ -154,6 +155,12 @@ export default function TruckPostingModal({
 
         {/* Form - Matching LoadPostingModal design */}
         <form onSubmit={handleSubmit}>
+          {/* Error Display */}
+          {error && (
+            <div className="mx-4 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
+              {error}
+            </div>
+          )}
           <div className="border-b border-[#064d51]/30 p-4" style={{ backgroundColor: '#2B2727' }}>
             {/* Form Fields Row - Grid matching table columns */}
             <div className="grid grid-cols-12 gap-2 mb-4">

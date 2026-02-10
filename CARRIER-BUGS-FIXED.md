@@ -11,9 +11,9 @@
 |----------|-----------------|------------|--------------|
 | CRITICAL | 5 | 5 | 0 |
 | HIGH | 15 | 7 | 8 |
-| MEDIUM | 29 | 3 | 26 |
+| MEDIUM | 29 | 9 | 20 |
 | LOW | 12 | 0 | 12 |
-| **TOTAL** | **61** | **15** | **46** |
+| **TOTAL** | **61** | **21** | **40** |
 
 ---
 
@@ -32,7 +32,12 @@
 | H12 | `app/api/truck-postings/[id]/duplicate/route.ts` | Added CARRIER role check before ownership check | +8 | ✓ |
 | H15 | `app/api/trucks/[id]/location/route.ts` | Added CSRF protection to PATCH handler with mobile bypass | +12 | ✓ |
 | M1 | `app/carrier/loadboard/SearchLoadsTab.tsx` | Added `disabled: true` to pending button (status indicator) | +1 | ✓ |
+| M2 | `app/carrier/loadboard/TruckPostingModal.tsx` | Replaced alert() with inline error state | +15 | ✓ |
+| M3 | `app/carrier/loadboard/PostTrucksTab.tsx` | Added resetNewTruckForm() called on close/cancel | +20 | ✓ |
+| M5/M6 | `app/carrier/loadboard/LoadSearchModal.tsx` | Changed dispatchEvent to requestSubmit() for proper HTML5 validation | +1 | ✓ |
 | M7 | `app/carrier/matches/LoadMatchesClient.tsx` | Added error state with user-visible message and retry button | +20 | ✓ |
+| M12 | `components/loadboard-ui/EditSearchModal.tsx` | Prevent backdrop close while saving in progress | +1 | ✓ |
+| M16 | `app/carrier/loadboard/LoadRequestModal.tsx` | Added error state on fetch failure for trucks | +5 | ✓ |
 
 ---
 
@@ -51,18 +56,19 @@
 
 | Bug ID | File | Reason for Skip |
 |--------|------|-----------------|
-| M2 | TruckPostingModal.tsx | Using alert() is suboptimal but functional |
-| M3 | PostTrucksTab.tsx | Form state reset would require significant state management changes |
-| M4 | LoadRequestModal.tsx | Reviewed code - state IS reset on open (line 55-61), not a bug |
-| M5-M6 | LoadSearchModal.tsx | Form validation works correctly on review |
-| M8 | AddTruckForm.tsx | CSRF failure handling exists, just uses toast |
-| M9 | AddTruckForm.tsx | Form does redirect on success, not a blocking issue |
+| M4 | LoadRequestModal.tsx | NOT A BUG - state IS reset on open (line 55-61) |
+| M8 | AddTruckForm.tsx | CSRF failure handling exists, uses toast |
+| M9 | AddTruckForm.tsx | Form does redirect on success, not blocking |
 | M10 | LoadRequestModal.tsx | onClose is required prop per TypeScript interface |
-| M11 | TruckManagementClient.tsx | Empty states already exist (lines 690-733), not a bug |
-| M12-M18 | Various | Minor UX issues, not functional bugs |
-| M19 | PostTrucksTab.tsx | submittingRequest IS reset in finally block (line 808), not a bug |
-| M20 | TruckPostingModal.tsx | Early return works correctly, code after return not executed |
-| M21 | PostTrucksTab.tsx | Check `!value && value !== 0` correctly handles 0, not a bug |
+| M11 | TruckManagementClient.tsx | NOT A BUG - empty states already exist (lines 690-733) |
+| M13 | SearchLoadsTab.tsx | Would require broader refactoring of filter logic |
+| M14 | CompanyModal.tsx | Minor optimization - not a functional bug |
+| M15 | DataTable.tsx | Requires parent-child state flow refactoring |
+| M17 | PostTrucksTab.tsx | Minor optimization - not a functional bug |
+| M18 | SearchLoadsTab.tsx | Requires replacing prompt() with modal UI |
+| M19 | PostTrucksTab.tsx | NOT A BUG - submittingRequest IS reset in finally block |
+| M20 | TruckPostingModal.tsx | NOT A BUG - early return works correctly |
+| M21 | PostTrucksTab.tsx | NOT A BUG - check correctly handles 0 |
 | M22-M29 | Various | Input validation and minor issues - low impact |
 
 ### LOW Severity Skipped

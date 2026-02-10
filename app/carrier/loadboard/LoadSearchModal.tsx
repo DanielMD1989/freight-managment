@@ -306,8 +306,7 @@ export default function LoadSearchModal({
               onClick={() => {
                 const form = document.querySelector('form');
                 if (form) {
-                  const event = new Event('submit', { cancelable: true, bubbles: true });
-                  form.dispatchEvent(event);
+                  form.requestSubmit();
                 }
               }}
               disabled={loading}

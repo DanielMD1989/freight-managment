@@ -63,15 +63,19 @@ export default function LoadRequestModal({ isOpen, onClose, load, onRequestSent 
 
   const fetchTrucks = async () => {
     setLoadingTrucks(true);
+    setError(null);
     try {
       // Fetch trucks with active postings
       const response = await fetch('/api/trucks?approvalStatus=APPROVED&hasActivePosting=true&limit=100');
       if (response.ok) {
         const data = await response.json();
         setTrucks(data.trucks || []);
+      } else {
+        setError('Failed to load trucks. Please try again.');
       }
     } catch (err) {
       console.error('Failed to fetch trucks:', err);
+      setError('Failed to load trucks. Please check your connection.');
     } finally {
       setLoadingTrucks(false);
     }
