@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { requireCSRF } from '@/lib/csrf';
 import { z } from 'zod';
 import { getTruckCurrentLocation } from '@/lib/deadheadOptimization';
 
@@ -23,6 +24,19 @@ export async function PATCH(
 ) {
   try {
     const session = await requireAuth();
+
+    // CSRF protection for state-changing operation
+    // Skip for mobile clients using Bearer token authentication
+    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
+    const hasBearerAuth = request.headers.get('authorization')?.startsWith('Bearer ');
+
+    if (!isMobileClient && !hasBearerAuth) {
+      const csrfError = await requireCSRF(request);
+      if (csrfError) {
+        return csrfError;
+      }
+    }
+
     const { id: truckId } = await params;
 
     const body = await request.json();

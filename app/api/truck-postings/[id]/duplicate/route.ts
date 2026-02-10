@@ -45,8 +45,19 @@ export async function POST(
       );
     }
 
-    // Verify ownership (carrier or admin)
-    if (user.role !== 'ADMIN' && originalPosting.carrierId !== user.organizationId) {
+    // Verify role is CARRIER or ADMIN
+    const isAdmin = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
+    const isCarrier = user.role === 'CARRIER';
+
+    if (!isAdmin && !isCarrier) {
+      return NextResponse.json(
+        { error: 'Only carriers can duplicate truck postings' },
+        { status: 403 }
+      );
+    }
+
+    // Verify ownership (carrier must own the posting, admin can duplicate any)
+    if (!isAdmin && originalPosting.carrierId !== user.organizationId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }

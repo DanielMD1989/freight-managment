@@ -10,10 +10,10 @@
 | Category | Bugs Identified | Bugs Fixed | Bugs Skipped |
 |----------|-----------------|------------|--------------|
 | CRITICAL | 5 | 5 | 0 |
-| HIGH | 15 | 4 | 11 |
+| HIGH | 15 | 7 | 8 |
 | MEDIUM | 29 | 3 | 26 |
 | LOW | 12 | 0 | 12 |
-| **TOTAL** | **61** | **12** | **49** |
+| **TOTAL** | **61** | **15** | **46** |
 
 ---
 
@@ -26,8 +26,11 @@
 | C3 | `app/api/trucks/[id]/history/route.ts` | Added `Math.min()` to cap limit at 1000 | +1 | ✓ |
 | C4 | `app/api/trucks/[id]/location/route.ts` | Added ownership verification to GET handler | +35 | ✓ |
 | C5 | `app/api/truck-postings/[id]/duplicate/route.ts` | Added CSRF protection with mobile client bypass | +12 | ✓ |
+| H2 | `app/carrier/loadboard/PostTrucksTab.tsx` | Fixed wrong property path: changed `selectedTruck.volume` to `selectedTruck.lengthM` | +1 | ✓ |
 | H10/H13/H16 | `app/api/trucks/[id]/nearby-loads/route.ts` | Added numeric validation: maxDHO bounds (1-2000), NaN checks, minTripKm <= maxTripKm validation | +20 | ✓ |
 | H11 | `app/api/trucks/[id]/history/route.ts` | Added 7-day max date range limit | +8 | ✓ |
+| H12 | `app/api/truck-postings/[id]/duplicate/route.ts` | Added CARRIER role check before ownership check | +8 | ✓ |
+| H15 | `app/api/trucks/[id]/location/route.ts` | Added CSRF protection to PATCH handler with mobile bypass | +12 | ✓ |
 | M1 | `app/carrier/loadboard/SearchLoadsTab.tsx` | Added `disabled: true` to pending button (status indicator) | +1 | ✓ |
 | M7 | `app/carrier/matches/LoadMatchesClient.tsx` | Added error state with user-visible message and retry button | +20 | ✓ |
 
@@ -39,11 +42,10 @@
 
 | Bug ID | File | Reason for Skip |
 |--------|------|-----------------|
-| H1 | SearchLoadsTab.tsx | Requires significant refactoring of filter logic - not a quick fix |
-| H2 | PostTrucksTab.tsx | Need to verify property path with actual data - may be correct |
+| H1 | SearchLoadsTab.tsx | PREFERRED/BLOCKED tabs are unimplemented feature - no data fields exist to filter by |
 | H3-H6 | Various | Race condition fixes require AbortController refactoring - too invasive |
-| H7-H9, H14-H15 | Various | Rate limiting requires middleware changes - architectural change |
-| H12 | duplicate/route.ts | Role check already exists via `user.role !== 'ADMIN'` - may be sufficient |
+| H4 | EditSearchModal.tsx | NOT A BUG - onClose() is already called after await completes (line 67-68) |
+| H7-H9, H14 | Various | Rate limiting requires middleware changes - architectural change |
 
 ### MEDIUM Severity Skipped
 
@@ -179,10 +181,11 @@ npx tsc --noEmit
 |------|---------|
 | `app/api/trucks/[id]/position/route.ts` | +db import, +ownership verification |
 | `app/api/trucks/[id]/history/route.ts` | +db import, +ownership verification, +limit cap, +date range limit |
-| `app/api/trucks/[id]/location/route.ts` | +ownership verification to GET |
+| `app/api/trucks/[id]/location/route.ts` | +ownership verification to GET, +CSRF protection to PATCH |
 | `app/api/trucks/[id]/nearby-loads/route.ts` | +numeric validation with bounds |
-| `app/api/truck-postings/[id]/duplicate/route.ts` | +CSRF protection |
+| `app/api/truck-postings/[id]/duplicate/route.ts` | +CSRF protection, +CARRIER role check |
 | `app/carrier/loadboard/SearchLoadsTab.tsx` | +disabled flag on pending button |
+| `app/carrier/loadboard/PostTrucksTab.tsx` | Fixed property path: volume → lengthM |
 | `app/carrier/matches/LoadMatchesClient.tsx` | +error state with UI |
 
 ---

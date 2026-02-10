@@ -606,7 +606,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
         ...prev,
         truckId,
         origin: selectedTruck.currentCity || '',
-        lengthM: selectedTruck.volume ? String(selectedTruck.volume) : '',
+        lengthM: selectedTruck.lengthM ? String(selectedTruck.lengthM) : '',
         weight: selectedTruck.capacity ? String(selectedTruck.capacity) : '',
       }));
     }
