@@ -33,7 +33,11 @@ export function calculateAge(date: Date | string): AgeResult {
   let value: string;
   let colorClass: string;
 
-  if (diffHours < 1) {
+  // Handle future dates
+  if (diffMs < 0) {
+    value = 'Scheduled';
+    colorClass = 'bg-purple-100 text-purple-700 border-purple-300';
+  } else if (diffHours < 1) {
     value = `${diffMinutes}m`;
     colorClass = 'bg-green-100 text-green-700 border-green-300'; // Very fresh
   } else if (diffHours < 24) {

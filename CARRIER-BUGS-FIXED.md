@@ -11,9 +11,9 @@
 |----------|-----------------|------------|--------------|
 | CRITICAL | 5 | 5 | 0 |
 | HIGH | 15 | 7 | 8 |
-| MEDIUM | 29 | 9 | 20 |
-| LOW | 12 | 0 | 12 |
-| **TOTAL** | **61** | **21** | **40** |
+| MEDIUM | 29 | 10 | 19 |
+| LOW | 12 | 5 | 7 |
+| **TOTAL** | **61** | **27** | **34** |
 
 ---
 
@@ -38,6 +38,12 @@
 | M7 | `app/carrier/matches/LoadMatchesClient.tsx` | Added error state with user-visible message and retry button | +20 | ✓ |
 | M12 | `components/loadboard-ui/EditSearchModal.tsx` | Prevent backdrop close while saving in progress | +1 | ✓ |
 | M16 | `app/carrier/loadboard/LoadRequestModal.tsx` | Added error state on fetch failure for trucks | +5 | ✓ |
+| M8 | `app/carrier/trucks/add/AddTruckForm.tsx` | Added toast.error when CSRF token fails on doc upload | +1 | ✓ |
+| L4 | `lib/utils/ageCalculation.ts` | Added future date handling - shows "Scheduled" instead of negative age | +5 | ✓ |
+| L5 | `app/carrier/requests/ShipperRequestsClient.tsx` | Added maxLength={500} to response notes textarea | +1 | ✓ |
+| L6 | `app/carrier/loadboard/TruckPostingModal.tsx` | Added date range validation (availableTo > availableFrom) | +5 | ✓ |
+| L7 | `components/loadboard-ui/DataTable.tsx` | Clear expanded rows when data changes | +4 | ✓ |
+| L9 | `app/carrier/loadboard/SearchLoadsTab.tsx` | Deduplicate loads by ID after fetch | +1 | ✓ |
 
 ---
 
@@ -73,7 +79,15 @@
 
 ### LOW Severity Skipped
 
-All LOW severity bugs skipped as they are code quality issues (DRY violations, hardcoded routes, etc.) rather than functional bugs.
+| Bug ID | File | Reason for Skip |
+|--------|------|-----------------|
+| L1 | PostTrucksTab.tsx | Duplicate distance functions - would duplicate lib/geo.ts import |
+| L2 | TruckPostingModal.tsx | NOT A BUG - already has truthy check before parseFloat |
+| L3 | TruckManagementClient.tsx | Hardcoded routes - low impact, would need route constants |
+| L8 | CompanyModal.tsx | Double close handler - low impact UX issue |
+| L10 | PostTrucksTab.tsx | Tab state caching - requires URL state management |
+| L11 | DataTable.tsx | Resize listener - would need debounce utility |
+| L12 | Multiple files | Inconsistent error handling - needs codebase-wide standard |
 
 ---
 

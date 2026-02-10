@@ -298,6 +298,7 @@ export default function ShipperRequestsClient({ requests: initialRequests }: Pro
                       setResponseNotes({ ...responseNotes, [request.id]: e.target.value })
                     }
                     rows={2}
+                    maxLength={500}
                     placeholder="Add any notes for the shipper..."
                     className="w-full px-3 py-2 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99] dark:bg-slate-600 dark:text-white"
                   />

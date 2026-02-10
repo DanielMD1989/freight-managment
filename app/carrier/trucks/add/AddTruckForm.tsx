@@ -194,6 +194,7 @@ export default function AddTruckForm() {
     const csrfToken = await getCSRFToken();
     if (!csrfToken) {
       console.error('Failed to get CSRF token for document upload');
+      toast.error('Security token expired. Please refresh the page and try again.');
       setUploadingDocs(false);
       return false;
     }

@@ -57,6 +57,12 @@ export default function TruckPostingModal({
       return;
     }
 
+    // Validate date range if both dates provided
+    if (formData.availableTo && formData.availableFrom > formData.availableTo) {
+      setError('Available To date must be after Available From date');
+      return;
+    }
+
     setLoading(true);
     try {
       // Get CSRF token for secure submission

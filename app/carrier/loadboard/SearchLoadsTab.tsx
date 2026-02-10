@@ -330,7 +330,8 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
 
       const response = await fetch(`/api/loads?${params.toString()}`);
       const data = await response.json();
-      let fetchedLoads = data.loads || [];
+      // Deduplicate loads by ID to prevent duplicates
+      let fetchedLoads = [...new Map((data.loads || []).map((l: any) => [l.id, l])).values()];
 
       // Get carrier's origin and destination coordinates
       const carrierOriginCoords = getCityCoords(filterValues.origin);

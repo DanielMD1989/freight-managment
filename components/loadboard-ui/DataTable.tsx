@@ -64,6 +64,11 @@ export default function DataTable<T = any>({
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
   const [isMobile, setIsMobile] = useState(false);
 
+  // Clear expanded rows when data changes
+  useEffect(() => {
+    setExpandedRows(new Set());
+  }, [data]);
+
   // Auto-detect mobile and switch to card view
   useEffect(() => {
     const checkMobile = () => {
