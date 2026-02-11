@@ -64,8 +64,8 @@ export default function TruckSearchModal({
 
     setLoading(true);
     try {
-      // Build search criteria
-      const criteria: any = {};
+      // L39 FIX: Build search criteria with proper type
+      const criteria: Record<string, unknown> = {};
       if (formData.origin) criteria.origin = formData.origin;
       if (formData.destination) criteria.destination = formData.destination;
       if (formData.truckType) criteria.truckType = formData.truckType;
@@ -105,8 +105,10 @@ export default function TruckSearchModal({
       alert('Truck search created successfully!');
       onSuccess(search.id);
       onClose();
-    } catch (error: any) {
-      alert(error.message || 'Failed to create search');
+    } catch (error) {
+      // L40 FIX: Proper error handling without any
+      const message = error instanceof Error ? error.message : 'Failed to create search';
+      alert(message);
     } finally {
       setLoading(false);
     }

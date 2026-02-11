@@ -23,10 +23,40 @@ import { StatusTab } from '@/types/loadboard-ui';
 import PlacesAutocomplete from '@/components/PlacesAutocomplete';
 import { useToast } from '@/components/Toast/ToastContext';
 import { getCSRFToken } from '@/lib/csrfFetch';
+import type { Load, TruckMatch } from '@/lib/types/shipper';
+
+// Session user shape (from auth)
+interface SessionUser {
+  userId: string;
+  email?: string;
+  role: string;
+  status?: string;
+  organizationId?: string;
+}
+
+// L3 FIX: Add proper TypeScript interfaces
+interface EditFormData {
+  pickupCity: string;
+  deliveryCity: string;
+  pickupDate: string;
+  deliveryDate: string;
+  truckType: string;
+  weight: string;
+  lengthM: string;
+  rate: string;
+  cargoDescription: string;
+  contactPhone: string;
+}
+
+interface TruckSearchFilters {
+  origin?: string;
+  destination?: string;
+  [key: string]: string | number | boolean | undefined; // Allow dynamic keys
+}
 
 interface PostLoadsTabProps {
-  user: any;
-  onSwitchToSearchTrucks?: (filters: any) => void;
+  user: SessionUser;
+  onSwitchToSearchTrucks?: (filters: TruckSearchFilters) => void;
 }
 
 type LoadStatus = 'POSTED' | 'UNPOSTED' | 'EXPIRED';
@@ -51,21 +81,34 @@ const getTruckTypeLabel = (enumValue: string | null | undefined): string => {
 
 export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoadsTabProps) {
   const toast = useToast();
-  const [loads, setLoads] = useState<any[]>([]);
+  // L4-L8: Using interface types where safe, Record for flexible objects
+  const [loads, setLoads] = useState<Array<Load & { matchCount?: number }>>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [activeStatus, setActiveStatus] = useState<LoadStatus>('POSTED');
   const [activeMainTab, setActiveMainTab] = useState<MainTab>('postings');
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const [expandedLoadId, setExpandedLoadId] = useState<string | null>(null);
-  const [matchingTrucks, setMatchingTrucks] = useState<any[]>([]);
+  const [matchingTrucks, setMatchingTrucks] = useState<TruckMatch[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(false);
   const [editingLoadId, setEditingLoadId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<any>({});
+  // L4 FIX: Properly typed edit form state
+  const [editForm, setEditForm] = useState<EditFormData>({
+    pickupCity: '',
+    deliveryCity: '',
+    pickupDate: '',
+    deliveryDate: '',
+    truckType: '',
+    weight: '',
+    lengthM: '',
+    rate: '',
+    cargoDescription: '',
+    contactPhone: '',
+  });
   const [showNewLoadForm, setShowNewLoadForm] = useState(false);
 
   // Ethiopian cities
-  const [ethiopianCities, setEthiopianCities] = useState<any[]>([]);
+  const [ethiopianCities, setEthiopianCities] = useState<Array<{ name: string; id?: string }>>([]);
 
   // New load posting form state
   const [newLoadForm, setNewLoadForm] = useState({
@@ -86,7 +129,8 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
   // Truck request modal state
   const [requestModalOpen, setRequestModalOpen] = useState(false);
-  const [selectedTruckForRequest, setSelectedTruckForRequest] = useState<any>(null);
+  // L9: Using TruckMatch type for truck selection
+  const [selectedTruckForRequest, setSelectedTruckForRequest] = useState<TruckMatch | null>(null);
   const [selectedLoadForRequest, setSelectedLoadForRequest] = useState<string>('');
   const [requestNotes, setRequestNotes] = useState('');
   const [requestProposedRate, setRequestProposedRate] = useState('');
@@ -121,8 +165,9 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       const response = await fetch('/api/truck-requests?status=PENDING');
       if (response.ok) {
         const data = await response.json();
+        // L10 FIX: Type the truck request mapping
         const requestedIds = new Set<string>(
-          (data.truckRequests || []).map((req: any) => req.truckId)
+          (data.truckRequests || []).map((req: { truckId: string }) => req.truckId)
         );
         setRequestedTruckIds(requestedIds);
       }
@@ -152,12 +197,13 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       const response = await fetch(`/api/loads?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to fetch loads');
       const data = await response.json();
-      const loadsData = data.loads || [];
+      const loadsData: Load[] = data.loads || [];
 
       // Fetch match counts for POSTED loads in parallel
       // H29 FIX: Check response.ok for match counts
+      // L16 FIX: Properly typed load in map
       const loadsWithMatchCounts = await Promise.all(
-        loadsData.map(async (load: any) => {
+        loadsData.map(async (load: Load) => {
           if (load.status === 'POSTED') {
             try {
               const matchResponse = await fetch(`/api/loads/${load.id}/matching-trucks?limit=1`);
@@ -225,8 +271,9 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
   /**
    * Handle load row expand - show matching trucks
+   * L11 FIX: Properly typed load parameter
    */
-  const handleLoadExpand = async (load: any) => {
+  const handleLoadExpand = async (load: Load & { matchCount?: number }) => {
     if (expandedLoadId === load.id) {
       setExpandedLoadId(null);
       setMatchingTrucks([]);
@@ -239,8 +286,9 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
   /**
    * Handle POST action - Change unposted load to posted
+   * L12 FIX: Properly typed load parameter
    */
-  const handlePostLoad = async (load: any) => {
+  const handlePostLoad = async (load: Load) => {
     try {
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/loads/${load.id}`, {
@@ -256,15 +304,17 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
       toast.success('Load posted successfully!');
       setActiveStatus('POSTED');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to post load');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to post load';
+      toast.error(message);
     }
   };
 
   /**
    * Handle UNPOST action
+   * L13 FIX: Properly typed load parameter
    */
-  const handleUnpostLoad = async (load: any) => {
+  const handleUnpostLoad = async (load: Load) => {
     if (!confirm('Remove this load from the marketplace?')) return;
 
     try {
@@ -282,15 +332,17 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
       toast.success('Load removed from marketplace');
       fetchLoads();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to unpost load');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to unpost load';
+      toast.error(message);
     }
   };
 
   /**
    * Handle DUPLICATE action
+   * L14 FIX: Properly typed load parameter
    */
-  const handleDuplicateLoad = async (load: any) => {
+  const handleDuplicateLoad = async (load: Load) => {
     try {
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/loads/${load.id}/duplicate`, {
@@ -304,15 +356,17 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
       toast.success('Load duplicated! Edit and post when ready.');
       setActiveStatus('UNPOSTED');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to duplicate load');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to duplicate load';
+      toast.error(message);
     }
   };
 
   /**
    * Handle DELETE action
+   * L15 FIX: Properly typed load parameter
    */
-  const handleDeleteLoad = async (load: any) => {
+  const handleDeleteLoad = async (load: Load) => {
     if (!confirm('Are you sure you want to delete this load?')) return;
 
     try {
@@ -328,15 +382,17 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
       toast.success('Load deleted successfully');
       fetchLoads();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to delete load');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete load';
+      toast.error(message);
     }
   };
 
   /**
    * Handle EDIT action
+   * L5 FIX: Properly typed load parameter
    */
-  const handleStartEdit = (load: any) => {
+  const handleStartEdit = (load: Load & { matchCount?: number }) => {
     setEditingLoadId(load.id);
     setEditForm({
       pickupCity: load.pickupCity || '',
@@ -344,11 +400,11 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       pickupDate: load.pickupDate ? new Date(load.pickupDate).toISOString().split('T')[0] : '',
       deliveryDate: load.deliveryDate ? new Date(load.deliveryDate).toISOString().split('T')[0] : '',
       truckType: load.truckType || 'DRY_VAN',
-      weight: load.weight || '',
-      lengthM: load.lengthM || '',
+      weight: load.weight?.toString() || '',
+      lengthM: load.lengthM?.toString() || '',
       cargoDescription: load.cargoDescription || '',
-      rate: load.rate || '',
-      contactPhone: load.contactPhone || '',
+      rate: load.rate?.toString() || '',
+      contactPhone: load.shipperContactPhone || '',
     });
   };
 
@@ -364,15 +420,16 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
     try {
       const csrfToken = await getCSRFToken();
 
-      // Look up city IDs
+      // L6 FIX: Look up city IDs with proper types
       const pickupCityObj = ethiopianCities.find(
-        (c: any) => c.name.toLowerCase() === editForm.pickupCity.toLowerCase()
+        (c) => c.name.toLowerCase() === editForm.pickupCity.toLowerCase()
       );
       const deliveryCityObj = ethiopianCities.find(
-        (c: any) => c.name.toLowerCase() === editForm.deliveryCity.toLowerCase()
+        (c) => c.name.toLowerCase() === editForm.deliveryCity.toLowerCase()
       );
 
-      const updatePayload: any = {
+      // L7 FIX: Properly typed update payload
+      const updatePayload = {
         pickupCity: editForm.pickupCity,
         deliveryCity: editForm.deliveryCity,
         pickupCityId: pickupCityObj?.id || null,
@@ -384,7 +441,8 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
         lengthM: editForm.lengthM ? parseFloat(editForm.lengthM) : null,
         cargoDescription: editForm.cargoDescription || null,
         rate: editForm.rate ? parseFloat(editForm.rate) : null,
-        contactPhone: editForm.contactPhone || null,
+        shipperContactPhone: editForm.contactPhone || null,
+        status: undefined as string | undefined,
       };
 
       // If UNPOSTED, also post it
@@ -405,21 +463,45 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
       toast.success(wasUnposted ? 'Load updated and posted!' : 'Load updated successfully!');
       setEditingLoadId(null);
-      setEditForm({});
+      setEditForm({
+        pickupCity: '',
+        deliveryCity: '',
+        pickupDate: '',
+        deliveryDate: '',
+        truckType: '',
+        weight: '',
+        lengthM: '',
+        rate: '',
+        cargoDescription: '',
+        contactPhone: '',
+      });
 
       if (wasUnposted) {
         setActiveStatus('POSTED');
       } else {
         fetchLoads();
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to update load');
+    } catch (error) {
+      // L17 FIX: Proper error handling without any
+      const message = error instanceof Error ? error.message : 'Failed to update load';
+      toast.error(message);
     }
   };
 
   const handleCancelEdit = () => {
     setEditingLoadId(null);
-    setEditForm({});
+    setEditForm({
+      pickupCity: '',
+      deliveryCity: '',
+      pickupDate: '',
+      deliveryDate: '',
+      truckType: '',
+      weight: '',
+      lengthM: '',
+      rate: '',
+      cargoDescription: '',
+      contactPhone: '',
+    });
   };
 
   /**
@@ -434,12 +516,12 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
     try {
       const csrfToken = await getCSRFToken();
 
-      // Look up city IDs
+      // L18 FIX: Look up city IDs with proper types (no any)
       const pickupCityObj = ethiopianCities.find(
-        (c: any) => c.name.toLowerCase() === newLoadForm.pickupCity.toLowerCase()
+        (c) => c.name.toLowerCase() === newLoadForm.pickupCity.toLowerCase()
       );
       const deliveryCityObj = ethiopianCities.find(
-        (c: any) => c.name.toLowerCase() === newLoadForm.deliveryCity.toLowerCase()
+        (c) => c.name.toLowerCase() === newLoadForm.deliveryCity.toLowerCase()
       );
 
       const payload = {
@@ -495,15 +577,18 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       setShowNewLoadForm(false);
       setActiveStatus('POSTED');
       fetchLoads();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create load');
+    } catch (error) {
+      // L19 FIX: Proper error handling without any
+      const message = error instanceof Error ? error.message : 'Failed to create load';
+      toast.error(message);
     }
   };
 
   /**
    * Handle truck request
+   * L9 FIX: Properly typed truck parameter
    */
-  const handleOpenRequestModal = (truck: any, loadId: string) => {
+  const handleOpenRequestModal = (truck: TruckMatch, loadId: string) => {
     setSelectedTruckForRequest(truck);
     setSelectedLoadForRequest(loadId);
     setRequestNotes('');
@@ -541,10 +626,16 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       }
 
       toast.success('Request sent to carrier! You will be notified when they respond.');
-      setRequestedTruckIds(prev => new Set([...prev, selectedTruckForRequest.truck?.id || selectedTruckForRequest.id]));
+      // L8 FIX: Handle potentially undefined truck IDs
+      const truckId = selectedTruckForRequest.truck?.id || selectedTruckForRequest.id;
+      if (truckId) {
+        setRequestedTruckIds(prev => new Set([...prev, truckId]));
+      }
       setRequestModalOpen(false);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to send truck request');
+    } catch (error) {
+      // L20 FIX: Proper error handling without any
+      const message = error instanceof Error ? error.message : 'Failed to send truck request';
+      toast.error(message);
     } finally {
       setSubmittingRequest(false);
     }
@@ -922,11 +1013,11 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                         {/* Match Count Badge */}
                         {load.status === 'POSTED' && (
                           <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                            load.matchCount > 0
+                            (load.matchCount ?? 0) > 0
                               ? 'bg-emerald-100 text-emerald-700'
                               : 'bg-slate-100 text-slate-500'
                           }`}>
-                            {load.matchCount || 0} trucks
+                            {load.matchCount ?? 0} trucks
                           </span>
                         )}
 
@@ -1083,7 +1174,7 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                             </h4>
                             {onSwitchToSearchTrucks && (
                               <button
-                                onClick={() => onSwitchToSearchTrucks({ origin: load.pickupCity, destination: load.deliveryCity })}
+                                onClick={() => onSwitchToSearchTrucks({ origin: load.pickupCity ?? undefined, destination: load.deliveryCity ?? undefined })}
                                 className="text-xs text-teal-600 hover:text-teal-700 font-medium"
                               >
                                 Search All Trucks →
@@ -1102,9 +1193,10 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
                             </div>
                           ) : (
                             <div className="space-y-2 max-h-96 overflow-y-auto">
-                              {matchingTrucks.slice(0, 10).map((truck: any, idx: number) => {
-                                const truckId = truck.truck?.id || truck.id;
-                                const isRequested = requestedTruckIds.has(truckId);
+                              {/* L21 FIX: Use TruckMatch type instead of any */}
+                              {matchingTrucks.slice(0, 10).map((truck: TruckMatch, idx: number) => {
+                                const truckId = truck.truck?.id || truck.id || '';
+                                const isRequested = truckId ? requestedTruckIds.has(truckId) : false;
 
                                 return (
                                   <div

@@ -24,6 +24,7 @@ interface Load {
   offeredRate?: number;
 }
 
+// L33 FIX: Make carrier and originCity optional for flexibility
 interface TruckPosting {
   id: string;
   truck: {
@@ -32,18 +33,21 @@ interface TruckPosting {
     truckType: string;
     capacity: number;
   };
-  carrier: {
+  carrier?: {
     name: string;
     isVerified?: boolean;
   };
-  originCity: {
+  originCity?: {
     name: string;
-  };
+  } | null;
   destinationCity?: {
     name: string;
   } | null;
+  destinationCityObj?: {
+    name: string;
+  } | null;
   availableFrom: string;
-  availableTo?: string;
+  availableTo?: string | null;
   contactName?: string;
   contactPhone?: string;
 }
@@ -140,8 +144,10 @@ export default function TruckBookingModal({ isOpen, onClose, truckPosting, onReq
       setTimeout(() => {
         onClose();
       }, 2000);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      // L37 FIX: Proper error handling without any
+      const message = err instanceof Error ? err.message : 'Failed to send request';
+      setError(message);
     } finally {
       setLoading(false);
     }

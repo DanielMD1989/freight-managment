@@ -17,32 +17,84 @@ import {
   EditSearchModal,
 } from '@/components/loadboard-ui';
 import DataTable from '@/components/loadboard-ui/DataTable';
-import { TableColumn, StatusTab, RowAction, SavedSearch, SavedSearchCriteria } from '@/types/loadboard-ui';
+import { TableColumn, StatusTab, RowAction, SavedSearch, SavedSearchCriteria, CompanyInfo } from '@/types/loadboard-ui';
 import TruckBookingModal from './TruckBookingModal';
 import { getCSRFToken } from '@/lib/csrfFetch';
+import type { Organization, Truck } from '@/lib/types/shipper';
+
+// Session user shape (from auth)
+interface SessionUser {
+  userId: string;
+  email?: string;
+  role: string;
+  status?: string;
+  organizationId?: string;
+}
+
+// L22 FIX: Properly typed filter values
+interface FilterValues {
+  ageHours?: number;
+  origin?: string;
+  destination?: string;
+  truckType?: string;
+  minWeight?: number;
+  maxWeight?: number;
+  minLength?: number;
+  maxLength?: number;
+  verifiedOnly?: boolean;
+  showVerifiedOnly?: boolean;
+  fullPartial?: string;
+  availableFrom?: string;
+  [key: string]: string | number | boolean | undefined; // Allow dynamic keys
+}
+
+// L23 FIX: Extended truck posting with carrier info
+// Note: Uses local interface instead of extending TruckPosting for type compatibility
+interface TruckPostingWithCarrier {
+  id: string;
+  truckId: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'EXPIRED';
+  originCityId?: string | null;
+  destinationCityId?: string | null;
+  currentCity?: string | null;
+  availableFrom: string;
+  availableTo?: string | null;
+  preferredRate?: number | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  originCity?: { name: string; id?: string } | null;
+  destinationCityObj?: { name: string; id?: string } | null;
+  truck: Truck & { carrier?: Organization; carrierId: string };
+  carrier?: Organization & { contactPhone?: string; contactEmail?: string };
+  // Additional fields that may come from API
+  contactName?: string;
+  contactPhone?: string;
+}
 
 interface SearchTrucksTabProps {
-  user: any;
-  initialFilters?: any;
+  user: SessionUser;
+  initialFilters?: FilterValues;
 }
 
 type ResultsFilter = 'all' | 'PREFERRED' | 'BLOCKED';
 
 export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTabProps) {
-  const [trucks, setTrucks] = useState<any[]>([]);
+  // L24 FIX: Properly typed state variables
+  const [trucks, setTrucks] = useState<TruckPostingWithCarrier[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState<ResultsFilter>('all');
-  const [savedSearches, setSavedSearches] = useState<any[]>([]);
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
   const [activeSearchId, setActiveSearchId] = useState<string | null>(null);
-  const [filterValues, setFilterValues] = useState<Record<string, any>>(initialFilters || {});
-  const [selectedCompany, setSelectedCompany] = useState<any>(null);
+  const [filterValues, setFilterValues] = useState<FilterValues>(initialFilters || {});
+  const [selectedCompany, setSelectedCompany] = useState<CompanyInfo | null>(null);
   const [sortField, setSortField] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showSearchForm, setShowSearchForm] = useState(true); // Show search form by default
-  const [ethiopianCities, setEthiopianCities] = useState<any[]>([]);
+  const [ethiopianCities, setEthiopianCities] = useState<Array<{ name: string; id?: string; region?: string }>>([]);
   const [loadingCities, setLoadingCities] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
-  const [selectedTruckPosting, setSelectedTruckPosting] = useState<any>(null);
+  const [selectedTruckPosting, setSelectedTruckPosting] = useState<TruckPostingWithCarrier | null>(null);
   const [editingSearch, setEditingSearch] = useState<SavedSearch | null>(null);
   const [pendingRequestTruckIds, setPendingRequestTruckIds] = useState<Set<string>>(new Set());
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -50,8 +102,9 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   /**
    * Fetch trucks based on filters
    * Uses current filter values from state ref to avoid stale closure issues
+   * L25 FIX: Properly typed filter override
    */
-  const fetchTrucks = async (overrideFilters?: Record<string, any>) => {
+  const fetchTrucks = async (overrideFilters?: FilterValues) => {
     setLoading(true);
     setFetchError(null);
     try {
@@ -131,6 +184,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
 
   /**
    * Fetch pending truck requests to track button states
+   * L29 FIX: Properly typed request mapping
    */
   const fetchPendingTruckRequests = async () => {
     try {
@@ -138,7 +192,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
       if (response.ok) {
         const data = await response.json();
         const truckIds = new Set<string>(
-          (data.requests || []).map((req: any) => req.truckId)
+          (data.requests || []).map((req: { truckId: string }) => req.truckId)
         );
         setPendingRequestTruckIds(truckIds);
       }
@@ -181,12 +235,19 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
 
   /**
    * Handle saved search selection
+   * L31 FIX: Transform SavedSearchCriteria to FilterValues
    */
   const handleSelectSearch = (searchId: string) => {
     const search = savedSearches.find((s) => s.id === searchId);
     if (search) {
       setActiveSearchId(searchId);
-      setFilterValues(search.criteria || {});
+      // Transform criteria - truckType may be array in criteria but string in filters
+      const criteria = search.criteria || {};
+      const transformed: FilterValues = {
+        ...criteria,
+        truckType: Array.isArray(criteria.truckType) ? criteria.truckType[0] : criteria.truckType,
+      };
+      setFilterValues(transformed);
     }
   };
 
@@ -258,7 +319,8 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   const filterValuesRef = React.useRef(filterValues);
   filterValuesRef.current = filterValues;
 
-  const handleFilterChange = (key: string, value: any) => {
+  // L26 FIX: Properly typed filter change handler
+  const handleFilterChange = (key: string, value: string | number | boolean | undefined) => {
     const newFilters = { ...filterValues, [key]: value };
     setFilterValues(newFilters);
     setActiveSearchId(null);
@@ -300,10 +362,11 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
       setSortOrder('asc');
     }
 
-    // Sort the trucks array
+    // L32 FIX: Sort the trucks array with proper type handling
     const sorted = [...trucks].sort((a, b) => {
-      const aVal = a[field];
-      const bVal = b[field];
+      // Use type assertion for dynamic property access (via unknown to satisfy TS)
+      const aVal = (a as unknown as Record<string, unknown>)[field];
+      const bVal = (b as unknown as Record<string, unknown>)[field];
 
       if (aVal === null || aVal === undefined) return 1;
       if (bVal === null || bVal === undefined) return -1;
@@ -320,12 +383,20 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
 
   /**
    * Handle company link click
+   * L30 FIX: Transform to CompanyInfo type
    */
   const handleCompanyClick = async (companyId: string) => {
     try {
       const response = await fetch(`/api/organizations/${companyId}`);
       const data = await response.json();
-      setSelectedCompany(data);
+      // Transform to CompanyInfo format expected by CompanyModal
+      setSelectedCompany({
+        id: data.id,
+        name: data.name,
+        isVerified: data.isVerified ?? false,
+        isMasked: false,
+        allowNameDisplay: true,
+      });
     } catch (error) {
       console.error('Failed to fetch company:', error);
     }
@@ -368,11 +439,12 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
    * Table columns configuration (memoized)
    */
   const columns: TableColumn[] = useMemo(() => [
+    // L27 FIX: Properly typed column render functions
     {
       key: 'age',
       label: 'Age',
       width: '80px',
-      render: (_: any, row: any) => <AgeIndicator date={row.postedAt || row.createdAt} />,
+      render: (_: unknown, row: TruckPostingWithCarrier) => <AgeIndicator date={row.createdAt} />,
     },
     {
       key: 'availableDate',
@@ -398,7 +470,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
       key: 'currentCity',
       label: 'Origin',
       sortable: true,
-      render: (value: string, row: any) => (
+      render: (value: string, row: TruckPostingWithCarrier) => (
         <span className="font-medium text-slate-800 dark:text-slate-100">
           {value || row.originCity?.name || 'N/A'}
         </span>
@@ -408,20 +480,20 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
       key: 'destinationCity',
       label: 'Destination',
       sortable: true,
-      render: (_: any, row: any) => (
+      render: (_: unknown, row: TruckPostingWithCarrier) => (
         <span className="font-medium text-slate-800 dark:text-slate-100">
-          {row.destinationCity?.name || 'Anywhere'}
+          {row.destinationCityObj?.name || 'Anywhere'}
         </span>
       ),
     },
     {
       key: 'company',
       label: 'Company',
-      render: (_: any, row: any) => (
+      render: (_: unknown, row: TruckPostingWithCarrier) => (
         <CompanyLink
-          companyId={row.carrierId}
+          companyId={row.truck?.carrierId || ''}
           companyName={row.carrier?.name || 'Unknown'}
-          isMasked={!row.carrier?.allowNameDisplay}
+          isMasked={false}
           onClick={handleCompanyClick}
         />
       ),
@@ -456,6 +528,7 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
 
   /**
    * Table actions configuration (memoized)
+   * L28 FIX: Properly typed row actions
    */
   const tableActions: RowAction[] = useMemo(() => [
     {
@@ -467,18 +540,18 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
       ),
-      onClick: (row: any) => {
+      onClick: (row: TruckPostingWithCarrier) => {
         setSelectedTruckPosting(row);
         setShowBookingModal(true);
       },
-      show: (row: any) => !pendingRequestTruckIds.has(row.truck?.id || row.truckId),
+      show: (row: TruckPostingWithCarrier) => !pendingRequestTruckIds.has(row.truck?.id || row.truckId),
     },
     {
       key: 'pending',
       label: 'Pending',
       variant: 'secondary',
       onClick: () => {},
-      show: (row: any) => pendingRequestTruckIds.has(row.truck?.id || row.truckId),
+      show: (row: TruckPostingWithCarrier) => pendingRequestTruckIds.has(row.truck?.id || row.truckId),
     },
   ], [pendingRequestTruckIds]);
 

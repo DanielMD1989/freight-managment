@@ -9,13 +9,15 @@ import React, { useState, useEffect } from 'react';
 import { ETHIOPIAN_LOCATIONS } from '@/lib/constants/ethiopian-locations';
 import PlacesAutocomplete, { PlaceResult } from '@/components/PlacesAutocomplete';
 import { getCSRFToken } from '@/lib/csrfFetch';
+import type { Load, User } from '@/lib/types/shipper';
 
+// L1 FIX: Add proper TypeScript types
 interface LoadPostingModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  user: any;
-  load?: any; // Optional load for editing
+  user: Pick<User, 'id' | 'organizationId'>;
+  load?: Partial<Load>; // Optional load for editing
 }
 
 export default function LoadPostingModal({
@@ -61,7 +63,8 @@ export default function LoadPostingModal({
     }
   }, [load]);
 
-  const handleChange = (field: string, value: any) => {
+  // L2 FIX: Type the value parameter properly
+  const handleChange = (field: string, value: string | { lat: number; lng: number }) => {
     setFormData({ ...formData, [field]: value });
   };
 
@@ -103,9 +106,11 @@ export default function LoadPostingModal({
       alert(`Load ${isEditMode ? 'updated' : 'posted'} successfully!`);
       onSuccess();
       onClose();
-    } catch (error: any) {
+    } catch (error) {
+      // L38 FIX: Proper error handling without any
       console.error(`${isEditMode ? 'Update' : 'Create'} load error:`, error);
-      alert(error.message || `Failed to ${isEditMode ? 'update' : 'create'} load`);
+      const message = error instanceof Error ? error.message : `Failed to ${isEditMode ? 'update' : 'create'} load`;
+      alert(message);
     } finally {
       setLoading(false);
     }

@@ -13,9 +13,28 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import PostLoadsTab from './PostLoadsTab';
 import SearchTrucksTab from './SearchTrucksTab';
+// L34 FIX: Properly typed search filters
+interface SearchFilters {
+  origin?: string;
+  destination?: string;
+  truckType?: string;
+  pickupDate?: string;
+  length?: string;
+  weight?: string;
+  [key: string]: string | number | boolean | undefined; // Allow dynamic keys
+}
+
+// User shape from session (userId vs id)
+interface SessionUser {
+  userId: string;
+  email: string;
+  role: string;
+  status?: string;
+  organizationId?: string;
+}
 
 interface ShipperLoadboardClientProps {
-  user: any;
+  user: SessionUser;
 }
 
 type ShipperTabKey = 'POST_LOADS' | 'SEARCH_TRUCKS';
@@ -53,7 +72,8 @@ export default function ShipperLoadboardClient({ user }: ShipperLoadboardClientP
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<ShipperTabKey>('POST_LOADS');
-  const [searchFilters, setSearchFilters] = useState<any>(null);
+  // L35 FIX: Properly typed search filters state
+  const [searchFilters, setSearchFilters] = useState<SearchFilters | null>(null);
 
   // Read tab from URL parameters (navigation via sidebar)
   useEffect(() => {
@@ -91,8 +111,9 @@ export default function ShipperLoadboardClient({ user }: ShipperLoadboardClientP
 
   /**
    * Handle switching to SEARCH TRUCKS tab with filters
+   * L36 FIX: Properly typed filters parameter
    */
-  const handleSwitchToSearchTrucks = (filters: any) => {
+  const handleSwitchToSearchTrucks = (filters: SearchFilters) => {
     setSearchFilters(filters);
     handleTabChange('SEARCH_TRUCKS');
   };
@@ -155,7 +176,7 @@ export default function ShipperLoadboardClient({ user }: ShipperLoadboardClientP
         {activeTab === 'SEARCH_TRUCKS' && (
           <SearchTrucksTab
             user={user}
-            initialFilters={searchFilters}
+            initialFilters={searchFilters ?? undefined}
           />
         )}
       </ErrorBoundary>

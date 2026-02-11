@@ -108,6 +108,18 @@ export function canAssignLoads(
  * PHASE 2 - Foundation Rule: DISPATCHER_COORDINATION_ONLY
  * Dispatcher can propose load-truck matches that require carrier approval
  *
+ * H8-H9 SECURITY AUDIT NOTE:
+ * Dispatchers can propose ANY load to ANY truck by design. This is intentional
+ * for a freight marketplace model where dispatchers work for the platform
+ * (not individual companies) and coordinate matches across all participants.
+ *
+ * The carrier MUST approve all proposals before assignment happens, so there's
+ * no security risk - dispatchers can only PROPOSE, not ASSIGN.
+ *
+ * If per-organization dispatcher scoping is needed in the future, add:
+ * - DispatcherAssignment table (dispatcherId, organizationId, scope)
+ * - Update this function to check assignments
+ *
  * @param user - User with role information
  * @returns True if user can propose matches
  */
