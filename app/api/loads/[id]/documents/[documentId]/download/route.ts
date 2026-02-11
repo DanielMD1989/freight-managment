@@ -76,8 +76,31 @@ export async function GET(
       );
     }
 
-    // Get file path
+    // H3 FIX: Path traversal prevention
+    // Validate fileUrl doesn't contain path traversal sequences
+    if (document.fileUrl.includes('..') || document.fileUrl.includes('\\')) {
+      console.error('Path traversal attempt detected:', document.fileUrl);
+      return NextResponse.json(
+        { error: 'Invalid file path' },
+        { status: 400 }
+      );
+    }
+
+    // Get file path and verify it stays within uploads directory
+    const uploadsDir = join(process.cwd(), 'public', 'uploads');
     const filePath = join(process.cwd(), 'public', document.fileUrl);
+
+    // Resolve to absolute path and verify it's under uploads directory
+    const resolvedPath = require('path').resolve(filePath);
+    const resolvedUploads = require('path').resolve(uploadsDir);
+
+    if (!resolvedPath.startsWith(resolvedUploads)) {
+      console.error('Path escape attempt detected:', resolvedPath);
+      return NextResponse.json(
+        { error: 'Invalid file path' },
+        { status: 400 }
+      );
+    }
 
     // Check if file exists
     if (!existsSync(filePath)) {

@@ -33,8 +33,9 @@ export async function GET(request: NextRequest) {
     const priority = searchParams.get('priority');
     const escalationType = searchParams.get('escalationType');
     const assignedTo = searchParams.get('assignedTo');
-    const limit = parseInt(searchParams.get('limit') || '50', 10);
-    const offset = parseInt(searchParams.get('offset') || '0', 10);
+    // M1 FIX: Add pagination bounds to prevent DoS
+    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '50', 10), 1), 100);
+    const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10), 0);
 
     // Build where clause
     const where: any = {};

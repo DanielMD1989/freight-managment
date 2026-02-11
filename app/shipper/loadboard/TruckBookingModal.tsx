@@ -82,12 +82,17 @@ export default function TruckBookingModal({ isOpen, onClose, truckPosting, onReq
     try {
       // Include myLoads=true to only fetch loads belonging to the current user's organization
       const response = await fetch('/api/loads?status=POSTED,SEARCHING,OFFERED&myLoads=true&limit=100');
-      if (response.ok) {
-        const data = await response.json();
-        setLoads(data.loads || []);
+      // H34 FIX: Handle non-ok response with error state
+      if (!response.ok) {
+        console.error('Failed to fetch loads:', response.status);
+        setError('Failed to load your posted loads. Please try again.');
+        return;
       }
+      const data = await response.json();
+      setLoads(data.loads || []);
     } catch (err) {
       console.error('Failed to fetch loads:', err);
+      setError('Failed to load your posted loads. Please try again.');
     } finally {
       setLoadingLoads(false);
     }

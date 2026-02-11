@@ -38,7 +38,8 @@ export async function GET(request: NextRequest) {
 
     const statusParam = searchParams.get('status');
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '100'); // Higher default for UI
+    // M3 FIX: Add pagination bounds
+    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '100'), 1), 200); // Higher default for UI
     const skip = (page - 1) * limit;
 
     // PHASE 4: Build cache key from filter parameters

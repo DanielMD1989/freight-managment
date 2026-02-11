@@ -31,8 +31,13 @@ export default async function ShipperLayout({
     redirect('/login?redirect=/shipper');
   }
 
-  // Check if user is a shipper or admin
-  if (session.role !== 'SHIPPER' && session.role !== 'ADMIN') {
+  // H7 FIX: Intentional admin access for support purposes
+  // ADMIN and SUPER_ADMIN can access shipper panel to assist users
+  // This is a documented design decision for customer support workflows
+  const isShipper = session.role === 'SHIPPER';
+  const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+
+  if (!isShipper && !isAdmin) {
     redirect('/unauthorized');
   }
 

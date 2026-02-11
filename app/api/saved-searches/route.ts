@@ -47,8 +47,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ searches });
   } catch (error: any) {
     console.error('Get saved searches error:', error);
+    // M4 FIX: Don't leak error details
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch saved searches' },
+      { error: 'Failed to fetch saved searches' },
       { status: 500 }
     );
   }

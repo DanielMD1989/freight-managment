@@ -101,6 +101,11 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
   const fetchEthiopianCities = async () => {
     try {
       const response = await fetch('/api/ethiopian-locations');
+      // H27 FIX: Check response.ok before parsing
+      if (!response.ok) {
+        console.error('Failed to fetch Ethiopian cities:', response.status);
+        return;
+      }
       const data = await response.json();
       setEthiopianCities(data.locations || []);
     } catch (error) {
@@ -150,11 +155,13 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       const loadsData = data.loads || [];
 
       // Fetch match counts for POSTED loads in parallel
+      // H29 FIX: Check response.ok for match counts
       const loadsWithMatchCounts = await Promise.all(
         loadsData.map(async (load: any) => {
           if (load.status === 'POSTED') {
             try {
               const matchResponse = await fetch(`/api/loads/${load.id}/matching-trucks?limit=1`);
+              if (!matchResponse.ok) return { ...load, matchCount: 0 };
               const matchData = await matchResponse.json();
               return { ...load, matchCount: matchData.total || 0 };
             } catch {
@@ -168,11 +175,17 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
       setLoads(loadsWithMatchCounts);
 
       // Fetch counts for each status tab
+      // H30 FIX: Check response.ok for status counts
       const counts: Record<string, number> = { POSTED: 0, UNPOSTED: 0, EXPIRED: 0 };
       const statusPromises = ['POSTED', 'UNPOSTED', 'EXPIRED'].map(async (status) => {
-        const res = await fetch(`/api/loads?myLoads=true&status=${status}&limit=1`);
-        const json = await res.json();
-        counts[status] = json.pagination?.total || 0;
+        try {
+          const res = await fetch(`/api/loads?myLoads=true&status=${status}&limit=1`);
+          if (!res.ok) return;
+          const json = await res.json();
+          counts[status] = json.pagination?.total || 0;
+        } catch {
+          // Silently ignore count fetch errors
+        }
       });
       await Promise.all(statusPromises);
       setStatusCounts(counts);
@@ -191,6 +204,11 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
     setLoadingMatches(true);
     try {
       const response = await fetch(`/api/loads/${loadId}/matching-trucks?minScore=0&limit=50`);
+      // H28 FIX: Check response.ok before parsing
+      if (!response.ok) {
+        console.error('Failed to fetch matching trucks:', response.status);
+        return [];
+      }
       const data = await response.json();
       return data.trucks || [];
     } catch (error) {

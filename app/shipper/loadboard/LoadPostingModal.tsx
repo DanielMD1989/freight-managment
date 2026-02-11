@@ -8,6 +8,7 @@
 import React, { useState, useEffect } from 'react';
 import { ETHIOPIAN_LOCATIONS } from '@/lib/constants/ethiopian-locations';
 import PlacesAutocomplete, { PlaceResult } from '@/components/PlacesAutocomplete';
+import { getCSRFToken } from '@/lib/csrfFetch';
 
 interface LoadPostingModalProps {
   isOpen: boolean;
@@ -75,12 +76,17 @@ export default function LoadPostingModal({
 
     setLoading(true);
     try {
+      // H33 FIX: Add CSRF token for state-changing operations
+      const csrfToken = await getCSRFToken();
       const url = isEditMode ? `/api/loads/${load.id}` : '/api/loads';
       const method = isEditMode ? 'PATCH' : 'POST';
 
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+        },
         body: JSON.stringify({
           ...formData,
           lengthM: formData.lengthM ? parseFloat(formData.lengthM) : null,

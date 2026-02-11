@@ -117,6 +117,11 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
   const fetchSavedSearches = async () => {
     try {
       const response = await fetch('/api/saved-searches?type=TRUCKS');
+      // H31 FIX: Check response.ok before parsing
+      if (!response.ok) {
+        console.error('Failed to fetch saved searches:', response.status);
+        return;
+      }
       const data = await response.json();
       setSavedSearches(data.searches || []);
     } catch (error) {
@@ -149,6 +154,11 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
     setLoadingCities(true);
     try {
       const response = await fetch('/api/ethiopian-locations');
+      // H32 FIX: Check response.ok before parsing
+      if (!response.ok) {
+        console.error('Failed to fetch Ethiopian cities:', response.status);
+        return;
+      }
       const data = await response.json();
       setEthiopianCities(data.locations || []);
     } catch (error) {

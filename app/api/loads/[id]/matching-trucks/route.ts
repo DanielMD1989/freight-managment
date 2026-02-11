@@ -26,7 +26,8 @@ export async function GET(
     const { searchParams } = new URL(request.url);
 
     const minScore = parseInt(searchParams.get('minScore') || '50');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    // M2 FIX: Add pagination bounds
+    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '50'), 1), 100);
 
     // Fetch the load with assignedTruckId for carrier authorization check
     const load = await db.load.findUnique({
@@ -158,8 +159,9 @@ export async function GET(
     });
   } catch (error: any) {
     console.error('Matching trucks error:', error);
+    // M7 FIX: Don't leak error details
     return NextResponse.json(
-      { error: error.message || 'Failed to find matching trucks' },
+      { error: 'Failed to find matching trucks' },
       { status: 500 }
     );
   }

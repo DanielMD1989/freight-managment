@@ -54,8 +54,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error activating test users:', error);
+    // M5 FIX: Don't leak error details
     return NextResponse.json(
-      { error: error.message || 'Failed to activate test users' },
+      { error: 'Failed to activate test users' },
       { status: 500 }
     );
   }
@@ -90,8 +91,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ users });
   } catch (error: any) {
     console.error('Error fetching test users:', error);
+    // M6 FIX: Don't leak error details
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch test users' },
+      { error: 'Failed to fetch test users' },
       { status: 500 }
     );
   }
