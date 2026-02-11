@@ -97,6 +97,7 @@ export async function GET(
 
     const canView =
       user?.role === "SUPER_ADMIN" ||
+      user?.role === "ADMIN" ||
       truck.carrierId === user?.organizationId;
 
     if (!canView) {

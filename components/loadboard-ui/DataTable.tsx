@@ -69,21 +69,28 @@ export default function DataTable<T = any>({
     setExpandedRows(new Set());
   }, [data]);
 
-  // Auto-detect mobile and switch to card view
+  // Auto-detect mobile and switch to card view (debounced)
   useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
     const checkMobile = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      if (responsiveCardView && mobile) {
-        setViewMode('card');
-      } else if (!mobile && viewMode === 'card') {
-        setViewMode('table');
-      }
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        const mobile = window.innerWidth < 768;
+        setIsMobile(mobile);
+        if (responsiveCardView && mobile) {
+          setViewMode('card');
+        } else if (!mobile && viewMode === 'card') {
+          setViewMode('table');
+        }
+      }, 100); // Debounce 100ms
     };
 
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', checkMobile);
+    };
   }, [responsiveCardView, viewMode]);
 
   /**

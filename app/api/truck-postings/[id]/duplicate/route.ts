@@ -20,9 +20,17 @@ export async function POST(
     const user = await requireAuth();
 
     // CSRF protection for state-changing operation
-    // Skip for mobile clients using Bearer token authentication
+    // Mobile clients MUST use Bearer token authentication (inherently CSRF-safe)
+    // Web clients MUST provide CSRF token
     const isMobileClient = request.headers.get('x-client-type') === 'mobile';
     const hasBearerAuth = request.headers.get('authorization')?.startsWith('Bearer ');
+
+    if (isMobileClient && !hasBearerAuth) {
+      return NextResponse.json(
+        { error: 'Mobile clients require Bearer authentication' },
+        { status: 401 }
+      );
+    }
 
     if (!isMobileClient && !hasBearerAuth) {
       const csrfError = await requireCSRF(request);
@@ -64,6 +72,25 @@ export async function POST(
       );
     }
 
+    // ONE_ACTIVE_POST_PER_TRUCK rule: Check if truck already has an active posting
+    const existingActivePosting = await db.truckPosting.findFirst({
+      where: {
+        truckId: originalPosting.truckId,
+        status: 'ACTIVE',
+      },
+      select: { id: true },
+    });
+
+    if (existingActivePosting) {
+      return NextResponse.json(
+        {
+          error: 'This truck already has an active posting',
+          existingPostingId: existingActivePosting.id,
+        },
+        { status: 409 }
+      );
+    }
+
     // Create duplicate truck posting
     const { id: _, createdAt, updatedAt, postedAt, expiresAt, ...postingData } = originalPosting;
 
@@ -77,9 +104,10 @@ export async function POST(
 
     return NextResponse.json(duplicatePosting, { status: 201 });
   } catch (error: any) {
+    // Log detailed error server-side, return generic message to client
     console.error('Duplicate truck posting error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to duplicate truck posting' },
+      { error: 'Failed to duplicate truck posting' },
       { status: 500 }
     );
   }

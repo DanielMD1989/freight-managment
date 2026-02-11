@@ -45,12 +45,11 @@ export async function GET(request: NextRequest) {
       100
     );
     const offset = Math.max(parseInt(searchParams.get('offset') || '0') || 0, 0);
-    const type = searchParams.get('type') as
-      | 'COMMISSION'
-      | 'PAYMENT'
-      | 'REFUND'
-      | 'ADJUSTMENT'
-      | null;
+    const typeParam = searchParams.get('type');
+    const validTypes = ['COMMISSION', 'PAYMENT', 'REFUND', 'ADJUSTMENT'] as const;
+    const type = typeParam && validTypes.includes(typeParam as any)
+      ? (typeParam as typeof validTypes[number])
+      : null;
 
     // Get wallet accounts
     const walletAccounts = await db.financialAccount.findMany({

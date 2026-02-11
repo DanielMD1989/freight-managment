@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { requireCSRF } from '@/lib/csrf';
 import { getAccessRoles } from '@/lib/rbac';
 import { TripStatus, LoadStatus } from '@prisma/client';
 import { z } from 'zod';
@@ -127,14 +128,15 @@ export async function GET(
       );
     }
 
-    // For shippers, only show carrier contact info when trip is IN_TRANSIT or later
+    // For shippers, only show carrier contact info and route when trip is IN_TRANSIT or later
     let responseTrip: any = trip;
     if (isShipper && trip.status === 'ASSIGNED') {
-      // Hide carrier contact until pickup begins
+      // Hide carrier contact and route history until pickup begins
       responseTrip = {
         ...trip,
         truck: { ...trip.truck, contactPhone: '(hidden)' },
         carrier: { ...trip.carrier, contactPhone: '(hidden)' },
+        routeHistory: [], // Don't expose GPS data before trip starts
       };
     }
 
@@ -159,6 +161,26 @@ export async function PATCH(
   { params }: { params: Promise<{ tripId: string }> }
 ) {
   try {
+    // CSRF protection for state-changing operation
+    // Mobile clients MUST use Bearer token authentication (inherently CSRF-safe)
+    // Web clients MUST provide CSRF token
+    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
+    const hasBearerAuth = request.headers.get('authorization')?.startsWith('Bearer ');
+
+    if (isMobileClient && !hasBearerAuth) {
+      return NextResponse.json(
+        { error: 'Mobile clients require Bearer authentication' },
+        { status: 401 }
+      );
+    }
+
+    if (!isMobileClient && !hasBearerAuth) {
+      const csrfError = await requireCSRF(request);
+      if (csrfError) {
+        return csrfError;
+      }
+    }
+
     const session = await requireAuth();
     const { tripId } = await params;
 

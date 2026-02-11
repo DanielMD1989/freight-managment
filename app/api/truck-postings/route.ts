@@ -429,20 +429,22 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Pagination
-    const limit = Math.min(parseInt(limitParam || '20', 10), 100);
-    const offset = Math.max(parseInt(offsetParam || '0', 10), 0);
+    // Pagination with NaN handling
+    const limit = Math.min(Math.max(parseInt(limitParam || '20', 10) || 20, 1), 100);
+    const offset = Math.max(parseInt(offsetParam || '0', 10) || 0, 0);
 
     // PHASE 4: Convert city names to IDs in parallel (N+1 fix)
     let resolvedOriginCityId = originCityId;
     let resolvedDestinationCityId = destinationCityId;
 
     // Run city lookups in parallel if needed
+    // Escape LIKE wildcards to prevent injection
+    const escapeLikeWildcards = (str: string) => str.replace(/[%_]/g, '\\$&');
     const cityLookups = [];
     if (origin && !originCityId) {
       cityLookups.push(
         db.ethiopianLocation.findFirst({
-          where: { name: { contains: origin, mode: 'insensitive' } },
+          where: { name: { contains: escapeLikeWildcards(origin), mode: 'insensitive' } },
           select: { id: true },
         }).then(city => ({ type: 'origin', city }))
       );
@@ -450,7 +452,7 @@ export async function GET(request: NextRequest) {
     if (destination && !destinationCityId) {
       cityLookups.push(
         db.ethiopianLocation.findFirst({
-          where: { name: { contains: destination, mode: 'insensitive' } },
+          where: { name: { contains: escapeLikeWildcards(destination), mode: 'insensitive' } },
           select: { id: true },
         }).then(city => ({ type: 'destination', city }))
       );

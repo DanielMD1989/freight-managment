@@ -297,6 +297,32 @@ export async function PATCH(
       );
     }
 
+    // Validate city IDs if provided
+    if (data.originCityId) {
+      const originCity = await db.ethiopianLocation.findUnique({
+        where: { id: data.originCityId },
+        select: { id: true },
+      });
+      if (!originCity) {
+        return NextResponse.json(
+          { error: 'Invalid origin city ID' },
+          { status: 400 }
+        );
+      }
+    }
+    if (data.destinationCityId) {
+      const destCity = await db.ethiopianLocation.findUnique({
+        where: { id: data.destinationCityId },
+        select: { id: true },
+      });
+      if (!destCity) {
+        return NextResponse.json(
+          { error: 'Invalid destination city ID' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Update postedAt when status changes to ACTIVE (posted)
     const shouldUpdatePostedAt = data.status === 'ACTIVE' && existing.status !== 'ACTIVE';
 

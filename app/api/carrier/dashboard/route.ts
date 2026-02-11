@@ -156,7 +156,9 @@ export async function GET(request: NextRequest) {
 
     // Calculate total distance from trips
     const totalDistance = Number(tripStats._sum?.actualDistanceKm || tripStats._sum?.estimatedDistanceKm || 0);
-    const totalServiceFeesPaid = Number(revenueResult._sum?.carrierServiceFee || 0);
+    // Preserve 2 decimal precision for financial values
+    const rawFees = revenueResult._sum?.carrierServiceFee;
+    const totalServiceFeesPaid = rawFees ? parseFloat(Number(rawFees).toFixed(2)) : 0;
 
     return NextResponse.json({
       totalTrucks,
