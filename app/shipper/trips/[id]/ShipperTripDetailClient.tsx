@@ -177,8 +177,9 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
       setTrip((prev) => ({ ...prev, shipperConfirmed: true, status: 'COMPLETED' }));
       setShowConfirmModal(false);
       router.refresh();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      // L43 FIX: Proper error handling without any
+      setError(err instanceof Error ? err.message : 'Failed to confirm delivery');
     } finally {
       setConfirmingDelivery(false);
     }

@@ -37,8 +37,35 @@ interface Trip {
   podVerified: boolean;
 }
 
+// L45 FIX: Properly typed load from API
+interface LoadApiResponse {
+  id: string;
+  status: string;
+  pickupCity?: string | null;
+  deliveryCity?: string | null;
+  pickupDate: string;
+  deliveryDate?: string | null;
+  truckType: string;
+  weight?: number | null;
+  rate?: number | null;
+  assignedAt?: string | null;
+  updatedAt: string;
+  podSubmitted?: boolean;
+  podVerified?: boolean;
+  assignedTruck?: {
+    id: string;
+    licensePlate: string;
+    truckType: string;
+    carrier?: {
+      id: string;
+      name: string;
+      isVerified?: boolean;
+    };
+  } | null;
+}
+
 interface TripsResponse {
-  loads: any[];
+  loads: LoadApiResponse[];
   pagination: {
     page: number;
     limit: number;
@@ -129,8 +156,8 @@ export default async function ShipperTripsPage({
   // Fetch trips
   const data = await getTrips(page, status);
 
-  // Transform loads to trips format
-  const trips: Trip[] = (data?.loads || []).map((load: any) => ({
+  // L46 FIX: Transform loads to trips format with proper types
+  const trips: Trip[] = (data?.loads || []).map((load: LoadApiResponse) => ({
     id: load.id,
     loadId: load.id,
     referenceNumber: `LOAD-${load.id.slice(-8).toUpperCase()}`,
@@ -138,10 +165,10 @@ export default async function ShipperTripsPage({
     pickupCity: load.pickupCity || 'Unknown',
     deliveryCity: load.deliveryCity || 'Unknown',
     pickupDate: load.pickupDate,
-    deliveryDate: load.deliveryDate,
+    deliveryDate: load.deliveryDate || load.pickupDate,
     truckType: load.truckType,
-    weight: load.weight,
-    rate: load.rate,
+    weight: load.weight ?? 0,
+    rate: load.rate ?? null,
     assignedAt: load.assignedAt || load.updatedAt,
     truck: load.assignedTruck ? {
       id: load.assignedTruck.id,

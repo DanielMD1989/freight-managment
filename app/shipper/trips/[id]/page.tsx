@@ -14,6 +14,31 @@ import { db } from '@/lib/db';
 import { redirect, notFound } from 'next/navigation';
 import ShipperTripDetailClient from './ShipperTripDetailClient';
 
+// L47-L48 FIX: Simple types for Prisma query results
+interface DocResult {
+  id: string;
+  type: string;
+  fileName: string;
+  fileUrl: string;
+  uploadedAt: Date;
+}
+
+interface EventResult {
+  id: string;
+  eventType: string;
+  description?: string | null;
+  createdAt: Date;
+}
+
+interface PodDocResult {
+  id: string;
+  fileUrl: string;
+  fileName: string;
+  fileType: string;
+  notes?: string | null;
+  uploadedAt: Date;
+}
+
 async function getTripDetails(id: string, userId: string) {
   const user = await db.user.findUnique({
     where: { id: userId },
@@ -265,20 +290,21 @@ export default async function ShipperTripDetailPage({
         truckType: tripData.truck.truckType,
         capacity: Number(tripData.truck.capacity),
       } : null,
-      documents: (load?.documents || []).map((doc: any) => ({
+      // L49 FIX: Use typed map functions
+      documents: (load?.documents || []).map((doc: DocResult) => ({
         id: doc.id,
         documentType: doc.type,
         fileName: doc.fileName,
         fileUrl: doc.fileUrl,
         createdAt: doc.uploadedAt.toISOString(),
       })),
-      events: (load?.events || []).map((event: any) => ({
+      events: (load?.events || []).map((event: EventResult) => ({
         id: event.id,
         eventType: event.eventType,
         description: event.description || '',
         createdAt: event.createdAt.toISOString(),
       })),
-      podDocuments: (tripData.podDocuments || []).map((pod: any) => ({
+      podDocuments: (tripData.podDocuments || []).map((pod: PodDocResult) => ({
         id: pod.id,
         fileUrl: pod.fileUrl,
         fileName: pod.fileName,
@@ -336,14 +362,15 @@ export default async function ShipperTripDetailPage({
         truckType: load.assignedTruck.truckType,
         capacity: Number(load.assignedTruck.capacity),
       } : null,
-      documents: load.documents.map((doc: any) => ({
+      // L50 FIX: Use typed map functions for legacy format
+      documents: load.documents.map((doc: DocResult) => ({
         id: doc.id,
         documentType: doc.type,
         fileName: doc.fileName,
         fileUrl: doc.fileUrl,
         createdAt: doc.uploadedAt.toISOString(),
       })),
-      events: load.events.map((event: any) => ({
+      events: load.events.map((event: EventResult) => ({
         id: event.id,
         eventType: event.eventType,
         description: event.description || '',

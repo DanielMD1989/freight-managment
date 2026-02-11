@@ -105,7 +105,8 @@ export default function LoadCreationForm() {
     error: string | null;
   } | null>(null);
 
-  const updateField = (field: string, value: any) => {
+  // L44 FIX: Properly typed field value
+  const updateField = (field: string, value: string | number | boolean | { lat: number; lng: number } | undefined) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setError('');
   };

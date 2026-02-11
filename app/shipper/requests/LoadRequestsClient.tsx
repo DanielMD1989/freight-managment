@@ -98,8 +98,9 @@ export default function LoadRequestsClient({ requests: initialRequests }: Props)
       );
       setShowResponseForm(null);
       router.refresh();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      // L41 FIX: Proper error handling without any
+      setError(err instanceof Error ? err.message : 'Failed to process request');
     } finally {
       setLoading(null);
     }

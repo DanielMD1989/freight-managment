@@ -87,8 +87,9 @@ export default function TruckRequestsClient({ requests: initialRequests }: Props
 
       setRequests(requests.filter((r) => r.id !== requestId));
       router.refresh();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      // L42 FIX: Proper error handling without any
+      setError(err instanceof Error ? err.message : 'Failed to cancel request');
     } finally {
       setLoading(null);
     }
