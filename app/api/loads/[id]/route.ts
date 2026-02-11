@@ -148,6 +148,19 @@ export async function GET(
       return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
+    // H1 FIX: Authorization check - only shipper, assigned carrier, dispatcher, or admin
+    const isShipper = user.organizationId === load.shipperId;
+    const isAssignedCarrier = load.assignedTruck?.carrier?.id === user.organizationId;
+    const isDispatcher = user.role === 'DISPATCHER';
+    const isAdmin = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
+
+    if (!isShipper && !isAssignedCarrier && !isDispatcher && !isAdmin) {
+      return NextResponse.json(
+        { error: "You do not have permission to view this load" },
+        { status: 403 }
+      );
+    }
+
     // Compute age
     const ageMinutes = calculateAge(load.postedAt, load.createdAt);
 
@@ -253,8 +266,8 @@ export async function PATCH(
       );
     }
 
-    // Cannot edit if already assigned
-    if (existingLoad.status === "ASSIGNED" || existingLoad.status === "IN_TRANSIT" || existingLoad.status === "DELIVERED") {
+    // H13 FIX: Cannot edit if already assigned or in PICKUP_PENDING
+    if (existingLoad.status === "ASSIGNED" || existingLoad.status === "PICKUP_PENDING" || existingLoad.status === "IN_TRANSIT" || existingLoad.status === "DELIVERED") {
       return NextResponse.json(
         { error: "Cannot edit load after it has been assigned" },
         { status: 400 }

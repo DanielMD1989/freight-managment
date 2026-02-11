@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { findNextLoadsWithMinimalDHD } from '@/lib/deadheadOptimization';
 
@@ -15,6 +16,39 @@ export async function GET(
   try {
     const session = await requireAuth();
     const { id: loadId } = await params;
+
+    // H5 FIX: Get user's organization for authorization check
+    const user = await db.user.findUnique({
+      where: { id: session.userId },
+      select: { organizationId: true, role: true },
+    });
+
+    // H5 FIX: Verify load exists and check authorization
+    const load = await db.load.findUnique({
+      where: { id: loadId },
+      select: {
+        id: true,
+        shipperId: true,
+        assignedTruck: { select: { carrierId: true } },
+      },
+    });
+
+    if (!load) {
+      return NextResponse.json({ error: 'Load not found' }, { status: 404 });
+    }
+
+    // H5 FIX: Only shipper, assigned carrier, dispatcher, or admin can access
+    const isShipper = user?.organizationId === load.shipperId;
+    const isAssignedCarrier = load.assignedTruck?.carrierId === user?.organizationId;
+    const isDispatcher = user?.role === 'DISPATCHER';
+    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+
+    if (!isShipper && !isAssignedCarrier && !isDispatcher && !isAdmin) {
+      return NextResponse.json(
+        { error: 'You do not have permission to view next loads for this load' },
+        { status: 403 }
+      );
+    }
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
@@ -55,7 +89,7 @@ export async function GET(
   } catch (error) {
     console.error('Next loads error:', error);
     return NextResponse.json(
-      { error: 'Failed to find next loads' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

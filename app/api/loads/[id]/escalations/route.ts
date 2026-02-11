@@ -245,9 +245,15 @@ export async function GET(
       );
     }
 
-    // Permission check
-    const isShipper = session.role === 'SHIPPER' && load.shipperId === session.userId;
-    const isCarrier = session.role === 'CARRIER' && load.assignedTruck?.carrierId === session.userId;
+    // H17 FIX: Get user's organizationId for proper ownership check (same as POST handler)
+    const user = await db.user.findUnique({
+      where: { id: session.userId },
+      select: { organizationId: true },
+    });
+
+    // Permission check - compare organizationId (not userId) with shipperId/carrierId
+    const isShipper = session.role === 'SHIPPER' && load.shipperId === user?.organizationId;
+    const isCarrier = session.role === 'CARRIER' && load.assignedTruck?.carrierId === user?.organizationId;
     const isDispatcher = session.role === 'DISPATCHER';
     const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
 

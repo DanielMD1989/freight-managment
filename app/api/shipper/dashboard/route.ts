@@ -48,6 +48,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // H16 FIX: Verify user actually belongs to claimed organization
+    const user = await db.user.findUnique({
+      where: { id: session.userId },
+      select: { organizationId: true },
+    });
+
+    if (!user || user.organizationId !== session.organizationId) {
+      return NextResponse.json(
+        { error: 'Session organization mismatch' },
+        { status: 403 }
+      );
+    }
+
     // Start of current month for "this month" queries
     const startOfMonth = new Date();
     startOfMonth.setDate(1);

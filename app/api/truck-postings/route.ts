@@ -514,12 +514,8 @@ export async function GET(request: NextRequest) {
               capacity: true,
               lengthM: true,
               approvalStatus: true,
-              // Sprint 16: GPS fields
-              imei: true,
-              gpsProvider: true,
-              gpsStatus: true,
-              gpsVerifiedAt: true,
-              gpsLastSeenAt: true,
+              // H6 FIX: GPS/IMEI fields removed from public response - sensitive operational data
+              // Use /api/carrier/trucks for authenticated access to GPS info
               // Check if truck is assigned to any load
               assignedLoad: {
                 where: {

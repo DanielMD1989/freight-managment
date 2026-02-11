@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { validateCSRFWithMobile } from '@/lib/csrf';
 
 /**
  * DELETE /api/organizations/members/[id]
@@ -21,6 +22,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // H24 FIX: Add CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireAuth();
     const { id: memberId } = await params;
 
@@ -93,6 +98,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // H25 FIX: Add CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireAuth();
     const { id: memberId } = await params;
 

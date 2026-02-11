@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth, requireActiveUser } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
 import {
@@ -64,6 +65,10 @@ const createLoadSchema = z.object({
 // POST /api/loads - Create load
 export async function POST(request: NextRequest) {
   try {
+    // H22 FIX: Add CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     // Rate limiting: Apply RPS_CONFIGS.marketplace
     const ip =
       request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||

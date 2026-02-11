@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
@@ -20,6 +21,10 @@ const createOrganizationSchema = z.object({
 // POST /api/organizations - Create organization
 export async function POST(request: NextRequest) {
   try {
+    // H21 FIX: Add CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireAuth();
 
     // Check if user already has an organization

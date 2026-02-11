@@ -153,11 +153,9 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingProposal) {
+      // H10 FIX: Don't leak proposal ID in error response
       return NextResponse.json(
-        {
-          error: 'A pending proposal already exists for this load-truck pair',
-          existingProposalId: existingProposal.id,
-        },
+        { error: 'A pending proposal already exists for this load-truck pair' },
         { status: 409 }
       );
     }
@@ -277,15 +275,18 @@ export async function GET(request: NextRequest) {
     // Build where clause based on role
     const where: any = {};
 
-    // Role-based filtering
+    // H11 FIX: Role-based filtering - handle all roles explicitly
     if (session.role === 'CARRIER') {
       // Carriers see proposals for their organization
       where.carrierId = session.organizationId;
     } else if (session.role === 'DISPATCHER') {
       // Dispatchers see proposals they created
       where.proposedById = session.userId;
+    } else if (session.role === 'SHIPPER') {
+      // H11 FIX: Shippers can only see proposals for their own loads
+      where.load = { shipperId: session.organizationId };
     }
-    // Admins see all proposals
+    // Admins/SUPER_ADMIN see all proposals
 
     // Apply additional filters
     if (status) {

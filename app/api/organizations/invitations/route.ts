@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { validateCSRFWithMobile } from '@/lib/csrf';
 import { z } from 'zod';
 import { sendEmail, createEmailHTML } from '@/lib/email';
 import { zodErrorResponse } from '@/lib/validation';
@@ -27,6 +28,10 @@ const createInvitationSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
+    // H26 FIX: Add CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireAuth();
 
     const body = await request.json();

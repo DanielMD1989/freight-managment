@@ -96,18 +96,47 @@ export async function GET(
 ) {
   try {
     // Authenticate
-    await requireAuth();
+    const session = await requireAuth();
     const { id } = await params;
+
+    // Get user's organization
+    const user = await db.user.findUnique({
+      where: { id: session.userId },
+      select: { organizationId: true, role: true },
+    });
 
     // Fetch load
     const load = await db.load.findUnique({
       where: { id },
+      select: {
+        id: true,
+        shipperId: true,
+        tripKm: true,
+        truckType: true,
+        weight: true,
+        fullPartial: true,
+        requiresRefrigeration: true,
+        isFragile: true,
+        currency: true,
+      },
     });
 
     if (!load) {
       return NextResponse.json(
         { error: 'Load not found' },
         { status: 404 }
+      );
+    }
+
+    // H4 FIX: Authorization check - only shipper who owns load, dispatcher, or admin
+    const isOwner = user?.organizationId === load.shipperId;
+    const isDispatcher = user?.role === 'DISPATCHER';
+    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+
+    if (!isOwner && !isDispatcher && !isAdmin) {
+      return NextResponse.json(
+        { error: 'You do not have permission to view pricing for this load' },
+        { status: 403 }
       );
     }
 
@@ -130,7 +159,7 @@ export async function GET(
     console.error('Error calculating reference pricing:', error);
 
     return NextResponse.json(
-      { error: 'Failed to calculate reference pricing' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

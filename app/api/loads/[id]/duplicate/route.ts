@@ -50,11 +50,11 @@ export async function POST(
       );
     }
 
-    // Verify ownership or admin access
-    if (
-      originalLoad.shipperId !== session.organizationId &&
-      session.role !== 'ADMIN'
-    ) {
+    // H14 FIX: Verify ownership or admin access (include SUPER_ADMIN)
+    const isOwner = originalLoad.shipperId === session.organizationId;
+    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+
+    if (!isOwner && !isAdmin) {
       return NextResponse.json(
         { error: 'Forbidden: You can only duplicate your own loads' },
         { status: 403 }

@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { validateCSRFWithMobile } from '@/lib/csrf';
 import { z } from 'zod';
 import { createNotification } from '@/lib/notifications';
 import { zodErrorResponse } from '@/lib/validation';
@@ -60,9 +61,15 @@ export async function GET(
       );
     }
 
-    // Permission check
-    const isShipper = session.role === 'SHIPPER' && escalation.load.shipperId === session.userId;
-    const isCarrier = session.role === 'CARRIER' && escalation.load.assignedTruck?.carrierId === session.userId;
+    // H18 FIX: Get user's organizationId for proper ownership check
+    const user = await db.user.findUnique({
+      where: { id: session.userId },
+      select: { organizationId: true },
+    });
+
+    // Permission check - compare organizationId (not userId) with shipperId/carrierId
+    const isShipper = session.role === 'SHIPPER' && escalation.load.shipperId === user?.organizationId;
+    const isCarrier = session.role === 'CARRIER' && escalation.load.assignedTruck?.carrierId === user?.organizationId;
     const isDispatcher = session.role === 'DISPATCHER';
     const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
 
@@ -90,6 +97,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // H19 FIX: Add CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireAuth();
     const { id: escalationId } = await params;
 
@@ -276,6 +287,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // H20 FIX: Add CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireAuth();
     const { id: escalationId } = await params;
 

@@ -28,9 +28,21 @@ export async function GET(
     const minScore = parseInt(searchParams.get('minScore') || '50');
     const limit = parseInt(searchParams.get('limit') || '50');
 
-    // Fetch the load
+    // Fetch the load with assignedTruckId for carrier authorization check
     const load = await db.load.findUnique({
       where: { id },
+      select: {
+        id: true,
+        shipperId: true,
+        assignedTruckId: true,
+        pickupCity: true,
+        deliveryCity: true,
+        pickupDate: true,
+        truckType: true,
+        weight: true,
+        lengthM: true,
+        fullPartial: true,
+      },
     });
 
     if (!load) {
@@ -40,14 +52,20 @@ export async function GET(
       );
     }
 
-    // Verify ownership (shipper owns load) or dispatcher/admin access
-    if (
-      load.shipperId !== user.organizationId &&
-      user.role !== 'ADMIN' &&
-      user.role !== 'DISPATCHER'
-    ) {
+    // H15 FIX: Proper authorization - shipper, assigned carrier, dispatcher, or admin
+    const isShipper = load.shipperId === user.organizationId;
+    const isAssignedCarrier = load.assignedTruckId
+      ? await db.truck.findUnique({
+          where: { id: load.assignedTruckId },
+          select: { carrierId: true },
+        }).then((t) => t?.carrierId === user.organizationId)
+      : false;
+    const isDispatcher = user.role === 'DISPATCHER';
+    const isAdmin = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
+
+    if (!isShipper && !isAssignedCarrier && !isDispatcher && !isAdmin) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'You do not have permission to view matching trucks for this load' },
         { status: 403 }
       );
     }
