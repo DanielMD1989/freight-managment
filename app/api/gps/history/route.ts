@@ -16,6 +16,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { calculateDistanceKm } from '@/lib/geo';
+import { roundToDecimals } from '@/lib/rounding';
 
 export async function GET(request: NextRequest) {
   try {
@@ -175,18 +177,8 @@ export async function GET(request: NextRequest) {
         const prev = history[i - 1];
         const curr = history[i];
 
-        // Haversine distance
-        const R = 6371; // Earth radius in km
-        const dLat = ((curr.lat - prev.lat) * Math.PI) / 180;
-        const dLon = ((curr.lng - prev.lng) * Math.PI) / 180;
-        const a =
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos((prev.lat * Math.PI) / 180) *
-            Math.cos((curr.lat * Math.PI) / 180) *
-            Math.sin(dLon / 2) *
-            Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        totalDistance += R * c;
+        // Haversine distance (delegated to lib/geo.ts)
+        totalDistance += calculateDistanceKm(prev.lat, prev.lng, curr.lat, curr.lng);
       }
 
       const startTime = new Date(history[0].timestamp).getTime();
@@ -198,13 +190,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Rounding delegated to lib/rounding.ts
     return NextResponse.json({
       positions: history,
       count: history.length,
       stats: {
-        totalDistanceKm: Math.round(totalDistance * 100) / 100,
-        totalTimeHours: Math.round(totalTime * 100) / 100,
-        avgSpeedKmh: Math.round(avgSpeed * 100) / 100,
+        totalDistanceKm: roundToDecimals(totalDistance, 2),
+        totalTimeHours: roundToDecimals(totalTime, 2),
+        avgSpeedKmh: roundToDecimals(avgSpeed, 2),
         startTime: history.length > 0 ? history[0].timestamp : null,
         endTime: history.length > 0 ? history[history.length - 1].timestamp : null,
       },

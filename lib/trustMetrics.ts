@@ -8,10 +8,14 @@
  * - Cancellation rate (% of loads cancelled)
  * - Dispute rate (% of loads with disputes)
  * - Trust score (weighted composite score 0-100)
+ *
+ * ROUNDING: Delegated to lib/rounding.ts (2026-02-07)
+ * Uses roundPercentage2() for all percentage metrics (2 decimal places)
  */
 
 import { db } from './db';
 import { Decimal } from 'decimal.js';
+import { roundPercentage2 } from './rounding';
 
 /**
  * Calculate completion rate for an organization
@@ -41,7 +45,8 @@ export async function calculateCompletionRate(orgId: string): Promise<number> {
   }
 
   const completionRate = (organization.totalLoadsCompleted / totalLoads) * 100;
-  return Math.round(completionRate * 100) / 100; // Round to 2 decimal places
+  // Rounding delegated to lib/rounding.ts:roundPercentage2()
+  return roundPercentage2(completionRate);
 }
 
 /**
@@ -72,7 +77,8 @@ export async function calculateCancellationRate(orgId: string): Promise<number> 
   }
 
   const cancellationRate = (organization.totalLoadsCancelled / totalLoads) * 100;
-  return Math.round(cancellationRate * 100) / 100; // Round to 2 decimal places
+  // Rounding delegated to lib/rounding.ts:roundPercentage2()
+  return roundPercentage2(cancellationRate);
 }
 
 /**
@@ -104,7 +110,8 @@ export async function calculateDisputeRate(orgId: string): Promise<number> {
   }
 
   const disputeRate = (organization.totalDisputes / totalLoads) * 100;
-  return Math.round(disputeRate * 100) / 100; // Round to 2 decimal places
+  // Rounding delegated to lib/rounding.ts:roundPercentage2()
+  return roundPercentage2(disputeRate);
 }
 
 /**
@@ -187,7 +194,8 @@ export async function calculateTrustScore(orgId: string): Promise<number> {
 
   const trustScore = completionScore + cancellationScore + disputeScore + verifiedScore;
 
-  return Math.round(trustScore * 100) / 100; // Round to 2 decimal places
+  // Rounding delegated to lib/rounding.ts:roundPercentage2()
+  return roundPercentage2(trustScore);
 }
 
 /**

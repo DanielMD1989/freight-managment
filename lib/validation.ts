@@ -12,6 +12,7 @@
  */
 
 import { z } from 'zod';
+import { NextResponse } from 'next/server';
 
 /**
  * Email validation
@@ -385,4 +386,34 @@ export function validatePassword(password: string): boolean {
   }
 
   return true;
+}
+
+/**
+ * Sanitize Zod validation errors for safe client exposure
+ * Prevents internal schema details from leaking to attackers
+ */
+export function sanitizeZodError(error: z.ZodError): {
+  error: string;
+  fields: { field: string; message: string }[];
+} {
+  return {
+    error: 'Validation error',
+    fields: error.issues.map((issue) => ({
+      field: issue.path.join('.'),
+      message: issue.message,
+    })),
+  };
+}
+
+/**
+ * Create a NextResponse for Zod validation errors
+ * Use this in API routes to return consistent, safe error responses
+ *
+ * @example
+ * if (error instanceof z.ZodError) {
+ *   return zodErrorResponse(error);
+ * }
+ */
+export function zodErrorResponse(error: z.ZodError): NextResponse {
+  return NextResponse.json(sanitizeZodError(error), { status: 400 });
 }

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { canManageOrganization } from "@/lib/rbac";
 import { z } from "zod";
+import { zodErrorResponse } from "@/lib/validation";
 
 const updateOrganizationSchema = z.object({
   name: z.string().min(2).optional(),
@@ -109,10 +110,7 @@ export async function PATCH(
     console.error("Update organization error:", error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation error", details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     return NextResponse.json(

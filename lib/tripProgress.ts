@@ -66,6 +66,19 @@ export async function calculateTripProgress(loadId: string): Promise<TripProgres
     return null;
   }
 
+  // DISTANCE PRIORITY LOGIC — INTENTIONAL DIFFERENCE DOCUMENTED (2026-02-07)
+  //
+  // RATIONALE: Progress calculation uses PLANNED distance as the reference
+  // because we need a consistent total to measure progress against.
+  // GPS actual distance grows as the trip progresses and would cause
+  // the percentage to fluctuate incorrectly.
+  //
+  // Priority: corridor.distanceKm > estimatedTripKm > tripKm
+  //
+  // CONTRAST with lib/serviceFeeManagement.ts which uses:
+  // actualTripKm > estimatedTripKm > tripKm > corridor.distanceKm
+  // (Fee calculation uses actual GPS distance when available for accuracy)
+  //
   // Get total route distance (from corridor, estimatedTripKm, or tripKm)
   let totalDistanceKm = 0;
   if (load.corridor?.distanceKm) {

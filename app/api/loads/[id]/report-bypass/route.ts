@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { recordBypassReport } from '@/lib/bypassDetection';
 import { z } from 'zod';
+import { zodErrorResponse } from '@/lib/validation';
 
 const reportBypassSchema = z.object({
   reason: z.string().optional(),
@@ -54,10 +55,7 @@ export async function POST(
     }
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     return NextResponse.json(

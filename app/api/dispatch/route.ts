@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { CacheInvalidation } from "@/lib/cache";
 import { z } from "zod";
+import { zodErrorResponse } from "@/lib/validation";
 
 const dispatchSchema = z.object({
   loadId: z.string(),
@@ -191,10 +192,7 @@ export async function POST(request: NextRequest) {
     console.error("Dispatch error:", error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation error", details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     // Handle unique constraint violation (race condition)

@@ -19,6 +19,7 @@ import { createNotification } from '@/lib/notifications';
 import { incrementCompletedLoads, incrementCancelledLoads } from '@/lib/trustMetrics';
 // CRITICAL FIX: Import bypass detection for suspicious cancellations
 import { checkSuspiciousCancellation } from '@/lib/bypassDetection';
+import { zodErrorResponse } from '@/lib/validation';
 
 const updateStatusSchema = z.object({
   status: z.enum([
@@ -486,10 +487,7 @@ export async function PATCH(
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid request data', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     console.error('Load status update error:', error);

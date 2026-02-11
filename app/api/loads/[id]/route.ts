@@ -14,6 +14,7 @@ import {
 import { checkSuspiciousCancellation } from "@/lib/bypassDetection";
 import { validateStateTransition, LoadStatus } from "@/lib/loadStateMachine";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { zodErrorResponse } from "@/lib/validation";
 // CRITICAL FIX: Import CacheInvalidation for load mutations
 import { CacheInvalidation } from "@/lib/cache";
 // CRITICAL FIX: Import notification helper for status change notifications
@@ -448,10 +449,7 @@ export async function PATCH(
     console.error("Update load error:", error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation error", details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     return NextResponse.json(

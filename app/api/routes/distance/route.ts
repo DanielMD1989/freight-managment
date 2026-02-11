@@ -19,6 +19,7 @@ import {
   Coordinates,
 } from '@/lib/googleRoutes';
 import { z } from 'zod';
+import { zodErrorResponse } from '@/lib/validation';
 
 const coordinatesSchema = z.object({
   lat: z.number().min(-90).max(90),
@@ -111,10 +112,7 @@ export async function POST(request: NextRequest) {
     console.error('Road distance calculation error:', error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     return NextResponse.json(

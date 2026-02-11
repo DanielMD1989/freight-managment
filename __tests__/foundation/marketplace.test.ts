@@ -12,6 +12,7 @@
  */
 
 import { db } from '@/lib/db';
+import { calculateDistanceKm } from '@/lib/geo';
 
 describe('Foundation: Marketplace Core', () => {
   describe('Load Posting', () => {
@@ -182,15 +183,8 @@ describe('Foundation: Marketplace Core', () => {
       const loadPickupLat = 9.5930; // Dire Dawa
       const loadPickupLon = 41.8661;
 
-      // Haversine distance calculation (simplified)
-      const R = 6371; // Earth radius in km
-      const dLat = (loadPickupLat - carrierLat) * Math.PI / 180;
-      const dLon = (loadPickupLon - carrierLon) * Math.PI / 180;
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(carrierLat * Math.PI / 180) * Math.cos(loadPickupLat * Math.PI / 180) *
-                Math.sin(dLon/2) * Math.sin(dLon/2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      const dhO = R * c;
+      // Haversine distance calculation (delegated to lib/geo.ts)
+      const dhO = calculateDistanceKm(carrierLat, carrierLon, loadPickupLat, loadPickupLon);
 
       expect(dhO).toBeGreaterThan(0);
       expect(dhO).toBeCloseTo(348, -1); // Approximate distance ~350km
@@ -203,15 +197,8 @@ describe('Foundation: Marketplace Core', () => {
       const carrierHomeLat = 9.0320; // Addis Ababa
       const carrierHomeLon = 38.7469;
 
-      // Distance calculation
-      const R = 6371;
-      const dLat = (carrierHomeLat - loadDeliveryLat) * Math.PI / 180;
-      const dLon = (carrierHomeLon - loadDeliveryLon) * Math.PI / 180;
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(loadDeliveryLat * Math.PI / 180) * Math.cos(carrierHomeLat * Math.PI / 180) *
-                Math.sin(dLon/2) * Math.sin(dLon/2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      const dhD = R * c;
+      // Distance calculation (delegated to lib/geo.ts)
+      const dhD = calculateDistanceKm(loadDeliveryLat, loadDeliveryLon, carrierHomeLat, carrierHomeLon);
 
       expect(dhD).toBeGreaterThan(0);
       expect(dhD).toBeCloseTo(348, -1); // Approximate distance ~350km

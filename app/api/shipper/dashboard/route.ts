@@ -5,6 +5,11 @@
  *
  * Provides dashboard statistics for shipper portal
  * Sprint 11 - Story 11.1: Shipper Dashboard
+ *
+ * AGGREGATION NOTE (2026-02-08):
+ * Spending aggregation logic duplicates lib/aggregation.ts:getShipperSpendingSummary().
+ * This is acceptable for now as the dashboard has additional requirements.
+ * New aggregation logic should use lib/aggregation.ts as the single source of truth.
  */
 
 import { NextRequest, NextResponse } from 'next/server';

@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { findMatchingCorridor, calculateFeeFromCorridor } from '@/lib/serviceFeeCalculation';
 import { z } from 'zod';
+import { zodErrorResponse } from '@/lib/validation';
 
 const matchCorridorSchema = z.object({
   originRegion: z.string().min(1),
@@ -75,10 +76,7 @@ export async function POST(request: NextRequest) {
     console.error('Corridor match error:', error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     return NextResponse.json(

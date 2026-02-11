@@ -1,8 +1,28 @@
 /**
  * Geographic Utilities
  *
+ * THIS MODULE OWNS BUSINESS TRUTH FOR: DISTANCE CALCULATION
+ *
  * Shared utilities for distance calculations using the Haversine formula.
  * Centralizes coordinate-based distance calculations to avoid code duplication.
+ *
+ * OWNERSHIP DECLARATION (2026-02-06):
+ * - calculateDistanceKm() is the SINGLE SOURCE OF TRUTH for distance
+ * - All other distance implementations should import from this module
+ * - Do NOT create new inline haversine implementations
+ *
+ * COLLAPSED DUPLICATES (2026-02-08):
+ * - app/api/distance/route.ts — now imports calculateDistanceKm + roundDistance1
+ * - app/api/gps/history/route.ts — now imports calculateDistanceKm
+ * - app/api/trips/[tripId]/history/route.ts — now imports calculateDistanceKm
+ * - app/api/trips/[tripId]/live/route.ts — now imports calculateDistanceKm
+ * - lib/automationRules.ts — now imports calculateDistanceKm
+ * - __tests__/foundation/marketplace.test.ts — now imports calculateDistanceKm
+ *
+ * KNOWN DEPRECATED DUPLICATES (marked as DEPRECATED — READ-ONLY):
+ * - lib/gpsQuery.ts:176 — haversineDistance (duplicate)
+ * - app/carrier/loadboard/SearchLoadsTab.tsx:28 — haversineDistance (duplicate, rounds to integer)
+ * - app/carrier/loadboard/PostTrucksTab.tsx:258 — haversineDistance (duplicate, rounds to integer)
  */
 
 /**

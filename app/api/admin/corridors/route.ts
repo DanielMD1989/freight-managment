@@ -12,6 +12,7 @@ import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
 import { Decimal } from 'decimal.js';
 import { calculateFeePreview } from '@/lib/serviceFeeCalculation';
+import { zodErrorResponse } from '@/lib/validation';
 
 // Use centralized fee preview functions
 const calculatePartyFeePreview = calculateFeePreview;
@@ -363,10 +364,7 @@ export async function POST(request: NextRequest) {
     console.error('Create corridor error:', error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     return NextResponse.json(

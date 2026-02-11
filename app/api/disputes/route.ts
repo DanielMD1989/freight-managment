@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
+import { zodErrorResponse } from '@/lib/validation';
 
 const createDisputeSchema = z.object({
   loadId: z.string(),
@@ -93,10 +94,7 @@ export async function POST(request: NextRequest) {
     console.error('Error creating dispute:', error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     if (error.message === 'Unauthorized') {

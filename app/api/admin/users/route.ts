@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
+import { zodErrorResponse } from "@/lib/validation";
 
 // GET /api/admin/users - List all users
 export async function GET(request: NextRequest) {
@@ -128,10 +129,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation error", details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     return NextResponse.json(

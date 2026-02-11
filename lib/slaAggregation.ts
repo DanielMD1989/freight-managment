@@ -7,9 +7,13 @@
  * - On-time delivery rate
  * - Cancellation rate
  * - Exception MTTR (Mean Time To Resolution)
+ *
+ * ROUNDING: Delegated to lib/rounding.ts (2026-02-07)
+ * Uses roundPercentage() for all percentage and time metrics (1 decimal place)
  */
 
 import { db } from '@/lib/db';
+import { roundPercentage } from './rounding';
 
 // =============================================================================
 // TYPES
@@ -215,8 +219,8 @@ async function calculatePickupSLA(
     total,
     onTime,
     late,
-    rate: Math.round(rate * 10) / 10,
-    avgDelayHours: avgDelayHours ? Math.round(avgDelayHours * 10) / 10 : null,
+    rate: roundPercentage(rate),
+    avgDelayHours: avgDelayHours ? roundPercentage(avgDelayHours) : null,
   };
 }
 
@@ -291,8 +295,8 @@ async function calculateDeliverySLA(
     total,
     onTime,
     late,
-    rate: Math.round(rate * 10) / 10,
-    avgDelayHours: avgDelayHours ? Math.round(avgDelayHours * 10) / 10 : null,
+    rate: roundPercentage(rate),
+    avgDelayHours: avgDelayHours ? roundPercentage(avgDelayHours) : null,
   };
 }
 
@@ -331,7 +335,7 @@ async function calculateCancellationRate(
   return {
     total,
     cancelled,
-    rate: Math.round(rate * 10) / 10,
+    rate: roundPercentage(rate),
   };
 }
 
@@ -407,22 +411,22 @@ async function calculateExceptionMTTR(
     resolvedWithTime.length > 0 ? totalMTTR / resolvedWithTime.length : null;
 
   // Calculate averages
+  // Rounding delegated to lib/rounding.ts:roundPercentage() (1 decimal place)
   const mttrByTypeResult: Record<string, number> = {};
   for (const [type, data] of Object.entries(mttrByType)) {
-    mttrByTypeResult[type] = Math.round((data.total / data.count) * 10) / 10;
+    mttrByTypeResult[type] = roundPercentage(data.total / data.count);
   }
 
   const mttrByPriorityResult: Record<string, number> = {};
   for (const [priority, data] of Object.entries(mttrByPriority)) {
-    mttrByPriorityResult[priority] =
-      Math.round((data.total / data.count) * 10) / 10;
+    mttrByPriorityResult[priority] = roundPercentage(data.total / data.count);
   }
 
   return {
     total,
     resolved,
     open,
-    avgMTTR: avgMTTR ? Math.round(avgMTTR * 10) / 10 : null,
+    avgMTTR: avgMTTR ? roundPercentage(avgMTTR) : null,
     mttrByType: mttrByTypeResult,
     mttrByPriority: mttrByPriorityResult,
   };

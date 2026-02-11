@@ -12,6 +12,7 @@ import { createTripForLoad } from '@/lib/tripManagement'; // Trip Management
 // P0-005 FIX: Import CacheInvalidation for post-assignment cache clearing
 import { CacheInvalidation } from '@/lib/cache';
 import crypto from 'crypto';
+import { zodErrorResponse } from '@/lib/validation';
 
 const assignLoadSchema = z.object({
   truckId: z.string(),
@@ -383,10 +384,7 @@ export async function POST(
     console.error('Assign load error:', error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     // Handle unique constraint violation (race condition)

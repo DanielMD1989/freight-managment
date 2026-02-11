@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireAuth, requireActiveUser } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
+import { zodErrorResponse } from "@/lib/validation";
 
 const withdrawSchema = z.object({
   amount: z.number().positive(),
@@ -74,10 +75,7 @@ export async function POST(request: NextRequest) {
     console.error("Withdrawal request error:", error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation error", details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     return NextResponse.json(

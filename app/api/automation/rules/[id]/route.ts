@@ -8,6 +8,7 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { requirePermission, Permission } from '@/lib/rbac';
 import { z } from 'zod';
+import { zodErrorResponse } from '@/lib/validation';
 
 const updateRuleSchema = z.object({
   name: z.string().min(1).max(255).optional(),
@@ -134,10 +135,7 @@ export async function PATCH(
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid request data', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     console.error('Update automation rule error:', error);

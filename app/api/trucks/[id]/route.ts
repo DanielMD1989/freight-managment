@@ -8,6 +8,7 @@ import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { TripStatus } from "@prisma/client";
 // P1-001-B FIX: Import CacheInvalidation for update/delete operations
 import { CacheInvalidation } from "@/lib/cache";
+import { zodErrorResponse } from "@/lib/validation";
 
 /**
  * Helper function to apply RPS rate limiting for fleet endpoints
@@ -220,10 +221,7 @@ export async function PATCH(
   } catch (error) {
     console.error("PATCH /api/trucks/[id] error:", error);
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid data", details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
     return NextResponse.json(
       { error: "Failed to update truck" },

@@ -7,6 +7,7 @@
 
 import { db } from '@/lib/db';
 import { LoadStatus } from '@prisma/client';
+import { calculateDistanceKm } from '@/lib/geo';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -338,10 +339,10 @@ async function evaluateGpsBased(
     });
 
     if (recentPositions.length >= 2) {
-      // Calculate max distance moved
+      // Calculate max distance moved (delegated to lib/geo.ts)
       let maxDistance = 0;
       for (let i = 1; i < recentPositions.length; i++) {
-        const dist = calculateHaversineDistance(
+        const dist = calculateDistanceKm(
           Number(recentPositions[0].latitude),
           Number(recentPositions[0].longitude),
           Number(recentPositions[i].latitude),
@@ -454,34 +455,6 @@ function evaluateCustomLogic(logic: string, context: RuleEvaluationContext): boo
   // For now, just return false to prevent security issues
   console.warn('Custom logic evaluation not implemented:', logic);
   return false;
-}
-
-/**
- * Calculate Haversine distance between two GPS coordinates
- */
-function calculateHaversineDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  const R = 6371; // Earth's radius in km
-  const dLat = toRadians(lat2 - lat1);
-  const dLon = toRadians(lon2 - lon1);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRadians(lat1)) *
-      Math.cos(toRadians(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-function toRadians(degrees: number): number {
-  return degrees * (Math.PI / 180);
 }
 
 /**

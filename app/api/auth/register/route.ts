@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { hashPassword, setSession, validatePasswordPolicy } from "@/lib/auth";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { zodErrorResponse } from "@/lib/validation";
 
 const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -207,13 +208,7 @@ export async function POST(request: NextRequest) {
     console.error("Registration error:", error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          error: "Validation error",
-          details: error.issues,
-        },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     return NextResponse.json(

@@ -16,6 +16,7 @@ import {
   calculateFeePreview,
   calculateDualPartyFeePreview,
 } from '@/lib/serviceFeeCalculation';
+import { zodErrorResponse } from '@/lib/validation';
 
 // Ethiopian regions for validation
 const ETHIOPIAN_REGIONS = [
@@ -342,10 +343,7 @@ export async function PATCH(
     console.error('Update corridor error:', error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     return NextResponse.json(

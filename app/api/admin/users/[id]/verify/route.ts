@@ -8,6 +8,7 @@ import { db } from '@/lib/db';
 import { requirePermission, Permission } from '@/lib/rbac';
 import { z } from 'zod';
 import { notifyUserVerification } from '@/lib/notifications';
+import { zodErrorResponse } from '@/lib/validation';
 import { sendEmail, createEmailHTML } from '@/lib/email';
 
 const verifyUserSchema = z.object({
@@ -103,10 +104,7 @@ export async function POST(
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid request data', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     console.error('User verification error:', error);

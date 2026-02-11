@@ -14,6 +14,7 @@ import { TripStatus, LoadStatus } from '@prisma/client';
 import { z } from 'zod';
 // P1-002 FIX: Import CacheInvalidation for post-update cache clearing
 import { CacheInvalidation } from '@/lib/cache';
+import { zodErrorResponse } from '@/lib/validation';
 
 const updateTripSchema = z.object({
   status: z.enum(['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED', 'CANCELLED']).optional(),
@@ -353,10 +354,7 @@ export async function PATCH(
     console.error('Update trip error:', error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     return NextResponse.json(

@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { roundMoney } from "@/lib/rounding";
 
 export async function GET(request: NextRequest) {
   try {
@@ -118,21 +119,21 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Format status breakdown
+    // Format status breakdown (rounding delegated to lib/rounding.ts)
     const byStatus = Object.entries(statusCounts).map(([status, data]) => ({
       status,
       count: data.count,
-      totalAmount: Math.round(data.total * 100) / 100,
+      totalAmount: roundMoney(data.total),
     }));
 
-    // Format corridor breakdown
+    // Format corridor breakdown (rounding delegated to lib/rounding.ts)
     const byCorridor = Object.entries(corridorStats)
       .map(([corridorId, data]) => ({
         corridorId,
         corridorName: data.name,
         loadCount: data.count,
-        totalFees: Math.round(data.total * 100) / 100,
-        averageFee: data.count > 0 ? Math.round((data.total / data.count) * 100) / 100 : 0,
+        totalFees: roundMoney(data.total),
+        averageFee: data.count > 0 ? roundMoney(data.total / data.count) : 0,
       }))
       .sort((a, b) => b.totalFees - a.totalFees);
 
@@ -153,15 +154,16 @@ export async function GET(request: NextRequest) {
           load.updatedAt.toISOString(),
       }));
 
+    // Rounding delegated to lib/rounding.ts
     return NextResponse.json({
       summary: {
-        totalFeesCollected: Math.round(totalCollected * 100) / 100,
-        totalFeesReserved: Math.round(totalReserved * 100) / 100,
-        totalFeesRefunded: Math.round(totalRefunded * 100) / 100,
+        totalFeesCollected: roundMoney(totalCollected),
+        totalFeesReserved: roundMoney(totalReserved),
+        totalFeesRefunded: roundMoney(totalRefunded),
         totalLoadsWithFees: totalWithFees,
         averageFeePerLoad:
           totalWithFees > 0
-            ? Math.round(((totalCollected + totalReserved) / totalWithFees) * 100) / 100
+            ? roundMoney((totalCollected + totalReserved) / totalWithFees)
             : 0,
       },
       byStatus,

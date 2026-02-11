@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { getReturnLoadSuggestions } from '@/lib/returnLoadNotifications';
 import { z } from 'zod';
+import { zodErrorResponse } from '@/lib/validation';
 
 const returnLoadsQuerySchema = z.object({
   region: z.string().min(1),
@@ -84,10 +85,7 @@ export async function GET(request: NextRequest) {
     console.error('Return loads error:', error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     return NextResponse.json(

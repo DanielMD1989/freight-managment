@@ -17,6 +17,7 @@ import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
 import { broadcastGpsPosition } from '@/lib/websocket-server';
 import { withRpsLimit, RPS_CONFIGS } from '@/lib/rateLimit';
+import { zodErrorResponse } from '@/lib/validation';
 
 const gpsUpdateSchema = z.object({
   truckId: z.string().min(1),
@@ -162,10 +163,7 @@ async function postHandler(request: NextRequest) {
     console.error('GPS position update error:', error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     // Handle specific error types

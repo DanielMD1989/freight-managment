@@ -8,6 +8,7 @@
 
 import { db } from './db';
 import { Decimal } from 'decimal.js';
+import { calculateDistanceKm } from './geo';
 
 export interface GpsPosition {
   id: string;
@@ -165,6 +166,10 @@ export function calculateTripDistance(positions: GpsPosition[]): number {
 }
 
 /**
+ * COLLAPSED TO SINGLE SOURCE OF TRUTH (2026-02-06)
+ * Now delegates to lib/geo.ts:calculateDistanceKm
+ * Wrapper kept for backward compatibility with existing callers.
+ *
  * Calculate distance between two GPS coordinates using Haversine formula
  *
  * @param lat1 - Latitude of first point
@@ -179,23 +184,8 @@ function haversineDistance(
   lat2: number,
   lon2: number
 ): number {
-  const R = 6371; // Earth's radius in kilometers
-
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
+  // Delegates to single source of truth
+  return calculateDistanceKm(lat1, lon1, lat2, lon2);
 }
 
 /**

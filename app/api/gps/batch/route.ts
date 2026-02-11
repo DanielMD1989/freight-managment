@@ -17,6 +17,7 @@ import { requireAuth } from '@/lib/auth';
 import { broadcastGpsPosition } from '@/lib/websocket-server';
 import { z } from 'zod';
 import { withRpsLimit, RPS_CONFIGS } from '@/lib/rateLimit';
+import { zodErrorResponse } from '@/lib/validation';
 
 const positionSchema = z.object({
   latitude: z.number().min(-90).max(90),
@@ -168,10 +169,7 @@ async function postHandler(request: NextRequest) {
     console.error('GPS batch update error:', error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     return NextResponse.json(

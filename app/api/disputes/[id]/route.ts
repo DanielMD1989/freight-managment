@@ -10,6 +10,7 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { requirePermission, Permission } from '@/lib/rbac';
 import { z } from 'zod';
+import { zodErrorResponse } from '@/lib/validation';
 
 const updateDisputeSchema = z.object({
   status: z.enum(['OPEN', 'UNDER_REVIEW', 'RESOLVED', 'CLOSED']).optional(),
@@ -162,10 +163,7 @@ export async function PATCH(
     console.error('Error updating dispute:', error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     if (error.message === 'Unauthorized') {

@@ -20,6 +20,7 @@ import { Permission } from '@/lib/rbac';
 import { hasPermission } from '@/lib/rbac/permissions';
 import { z } from 'zod';
 import { UserRole } from '@prisma/client';
+import { zodErrorResponse } from '@/lib/validation';
 
 // Roles that Admin cannot manage (only SuperAdmin can)
 const ADMIN_PROTECTED_ROLES: UserRole[] = ['ADMIN', 'SUPER_ADMIN'];
@@ -280,10 +281,7 @@ export async function PATCH(
     console.error('Update user error:', error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     if (error.message?.includes('Forbidden') || error.message?.includes('Unauthorized')) {

@@ -1,0 +1,128 @@
+{
+  "_metadata": {
+    "created": "2026-02-06",
+    "purpose": "BEHAVIOR SNAPSHOT — READ-ONLY DATA FREEZE",
+    "warning": "Do NOT modify these values. They represent frozen system behavior."
+  },
+  "exampleShipments": [
+    {
+      "id": "SNAPSHOT-001",
+      "name": "Addis Ababa to Dire Dawa",
+      "origin": {
+        "city": "Addis Ababa",
+        "lat": 9.0054,
+        "lon": 38.7636
+      },
+      "destination": {
+        "city": "Dire Dawa",
+        "lat": 9.5931,
+        "lon": 41.8661
+      },
+      "calculatedValues": {
+        "distanceKm_libGeo": 346.6609749445706,
+        "distanceKm_frontendRounded": 347,
+        "note": "lib/geo.ts returns decimal, frontend returns integer"
+      },
+      "feeCalculation": {
+        "pricePerKm": 2.5,
+        "baseFee": 866.65,
+        "discount": 0,
+        "finalFee": 866.65,
+        "roundingMethod": "Math.round(x * 100) / 100"
+      }
+    },
+    {
+      "id": "SNAPSHOT-002",
+      "name": "Addis Ababa to Hawassa",
+      "origin": {
+        "city": "Addis Ababa",
+        "lat": 9.0054,
+        "lon": 38.7636
+      },
+      "destination": {
+        "city": "Hawassa",
+        "lat": 7.0504,
+        "lon": 38.4955
+      },
+      "calculatedValues": {
+        "distanceKm_libGeo": 219.3809536816754,
+        "distanceKm_frontendRounded": 219,
+        "note": "lib/geo.ts returns decimal, frontend returns integer"
+      },
+      "feeCalculation": {
+        "pricePerKm": 2.5,
+        "baseFee": 548.45,
+        "discount": 0,
+        "finalFee": 548.45,
+        "roundingMethod": "Math.round(x * 100) / 100"
+      }
+    },
+    {
+      "id": "SNAPSHOT-003",
+      "name": "112 km Reference Shipment",
+      "origin": {
+        "city": "Addis Ababa",
+        "lat": 9.0054,
+        "lon": 38.7636
+      },
+      "destination": {
+        "city": "Debre Berhan",
+        "lat": 9.6800,
+        "lon": 39.5300
+      },
+      "calculatedValues": {
+        "distanceKm_libGeo": 112.68426135281778,
+        "distanceKm_frontendRounded": 113,
+        "note": "lib/geo.ts returns decimal, frontend returns integer"
+      },
+      "feeCalculation": {
+        "pricePerKm": 2.5,
+        "baseFee": 281.71,
+        "discount": 0,
+        "finalFee": 281.71,
+        "roundingMethod": "Math.round(x * 100) / 100"
+      },
+      "withPromo": {
+        "promoFlag": true,
+        "promoDiscountPct": 10,
+        "baseFee": 281.71,
+        "discount": 28.17,
+        "finalFee": 253.54
+      }
+    }
+  ],
+  "roundingBehaviors": {
+    "lib/geo.ts": {
+      "function": "calculateDistanceKm",
+      "returns": "raw decimal (no rounding)",
+      "example": "109.83456..."
+    },
+    "lib/serviceFeeCalculation.ts": {
+      "function": "calculateFeePreview",
+      "returns": "2 decimal places",
+      "method": "Math.round(x * 100) / 100",
+      "example": "274.58"
+    },
+    "app/carrier/loadboard/SearchLoadsTab.tsx": {
+      "function": "haversineDistance",
+      "returns": "integer (rounded)",
+      "method": "Math.round(R * c)",
+      "example": "110"
+    },
+    "app/carrier/loadboard/PostTrucksTab.tsx": {
+      "function": "haversineDistance",
+      "returns": "integer (rounded)",
+      "method": "Math.round(R * c)",
+      "example": "110"
+    }
+  },
+  "distancePriority": {
+    "source": "lib/serviceFeeManagement.ts:200-209",
+    "order": [
+      "actualTripKm (GPS-computed)",
+      "estimatedTripKm (map estimate)",
+      "tripKm (legacy)",
+      "corridor.distanceKm (corridor default)"
+    ]
+  }
+}

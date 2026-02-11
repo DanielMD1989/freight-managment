@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
+import { zodErrorResponse } from "@/lib/validation";
 
 const createDeviceSchema = z.object({
   imei: z.string().min(15).max(15),
@@ -36,10 +37,7 @@ export async function POST(request: NextRequest) {
     console.error("Create GPS device error:", error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation error", details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     return NextResponse.json(

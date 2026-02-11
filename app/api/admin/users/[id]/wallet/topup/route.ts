@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
+import { zodErrorResponse } from '@/lib/validation';
 
 const topUpSchema = z.object({
   amount: z.number().positive('Amount must be positive'),
@@ -132,10 +133,7 @@ export async function POST(
     console.error('Wallet top-up error:', error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     return NextResponse.json(

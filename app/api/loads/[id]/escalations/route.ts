@@ -9,6 +9,7 @@ import { requireAuth } from '@/lib/auth';
 import { CacheInvalidation } from '@/lib/cache';
 import { z } from 'zod';
 import { validateStateTransition, LoadStatus } from '@/lib/loadStateMachine';
+import { zodErrorResponse } from '@/lib/validation';
 import { createNotification, notifyExceptionAssigned, createNotificationForRole } from '@/lib/notifications';
 
 const createEscalationSchema = z.object({
@@ -191,10 +192,7 @@ export async function POST(
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid request data', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     console.error('Escalation creation error:', error);

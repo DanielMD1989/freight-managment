@@ -13,6 +13,7 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
 import { sendEmail, createEmailHTML } from '@/lib/email';
+import { zodErrorResponse } from '@/lib/validation';
 
 const createInvitationSchema = z.object({
   email: z.string().email(),
@@ -133,10 +134,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid request data', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     console.error('Create invitation error:', error);

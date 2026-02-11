@@ -5,6 +5,7 @@ import { z } from "zod";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { logAuthFailure, logAuthSuccess } from "@/lib/auditLog";
 import { addCorsHeaders as addSecureCorsHeaders, isOriginAllowed } from "@/lib/cors";
+import { zodErrorResponse } from "@/lib/validation";
 
 // Helper to add CORS headers to response (uses secure origin validation)
 function addCorsHeaders(response: NextResponse, request: NextRequest): NextResponse {
@@ -368,13 +369,7 @@ export async function POST(request: NextRequest) {
     console.error("Login error stack:", error instanceof Error ? error.stack : "No stack trace");
 
     if (error instanceof z.ZodError) {
-      return addCorsHeaders(NextResponse.json(
-        {
-          error: "Validation error",
-          details: error.issues,
-        },
-        { status: 400 }
-      ), request);
+      return addCorsHeaders(zodErrorResponse(error), request);
     }
 
     return addCorsHeaders(NextResponse.json(

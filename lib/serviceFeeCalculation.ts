@@ -8,6 +8,7 @@
 import { db } from '@/lib/db';
 import { CorridorDirection } from '@prisma/client';
 import { Decimal } from 'decimal.js';
+import { roundMoney } from './rounding';
 
 export interface PartyFeeCalculation {
   baseFee: number;
@@ -405,6 +406,12 @@ export async function getAllCorridorsWithFees(): Promise<Array<{
 // ============================================================================
 // FEE PREVIEW FUNCTIONS
 // Simplified interfaces for corridor management UI previews
+//
+// RELATIONSHIP TO calculatePartyFee:
+// - calculatePartyFee uses Decimal.js for high precision (authoritative)
+// - calculateFeePreview uses simple math for quick previews (UI display)
+// - Both produce identical results - same formula, same 2 decimal rounding
+// - Use calculatePartyFee for actual fee deduction, calculateFeePreview for display
 // ============================================================================
 
 export interface FeePreview {
@@ -420,6 +427,14 @@ export interface DualPartyFeePreview {
 }
 
 /**
+ * THIS MODULE OWNS BUSINESS TRUTH FOR: SERVICE FEE CALCULATION
+ *
+ * OWNERSHIP DECLARATION (2026-02-06):
+ * - calculateFeePreview() is the SINGLE SOURCE OF TRUTH for fee preview calculations
+ * - calculateDualPartyFeePreview() is the SINGLE SOURCE OF TRUTH for dual-party fees
+ * - Formula: baseFee = distanceKm × pricePerKm
+ * - Rounding: delegated to lib/rounding.ts:roundMoney() (2 decimal places)
+ *
  * Calculate a simple fee preview for a single party
  * Used by corridor management UI for quick fee display
  */
@@ -440,10 +455,11 @@ export function calculateFeePreview(
     discount = baseFee * (promoDiscountPct / 100);
   }
 
+  // Rounding delegated to lib/rounding.ts
   return {
-    baseFee: Math.round(baseFee * 100) / 100,
-    discount: Math.round(discount * 100) / 100,
-    finalFee: Math.round((baseFee - discount) * 100) / 100,
+    baseFee: roundMoney(baseFee),
+    discount: roundMoney(discount),
+    finalFee: roundMoney(baseFee - discount),
   };
 }
 

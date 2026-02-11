@@ -12,6 +12,7 @@ import { requireAuth } from '@/lib/auth';
 import { createNotification, NotificationType } from '@/lib/notifications';
 import { z } from 'zod';
 import { CacheInvalidation } from '@/lib/cache';
+import { zodErrorResponse } from '@/lib/validation';
 
 const cancelTripSchema = z.object({
   reason: z.string().min(1, 'Cancellation reason is required').max(500),
@@ -197,10 +198,7 @@ export async function POST(
     console.error('Cancel trip error:', error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     return NextResponse.json(

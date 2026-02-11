@@ -15,6 +15,7 @@ import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { checkRateLimit, withRpsLimit, RATE_LIMIT_GPS_UPDATE, RPS_CONFIGS } from '@/lib/rateLimit';
+import { zodErrorResponse } from '@/lib/validation';
 
 const gpsUpdateSchema = z.object({
   latitude: z.number().min(-90).max(90),
@@ -205,10 +206,7 @@ async function postHandler(
     console.error('GPS update error:', error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     return NextResponse.json(

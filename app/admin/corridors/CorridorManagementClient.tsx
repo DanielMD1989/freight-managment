@@ -153,7 +153,13 @@ export default function CorridorManagementClient() {
     }
   }, [formData.originRegion, formData.destinationRegion, editingCorridor]);
 
-  // Calculate preview fee for a single party
+  // UI-ONLY PREVIEW — NOT AUTHORITATIVE
+  //
+  // This is a client-side preview for immediate form feedback only.
+  // AUTHORITATIVE fee calculation is in lib/serviceFeeCalculation.ts (server-side).
+  // The actual fee charged is always computed server-side via the API.
+  //
+  // Formula mirrors: baseFee = distance × pricePerKm, discount = baseFee × (promoPct / 100)
   const calculatePartyFee = (pricePerKm: string, promoFlag: boolean, promoPct: string) => {
     const distance = parseFloat(formData.distanceKm) || 0;
     const price = parseFloat(pricePerKm) || 0;

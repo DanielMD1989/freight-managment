@@ -9,6 +9,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { calculateDistanceKm } from '@/lib/geo';
+import { roundToDecimals, roundDistance1 } from '@/lib/rounding';
 
 /**
  * GET /api/trips/[tripId]/history
@@ -109,11 +111,11 @@ export async function GET(
       orderBy: { timestamp: 'asc' },
     });
 
-    // Calculate total distance traveled
+    // Calculate total distance traveled (delegated to lib/geo.ts)
     let totalDistanceKm = 0;
     if (positions.length > 1) {
       for (let i = 1; i < positions.length; i++) {
-        totalDistanceKm += calculateHaversineDistance(
+        totalDistanceKm += calculateDistanceKm(
           Number(positions[i - 1].latitude),
           Number(positions[i - 1].longitude),
           Number(positions[i].latitude),
@@ -181,13 +183,14 @@ export async function GET(
         completedAt: trip.completedAt?.toISOString() || null,
         durationMinutes,
       },
+      // Rounding delegated to lib/rounding.ts
       distance: {
         estimatedKm: trip.estimatedDistanceKm ? Number(trip.estimatedDistanceKm) : null,
-        actualKm: Math.round(totalDistanceKm * 100) / 100,
+        actualKm: roundToDecimals(totalDistanceKm, 2),
       },
       stats: {
         positionCount: positions.length,
-        avgSpeedKmh: avgSpeedKmh ? Math.round(avgSpeedKmh * 10) / 10 : null,
+        avgSpeedKmh: avgSpeedKmh ? roundDistance1(avgSpeedKmh) : null,
       },
       route,
       // Also include 'positions' for mobile app compatibility
@@ -200,27 +203,6 @@ export async function GET(
       { status: 500 }
     );
   }
-}
-
-// Calculate distance between two points using Haversine formula
-function calculateHaversineDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  const R = 6371; // Earth's radius in km
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-function toRad(deg: number): number {
-  return deg * (Math.PI / 180);
 }
 
 // Simple route simplification by sampling

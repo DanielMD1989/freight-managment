@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { calculateServiceFee } from '@/lib/serviceFeeCalculation';
 import { z } from 'zod';
+import { zodErrorResponse } from '@/lib/validation';
 
 const calculateFeeSchema = z.object({
   loadId: z.string().cuid(),
@@ -60,10 +61,7 @@ export async function POST(request: NextRequest) {
     console.error('Calculate fee error:', error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     return NextResponse.json(

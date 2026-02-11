@@ -13,6 +13,7 @@ import { requireAuth } from '@/lib/auth';
 import { TripStatus } from '@prisma/client';
 import { z } from 'zod';
 import { TripCache, CacheInvalidation, CacheTTL, cacheAside, CacheKeys, cache } from '@/lib/cache';
+import { zodErrorResponse } from '@/lib/validation';
 
 const createTripSchema = z.object({
   loadId: z.string(),
@@ -314,10 +315,7 @@ export async function POST(request: NextRequest) {
     console.error('Create trip error:', error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     return NextResponse.json(

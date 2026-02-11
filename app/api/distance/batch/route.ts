@@ -23,6 +23,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
 import { calculateDistanceKm } from '@/lib/geo';
+import { zodErrorResponse } from '@/lib/validation';
 
 // Cache TTL in milliseconds (24 hours)
 const CACHE_TTL = 24 * 60 * 60 * 1000;
@@ -257,10 +258,7 @@ export async function POST(request: NextRequest) {
     console.error('Batch distance error:', error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     return NextResponse.json(

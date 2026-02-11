@@ -104,6 +104,18 @@ export async function findReturnLoads(
       matchScore += 5;
     }
 
+    // DISTANCE PRIORITY LOGIC — INTENTIONAL DIFFERENCE DOCUMENTED (2026-02-07)
+    //
+    // RATIONALE: Return load matching uses PLANNED/CORRIDOR distance for
+    // display because we're showing available loads, not calculating fees.
+    // These loads haven't been assigned yet, so no GPS actual distance exists.
+    //
+    // Priority: corridor.distanceKm > estimatedTripKm > tripKm
+    //
+    // CONTRAST with lib/serviceFeeManagement.ts which uses:
+    // actualTripKm > estimatedTripKm > tripKm > corridor.distanceKm
+    // (Fee calculation uses actual GPS distance when available for accuracy)
+    //
     // Get distance
     let distanceKm = 0;
     if (load.corridor?.distanceKm) {

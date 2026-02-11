@@ -8,6 +8,7 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
 import { createNotification } from '@/lib/notifications';
+import { zodErrorResponse } from '@/lib/validation';
 
 const updateEscalationSchema = z.object({
   status: z.enum(['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'ESCALATED']).optional(),
@@ -258,10 +259,7 @@ export async function PATCH(
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid request data', details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     console.error('Escalation update error:', error);

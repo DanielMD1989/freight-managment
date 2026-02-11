@@ -9,6 +9,7 @@ import {
 } from "@/lib/loadUtils";
 import { LoadCache, CacheInvalidation, CacheTTL } from "@/lib/cache";
 import { checkRpsLimit, RPS_CONFIGS, addRateLimitHeaders } from "@/lib/rateLimit";
+import { zodErrorResponse } from "@/lib/validation";
 
 const createLoadSchema = z.object({
   // Location & Schedule
@@ -168,10 +169,7 @@ export async function POST(request: NextRequest) {
     console.error("Create load error:", error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation error", details: error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(error);
     }
 
     if (error instanceof Error && error.name === "ForbiddenError") {
