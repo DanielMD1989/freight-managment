@@ -6,12 +6,11 @@
  * Main client wrapper with tab navigation between POST TRUCKS and SEARCH LOADS
  */
 
-import React, { useState, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
+import React from 'react';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import PostTrucksTab from './PostTrucksTab';
 import SearchLoadsTab from './SearchLoadsTab';
+import { useTabState } from '@/lib/hooks/useTabState';
 
 interface CarrierLoadboardClientProps {
   user: any;
@@ -41,27 +40,8 @@ function SearchIcon() {
 }
 
 export default function CarrierLoadboardClient({ user }: CarrierLoadboardClientProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<CarrierTabKey>('POST_TRUCKS');
-
-  // Read tab from URL parameters
-  useEffect(() => {
-    const tabParam = searchParams.get('tab') as CarrierTabKey;
-    if (tabParam === 'SEARCH_LOADS' || tabParam === 'POST_TRUCKS') {
-      setActiveTab(tabParam);
-    }
-  }, [searchParams]);
-
-  /**
-   * Handle tab change
-   */
-  const handleTabChange = (tab: CarrierTabKey) => {
-    const params = new URLSearchParams(window.location.search);
-    params.set('tab', tab);
-    router.push(`${window.location.pathname}?${params.toString()}`);
-    setActiveTab(tab);
-  };
+  // URL-based tab persistence using infrastructure hook
+  const [activeTab, setActiveTab] = useTabState('POST_TRUCKS');
 
   return (
     <div className="p-6">
@@ -92,7 +72,7 @@ export default function CarrierLoadboardClient({ user }: CarrierLoadboardClientP
           return (
             <button
               key={tab.key}
-              onClick={() => handleTabChange(tab.key)}
+              onClick={() => setActiveTab(tab.key)}
               className={`
                 flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium
                 transition-all duration-200

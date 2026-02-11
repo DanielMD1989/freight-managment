@@ -730,6 +730,18 @@ export const RPS_CONFIGS: Record<string, RpsConfig> = {
     rps: 10,
     burst: 5,
   },
+  // Dashboard endpoints - moderate limit (60/min = 1/sec)
+  dashboard: {
+    endpoint: '/api/*/dashboard',
+    rps: 1,
+    burst: 5,
+  },
+  // Write operations (POST/PATCH/DELETE) - strict limit
+  write: {
+    endpoint: '/api/*',
+    rps: 0.5, // 30 per minute = 0.5 per second
+    burst: 5,
+  },
 };
 
 // =============================================================================

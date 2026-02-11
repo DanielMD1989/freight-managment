@@ -6,9 +6,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
-import { requireCSRF } from '@/lib/csrf';
+import { validateCSRFWithMobile } from '@/lib/csrf';
 import { z } from 'zod';
 import { getTruckCurrentLocation } from '@/lib/deadheadOptimization';
+import { checkRpsLimit, RPS_CONFIGS } from '@/lib/rateLimit';
 
 const updateLocationSchema = z.object({
   latitude: z.number().min(-90).max(90),
@@ -23,19 +24,29 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting: GPS endpoints need higher limits for real-time tracking
+    const ip =
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      request.headers.get('x-real-ip') ||
+      'unknown';
+    const rpsResult = await checkRpsLimit(
+      RPS_CONFIGS.gps.endpoint,
+      ip,
+      RPS_CONFIGS.gps.rps,
+      RPS_CONFIGS.gps.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded', retryAfter: 1 },
+        { status: 429, headers: { 'Retry-After': '1' } }
+      );
+    }
+
     const session = await requireAuth();
 
-    // CSRF protection for state-changing operation
-    // Skip for mobile clients using Bearer token authentication
-    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
-    const hasBearerAuth = request.headers.get('authorization')?.startsWith('Bearer ');
-
-    if (!isMobileClient && !hasBearerAuth) {
-      const csrfError = await requireCSRF(request);
-      if (csrfError) {
-        return csrfError;
-      }
-    }
+    // CSRF protection with mobile client handling
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
 
     const { id: truckId } = await params;
 
@@ -102,15 +113,20 @@ export async function PATCH(
 
   } catch (error) {
     if (error instanceof z.ZodError) {
+      // Sanitize Zod errors - only expose field names and messages
+      const fields = error.issues.map(issue => ({
+        field: issue.path.join('.'),
+        message: issue.message,
+      }));
       return NextResponse.json(
-        { error: 'Invalid request data', details: error.issues },
+        { error: 'Validation error', fields },
         { status: 400 }
       );
     }
 
     console.error('Update truck location error:', error);
     return NextResponse.json(
-      { error: 'Failed to update truck location' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -122,6 +138,24 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting: GPS endpoints need higher limits for real-time tracking
+    const ip =
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      request.headers.get('x-real-ip') ||
+      'unknown';
+    const rpsResult = await checkRpsLimit(
+      RPS_CONFIGS.gps.endpoint,
+      ip,
+      RPS_CONFIGS.gps.rps,
+      RPS_CONFIGS.gps.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded', retryAfter: 1 },
+        { status: 429, headers: { 'Retry-After': '1' } }
+      );
+    }
+
     const session = await requireAuth();
     const { id: truckId } = await params;
 
@@ -199,7 +233,7 @@ export async function GET(
   } catch (error) {
     console.error('Get truck location error:', error);
     return NextResponse.json(
-      { error: 'Failed to get truck location' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

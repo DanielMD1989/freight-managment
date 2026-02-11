@@ -13,6 +13,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { getCSRFToken } from '@/lib/csrfFetch';
+import { ROUTES } from '@/lib/routes';
 
 interface Truck {
   id: string;
@@ -364,7 +365,7 @@ export default function TruckManagementClient({
 
             {/* Add Truck Button */}
             <Link
-              href="/carrier/trucks/add"
+              href={ROUTES.carrier.trucks.add}
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-teal-500 text-white rounded-xl font-medium hover:from-teal-700 hover:to-teal-600 transition-all shadow-md shadow-teal-500/25"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -380,7 +381,7 @@ export default function TruckManagementClient({
       {activeTab !== 'approved' && (
         <div className="flex justify-end">
           <Link
-            href="/carrier/trucks/add"
+            href={ROUTES.carrier.trucks.add}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-teal-500 text-white rounded-xl font-medium hover:from-teal-700 hover:to-teal-600 transition-all shadow-md shadow-teal-500/25"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -701,7 +702,7 @@ export default function TruckManagementClient({
                     : 'Add your first truck to start finding loads and earning revenue.'}
                 </p>
                 <Link
-                  href="/carrier/trucks/add"
+                  href={ROUTES.carrier.trucks.add}
                   className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
                 >
                   Add Your First Truck

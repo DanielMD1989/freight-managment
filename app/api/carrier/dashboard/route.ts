@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { checkRpsLimit, RPS_CONFIGS } from '@/lib/rateLimit';
 
 /**
  * GET /api/carrier/dashboard
@@ -33,6 +34,31 @@ import { db } from '@/lib/db';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting: Apply dashboard RPS limit
+    const ip =
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      request.headers.get('x-real-ip') ||
+      'unknown';
+    const rpsResult = await checkRpsLimit(
+      RPS_CONFIGS.dashboard.endpoint,
+      ip,
+      RPS_CONFIGS.dashboard.rps,
+      RPS_CONFIGS.dashboard.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please slow down.', retryAfter: 1 },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rpsResult.limit.toString(),
+            'X-RateLimit-Remaining': rpsResult.remaining.toString(),
+            'Retry-After': '1',
+          },
+        }
+      );
+    }
+
     const session = await requireAuth();
 
     // Check if user is a carrier or admin

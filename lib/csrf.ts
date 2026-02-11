@@ -284,6 +284,50 @@ export function createCSRFMiddleware(config: CSRFConfig = {}) {
 }
 
 /**
+ * Validate CSRF with Mobile Client Bypass
+ *
+ * Consolidated helper for state-changing endpoints that handles:
+ * - Mobile clients: MUST have Bearer token authentication
+ * - Web clients: MUST have valid CSRF token
+ *
+ * Usage:
+ * ```typescript
+ * const csrfError = await validateCSRFWithMobile(request);
+ * if (csrfError) return csrfError;
+ * ```
+ *
+ * @param request NextRequest to validate
+ * @returns NextResponse with error if invalid, null if valid
+ */
+export async function validateCSRFWithMobile(
+  request: NextRequest
+): Promise<NextResponse | null> {
+  const isMobileClient = request.headers.get('x-client-type') === 'mobile';
+  const hasBearerAuth = request.headers
+    .get('authorization')
+    ?.startsWith('Bearer ');
+
+  // Mobile clients MUST have Bearer authentication (inherently CSRF-safe)
+  if (isMobileClient && !hasBearerAuth) {
+    return NextResponse.json(
+      { error: 'Mobile clients require Bearer authentication' },
+      { status: 401 }
+    );
+  }
+
+  // Web clients (and mobile with Bearer) need CSRF check
+  // Bearer auth is inherently CSRF-safe, so we can skip for those
+  if (!isMobileClient && !hasBearerAuth) {
+    const csrfError = requireCSRF(request);
+    if (csrfError) {
+      return csrfError;
+    }
+  }
+
+  return null; // Valid
+}
+
+/**
  * Inline CSRF validation
  *
  * Use this for inline CSRF checks within route handlers.

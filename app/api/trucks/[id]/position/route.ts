@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { getLatestPosition } from '@/lib/gpsQuery';
+import { checkRpsLimit, RPS_CONFIGS } from '@/lib/rateLimit';
 
 /**
  * GET /api/trucks/[id]/position
@@ -21,6 +22,24 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting: GPS endpoints need higher limits for real-time tracking
+    const ip =
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      request.headers.get('x-real-ip') ||
+      'unknown';
+    const rpsResult = await checkRpsLimit(
+      RPS_CONFIGS.gps.endpoint,
+      ip,
+      RPS_CONFIGS.gps.rps,
+      RPS_CONFIGS.gps.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded', retryAfter: 1 },
+        { status: 429, headers: { 'Retry-After': '1' } }
+      );
+    }
+
     const { id: truckId } = await params;
     const session = await requireAuth();
 
