@@ -85,8 +85,10 @@ export default function TrucksClient() {
       const data = await response.json();
       setPostings(data.postings || []);
       setTotal(data.total || 0);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch truck postings');
+    // H3 FIX: Use unknown type with type guard
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to fetch truck postings';
+      setError(message);
     } finally {
       setLoading(false);
     }

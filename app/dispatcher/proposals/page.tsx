@@ -13,6 +13,9 @@ import { db } from '@/lib/db';
 import { redirect } from 'next/navigation';
 import ProposalsClient from './ProposalsClient';
 
+// M7 FIX: Add pagination to prevent unbounded queries
+const PROPOSALS_PAGE_SIZE = 50;
+
 async function getProposals(userId: string) {
   const proposals = await db.matchProposal.findMany({
     where: {
@@ -43,6 +46,7 @@ async function getProposals(userId: string) {
       },
     },
     orderBy: { createdAt: 'desc' },
+    take: PROPOSALS_PAGE_SIZE, // M7 FIX: Limit results
   });
 
   return proposals;

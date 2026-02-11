@@ -81,8 +81,10 @@ export default function LoadsClient() {
       setLoads(data.loads || []);
       setTotal(data.pagination?.total || data.loads?.length || 0);
       setTotalPages(data.pagination?.totalPages || Math.ceil((data.pagination?.total || 0) / limit));
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch loads');
+    // H2 FIX: Use unknown type with type guard
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to fetch loads';
+      setError(message);
     } finally {
       setLoading(false);
     }

@@ -171,34 +171,52 @@ export default function DispatcherMapPage() {
     fetchMapData();
   }, []);
 
+  // M4 FIX: Use Promise.allSettled for combined error handling
   const fetchMapData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const [trucksRes, loadsRes, tripsRes] = await Promise.all([
+      const results = await Promise.allSettled([
         fetch('/api/map/vehicles?includeAll=true'),
         fetch('/api/map/loads?status=POSTED'),
         fetch('/api/map/trips?status=IN_TRANSIT'),
       ]);
 
-      if (trucksRes.ok) {
-        const data = await trucksRes.json();
+      const errors: string[] = [];
+
+      // Process trucks
+      if (results[0].status === 'fulfilled' && results[0].value.ok) {
+        const data = await results[0].value.json();
         setTrucks(data.vehicles || data.trucks || []);
+      } else {
+        errors.push('trucks');
       }
 
-      if (loadsRes.ok) {
-        const data = await loadsRes.json();
+      // Process loads
+      if (results[1].status === 'fulfilled' && results[1].value.ok) {
+        const data = await results[1].value.json();
         setLoads(data.loads || []);
+      } else {
+        errors.push('loads');
       }
 
-      if (tripsRes.ok) {
-        const data = await tripsRes.json();
+      // Process trips
+      if (results[2].status === 'fulfilled' && results[2].value.ok) {
+        const data = await results[2].value.json();
         setTrips(data.trips || []);
+      } else {
+        errors.push('trips');
+      }
+
+      // M4 FIX: Show partial error if some data failed to load
+      if (errors.length > 0 && errors.length < 3) {
+        setError(`Failed to load some data (${errors.join(', ')}). Showing partial results.`);
+      } else if (errors.length === 3) {
+        setError('Failed to load map data');
       }
     } catch (err) {
       setError('Failed to load map data');
-      console.error('Map data fetch error:', err);
     } finally {
       setLoading(false);
     }

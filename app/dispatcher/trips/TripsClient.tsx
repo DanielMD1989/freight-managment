@@ -7,8 +7,11 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+
+// L4 FIX: Use constant for page size
+const TRIPS_PAGE_SIZE = 20;
 
 interface Trip {
   id: string;
@@ -62,13 +65,14 @@ export default function TripsClient() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Pagination
+  // Pagination - L4 FIX: Use constant
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const limit = 20;
+  const limit = TRIPS_PAGE_SIZE;
 
-  const fetchTrips = async () => {
+  // L5 FIX: Wrap in useCallback with proper dependencies
+  const fetchTrips = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -82,6 +86,11 @@ export default function TripsClient() {
         params.append('status', statusFilter);
       }
 
+      // M3 FIX: Add server-side search parameter
+      if (searchQuery.trim()) {
+        params.append('search', searchQuery.trim());
+      }
+
       const response = await fetch(`/api/trips?${params.toString()}`);
 
       if (!response.ok) {
@@ -92,29 +101,27 @@ export default function TripsClient() {
       setTrips(data.trips || []);
       setTotal(data.pagination?.total || 0);
       setTotalPages(data.pagination?.totalPages || 1);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch trips');
+    // H4 FIX: Use unknown type with type guard
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to fetch trips';
+      setError(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, limit, statusFilter, searchQuery]);
 
+  // M3 FIX: Add searchQuery to dependencies for server-side search
+  // L5 FIX: Include fetchTrips in dependency array
   useEffect(() => {
-    fetchTrips();
-  }, [page, statusFilter]);
+    // Debounce search to avoid excessive API calls
+    const timeoutId = setTimeout(() => {
+      fetchTrips();
+    }, searchQuery ? 300 : 0);
+    return () => clearTimeout(timeoutId);
+  }, [fetchTrips, searchQuery]);
 
-  // Filter by search client-side
-  const filteredTrips = searchQuery
-    ? trips.filter(
-        (t) =>
-          t.pickupCity?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          t.deliveryCity?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          t.load?.pickupCity?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          t.load?.deliveryCity?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          t.truck?.licensePlate?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          t.carrier?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : trips;
+  // M3 FIX: Server-side search means we use trips directly
+  const filteredTrips = trips;
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {

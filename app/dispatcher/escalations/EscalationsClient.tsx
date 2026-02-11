@@ -89,8 +89,10 @@ export default function EscalationsClient() {
       setEscalations(data.escalations || []);
       setTotal(data.total || 0);
       setStats(data.stats || null);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch escalations');
+    // H5 FIX: Use unknown type with type guard
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to fetch escalations';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -155,8 +157,10 @@ export default function EscalationsClient() {
       }
 
       fetchEscalations();
-    } catch (err: any) {
-      setError(err.message || 'Failed to escalate');
+    // H5 FIX: Use unknown type with type guard
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to escalate';
+      setError(message);
     }
   }, []);
 

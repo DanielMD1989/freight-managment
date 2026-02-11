@@ -10,6 +10,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
+// M1 FIX: Add rate limiting
+import { checkRpsLimit, RPS_CONFIGS } from '@/lib/rateLimit';
 
 /**
  * GET /api/dispatcher/dashboard
@@ -26,6 +28,22 @@ import { db } from '@/lib/db';
  */
 export async function GET(request: NextRequest) {
   try {
+    // M1 FIX: Apply rate limiting
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      request.headers.get('x-real-ip') || 'unknown';
+    const rpsResult = await checkRpsLimit(
+      RPS_CONFIGS.dashboard.endpoint,
+      ip,
+      RPS_CONFIGS.dashboard.rps,
+      RPS_CONFIGS.dashboard.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please slow down.' },
+        { status: 429 }
+      );
+    }
+
     const session = await requireAuth();
 
     // Check if user is a dispatcher, admin, or super admin

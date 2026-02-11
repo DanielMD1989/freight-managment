@@ -29,40 +29,22 @@ import {
 } from '@/components/dashboard';
 import QuickAssignModal from '@/components/QuickAssignModal';
 import StatusUpdateModal from '@/components/StatusUpdateModal';
+// H1 FIX: Import proper types from centralized types file
+import type {
+  DashboardStats,
+  DashboardData,
+  DashboardUser,
+  PickupToday,
+  DispatcherLoad,
+  DispatcherTruckPosting,
+} from '@/lib/types/dispatcher';
+// M2 FIX: Import page size constant
+import { DISPATCHER_PAGE_SIZE } from '@/lib/types/dispatcher';
 
 type DashboardTab = 'loads' | 'trucks';
 
-interface DashboardStats {
-  postedLoads: number;
-  assignedLoads: number;
-  inTransitLoads: number;
-  availableTrucks: number;
-  deliveriesToday: number;
-  onTimeRate: number;
-  alertCount: number;
-}
-
-interface PickupToday {
-  id: string;
-  pickupCity: string;
-  deliveryCity: string;
-  pickupDate: string;
-  status: string;
-  truckType: string;
-}
-
-interface DashboardData {
-  stats: DashboardStats;
-  pickupsToday: PickupToday[];
-}
-
 interface DispatcherDashboardClientProps {
-  user: {
-    userId: string;
-    email: string;
-    role: string;
-    name?: string;
-  };
+  user: DashboardUser;
   dashboardData?: DashboardData | null;
 }
 
@@ -71,8 +53,9 @@ export default function DispatcherDashboardClient({
   dashboardData,
 }: DispatcherDashboardClientProps) {
   const [activeTab, setActiveTab] = useState<DashboardTab>('loads');
-  const [loads, setLoads] = useState<any[]>([]);
-  const [trucks, setTrucks] = useState<any[]>([]);
+  // H1 FIX: Use proper types instead of any[]
+  const [loads, setLoads] = useState<DispatcherLoad[]>([]);
+  const [trucks, setTrucks] = useState<DispatcherTruckPosting[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,7 +73,7 @@ export default function DispatcherDashboardClient({
 
     try {
       const params = new URLSearchParams({
-        limit: '50',
+        limit: DISPATCHER_PAGE_SIZE.toString(),
       });
 
       if (statusFilter !== 'ALL') {
@@ -109,9 +92,11 @@ export default function DispatcherDashboardClient({
 
       const data = await response.json();
       setLoads(data.loads || []);
-    } catch (err: any) {
-      console.error('Error fetching loads:', err);
-      setError(err.message || 'Failed to fetch loads');
+    // H1 FIX: Use unknown type with type guard
+    } catch (error: unknown) {
+      console.error('Error fetching loads:', error);
+      const message = error instanceof Error ? error.message : 'Failed to fetch loads';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -124,7 +109,7 @@ export default function DispatcherDashboardClient({
 
     try {
       const params = new URLSearchParams({
-        limit: '50',
+        limit: DISPATCHER_PAGE_SIZE.toString(),
       });
 
       const response = await fetch(`/api/truck-postings?${params.toString()}`);
@@ -135,9 +120,11 @@ export default function DispatcherDashboardClient({
 
       const data = await response.json();
       setTrucks(data.postings || []);
-    } catch (err: any) {
-      console.error('Error fetching trucks:', err);
-      setError(err.message || 'Failed to fetch trucks');
+    // H1 FIX: Use unknown type with type guard
+    } catch (error: unknown) {
+      console.error('Error fetching trucks:', error);
+      const message = error instanceof Error ? error.message : 'Failed to fetch trucks';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -477,7 +464,8 @@ export default function DispatcherDashboardClient({
           >
             {pickupsToday.length > 0 ? (
               <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
-                {pickupsToday.slice(0, 4).map((load: any) => (
+                {/* H1 FIX: Use proper type for load */}
+                {pickupsToday.slice(0, 4).map((load: PickupToday) => (
                   <Link
                     key={load.id}
                     href={`/dispatcher/loads/${load.id}`}
@@ -540,7 +528,7 @@ export default function DispatcherDashboardClient({
                     return new Date(l.deliveryDate) < new Date();
                   })
                   .slice(0, 4)
-                  .map((load: any) => (
+                  .map((load: DispatcherLoad) => (
                     <Link
                       key={load.id}
                       href={`/dispatcher/loads/${load.id}`}
@@ -601,18 +589,18 @@ export default function DispatcherDashboardClient({
   );
 }
 
-// Loads Table Component
-function LoadsTable({ loads, onRefresh, userRole }: { loads: any[]; onRefresh: () => void; userRole: string }) {
+// H1 FIX: Use proper types for LoadsTable component
+function LoadsTable({ loads, onRefresh, userRole }: { loads: DispatcherLoad[]; onRefresh: () => void; userRole: string }) {
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
-  const [selectedLoad, setSelectedLoad] = useState<any>(null);
+  const [selectedLoad, setSelectedLoad] = useState<DispatcherLoad | null>(null);
 
-  const handleAssignLoad = (load: any) => {
+  const handleAssignLoad = (load: DispatcherLoad) => {
     setSelectedLoad(load);
     setAssignModalOpen(true);
   };
 
-  const handleUpdateStatus = (load: any) => {
+  const handleUpdateStatus = (load: DispatcherLoad) => {
     setSelectedLoad(load);
     setStatusModalOpen(true);
   };
@@ -856,7 +844,8 @@ function LoadsTable({ loads, onRefresh, userRole }: { loads: any[]; onRefresh: (
 }
 
 // Trucks Table Component
-function TrucksTable({ trucks, onRefresh }: { trucks: any[]; onRefresh: () => void }) {
+// H1 FIX: Use proper types for TrucksTable component
+function TrucksTable({ trucks, onRefresh }: { trucks: DispatcherTruckPosting[]; onRefresh: () => void }) {
   if (trucks.length === 0) {
     return (
       <div className="py-16 text-center">

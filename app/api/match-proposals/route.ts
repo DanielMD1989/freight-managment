@@ -13,12 +13,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
+import { Prisma, UserRole, ProposalStatus } from '@prisma/client';
 import { requireAuth, requireActiveUser } from '@/lib/auth';
 import { requireCSRF } from '@/lib/csrf';
 import { canProposeMatch } from '@/lib/dispatcherPermissions';
 import { RULE_DISPATCHER_COORDINATION_ONLY } from '@/lib/foundation-rules';
-import { UserRole } from '@prisma/client';
 import { createNotification, NotificationType } from '@/lib/notifications';
+import { zodErrorResponse } from '@/lib/validation';
 
 // Validation schema for match proposal
 const MatchProposalSchema = z.object({
@@ -76,14 +77,9 @@ export async function POST(request: NextRequest) {
     // Validate input
     const validationResult = MatchProposalSchema.safeParse(body);
 
+    // H9 FIX: Use zodErrorResponse to prevent schema detail leakage
     if (!validationResult.success) {
-      return NextResponse.json(
-        {
-          error: 'Invalid request data',
-          details: validationResult.error.format(),
-        },
-        { status: 400 }
-      );
+      return zodErrorResponse(validationResult.error);
     }
 
     const data = validationResult.data;
@@ -272,8 +268,8 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(limitParam || '20', 10), 100);
     const offset = Math.max(parseInt(offsetParam || '0', 10), 0);
 
-    // Build where clause based on role
-    const where: any = {};
+    // H7 FIX: Use typed where clause instead of any
+    const where: Prisma.MatchProposalWhereInput = {};
 
     // H11 FIX: Role-based filtering - handle all roles explicitly
     if (session.role === 'CARRIER') {
@@ -289,8 +285,9 @@ export async function GET(request: NextRequest) {
     // Admins/SUPER_ADMIN see all proposals
 
     // Apply additional filters
-    if (status) {
-      where.status = status;
+    // H7 FIX: Cast status to ProposalStatus enum for type safety
+    if (status && Object.values(ProposalStatus).includes(status as ProposalStatus)) {
+      where.status = status as ProposalStatus;
     }
 
     if (loadId) {

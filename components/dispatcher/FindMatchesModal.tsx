@@ -13,27 +13,30 @@
 import { useState, useEffect } from 'react';
 import { getCSRFToken } from '@/lib/csrfFetch';
 
-interface MatchingTruck {
-  truckPosting: {
-    id: string;
-    truck: {
-      id: string;
-      licensePlate: string;
-      truckType: string;
-      capacity: number;
-      carrier: {
-        id: string;
-        name: string;
-      };
-      currentCity?: {
-        name: string;
-      };
-    };
-  };
+// H6 FIX: Define interfaces locally with discriminated union
+interface TruckMatch {
+  type: 'truck';
+  id: string;
   matchScore: number;
+  truck: {
+    id: string;
+    licensePlate: string;
+    truckType: string;
+    capacity: number;
+  };
+  carrier?: {
+    id: string;
+    name: string;
+  };
+  originCity?: {
+    name: string;
+  };
+  currentCity?: string;
 }
 
-interface MatchingLoad {
+interface LoadMatch {
+  type: 'load';
+  matchScore: number;
   load: {
     id: string;
     pickupCity: string;
@@ -45,7 +48,17 @@ interface MatchingLoad {
       name: string;
     };
   };
-  matchScore: number;
+}
+
+type MatchResult = TruckMatch | LoadMatch;
+
+// Type guard helpers
+function isTruckMatch(match: MatchResult): match is TruckMatch {
+  return match.type === 'truck';
+}
+
+function isLoadMatch(match: MatchResult): match is LoadMatch {
+  return match.type === 'load';
 }
 
 interface FindMatchesModalProps {
@@ -83,7 +96,8 @@ export default function FindMatchesModal({
   truckId,
   onProposalCreated,
 }: FindMatchesModalProps) {
-  const [matches, setMatches] = useState<any[]>([]);
+  // H6 FIX: Use proper typed matches
+  const [matches, setMatches] = useState<MatchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [proposing, setProposing] = useState<string | null>(null);
@@ -117,30 +131,46 @@ export default function FindMatchesModal({
       }
 
       const data = await response.json();
-      // Handle both API response formats:
+      // H6 FIX: Add type discriminator to matches for proper typing
       // - matching-trucks returns { trucks: [...] }
       // - matching-loads returns { matches: [...] }
-      setMatches(data.matches || data.trucks || []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load matches');
+      const rawMatches = data.matches || data.trucks || [];
+      const typedMatches: MatchResult[] = rawMatches.map((m: Record<string, unknown>) => ({
+        ...m,
+        type: type === 'trucks' ? 'truck' : 'load',
+      }));
+      setMatches(typedMatches);
+    // H6 FIX: Use unknown type with type guard
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to load matches';
+      setError(message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleProposeMatch = async (match: any) => {
-    const matchLoadId = type === 'trucks' ? loadId : match.load?.id;
-    // For trucks: API returns flat object with truck.id (not wrapped in truckPosting)
-    // For loads: truckId is passed as prop
-    const matchTruckId = type === 'trucks' ? match.truck?.id : truckId;
+  // H6 FIX: Use type guards for proper typing
+  const handleProposeMatch = async (match: MatchResult) => {
+    let matchLoadId: string | undefined;
+    let matchTruckId: string | undefined;
+    let proposingId: string | undefined;
+
+    if (isTruckMatch(match)) {
+      matchLoadId = loadId;
+      matchTruckId = match.truck?.id;
+      proposingId = match.id;
+    } else if (isLoadMatch(match)) {
+      matchLoadId = match.load?.id;
+      matchTruckId = truckId;
+      proposingId = match.load?.id;
+    }
 
     if (!matchLoadId || !matchTruckId) {
       setError('Missing load or truck ID');
       return;
     }
 
-    // For trucks: match.id is the posting ID, for loads: match.load?.id
-    setProposing(type === 'trucks' ? match.id : match.load?.id);
+    setProposing(proposingId || null);
     setError(null);
 
     try {
@@ -165,12 +195,15 @@ export default function FindMatchesModal({
         throw new Error(data.error || 'Failed to create proposal');
       }
 
-      // Mark as proposed
-      const proposedKey = type === 'trucks' ? match.id : match.load?.id;
-      setProposedIds(prev => new Set([...prev, proposedKey]));
+      // Mark as proposed using the proposingId
+      if (proposingId) {
+        setProposedIds(prev => new Set([...prev, proposingId]));
+      }
       onProposalCreated?.();
-    } catch (err: any) {
-      setError(err.message || 'Failed to create proposal');
+    // H6 FIX: Use unknown type with type guard
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to create proposal';
+      setError(message);
     } finally {
       setProposing(null);
     }
@@ -206,11 +239,13 @@ export default function FindMatchesModal({
                 )}
               </p>
             </div>
+            {/* L1 FIX: Add aria-label for accessibility */}
             <button
               onClick={onClose}
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              aria-label="Close modal"
             >
-              <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -246,8 +281,9 @@ export default function FindMatchesModal({
             ) : (
               <div className="space-y-3">
                 {matches.map((match, index) => {
-                  const itemId = type === 'trucks' ? match.id : match.load?.id;
-                  const isProposed = proposedIds.has(itemId);
+                  // H6 FIX: Use type guards for proper type checking
+                  const itemId = isTruckMatch(match) ? match.id : isLoadMatch(match) ? match.load?.id : '';
+                  const isProposed = itemId ? proposedIds.has(itemId) : false;
                   const isProposing = proposing === itemId;
 
                   return (
@@ -261,7 +297,7 @@ export default function FindMatchesModal({
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          {type === 'trucks' ? (
+                          {isTruckMatch(match) ? (
                             // Truck match card - API returns flat structure with truck nested
                             <>
                               <div className="flex items-center gap-3 mb-2">
@@ -278,7 +314,7 @@ export default function FindMatchesModal({
                                 <p>Location: {match.originCity?.name || match.currentCity || 'N/A'}</p>
                               </div>
                             </>
-                          ) : (
+                          ) : isLoadMatch(match) ? (
                             // Load match card
                             <>
                               <div className="flex items-center gap-3 mb-2">
@@ -295,7 +331,7 @@ export default function FindMatchesModal({
                                 <p>Pickup: {new Date(match.load?.pickupDate).toLocaleDateString()}</p>
                               </div>
                             </>
-                          )}
+                          ) : null}
                         </div>
 
                         <div className="ml-4">
