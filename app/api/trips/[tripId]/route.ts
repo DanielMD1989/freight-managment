@@ -336,7 +336,9 @@ export async function PATCH(
       return { updatedTrip, loadSynced };
     });
 
-    // P1-002 FIX: Cache invalidation after transaction commits
+    // Cache invalidation MUST happen after transaction commits (not inside tx)
+    // Reason: If tx rolls back, we don't want to invalidate cache for uncommitted data
+    // This ensures cache consistency: only invalidate when data is durably written
     await CacheInvalidation.trip(tripId, trip.carrierId, trip.shipperId);
     if (loadSynced) {
       await CacheInvalidation.load(trip.loadId, trip.shipperId);

@@ -586,7 +586,7 @@ export async function GET(request: NextRequest) {
       truckType: posting.truck?.truckType || '',
       lengthM: posting.truck?.lengthM || posting.availableLength,
       maxWeight: posting.truck?.capacity || posting.availableWeight,
-      // Flatten carrier info
+      // Carrier contact is intentionally public - carriers post contact info so shippers can reach them
       carrierContactPhone: posting.contactPhone,
     }));
 
@@ -613,7 +613,11 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' }, // Most recent loads first
       });
 
-      postingsWithMatchCount = postings.map((posting: any) => {
+      // Limit match count calculation to first 50 postings to prevent O(n*m) performance issues
+      const postingsToCalculate = postings.slice(0, 50);
+      const postingsWithoutCalc = postings.slice(50);
+
+      const calculatedPostings = postingsToCalculate.map((posting: any) => {
         const truckCriteria = {
           currentCity: posting.originCity?.name || '',
           destinationCity: posting.destinationCity?.name || null,
@@ -643,6 +647,14 @@ export async function GET(request: NextRequest) {
           matchCount: matches.length,
         };
       });
+
+      // Postings beyond limit get matchCount: null (not calculated)
+      const uncalculatedPostings = postingsWithoutCalc.map((posting: any) => ({
+        ...posting,
+        matchCount: null,
+      }));
+
+      postingsWithMatchCount = [...calculatedPostings, ...uncalculatedPostings];
     }
 
     return NextResponse.json({

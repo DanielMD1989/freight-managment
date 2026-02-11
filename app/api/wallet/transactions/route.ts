@@ -129,9 +129,13 @@ export async function GET(request: NextRequest) {
     const formattedTransactions = transactions
       .filter((tx) => tx.lines && tx.lines.length > 0) // Skip transactions with no lines
       .map((tx) => {
-        const line = tx.lines[0]; // Get the line affecting this organization's wallet
-        const isDebit = walletAccountIds.includes(line.accountId || '');
-        const amount = Number(line.amount);
+        // Find the line that affects this organization's wallet (more robust than assuming lines[0])
+        const walletLine = tx.lines.find(line =>
+          line.accountId && walletAccountIds.includes(line.accountId)
+        );
+        const line = walletLine || tx.lines[0]; // Fallback to first line if no wallet line found
+        const isDebit = line.accountId ? walletAccountIds.includes(line.accountId) : false;
+        const amount = Number(line.amount || 0);
 
         return {
           id: tx.id,

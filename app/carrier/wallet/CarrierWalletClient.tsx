@@ -91,10 +91,12 @@ export default function CarrierWalletClient({ walletData }: { walletData: Wallet
   const [transactions, setTransactions] = useState<Transaction[]>(walletData.transactions);
   const [hasMore, setHasMore] = useState(walletData.transactions.length >= 50);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const pageSize = 10;
 
   const loadMoreTransactions = useCallback(async () => {
     setLoadingMore(true);
+    setLoadError(null);
     try {
       const response = await fetch(
         `/api/wallet/transactions?offset=${transactions.length}&limit=50`
@@ -119,9 +121,12 @@ export default function CarrierWalletClient({ walletData }: { walletData: Wallet
         } else {
           setHasMore(false);
         }
+      } else {
+        setLoadError('Failed to load transactions');
       }
     } catch (error) {
       console.error('Failed to load more transactions:', error);
+      setLoadError('Failed to load transactions. Please try again.');
     } finally {
       setLoadingMore(false);
     }
@@ -371,6 +376,11 @@ export default function CarrierWalletClient({ walletData }: { walletData: Wallet
                 </button>
               </div>
             </div>
+            {loadError && (
+              <div className="text-center text-red-600 dark:text-red-400 text-sm mb-2">
+                {loadError}
+              </div>
+            )}
             {hasMore && (
               <div className="text-center">
                 <button
