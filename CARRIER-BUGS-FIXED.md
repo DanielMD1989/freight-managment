@@ -10,10 +10,10 @@
 | Category | Bugs Identified | Bugs Fixed | Bugs Skipped |
 |----------|-----------------|------------|--------------|
 | CRITICAL | 5 | 5 | 0 |
-| HIGH | 15 | 7 | 8 |
+| HIGH | 15 | 14 | 1 |
 | MEDIUM | 29 | 10 | 19 |
 | LOW | 12 | 5 | 7 |
-| **TOTAL** | **61** | **27** | **34** |
+| **TOTAL** | **61** | **34** | **27** |
 
 ---
 
@@ -31,6 +31,13 @@
 | H11 | `app/api/trucks/[id]/history/route.ts` | Added 7-day max date range limit | +8 | ✓ |
 | H12 | `app/api/truck-postings/[id]/duplicate/route.ts` | Added CARRIER role check before ownership check | +8 | ✓ |
 | H15 | `app/api/trucks/[id]/location/route.ts` | Added CSRF protection to PATCH handler with mobile bypass | +12 | ✓ |
+| H6 | `app/api/trucks/route.ts` | Added pagination bounds: page >= 1, limit 1-100, NaN handling | +2 | ✓ |
+| H7 | `app/api/truck-postings/[id]/route.ts` | Block MATCHED status in PATCH - only system can set | +5 | ✓ |
+| H8 | `app/api/carrier/dashboard/route.ts` | Renamed misleading `totalRevenue` → `totalServiceFeesPaid` | +3 | ✓ |
+| H9 | `app/api/wallet/transactions/route.ts` | Added NaN handling and bounds to limit/offset params | +2 | ✓ |
+| H10 | `app/api/wallet/transactions/route.ts` | Added array bounds check before accessing tx.lines[0] | +1 | ✓ |
+| H11 | `app/api/truck-postings/route.ts` | Increased match limit 500→1000, added orderBy, documented | +4 | ✓ |
+| H12-NEW | `app/api/trucks/[id]/route.ts` | Fixed info disclosure - generic error, log details server-side | +6 | ✓ |
 | M1 | `app/carrier/loadboard/SearchLoadsTab.tsx` | Added `disabled: true` to pending button (status indicator) | +1 | ✓ |
 | M2 | `app/carrier/loadboard/TruckPostingModal.tsx` | Replaced alert() with inline error state | +15 | ✓ |
 | M3 | `app/carrier/loadboard/PostTrucksTab.tsx` | Added resetNewTruckForm() called on close/cancel | +20 | ✓ |

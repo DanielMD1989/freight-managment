@@ -20,6 +20,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth';
+import { requireCSRF } from '@/lib/csrf';
 import { hasElevatedPermissions } from '@/lib/dispatcherPermissions';
 import { UserRole } from '@prisma/client';
 // P1-001-B FIX: Import CacheInvalidation for update/delete operations
@@ -208,6 +209,26 @@ export async function PATCH(
       );
     }
 
+    // CSRF protection for state-changing operation
+    // Mobile clients MUST use Bearer token authentication (inherently CSRF-safe)
+    // Web clients MUST provide CSRF token
+    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
+    const hasBearerAuth = request.headers.get('authorization')?.startsWith('Bearer ');
+
+    if (isMobileClient && !hasBearerAuth) {
+      return NextResponse.json(
+        { error: 'Mobile clients require Bearer authentication' },
+        { status: 401 }
+      );
+    }
+
+    if (!isMobileClient && !hasBearerAuth) {
+      const csrfError = await requireCSRF(request);
+      if (csrfError) {
+        return csrfError;
+      }
+    }
+
     // Require authentication
     const session = await requireAuth();
 
@@ -267,6 +288,14 @@ export async function PATCH(
     }
 
     const data = validationResult.data;
+
+    // Block manual status change to MATCHED - only system can set this
+    if (data.status === 'MATCHED') {
+      return NextResponse.json(
+        { error: 'MATCHED status can only be set by system' },
+        { status: 400 }
+      );
+    }
 
     // Update postedAt when status changes to ACTIVE (posted)
     const shouldUpdatePostedAt = data.status === 'ACTIVE' && existing.status !== 'ACTIVE';
@@ -349,6 +378,26 @@ export async function DELETE(
         { error: 'Invalid posting ID format' },
         { status: 400 }
       );
+    }
+
+    // CSRF protection for state-changing operation
+    // Mobile clients MUST use Bearer token authentication (inherently CSRF-safe)
+    // Web clients MUST provide CSRF token
+    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
+    const hasBearerAuth = request.headers.get('authorization')?.startsWith('Bearer ');
+
+    if (isMobileClient && !hasBearerAuth) {
+      return NextResponse.json(
+        { error: 'Mobile clients require Bearer authentication' },
+        { status: 401 }
+      );
+    }
+
+    if (!isMobileClient && !hasBearerAuth) {
+      const csrfError = await requireCSRF(request);
+      if (csrfError) {
+        return csrfError;
+      }
     }
 
     // Require authentication

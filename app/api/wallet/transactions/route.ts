@@ -41,10 +41,10 @@ export async function GET(request: NextRequest) {
     // Parse query parameters
     const { searchParams } = new URL(request.url);
     const limit = Math.min(
-      parseInt(searchParams.get('limit') || '50'),
+      Math.max(parseInt(searchParams.get('limit') || '50') || 50, 1),
       100
     );
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const offset = Math.max(parseInt(searchParams.get('offset') || '0') || 0, 0);
     const type = searchParams.get('type') as
       | 'COMMISSION'
       | 'PAYMENT'
@@ -127,21 +127,23 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Format transactions for display
-    const formattedTransactions = transactions.map((tx) => {
-      const line = tx.lines[0]; // Get the line affecting this organization's wallet
-      const isDebit = walletAccountIds.includes(line.accountId || '');
-      const amount = Number(line.amount);
+    const formattedTransactions = transactions
+      .filter((tx) => tx.lines && tx.lines.length > 0) // Skip transactions with no lines
+      .map((tx) => {
+        const line = tx.lines[0]; // Get the line affecting this organization's wallet
+        const isDebit = walletAccountIds.includes(line.accountId || '');
+        const amount = Number(line.amount);
 
-      return {
-        id: tx.id,
-        type: tx.transactionType,
-        description: tx.description,
-        reference: tx.reference,
-        loadId: tx.loadId,
-        amount: isDebit ? amount : -amount, // Positive = money in, Negative = money out
-        createdAt: tx.createdAt,
-      };
-    });
+        return {
+          id: tx.id,
+          type: tx.transactionType,
+          description: tx.description,
+          reference: tx.reference,
+          loadId: tx.loadId,
+          amount: isDebit ? amount : -amount, // Positive = money in, Negative = money out
+          createdAt: tx.createdAt,
+        };
+      });
 
     return NextResponse.json({
       transactions: formattedTransactions,

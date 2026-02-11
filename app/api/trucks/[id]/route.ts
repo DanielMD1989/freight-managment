@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { requireCSRF } from "@/lib/csrf";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
@@ -127,6 +128,26 @@ export async function PATCH(
     const rateLimitError = await applyFleetRpsLimit(request);
     if (rateLimitError) return rateLimitError;
 
+    // CSRF protection for state-changing operation
+    // Mobile clients MUST use Bearer token authentication (inherently CSRF-safe)
+    // Web clients MUST provide CSRF token
+    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
+    const hasBearerAuth = request.headers.get('authorization')?.startsWith('Bearer ');
+
+    if (isMobileClient && !hasBearerAuth) {
+      return NextResponse.json(
+        { error: 'Mobile clients require Bearer authentication' },
+        { status: 401 }
+      );
+    }
+
+    if (!isMobileClient && !hasBearerAuth) {
+      const csrfError = await requireCSRF(request);
+      if (csrfError) {
+        return csrfError;
+      }
+    }
+
     const session = await requireAuth();
     await requirePermission(Permission.EDIT_TRUCKS);
     const { id } = await params;
@@ -223,6 +244,26 @@ export async function DELETE(
     const rateLimitError = await applyFleetRpsLimit(request);
     if (rateLimitError) return rateLimitError;
 
+    // CSRF protection for state-changing operation
+    // Mobile clients MUST use Bearer token authentication (inherently CSRF-safe)
+    // Web clients MUST provide CSRF token
+    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
+    const hasBearerAuth = request.headers.get('authorization')?.startsWith('Bearer ');
+
+    if (isMobileClient && !hasBearerAuth) {
+      return NextResponse.json(
+        { error: 'Mobile clients require Bearer authentication' },
+        { status: 401 }
+      );
+    }
+
+    if (!isMobileClient && !hasBearerAuth) {
+      const csrfError = await requireCSRF(request);
+      if (csrfError) {
+        return csrfError;
+      }
+    }
+
     const session = await requireAuth();
     await requirePermission(Permission.DELETE_TRUCKS);
     const { id } = await params;
@@ -282,19 +323,18 @@ export async function DELETE(
     });
 
     if (activeTrip) {
+      // Log detailed info server-side for debugging
+      console.log('Truck deletion blocked - active trip:', {
+        truckId: id,
+        tripId: activeTrip.id,
+        tripStatus: activeTrip.status,
+        loadId: activeTrip.load?.id,
+      });
+
       return NextResponse.json(
         {
-          error: "Cannot delete truck with active trip",
-          code: "TRUCK_HAS_ACTIVE_TRIP",
-          message: `This truck is currently assigned to an active trip (${activeTrip.status}). Complete or cancel the trip before deleting the truck.`,
-          details: {
-            tripId: activeTrip.id,
-            tripStatus: activeTrip.status,
-            loadId: activeTrip.load?.id,
-            route: activeTrip.load
-              ? `${activeTrip.load.pickupCity} → ${activeTrip.load.deliveryCity}`
-              : undefined,
-          },
+          error: "Cannot delete truck with active assignments",
+          message: "This truck is currently assigned to an active trip. Complete or cancel the trip before deleting the truck.",
         },
         { status: 409 }
       );

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { requireCSRF } from "@/lib/csrf";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
 import {
@@ -53,6 +54,26 @@ export async function POST(request: NextRequest) {
           },
         }
       );
+    }
+
+    // CSRF protection for state-changing operation
+    // Mobile clients MUST use Bearer token authentication (inherently CSRF-safe)
+    // Web clients MUST provide CSRF token
+    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
+    const hasBearerAuth = request.headers.get('authorization')?.startsWith('Bearer ');
+
+    if (isMobileClient && !hasBearerAuth) {
+      return NextResponse.json(
+        { error: 'Mobile clients require Bearer authentication' },
+        { status: 401 }
+      );
+    }
+
+    if (!isMobileClient && !hasBearerAuth) {
+      const csrfError = await requireCSRF(request);
+      if (csrfError) {
+        return csrfError;
+      }
     }
 
     const session = await requireAuth();
@@ -192,8 +213,8 @@ export async function GET(request: NextRequest) {
     const session = await requireAuth();
     const { searchParams } = request.nextUrl;
 
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
+    const page = Math.max(parseInt(searchParams.get("page") || "1") || 1, 1);
+    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "20") || 20, 1), 100);
     const truckType = searchParams.get("truckType");
     const isAvailable = searchParams.get("isAvailable");
     const myTrucks = searchParams.get("myTrucks") === "true";

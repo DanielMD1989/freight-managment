@@ -82,10 +82,17 @@ export async function POST(request: NextRequest) {
     const session = await requireActiveUser();
 
     // CSRF protection for state-changing operation
-    // Skip for mobile clients using Bearer token authentication (no cookies)
-    // Bearer tokens are inherently CSRF-safe as attackers cannot add Authorization headers cross-origin
+    // Mobile clients MUST use Bearer token authentication (inherently CSRF-safe)
+    // Web clients MUST provide CSRF token
     const isMobileClient = request.headers.get('x-client-type') === 'mobile';
     const hasBearerAuth = request.headers.get('authorization')?.startsWith('Bearer ');
+
+    if (isMobileClient && !hasBearerAuth) {
+      return NextResponse.json(
+        { error: 'Mobile clients require Bearer authentication' },
+        { status: 401 }
+      );
+    }
 
     if (!isMobileClient && !hasBearerAuth) {
       const csrfError = await requireCSRF(request);
@@ -585,6 +592,9 @@ export async function GET(request: NextRequest) {
     let postingsWithMatchCount = transformedPostings;
     if (includeMatchCount) {
       // Fetch all posted loads for matching
+      // Performance limit: Only fetch recent 1000 posted loads for matching
+      // This is intentional to prevent slow queries on large datasets
+      // For more matches, use dedicated /api/matches endpoint with pagination
       const loads = await db.load.findMany({
         where: { status: 'POSTED' },
         select: {
@@ -597,7 +607,8 @@ export async function GET(request: NextRequest) {
           lengthM: true,
           fullPartial: true,
         },
-        take: 500,
+        take: 1000,
+        orderBy: { createdAt: 'desc' }, // Most recent loads first
       });
 
       postingsWithMatchCount = postings.map((posting: any) => {
