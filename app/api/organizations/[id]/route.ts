@@ -25,6 +25,25 @@ export async function GET(
   try {
     const { id } = await params;
 
+    // C1 FIX: Require authentication to prevent unauthenticated enumeration
+    const session = await requireAuth();
+
+    // Authorization: user must be member of org, or admin
+    const user = await db.user.findUnique({
+      where: { id: session.userId },
+      select: { organizationId: true, role: true },
+    });
+
+    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+    const isMember = user?.organizationId === id;
+
+    if (!isAdmin && !isMember) {
+      return NextResponse.json(
+        { error: 'You do not have permission to view this organization' },
+        { status: 403 }
+      );
+    }
+
     const organization = await db.organization.findUnique({
       where: { id },
       include: {

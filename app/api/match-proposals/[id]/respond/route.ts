@@ -12,7 +12,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { z } from 'zod';
-import { requireAuth } from '@/lib/auth';
+import { requireActiveUser } from '@/lib/auth';
+import { validateCSRFWithMobile } from '@/lib/csrf';
 import { canApproveRequests } from '@/lib/dispatcherPermissions';
 import { RULE_CARRIER_FINAL_AUTHORITY } from '@/lib/foundation-rules';
 import { UserRole } from '@prisma/client';
@@ -47,8 +48,13 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // C13 FIX: Add CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const { id: proposalId } = await params;
-    const session = await requireAuth();
+    // C14 FIX: Use requireActiveUser to block suspended users
+    const session = await requireActiveUser();
 
     // Get the proposal
     const proposal = await db.matchProposal.findUnique({

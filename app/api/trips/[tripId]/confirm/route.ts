@@ -10,9 +10,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { validateCSRFWithMobile } from '@/lib/csrf';
 import { createNotification, NotificationType } from '@/lib/notifications';
 import { CacheInvalidation } from '@/lib/cache';
 import { z } from 'zod';
+import { zodErrorResponse } from '@/lib/validation';
 
 const confirmSchema = z.object({
   notes: z.string().max(1000).optional(),
@@ -28,6 +30,10 @@ export async function POST(
   { params }: { params: Promise<{ tripId: string }> }
 ) {
   try {
+    // C15 FIX: Add CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const { tripId } = await params;
     const session = await requireAuth();
 
@@ -37,10 +43,7 @@ export async function POST(
       const body = await request.json();
       const result = confirmSchema.safeParse(body);
       if (!result.success) {
-        return NextResponse.json(
-          { error: 'Validation failed', details: result.error.issues },
-          { status: 400 }
-        );
+        return zodErrorResponse(result.error);
       }
       confirmationNotes = result.data.notes || null;
     } catch {

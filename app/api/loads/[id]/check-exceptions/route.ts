@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
+import { validateCSRFWithMobile } from '@/lib/csrf';
 import { checkAllRules, autoCreateEscalations } from '@/lib/exceptionDetection';
 
 // POST /api/loads/[id]/check-exceptions - Manually trigger exception detection
@@ -13,6 +14,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // C12 FIX: Add CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireAuth();
     const { id: loadId } = await params;
 
@@ -44,7 +49,7 @@ export async function POST(
   } catch (error) {
     console.error('Exception check error:', error);
     return NextResponse.json(
-      { error: 'Failed to check for exceptions' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -83,7 +88,7 @@ export async function GET(
   } catch (error) {
     console.error('Exception preview error:', error);
     return NextResponse.json(
-      { error: 'Failed to preview exceptions' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

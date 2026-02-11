@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth, requireActiveUser } from '@/lib/auth';
+import { validateCSRFWithMobile } from '@/lib/csrf';
 import { getAccessRoles } from '@/lib/rbac';
 import { z } from 'zod';
 import { validateStateTransition, LoadStatus, getStatusDescription } from '@/lib/loadStateMachine';
@@ -47,6 +48,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // C5 FIX: Add CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     // Require ACTIVE user status for updating load status
     const session = await requireActiveUser();
     const { id: loadId } = await params;

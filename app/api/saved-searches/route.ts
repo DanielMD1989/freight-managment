@@ -9,6 +9,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { validateCSRFWithMobile } from '@/lib/csrf';
+import { zodErrorResponse } from '@/lib/validation';
 import { z } from 'zod';
 
 const createSavedSearchSchema = z.object({
@@ -58,14 +60,15 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    // C2 FIX: Add CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const user = await requireAuth();
     const body = await request.json();
     const result = createSavedSearchSchema.safeParse(body);
     if (!result.success) {
-      return NextResponse.json(
-        { error: 'Validation failed', details: result.error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(result.error);
     }
 
     const { name, type, criteria } = result.data;
@@ -84,7 +87,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Create saved search error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to create saved search' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

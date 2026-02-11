@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { validateCSRFWithMobile } from '@/lib/csrf';
 import { CacheInvalidation } from '@/lib/cache';
 import { z } from 'zod';
 import { validateStateTransition, LoadStatus } from '@/lib/loadStateMachine';
@@ -41,6 +42,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // C10 FIX: Add CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireAuth();
     const { id: loadId } = await params;
 
@@ -69,9 +74,16 @@ export async function POST(
       );
     }
 
+    // H2 FIX: Get user's organizationId for proper ownership check
+    const user = await db.user.findUnique({
+      where: { id: session.userId },
+      select: { organizationId: true },
+    });
+
     // Permission check: Only involved parties + dispatchers + admins can create escalations
-    const isShipper = session.role === 'SHIPPER' && load.shipperId === session.userId;
-    const isCarrier = session.role === 'CARRIER' && load.assignedTruck?.carrierId === session.userId;
+    // H2 FIX: Compare organizationId (not userId) with shipperId/carrierId
+    const isShipper = session.role === 'SHIPPER' && load.shipperId === user?.organizationId;
+    const isCarrier = session.role === 'CARRIER' && load.assignedTruck?.carrierId === user?.organizationId;
     const isDispatcher = session.role === 'DISPATCHER';
     const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
 

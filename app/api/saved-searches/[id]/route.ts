@@ -9,8 +9,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
+import { validateCSRFWithMobile } from '@/lib/csrf';
+import { zodErrorResponse } from '@/lib/validation';
 import { db } from '@/lib/db';
-import { SearchType } from '@prisma/client';
 import { z } from 'zod';
 
 const updateSavedSearchSchema = z.object({
@@ -39,6 +40,10 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // C3 FIX: Add CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const { id } = await params;
 
     // Require authentication
@@ -67,10 +72,7 @@ export async function PUT(
     const body = await request.json();
     const result = updateSavedSearchSchema.safeParse(body);
     if (!result.success) {
-      return NextResponse.json(
-        { error: 'Validation failed', details: result.error.issues },
-        { status: 400 }
-      );
+      return zodErrorResponse(result.error);
     }
 
     const { name, criteria } = result.data;
@@ -115,6 +117,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // C3 FIX: Add CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const { id } = await params;
 
     // Require authentication

@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requirePermission, Permission } from '@/lib/rbac';
+import { validateCSRFWithMobile } from '@/lib/csrf';
 import { CacheInvalidation } from '@/lib/cache';
 
 /**
@@ -28,6 +29,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // C4 FIX: Add CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const { id } = await params;
 
     // Require permission to post loads
@@ -148,7 +153,7 @@ export async function POST(
     console.error('Error duplicating load:', error);
 
     return NextResponse.json(
-      { error: 'Failed to duplicate load' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
