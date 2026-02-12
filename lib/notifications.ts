@@ -6,6 +6,7 @@
 
 import { db } from '@/lib/db';
 import { sendRealtimeNotification } from '@/lib/websocket-server';
+import { UserRole, Prisma } from '@prisma/client';
 
 /**
  * Notification Types
@@ -128,7 +129,7 @@ export async function createNotification(params: {
         title,
         message,
         read: false,
-        metadata: metadata ? JSON.parse(JSON.stringify(metadata)) : undefined,
+        metadata: metadata ? (JSON.parse(JSON.stringify(metadata)) as Prisma.InputJsonValue) : undefined,
       },
     });
 
@@ -139,7 +140,7 @@ export async function createNotification(params: {
       type: notification.type,
       title: notification.title,
       message: notification.message,
-      metadata: notification.metadata,
+      metadata: notification.metadata as Record<string, unknown> | undefined,
       createdAt: notification.createdAt,
     });
 
@@ -163,15 +164,13 @@ export async function createNotificationForRole(params: {
   type: string;
   title: string;
   message: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  metadata?: any;
+  metadata?: Record<string, unknown>;
   organizationId?: string; // Optional: scope to specific organization
 }) {
   const { role, type, title, message, metadata, organizationId } = params;
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = { role, isActive: true };
+    const where: Prisma.UserWhereInput = { role: role as UserRole, isActive: true };
     if (organizationId) {
       where.organizationId = organizationId;
     }

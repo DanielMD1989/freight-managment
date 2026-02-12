@@ -66,24 +66,24 @@ export function sanitizeInput(input: string): string {
 /**
  * Sanitize object recursively
  */
-export function sanitizeObject<T extends Record<string, any>>(obj: T): T {
+export function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
   const sanitized = {} as T;
 
   for (const [key, value] of Object.entries(obj)) {
     if (typeof value === 'string') {
-      sanitized[key as keyof T] = sanitizeInput(value) as T[keyof T];
+      (sanitized as Record<string, unknown>)[key] = sanitizeInput(value);
     } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      sanitized[key as keyof T] = sanitizeObject(value);
+      (sanitized as Record<string, unknown>)[key] = sanitizeObject(value as Record<string, unknown>);
     } else if (Array.isArray(value)) {
-      sanitized[key as keyof T] = value.map((item) =>
+      (sanitized as Record<string, unknown>)[key] = value.map((item) =>
         typeof item === 'string'
           ? sanitizeInput(item)
-          : typeof item === 'object'
-          ? sanitizeObject(item)
+          : typeof item === 'object' && item !== null
+          ? sanitizeObject(item as Record<string, unknown>)
           : item
-      ) as T[keyof T];
+      );
     } else {
-      sanitized[key as keyof T] = value;
+      (sanitized as Record<string, unknown>)[key] = value;
     }
   }
 
@@ -311,7 +311,7 @@ export async function logSecurityEvent(event: {
   ip: string;
   userAgent?: string;
   userId?: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }) {
   const timestamp = new Date().toISOString();
 
@@ -335,7 +335,7 @@ export async function logSecurityEvent(event: {
           ipAddress: event.ip,
           userAgent: event.userAgent || null,
           success: false, // Security events are typically failures/threats
-          metadata: event.details ? event.details : null,
+          metadata: event.details ? JSON.parse(JSON.stringify(event.details)) : undefined,
         },
       });
     } catch (error) {

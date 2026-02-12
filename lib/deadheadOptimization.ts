@@ -7,6 +7,7 @@
 
 import { db } from '@/lib/db';
 import { calculateDistanceKm } from '@/lib/geo';
+import { LoadStatus, Prisma, TruckType } from '@prisma/client';
 
 // Re-export for backwards compatibility
 export { calculateDistanceKm as calculateDistance } from '@/lib/geo';
@@ -257,12 +258,12 @@ export async function findLoadsWithMinimalDHO(
   }
 
   // Build where clause
-  const where: any = {
-    status: 'POSTED',
+  const where: Prisma.LoadWhereInput = {
+    status: LoadStatus.POSTED,
   };
 
   if (filters?.truckType) {
-    where.truckType = filters.truckType;
+    where.truckType = filters.truckType as TruckType;
   }
 
   if (filters?.minTripKm || filters?.maxTripKm) {
@@ -295,12 +296,6 @@ export async function findLoadsWithMinimalDHO(
       tripKm: true,
       originLat: true,
       originLon: true,
-      pickupLocation: {
-        select: {
-          latitude: true,
-          longitude: true,
-        },
-      },
     },
     take: 100, // Limit for performance
   });
@@ -308,17 +303,8 @@ export async function findLoadsWithMinimalDHO(
   // Calculate DH-O for each load and filter
   const loadsWithDHO = loads
     .map((load) => {
-      const pickupLat = load.originLat
-        ? Number(load.originLat)
-        : load.pickupLocation
-        ? Number(load.pickupLocation.latitude)
-        : null;
-
-      const pickupLon = load.originLon
-        ? Number(load.originLon)
-        : load.pickupLocation
-        ? Number(load.pickupLocation.longitude)
-        : null;
+      const pickupLat = load.originLat ? Number(load.originLat) : null;
+      const pickupLon = load.originLon ? Number(load.originLon) : null;
 
       if (!pickupLat || !pickupLon) {
         return null;
@@ -405,17 +391,17 @@ export async function findNextLoadsWithMinimalDHD(
   }
 
   // Build where clause for next loads
-  const where: any = {
-    status: 'POSTED',
+  const where: Prisma.LoadWhereInput = {
+    status: LoadStatus.POSTED,
     id: { not: currentLoadId }, // Exclude current load
     pickupDate: {
-      gte: currentLoad.deliveryDate, // Pickup after current delivery
+      gte: currentLoad.deliveryDate ?? undefined, // Pickup after current delivery
     },
   };
 
   // Match truck type if specified in filters, otherwise use current load's truck type
   if (filters?.truckType) {
-    where.truckType = filters.truckType;
+    where.truckType = filters.truckType as TruckType;
   } else if (currentLoad.truckType) {
     where.truckType = currentLoad.truckType;
   }
@@ -430,8 +416,8 @@ export async function findNextLoadsWithMinimalDHD(
     }
   }
 
-  if (filters?.pickupAfter) {
-    where.pickupDate.gte = filters.pickupAfter;
+  if (filters?.pickupAfter && where.pickupDate && typeof where.pickupDate === 'object' && 'gte' in where.pickupDate) {
+    (where.pickupDate as Prisma.DateTimeFilter).gte = filters.pickupAfter;
   }
 
   // Get available next loads

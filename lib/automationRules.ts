@@ -13,6 +13,24 @@ import { calculateDistanceKm } from '@/lib/geo';
 // TYPE DEFINITIONS
 // ============================================================================
 
+// Load type used for automation rule evaluation
+interface AutomationLoadTruck {
+  id: string;
+  gpsDevice?: {
+    id: string;
+    imei?: string;
+  } | null;
+}
+
+interface AutomationLoad {
+  id: string;
+  status: LoadStatus;
+  pickupDate?: Date | string | null;
+  deliveryDate?: Date | string | null;
+  tripKm?: number | null;
+  assignedTruck?: AutomationLoadTruck | null;
+}
+
 export interface RuleCondition {
   // Time-based conditions
   graceHours?: number; // Grace period in hours
@@ -62,12 +80,12 @@ export interface RuleAction {
   // Webhook params
   webhookUrl?: string;
   webhookMethod?: 'GET' | 'POST';
-  webhookPayload?: Record<string, any>;
+  webhookPayload?: Record<string, unknown>;
 }
 
 export interface RuleEvaluationContext {
   loadId: string;
-  load: any;
+  load: AutomationLoad;
   trigger: string;
   currentTime: Date;
 }
@@ -78,7 +96,7 @@ export interface RuleEvaluationResult {
   matched: boolean;
   reason?: string;
   actionsToExecute: RuleAction[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // ============================================================================
@@ -128,7 +146,7 @@ export async function evaluateRule(
   }
 
   // Get load data
-  const load = await db.load.findUnique({
+  const loadData = await db.load.findUnique({
     where: { id: loadId },
     include: {
       assignedTruck: {
@@ -139,7 +157,7 @@ export async function evaluateRule(
     },
   });
 
-  if (!load) {
+  if (!loadData) {
     return {
       ruleId,
       ruleName: rule.name,
@@ -148,6 +166,19 @@ export async function evaluateRule(
       actionsToExecute: [],
     };
   }
+
+  // Convert Decimal tripKm to number for the AutomationLoad interface
+  const load: AutomationLoad = {
+    ...loadData,
+    tripKm: loadData.tripKm ? Number(loadData.tripKm) : null,
+    assignedTruck: loadData.assignedTruck ? {
+      id: loadData.assignedTruck.id,
+      gpsDevice: loadData.assignedTruck.gpsDevice ? {
+        id: loadData.assignedTruck.gpsDevice.id,
+        imei: loadData.assignedTruck.gpsDevice.imei,
+      } : null,
+    } : null,
+  };
 
   const conditions = rule.conditions as RuleCondition;
   const context: RuleEvaluationContext = {
@@ -196,7 +227,7 @@ export async function evaluateRule(
 async function evaluateTimeBased(
   context: RuleEvaluationContext,
   conditions: RuleCondition
-): Promise<{ matched: boolean; reason: string; metadata: Record<string, any> }> {
+): Promise<{ matched: boolean; reason: string; metadata: Record<string, unknown> }> {
   const { load, currentTime } = context;
   const graceHours = conditions.graceHours || 2;
   const gracePeriodMs = graceHours * 60 * 60 * 1000;
@@ -211,7 +242,7 @@ async function evaluateTimeBased(
   }
 
   // Late pickup check
-  if (load.status === 'ASSIGNED' || load.status === 'PICKUP_PENDING') {
+  if ((load.status === 'ASSIGNED' || load.status === 'PICKUP_PENDING') && load.pickupDate) {
     const pickupTime = new Date(load.pickupDate);
     if (currentTime.getTime() > pickupTime.getTime() + gracePeriodMs) {
       const hoursLate = Math.floor(
@@ -231,7 +262,7 @@ async function evaluateTimeBased(
   }
 
   // Late delivery check
-  if (load.status === 'IN_TRANSIT') {
+  if (load.status === 'IN_TRANSIT' && load.deliveryDate) {
     const deliveryTime = new Date(load.deliveryDate);
     if (currentTime.getTime() > deliveryTime.getTime() + gracePeriodMs) {
       const hoursLate = Math.floor(
@@ -263,7 +294,7 @@ async function evaluateTimeBased(
 async function evaluateGpsBased(
   context: RuleEvaluationContext,
   conditions: RuleCondition
-): Promise<{ matched: boolean; reason: string; metadata: Record<string, any> }> {
+): Promise<{ matched: boolean; reason: string; metadata: Record<string, unknown> }> {
   const { load, currentTime } = context;
 
   if (!load.assignedTruck) {
@@ -379,7 +410,7 @@ async function evaluateGpsBased(
 async function evaluateThresholdBased(
   context: RuleEvaluationContext,
   conditions: RuleCondition
-): Promise<{ matched: boolean; reason: string; metadata: Record<string, any> }> {
+): Promise<{ matched: boolean; reason: string; metadata: Record<string, unknown> }> {
   const { load } = context;
 
   // Check min/max value thresholds (can be extended for various metrics)
@@ -418,7 +449,7 @@ async function evaluateThresholdBased(
 async function evaluateCustom(
   context: RuleEvaluationContext,
   conditions: RuleCondition
-): Promise<{ matched: boolean; reason: string; metadata: Record<string, any> }> {
+): Promise<{ matched: boolean; reason: string; metadata: Record<string, unknown> }> {
   if (!conditions.customLogic) {
     return {
       matched: false,

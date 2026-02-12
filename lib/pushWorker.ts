@@ -267,8 +267,8 @@ function getConfig(): PushConfig {
 // FIREBASE CLOUD MESSAGING (FCM)
 // =============================================================================
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let firebaseApp: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Firebase Admin SDK type loaded dynamically
+let firebaseApp: unknown = null;
 
 async function initializeFirebase(): Promise<boolean> {
   const config = getConfig();
@@ -284,12 +284,13 @@ async function initializeFirebase(): Promise<boolean> {
 
   try {
     // Dynamic import to avoid bundling issues
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const dynamicRequire = (moduleName: string): any => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-eval -- Dynamic require for optional Firebase SDK
+    const dynamicRequire = (moduleName: string): unknown => {
       return eval('require')(moduleName);
     };
 
-    const admin = dynamicRequire('firebase-admin');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Firebase Admin SDK is optionally loaded
+    const admin = dynamicRequire('firebase-admin') as any;
 
     firebaseApp = admin.initializeApp({
       credential: admin.credential.cert({
@@ -325,12 +326,13 @@ async function sendFCM(
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const dynamicRequire = (moduleName: string): any => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-eval -- Dynamic require for optional Firebase SDK
+  const dynamicRequire = (moduleName: string): unknown => {
     return eval('require')(moduleName);
   };
 
-  const admin = dynamicRequire('firebase-admin');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Firebase Admin SDK is optionally loaded
+  const admin = dynamicRequire('firebase-admin') as any;
   const messaging = admin.messaging();
 
   const message = {
@@ -357,8 +359,8 @@ async function sendFCM(
     const response = await messaging.sendEachForMulticast(message);
 
     const invalidTokens: string[] = [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    response.responses.forEach((resp: any, idx: number) => {
+    // Firebase response type from sendEachForMulticast
+    response.responses.forEach((resp: { success: boolean; error?: { code?: string } }, idx: number) => {
       if (!resp.success) {
         const errorCode = resp.error?.code;
         // Mark tokens as invalid for certain error codes
@@ -392,8 +394,8 @@ async function sendFCM(
 // APPLE PUSH NOTIFICATION SERVICE (APNs)
 // =============================================================================
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let apnsProvider: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- APNs Provider type loaded dynamically
+let apnsProvider: unknown = null;
 
 async function initializeAPNs(): Promise<boolean> {
   const config = getConfig();
@@ -408,12 +410,13 @@ async function initializeAPNs(): Promise<boolean> {
   }
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const dynamicRequire = (moduleName: string): any => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-eval -- Dynamic require for optional APN SDK
+    const dynamicRequire = (moduleName: string): unknown => {
       return eval('require')(moduleName);
     };
 
-    const apn = dynamicRequire('apn');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- APN SDK is optionally loaded
+    const apn = dynamicRequire('apn') as any;
 
     apnsProvider = new apn.Provider({
       token: {
@@ -453,12 +456,13 @@ async function sendAPNs(
   }
 
   const config = getConfig();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const dynamicRequire = (moduleName: string): any => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-eval -- Dynamic require for optional APN SDK
+  const dynamicRequire = (moduleName: string): unknown => {
     return eval('require')(moduleName);
   };
 
-  const apn = dynamicRequire('apn');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- APN SDK is optionally loaded
+  const apn = dynamicRequire('apn') as any;
 
   const notification = new apn.Notification();
   notification.alert = {
@@ -481,16 +485,21 @@ async function sendAPNs(
   }
 
   try {
-    const response = await apnsProvider.send(notification, tokens);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- APNs provider instance is dynamically typed
+    const response = await (apnsProvider as any).send(notification, tokens);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // APNs response type
+    interface APNsFailedResult {
+      response?: { reason?: string };
+      device: string;
+    }
     const invalidTokens = response.failed
       .filter(
-        (f: { response?: { reason?: string }; device: string }) =>
+        (f: APNsFailedResult) =>
           f.response?.reason === 'BadDeviceToken' ||
           f.response?.reason === 'Unregistered'
       )
-      .map((f: { device: string }) => f.device);
+      .map((f: APNsFailedResult) => f.device);
 
     logger.info('[Push APNs] Sent', {
       success: response.sent.length,

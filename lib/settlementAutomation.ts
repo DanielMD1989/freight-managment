@@ -9,6 +9,15 @@
  */
 
 import { db } from './db';
+import { LoadStatus } from '@prisma/client';
+
+// Settlement status values (stored as String in database)
+const SettlementStatus = {
+  PENDING: 'PENDING',
+  IN_PROGRESS: 'IN_PROGRESS',
+  PAID: 'PAID',
+  DISPUTED: 'DISPUTED',
+} as const;
 
 /**
  * Auto-verify POD after configured timeout if shipper hasn't responded
@@ -113,11 +122,14 @@ export async function processReadySettlements(): Promise<number> {
 
   // Build where clause for loads ready for settlement
   // Note: Amount constraints removed since pricing is negotiated off-platform
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const whereClause: any = {
-    status: 'DELIVERED',
+  const whereClause: {
+    status: LoadStatus;
+    podVerified: boolean;
+    settlementStatus: string;
+  } = {
+    status: LoadStatus.DELIVERED,
     podVerified: true,
-    settlementStatus: 'PENDING',
+    settlementStatus: SettlementStatus.PENDING,
   };
 
   // Find loads ready for settlement

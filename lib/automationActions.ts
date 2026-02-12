@@ -17,7 +17,7 @@ export interface ActionExecutionResult {
   action: RuleAction;
   success: boolean;
   error?: string;
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 /**

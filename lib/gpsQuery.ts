@@ -188,6 +188,20 @@ function haversineDistance(
   return calculateDistanceKm(lat1, lon1, lat2, lon2);
 }
 
+/** Position data from Prisma query - Decimal fields that need conversion */
+interface RawGpsPosition {
+  id: string;
+  latitude: { toNumber(): number } | number;
+  longitude: { toNumber(): number } | number;
+  speed: { toNumber(): number } | number | null;
+  heading: { toNumber(): number } | number | null;
+  altitude: { toNumber(): number } | number | null;
+  accuracy: { toNumber(): number } | number | null;
+  timestamp: Date;
+  truckId: string;
+  loadId: string | null;
+}
+
 /**
  * Format GPS position from database to API format
  *
@@ -196,8 +210,7 @@ function haversineDistance(
  * @param position - Raw position from database
  * @returns Formatted GPS position
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function formatPosition(position: any): GpsPosition {
+function formatPosition(position: RawGpsPosition): GpsPosition {
   return {
     id: position.id,
     latitude: Number(position.latitude),
@@ -225,8 +238,7 @@ export async function getPositionCount(
   startDate?: Date,
   endDate?: Date
 ): Promise<number> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: any = { truckId };
+  const where: { truckId: string; timestamp?: { gte?: Date; lte?: Date } } = { truckId };
 
   if (startDate || endDate) {
     where.timestamp = {};

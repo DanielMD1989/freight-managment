@@ -24,8 +24,8 @@ import path from 'path';
 import crypto from 'crypto';
 
 // Helper to prevent webpack from analyzing dynamic requires
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const dynamicRequire = (moduleName: string): any => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic require for optional SDK dependencies (AWS S3, Cloudinary)
+const dynamicRequire = (moduleName: string): any => { // eslint-disable-line @typescript-eslint/no-explicit-any
   // Use eval to prevent webpack bundling analysis
   // eslint-disable-next-line no-eval
   return eval('require')(moduleName);

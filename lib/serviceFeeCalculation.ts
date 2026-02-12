@@ -73,11 +73,30 @@ export interface CorridorMatch {
   matchType: 'exact' | 'bidirectional' | 'none';
 }
 
+/** Corridor data from Prisma query with Decimal fields */
+interface RawCorridor {
+  id: string;
+  name: string;
+  originRegion: string;
+  destinationRegion: string;
+  distanceKm: { toNumber(): number } | number;
+  direction: CorridorDirection;
+  isActive: boolean;
+  pricePerKm: { toNumber(): number } | number;
+  promoFlag: boolean;
+  promoDiscountPct: { toNumber(): number } | number | null;
+  shipperPricePerKm?: { toNumber(): number } | number | null;
+  shipperPromoFlag?: boolean;
+  shipperPromoPct?: { toNumber(): number } | number | null;
+  carrierPricePerKm?: { toNumber(): number } | number | null;
+  carrierPromoFlag?: boolean;
+  carrierPromoPct?: { toNumber(): number } | number | null;
+}
+
 /**
  * Helper to map corridor from DB to CorridorMatch format
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapCorridorToMatch(corridor: any, matchType: 'exact' | 'bidirectional'): CorridorMatch {
+function mapCorridorToMatch(corridor: RawCorridor, matchType: 'exact' | 'bidirectional'): CorridorMatch {
   // Get shipper price (use new field or fall back to legacy)
   const shipperPricePerKm = corridor.shipperPricePerKm
     ? Number(corridor.shipperPricePerKm)

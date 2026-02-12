@@ -148,7 +148,7 @@ export interface NotificationPayload {
   type: string;
   title: string;
   message: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
   createdAt: Date;
 }
 
@@ -717,7 +717,7 @@ export async function broadcastGpsPosition(
 export async function broadcastTripStatusChange(
   loadId: string,
   status: string,
-  metadata?: any
+  metadata?: Record<string, unknown>
 ): Promise<void> {
   if (!io) {
     console.warn('WebSocket server not initialized');

@@ -149,8 +149,10 @@ export function requireCSRF(request: NextRequest): NextResponse | null {
  * @returns Wrapped handler with CSRF protection
  */
 export function withCSRFProtection<T>(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper must accept any route arguments
   handler: (request: NextRequest, ...args: any[]) => Promise<NextResponse>
 ) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper must accept any route arguments
   return async (request: NextRequest, ...args: any[]): Promise<NextResponse> => {
     // Check CSRF token
     const csrfError = requireCSRF(request);
@@ -252,7 +254,9 @@ export interface CSRFConfig {
  * @returns Middleware function
  */
 export function createCSRFMiddleware(config: CSRFConfig = {}) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper must accept any route arguments
   return (handler: (request: NextRequest, ...args: any[]) => Promise<NextResponse>) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper must accept any route arguments
     return async (request: NextRequest, ...args: any[]): Promise<NextResponse> => {
       const method = request.method;
       const pathname = new URL(request.url).pathname;

@@ -43,8 +43,7 @@ interface WarningMessage {
 function getWarningMessage(
   type: BypassWarningType,
   organizationName: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  details?: any
+  details?: Record<string, unknown>
 ): WarningMessage {
   switch (type) {
     case BypassWarningType.FIRST_SUSPICIOUS_CANCELLATION:
@@ -74,7 +73,7 @@ function getWarningMessage(
     case BypassWarningType.BYPASS_REPORTED:
       return {
         subject: 'Bypass Attempt Reported Against Your Account',
-        message: `Dear ${organizationName},\n\nWe have received a report from another platform user alleging that you attempted to bypass the platform after viewing contact information.\n\nReport Details:\n• Load ID: ${details?.loadId || 'N/A'}\n• Reported By: ${details?.reportedBy || 'Another user'}\n• Date: ${details?.reportedAt ? new Date(details.reportedAt).toLocaleDateString() : 'N/A'}\n• Reason: ${details?.reason || 'Not provided'}\n\nThis report will be investigated by our platform operations team. Please note:\n• Multiple bypass reports may result in account flagging\n• False reports are taken seriously and investigated\n• You have the right to respond to this allegation\n\nWhat You Should Do:\n1. Review the details of the reported load\n2. If you have an explanation, contact support immediately\n3. Ensure all future loads are completed through the platform\n4. Maintain professional communication with all platform users\n\nRemember: Completing loads through the platform provides:\n✓ Legal protection for both parties\n✓ Dispute resolution support\n✓ Payment security\n✓ Trust score and reputation building\n✓ Transparent corridor-based service fees\n\nContact Support: support@freightet.com\n\nBest regards,\nFreightET Platform Team`,
+        message: `Dear ${organizationName},\n\nWe have received a report from another platform user alleging that you attempted to bypass the platform after viewing contact information.\n\nReport Details:\n• Load ID: ${details?.loadId || 'N/A'}\n• Reported By: ${details?.reportedBy || 'Another user'}\n• Date: ${details?.reportedAt ? new Date(String(details.reportedAt)).toLocaleDateString() : 'N/A'}\n• Reason: ${details?.reason || 'Not provided'}\n\nThis report will be investigated by our platform operations team. Please note:\n• Multiple bypass reports may result in account flagging\n• False reports are taken seriously and investigated\n• You have the right to respond to this allegation\n\nWhat You Should Do:\n1. Review the details of the reported load\n2. If you have an explanation, contact support immediately\n3. Ensure all future loads are completed through the platform\n4. Maintain professional communication with all platform users\n\nRemember: Completing loads through the platform provides:\n✓ Legal protection for both parties\n✓ Dispute resolution support\n✓ Payment security\n✓ Trust score and reputation building\n✓ Transparent corridor-based service fees\n\nContact Support: support@freightet.com\n\nBest regards,\nFreightET Platform Team`,
         severity: WarningSeverity.WARNING,
         actionRequired: 'Review the report and contact support if needed',
       };
@@ -232,8 +231,7 @@ async function sendSmsNotification(
 export async function sendBypassWarning(
   organizationId: string,
   type: BypassWarningType,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  details?: any
+  details?: Record<string, unknown>
 ): Promise<void> {
   try {
     // Get organization name

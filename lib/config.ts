@@ -373,15 +373,16 @@ export async function loadSecrets(): Promise<Record<string, string>> {
 
   try {
     // Dynamic import to avoid bundling issues
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const dynamicRequire = (moduleName: string): any => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-eval -- Dynamic require for optional AWS SDK dependency
+    const dynamicRequire = (moduleName: string): unknown => {
       return eval('require')(moduleName);
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AWS SDK is optionally loaded
     const {
       SecretsManagerClient,
       GetSecretValueCommand,
-    } = dynamicRequire('@aws-sdk/client-secrets-manager');
+    } = dynamicRequire('@aws-sdk/client-secrets-manager') as any;
 
     const client = new SecretsManagerClient({ region: smConfig.region });
 

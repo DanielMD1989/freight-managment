@@ -3,16 +3,21 @@
  * PUT /api/notifications/[id]/read
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { markAsRead } from '@/lib/notifications';
 import { db } from '@/lib/db';
+import { validateCSRFWithMobile } from '@/lib/csrf';
 
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await getSession();
 
     if (!session?.userId) {

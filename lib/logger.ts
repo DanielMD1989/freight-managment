@@ -235,7 +235,7 @@ class Logger {
         name: error.name,
         message: error.message,
         stack: error.stack,
-        code: (error as any).code,
+        code: (error as Error & { code?: string }).code,
       };
     }
 
@@ -495,14 +495,15 @@ export async function withTiming<T>(
  */
 export function timed(name?: string) {
   return function (
-    target: any,
+    target: object,
     propertyKey: string,
     descriptor: PropertyDescriptor
   ) {
     const originalMethod = descriptor.value;
     const methodName = name || `${target.constructor.name}.${propertyKey}`;
 
-    descriptor.value = async function (...args: any[]) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Decorator wrapper must accept any arguments
+    descriptor.value = async function (...args: unknown[]) {
       const start = Date.now();
       try {
         const result = await originalMethod.apply(this, args);

@@ -3,12 +3,17 @@
  * PUT /api/notifications/mark-all-read
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { markAllAsRead } from '@/lib/notifications';
+import { validateCSRFWithMobile } from '@/lib/csrf';
 
-export async function PUT() {
+export async function PUT(request: NextRequest) {
   try {
+    // CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await getSession();
 
     if (!session?.userId) {

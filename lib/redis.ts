@@ -33,7 +33,7 @@ const isEdgeRuntime = (typeof process !== 'undefined' && process.env.NEXT_RUNTIM
   (typeof globalThis !== 'undefined' && 'EdgeRuntime' in globalThis);
 
 // Conditional import for Node.js runtime only
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ioredis is a dynamic external library with varying types
 let Redis: any = null;
 
 if (!isEdgeRuntime) {
@@ -111,9 +111,11 @@ function getRedisConfig(): RedisConfigOptions {
 // REDIS CLIENT SINGLETON
 // =============================================================================
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Redis client instance type varies by version
+type RedisClient = any;
+
 const globalForRedis = globalThis as unknown as {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  redis: any | undefined;
+  redis: RedisClient | undefined;
   redisConnected: boolean;
 };
 
@@ -132,8 +134,7 @@ export function isRedisEnabled(): boolean {
 /**
  * Create or return existing Redis client
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function createRedisClient(): any | null {
+function createRedisClient(): RedisClient | null {
   // Edge Runtime or Redis not available
   if (isEdgeRuntime || !Redis) {
     return null;

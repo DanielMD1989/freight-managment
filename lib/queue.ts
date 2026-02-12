@@ -200,12 +200,16 @@ function generateJobId(): string {
 // BULLMQ IMPLEMENTATION
 // =============================================================================
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let bullmqQueues: Map<QueueName, any> | null = null;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let bullmqWorkers: Map<QueueName, any> | null = null;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let redisConnection: any | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- BullMQ Queue type loaded dynamically
+type BullMQQueue = any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- BullMQ Worker type loaded dynamically
+type BullMQWorker = any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ioredis client type loaded dynamically
+type RedisConnection = any;
+
+let bullmqQueues: Map<QueueName, BullMQQueue> | null = null;
+let bullmqWorkers: Map<QueueName, BullMQWorker> | null = null;
+let redisConnection: RedisConnection | null = null;
 
 // =============================================================================
 // GRACEFUL SHUTDOWN STATE
@@ -254,13 +258,15 @@ async function initializeBullMQ(): Promise<boolean> {
 
   try {
     // Dynamic import to avoid bundling issues
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const dynamicRequire = (moduleName: string): any => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-eval -- Dynamic require for optional BullMQ/ioredis
+    const dynamicRequire = (moduleName: string): unknown => {
       return eval('require')(moduleName);
     };
 
-    const { Queue, Worker, QueueEvents } = dynamicRequire('bullmq');
-    const IORedis = dynamicRequire('ioredis');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- BullMQ is optionally loaded
+    const { Queue, Worker, QueueEvents } = dynamicRequire('bullmq') as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ioredis is optionally loaded
+    const IORedis = dynamicRequire('ioredis') as any;
 
     // Create Redis connection for BullMQ
     const connection = config.redisUrl
@@ -695,13 +701,15 @@ export async function startWorkers(): Promise<void> {
   }
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const dynamicRequire = (moduleName: string): any => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-eval -- Dynamic require for optional BullMQ/ioredis
+    const dynamicRequire = (moduleName: string): unknown => {
       return eval('require')(moduleName);
     };
 
-    const { Worker } = dynamicRequire('bullmq');
-    const IORedis = dynamicRequire('ioredis');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- BullMQ is optionally loaded
+    const { Worker } = dynamicRequire('bullmq') as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ioredis is optionally loaded
+    const IORedis = dynamicRequire('ioredis') as any;
 
     const connection = config.redisUrl
       ? new IORedis(config.redisUrl, { maxRetriesPerRequest: null })
@@ -717,8 +725,8 @@ export async function startWorkers(): Promise<void> {
     for (const [queueName, queueConfig] of Object.entries(QUEUE_CONFIGS)) {
       const worker = new Worker(
         queueName,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        async (job: any) => {
+        // BullMQ job type
+        async (job: { id: string; name: string; data: JobData; updateProgress: (progress: number) => Promise<void> }) => {
           const key = `${queueName}:${job.name}`;
           const processor = processors.get(key);
 
@@ -740,8 +748,8 @@ export async function startWorkers(): Promise<void> {
         }
       );
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      worker.on('completed', (job: any) => {
+      // BullMQ job event types
+      worker.on('completed', (job: { id: string; name: string }) => {
         logger.debug('Job completed', {
           queueName,
           jobId: job.id,
@@ -749,8 +757,7 @@ export async function startWorkers(): Promise<void> {
         });
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      worker.on('failed', (job: any, err: Error) => {
+      worker.on('failed', (job: { id?: string; name?: string } | undefined, err: Error) => {
         logger.error('Job failed', err, {
           queueName,
           jobId: job?.id,

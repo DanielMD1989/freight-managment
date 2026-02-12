@@ -21,11 +21,9 @@ export interface RetryOptions {
   /** Whether to add jitter to delays (default: true) */
   jitter?: boolean;
   /** Custom function to determine if error is retryable */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  isRetryable?: (error: any) => boolean;
+  isRetryable?: (error: unknown) => boolean;
   /** Callback for each retry attempt */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onRetry?: (error: any, attempt: number, delayMs: number) => void;
+  onRetry?: (error: unknown, attempt: number, delayMs: number) => void;
 }
 
 const defaultOptions: Required<Omit<RetryOptions, 'isRetryable' | 'onRetry'>> = {
@@ -36,33 +34,39 @@ const defaultOptions: Required<Omit<RetryOptions, 'isRetryable' | 'onRetry'>> = 
   jitter: true,
 };
 
+/** Type guard for error objects with code property */
+function hasErrorCode(error: unknown): error is { code?: string; status?: number; message?: string } {
+  return typeof error === 'object' && error !== null;
+}
+
 /**
  * Default function to determine if an error is retryable
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function defaultIsRetryable(error: any): boolean {
+function defaultIsRetryable(error: unknown): boolean {
+  if (!hasErrorCode(error)) return false;
+
   // Prisma connection errors
-  if (error?.code === 'P1001') return true; // Can't reach database server
-  if (error?.code === 'P1002') return true; // Database server timed out
-  if (error?.code === 'P1008') return true; // Operations timed out
-  if (error?.code === 'P1017') return true; // Server has closed the connection
+  if (error.code === 'P1001') return true; // Can't reach database server
+  if (error.code === 'P1002') return true; // Database server timed out
+  if (error.code === 'P1008') return true; // Operations timed out
+  if (error.code === 'P1017') return true; // Server has closed the connection
 
   // Network errors
-  if (error?.code === 'ECONNRESET') return true;
-  if (error?.code === 'ETIMEDOUT') return true;
-  if (error?.code === 'ECONNREFUSED') return true;
-  if (error?.code === 'ENOTFOUND') return true;
+  if (error.code === 'ECONNRESET') return true;
+  if (error.code === 'ETIMEDOUT') return true;
+  if (error.code === 'ECONNREFUSED') return true;
+  if (error.code === 'ENOTFOUND') return true;
 
   // HTTP status codes that are retryable
-  if (error?.status === 408) return true; // Request Timeout
-  if (error?.status === 429) return true; // Too Many Requests
-  if (error?.status === 500) return true; // Internal Server Error
-  if (error?.status === 502) return true; // Bad Gateway
-  if (error?.status === 503) return true; // Service Unavailable
-  if (error?.status === 504) return true; // Gateway Timeout
+  if (error.status === 408) return true; // Request Timeout
+  if (error.status === 429) return true; // Too Many Requests
+  if (error.status === 500) return true; // Internal Server Error
+  if (error.status === 502) return true; // Bad Gateway
+  if (error.status === 503) return true; // Service Unavailable
+  if (error.status === 504) return true; // Gateway Timeout
 
   // Check error message for common transient patterns
-  const message = error?.message?.toLowerCase() || '';
+  const message = error.message?.toLowerCase() || '';
   if (message.includes('timeout')) return true;
   if (message.includes('connection')) return true;
   if (message.includes('temporarily unavailable')) return true;
@@ -128,8 +132,7 @@ export async function withRetry<T>(
     isRetryable: options.isRetryable || defaultIsRetryable,
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let lastError: any;
+  let lastError: unknown;
 
   for (let attempt = 1; attempt <= opts.maxAttempts; attempt++) {
     try {
@@ -208,11 +211,12 @@ export const DATABASE_RETRY_OPTIONS: RetryOptions = {
   backoffMultiplier: 2,
   jitter: true,
   isRetryable: (error) => {
+    if (!hasErrorCode(error)) return false;
     // Only retry Prisma connection errors
-    if (error?.code === 'P1001') return true;
-    if (error?.code === 'P1002') return true;
-    if (error?.code === 'P1008') return true;
-    if (error?.code === 'P1017') return true;
+    if (error.code === 'P1001') return true;
+    if (error.code === 'P1002') return true;
+    if (error.code === 'P1008') return true;
+    if (error.code === 'P1017') return true;
     return false;
   },
 };
@@ -227,11 +231,12 @@ export const EXTERNAL_API_RETRY_OPTIONS: RetryOptions = {
   backoffMultiplier: 2,
   jitter: true,
   isRetryable: (error) => {
+    if (!hasErrorCode(error)) return false;
     // Retry on network errors and server errors
-    if (error?.status === 429) return true; // Rate limited
-    if (error?.status >= 500) return true; // Server errors
-    if (error?.code === 'ECONNRESET') return true;
-    if (error?.code === 'ETIMEDOUT') return true;
+    if (error.status === 429) return true; // Rate limited
+    if (error.status && error.status >= 500) return true; // Server errors
+    if (error.code === 'ECONNRESET') return true;
+    if (error.code === 'ETIMEDOUT') return true;
     return false;
   },
 };

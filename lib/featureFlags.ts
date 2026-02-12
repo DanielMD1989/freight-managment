@@ -317,7 +317,7 @@ async function setLocalFlag(flag: FeatureFlag): Promise<void> {
 /**
  * LaunchDarkly provider
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- LaunchDarkly SDK is a dynamic external library
 let ldClient: any = null;
 
 async function initLaunchDarkly(): Promise<void> {
@@ -325,12 +325,13 @@ async function initLaunchDarkly(): Promise<void> {
   if (!config.launchDarkly?.sdkKey) return;
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const dynamicRequire = (moduleName: string): any => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-eval -- Dynamic require for optional SDK dependency
+    const dynamicRequire = (moduleName: string): unknown => {
       return eval('require')(moduleName);
     };
 
-    const LaunchDarkly = dynamicRequire('@launchdarkly/node-server-sdk');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- LaunchDarkly SDK is optionally loaded
+    const LaunchDarkly = dynamicRequire('@launchdarkly/node-server-sdk') as any;
     ldClient = LaunchDarkly.init(config.launchDarkly.sdkKey);
     await ldClient.waitForInitialization();
     logger.info('LaunchDarkly client initialized');
@@ -366,7 +367,7 @@ async function getLaunchDarklyFlag(key: string, context: EvaluationContext): Pro
 /**
  * Unleash provider
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Unleash SDK is a dynamic external library
 let unleashClient: any = null;
 
 async function initUnleash(): Promise<void> {
@@ -374,12 +375,13 @@ async function initUnleash(): Promise<void> {
   if (!config.unleash?.url) return;
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const dynamicRequire = (moduleName: string): any => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-eval -- Dynamic require for optional SDK dependency
+    const dynamicRequire = (moduleName: string): unknown => {
       return eval('require')(moduleName);
     };
 
-    const { Unleash } = dynamicRequire('unleash-client');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Unleash SDK is optionally loaded
+    const { Unleash } = dynamicRequire('unleash-client') as any;
     unleashClient = new Unleash({
       url: config.unleash.url,
       appName: config.unleash.appName,

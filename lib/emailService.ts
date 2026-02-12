@@ -58,7 +58,7 @@ export interface EmailTemplateData {
   amount?: number;
   message?: string;
   actionUrl?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -224,7 +224,10 @@ function getEmailTemplate(
         text: `POD Verified - Settlement Processing\n\nHello ${recipientName},\n\nThe Proof of Delivery for Load #${data.loadId?.slice(-8)} has been verified.\n\nSettlement is now being processed.\n\nView Settlement Status: ${baseUrl}/loads/${data.loadId}\n\nFreightET Platform`,
       };
 
-    case EmailTemplate.SERVICE_FEE_DEDUCTED:
+    case EmailTemplate.SERVICE_FEE_DEDUCTED: {
+      const totalAmount = Number(data.totalAmount) || 0;
+      const feeAmount = data.amount || 0;
+      const netAmount = totalAmount - feeAmount;
       return {
         subject: `Service Fee Deducted: ${data.amount} ETB`,
         html: `
@@ -232,8 +235,8 @@ function getEmailTemplate(
             <h2 style="color: #2563eb;">Service Fee Deducted</h2>
             <p>Hello ${recipientName},</p>
             <p>A service fee of <strong>${data.amount} ETB</strong> has been deducted for Load #${data.loadId?.slice(-8)}.</p>
-            <p><strong>Load Amount:</strong> ${data.totalAmount} ETB</p>
-            <p><strong>Net Amount:</strong> ${(data.totalAmount || 0) - (data.amount || 0)} ETB</p>
+            <p><strong>Load Amount:</strong> ${totalAmount} ETB</p>
+            <p><strong>Net Amount:</strong> ${netAmount} ETB</p>
             <p style="margin-top: 30px;">
               <a href="${baseUrl}/"
                  style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
@@ -245,8 +248,9 @@ function getEmailTemplate(
             </p>
           </div>
         `,
-        text: `Service Fee Deducted\n\nHello ${recipientName},\n\nA service fee of ${data.amount} ETB has been deducted for Load #${data.loadId?.slice(-8)}.\n\nLoad Amount: ${data.totalAmount} ETB\nNet Amount: ${(data.totalAmount || 0) - (data.amount || 0)} ETB\n\nView Wallet: ${baseUrl}/\n\nFreightET Platform`,
+        text: `Service Fee Deducted\n\nHello ${recipientName},\n\nA service fee of ${data.amount} ETB has been deducted for Load #${data.loadId?.slice(-8)}.\n\nLoad Amount: ${totalAmount} ETB\nNet Amount: ${netAmount} ETB\n\nView Wallet: ${baseUrl}/\n\nFreightET Platform`,
       };
+    }
 
     case EmailTemplate.SETTLEMENT_COMPLETE:
       return {

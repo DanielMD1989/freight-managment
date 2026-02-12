@@ -393,9 +393,11 @@ export async function enforceRateLimit(
  */
 export function withRateLimit<T>(
   config: RateLimitConfig,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper must accept any route arguments
   handler: (request: NextRequest, ...args: any[]) => Promise<NextResponse>,
   getUserId: (request: NextRequest) => Promise<{ userId?: string; orgId?: string }>
 ) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper must accept any route arguments
   return async (request: NextRequest, ...args: any[]): Promise<NextResponse> => {
     try {
       // Check skip condition
@@ -462,8 +464,10 @@ export function withRateLimit<T>(
  */
 export function withRpsLimit(
   rpsConfig: RpsConfig,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper must accept any route arguments
   handler: (request: NextRequest, ...args: any[]) => Promise<NextResponse>
 ) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper must accept any route arguments
   return async (request: NextRequest, ...args: any[]): Promise<NextResponse> => {
     const ip =
       request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||

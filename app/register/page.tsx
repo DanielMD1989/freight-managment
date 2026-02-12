@@ -9,6 +9,11 @@ interface Association {
   name: string;
 }
 
+interface ValidationErrorDetail {
+  message: string;
+  path?: string[];
+}
+
 export default function RegisterPage() {
   const router = useRouter();
 
@@ -75,7 +80,7 @@ export default function RegisterPage() {
 
       if (!response.ok) {
         if (data.details && Array.isArray(data.details)) {
-          const errorMessages = data.details.map((detail: any) => detail.message).join(", ");
+          const errorMessages = data.details.map((detail: ValidationErrorDetail) => detail.message).join(", ");
           throw new Error(errorMessages);
         }
         throw new Error(data.error || "Registration failed");

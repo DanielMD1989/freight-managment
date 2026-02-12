@@ -27,9 +27,50 @@ import {
   X,
 } from 'lucide-react';
 
+// Type definitions for organization details
+interface OrganizationLoad {
+  id: string;
+  status: string;
+}
+
+interface OrganizationMember {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+  role: string;
+}
+
+interface OrganizationTruck {
+  id: string;
+}
+
+interface Organization {
+  id: string;
+  name: string;
+  type: string;
+  isVerified: boolean;
+  contactEmail: string;
+  contactPhone: string;
+  address?: string | null;
+  city?: string | null;
+  licenseNumber?: string | null;
+  taxId?: string | null;
+  description?: string | null;
+  users?: OrganizationMember[];
+  trucks?: OrganizationTruck[];
+  loads?: OrganizationLoad[];
+}
+
+interface SessionUser {
+  userId: string;
+  role: string;
+  organizationId?: string | null;
+}
+
 interface OrganizationDetailsClientProps {
-  organization: any;
-  user: any;
+  organization: Organization;
+  user: SessionUser;
 }
 
 export default function OrganizationDetailsClient({
@@ -55,11 +96,11 @@ export default function OrganizationDetailsClient({
   };
 
   const activeLoads = organization.loads?.filter(
-    (load: any) => load.status !== 'COMPLETED' && load.status !== 'CANCELLED'
+    (load: OrganizationLoad) => load.status !== 'COMPLETED' && load.status !== 'CANCELLED'
   ).length || 0;
 
   const completedLoads = organization.loads?.filter(
-    (load: any) => load.status === 'COMPLETED'
+    (load: OrganizationLoad) => load.status === 'COMPLETED'
   ).length || 0;
 
   return (
@@ -234,18 +275,18 @@ export default function OrganizationDetailsClient({
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {organization.users.map((user: any) => (
+              {organization.users.map((member: OrganizationMember) => (
                 <div
-                  key={user.id}
+                  key={member.id}
                   className="flex items-center justify-between rounded-lg border p-3"
                 >
                   <div>
                     <p className="font-medium">
-                      {user.firstName} {user.lastName}
+                      {member.firstName} {member.lastName}
                     </p>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                    <p className="text-sm text-muted-foreground">{member.email}</p>
                   </div>
-                  <Badge variant="secondary">{user.role}</Badge>
+                  <Badge variant="secondary">{member.role}</Badge>
                 </div>
               ))}
             </div>
