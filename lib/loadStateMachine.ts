@@ -69,6 +69,12 @@ export const VALID_TRANSITIONS: Record<LoadStatus, LoadStatus[]> = {
     LoadStatus.CANCELLED,
   ],
 
+  // BUSINESS DECISION (2026-02-13): IN_TRANSIT loads cannot be directly cancelled.
+  // Rationale: Once a truck has picked up cargo and is moving, cancellation would
+  // leave the carrier stranded with goods. The correct flow is:
+  // 1. Create an EXCEPTION (damage, refusal, force majeure)
+  // 2. From EXCEPTION, an admin can then transition to CANCELLED if needed
+  // This ensures proper documentation and handling of mid-transit issues.
   [LoadStatus.IN_TRANSIT]: [
     LoadStatus.DELIVERED,
     LoadStatus.EXCEPTION,

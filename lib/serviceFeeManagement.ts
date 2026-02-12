@@ -188,19 +188,21 @@ export async function deductServiceFee(loadId: string): Promise<ServiceFeeDeduct
     }
   }
 
-  // If no corridor found, waive fees
+  // If no corridor found, waive fees (use transaction for consistency)
   if (!corridor) {
-    await db.load.update({
-      where: { id: loadId },
-      data: {
-        shipperFeeStatus: 'WAIVED',
-        carrierFeeStatus: 'WAIVED',
-        shipperServiceFee: 0,
-        carrierServiceFee: 0,
-        // Legacy
-        serviceFeeStatus: 'WAIVED',
-        serviceFeeEtb: 0,
-      },
+    await db.$transaction(async (tx) => {
+      await tx.load.update({
+        where: { id: loadId },
+        data: {
+          shipperFeeStatus: 'WAIVED',
+          carrierFeeStatus: 'WAIVED',
+          shipperServiceFee: 0,
+          carrierServiceFee: 0,
+          // Legacy
+          serviceFeeStatus: 'WAIVED',
+          serviceFeeEtb: 0,
+        },
+      });
     });
 
     return {

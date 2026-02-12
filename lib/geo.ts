@@ -36,11 +36,11 @@ function toRadians(degrees: number): number {
  * Calculate distance between two GPS coordinates in kilometers
  * Using Haversine formula
  *
- * @param lat1 - Latitude of first point
- * @param lon1 - Longitude of first point
- * @param lat2 - Latitude of second point
- * @param lon2 - Longitude of second point
- * @returns Distance in kilometers
+ * @param lat1 - Latitude of first point (-90 to 90)
+ * @param lon1 - Longitude of first point (-180 to 180)
+ * @param lat2 - Latitude of second point (-90 to 90)
+ * @param lon2 - Longitude of second point (-180 to 180)
+ * @returns Distance in kilometers (0 if invalid coordinates)
  */
 export function calculateDistanceKm(
   lat1: number,
@@ -48,6 +48,16 @@ export function calculateDistanceKm(
   lat2: number,
   lon2: number
 ): number {
+  // Validate inputs: return 0 for invalid coordinates
+  if (
+    !Number.isFinite(lat1) || !Number.isFinite(lon1) ||
+    !Number.isFinite(lat2) || !Number.isFinite(lon2) ||
+    lat1 < -90 || lat1 > 90 || lat2 < -90 || lat2 > 90 ||
+    lon1 < -180 || lon1 > 180 || lon2 < -180 || lon2 > 180
+  ) {
+    return 0;
+  }
+
   const R = 6371; // Earth's radius in km
   const dLat = toRadians(lat2 - lat1);
   const dLon = toRadians(lon2 - lon1);
@@ -67,11 +77,11 @@ export function calculateDistanceKm(
  * Calculate distance between two GPS coordinates in meters
  * Using Haversine formula
  *
- * @param lat1 - Latitude of first point
- * @param lon1 - Longitude of first point
- * @param lat2 - Latitude of second point
- * @param lon2 - Longitude of second point
- * @returns Distance in meters
+ * @param lat1 - Latitude of first point (-90 to 90)
+ * @param lon1 - Longitude of first point (-180 to 180)
+ * @param lat2 - Latitude of second point (-90 to 90)
+ * @param lon2 - Longitude of second point (-180 to 180)
+ * @returns Distance in meters (0 if invalid coordinates)
  */
 export function calculateDistanceMeters(
   lat1: number,
@@ -79,6 +89,16 @@ export function calculateDistanceMeters(
   lat2: number,
   lon2: number
 ): number {
+  // Validate inputs: return 0 for invalid coordinates
+  if (
+    !Number.isFinite(lat1) || !Number.isFinite(lon1) ||
+    !Number.isFinite(lat2) || !Number.isFinite(lon2) ||
+    lat1 < -90 || lat1 > 90 || lat2 < -90 || lat2 > 90 ||
+    lon1 < -180 || lon1 > 180 || lon2 < -180 || lon2 > 180
+  ) {
+    return 0;
+  }
+
   const R = 6371000; // Earth's radius in meters
   const φ1 = toRadians(lat1);
   const φ2 = toRadians(lat2);

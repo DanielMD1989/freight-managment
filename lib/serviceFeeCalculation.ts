@@ -196,7 +196,8 @@ export function calculatePartyFee(
   promoFlag: boolean,
   promoDiscountPct: number | null
 ): PartyFeeCalculation {
-  if (pricePerKm <= 0) {
+  // Validate inputs: negative or invalid values return zero fee
+  if (pricePerKm <= 0 || distanceKm <= 0 || !Number.isFinite(distanceKm) || !Number.isFinite(pricePerKm)) {
     return {
       baseFee: 0,
       promoDiscount: 0,
@@ -464,7 +465,8 @@ export function calculateFeePreview(
   promoFlag: boolean,
   promoDiscountPct: number | null
 ): FeePreview {
-  if (pricePerKm <= 0) {
+  // Validate inputs: negative or invalid values return zero fee
+  if (pricePerKm <= 0 || distanceKm <= 0 || !Number.isFinite(distanceKm) || !Number.isFinite(pricePerKm)) {
     return { baseFee: 0, discount: 0, finalFee: 0 };
   }
 

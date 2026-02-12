@@ -1,11 +1,21 @@
 /**
  * Matching Engine - Truck/Load Bidirectional Matching
  *
- * Automatically matches available trucks with posted loads based on:
- * - Route compatibility (35%)
- * - Truck type match (25%)
- * - Capacity match (20%)
- * - Time window overlap (20%)
+ * Automatically matches available trucks with posted loads.
+ *
+ * DB-BACKED MATCHING (findMatchingLoadsForTruck, findMatchingTrucksForLoad):
+ * Score breakdown (max 100 points):
+ * - Route compatibility: 40 points (origin/destination match)
+ * - Time window overlap: 30 points (availability alignment)
+ * - Capacity match: 20 points (weight/type/utilization)
+ * - Deadhead distance: 10 points (proximity to pickup)
+ *
+ * IN-MEMORY MATCHING (findMatchingLoads, findMatchingTrucks):
+ * Score breakdown (max 100 points):
+ * - Route match: 30% (origin/destination alignment)
+ * - DH-O distance: 30% (deadhead to origin)
+ * - Capacity: 20% (weight/type fit)
+ * - Time: 20% (availability)
  *
  * Sprint 8 - Story 8.4: Truck/Load Matching Algorithm
  */
