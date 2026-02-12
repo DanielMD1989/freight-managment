@@ -7,11 +7,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { validateCSRFWithMobile } from '@/lib/csrf';
+import { checkRpsLimit, RPS_CONFIGS } from '@/lib/rateLimit';
 import { z } from 'zod';
 import { zodErrorResponse } from '@/lib/validation';
+// H15 FIX: Import max topup constant
+import { MAX_WALLET_TOPUP_AMOUNT, ADMIN_FINANCIAL_OPS_RPS, ADMIN_FINANCIAL_OPS_BURST } from '@/lib/types/admin';
 
+// H15 FIX: Add maximum amount validation to prevent abuse
 const topUpSchema = z.object({
-  amount: z.number().positive('Amount must be positive'),
+  amount: z.number()
+    .positive('Amount must be positive')
+    .max(MAX_WALLET_TOPUP_AMOUNT, `Maximum topup is ${MAX_WALLET_TOPUP_AMOUNT.toLocaleString()} ETB`),
   paymentMethod: z.string().optional().default('MANUAL'),
   reference: z.string().optional(),
   notes: z.string().optional(),
@@ -27,6 +34,26 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // M9 FIX: Add rate limiting for financial operations
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      request.headers.get('x-real-ip') || 'unknown';
+    const rpsResult = await checkRpsLimit(
+      'admin-wallet-topup',
+      ip,
+      ADMIN_FINANCIAL_OPS_RPS,
+      ADMIN_FINANCIAL_OPS_BURST
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please slow down.' },
+        { status: 429 }
+      );
+    }
+
+    // M1 FIX: Add CSRF validation
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireAuth();
 
     // Only admins can access this endpoint

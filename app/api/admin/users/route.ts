@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { Prisma, UserRole } from "@prisma/client";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
+// M1 FIX: Add CSRF validation
+import { validateCSRFWithMobile } from "@/lib/csrf";
 
 // GET /api/admin/users - List all users
 export async function GET(request: NextRequest) {
@@ -15,10 +18,12 @@ export async function GET(request: NextRequest) {
     const role = searchParams.get("role");
     const search = searchParams.get("search");
 
-    const where: any = {};
+    // H1 FIX: Use typed Prisma where input instead of any
+    const where: Prisma.UserWhereInput = {};
 
-    if (role) {
-      where.role = role;
+    // H14 FIX: Validate role against UserRole enum
+    if (role && Object.values(UserRole).includes(role as UserRole)) {
+      where.role = role as UserRole;
     }
 
     if (search) {
@@ -73,6 +78,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    // L6 FIX: Server-side logging intentional for debugging - errors not exposed to client
     console.error("List users error:", error);
 
     if (error instanceof Error && error.name === "ForbiddenError") {
@@ -100,6 +106,10 @@ const updateUserSchema = z.object({
 // PATCH /api/admin/users - Update user role
 export async function PATCH(request: NextRequest) {
   try {
+    // M1 FIX: Add CSRF validation
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     await requirePermission(Permission.ASSIGN_ROLES);
 
     const body = await request.json();
@@ -122,6 +132,7 @@ export async function PATCH(request: NextRequest) {
       user,
     });
   } catch (error) {
+    // L6 FIX: Server-side logging intentional for debugging - errors not exposed to client
     console.error("Update user role error:", error);
 
     if (error instanceof Error && error.name === "ForbiddenError") {

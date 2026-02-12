@@ -19,6 +19,10 @@ import { VerificationStatus } from "@prisma/client";
 import { sanitizeRejectionReason, validateIdFormat } from "@/lib/validation";
 import { z } from "zod";
 import { sendEmail, createDocumentApprovalEmail, createDocumentRejectionEmail } from "@/lib/email";
+// M6 FIX: Add CSRF validation
+import { validateCSRFWithMobile } from "@/lib/csrf";
+// H9 FIX: Import types for proper typing
+import type { CompanyDocumentWithOrg, TruckDocumentWithCarrier } from "@/lib/types/admin";
 
 const verifyDocumentSchema = z.object({
   entityType: z.enum(["company", "truck"]),
@@ -35,6 +39,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // M6 FIX: Add CSRF validation
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     // Require admin or ops permission
     const session = await requirePermission(Permission.VERIFY_DOCUMENTS);
 
@@ -51,11 +59,10 @@ export async function PATCH(
 
     const body = await request.json();
     const result = verifyDocumentSchema.safeParse(body);
+    // H8 FIX: Use zodErrorResponse to prevent schema detail leakage
     if (!result.success) {
-      return NextResponse.json(
-        { error: "Validation failed", details: result.error.issues },
-        { status: 400 }
-      );
+      const { zodErrorResponse } = await import('@/lib/validation');
+      return zodErrorResponse(result.error);
     }
 
     const { entityType, verificationStatus, rejectionReason, expiresAt } = result.data;
@@ -152,17 +159,26 @@ export async function PATCH(
       // Log action in audit trail
       }
 
+    // H9 FIX: Use proper type guards instead of unsafe casts
     // Send email notification to organization
-    const contactEmail = entityType === 'company'
-      ? (updatedDocument as any)?.organization?.contactEmail
-      : (updatedDocument as any)?.truck?.carrier?.contactEmail;
-    const orgName = entityType === 'company'
-      ? (updatedDocument as any)?.organization?.name
-      : (updatedDocument as any)?.truck?.carrier?.name;
+    let contactEmail: string | null | undefined;
+    let orgName: string | null | undefined;
+    let fileName: string = 'Document';
+
+    if (entityType === 'company' && updatedDocument) {
+      const companyDoc = updatedDocument as CompanyDocumentWithOrg;
+      contactEmail = companyDoc.organization?.contactEmail;
+      orgName = companyDoc.organization?.name;
+      fileName = companyDoc.fileName || 'Document';
+    } else if (entityType === 'truck' && updatedDocument) {
+      const truckDoc = updatedDocument as TruckDocumentWithCarrier;
+      contactEmail = truckDoc.truck?.carrier?.contactEmail;
+      orgName = truckDoc.truck?.carrier?.name;
+      fileName = truckDoc.fileName || 'Document';
+    }
 
     if (contactEmail) {
       const docTypeName = entityType === 'company' ? 'Company Document' : 'Truck Document';
-      const fileName = (updatedDocument as any)?.fileName || 'Document';
 
       if (verificationStatus === 'APPROVED') {
         const emailMsg = createDocumentApprovalEmail({

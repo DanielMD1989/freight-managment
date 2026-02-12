@@ -7,7 +7,7 @@
  * Includes financial summary cards at top
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 type AccountType = 'ALL' | 'SHIPPER_WALLET' | 'CARRIER_WALLET' | 'PLATFORM_REVENUE';
 
@@ -60,9 +60,13 @@ export default function AdminWalletsClient() {
     totalShipperDeposits: 0,
     totalCarrierEarnings: 0,
   });
+  // L1-L2 FIX: Add error state for failed API calls
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchWallets = async () => {
+  // M10 FIX: Wrap fetchWallets in useCallback to fix useEffect dependency warning
+  const fetchWallets = useCallback(async () => {
     setLoading(true);
+    setError(null); // L1 FIX: Clear error on new fetch
     try {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -79,13 +83,18 @@ export default function AdminWalletsClient() {
         setWallets(data.wallets || []);
         setTotalPages(data.pagination?.pages || 1);
         setTotalCount(data.pagination?.total || 0);
+      } else {
+        // L1 FIX: Set error state on non-ok response
+        setError('Failed to load wallets. Please try again.');
       }
-    } catch (error) {
-      console.error('Failed to fetch wallets:', error);
+    } catch (err) {
+      // L1 FIX: Set error state and log for debugging
+      console.error('Failed to fetch wallets:', err);
+      setError('Failed to load wallets. Please check your connection.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeType, page]);
 
   const fetchSummary = async () => {
     try {
@@ -98,14 +107,15 @@ export default function AdminWalletsClient() {
           totalCarrierEarnings: data.totalCarrierEarnings || 0,
         });
       }
-    } catch (error) {
-      console.error('Failed to fetch wallet summary:', error);
+      // L2 FIX: Summary errors are non-critical, silently ignored but logged
+    } catch (err) {
+      console.error('Failed to fetch wallet summary:', err);
     }
   };
 
   useEffect(() => {
     fetchWallets();
-  }, [activeType, page]);
+  }, [fetchWallets]);
 
   useEffect(() => {
     fetchSummary();
@@ -195,6 +205,8 @@ export default function AdminWalletsClient() {
               setActiveType(tab.key);
               setPage(1);
             }}
+            aria-label={`Filter by ${tab.label}`}
+            aria-pressed={activeType === tab.key}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
               activeType === tab.key
                 ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
@@ -210,6 +222,23 @@ export default function AdminWalletsClient() {
       <div className="text-sm text-slate-500 dark:text-slate-400">
         {totalCount} accounts found
       </div>
+
+      {/* L1 FIX: Error message display */}
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-center gap-3" role="alert">
+          <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="text-red-700 dark:text-red-300 text-sm">{error}</span>
+          <button
+            onClick={() => fetchWallets()}
+            className="ml-auto text-sm text-red-600 dark:text-red-400 hover:underline font-medium"
+            aria-label="Retry loading wallets"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 shadow-sm overflow-hidden">
@@ -280,6 +309,7 @@ export default function AdminWalletsClient() {
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
+                aria-label="Go to previous page"
                 className="px-3 py-1 text-sm rounded-lg border border-slate-200 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700"
               >
                 Previous
@@ -287,6 +317,7 @@ export default function AdminWalletsClient() {
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
+                aria-label="Go to next page"
                 className="px-3 py-1 text-sm rounded-lg border border-slate-200 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700"
               >
                 Next

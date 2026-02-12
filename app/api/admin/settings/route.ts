@@ -11,6 +11,8 @@ import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { z } from 'zod';
 import { zodErrorResponse } from '@/lib/validation';
+// M2 FIX: Add CSRF validation
+import { validateCSRFWithMobile } from '@/lib/csrf';
 
 const settingsSchema = z.object({
   // Rate Limiting
@@ -124,6 +126,10 @@ export async function GET(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
+    // M2 FIX: Add CSRF validation
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     // Require admin access
     const session = await requireAuth();
 

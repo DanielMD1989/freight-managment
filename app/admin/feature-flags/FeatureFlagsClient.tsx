@@ -4,6 +4,15 @@
  * Feature Flags Client Component
  *
  * Sprint 10 - Story 10.7: Feature Flag System
+ *
+ * M11 FIX: KNOWN LIMITATION - Current implementation uses hardcoded feature flags.
+ * Production implementation should:
+ * 1. Fetch flags from /api/admin/feature-flags endpoint
+ * 2. Persist changes to database via PATCH /api/admin/feature-flags/[id]
+ * 3. Implement proper optimistic updates with rollback on error
+ * 4. Add CSRF protection to state-changing operations
+ *
+ * This is a demo/placeholder implementation for MVP.
  */
 
 import { useState } from 'react';

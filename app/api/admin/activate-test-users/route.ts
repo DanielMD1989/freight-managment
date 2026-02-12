@@ -10,9 +10,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+// M4 FIX: Add CSRF validation
+import { validateCSRFWithMobile } from '@/lib/csrf';
 
 export async function POST(request: NextRequest) {
   try {
+    // M4 FIX: Add CSRF validation
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     // Require admin authentication
     const session = await requireAuth();
     if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
@@ -52,9 +58,9 @@ export async function POST(request: NextRequest) {
       message: `Updated ${result.count} test users to ACTIVE status`,
       users,
     });
-  } catch (error: any) {
+  // H7 FIX: Use unknown type with type guard
+  } catch (error: unknown) {
     console.error('Error activating test users:', error);
-    // M5 FIX: Don't leak error details
     return NextResponse.json(
       { error: 'Failed to activate test users' },
       { status: 500 }
@@ -89,9 +95,9 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ users });
-  } catch (error: any) {
+  // H7 FIX: Use unknown type with type guard
+  } catch (error: unknown) {
     console.error('Error fetching test users:', error);
-    // M6 FIX: Don't leak error details
     return NextResponse.json(
       { error: 'Failed to fetch test users' },
       { status: 500 }

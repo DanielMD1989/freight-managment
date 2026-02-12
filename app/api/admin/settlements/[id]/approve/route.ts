@@ -10,6 +10,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requirePermission, Permission } from '@/lib/rbac';
 import { db } from '@/lib/db';
+// M5 FIX: Add CSRF validation
+import { validateCSRFWithMobile } from '@/lib/csrf';
 
 /**
  * POST /api/admin/settlements/[id]/approve
@@ -26,6 +28,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // M5 FIX: Add CSRF validation
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     await requirePermission(Permission.MANAGE_SETTLEMENTS);
 
     const { id: loadId } = await params;

@@ -11,6 +11,12 @@
  * - Admin: Can manage Carrier/Shipper/Dispatcher only
  * - SuperAdmin: Can manage any user including Admin
  * - Phone change: Only Admin/SuperAdmin (users cannot change own)
+ *
+ * L8 FIX: KNOWN LIMITATION - Audit logging not persisted to database.
+ * Production implementation should:
+ * 1. Use writeAuditLog() from lib/auditLog to persist changes
+ * 2. Log: userId, action type, target user, changes, timestamp
+ * 3. Implement proper audit trail for compliance
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -19,8 +25,10 @@ import { requireAuth, requireActiveUser } from '@/lib/auth';
 import { Permission } from '@/lib/rbac';
 import { hasPermission } from '@/lib/rbac/permissions';
 import { z } from 'zod';
-import { UserRole } from '@prisma/client';
+import { UserRole, UserStatus } from '@prisma/client';
 import { zodErrorResponse } from '@/lib/validation';
+// H2-H6, M12 FIX: Import types for proper typing
+import type { UserUpdateData } from '@/lib/types/admin';
 
 // Roles that Admin cannot manage (only SuperAdmin can)
 const ADMIN_PROTECTED_ROLES: UserRole[] = ['ADMIN', 'SUPER_ADMIN'];
@@ -77,9 +85,11 @@ export async function GET(
     const session = await requireActiveUser();
     const { id: userId } = await params;
 
+    // H2 FIX: Cast to UserRole instead of any
     // Check view permission
-    const canView = hasPermission(session.role as any, Permission.VIEW_USERS) ||
-                    hasPermission(session.role as any, Permission.VIEW_ALL_USERS);
+    const userRole = session.role as UserRole;
+    const canView = hasPermission(userRole, Permission.VIEW_USERS) ||
+                    hasPermission(userRole, Permission.VIEW_ALL_USERS);
 
     if (!canView) {
       return NextResponse.json(
@@ -132,11 +142,13 @@ export async function GET(
     }
 
     return NextResponse.json({ user });
-  } catch (error: any) {
+  // H3 FIX: Use unknown type with type guard
+  } catch (error: unknown) {
     console.error('Get user error:', error);
 
-    if (error.message?.includes('Forbidden') || error.message?.includes('Unauthorized')) {
-      return NextResponse.json({ error: error.message }, { status: 403 });
+    const errorMessage = error instanceof Error ? error.message : '';
+    if (errorMessage.includes('Forbidden') || errorMessage.includes('Unauthorized')) {
+      return NextResponse.json({ error: errorMessage }, { status: 403 });
     }
 
     return NextResponse.json(
@@ -197,14 +209,17 @@ export async function PATCH(
     const body = await request.json();
     const validatedData = updateUserSchema.parse(body);
 
-    // Build update data
-    const updateData: any = {};
+    // H4 FIX: Use typed update data instead of any
+    const updateData: UserUpdateData = {};
     const changes: string[] = [];
+
+    // M12 FIX: Store role as UserRole for proper typing
+    const sessionRole = session.role as UserRole;
 
     // Phone change
     if (validatedData.phone !== undefined) {
       // Check CHANGE_USER_PHONE permission
-      if (!hasPermission(session.role as any, Permission.CHANGE_USER_PHONE)) {
+      if (!hasPermission(sessionRole, Permission.CHANGE_USER_PHONE)) {
         return NextResponse.json(
           { error: 'You do not have permission to change user phone numbers' },
           { status: 403 }
@@ -227,14 +242,14 @@ export async function PATCH(
     // Status change
     if (validatedData.status !== undefined) {
       // Check ACTIVATE_DEACTIVATE_USERS permission
-      if (!hasPermission(session.role as any, Permission.ACTIVATE_DEACTIVATE_USERS)) {
+      if (!hasPermission(sessionRole, Permission.ACTIVATE_DEACTIVATE_USERS)) {
         return NextResponse.json(
           { error: 'You do not have permission to change user status' },
           { status: 403 }
         );
       }
 
-      updateData.status = validatedData.status;
+      updateData.status = validatedData.status as UserStatus;
       changes.push(`status: ${targetUser.status} → ${validatedData.status}`);
     }
 
@@ -277,15 +292,17 @@ export async function PATCH(
       changes,
     });
 
-  } catch (error: any) {
+  // H5 FIX: Use unknown type with type guard
+  } catch (error: unknown) {
     console.error('Update user error:', error);
 
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
 
-    if (error.message?.includes('Forbidden') || error.message?.includes('Unauthorized')) {
-      return NextResponse.json({ error: error.message }, { status: 403 });
+    const errorMessage = error instanceof Error ? error.message : '';
+    if (errorMessage.includes('Forbidden') || errorMessage.includes('Unauthorized')) {
+      return NextResponse.json({ error: errorMessage }, { status: 403 });
     }
 
     return NextResponse.json(
@@ -344,7 +361,7 @@ export async function DELETE(
 
     if (ADMIN_PROTECTED_ROLES.includes(targetRole)) {
       // Deleting Admin/SuperAdmin requires DELETE_ADMIN permission
-      if (!hasPermission(session.role as any, Permission.DELETE_ADMIN)) {
+      if (!hasPermission(session.role as UserRole, Permission.DELETE_ADMIN)) {
         return NextResponse.json(
           { error: 'Only SuperAdmin can delete Admin users' },
           { status: 403 }
@@ -352,7 +369,7 @@ export async function DELETE(
       }
     } else {
       // Deleting operational roles requires DELETE_NON_ADMIN_USERS permission
-      if (!hasPermission(session.role as any, Permission.DELETE_NON_ADMIN_USERS)) {
+      if (!hasPermission(session.role as UserRole, Permission.DELETE_NON_ADMIN_USERS)) {
         return NextResponse.json(
           { error: 'You do not have permission to delete users' },
           { status: 403 }
@@ -386,11 +403,13 @@ export async function DELETE(
       user: deletedUser,
     });
 
-  } catch (error: any) {
+  // H6 FIX: Use unknown type with type guard
+  } catch (error: unknown) {
     console.error('Delete user error:', error);
 
-    if (error.message?.includes('Forbidden') || error.message?.includes('Unauthorized')) {
-      return NextResponse.json({ error: error.message }, { status: 403 });
+    const errorMessage = error instanceof Error ? error.message : '';
+    if (errorMessage.includes('Forbidden') || errorMessage.includes('Unauthorized')) {
+      return NextResponse.json({ error: errorMessage }, { status: 403 });
     }
 
     return NextResponse.json(

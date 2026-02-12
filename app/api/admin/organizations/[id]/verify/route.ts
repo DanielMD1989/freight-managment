@@ -10,6 +10,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { writeAuditLog, AuditEventType, AuditSeverity } from '@/lib/auditLog';
+// M7 FIX: Add CSRF validation
+import { validateCSRFWithMobile } from '@/lib/csrf';
 
 /**
  * POST /api/admin/organizations/[id]/verify
@@ -21,6 +23,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // M7 FIX: Add CSRF validation
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const { id: orgId } = await params;
     const session = await requireAuth();
 
@@ -109,6 +115,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // M7 FIX: Add CSRF validation
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const { id: orgId } = await params;
     const session = await requireAuth();
 

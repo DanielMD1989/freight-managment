@@ -13,6 +13,8 @@ import { z } from 'zod';
 import { Decimal } from 'decimal.js';
 import { calculateFeePreview } from '@/lib/serviceFeeCalculation';
 import { zodErrorResponse } from '@/lib/validation';
+// M3 FIX: Add CSRF validation
+import { validateCSRFWithMobile } from '@/lib/csrf';
 
 // Use centralized fee preview functions
 const calculatePartyFeePreview = calculateFeePreview;
@@ -222,6 +224,7 @@ export async function GET(request: NextRequest) {
       regions: ETHIOPIAN_REGIONS,
     });
   } catch (error) {
+    // L4 FIX: Server-side logging intentional for debugging - errors not exposed to client
     console.error('Get corridors error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -237,6 +240,10 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    // M3 FIX: Add CSRF validation
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireAuth();
 
     // Only admins can create corridors
@@ -361,6 +368,7 @@ export async function POST(request: NextRequest) {
       },
     }, { status: 201 });
   } catch (error) {
+    // L4 FIX: Server-side logging intentional for debugging - errors not exposed to client
     console.error('Create corridor error:', error);
 
     if (error instanceof z.ZodError) {
