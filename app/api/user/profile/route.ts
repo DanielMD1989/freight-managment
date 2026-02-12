@@ -106,10 +106,9 @@ export async function PATCH(request: NextRequest) {
     // Validate request body with Zod
     const validation = updateProfileSchema.safeParse(body);
     if (!validation.success) {
-      return NextResponse.json(
-        { error: validation.error.issues[0]?.message || 'Invalid input' },
-        { status: 400 }
-      );
+      // FIX: Use zodErrorResponse to avoid schema leak
+      const { zodErrorResponse } = await import('@/lib/validation');
+      return zodErrorResponse(validation.error);
     }
 
     const { firstName, lastName, phone } = validation.data;

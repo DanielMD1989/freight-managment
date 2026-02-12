@@ -183,7 +183,8 @@ export async function GET(request: NextRequest) {
         entityId,
       });
     }
-  } catch (error: any) {
+  // FIX: Use unknown type
+  } catch (error: unknown) {
     console.error('Error fetching documents:', error);
 
     return NextResponse.json(

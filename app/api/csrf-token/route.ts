@@ -78,11 +78,12 @@ export async function GET(request: NextRequest) {
     });
 
     return response;
-  } catch (error: any) {
+  // FIX: Use unknown type with type guard
+  } catch (error: unknown) {
     console.error('Error generating CSRF token:', error);
 
     // Check if it's an auth error
-    if (error.message === 'Unauthorized') {
+    if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }

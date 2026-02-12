@@ -27,10 +27,9 @@ export async function POST(
     const body = await request.json();
     const result = executeRuleSchema.safeParse(body);
     if (!result.success) {
-      return NextResponse.json(
-        { error: 'Validation failed', details: result.error.issues },
-        { status: 400 }
-      );
+      // FIX: Use zodErrorResponse to avoid schema leak
+      const { zodErrorResponse } = await import('@/lib/validation');
+      return zodErrorResponse(result.error);
     }
 
     const { loadId } = result.data;

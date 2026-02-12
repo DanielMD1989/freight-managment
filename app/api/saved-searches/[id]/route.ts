@@ -92,7 +92,8 @@ export async function PUT(
       savedSearch,
       message: 'Saved search updated successfully',
     });
-  } catch (error: any) {
+  // FIX: Use unknown type
+  } catch (error: unknown) {
     console.error('Error updating saved search:', error);
 
     return NextResponse.json(
@@ -153,7 +154,8 @@ export async function DELETE(
     return NextResponse.json({
       message: 'Saved search deleted successfully',
     });
-  } catch (error: any) {
+  // FIX: Use unknown type
+  } catch (error: unknown) {
     console.error('Error deleting saved search:', error);
 
     return NextResponse.json(

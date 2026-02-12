@@ -153,7 +153,8 @@ export async function GET(
     response.headers.set('X-RateLimit-Reset', new Date(rateLimitResult.resetTime).toISOString());
 
     return response;
-  } catch (error: any) {
+  // FIX: Use unknown type
+  } catch (error: unknown) {
     console.error('Error serving file:', error);
 
     return NextResponse.json(

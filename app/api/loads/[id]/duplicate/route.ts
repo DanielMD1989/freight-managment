@@ -149,7 +149,8 @@ export async function POST(
       message: 'Load duplicated successfully',
       load: duplicateLoad,
     });
-  } catch (error: any) {
+  // FIX: Use unknown type
+  } catch (error: unknown) {
     console.error('Error duplicating load:', error);
 
     return NextResponse.json(

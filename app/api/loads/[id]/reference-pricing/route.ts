@@ -155,7 +155,8 @@ export async function GET(
         calculatedAt: new Date().toISOString(),
       },
     });
-  } catch (error: any) {
+  // FIX: Use unknown type
+  } catch (error: unknown) {
     console.error('Error calculating reference pricing:', error);
 
     return NextResponse.json(

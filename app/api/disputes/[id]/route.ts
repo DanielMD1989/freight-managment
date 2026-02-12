@@ -83,10 +83,11 @@ export async function GET(
     }
 
     return NextResponse.json({ dispute });
-  } catch (error: any) {
+  // FIX: Use unknown type with type guard
+  } catch (error: unknown) {
     console.error('Error fetching dispute:', error);
 
-    if (error.message === 'Unauthorized') {
+    if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -159,18 +160,19 @@ export async function PATCH(
       message: 'Dispute updated successfully',
       dispute: updatedDispute,
     });
-  } catch (error: any) {
+  // FIX: Use unknown type with type guards
+  } catch (error: unknown) {
     console.error('Error updating dispute:', error);
 
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
 
-    if (error.message === 'Unauthorized') {
+    if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (error.message?.includes('Permission denied')) {
+    if (error instanceof Error && error.message?.includes('Permission denied')) {
       return NextResponse.json(
         { error: 'Forbidden: Admin access required' },
         { status: 403 }

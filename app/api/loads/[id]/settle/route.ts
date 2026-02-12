@@ -124,23 +124,25 @@ export async function POST(
 
         lockAcquired = true;
       });
-    } catch (error: any) {
-      if (error.message === 'LOAD_NOT_FOUND') {
+    // FIX: Use unknown type with type guard
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (errorMessage === 'LOAD_NOT_FOUND') {
         return NextResponse.json({ error: 'Load not found' }, { status: 404 });
       }
-      if (error.message === 'SETTLEMENT_IN_PROGRESS') {
+      if (errorMessage === 'SETTLEMENT_IN_PROGRESS') {
         return NextResponse.json(
           { error: 'Settlement already in progress', code: 'IDEMPOTENCY_CONFLICT' },
           { status: 409 }
         );
       }
-      if (error.message === 'SETTLEMENT_COMPLETED') {
+      if (errorMessage === 'SETTLEMENT_COMPLETED') {
         return NextResponse.json(
           { error: 'Settlement already completed', code: 'IDEMPOTENCY_CONFLICT' },
           { status: 409 }
         );
       }
-      if (error.message === 'SETTLEMENT_REQUIREMENTS_NOT_MET') {
+      if (errorMessage === 'SETTLEMENT_REQUIREMENTS_NOT_MET') {
         return NextResponse.json(
           { error: 'Settlement requirements not met', code: 'REQUIREMENTS_NOT_MET' },
           { status: 400 }

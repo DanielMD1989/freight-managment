@@ -315,26 +315,28 @@ export async function POST(
 
         return { load: updatedLoad, trip, trackingUrl };
       });
-    } catch (error: any) {
+    // FIX: Use unknown type with type guard
+    } catch (error: unknown) {
       // Handle specific transaction errors
-      if (error.message === 'LOAD_NOT_FOUND') {
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (errorMessage === 'LOAD_NOT_FOUND') {
         return NextResponse.json({ error: 'Load not found' }, { status: 404 });
       }
-      if (error.message === 'LOAD_ALREADY_ASSIGNED') {
+      if (errorMessage === 'LOAD_ALREADY_ASSIGNED') {
         return NextResponse.json(
           { error: 'Load has already been assigned to another truck. Please refresh and try again.' },
           { status: 409 }
         );
       }
-      if (error.message.startsWith('LOAD_NOT_AVAILABLE:')) {
-        const status = error.message.split(':')[1];
+      if (errorMessage.startsWith('LOAD_NOT_AVAILABLE:')) {
+        const status = errorMessage.split(':')[1];
         return NextResponse.json(
           { error: `Load is no longer available (status: ${status})` },
           { status: 400 }
         );
       }
-      if (error.message.startsWith('TRUCK_ALREADY_BUSY:')) {
-        const [, pickup, delivery] = error.message.split(':');
+      if (errorMessage.startsWith('TRUCK_ALREADY_BUSY:')) {
+        const [, pickup, delivery] = errorMessage.split(':');
         return NextResponse.json(
           { error: `This truck is already assigned to an active load (${pickup} → ${delivery})` },
           { status: 409 }
@@ -385,16 +387,18 @@ export async function POST(
         ? 'Load assigned successfully. GPS tracking enabled.'
         : 'Load assigned successfully. GPS tracking not available for this truck.',
     });
-  } catch (error: any) {
+  // FIX: Use unknown type with type guard
+  } catch (error: unknown) {
     console.error('Assign load error:', error);
 
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
 
-    // Handle unique constraint violation (race condition)
-    if (error?.code === 'P2002') {
-      const field = error?.meta?.target?.[0] || 'field';
+    // Handle unique constraint violation (race condition) - Prisma error
+    const prismaError = error as { code?: string; meta?: { target?: string[] } };
+    if (prismaError?.code === 'P2002') {
+      const field = prismaError?.meta?.target?.[0] || 'field';
       if (field === 'assignedTruckId') {
         return NextResponse.json(
           { error: 'This truck is already assigned to another load. Please refresh and try again.' },

@@ -139,13 +139,9 @@ export async function POST(request: NextRequest) {
     const validationResult = TruckPostingSchema.safeParse(body);
 
     if (!validationResult.success) {
-      return NextResponse.json(
-        {
-          error: 'Invalid request data',
-          details: validationResult.error.format(),
-        },
-        { status: 400 }
-      );
+      // FIX: Use zodErrorResponse to avoid schema leak
+      const { zodErrorResponse } = await import('@/lib/validation');
+      return zodErrorResponse(validationResult.error);
     }
 
     const data = validationResult.data;

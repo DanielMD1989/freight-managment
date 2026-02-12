@@ -157,7 +157,8 @@ export async function GET(
       total: matchedTrucks.length,
       exactMatches: matchedTrucks.filter(t => t.isExactMatch).length,
     });
-  } catch (error: any) {
+  // FIX: Use unknown type
+  } catch (error: unknown) {
     console.error('Matching trucks error:', error);
     // M7 FIX: Don't leak error details
     return NextResponse.json(

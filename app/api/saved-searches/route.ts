@@ -45,7 +45,8 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ searches });
-  } catch (error: any) {
+  // FIX: Use unknown type
+  } catch (error: unknown) {
     console.error('Get saved searches error:', error);
     // M4 FIX: Don't leak error details
     return NextResponse.json(
@@ -85,7 +86,8 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ search }, { status: 201 });
-  } catch (error: any) {
+  // FIX: Use unknown type
+  } catch (error: unknown) {
     console.error('Create saved search error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

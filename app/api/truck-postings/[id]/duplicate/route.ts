@@ -103,7 +103,8 @@ export async function POST(
     });
 
     return NextResponse.json(duplicatePosting, { status: 201 });
-  } catch (error: any) {
+  // FIX: Use unknown type
+  } catch (error: unknown) {
     // Log detailed error server-side, return generic message to client
     console.error('Duplicate truck posting error:', error);
     return NextResponse.json(

@@ -45,14 +45,15 @@ export async function POST(
       message: 'Bypass attempt reported successfully',
       loadId,
     });
-  } catch (error: any) {
+  // FIX: Use unknown type with type guards
+  } catch (error: unknown) {
     console.error('Report bypass error:', error);
 
-    if (error.message === 'Load not found') {
+    if (error instanceof Error && error.message === 'Load not found') {
       return NextResponse.json({ error: 'Load not found' }, { status: 404 });
     }
 
-    if (error.message === 'Bypass already reported for this load') {
+    if (error instanceof Error && error.message === 'Bypass already reported for this load') {
       return NextResponse.json(
         { error: 'Bypass already reported for this load' },
         { status: 400 }

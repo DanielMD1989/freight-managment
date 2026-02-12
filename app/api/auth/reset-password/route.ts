@@ -43,10 +43,9 @@ export async function POST(request: NextRequest) {
     // Validate request body with Zod
     const parseResult = resetPasswordSchema.safeParse(body);
     if (!parseResult.success) {
-      return NextResponse.json(
-        { error: parseResult.error.issues[0]?.message || 'Invalid input' },
-        { status: 400 }
-      );
+      // FIX: Use zodErrorResponse to avoid schema leak
+      const { zodErrorResponse } = await import('@/lib/validation');
+      return zodErrorResponse(parseResult.error);
     }
 
     const { email, otp, newPassword } = parseResult.data;

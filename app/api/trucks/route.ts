@@ -148,15 +148,9 @@ export async function POST(request: NextRequest) {
     console.error("Create truck error:", error);
 
     if (error instanceof z.ZodError) {
-      // Sanitize Zod errors - only expose field names and messages, not internal paths
-      const fields = error.issues.map(issue => ({
-        field: issue.path.join('.'),
-        message: issue.message,
-      }));
-      return NextResponse.json(
-        { error: "Validation error", fields },
-        { status: 400 }
-      );
+      // FIX: Use zodErrorResponse for consistent sanitization
+      const { zodErrorResponse } = await import('@/lib/validation');
+      return zodErrorResponse(error);
     }
 
     return NextResponse.json(

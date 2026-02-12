@@ -50,10 +50,9 @@ export async function POST(request: NextRequest) {
     // Validate request body with Zod
     const validation = forgotPasswordSchema.safeParse(body);
     if (!validation.success) {
-      return NextResponse.json(
-        { error: validation.error.issues[0]?.message || 'Invalid email' },
-        { status: 400 }
-      );
+      // FIX: Use zodErrorResponse to avoid schema leak
+      const { zodErrorResponse } = await import('@/lib/validation');
+      return zodErrorResponse(validation.error);
     }
 
     // Email is already normalized (lowercase) by the schema

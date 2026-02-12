@@ -188,16 +188,18 @@ export async function POST(request: NextRequest) {
       message: "Load dispatched successfully",
       load: updatedLoad,
     });
-  } catch (error: any) {
+  // FIX: Use unknown type with type guards
+  } catch (error: unknown) {
     console.error("Dispatch error:", error);
 
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
 
-    // Handle unique constraint violation (race condition)
-    if (error?.code === 'P2002') {
-      const field = error?.meta?.target?.[0] || 'field';
+    // Handle unique constraint violation (race condition) - Prisma error
+    const prismaError = error as { code?: string; meta?: { target?: string[] } };
+    if (prismaError?.code === 'P2002') {
+      const field = prismaError?.meta?.target?.[0] || 'field';
       if (field === 'assignedTruckId') {
         return NextResponse.json(
           { error: 'This truck is already assigned to another load. Please refresh and try again.' },

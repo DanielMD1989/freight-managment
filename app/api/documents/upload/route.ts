@@ -123,10 +123,9 @@ export async function POST(request: NextRequest) {
     });
 
     if (!parseResult.success) {
-      return NextResponse.json(
-        { error: parseResult.error.issues[0]?.message || 'Invalid input' },
-        { status: 400 }
-      );
+      // FIX: Use zodErrorResponse to avoid schema leak
+      const { zodErrorResponse } = await import('@/lib/validation');
+      return zodErrorResponse(parseResult.error);
     }
 
     const { type, entityType, entityId } = parseResult.data;
@@ -323,11 +322,12 @@ export async function POST(request: NextRequest) {
 
       return response;
     }
-  } catch (error: any) {
+  // FIX: Use unknown type with type guard
+  } catch (error: unknown) {
     console.error('Error uploading document:', error);
 
     // Handle specific errors
-    if (error.message?.includes('too large')) {
+    if (error instanceof Error && error.message?.includes('too large')) {
       return NextResponse.json(
         { error: `File size exceeds maximum of ${MAX_FILE_SIZE / 1024 / 1024}MB` },
         { status: 413 }

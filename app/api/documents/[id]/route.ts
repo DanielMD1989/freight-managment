@@ -145,7 +145,8 @@ export async function GET(
         fileSize: Number(document.fileSize),
       });
     }
-  } catch (error: any) {
+  // FIX: Use unknown type
+  } catch (error: unknown) {
     console.error('Error fetching document:', error);
 
     return NextResponse.json(
@@ -363,10 +364,13 @@ export async function PATCH(
         document: updated,
       });
     }
-  } catch (error: any) {
+  // FIX: Use unknown type with type guard
+  } catch (error: unknown) {
     console.error('Error updating document:', error);
 
-    if (error.code === 'P2025') {
+    // Handle Prisma error
+    const prismaError = error as { code?: string };
+    if (prismaError?.code === 'P2025') {
       return NextResponse.json(
         { error: 'Document not found' },
         { status: 404 }
@@ -506,7 +510,8 @@ export async function DELETE(
         message: 'Truck document deleted successfully',
       });
     }
-  } catch (error: any) {
+  // FIX: Use unknown type
+  } catch (error: unknown) {
     console.error('Error deleting document:', error);
 
     return NextResponse.json(

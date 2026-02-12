@@ -75,7 +75,8 @@ export async function GET(
     return NextResponse.json({
       documents: load.documents,
     });
-  } catch (error: any) {
+  // FIX: Use unknown type
+  } catch (error: unknown) {
     console.error('Error fetching load documents:', error);
 
     return NextResponse.json(
@@ -233,7 +234,8 @@ export async function POST(
       message: 'Document uploaded successfully',
       document,
     });
-  } catch (error: any) {
+  // FIX: Use unknown type
+  } catch (error: unknown) {
     console.error('Error uploading load document:', error);
 
     return NextResponse.json(

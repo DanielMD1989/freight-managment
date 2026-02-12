@@ -90,14 +90,15 @@ export async function POST(request: NextRequest) {
       message: 'Dispute created successfully',
       dispute,
     });
-  } catch (error: any) {
+  // FIX: Use unknown type with type guards
+  } catch (error: unknown) {
     console.error('Error creating dispute:', error);
 
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
 
-    if (error.message === 'Unauthorized') {
+    if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -177,10 +178,11 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ disputes });
-  } catch (error: any) {
+  // FIX: Use unknown type with type guard
+  } catch (error: unknown) {
     console.error('Error fetching disputes:', error);
 
-    if (error.message === 'Unauthorized') {
+    if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

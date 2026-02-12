@@ -310,7 +310,8 @@ export async function GET(
       totalMatches: maskedMatches.length,
       matches: maskedMatches,
     });
-  } catch (error: any) {
+  // FIX: Use unknown type
+  } catch (error: unknown) {
     console.error('Error finding matching loads:', error);
 
     return NextResponse.json(

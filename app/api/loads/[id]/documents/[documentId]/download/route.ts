@@ -121,7 +121,8 @@ export async function GET(
         'Content-Length': document.fileSize.toString(),
       },
     });
-  } catch (error: any) {
+  // FIX: Use unknown type
+  } catch (error: unknown) {
     console.error('Error downloading document:', error);
 
     return NextResponse.json(
