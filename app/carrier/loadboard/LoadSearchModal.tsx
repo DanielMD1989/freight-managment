@@ -59,7 +59,7 @@ export default function LoadSearchModal({
     setLoading(true);
     try {
       // Build search criteria
-      const criteria: any = {};
+      const criteria: Record<string, string | number | boolean | { min: number; max: number }> = {};
       if (formData.origin) criteria.origin = formData.origin;
       if (formData.destination) criteria.destination = formData.destination;
       if (formData.truckType) criteria.truckType = formData.truckType;
@@ -91,8 +91,8 @@ export default function LoadSearchModal({
       alert('Load search created successfully!');
       onSuccess(search.id);
       onClose();
-    } catch (error: any) {
-      alert(error.message || 'Failed to create search');
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Failed to create search');
     } finally {
       setLoading(false);
     }

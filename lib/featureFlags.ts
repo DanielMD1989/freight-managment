@@ -317,6 +317,7 @@ async function setLocalFlag(flag: FeatureFlag): Promise<void> {
 /**
  * LaunchDarkly provider
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let ldClient: any = null;
 
 async function initLaunchDarkly(): Promise<void> {
@@ -324,6 +325,7 @@ async function initLaunchDarkly(): Promise<void> {
   if (!config.launchDarkly?.sdkKey) return;
 
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dynamicRequire = (moduleName: string): any => {
       return eval('require')(moduleName);
     };
@@ -364,6 +366,7 @@ async function getLaunchDarklyFlag(key: string, context: EvaluationContext): Pro
 /**
  * Unleash provider
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let unleashClient: any = null;
 
 async function initUnleash(): Promise<void> {
@@ -371,6 +374,7 @@ async function initUnleash(): Promise<void> {
   if (!config.unleash?.url) return;
 
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dynamicRequire = (moduleName: string): any => {
       return eval('require')(moduleName);
     };

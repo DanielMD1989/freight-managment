@@ -88,8 +88,8 @@ export default function TeamManagementClient({
       setInviteEmail('');
       setSuccess('Invitation sent successfully');
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -113,8 +113,8 @@ export default function TeamManagementClient({
       setInvitations(invitations.filter((inv) => inv.id !== invitationId));
       setSuccess('Invitation cancelled');
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     }
   };
 
@@ -144,8 +144,8 @@ export default function TeamManagementClient({
       setMembers(members.filter((m) => m.id !== memberId));
       setSuccess('Member removed successfully');
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     }
   };
 

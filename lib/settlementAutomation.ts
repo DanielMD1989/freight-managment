@@ -113,6 +113,7 @@ export async function processReadySettlements(): Promise<number> {
 
   // Build where clause for loads ready for settlement
   // Note: Amount constraints removed since pricing is negotiated off-platform
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const whereClause: any = {
     status: 'DELIVERED',
     podVerified: true,
@@ -230,8 +231,8 @@ export async function completeLoadWithSettlement(loadId: string): Promise<void> 
   if (load.podSubmitted && load.podVerified) {
     try {
       await markLoadAsSettled(loadId);
-      } catch (error: any) {
-      console.error(`✗ Settlement failed for load ${loadId}:`, error.message);
+      } catch (error: unknown) {
+      console.error(`✗ Settlement failed for load ${loadId}:`, error instanceof Error ? error.message : 'Unknown error');
 
       // Mark as dispute if settlement fails
       await db.load.update({

@@ -125,11 +125,11 @@ class TwilioSmsProvider implements SmsProvider {
         success: true,
         messageId: data.sid,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error sending SMS via Twilio:', error);
       return {
         success: false,
-        error: error.message || 'Failed to send SMS via Twilio',
+        error: error instanceof Error ? error.message : 'Failed to send SMS via Twilio',
       };
     }
   }
@@ -185,12 +185,12 @@ export async function sendSms(to: string, message: string): Promise<SmsResult> {
     });
 
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[SMS ERROR]', error, { to });
 
     return {
       success: false,
-      error: error.message || 'Failed to send SMS',
+      error: error instanceof Error ? error.message : 'Failed to send SMS',
     };
   }
 }

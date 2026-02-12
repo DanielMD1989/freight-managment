@@ -548,6 +548,7 @@ interface LoadMatchCriteria {
   weight?: number | null;
   lengthM?: number | null;
   fullPartial?: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any; // Allow additional fields to pass through
 }
 
@@ -563,6 +564,7 @@ interface TruckMatchCriteria {
   maxWeight?: number | null;
   lengthM?: number | null;
   fullPartial?: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any; // Allow additional fields to pass through
 }
 

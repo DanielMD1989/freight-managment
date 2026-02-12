@@ -46,7 +46,7 @@ async function getTrucks(
   truckType?: string,
   status?: string,
   approvalStatus?: string
-): Promise<{ trucks: Truck[]; pagination: any } | null> {
+): Promise<{ trucks: Truck[]; pagination: { page: number; pageSize: number; total: number; totalPages: number } } | null> {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
     const params = new URLSearchParams({
@@ -147,9 +147,9 @@ export default async function TrucksPage({
           initialApprovedTrucks={approvedData?.trucks || []}
           initialPendingTrucks={pendingData?.trucks || []}
           initialRejectedTrucks={rejectedData?.trucks || []}
-          approvedPagination={approvedData?.pagination}
-          pendingPagination={pendingData?.pagination}
-          rejectedPagination={rejectedData?.pagination}
+          approvedPagination={approvedData?.pagination || { page: 1, pageSize: 20, total: 0, totalPages: 0 }}
+          pendingPagination={pendingData?.pagination || { page: 1, pageSize: 20, total: 0, totalPages: 0 }}
+          rejectedPagination={rejectedData?.pagination || { page: 1, pageSize: 20, total: 0, totalPages: 0 }}
           initialTab={activeTab}
         />
       </div>

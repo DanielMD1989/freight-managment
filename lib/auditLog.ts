@@ -25,6 +25,7 @@
 
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 
 /**
  * Audit event types
@@ -482,7 +483,7 @@ export async function queryAuditLogs(filters: {
   limit?: number;
   offset?: number;
 }) {
-  const where: any = {};
+  const where: Prisma.AuditLogWhereInput = {};
 
   if (filters.userId) where.userId = filters.userId;
   if (filters.organizationId) where.organizationId = filters.organizationId;
@@ -529,14 +530,14 @@ export async function getAuditLogStats(
   startDate?: Date,
   endDate?: Date
 ) {
-  const where: any = {};
+  const where: Prisma.AuditLogWhereInput = {};
 
   if (organizationId) where.organizationId = organizationId;
 
   if (startDate || endDate) {
     where.timestamp = {};
-    if (startDate) where.timestamp.gte = startDate;
-    if (endDate) where.timestamp.lte = endDate;
+    if (startDate) (where.timestamp as Prisma.DateTimeFilter).gte = startDate;
+    if (endDate) (where.timestamp as Prisma.DateTimeFilter).lte = endDate;
   }
 
   const [

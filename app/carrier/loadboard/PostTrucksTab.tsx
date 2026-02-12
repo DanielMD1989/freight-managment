@@ -20,9 +20,10 @@ import PlacesAutocomplete, { PlaceResult } from '@/components/PlacesAutocomplete
 import { useToast } from '@/components/Toast/ToastContext';
 import { getCSRFToken } from '@/lib/csrfFetch';
 import { calculateDistanceKm } from '@/lib/geo';
+import { CarrierUser, EthiopianCity, Load, Truck, TruckPosting, TruckWithPosting, LoadRequest, TruckPostingUpdatePayload, LoadMatch } from '@/types/carrier-loadboard';
 
 interface PostTrucksTabProps {
-  user: any;
+  user: CarrierUser;
 }
 
 type TruckStatus = 'POSTED' | 'UNPOSTED' | 'EXPIRED';
@@ -31,22 +32,22 @@ type MainTab = 'postings' | 'matching';
 
 export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   const toast = useToast();
-  const [trucks, setTrucks] = useState<any[]>([]);
+  const [trucks, setTrucks] = useState<TruckWithPosting[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeStatus, setActiveStatus] = useState<TruckStatus>('POSTED');
   const [activeMainTab, setActiveMainTab] = useState<MainTab>('postings');
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const [selectedTruckId, setSelectedTruckId] = useState<string | null>(null);
   const [expandedTruckId, setExpandedTruckId] = useState<string | null>(null);
-  const [matchingLoads, setMatchingLoads] = useState<any[]>([]);
+  const [matchingLoads, setMatchingLoads] = useState<Load[]>([]);
   const [editingTruckId, setEditingTruckId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<any>({});
+  const [editForm, setEditForm] = useState<TruckPostingUpdatePayload>({});
   const [loadingMatches, setLoadingMatches] = useState(false);
   const [showNewTruckForm, setShowNewTruckForm] = useState(false);
   const [activeLoadTab, setActiveLoadTab] = useState<LoadTab>('all');
 
   // User's approved trucks (from My Trucks)
-  const [approvedTrucks, setApprovedTrucks] = useState<any[]>([]);
+  const [approvedTrucks, setApprovedTrucks] = useState<Truck[]>([]);
   const [loadingApprovedTrucks, setLoadingApprovedTrucks] = useState(false);
 
   // New truck posting form state
@@ -70,7 +71,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   });
 
   // Ethiopian cities
-  const [ethiopianCities, setEthiopianCities] = useState<any[]>([]);
+  const [ethiopianCities, setEthiopianCities] = useState<EthiopianCity[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
 
   // Note: DH-O, DH-D, F/P filters removed - these are already specified when posting the truck
@@ -78,7 +79,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
   // Sprint 18: Load request modal state
   const [requestModalOpen, setRequestModalOpen] = useState(false);
-  const [selectedLoadForRequest, setSelectedLoadForRequest] = useState<any>(null);
+  const [selectedLoadForRequest, setSelectedLoadForRequest] = useState<Load | null>(null);
   const [selectedTruckForRequest, setSelectedTruckForRequest] = useState<string>('');
   const [requestNotes, setRequestNotes] = useState('');
   // Note: proposedRate removed - price negotiation happens outside platform
@@ -151,7 +152,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       if (response.ok) {
         const data = await response.json();
         const requestedIds = new Set<string>(
-          (data.loadRequests || []).map((req: any) => req.loadId)
+          (data.loadRequests || []).map((req: LoadRequest) => req.loadId)
         );
         setRequestedLoadIds(requestedIds);
       }
@@ -172,23 +173,26 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   const fetchTrucks = async () => {
     setLoading(true);
     try {
-      let trucksData: any[] = [];
+      let trucksData: TruckWithPosting[] = [];
 
       // UNPOSTED requires a different API - fetch trucks without active postings
       if (activeStatus === 'UNPOSTED') {
         const response = await fetch(`/api/trucks?myTrucks=true&hasActivePosting=false`);
         const data = await response.json();
         // Transform truck data to match expected format (add status field)
-        trucksData = (data.trucks || []).map((truck: any) => ({
+        trucksData = (data.trucks || []).map((truck: Truck) => ({
           ...truck,
-          status: 'UNPOSTED',
+          status: 'UNPOSTED' as const,
           matchCount: 0, // Unposted trucks don't have matches
-        }));
+          truck: truck,
+        })) as TruckWithPosting[];
       } else {
         // Fetch truck postings for POSTED (ACTIVE) or EXPIRED
         const params = new URLSearchParams();
         params.append('includeMatchCount', 'true');
-        params.append('organizationId', user.organizationId);
+        if (user.organizationId) {
+          params.append('organizationId', user.organizationId);
+        }
 
         // Map status - POSTED maps to ACTIVE in the API
         const apiStatus = activeStatus === 'POSTED' ? 'ACTIVE' : activeStatus;
@@ -201,7 +205,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
       // Fetch match counts for POSTED/ACTIVE trucks in parallel
       const trucksWithMatchCounts = await Promise.all(
-        trucksData.map(async (truck: any) => {
+        trucksData.map(async (truck: TruckWithPosting) => {
           if (truck.status === 'POSTED' || truck.status === 'ACTIVE') {
             try {
               const matchResponse = await fetch(`/api/truck-postings/${truck.id}/matching-loads?limit=1`);
@@ -217,7 +221,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       );
 
       // Sort by most recently posted first (smallest age at top)
-      const sortedTrucks = trucksWithMatchCounts.sort((a: any, b: any) => {
+      const sortedTrucks = trucksWithMatchCounts.sort((a: TruckWithPosting, b: TruckWithPosting) => {
         const dateA = new Date(a.postedAt || a.createdAt || 0).getTime();
         const dateB = new Date(b.postedAt || b.createdAt || 0).getTime();
         return dateB - dateA; // Newest first
@@ -306,10 +310,10 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
     // Look up coordinates for both cities
     const city1Data = ethiopianCities.find(
-      (city: any) => city.name?.toLowerCase().trim() === c1
+      (city: EthiopianCity) => city.name?.toLowerCase().trim() === c1
     );
     const city2Data = ethiopianCities.find(
-      (city: any) => city.name?.toLowerCase().trim() === c2
+      (city: EthiopianCity) => city.name?.toLowerCase().trim() === c2
     );
 
     // If both cities have coordinates, calculate actual distance
@@ -350,7 +354,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
           .then(res => res.json())
           .then(data => {
             // Add truck info to each load for DH calculation
-            return (data.matches || []).map((match: any) => ({
+            return (data.matches || []).map((match: LoadMatch) => ({
               ...match,
               truckOrigin: truck.originCity?.name || truck.origin,
               truckDestination: truck.destinationCity?.name || truck.destination,
@@ -451,12 +455,12 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
     // Try exact match first
     let city = ethiopianCities.find(
-      (c: any) => c.name?.toLowerCase().trim() === searchName
+      (c: EthiopianCity) => c.name?.toLowerCase().trim() === searchName
     );
 
     // If no exact match, try fuzzy match (contains or similar spelling)
     if (!city) {
-      city = ethiopianCities.find((c: any) => {
+      city = ethiopianCities.find((c: EthiopianCity) => {
         const cityNameLower = c.name?.toLowerCase().trim() || '';
         // Check if one contains the other
         if (cityNameLower.includes(searchName) || searchName.includes(cityNameLower)) {
@@ -481,7 +485,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
    * Handle truck row click - show matching loads for this specific truck
    * The API now calculates DH-O and DH-D distances and returns them sorted
    */
-  const handleTruckClick = async (truck: any) => {
+  const handleTruckClick = async (truck: TruckWithPosting) => {
     if (selectedTruckId === truck.id) {
       // Deselect - show all loads again
       setSelectedTruckId(null);
@@ -503,7 +507,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   /**
    * Handle POST action - Change unposted truck to posted/active
    */
-  const handlePostTruckPosting = async (truck: any) => {
+  const handlePostTruckPosting = async (truck: TruckWithPosting) => {
     try {
       // Get CSRF token for secure submission
       const csrfToken = await getCSRFToken();
@@ -531,16 +535,16 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       toast.success('Truck posted successfully!');
       // Switch to POSTED tab and refresh (useEffect will fetch)
       setActiveStatus('POSTED');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Post truck error:', error);
-      toast.error(error.message || 'Failed to post truck');
+      toast.error(error instanceof Error ? error.message : 'Failed to post truck');
     }
   };
 
   /**
    * Handle COPY action
    */
-  const handleCopy = async (truck: any) => {
+  const handleCopy = async (truck: TruckWithPosting) => {
     try {
       const csrfToken = await getCSRFToken();
       if (!csrfToken) {
@@ -569,7 +573,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   /**
    * Handle DELETE action
    */
-  const handleDelete = async (truck: any) => {
+  const handleDelete = async (truck: TruckWithPosting) => {
     if (!confirm(`Are you sure you want to delete this truck posting?`)) {
       return;
     }
@@ -656,11 +660,11 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
       // Look up EthiopianLocation IDs from city names
       const originCity = ethiopianCities.find(
-        (c: any) => c.name.toLowerCase() === newTruckForm.origin.toLowerCase()
+        (c: EthiopianCity) => c.name.toLowerCase() === newTruckForm.origin.toLowerCase()
       );
       const destinationCity = newTruckForm.destination
         ? ethiopianCities.find(
-            (c: any) => c.name.toLowerCase() === newTruckForm.destination.toLowerCase()
+            (c: EthiopianCity) => c.name.toLowerCase() === newTruckForm.destination.toLowerCase()
           )
         : null;
 
@@ -738,9 +742,9 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
       // Refresh trucks (matching loads will be fetched automatically via useEffect)
       await fetchTrucks();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Create truck posting error:', error);
-      toast.error(error.message || 'Failed to create truck posting');
+      toast.error(error instanceof Error ? error.message : 'Failed to create truck posting');
     }
   };
 
@@ -756,7 +760,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   /**
    * Handle toggle keep/star
    */
-  const handleToggleKeep = async (truck: any) => {
+  const handleToggleKeep = async (truck: TruckWithPosting) => {
     // TODO: Implement keep/star toggle
     toast.info('Keep/Star functionality coming soon');
   };
@@ -764,7 +768,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   /**
    * Sprint 18: Handle opening the load request modal
    */
-  const handleOpenRequestModal = (load: any) => {
+  const handleOpenRequestModal = (load: Load) => {
     setSelectedLoadForRequest(load);
     // Pre-select first posted truck
     const postedTrucks = trucks.filter(t =>
@@ -824,9 +828,9 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       setSelectedLoadForRequest(null);
       setSelectedTruckForRequest('');
       setRequestNotes('');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Load request error:', error);
-      toast.error(error.message || 'Failed to submit load request');
+      toast.error(error instanceof Error ? error.message : 'Failed to submit load request');
     } finally {
       setSubmittingRequest(false);
     }
@@ -1199,12 +1203,12 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   /**
    * Handle EDIT action
    */
-  const handleEdit = async (truck: any) => {
+  const handleEdit = async (truck: TruckWithPosting) => {
     // Parse notes to extract comments
     const notesLines = truck.notes?.split('\n') || [];
 
     // Format dates for date input (YYYY-MM-DD)
-    const formatDate = (date: any) => {
+    const formatDate = (date: string | Date | null | undefined): string => {
       if (!date) return '';
       try {
         const d = new Date(date);
@@ -1246,7 +1250,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     // Build notes from comments, handling undefined values
     const comment1 = editForm.comments1 || '';
     const comment2 = editForm.comments2 || '';
-    const notes = [comment1, comment2].filter(Boolean).join('\n').trim() || null;
+    const notes = [comment1, comment2].filter(Boolean).join('\n').trim() || undefined;
 
     try {
       // Get CSRF token for secure submission
@@ -1257,20 +1261,20 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       }
 
       // Build update payload
-      const updatePayload: any = {
+      const updatePayload: TruckPostingUpdatePayload = {
         availableFrom: editForm.availableFrom || undefined,
-        availableTo: editForm.availableTo || null,
+        availableTo: editForm.availableTo || undefined,
         originCityId: editForm.origin || undefined,
-        destinationCityId: editForm.destination || null,
+        destinationCityId: editForm.destination || undefined,
         fullPartial: editForm.fullPartial || undefined,
-        availableLength: editForm.lengthM ? parseFloat(editForm.lengthM) : null,
-        availableWeight: editForm.weight ? parseFloat(editForm.weight) : null,
-        ownerName: editForm.owner || null,
+        availableLength: editForm.lengthM ? parseFloat(String(editForm.lengthM)) : null,
+        availableWeight: editForm.weight ? parseFloat(String(editForm.weight)) : null,
+        ownerName: editForm.owner || undefined,
         contactPhone: editForm.contactPhone || undefined,
         notes,
         // Declared DH limits
-        preferredDhToOriginKm: editForm.declaredDhO ? parseFloat(editForm.declaredDhO) : null,
-        preferredDhAfterDeliveryKm: editForm.declaredDhD ? parseFloat(editForm.declaredDhD) : null,
+        preferredDhToOriginKm: editForm.declaredDhO ? parseFloat(String(editForm.declaredDhO)) : null,
+        preferredDhAfterDeliveryKm: editForm.declaredDhD ? parseFloat(String(editForm.declaredDhD)) : null,
       };
 
       // If currently UNPOSTED, change to ACTIVE when saving
@@ -1299,9 +1303,9 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       } else {
         fetchTrucks();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Update failed:', error);
-      toast.error(error.message || 'Failed to update truck posting');
+      toast.error(error instanceof Error ? error.message : 'Failed to update truck posting');
     }
   };
 
@@ -1844,7 +1848,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                           className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-md focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                         >
                           <option value="">Select city</option>
-                          {ethiopianCities.map((city: any) => (
+                          {ethiopianCities.map((city: EthiopianCity) => (
                             <option key={city.id} value={city.id}>{city.name}</option>
                           ))}
                         </select>
@@ -1861,7 +1865,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                           className="w-full px-3 py-2 text-sm bg-white text-[#064d51] border border-[#064d51]/20 rounded-md focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99]"
                         >
                           <option value="">Anywhere</option>
-                          {ethiopianCities.map((city: any) => (
+                          {ethiopianCities.map((city: EthiopianCity) => (
                             <option key={city.id} value={city.id}>{city.name}</option>
                           ))}
                         </select>

@@ -12,8 +12,18 @@ import PostTrucksTab from './PostTrucksTab';
 import SearchLoadsTab from './SearchLoadsTab';
 import { useTabState } from '@/lib/hooks/useTabState';
 
+interface CarrierUser {
+  userId: string;
+  email: string;
+  role: string;
+  organizationId?: string | null;
+  firstName?: string;
+  lastName?: string;
+  status?: string;
+}
+
 interface CarrierLoadboardClientProps {
-  user: any;
+  user: CarrierUser;
 }
 
 type CarrierTabKey = 'POST_TRUCKS' | 'SEARCH_LOADS';

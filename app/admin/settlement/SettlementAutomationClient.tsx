@@ -79,7 +79,7 @@ export default function SettlementAutomationClient() {
         const data = await response.json();
         alert(`Error: ${data.error || 'Failed to run automation'}`);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       alert('Failed to run automation');
       console.error('Automation error:', error);
     } finally {

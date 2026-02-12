@@ -76,6 +76,7 @@ export interface CorridorMatch {
 /**
  * Helper to map corridor from DB to CorridorMatch format
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapCorridorToMatch(corridor: any, matchType: 'exact' | 'bidirectional'): CorridorMatch {
   // Get shipper price (use new field or fall back to legacy)
   const shipperPricePerKm = corridor.shipperPricePerKm

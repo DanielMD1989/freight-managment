@@ -163,12 +163,14 @@ export async function createNotificationForRole(params: {
   type: string;
   title: string;
   message: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata?: any;
   organizationId?: string; // Optional: scope to specific organization
 }) {
   const { role, type, title, message, metadata, organizationId } = params;
 
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = { role, isActive: true };
     if (organizationId) {
       where.organizationId = organizationId;

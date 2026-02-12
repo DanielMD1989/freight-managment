@@ -43,6 +43,7 @@ interface WarningMessage {
 function getWarningMessage(
   type: BypassWarningType,
   organizationName: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   details?: any
 ): WarningMessage {
   switch (type) {
@@ -231,6 +232,7 @@ async function sendSmsNotification(
 export async function sendBypassWarning(
   organizationId: string,
   type: BypassWarningType,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   details?: any
 ): Promise<void> {
   try {

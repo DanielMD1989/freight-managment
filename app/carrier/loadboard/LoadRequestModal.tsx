@@ -22,13 +22,14 @@ interface Load {
   id: string;
   pickupCity: string;
   deliveryCity: string;
-  pickupDate: string;
-  truckType: string;
-  weight: number;
+  pickupDate?: string;
+  truckType?: string;
+  weight?: number;
   rate?: number;
   shipper?: {
     id: string;
     name: string;
+    isVerified?: boolean;
   };
 }
 
@@ -114,8 +115,8 @@ export default function LoadRequestModal({ isOpen, onClose, load, onRequestSent 
       setTimeout(() => {
         onClose();
       }, 2000);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -163,7 +164,7 @@ export default function LoadRequestModal({ isOpen, onClose, load, onRequestSent 
             <div>
               <span className="text-[#064d51]/60 dark:text-gray-400">Pickup:</span>{' '}
               <span className="font-medium text-[#064d51] dark:text-white">
-                {new Date(load.pickupDate).toLocaleDateString()}
+                {load.pickupDate ? new Date(load.pickupDate).toLocaleDateString() : 'TBD'}
               </span>
             </div>
             <div>

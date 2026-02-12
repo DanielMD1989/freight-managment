@@ -52,8 +52,8 @@ export default function BypassReviewClient() {
 
       const data = await response.json();
       setOrganizations(data.organizations || []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load data');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -85,8 +85,8 @@ export default function BypassReviewClient() {
       // Refresh the list after successful unflag
       await fetchFlaggedOrganizations();
       alert('Organization unflagged successfully');
-    } catch (err: any) {
-      alert('Failed to unflag organization: ' + err.message);
+    } catch (err: unknown) {
+      alert('Failed to unflag organization: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
   };
 

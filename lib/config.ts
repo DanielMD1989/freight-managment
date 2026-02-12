@@ -373,6 +373,7 @@ export async function loadSecrets(): Promise<Record<string, string>> {
 
   try {
     // Dynamic import to avoid bundling issues
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dynamicRequire = (moduleName: string): any => {
       return eval('require')(moduleName);
     };

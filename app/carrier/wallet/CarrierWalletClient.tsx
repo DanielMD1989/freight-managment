@@ -27,6 +27,16 @@ interface Transaction {
   loadRoute: string | null;
 }
 
+interface ApiTransaction {
+  id: string;
+  createdAt: string;
+  type: string;
+  description: string;
+  reference: string | null;
+  amount: number;
+  loadId: string | null;
+}
+
 interface WalletData {
   balance: number;
   currency: string;
@@ -105,7 +115,7 @@ export default function CarrierWalletClient({ walletData }: { walletData: Wallet
         const data = await response.json();
         if (data.transactions && data.transactions.length > 0) {
           // Transform API response to match local format
-          const newTransactions = data.transactions.map((tx: any) => ({
+          const newTransactions = data.transactions.map((tx: ApiTransaction) => ({
             id: tx.id,
             date: tx.createdAt,
             type: tx.type,

@@ -10,12 +10,30 @@ import React, { useState } from 'react';
 import PlacesAutocomplete, { PlaceResult } from '@/components/PlacesAutocomplete';
 import { getCSRFToken } from '@/lib/csrfFetch';
 
+interface CarrierUser {
+  userId: string;
+  email: string;
+  role: 'CARRIER' | 'ADMIN' | 'SUPER_ADMIN';
+  organizationId: string | null;
+  firstName?: string;
+  lastName?: string;
+}
+
+interface EthiopianCity {
+  id: string;
+  name: string;
+  nameEthiopic?: string;
+  region?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
 interface TruckPostingModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  user: any;
-  ethiopianCities: any[];
+  user: CarrierUser;
+  ethiopianCities: EthiopianCity[];
 }
 
 export default function TruckPostingModal({
@@ -43,7 +61,8 @@ export default function TruckPostingModal({
     comments2: '',
   });
 
-  const handleChange = (field: string, value: any) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleChange = (field: string, value: string | boolean | { lat: number; lng: number } | null) => {
     setFormData({ ...formData, [field]: value });
   };
 
@@ -86,11 +105,11 @@ export default function TruckPostingModal({
 
       // Look up EthiopianLocation IDs from city names
       const originCity = ethiopianCities.find(
-        (c: any) => c.name?.toLowerCase() === formData.origin.toLowerCase()
+        (c: EthiopianCity) => c.name?.toLowerCase() === formData.origin.toLowerCase()
       );
       const destinationCity = formData.destination
         ? ethiopianCities.find(
-            (c: any) => c.name?.toLowerCase() === formData.destination.toLowerCase()
+            (c: EthiopianCity) => c.name?.toLowerCase() === formData.destination.toLowerCase()
           )
         : null;
 
@@ -135,9 +154,9 @@ export default function TruckPostingModal({
 
       onSuccess();
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Create truck posting error:', error);
-      setError(error.message || 'Failed to create truck posting');
+      setError(error instanceof Error ? error.message : 'Failed to create truck posting');
     } finally {
       setLoading(false);
     }

@@ -133,11 +133,11 @@ class SendGridEmailProvider implements EmailProvider {
         success: true,
         messageId,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error sending email via SendGrid:', error);
       return {
         success: false,
-        error: error.message || 'Failed to send email via SendGrid',
+        error: error instanceof Error ? error.message : 'Failed to send email via SendGrid',
       };
     }
   }
@@ -214,11 +214,11 @@ class AwsSesEmailProvider implements EmailProvider {
         success: true,
         messageId,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error sending email via AWS SES:', error);
       return {
         success: false,
-        error: error.message || 'Failed to send email via AWS SES',
+        error: error instanceof Error ? error.message : 'Failed to send email via AWS SES',
       };
     }
   }
@@ -277,11 +277,11 @@ class ResendEmailProvider implements EmailProvider {
         success: true,
         messageId: data.id,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error sending email via Resend:', error);
       return {
         success: false,
-        error: error.message || 'Failed to send email',
+        error: error instanceof Error ? error.message : 'Failed to send email',
       };
     }
   }
@@ -351,7 +351,7 @@ export async function sendEmailDirect(message: EmailMessage): Promise<EmailResul
     });
 
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[EMAIL ERROR]', error, {
       to: message.to,
       subject: message.subject,
@@ -359,7 +359,7 @@ export async function sendEmailDirect(message: EmailMessage): Promise<EmailResul
 
     return {
       success: false,
-      error: error.message || 'Failed to send email',
+      error: error instanceof Error ? error.message : 'Failed to send email',
     };
   }
 }

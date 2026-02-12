@@ -112,7 +112,7 @@ export default function CarrierTripsPage() {
 
       const data = await response.json();
       // The /api/trips endpoint now returns properly formatted trips
-      const fetchedTrips = (data.trips || []).map((trip: any) => ({
+      const fetchedTrips = (data.trips || []).map((trip: Trip) => ({
         ...trip,
         // Ensure pickupCity/deliveryCity are at top level
         pickupCity: trip.pickupCity || trip.load?.pickupCity || 'Unknown',
@@ -155,8 +155,8 @@ export default function CarrierTripsPage() {
         // Delivered trips go to trip history
         router.push('/carrier/trip-history');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setActionLoading(null);
     }
@@ -300,7 +300,7 @@ export default function CarrierTripsPage() {
         const response = await fetch('/api/trips?status=ASSIGNED,PICKUP_PENDING,IN_TRANSIT,DELIVERED');
         if (response.ok) {
           const data = await response.json();
-          const fetchedTrips = (data.trips || []).map((trip: any) => ({
+          const fetchedTrips = (data.trips || []).map((trip: Trip) => ({
             ...trip,
             pickupCity: trip.pickupCity || trip.load?.pickupCity || 'Unknown',
             deliveryCity: trip.deliveryCity || trip.load?.deliveryCity || 'Unknown',

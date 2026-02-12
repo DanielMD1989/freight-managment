@@ -15,9 +15,10 @@ import { TableColumn, RowAction, StatusTab, SavedSearch, SavedSearchCriteria } f
 import LoadRequestModal from './LoadRequestModal';
 import { getCSRFToken } from '@/lib/csrfFetch';
 import { calculateDistanceKm } from '@/lib/geo';
+import { CarrierUser, EthiopianCity, Load, LoadRequest, LoadFilterValues } from '@/types/carrier-loadboard';
 
 interface SearchLoadsTabProps {
-  user: any;
+  user: CarrierUser;
 }
 
 type ResultsFilter = 'all' | 'PREFERRED' | 'BLOCKED';
@@ -39,28 +40,28 @@ function haversineDistance(
 }
 
 export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
-  const [loads, setLoads] = useState<any[]>([]);
+  const [loads, setLoads] = useState<Load[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState<ResultsFilter>('all');
-  const [ethiopianCities, setEthiopianCities] = useState<any[]>([]);
+  const [ethiopianCities, setEthiopianCities] = useState<EthiopianCity[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
   const [showSearchForm, setShowSearchForm] = useState(false);
   const [sortField, setSortField] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Saved searches state
-  const [savedSearches, setSavedSearches] = useState<any[]>([]);
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
   const [activeSavedSearchId, setActiveSavedSearchId] = useState<string | null>(null);
   const [loadingSavedSearches, setLoadingSavedSearches] = useState(false);
   const [editingSearch, setEditingSearch] = useState<SavedSearch | null>(null);
 
   // Load request modal state
   const [showRequestModal, setShowRequestModal] = useState(false);
-  const [selectedLoad, setSelectedLoad] = useState<any | null>(null);
+  const [selectedLoad, setSelectedLoad] = useState<Load | null>(null);
   const [pendingRequestLoadIds, setPendingRequestLoadIds] = useState<Set<string>>(new Set());
 
   // Search form state
-  const [filterValues, setFilterValues] = useState<Record<string, any>>({
+  const [filterValues, setFilterValues] = useState<LoadFilterValues>({
     truckType: '',
     truckTypeMode: 'ANY',
     origin: '',
@@ -83,7 +84,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
       if (response.ok) {
         const data = await response.json();
         const loadIds = new Set<string>(
-          (data.loadRequests || []).map((req: any) => req.loadId)
+          (data.loadRequests || []).map((req: LoadRequest) => req.loadId)
         );
         setPendingRequestLoadIds(loadIds);
       }
@@ -168,8 +169,16 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
     const search = savedSearches.find((s) => s.id === searchId);
     if (!search) return;
 
-    // Apply saved criteria to filter values
-    setFilterValues(search.criteria);
+    // Apply saved criteria to filter values, mapping fields as needed
+    const criteria = search.criteria || {};
+    setFilterValues(prev => ({
+      ...prev,
+      truckType: Array.isArray(criteria.truckType) ? criteria.truckType[0] || '' : criteria.truckType || '',
+      origin: criteria.origin || '',
+      destination: criteria.destination || '',
+      fullPartial: criteria.fullPartial || '',
+      weight: criteria.maxWeight?.toString() || '',
+    }));
     setActiveSavedSearchId(searchId);
 
     // Automatically trigger search
@@ -222,7 +231,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
   /**
    * Update saved search
    */
-  const updateSavedSearch = async (searchId: string, updates: any) => {
+  const updateSavedSearch = async (searchId: string, updates: { name?: string; criteria?: SavedSearchCriteria }) => {
     try {
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/saved-searches/${searchId}`, {
@@ -245,7 +254,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
   /**
    * Handle filter change
    */
-  const handleFilterChange = (key: string, value: any) => {
+  const handleFilterChange = (key: string, value: string | number | boolean) => {
     setFilterValues({ ...filterValues, [key]: value });
   };
 
@@ -283,11 +292,11 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
     const searchName = cityName.toLowerCase().trim();
 
     // Try exact match first
-    let city = ethiopianCities.find((c: any) => c.name?.toLowerCase().trim() === searchName);
+    let city = ethiopianCities.find((c: EthiopianCity) => c.name?.toLowerCase().trim() === searchName);
 
     // Fuzzy match for spelling variations
     if (!city) {
-      city = ethiopianCities.find((c: any) => {
+      city = ethiopianCities.find((c: EthiopianCity) => {
         const name = c.name?.toLowerCase().trim() || '';
         if (name.includes(searchName) || searchName.includes(name)) return true;
         // Handle double letters (Mekelle/Mekele, Jimma/Jima)
@@ -331,14 +340,16 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
       const response = await fetch(`/api/loads?${params.toString()}`);
       const data = await response.json();
       // Deduplicate loads by ID to prevent duplicates
-      let fetchedLoads = [...new Map((data.loads || []).map((l: any) => [l.id, l])).values()];
+      const loadMap = new Map<string, Load>();
+      (data.loads || []).forEach((l: Load) => loadMap.set(l.id, l));
+      const fetchedLoads: Load[] = Array.from(loadMap.values());
 
       // Get carrier's origin and destination coordinates
       const carrierOriginCoords = getCityCoords(filterValues.origin);
       const carrierDestCoords = getCityCoords(filterValues.destination);
 
       // Calculate DH-O and DH-D for each load
-      const loadsWithDH = fetchedLoads.map((load: any) => {
+      const loadsWithDH = fetchedLoads.map((load: Load) => {
         const pickupCoords = getCityCoords(load.pickupCity);
         const deliveryCoords = getCityCoords(load.deliveryCity);
 
@@ -377,7 +388,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
       let filteredLoads = loadsWithDH;
 
       if (dhOriginLimit !== null) {
-        filteredLoads = filteredLoads.filter((load: any) => {
+        filteredLoads = filteredLoads.filter((load: Load & { dhToOriginKm?: number; dhAfterDeliveryKm?: number }) => {
           // If no DH-O calculated (carrier didn't enter origin), skip filtering
           if (load.dhToOriginKm === null || load.dhToOriginKm === undefined) return true;
           return load.dhToOriginKm <= dhOriginLimit;
@@ -385,7 +396,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
       }
 
       if (dhDestLimit !== null) {
-        filteredLoads = filteredLoads.filter((load: any) => {
+        filteredLoads = filteredLoads.filter((load: Load & { dhToOriginKm?: number; dhAfterDeliveryKm?: number }) => {
           // If no DH-D calculated (carrier didn't enter destination), skip filtering
           if (load.dhAfterDeliveryKm === null || load.dhAfterDeliveryKm === undefined) return true;
           return load.dhAfterDeliveryKm <= dhDestLimit;
@@ -393,31 +404,35 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
       }
 
       // Sort by DH-O (smaller is better), then DH-D, then by date
-      filteredLoads.sort((a: any, b: any) => {
+      filteredLoads.sort((a: Load & { dhToOriginKm?: number; dhAfterDeliveryKm?: number; createdAt?: string }, b: Load & { dhToOriginKm?: number; dhAfterDeliveryKm?: number; createdAt?: string }) => {
         // Loads with calculated DH first
-        const aHasDH = a.dhToOriginKm !== null && a.dhToOriginKm !== undefined;
-        const bHasDH = b.dhToOriginKm !== null && b.dhToOriginKm !== undefined;
+        const aDhO = a.dhToOriginKm ?? null;
+        const bDhO = b.dhToOriginKm ?? null;
+        const aHasDH = aDhO !== null;
+        const bHasDH = bDhO !== null;
 
         if (aHasDH && !bHasDH) return -1;
         if (!aHasDH && bHasDH) return 1;
 
         // Sort by DH-O (smaller is better)
-        if (aHasDH && bHasDH) {
-          if (a.dhToOriginKm !== b.dhToOriginKm) {
-            return a.dhToOriginKm - b.dhToOriginKm;
-          }
+        if (aHasDH && bHasDH && aDhO !== bDhO) {
+          return aDhO - bDhO;
         }
 
         // Then by DH-D (smaller is better)
-        const aHasDhD = a.dhAfterDeliveryKm !== null && a.dhAfterDeliveryKm !== undefined;
-        const bHasDhD = b.dhAfterDeliveryKm !== null && b.dhAfterDeliveryKm !== undefined;
+        const aDhD = a.dhAfterDeliveryKm ?? null;
+        const bDhD = b.dhAfterDeliveryKm ?? null;
+        const aHasDhD = aDhD !== null;
+        const bHasDhD = bDhD !== null;
 
-        if (aHasDhD && bHasDhD && a.dhAfterDeliveryKm !== b.dhAfterDeliveryKm) {
-          return a.dhAfterDeliveryKm - b.dhAfterDeliveryKm;
+        if (aHasDhD && bHasDhD && aDhD !== bDhD) {
+          return aDhD - bDhD;
         }
 
         // Finally by creation date (newest first)
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bDate - aDate;
       });
 
       setLoads(filteredLoads);
@@ -440,8 +455,10 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
     }
 
     const sorted = [...loads].sort((a, b) => {
-      const aVal = a[field];
-      const bVal = b[field];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const aVal = (a as Record<string, any>)[field];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const bVal = (b as Record<string, any>)[field];
 
       if (aVal === null || aVal === undefined) return 1;
       if (bVal === null || bVal === undefined) return -1;
@@ -502,7 +519,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
       key: 'age',
       label: 'Age',
       width: '80px',
-      render: (_: any, row: any) => <AgeIndicator date={row.postedAt || row.createdAt} />,
+      render: (_: unknown, row: Load) => <AgeIndicator date={row.postedAt || row.createdAt || ''} />,
     },
     {
       key: 'pickupDate',
@@ -566,7 +583,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
     {
       key: 'shipper',
       label: 'Company',
-      render: (_: any, row: any) => (
+      render: (_: unknown, row: Load) => (
         <span className="font-medium text-teal-600 dark:text-teal-400 hover:underline cursor-pointer">
           {row.shipper?.name || 'Anonymous'}
         </span>
@@ -586,7 +603,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
       width: '110px',
       align: 'right' as const,
       sortable: true,
-      render: (value: number, row: any) => (
+      render: (value: number, row: Load) => (
         <span className="text-teal-600 dark:text-teal-400 font-medium">
           {value ? `${value.toLocaleString()} ETB` : row.tripKm ? `~${Math.round(row.tripKm * 15)} ETB` : '—'}
         </span>
@@ -607,11 +624,11 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
       ),
-      onClick: (row: any) => {
+      onClick: (row: Load) => {
         setSelectedLoad(row);
         setShowRequestModal(true);
       },
-      show: (row: any) => !pendingRequestLoadIds.has(row.id),
+      show: (row: Load) => !pendingRequestLoadIds.has(row.id),
     },
     {
       key: 'pending',
@@ -619,7 +636,7 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
       variant: 'secondary',
       disabled: true,  // Status indicator - request already sent
       onClick: () => {},  // No action needed - just shows status
-      show: (row: any) => pendingRequestLoadIds.has(row.id),
+      show: (row: Load) => pendingRequestLoadIds.has(row.id),
     },
   ], [pendingRequestLoadIds]);
 

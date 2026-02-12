@@ -267,6 +267,7 @@ function getConfig(): PushConfig {
 // FIREBASE CLOUD MESSAGING (FCM)
 // =============================================================================
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let firebaseApp: any = null;
 
 async function initializeFirebase(): Promise<boolean> {
@@ -283,6 +284,7 @@ async function initializeFirebase(): Promise<boolean> {
 
   try {
     // Dynamic import to avoid bundling issues
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dynamicRequire = (moduleName: string): any => {
       return eval('require')(moduleName);
     };
@@ -323,6 +325,7 @@ async function sendFCM(
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const dynamicRequire = (moduleName: string): any => {
     return eval('require')(moduleName);
   };
@@ -354,6 +357,7 @@ async function sendFCM(
     const response = await messaging.sendEachForMulticast(message);
 
     const invalidTokens: string[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     response.responses.forEach((resp: any, idx: number) => {
       if (!resp.success) {
         const errorCode = resp.error?.code;
@@ -388,6 +392,7 @@ async function sendFCM(
 // APPLE PUSH NOTIFICATION SERVICE (APNs)
 // =============================================================================
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let apnsProvider: any = null;
 
 async function initializeAPNs(): Promise<boolean> {
@@ -403,6 +408,7 @@ async function initializeAPNs(): Promise<boolean> {
   }
 
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dynamicRequire = (moduleName: string): any => {
       return eval('require')(moduleName);
     };
@@ -447,6 +453,7 @@ async function sendAPNs(
   }
 
   const config = getConfig();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const dynamicRequire = (moduleName: string): any => {
     return eval('require')(moduleName);
   };
@@ -476,13 +483,14 @@ async function sendAPNs(
   try {
     const response = await apnsProvider.send(notification, tokens);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const invalidTokens = response.failed
       .filter(
-        (f: any) =>
+        (f: { response?: { reason?: string }; device: string }) =>
           f.response?.reason === 'BadDeviceToken' ||
           f.response?.reason === 'Unregistered'
       )
-      .map((f: any) => f.device);
+      .map((f: { device: string }) => f.device);
 
     logger.info('[Push APNs] Sent', {
       success: response.sent.length,

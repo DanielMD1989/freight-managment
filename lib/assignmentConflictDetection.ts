@@ -16,12 +16,14 @@ export interface ConflictCheck {
 export interface AssignmentConflict {
   type: 'TRUCK_ALREADY_ASSIGNED' | 'LOAD_ALREADY_ASSIGNED' | 'SCHEDULE_CONFLICT';
   message: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   details?: any;
 }
 
 export interface AssignmentWarning {
   type: 'TRUCK_UNAVAILABLE' | 'GPS_NOT_VERIFIED' | 'TRUCK_TYPE_MISMATCH' | 'SCHEDULE_TIGHT';
   message: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   details?: any;
 }
 

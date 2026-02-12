@@ -86,8 +86,8 @@ export default function TruckDetailsPage({ params }: { params: Promise<{ id: str
       }
       const data = await response.json();
       setTruck(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }

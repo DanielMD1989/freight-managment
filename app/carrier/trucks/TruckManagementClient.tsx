@@ -91,13 +91,22 @@ function getApprovalStatusColor(status: string): string {
   return colors[status] || 'bg-slate-100 text-slate-600 border border-slate-200';
 }
 
+interface Pagination {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  pages?: number;
+  hasMore?: boolean;
+}
+
 interface TruckManagementClientProps {
   initialApprovedTrucks: Truck[];
   initialPendingTrucks: Truck[];
   initialRejectedTrucks: Truck[];
-  approvedPagination: any;
-  pendingPagination: any;
-  rejectedPagination: any;
+  approvedPagination: Pagination;
+  pendingPagination: Pagination;
+  rejectedPagination: Pagination;
   initialTab: string;
 }
 
@@ -663,10 +672,10 @@ export default function TruckManagementClient({
             </div>
 
             {/* Pagination */}
-            {pagination && pagination.pages > 1 && (
+            {pagination && (pagination.totalPages || pagination.pages || 0) > 1 && (
               <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
                 <div className="text-sm text-gray-600">
-                  Page {pagination.page} of {pagination.pages}
+                  Page {pagination.page} of {pagination.totalPages || pagination.pages}
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -678,7 +687,7 @@ export default function TruckManagementClient({
                   </button>
                   <button
                     onClick={() => handlePageChange(pagination.page + 1)}
-                    disabled={pagination.page === pagination.pages}
+                    disabled={pagination.page === (pagination.totalPages || pagination.pages)}
                     className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Next

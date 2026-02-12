@@ -138,8 +138,8 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
       } else if (newStatus === 'COMPLETED') {
         router.push('/carrier/trips?tab=completed');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -181,8 +181,8 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
 
       setShowCancelModal(false);
       router.push('/carrier/trips');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -229,8 +229,8 @@ export default function TripDetailClient({ trip: initialTrip }: Props) {
       setPodNotes('');
 
       router.refresh();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setUploadingPod(false);
     }

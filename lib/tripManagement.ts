@@ -126,6 +126,7 @@ export async function updateTripStatus(
     }
 
     // Build update data with timestamps
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: any = {
       status: newStatus,
       updatedAt: new Date(),

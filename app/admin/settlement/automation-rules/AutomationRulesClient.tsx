@@ -115,8 +115,8 @@ export default function AutomationRulesClient({
 
       // Refresh to get updated settings
       router.refresh();
-    } catch (error: any) {
-      setErrorMessage(error.message || 'Failed to save settings');
+    } catch (error: unknown) {
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to save settings');
       setTimeout(() => setErrorMessage(''), 5000);
     } finally {
       setIsSaving(false);

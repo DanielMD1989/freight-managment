@@ -196,6 +196,7 @@ function haversineDistance(
  * @param position - Raw position from database
  * @returns Formatted GPS position
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function formatPosition(position: any): GpsPosition {
   return {
     id: position.id,
@@ -224,6 +225,7 @@ export async function getPositionCount(
   startDate?: Date,
   endDate?: Date
 ): Promise<number> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = { truckId };
 
   if (startDate || endDate) {

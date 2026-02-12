@@ -21,8 +21,10 @@ export interface RetryOptions {
   /** Whether to add jitter to delays (default: true) */
   jitter?: boolean;
   /** Custom function to determine if error is retryable */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   isRetryable?: (error: any) => boolean;
   /** Callback for each retry attempt */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onRetry?: (error: any, attempt: number, delayMs: number) => void;
 }
 
@@ -37,6 +39,7 @@ const defaultOptions: Required<Omit<RetryOptions, 'isRetryable' | 'onRetry'>> = 
 /**
  * Default function to determine if an error is retryable
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function defaultIsRetryable(error: any): boolean {
   // Prisma connection errors
   if (error?.code === 'P1001') return true; // Can't reach database server
@@ -125,6 +128,7 @@ export async function withRetry<T>(
     isRetryable: options.isRetryable || defaultIsRetryable,
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let lastError: any;
 
   for (let attempt = 1; attempt <= opts.maxAttempts; attempt++) {

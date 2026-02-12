@@ -200,8 +200,11 @@ function generateJobId(): string {
 // BULLMQ IMPLEMENTATION
 // =============================================================================
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let bullmqQueues: Map<QueueName, any> | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let bullmqWorkers: Map<QueueName, any> | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let redisConnection: any | null = null;
 
 // =============================================================================
@@ -251,6 +254,7 @@ async function initializeBullMQ(): Promise<boolean> {
 
   try {
     // Dynamic import to avoid bundling issues
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dynamicRequire = (moduleName: string): any => {
       return eval('require')(moduleName);
     };
@@ -691,6 +695,7 @@ export async function startWorkers(): Promise<void> {
   }
 
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dynamicRequire = (moduleName: string): any => {
       return eval('require')(moduleName);
     };
@@ -712,6 +717,7 @@ export async function startWorkers(): Promise<void> {
     for (const [queueName, queueConfig] of Object.entries(QUEUE_CONFIGS)) {
       const worker = new Worker(
         queueName,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (job: any) => {
           const key = `${queueName}:${job.name}`;
           const processor = processors.get(key);
@@ -734,6 +740,7 @@ export async function startWorkers(): Promise<void> {
         }
       );
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       worker.on('completed', (job: any) => {
         logger.debug('Job completed', {
           queueName,
@@ -742,6 +749,7 @@ export async function startWorkers(): Promise<void> {
         });
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       worker.on('failed', (job: any, err: Error) => {
         logger.error('Job failed', err, {
           queueName,
