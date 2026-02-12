@@ -19,6 +19,10 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { calculateDistanceKm } from '@/lib/geo';
 
+// Type for DH calculation result
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DhResult = Record<string, any>;
+
 // Cache for distance calculations
 const distanceCache = new Map<string, { distance: number; duration: number; timestamp: number }>();
 const CACHE_TTL = 24 * 60 * 60 * 1000;
@@ -160,7 +164,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Load not found' }, { status: 404 });
     }
 
-    const result: any = {
+    const result: DhResult = {
       truckId: truck.id,
       truckPlate: truck.licensePlate,
       loadId: load.id,

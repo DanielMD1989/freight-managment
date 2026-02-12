@@ -20,6 +20,7 @@ import { zodErrorResponse } from "@/lib/validation";
 import { CacheInvalidation } from "@/lib/cache";
 // CRITICAL FIX: Import notification helper for status change notifications
 import { createNotification } from "@/lib/notifications";
+import { Prisma } from "@prisma/client";
 
 /**
  * Helper function to apply RPS rate limiting
@@ -277,7 +278,8 @@ export async function PATCH(
     const body = await request.json();
     const validatedData = updateLoadSchema.parse(body);
 
-    let additionalData: any = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let additionalData: Record<string, any> = {};
 
     // Update postedAt when status changes to POSTED
     if (validatedData.status === 'POSTED' && existingLoad.status !== 'POSTED') {
@@ -321,7 +323,8 @@ export async function PATCH(
         data: {
           ...validatedData,
           ...additionalData,
-        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
       });
 
       // Sync Trip status when Load status changes
@@ -344,7 +347,8 @@ export async function PATCH(
           });
 
           if (trip) {
-            const tripUpdateData: any = {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const tripUpdateData: Record<string, any> = {
               status: newTripStatus,
             };
 

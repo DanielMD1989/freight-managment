@@ -118,10 +118,26 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Type for audit log entries
+interface AuditLogEntry {
+  createdAt?: string | Date;
+  eventType?: string;
+  severity?: string;
+  userId?: string | null;
+  organizationId?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  resourceType?: string | null;
+  resourceId?: string | null;
+  action?: string | null;
+  details?: unknown;
+  [key: string]: unknown;
+}
+
 /**
  * Convert audit logs to CSV format
  */
-function convertLogsToCSV(logs: any[]): string {
+function convertLogsToCSV(logs: AuditLogEntry[]): string {
   // CSV header
   const header = [
     'Timestamp',

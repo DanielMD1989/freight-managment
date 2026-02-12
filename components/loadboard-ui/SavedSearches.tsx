@@ -21,7 +21,7 @@ export default function SavedSearches({
   /**
    * Format criteria for display
    */
-  const formatCriteria = (criteria: any): string => {
+  const formatCriteria = (criteria: Record<string, unknown>): string => {
     const parts: string[] = [];
 
     if (criteria.origin) parts.push(`From: ${criteria.origin}`);

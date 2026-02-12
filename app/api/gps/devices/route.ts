@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
+import { Prisma } from "@prisma/client";
 
 const createDeviceSchema = z.object({
   imei: z.string().min(15).max(15),
@@ -55,9 +56,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const status = searchParams.get("status");
 
-    const where: any = {};
+    const where: Prisma.GpsDeviceWhereInput = {};
     if (status) {
-      where.status = status;
+      where.status = status as Prisma.EnumGpsDeviceStatusFilter;
     }
 
     const devices = await db.gpsDevice.findMany({

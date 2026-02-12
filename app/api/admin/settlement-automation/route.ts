@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const action = searchParams.get('action') || 'full';
 
-    let result: any = {};
+    let result: { action: string; autoVerifiedCount?: number; settledCount?: number; [key: string]: unknown } = { action: '' };
 
     switch (action) {
       case 'auto-verify':

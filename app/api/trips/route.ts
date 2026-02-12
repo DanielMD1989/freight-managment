@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
-import { TripStatus } from '@prisma/client';
+import { TripStatus, Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { TripCache, CacheInvalidation, CacheTTL, cacheAside, CacheKeys, cache } from '@/lib/cache';
 import { zodErrorResponse } from '@/lib/validation';
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build where clause based on role
-    let whereClause: any = {};
+    let whereClause: Prisma.TripWhereInput = {};
 
     switch (session.role) {
       case 'SUPER_ADMIN':

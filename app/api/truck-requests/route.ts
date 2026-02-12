@@ -17,7 +17,7 @@ import { requireAuth } from '@/lib/auth';
 import { requireCSRF } from '@/lib/csrf';
 import { canRequestTruck } from '@/lib/dispatcherPermissions';
 import { RULE_CARRIER_FINAL_AUTHORITY, RULE_SHIPPER_DEMAND_FOCUS } from '@/lib/foundation-rules';
-import { UserRole } from '@prisma/client';
+import { UserRole, Prisma } from '@prisma/client';
 import { notifyTruckRequest } from '@/lib/notifications';
 
 // Validation schema for truck request
@@ -298,7 +298,8 @@ export async function GET(request: NextRequest) {
     const offset = Math.max(parseInt(offsetParam || '0', 10), 0);
 
     // Build where clause based on role
-    const where: any = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: Record<string, any> = {};
 
     // Role-based filtering
     if (session.role === 'SHIPPER') {

@@ -10,6 +10,7 @@ import { validateCSRFWithMobile } from '@/lib/csrf';
 import { z } from 'zod';
 import { createNotification } from '@/lib/notifications';
 import { zodErrorResponse } from '@/lib/validation';
+import { Prisma } from '@prisma/client';
 
 const updateEscalationSchema = z.object({
   status: z.enum(['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'ESCALATED']).optional(),
@@ -146,7 +147,7 @@ export async function PATCH(
     }
 
     // Build update data
-    const updateData: any = {};
+    const updateData: Prisma.LoadEscalationUpdateInput = {};
 
     if (validatedData.status !== undefined) {
       updateData.status = validatedData.status;

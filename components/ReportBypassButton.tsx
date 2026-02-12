@@ -58,8 +58,8 @@ export default function ReportBypassButton({
       if (onReported) {
         onReported();
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to report bypass');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to report bypass');
     } finally {
       setLoading(false);
     }

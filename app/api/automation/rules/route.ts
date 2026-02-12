@@ -9,6 +9,7 @@ import { requireAuth } from '@/lib/auth';
 import { requirePermission, Permission } from '@/lib/rbac';
 import { z } from 'zod';
 import { zodErrorResponse } from '@/lib/validation';
+import { Prisma } from '@prisma/client';
 
 const createRuleSchema = z.object({
   name: z.string().min(1).max(255),
@@ -83,14 +84,14 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     const pageSize = parseInt(searchParams.get('pageSize') || '50', 10);
 
-    const where: any = {};
+    const where: Prisma.AutomationRuleWhereInput = {};
 
     if (ruleType) {
-      where.ruleType = ruleType;
+      where.ruleType = ruleType as Prisma.EnumRuleTypeFilter;
     }
 
     if (trigger) {
-      where.trigger = trigger;
+      where.trigger = trigger as Prisma.EnumRuleTriggerFilter;
     }
 
     if (isEnabled !== null && isEnabled !== undefined) {

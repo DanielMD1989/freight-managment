@@ -75,9 +75,9 @@ export default function StatusUpdateModal({
       // Success
       onUpdateSuccess();
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error updating status:', err);
-      setError(err.message || 'Failed to update status');
+      setError(err instanceof Error ? err.message : 'Failed to update status');
     } finally {
       setUpdating(false);
     }

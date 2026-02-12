@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { Prisma } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -113,7 +114,7 @@ export async function GET(request: NextRequest) {
     // If truckIds are provided, get positions for multiple trucks
     if (truckIds && truckIds.length > 0) {
       // Build where clause based on role
-      const where: any = {
+      const where: Prisma.TruckWhereInput = {
         id: { in: truckIds },
       };
 
@@ -177,7 +178,7 @@ export async function GET(request: NextRequest) {
     }
 
     // If no specific query, return all active trips for the user's context
-    const activeLoadsWhere: any = {
+    const activeLoadsWhere: Prisma.LoadWhereInput = {
       status: 'IN_TRANSIT',
       assignedTruckId: { not: null },
     };

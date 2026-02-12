@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requirePermission, Permission } from '@/lib/rbac';
 import { db } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 
 /**
  * GET /api/admin/settlements
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0');
 
     // Build where clause based on status
-    let where: any = {};
+    let where: Prisma.LoadWhereInput = {};
 
     switch (status) {
       case 'PENDING':

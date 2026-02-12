@@ -466,7 +466,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Build where clause
-    const where: any = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: Record<string, any> = {};
 
     // Default: only show ACTIVE postings to public
     if (organizationId) {

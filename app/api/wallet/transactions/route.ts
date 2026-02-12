@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { Prisma } from '@prisma/client';
 
 /**
  * GET /api/wallet/transactions
@@ -77,7 +78,8 @@ export async function GET(request: NextRequest) {
     const walletAccountIds = walletAccounts.map((account) => account.id);
 
     // Build where clause for journal entries
-    const where: any = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: Record<string, any> = {
       lines: {
         some: {
           OR: [

@@ -15,7 +15,7 @@ import { validateCSRFWithMobile } from '@/lib/csrf';
 import { z } from 'zod';
 import { sendEmail, createEmailHTML } from '@/lib/email';
 import { zodErrorResponse } from '@/lib/validation';
-import { UserRole } from '@prisma/client';
+import { UserRole, Prisma } from '@prisma/client';
 
 const createInvitationSchema = z.object({
   email: z.string().email(),
@@ -176,7 +176,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
 
-    const where: any = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: Record<string, any> = {
       organizationId: user.organizationId,
     };
 

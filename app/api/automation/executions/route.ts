@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { requirePermission, Permission } from '@/lib/rbac';
+import { Prisma } from '@prisma/client';
 
 // GET /api/automation/executions - List rule executions
 export async function GET(request: NextRequest) {
@@ -21,14 +22,14 @@ export async function GET(request: NextRequest) {
     const from = searchParams.get('from') ? new Date(searchParams.get('from')!) : undefined;
     const to = searchParams.get('to') ? new Date(searchParams.get('to')!) : undefined;
 
-    const where: any = {};
+    const where: Prisma.AutomationRuleExecutionWhereInput = {};
 
     if (ruleId) {
       where.ruleId = ruleId;
     }
 
     if (status) {
-      where.status = status;
+      where.status = status as Prisma.EnumExecutionStatusFilter;
     }
 
     if (from || to) {

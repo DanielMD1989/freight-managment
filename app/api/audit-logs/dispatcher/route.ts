@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { canViewSystemDashboard } from '@/lib/dispatcherPermissions';
-import { UserRole } from '@prisma/client';
+import { UserRole, Prisma } from '@prisma/client';
 
 // Dispatcher-specific event types
 export const DISPATCHER_EVENT_TYPES: string[] = [
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
     // Build where clause
-    const where: any = {
+    const where: Prisma.LoadEventWhereInput = {
       // Only dispatcher-related events
       eventType: {
         in: DISPATCHER_EVENT_TYPES,

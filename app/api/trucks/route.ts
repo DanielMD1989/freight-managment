@@ -13,6 +13,7 @@ import {
 import { getVisibilityRules, RULE_SHIPPER_DEMAND_FOCUS } from "@/lib/foundation-rules";
 import { TruckCache, CacheInvalidation } from "@/lib/cache";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { Prisma } from "@prisma/client";
 
 const createTruckSchema = z.object({
   truckType: z.enum(["FLATBED", "REFRIGERATED", "TANKER", "CONTAINER", "DRY_VAN", "LOWBOY", "DUMP_TRUCK", "BOX_TRUCK"]),
@@ -91,7 +92,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Sprint 16: GPS verification
-    let gpsData: any = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let gpsData: Record<string, any> = {};
 
     if (validatedData.imei) {
       // Validate IMEI format
@@ -248,7 +250,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const where: any = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: Record<string, any> = {};
 
     // Role-based filtering
     if (user.role === 'CARRIER') {

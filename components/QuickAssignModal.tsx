@@ -76,7 +76,21 @@ export default function QuickAssignModal({
       }
 
       const data = await response.json();
-      setTrucks(data.matches?.map((m: any) => ({
+      // Define the match type from API response
+      interface TruckMatch {
+        truckPosting: {
+          id: string;
+          truck: {
+            id: string;
+            licensePlate: string;
+            truckType: string;
+            carrier: { name: string };
+            currentCity: string;
+          };
+        };
+        matchScore?: number;
+      }
+      setTrucks(data.matches?.map((m: TruckMatch) => ({
         id: m.truckPosting.id, // truckPosting ID for direct assignment
         truckId: m.truckPosting.truck.id, // actual truck ID for match proposals
         licensePlate: m.truckPosting.truck.licensePlate,
@@ -85,9 +99,9 @@ export default function QuickAssignModal({
         originCity: m.truckPosting.truck.currentCity,
         matchScore: m.matchScore,
       })) || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching trucks:', err);
-      setError(err.message || 'Failed to fetch trucks');
+      setError(err instanceof Error ? err.message : 'Failed to fetch trucks');
     } finally {
       setLoading(false);
     }
@@ -150,9 +164,9 @@ export default function QuickAssignModal({
       // Success
       onAssignSuccess();
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(canDirectAssign ? 'Error assigning load:' : 'Error creating proposal:', err);
-      setError(err.message || (canDirectAssign ? 'Failed to assign load' : 'Failed to create match proposal'));
+      setError(err instanceof Error ? err.message : (canDirectAssign ? 'Failed to assign load' : 'Failed to create match proposal'));
     } finally {
       setAssigning(false);
     }

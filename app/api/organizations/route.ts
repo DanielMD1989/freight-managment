@@ -5,6 +5,7 @@ import { validateCSRFWithMobile } from "@/lib/csrf";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
+import { Prisma } from "@prisma/client";
 
 const createOrganizationSchema = z.object({
   name: z.string().min(2, "Organization name must be at least 2 characters"),
@@ -114,7 +115,8 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get("type");
     const search = searchParams.get("search");
 
-    const where: any = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: Record<string, any> = {};
 
     if (type) {
       where.type = type;

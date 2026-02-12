@@ -4,6 +4,7 @@ import { requireAuth, requireActiveUser } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
+import { Prisma } from "@prisma/client";
 
 const withdrawSchema = z.object({
   amount: z.number().positive(),
@@ -93,7 +94,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const status = searchParams.get("status");
 
-    const where: any = {};
+    const where: Prisma.WithdrawalRequestWhereInput = {};
 
     // Admin/Ops can see all withdrawals, others see only their own
     if (session.role !== "ADMIN" && session.role !== "PLATFORM_OPS") {

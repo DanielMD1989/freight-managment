@@ -17,7 +17,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requirePermission, Permission } from "@/lib/rbac";
-import { VerificationStatus } from "@prisma/client";
+import { VerificationStatus, Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get("offset") || "0");
 
     // Build where clauses
-    const companyWhere: any = {};
-    const truckWhere: any = {};
+    const companyWhere: Prisma.CompanyDocumentWhereInput = {};
+    const truckWhere: Prisma.TruckDocumentWhereInput = {};
 
     if (status) {
       companyWhere.verificationStatus = status;
@@ -51,13 +51,13 @@ export async function GET(request: NextRequest) {
     }
 
     if (documentType) {
-      companyWhere.type = documentType;
-      truckWhere.type = documentType;
+      companyWhere.type = documentType as Prisma.EnumCompanyDocumentTypeFilter;
+      truckWhere.type = documentType as Prisma.EnumTruckDocumentTypeFilter;
     }
 
     // Fetch documents based on entity type
-    let companyDocuments: any[] = [];
-    let truckDocuments: any[] = [];
+    let companyDocuments: Prisma.CompanyDocumentGetPayload<{ include: { organization: { select: { id: true; name: true; contactEmail: true; contactPhone: true; isVerified: true } } } }>[] = [];
+    let truckDocuments: Prisma.TruckDocumentGetPayload<{ include: { truck: { select: { id: true; licensePlate: true; carrier: { select: { id: true; name: true; contactEmail: true; contactPhone: true; isVerified: true } } } } } }>[] = [];
 
     if (entityType === "company" || entityType === "all") {
       companyDocuments = await db.companyDocument.findMany({

@@ -11,6 +11,7 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { calculateDistanceKm } from '@/lib/geo';
 import { roundToDecimals, roundDistance1 } from '@/lib/rounding';
+import { Prisma } from '@prisma/client';
 
 /**
  * GET /api/trips/[tripId]/history
@@ -87,7 +88,8 @@ export async function GET(
     }
 
     // Build query for GPS positions
-    const whereClause: any = { tripId };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const whereClause: Record<string, any> = { tripId };
 
     if (startTime) {
       whereClause.timestamp = { ...whereClause.timestamp, gte: new Date(startTime) };

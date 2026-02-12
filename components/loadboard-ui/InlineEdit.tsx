@@ -25,7 +25,7 @@ export default function InlineEdit({
   /**
    * Handle field change
    */
-  const handleChange = (key: string, value: any) => {
+  const handleChange = (key: string, value: string | number | boolean) => {
     setFormData({ ...formData, [key]: value });
     // Clear error for this field
     if (errors[key]) {
@@ -65,7 +65,7 @@ export default function InlineEdit({
   /**
    * Render field
    */
-  const renderField = (field: any) => {
+  const renderField = (field: typeof fields[number]) => {
     const value = formData[field.key] || '';
     const error = errors[field.key];
 
@@ -106,7 +106,7 @@ export default function InlineEdit({
             className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:ring-2 focus:ring-[#1e9c99] focus:border-transparent"
           >
             <option value="">Select...</option>
-            {field.options?.map((option: any) => (
+            {field.options?.map((option: { value: string; label: string }) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>

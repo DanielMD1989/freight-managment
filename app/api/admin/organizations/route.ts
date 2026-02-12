@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 
 /**
  * GET /api/admin/organizations
@@ -41,10 +42,10 @@ export async function GET(request: NextRequest) {
     const isVerified = searchParams.get('isVerified');
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.OrganizationWhereInput = {};
 
     if (type) {
-      where.type = type;
+      where.type = type as Prisma.EnumOrganizationTypeFilter;
     }
 
     if (search) {

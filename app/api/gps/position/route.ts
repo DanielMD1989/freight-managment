@@ -18,6 +18,7 @@ import { z } from 'zod';
 import { broadcastGpsPosition } from '@/lib/websocket-server';
 import { withRpsLimit, RPS_CONFIGS } from '@/lib/rateLimit';
 import { zodErrorResponse } from '@/lib/validation';
+import { Prisma } from '@prisma/client';
 
 const gpsUpdateSchema = z.object({
   truckId: z.string().min(1),
@@ -212,7 +213,7 @@ async function getHandler(request: NextRequest) {
     });
 
     // Build where clause based on role
-    const truckWhere: any = { id: truckId };
+    const truckWhere: Prisma.TruckWhereInput = { id: truckId };
 
     if (session.role === 'CARRIER') {
       if (!user?.organizationId) {

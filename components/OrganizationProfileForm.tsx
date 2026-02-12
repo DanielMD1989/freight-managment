@@ -35,8 +35,21 @@ interface OrganizationFormData {
   taxId?: string;
 }
 
+interface Organization {
+  id: string;
+  name: string;
+  type: string;
+  description?: string;
+  contactEmail: string;
+  contactPhone: string;
+  address?: string;
+  city?: string;
+  licenseNumber?: string;
+  taxId?: string;
+}
+
 interface OrganizationProfileFormProps {
-  organization?: any;
+  organization?: Organization;
   mode?: 'create' | 'edit';
   onSuccess?: () => void;
 }
@@ -74,7 +87,7 @@ export default function OrganizationProfileForm({
     try {
       const endpoint = mode === 'create'
         ? '/api/organizations'
-        : `/api/organizations/${organization.id}`;
+        : `/api/organizations/${organization?.id}`;
 
       const method = mode === 'create' ? 'POST' : 'PUT';
 
@@ -96,8 +109,8 @@ export default function OrganizationProfileForm({
       } else {
         router.push(`/organizations/${data.organization.id}`);
       }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);
     }

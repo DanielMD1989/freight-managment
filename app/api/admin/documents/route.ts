@@ -10,6 +10,10 @@ import { db } from '@/lib/db';
 import { requirePermission, Permission } from '@/lib/rbac';
 import { VerificationStatus } from '@prisma/client';
 
+// Type for transformed document with user details
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type TransformedDocument = Record<string, any>;
+
 /**
  * GET /api/admin/documents
  *
@@ -68,7 +72,7 @@ export async function GET(request: NextRequest) {
     };
 
     // Fetch company documents
-    let companyDocuments: any[] = [];
+    let companyDocuments: TransformedDocument[] = [];
     let companyCount = 0;
 
     if (entityType === 'company' || entityType === 'all') {
@@ -117,7 +121,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch truck documents
-    let truckDocuments: any[] = [];
+    let truckDocuments: TransformedDocument[] = [];
     let truckCount = 0;
 
     if (entityType === 'truck' || entityType === 'all') {
@@ -173,7 +177,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Combine and paginate if showing all
-    let documents: any[] = [];
+    let documents: TransformedDocument[] = [];
     let total = 0;
 
     if (entityType === 'all') {

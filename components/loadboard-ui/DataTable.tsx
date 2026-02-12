@@ -130,6 +130,7 @@ export default function DataTable<T = any>({
     if (selectedRows.length === data.length) {
       onSelectionChange([]);
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onSelectionChange(data.map((row: any) => row[rowKey]));
     }
   }, [selectedRows, data, onSelectionChange, rowKey]);
@@ -155,6 +156,7 @@ export default function DataTable<T = any>({
   const sortedData = useMemo(() => {
     if (!sortColumn) return data;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return [...data].sort((a: any, b: any) => {
       const aVal = a[sortColumn];
       const bVal = b[sortColumn];

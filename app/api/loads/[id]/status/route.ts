@@ -10,7 +10,7 @@ import { validateCSRFWithMobile } from '@/lib/csrf';
 import { getAccessRoles } from '@/lib/rbac';
 import { z } from 'zod';
 import { validateStateTransition, LoadStatus, getStatusDescription } from '@/lib/loadStateMachine';
-import { TripStatus } from '@prisma/client'; // P0-001 FIX: Import TripStatus enum
+import { TripStatus, Prisma } from '@prisma/client'; // P0-001 FIX: Import TripStatus enum
 import { deductServiceFee } from '@/lib/serviceFeeManagement'; // Service Fee Implementation
 // CRITICAL FIX: Import CacheInvalidation for status changes
 import { CacheInvalidation } from '@/lib/cache';
@@ -173,7 +173,8 @@ export async function PATCH(
 
     // CRITICAL FIX (ISSUE #2): If transitioning to COMPLETED, deduct fees FIRST
     // If fee deduction fails, block the status change
-    let serviceFeeResult: any = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let serviceFeeResult: Record<string, any> | null = null;
     if (newStatus === 'COMPLETED') {
       // Check if fee already deducted (idempotency)
       const existingFeeEvent = await db.loadEvent.findFirst({

@@ -16,7 +16,7 @@ import { z } from 'zod';
 import { requireAuth } from '@/lib/auth';
 // P0-001 FIX: Removed requireCSRF import - middleware handles CSRF and exempts Bearer tokens (mobile)
 import { createNotification } from '@/lib/notifications';
-import { UserRole } from '@prisma/client';
+import { UserRole, Prisma } from '@prisma/client';
 
 // Validation schema for load request
 // Note: No proposedRate field - price negotiation happens outside platform
@@ -310,7 +310,7 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0');
 
     // Build where clause based on role
-    const where: any = {};
+    const where: Prisma.LoadRequestWhereInput = {};
 
     if (session.role === 'CARRIER') {
       // Carriers see their own requests
@@ -327,7 +327,7 @@ export async function GET(request: NextRequest) {
 
     // Apply filters
     if (status) {
-      where.status = status;
+      where.status = status as Prisma.EnumRequestStatusFilter;
     }
     if (loadId) {
       where.loadId = loadId;

@@ -18,6 +18,7 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { calculateDistanceKm } from '@/lib/geo';
 import { roundToDecimals } from '@/lib/rounding';
+import { Prisma } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.GpsPositionWhereInput = {};
 
     if (loadId) {
       // Verify access to load

@@ -13,6 +13,7 @@ import { validateCSRFWithMobile } from '@/lib/csrf';
 import { zodErrorResponse } from '@/lib/validation';
 import { db } from '@/lib/db';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 
 const updateSavedSearchSchema = z.object({
   name: z.string().min(1).optional(),
@@ -78,7 +79,7 @@ export async function PUT(
     const { name, criteria } = result.data;
 
     // Build update data
-    const updateData: any = {};
+    const updateData: Prisma.SavedSearchUpdateInput = {};
     if (name !== undefined) updateData.name = name;
     if (criteria !== undefined) updateData.criteria = criteria;
 

@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { Prisma } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,7 +36,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Build where clause
-    const where: any = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: Record<string, any> = {
       status,
       // Only loads with location data
       originLat: { not: null },

@@ -16,7 +16,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { getVisibilityRules } from '@/lib/foundation-rules';
-import { UserRole } from '@prisma/client';
+import { UserRole, Prisma } from '@prisma/client';
 
 interface MapMarker {
   id: string;
@@ -105,7 +105,8 @@ export async function GET(request: NextRequest) {
     // TRUCK MARKERS
     // =========================================================================
     if (!typeFilter || typeFilter === 'truck') {
-      let truckWhere: any = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let truckWhere: Record<string, any> = {};
 
       if (isCarrier) {
         // Carrier: Own fleet only
@@ -205,7 +206,8 @@ export async function GET(request: NextRequest) {
     // LOAD MARKERS (Pickup & Delivery points)
     // =========================================================================
     if (!typeFilter || typeFilter === 'load' || typeFilter === 'pickup' || typeFilter === 'delivery') {
-      let loadWhere: any = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let loadWhere: Record<string, any> = {};
 
       if (isShipper) {
         // Shipper: Own loads only
@@ -320,7 +322,8 @@ export async function GET(request: NextRequest) {
     // SUMMARY
     // =========================================================================
     const orgId = user.organizationId;
-    let summaryWhere: any = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let summaryWhere: Record<string, any> = {};
     if (isCarrier && orgId) {
       summaryWhere = { carrierId: orgId };
     } else if (isShipper && orgId) {

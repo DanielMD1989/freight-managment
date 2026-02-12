@@ -13,6 +13,7 @@ import { db } from '@/lib/db';
 import { z } from 'zod';
 // CSRF FIX: Add CSRF validation
 import { validateCSRFWithMobile } from '@/lib/csrf';
+import { Prisma } from '@prisma/client';
 
 const updateFlagSchema = z.object({
   organizationId: z.string().min(1),
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0');
 
     // Build where clause
-    let where: any = {};
+    let where: Prisma.OrganizationWhereInput = {};
 
     switch (status) {
       case 'flagged':

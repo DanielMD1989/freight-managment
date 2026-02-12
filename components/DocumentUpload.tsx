@@ -22,6 +22,7 @@ interface DocumentUploadProps {
   entityType: "company" | "truck";
   entityId: string;
   documentType: CompanyDocumentType | TruckDocumentType;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onUploadComplete?: (document: any) => void;
   onUploadError?: (error: string) => void;
   label?: string;
@@ -165,12 +166,13 @@ export default function DocumentUpload({
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to upload document");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to upload document";
+      setError(errorMessage);
       setUploadProgress(0);
 
       if (onUploadError) {
-        onUploadError(err.message);
+        onUploadError(errorMessage);
       }
     } finally {
       setUploading(false);

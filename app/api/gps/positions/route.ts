@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { broadcastGpsPosition } from "@/lib/websocket-server";
 import { checkRateLimit, withRpsLimit, RATE_LIMIT_GPS_UPDATE, RPS_CONFIGS } from "@/lib/rateLimit";
+import { Prisma } from "@prisma/client";
 
 // GET /api/gps/positions - Get latest GPS positions
 async function getHandler(request: NextRequest) {
@@ -15,7 +16,7 @@ async function getHandler(request: NextRequest) {
     const deviceId = searchParams.get("deviceId");
     const hours = parseInt(searchParams.get("hours") || "24");
 
-    const where: any = {};
+    const where: Prisma.GpsPositionWhereInput = {};
 
     if (truckId) {
       // Check if user can view this truck's GPS

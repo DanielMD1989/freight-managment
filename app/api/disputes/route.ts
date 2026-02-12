@@ -10,6 +10,7 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
 import { zodErrorResponse } from '@/lib/validation';
+import { Prisma } from '@prisma/client';
 
 const createDisputeSchema = z.object({
   loadId: z.string(),
@@ -122,9 +123,9 @@ export async function GET(request: NextRequest) {
     const loadId = searchParams.get('loadId');
 
     // Build where clause
-    const where: any = {
+    const where: Prisma.DisputeWhereInput = {
       OR: [
-        { raisedByOrganizationId: session.organizationId },
+        { disputedOrgId: session.organizationId },
         {
           load: {
             OR: [
@@ -141,7 +142,7 @@ export async function GET(request: NextRequest) {
     };
 
     if (status) {
-      where.status = status;
+      where.status = status as Prisma.EnumDisputeStatusFilter;
     }
 
     if (loadId) {

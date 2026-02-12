@@ -10,7 +10,7 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { requireCSRF } from '@/lib/csrf';
 import { getAccessRoles } from '@/lib/rbac';
-import { TripStatus, LoadStatus } from '@prisma/client';
+import { TripStatus, LoadStatus, Prisma } from '@prisma/client';
 import { z } from 'zod';
 // P1-002 FIX: Import CacheInvalidation for post-update cache clearing
 import { CacheInvalidation } from '@/lib/cache';
@@ -130,7 +130,7 @@ export async function GET(
     }
 
     // For shippers, only show carrier contact info and route when trip is IN_TRANSIT or later
-    let responseTrip: any = trip;
+    let responseTrip: typeof trip | Record<string, unknown> = trip;
     if (isShipper && trip.status === 'ASSIGNED') {
       // Hide carrier contact and route history until pickup begins
       responseTrip = {
@@ -216,7 +216,7 @@ export async function PATCH(
     }
 
     // Build update data
-    const updateData: any = {
+    const updateData: Prisma.TripUpdateInput = {
       updatedAt: new Date(),
     };
 

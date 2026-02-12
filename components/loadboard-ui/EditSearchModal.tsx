@@ -73,6 +73,7 @@ export default function EditSearchModal({
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updateCriteria = (key: string, value: any) => {
     setCriteria((prev) => ({
       ...prev,

@@ -270,7 +270,7 @@ async function getHandler(
     }
 
     // Build query
-    const whereClause: any = { tripId };
+    const whereClause: Prisma.GpsPositionWhereInput = { tripId };
     if (since) {
       whereClause.timestamp = { gt: new Date(since) };
     }

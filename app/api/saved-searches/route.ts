@@ -12,6 +12,7 @@ import { requireAuth } from '@/lib/auth';
 import { validateCSRFWithMobile } from '@/lib/csrf';
 import { zodErrorResponse } from '@/lib/validation';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 
 const createSavedSearchSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -29,7 +30,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type'); // LOADS or TRUCKS
 
-    const where: any = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: Record<string, any> = {
       userId: user.userId,
     };
 

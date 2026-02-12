@@ -11,6 +11,7 @@ import {
 import { LoadCache, CacheInvalidation, CacheTTL } from "@/lib/cache";
 import { checkRpsLimit, RPS_CONFIGS, addRateLimitHeaders } from "@/lib/rateLimit";
 import { zodErrorResponse } from "@/lib/validation";
+import { Prisma } from "@prisma/client";
 
 const createLoadSchema = z.object({
   // Location & Schedule
@@ -253,7 +254,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const where: any = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: Record<string, any> = {};
 
     // Get user details for role-based filtering
     const user = await db.user.findUnique({
@@ -326,7 +328,8 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
 
-    let orderBy: any = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let orderBy: Record<string, any> | Record<string, any>[] = {};
 
     // Map sortBy to database fields
     switch (sortBy) {

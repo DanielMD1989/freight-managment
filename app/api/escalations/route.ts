@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { canViewSystemDashboard } from '@/lib/dispatcherPermissions';
-import { UserRole } from '@prisma/client';
+import { UserRole, Prisma } from '@prisma/client';
 
 // GET /api/escalations - List all escalations (dispatcher queue)
 export async function GET(request: NextRequest) {
@@ -40,18 +40,18 @@ export async function GET(request: NextRequest) {
     const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10), 0);
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.LoadEscalationWhereInput = {};
 
     if (status) {
-      where.status = status;
+      where.status = status as Prisma.EnumEscalationStatusFilter;
     }
 
     if (priority) {
-      where.priority = priority;
+      where.priority = priority as Prisma.EnumEscalationPriorityFilter;
     }
 
     if (escalationType) {
-      where.escalationType = escalationType;
+      where.escalationType = escalationType as Prisma.EnumEscalationTypeFilter;
     }
 
     if (assignedTo) {
