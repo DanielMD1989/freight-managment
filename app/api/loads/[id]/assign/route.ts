@@ -187,7 +187,8 @@ export async function POST(
 
     // P0-005 & P0-006 FIX: Wrap all critical operations in a single transaction
     // with fresh re-fetch to prevent race conditions
-    let result: { load: any; trip: any; trackingUrl: string | null };
+    // FIX: Use Record types instead of any
+    let result: { load: Record<string, unknown>; trip: Record<string, unknown>; trackingUrl: string | null };
 
     try {
       result = await db.$transaction(async (tx) => {

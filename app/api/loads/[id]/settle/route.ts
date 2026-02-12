@@ -196,7 +196,8 @@ export async function POST(
           settledAt: updatedLoad?.settledAt,
         },
       });
-    } catch (settlementError: any) {
+    // FIX: Use unknown type with type guard
+    } catch (settlementError: unknown) {
       console.error('Settlement processing error:', settlementError);
 
       // IDEMPOTENCY: Reset status on failure so it can be retried
@@ -208,7 +209,7 @@ export async function POST(
       return NextResponse.json(
         {
           error: 'Settlement failed',
-          details: settlementError.message || 'Unknown error',
+          details: settlementError instanceof Error ? settlementError.message : 'Unknown error',
           retryable: true, // Client can retry since we reset status
         },
         { status: 400 }

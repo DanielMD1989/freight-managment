@@ -4,6 +4,7 @@ import { hashPassword, setSession, validatePasswordPolicy } from "@/lib/auth";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { zodErrorResponse } from "@/lib/validation";
+import { OrganizationType, AccountType } from "@prisma/client";
 
 const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -26,23 +27,24 @@ const registerSchema = z.object({
 });
 
 // Map carrier type to organization type
-function getOrganizationType(role: string, carrierType?: string): string {
+// FIX: Return proper OrganizationType enum
+function getOrganizationType(role: string, carrierType?: string): OrganizationType {
   if (role === "SHIPPER") {
-    return "SHIPPER";
+    return OrganizationType.SHIPPER;
   }
   if (role === "CARRIER") {
     switch (carrierType) {
       case "CARRIER_COMPANY":
-        return "CARRIER_COMPANY";
+        return OrganizationType.CARRIER_COMPANY;
       case "CARRIER_INDIVIDUAL":
-        return "CARRIER_INDIVIDUAL";
+        return OrganizationType.CARRIER_INDIVIDUAL;
       case "FLEET_OWNER":
-        return "FLEET_OWNER";
+        return OrganizationType.FLEET_OWNER;
       default:
-        return "CARRIER_COMPANY";
+        return OrganizationType.CARRIER_COMPANY;
     }
   }
-  return "SHIPPER"; // Default
+  return OrganizationType.SHIPPER; // Default
 }
 
 export async function POST(request: NextRequest) {
@@ -125,14 +127,15 @@ export async function POST(request: NextRequest) {
       const orgType = getOrganizationType(validatedData.role, validatedData.carrierType);
 
       // Determine wallet type based on organization type
-      const walletType = orgType === "SHIPPER" ? "SHIPPER_WALLET" : "CARRIER_WALLET";
+      // FIX: Use proper enum type
+      const walletType: AccountType = orgType === OrganizationType.SHIPPER ? AccountType.SHIPPER_WALLET : AccountType.CARRIER_WALLET;
 
       const { organization } = await db.$transaction(async (tx) => {
         // 1. Create organization
         const organization = await tx.organization.create({
           data: {
             name: validatedData.companyName!,
-            type: orgType as any,
+            type: orgType,
             contactEmail: validatedData.email,
             contactPhone: validatedData.phone || "N/A",
             isVerified: false,
@@ -146,7 +149,7 @@ export async function POST(request: NextRequest) {
         await tx.financialAccount.create({
           data: {
             organizationId: organization.id,
-            accountType: walletType as any,
+            accountType: walletType,
             balance: 0,
             currency: "ETB",
             isActive: true,

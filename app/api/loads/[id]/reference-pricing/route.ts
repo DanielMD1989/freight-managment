@@ -20,15 +20,25 @@ import { requireAuth } from '@/lib/auth';
  * - Use machine learning models
  * - Integrate with DAT RateView or similar services
  */
-function calculateReferencePricing(load: any): {
+// FIX: Use proper interface instead of any
+interface LoadForPricing {
+  tripKm?: unknown;
+  weight?: unknown;
+  truckType?: string | null;
+  fullPartial?: string | null;
+  requiresRefrigeration?: boolean;
+  isFragile?: boolean;
+}
+
+function calculateReferencePricing(load: LoadForPricing): {
   trihaulRate: number | null;
   brokerSpotRate: number | null;
 } {
   // Base rate per km (Ethiopian Birr)
   const baseRatePerKm = 25; // ETB per km
 
-  // Calculate base price
-  const tripKm = load.tripKm || 0;
+  // Calculate base price - convert Prisma Decimal to number
+  const tripKm = Number(load.tripKm) || 0;
   const basePrice = tripKm * baseRatePerKm;
 
   // Apply multipliers based on load characteristics
@@ -47,12 +57,13 @@ function calculateReferencePricing(load: any): {
     brokerMultiplier *= 1.18;
   }
 
-  // Weight multiplier
-  if (load.weight) {
-    if (load.weight > 10000) {
+  // Weight multiplier - convert Prisma Decimal to number
+  const weightNum = Number(load.weight) || 0;
+  if (weightNum) {
+    if (weightNum > 10000) {
       trihaulMultiplier *= 1.10;
       brokerMultiplier *= 1.12;
-    } else if (load.weight < 2000) {
+    } else if (weightNum < 2000) {
       trihaulMultiplier *= 0.90;
       brokerMultiplier *= 0.92;
     }

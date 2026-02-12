@@ -143,7 +143,8 @@ export async function POST(request: NextRequest) {
     const validCompanyTypes = Object.values(CompanyDocumentType);
     const validTruckTypes = Object.values(TruckDocumentType);
 
-    if (entityType === 'company' && !validCompanyTypes.includes(type as any)) {
+    // FIX: Use proper enum types instead of any
+    if (entityType === 'company' && !validCompanyTypes.includes(type as CompanyDocumentType)) {
       return NextResponse.json(
         {
           error: `Invalid company document type. Must be one of: ${validCompanyTypes.join(', ')}`,
@@ -152,7 +153,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (entityType === 'truck' && !validTruckTypes.includes(type as any)) {
+    if (entityType === 'truck' && !validTruckTypes.includes(type as TruckDocumentType)) {
       return NextResponse.json(
         {
           error: `Invalid truck document type. Must be one of: ${validTruckTypes.join(', ')}`,

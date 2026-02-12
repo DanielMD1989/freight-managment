@@ -15,7 +15,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { Prisma } from '@prisma/client';
+import { Prisma, LocationType } from '@prisma/client';
 
 /**
  * GET /api/locations
@@ -115,10 +115,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Type filter (CITY, TOWN, VILLAGE, LANDMARK)
+    // FIX: Use proper enum type instead of any
     if (type) {
-      const validTypes = ['CITY', 'TOWN', 'VILLAGE', 'LANDMARK'];
-      if (validTypes.includes(type.toUpperCase())) {
-        where.type = type.toUpperCase() as any;
+      const validTypes = Object.values(LocationType);
+      const upperType = type.toUpperCase() as LocationType;
+      if (validTypes.includes(upperType)) {
+        where.type = upperType;
       } else {
         return NextResponse.json(
           { error: 'Invalid location type. Must be one of: CITY, TOWN, VILLAGE, LANDMARK' },

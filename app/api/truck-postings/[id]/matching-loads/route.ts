@@ -214,9 +214,10 @@ export async function GET(
     const declaredDhD = truckPosting.preferredDhAfterDeliveryKm ? Number(truckPosting.preferredDhAfterDeliveryKm) : null;
 
     // Find matching loads and calculate distances
+    // FIX: Remove any - type inferred from findMatchingLoads return type
     const matchedLoads = findMatchingLoads(truckCriteria, loadsCriteria, minScore)
       .slice(0, limit)
-      .map((load: any) => {
+      .map((load) => {
         const fullLoad = loads.find(l => l.id === load.id);
 
         // Get load pickup/delivery coordinates

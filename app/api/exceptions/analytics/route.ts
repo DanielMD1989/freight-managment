@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { canViewSystemDashboard } from '@/lib/dispatcherPermissions';
+import { UserRole } from '@prisma/client';
 
 // GET /api/exceptions/analytics - Get exception analytics and insights
 export async function GET(request: NextRequest) {
@@ -14,8 +15,9 @@ export async function GET(request: NextRequest) {
     const session = await requireAuth();
 
     // Only dispatchers and admins can view analytics
+    // FIX: Use proper enum type
     const canView = canViewSystemDashboard({
-      role: session.role as any,
+      role: session.role as UserRole,
       organizationId: null,
       userId: session.userId,
     });

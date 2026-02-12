@@ -15,6 +15,7 @@ import { validateCSRFWithMobile } from '@/lib/csrf';
 import { z } from 'zod';
 import { sendEmail, createEmailHTML } from '@/lib/email';
 import { zodErrorResponse } from '@/lib/validation';
+import { UserRole } from '@prisma/client';
 
 const createInvitationSchema = z.object({
   email: z.string().email(),
@@ -86,10 +87,11 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
+    // FIX: Use proper enum type instead of any
     const invitation = await db.invitation.create({
       data: {
         email: data.email,
-        role: data.role as any,
+        role: data.role as UserRole,
         organizationId: data.organizationId,
         invitedById: session.userId,
         expiresAt,

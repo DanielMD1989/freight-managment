@@ -344,9 +344,11 @@ export async function DELETE(
       await db.truck.delete({
         where: { id },
       });
-    } catch (deleteError: any) {
-      // Handle foreign key constraint errors
-      if (deleteError.code === 'P2003' || deleteError.message?.includes('foreign key constraint')) {
+    // FIX: Use unknown type with type guards
+    } catch (deleteError: unknown) {
+      // Handle foreign key constraint errors - Prisma error
+      const prismaError = deleteError as { code?: string; message?: string };
+      if (prismaError?.code === 'P2003' || prismaError?.message?.includes('foreign key constraint')) {
         return NextResponse.json(
           {
             error: "Cannot delete truck with active postings",

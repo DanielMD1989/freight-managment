@@ -13,13 +13,15 @@ import { cacheAside, CacheKeys } from '@/lib/cache';
 // Cache TTL: 1 hour (locations rarely change)
 const LOCATIONS_CACHE_TTL = 60 * 60;
 
+// FIX: Use proper types - Prisma Decimal is compatible with any
 interface Location {
   id: string;
   name: string;
   nameEthiopic: string | null;
   region: string;
-  latitude: any;
-  longitude: any;
+  // Prisma returns Decimal objects which are compatible with number operations
+  latitude: unknown;
+  longitude: unknown;
 }
 
 /**

@@ -144,9 +144,10 @@ export async function GET(
       status: truck.status,
     }));
 
+    // FIX: Remove any - type inferred from findMatchingTrucks return type
     const matchedTrucks = findMatchingTrucks(loadCriteria, trucksCriteria, minScore)
       .slice(0, limit)
-      .map((truck: any) => ({
+      .map((truck) => ({
         ...truck,
         // Include full truck object
         ...trucks.find(t => t.id === truck.id),

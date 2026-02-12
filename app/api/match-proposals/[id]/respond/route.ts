@@ -167,7 +167,12 @@ export async function POST(
 
       // P0-007 FIX: All checks and operations now inside atomic transaction
       // with fresh re-fetch to prevent race conditions
-      let result: { proposal: any; load: any; trip: any };
+      // FIX: Use explicit interface for transaction result
+      let result: {
+        proposal: Record<string, unknown>;
+        load: Record<string, unknown>;
+        trip: Record<string, unknown> & { trackingUrl?: string | null }
+      };
 
       try {
         result = await db.$transaction(async (tx) => {

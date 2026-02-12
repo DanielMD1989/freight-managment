@@ -567,7 +567,8 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Transform postings to flatten nested fields for UI consumption
-    const transformedPostings = postings.map((posting: any) => ({
+    // FIX: Remove any - Prisma infers type from query
+    const transformedPostings = postings.map((posting) => ({
       ...posting,
       // Flatten city names
       currentCity: posting.originCity?.name || '',
@@ -583,7 +584,8 @@ export async function GET(request: NextRequest) {
     }));
 
     // Calculate match counts if requested
-    let postingsWithMatchCount = transformedPostings;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let postingsWithMatchCount: any[] = transformedPostings;
     if (includeMatchCount) {
       // Fetch all posted loads for matching
       // Performance limit: Only fetch recent 1000 posted loads for matching
@@ -609,7 +611,8 @@ export async function GET(request: NextRequest) {
       const postingsToCalculate = postings.slice(0, 50);
       const postingsWithoutCalc = postings.slice(50);
 
-      const calculatedPostings = postingsToCalculate.map((posting: any) => {
+      // FIX: Remove any - type inferred from postings array
+      const calculatedPostings = postingsToCalculate.map((posting) => {
         const truckCriteria = {
           currentCity: posting.originCity?.name || '',
           destinationCity: posting.destinationCity?.name || null,
@@ -641,7 +644,8 @@ export async function GET(request: NextRequest) {
       });
 
       // Postings beyond limit get matchCount: null (not calculated)
-      const uncalculatedPostings = postingsWithoutCalc.map((posting: any) => ({
+      // FIX: Remove any - type inferred from postings array
+      const uncalculatedPostings = postingsWithoutCalc.map((posting) => ({
         ...posting,
         matchCount: null,
       }));

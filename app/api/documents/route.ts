@@ -21,7 +21,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { VerificationStatus, CompanyDocumentType, TruckDocumentType } from '@prisma/client';
+import { VerificationStatus, CompanyDocumentType, TruckDocumentType, Prisma } from '@prisma/client';
 import { requireAuth } from '@/lib/auth';
 
 /**
@@ -75,15 +75,17 @@ export async function GET(request: NextRequest) {
     // Fetch documents based on entity type
     if (entityType === 'company') {
       // Build where clause
-      const where: any = {
+      // FIX: Use Prisma type instead of any
+      const where: Prisma.CompanyDocumentWhereInput = {
         organizationId: entityId,
       };
 
-      if (typeFilter && Object.values(CompanyDocumentType).includes(typeFilter as any)) {
+      // FIX: Use proper enum types
+      if (typeFilter && Object.values(CompanyDocumentType).includes(typeFilter as CompanyDocumentType)) {
         where.type = typeFilter as CompanyDocumentType;
       }
 
-      if (statusFilter && Object.values(VerificationStatus).includes(statusFilter as any)) {
+      if (statusFilter && Object.values(VerificationStatus).includes(statusFilter as VerificationStatus)) {
         where.verificationStatus = statusFilter as VerificationStatus;
       }
 
@@ -123,15 +125,17 @@ export async function GET(request: NextRequest) {
         entityId,
       });
     } else {
-      const where: any = {
+      // FIX: Use Prisma type instead of any
+      const where: Prisma.TruckDocumentWhereInput = {
         truckId: entityId,
       };
 
-      if (typeFilter && Object.values(TruckDocumentType).includes(typeFilter as any)) {
+      // FIX: Use proper enum types
+      if (typeFilter && Object.values(TruckDocumentType).includes(typeFilter as TruckDocumentType)) {
         where.type = typeFilter as TruckDocumentType;
       }
 
-      if (statusFilter && Object.values(VerificationStatus).includes(statusFilter as any)) {
+      if (statusFilter && Object.values(VerificationStatus).includes(statusFilter as VerificationStatus)) {
         where.verificationStatus = statusFilter as VerificationStatus;
       }
 

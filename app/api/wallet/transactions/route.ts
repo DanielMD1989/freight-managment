@@ -47,8 +47,10 @@ export async function GET(request: NextRequest) {
     const offset = Math.max(parseInt(searchParams.get('offset') || '0') || 0, 0);
     const typeParam = searchParams.get('type');
     const validTypes = ['COMMISSION', 'PAYMENT', 'REFUND', 'ADJUSTMENT'] as const;
-    const type = typeParam && validTypes.includes(typeParam as any)
-      ? (typeParam as typeof validTypes[number])
+    // FIX: Use proper type narrowing
+    type ValidType = typeof validTypes[number];
+    const type: ValidType | null = typeParam && (validTypes as readonly string[]).includes(typeParam)
+      ? (typeParam as ValidType)
       : null;
 
     // Get wallet accounts

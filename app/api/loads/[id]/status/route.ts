@@ -198,13 +198,14 @@ export async function PATCH(
               { status: 400 }
             );
           }
-        } catch (feeError: any) {
+        // FIX: Use unknown type with type guard
+        } catch (feeError: unknown) {
           // Exception during fee deduction - block completion
           console.error('Service fee deduction exception:', feeError);
           return NextResponse.json(
             {
               error: 'Cannot complete trip: fee deduction failed',
-              details: feeError.message || 'Fee deduction exception',
+              details: feeError instanceof Error ? feeError.message : 'Fee deduction exception',
             },
             { status: 400 }
           );
