@@ -11,6 +11,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requirePermission, Permission } from '@/lib/rbac';
 import { db } from '@/lib/db';
 import { z } from 'zod';
+// CSRF FIX: Add CSRF validation
+import { validateCSRFWithMobile } from '@/lib/csrf';
 
 const updateFlagSchema = z.object({
   organizationId: z.string().min(1),
@@ -118,15 +120,18 @@ export async function GET(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
+    // CSRF FIX: Validate CSRF token
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     await requirePermission(Permission.MANAGE_USERS);
 
     const body = await request.json();
     const result = updateFlagSchema.safeParse(body);
     if (!result.success) {
-      return NextResponse.json(
-        { error: 'Validation failed', details: result.error.issues },
-        { status: 400 }
-      );
+      // FIX: Use zodErrorResponse to avoid leaking validation details
+      const { zodErrorResponse } = await import('@/lib/validation');
+      return zodErrorResponse(result.error);
     }
 
     const { organizationId, isFlagged, flagReason } = result.data;
@@ -146,7 +151,8 @@ export async function PATCH(request: NextRequest) {
         : 'Flag removed successfully',
       organization: updated,
     });
-  } catch (error: any) {
+  // FIX: Use unknown type with type guard
+  } catch (error: unknown) {
     console.error('Update organization flag error:', error);
 
     if (error instanceof Error && error.name === 'ForbiddenError') {
@@ -154,10 +160,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     return NextResponse.json(
-      {
-        error: 'Failed to update organization',
-        details: error.message,
-      },
+      { error: 'Failed to update organization' },
       { status: 500 }
     );
   }

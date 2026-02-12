@@ -14,6 +14,8 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { DocumentType } from '@prisma/client';
+// CSRF FIX: Add CSRF validation
+import { validateCSRFWithMobile } from '@/lib/csrf';
 
 /**
  * GET /api/loads/[id]/documents
@@ -103,6 +105,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // CSRF FIX: Validate CSRF token
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const { id } = await params;
 
     // Require authentication

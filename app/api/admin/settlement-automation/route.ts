@@ -12,6 +12,8 @@ import {
   autoVerifyExpiredPODs,
   processReadySettlements,
 } from '@/lib/settlementAutomation';
+// CSRF FIX: Add CSRF validation
+import { validateCSRFWithMobile } from '@/lib/csrf';
 
 /**
  * GET /api/admin/settlement-automation
@@ -52,6 +54,10 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    // CSRF FIX: Validate CSRF token
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     await requirePermission(Permission.MANAGE_SETTLEMENTS);
 
     const { searchParams } = request.nextUrl;
@@ -95,7 +101,8 @@ export async function POST(request: NextRequest) {
       stats,
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
+  // FIX: Use unknown type with type guard
+  } catch (error: unknown) {
     console.error('Settlement automation error:', error);
 
     if (error instanceof Error && error.name === 'ForbiddenError') {
@@ -103,10 +110,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      {
-        error: 'Settlement automation failed',
-        details: error.message,
-      },
+      { error: 'Settlement automation failed' },
       { status: 500 }
     );
   }

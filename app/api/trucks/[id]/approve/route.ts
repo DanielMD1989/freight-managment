@@ -19,6 +19,8 @@ import { UserRole } from '@prisma/client';
 // P1-001-B FIX: Import CacheInvalidation for approval status changes
 import { CacheInvalidation } from '@/lib/cache';
 import { sendEmail, createEmailHTML } from '@/lib/email';
+// CSRF FIX: Add CSRF validation
+import { validateCSRFWithMobile } from '@/lib/csrf';
 
 // Validation schema for truck approval
 const TruckApprovalSchema = z.object({
@@ -44,6 +46,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // CSRF FIX: Validate CSRF token
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const { id: truckId } = await params;
     const session = await requireAuth();
 

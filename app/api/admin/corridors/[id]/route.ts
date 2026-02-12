@@ -17,6 +17,8 @@ import {
   calculateDualPartyFeePreview,
 } from '@/lib/serviceFeeCalculation';
 import { zodErrorResponse } from '@/lib/validation';
+// CSRF FIX: Add CSRF validation
+import { validateCSRFWithMobile } from '@/lib/csrf';
 
 // Ethiopian regions for validation
 const ETHIOPIAN_REGIONS = [
@@ -202,6 +204,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // CSRF FIX: Validate CSRF token
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireAuth();
 
     // Only admins can update corridors
@@ -363,6 +369,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // CSRF FIX: Validate CSRF token
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireAuth();
 
     // Only super admins can delete corridors

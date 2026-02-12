@@ -27,6 +27,8 @@ import { hasPermission } from '@/lib/rbac/permissions';
 import { z } from 'zod';
 import { UserRole, UserStatus } from '@prisma/client';
 import { zodErrorResponse } from '@/lib/validation';
+// CSRF FIX: Add CSRF validation
+import { validateCSRFWithMobile } from '@/lib/csrf';
 // H2-H6, M12 FIX: Import types for proper typing
 import type { UserUpdateData } from '@/lib/types/admin';
 
@@ -172,6 +174,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // CSRF FIX: Validate CSRF token
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireActiveUser();
     const { id: userId } = await params;
 
@@ -326,6 +332,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // CSRF FIX: Validate CSRF token
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireActiveUser();
     const { id: userId } = await params;
 

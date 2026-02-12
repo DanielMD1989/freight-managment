@@ -10,6 +10,8 @@ import { z } from 'zod';
 import { notifyUserVerification } from '@/lib/notifications';
 import { zodErrorResponse } from '@/lib/validation';
 import { sendEmail, createEmailHTML } from '@/lib/email';
+// CSRF FIX: Add CSRF validation
+import { validateCSRFWithMobile } from '@/lib/csrf';
 
 const verifyUserSchema = z.object({
   status: z.enum(['PENDING_VERIFICATION', 'ACTIVE', 'SUSPENDED', 'REJECTED']),
@@ -22,6 +24,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // CSRF FIX: Validate CSRF token
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     // Only ADMIN and SUPER_ADMIN can verify users
     await requirePermission(Permission.VERIFY_DOCUMENTS);
 

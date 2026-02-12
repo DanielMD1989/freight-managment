@@ -107,7 +107,8 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(result);
-  } catch (error: any) {
+  // FIX: Use unknown type with type guard
+  } catch (error: unknown) {
     console.error('Error querying audit logs:', error);
 
     return NextResponse.json(
@@ -195,7 +196,8 @@ export async function stats(request: NextRequest) {
     const stats = await getAuditLogStats(organizationId, startDate, endDate);
 
     return NextResponse.json(stats);
-  } catch (error: any) {
+  // FIX: Use unknown type with type guard
+  } catch (error: unknown) {
     console.error('Error getting audit log stats:', error);
 
     return NextResponse.json(
