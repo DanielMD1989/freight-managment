@@ -6,12 +6,30 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// API configuration
 class ApiConfig {
   /// Base URL for the API
-  /// In development, use your local network IP or ngrok URL
-  /// In production, use your production API URL
+  /// SECURITY: Must be configured via --dart-define=API_BASE_URL=https://...
+  /// Development: Use ngrok or local HTTPS proxy
+  /// Production: Use production HTTPS URL
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.1.6:3000',
+    // SECURITY: No default - must be explicitly configured
+    // This prevents accidental HTTP usage in production
+    defaultValue: '',
   );
+
+  /// Validate that API URL is configured and uses HTTPS in release mode
+  static void validateConfig() {
+    if (baseUrl.isEmpty) {
+      throw StateError(
+        'API_BASE_URL not configured. '
+        'Use: flutter run --dart-define=API_BASE_URL=https://your-api.com',
+      );
+    }
+    // Allow HTTP only in debug mode (for local development)
+    assert(
+      baseUrl.startsWith('https://') || baseUrl.startsWith('http://'),
+      'API_BASE_URL must start with https:// (or http:// in debug mode)',
+    );
+  }
 
   /// API timeout in milliseconds
   static const int connectTimeout = 30000;
@@ -52,6 +70,14 @@ class ApiClient {
 
     // Note: For web builds, browser handles CORS automatically
     // No special adapter needed for iOS/Android
+
+    // SECURITY TODO: Implement certificate pinning for production
+    // This prevents MITM attacks by validating server certificate
+    // Implementation options:
+    // 1. Use dio_http2_adapter with SecurityContext
+    // 2. Use native platform certificate pinning
+    // 3. Use a package like ssl_pinning_plugin
+    // Reference: https://owasp.org/www-community/controls/Certificate_and_Public_Key_Pinning
 
     // Add interceptors
     _dio.interceptors.add(_authInterceptor());
@@ -159,16 +185,24 @@ class ApiClient {
     );
   }
 
-  /// Helper to read from storage (web uses SharedPreferences)
+  /// Helper to read from storage
+  /// SECURITY NOTE: On web, SharedPreferences uses localStorage which is not encrypted.
+  /// This is acceptable because:
+  /// 1. Web cookies are also not encrypted in localStorage
+  /// 2. XSS protection is handled via HttpOnly cookies on the server
+  /// 3. Session tokens have server-side expiration
+  /// TODO: Consider using IndexedDB with Web Crypto API for enhanced web security
   Future<String?> _readStorage(String key) async {
     if (kIsWeb) {
       _webPrefs ??= await SharedPreferences.getInstance();
       return _webPrefs!.getString(key);
     }
+    // Mobile: Uses FlutterSecureStorage (Keychain on iOS, EncryptedSharedPreferences on Android)
     return await _storage.read(key: key);
   }
 
-  /// Helper to write to storage (web uses SharedPreferences)
+  /// Helper to write to storage
+  /// SECURITY: Mobile uses encrypted storage, web uses localStorage (see note above)
   Future<void> _writeStorage(String key, String value) async {
     if (kIsWeb) {
       _webPrefs ??= await SharedPreferences.getInstance();

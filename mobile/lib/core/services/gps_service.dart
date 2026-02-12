@@ -52,7 +52,10 @@ class GpsService {
       _lastPosition = position;
       return position;
     } catch (e) {
-      debugPrint('[GPS] Error getting position: $e');
+      assert(() {
+        debugPrint('[GPS] Error getting position: $e');
+        return true;
+      }());
       return null;
     }
   }
@@ -77,7 +80,10 @@ class GpsService {
       ).listen(
         _onPositionUpdate,
         onError: (error) {
-          debugPrint('[GPS] Position stream error: $error');
+          assert(() {
+            debugPrint('[GPS] Position stream error: $error');
+            return true;
+          }());
         },
       );
 
@@ -87,10 +93,16 @@ class GpsService {
         (_) => _uploadCurrentPosition(),
       );
 
-      debugPrint('[GPS] Tracking started for truck $truckId');
+      assert(() {
+        debugPrint('[GPS] Tracking started for truck $truckId');
+        return true;
+      }());
       return true;
     } catch (e) {
-      debugPrint('[GPS] Error starting tracking: $e');
+      assert(() {
+        debugPrint('[GPS] Error starting tracking: $e');
+        return true;
+      }());
       return false;
     }
   }
@@ -105,13 +117,20 @@ class GpsService {
 
     _currentTruckId = null;
 
-    debugPrint('[GPS] Tracking stopped');
+    assert(() {
+      debugPrint('[GPS] Tracking stopped');
+      return true;
+    }());
   }
 
   /// Handle position update
   void _onPositionUpdate(Position position) {
     _lastPosition = position;
-    debugPrint('[GPS] Position update: ${position.latitude}, ${position.longitude}');
+    // SECURITY: Don't log GPS coordinates - privacy sensitive data
+    assert(() {
+      debugPrint('[GPS] Position updated');
+      return true;
+    }());
 
     // Upload immediately on significant movement
     _uploadPosition(position);
@@ -136,9 +155,15 @@ class GpsService {
         },
       );
 
-      debugPrint('[GPS] Position uploaded successfully');
+      assert(() {
+        debugPrint('[GPS] Position uploaded successfully');
+        return true;
+      }());
     } catch (e) {
-      debugPrint('[GPS] Error uploading position: $e');
+      assert(() {
+        debugPrint('[GPS] Error uploading position: $e');
+        return true;
+      }());
       // Store locally for later sync if offline
       // TODO: Implement offline queue
     }
