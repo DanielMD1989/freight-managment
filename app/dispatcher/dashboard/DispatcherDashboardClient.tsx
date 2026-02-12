@@ -11,7 +11,7 @@
  * Sections: Unassigned Loads, Active Trips, Trucks Overview
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
   StatCard,
@@ -66,8 +66,8 @@ export default function DispatcherDashboardClient({
   const firstName = user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'Dispatcher';
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-  // Fetch loads
-  const fetchLoads = async () => {
+  // L5 FIX: Use useCallback to prevent stale closure bugs
+  const fetchLoads = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -100,10 +100,10 @@ export default function DispatcherDashboardClient({
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter, searchQuery]);
 
-  // Fetch trucks
-  const fetchTrucks = async () => {
+  // L5 FIX: Use useCallback to prevent stale closure bugs
+  const fetchTrucks = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -128,16 +128,16 @@ export default function DispatcherDashboardClient({
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // Fetch data when tab changes
+  // L5 FIX: Include fetch functions in dependency array
   useEffect(() => {
     if (activeTab === 'loads') {
       fetchLoads();
     } else {
       fetchTrucks();
     }
-  }, [activeTab, statusFilter, searchQuery]);
+  }, [activeTab, fetchLoads, fetchTrucks]);
 
   // Use API-provided stats (accurate, full database counts) with fallback to client calculation
   const stats = dashboardData?.stats;

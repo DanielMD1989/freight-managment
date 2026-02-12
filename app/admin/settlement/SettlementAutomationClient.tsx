@@ -29,6 +29,8 @@ export default function SettlementAutomationClient() {
   const [running, setRunning] = useState(false);
   const [lastRun, setLastRun] = useState<string | null>(null);
   const [result, setResult] = useState<AutomationResult | null>(null);
+  // L41 FIX: Add error state to surface API failures to user
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchStats();
@@ -37,15 +39,20 @@ export default function SettlementAutomationClient() {
   const fetchStats = async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await fetch('/api/admin/settlement-automation');
 
       if (response.ok) {
         const data = await response.json();
         setStats(data.stats);
       } else {
+        // L41 FIX: Set error state instead of just logging
+        setError('Failed to fetch settlement statistics');
         console.error('Failed to fetch stats');
       }
     } catch (error) {
+      // L41 FIX: Set error state instead of just logging
+      setError('Network error while fetching statistics');
       console.error('Error fetching stats:', error);
     } finally {
       setLoading(false);
@@ -96,11 +103,12 @@ export default function SettlementAutomationClient() {
     );
   }
 
-  if (!stats) {
+  // L41 FIX: Show error state to user
+  if (!stats || error) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-6">
         <h3 className="text-red-800 font-semibold mb-2">Error</h3>
-        <p className="text-red-700">Failed to load settlement statistics</p>
+        <p className="text-red-700">{error || 'Failed to load settlement statistics'}</p>
         <button
           onClick={fetchStats}
           className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"

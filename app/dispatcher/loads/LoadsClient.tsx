@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import FindMatchesModal from '@/components/dispatcher/FindMatchesModal';
 
@@ -51,7 +51,8 @@ export default function LoadsClient() {
   const [showFindTrucks, setShowFindTrucks] = useState(false);
   const [selectedLoad, setSelectedLoad] = useState<Load | null>(null);
 
-  const fetchLoads = async () => {
+  // L5 FIX: Use useCallback to prevent stale closure bugs
+  const fetchLoads = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -88,20 +89,20 @@ export default function LoadsClient() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, statusFilter, truckTypeFilter, searchQuery]);
 
+  // L5 FIX: Include fetchLoads in dependency array
   useEffect(() => {
     fetchLoads();
-  }, [page, statusFilter, truckTypeFilter]);
+  }, [fetchLoads]);
 
-  // Debounced search
+  // Debounced search - reset page when search changes
   useEffect(() => {
     const timer = setTimeout(() => {
-      setPage(1);
-      fetchLoads();
+      if (page !== 1) setPage(1);
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFindTrucks = (load: Load) => {
     setSelectedLoad(load);

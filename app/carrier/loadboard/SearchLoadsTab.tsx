@@ -100,6 +100,11 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
     setLoadingCities(true);
     try {
       const response = await fetch('/api/ethiopian-locations');
+      // L41 FIX: Check response.ok before parsing
+      if (!response.ok) {
+        console.error('Failed to fetch Ethiopian cities:', response.status);
+        return;
+      }
       const data = await response.json();
       setEthiopianCities(data.locations || []);
     } catch (error) {
@@ -122,6 +127,11 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
     setLoadingSavedSearches(true);
     try {
       const response = await fetch('/api/saved-searches?type=LOADS');
+      // L41 FIX: Check response.ok before parsing
+      if (!response.ok) {
+        console.error('Failed to fetch saved searches:', response.status);
+        return;
+      }
       const data = await response.json();
       setSavedSearches(data.searches || []);
     } catch (error) {
@@ -279,9 +289,12 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
 
   /**
    * Handle successful load request sent
+   * L41 FIX: Refresh load list after request to get real server state
    */
   const handleLoadRequestSent = (loadId: string) => {
     setPendingRequestLoadIds(prev => new Set([...prev, loadId]));
+    // Refresh pending requests to ensure state is accurate
+    fetchPendingLoadRequests();
   };
 
   /**
@@ -338,6 +351,10 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
       }
 
       const response = await fetch(`/api/loads?${params.toString()}`);
+      // L41 FIX: Check response.ok before parsing
+      if (!response.ok) {
+        throw new Error('Failed to fetch loads');
+      }
       const data = await response.json();
       // Deduplicate loads by ID to prevent duplicates
       const loadMap = new Map<string, Load>();

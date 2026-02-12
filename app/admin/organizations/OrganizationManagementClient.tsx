@@ -79,6 +79,8 @@ export default function OrganizationManagementClient({
 
   const [searchInput, setSearchInput] = useState(initialSearch || '');
   const [typeFilter, setTypeFilter] = useState(initialType || '');
+  // L41 FIX: Add submitting state to prevent rapid clicks
+  const [submittingOrgId, setSubmittingOrgId] = useState<string | null>(null);
 
   /**
    * Handle search submit
@@ -144,6 +146,10 @@ export default function OrganizationManagementClient({
       return;
     }
 
+    // L41 FIX: Prevent rapid clicks
+    if (submittingOrgId) return;
+    setSubmittingOrgId(orgId);
+
     try {
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/admin/organizations/${orgId}/verify`, {
@@ -160,6 +166,8 @@ export default function OrganizationManagementClient({
       }
     } catch (error) {
       alert('An error occurred while verifying the organization');
+    } finally {
+      setSubmittingOrgId(null);
     }
   };
 
@@ -174,6 +182,10 @@ export default function OrganizationManagementClient({
     ) {
       return;
     }
+
+    // L41 FIX: Prevent rapid clicks
+    if (submittingOrgId) return;
+    setSubmittingOrgId(orgId);
 
     try {
       const csrfToken = await getCSRFToken();
@@ -191,6 +203,8 @@ export default function OrganizationManagementClient({
       }
     } catch (error) {
       alert('An error occurred while removing verification');
+    } finally {
+      setSubmittingOrgId(null);
     }
   };
 

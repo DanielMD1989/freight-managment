@@ -304,6 +304,8 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
       toast.success('Load posted successfully!');
       setActiveStatus('POSTED');
+      // L41 FIX: Refresh load list after mutation
+      fetchLoads();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to post load';
       toast.error(message);
@@ -356,6 +358,8 @@ export default function PostLoadsTab({ user, onSwitchToSearchTrucks }: PostLoads
 
       toast.success('Load duplicated! Edit and post when ready.');
       setActiveStatus('UNPOSTED');
+      // L41 FIX: Refresh load list after mutation
+      fetchLoads();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to duplicate load';
       toast.error(message);

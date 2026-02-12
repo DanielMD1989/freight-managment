@@ -550,7 +550,10 @@ export default function SearchTrucksTab({ user, initialFilters }: SearchTrucksTa
       key: 'pending',
       label: 'Pending',
       variant: 'secondary',
-      onClick: () => {},
+      disabled: true,
+      onClick: () => {
+        alert('Your booking request is pending carrier approval. You will be notified when they respond.');
+      },
       show: (row: TruckPostingWithCarrier) => pendingRequestTruckIds.has(row.truck?.id || row.truckId),
     },
   ], [pendingRequestTruckIds]);
