@@ -37,7 +37,7 @@ interface ExtendedDataTableProps<T> extends DataTableProps<T> {
   expandedRowIds?: string[];
 }
 
-export default function DataTable<T = any>({
+export default function DataTable<T extends object = Record<string, unknown>>({
   columns,
   data,
   expandable = false,
@@ -124,14 +124,18 @@ export default function DataTable<T = any>({
   /**
    * Toggle select all (memoized)
    */
+  // Helper to safely access object properties by string key
+  const getProperty = (obj: T, key: string): unknown => {
+    return (obj as Record<string, unknown>)[key];
+  };
+
   const toggleSelectAll = useCallback(() => {
     if (!onSelectionChange) return;
 
     if (selectedRows.length === data.length) {
       onSelectionChange([]);
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onSelectionChange(data.map((row: any) => row[rowKey]));
+      onSelectionChange(data.map((row: T) => String(getProperty(row, rowKey))));
     }
   }, [selectedRows, data, onSelectionChange, rowKey]);
 
@@ -156,10 +160,9 @@ export default function DataTable<T = any>({
   const sortedData = useMemo(() => {
     if (!sortColumn) return data;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return [...data].sort((a: any, b: any) => {
-      const aVal = a[sortColumn];
-      const bVal = b[sortColumn];
+    return [...data].sort((a: T, b: T) => {
+      const aVal = getProperty(a, sortColumn);
+      const bVal = getProperty(b, sortColumn);
 
       if (aVal === null || aVal === undefined) return 1;
       if (bVal === null || bVal === undefined) return -1;
@@ -181,17 +184,18 @@ export default function DataTable<T = any>({
    * Render cell value
    */
   const renderCell = (column: TableColumn, row: T) => {
+    const cellValue = getProperty(row, column.key);
     if (column.render) {
-      return column.render((row as any)[column.key], row);
+      return column.render(cellValue, row);
     }
-    return (row as any)[column.key]?.toString() || '';
+    return cellValue !== null && cellValue !== undefined ? String(cellValue) : '';
   };
 
   /**
    * Get row ID
    */
   const getRowId = (row: T): string => {
-    return (row as any)[rowKey];
+    return String(getProperty(row, rowKey));
   };
 
   // Loading state with enhanced skeleton

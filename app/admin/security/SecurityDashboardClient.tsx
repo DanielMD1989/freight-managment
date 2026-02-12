@@ -20,6 +20,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Shield, AlertTriangle, Download, XCircle, CheckCircle } from 'lucide-react';
 
+interface SecurityEventDetails {
+  [key: string]: string | number | boolean | null | undefined;
+}
+
 interface AuditLog {
   id: string;
   eventType: string;
@@ -27,7 +31,7 @@ interface AuditLog {
   userId?: string;
   ipAddress?: string;
   createdAt: string;
-  details?: any;
+  details?: SecurityEventDetails;
 }
 
 interface SecurityStats {

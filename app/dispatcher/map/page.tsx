@@ -262,7 +262,12 @@ export default function DispatcherMapPage() {
 
       if (response.ok) {
         const data = await response.json();
-        data.results?.forEach((result: any, index: number) => {
+        interface DistanceResult {
+          distanceKm: number;
+          durationMinutes: number;
+          source: string;
+        }
+        data.results?.forEach((result: DistanceResult, index: number) => {
           distances[availableTrucks[index].id] = {
             distanceKm: result.distanceKm,
             durationMinutes: result.durationMinutes,

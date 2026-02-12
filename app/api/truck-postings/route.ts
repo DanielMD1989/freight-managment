@@ -585,8 +585,8 @@ export async function GET(request: NextRequest) {
     }));
 
     // Calculate match counts if requested
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let postingsWithMatchCount: any[] = transformedPostings;
+    type TransformedPosting = typeof transformedPostings[number] & { matchCount?: number | null };
+    let postingsWithMatchCount: TransformedPosting[] = transformedPostings;
     if (includeMatchCount) {
       // Fetch all posted loads for matching
       // Performance limit: Only fetch recent 1000 posted loads for matching
@@ -608,33 +608,35 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' }, // Most recent loads first
       });
 
-      // Limit match count calculation to first 50 postings to prevent O(n*m) performance issues
-      const postingsToCalculate = postings.slice(0, 50);
-      const postingsWithoutCalc = postings.slice(50);
+      // Pre-filter and transform loads once for performance
+      const loadsCriteria = loads
+        .filter(load => load.pickupCity && load.deliveryCity && load.truckType)
+        .map(load => ({
+          pickupCity: load.pickupCity!,
+          deliveryCity: load.deliveryCity!,
+          pickupDate: load.pickupDate,
+          truckType: load.truckType,
+          weight: load.weight ? Number(load.weight) : null,
+          lengthM: load.lengthM ? Number(load.lengthM) : null,
+          fullPartial: load.fullPartial,
+        }));
 
-      // FIX: Remove any - type inferred from postings array
-      const calculatedPostings = postingsToCalculate.map((posting) => {
+      // Limit match count calculation to first 50 postings to prevent O(n*m) performance issues
+      postingsWithMatchCount = transformedPostings.map((posting, index) => {
+        // Only calculate matches for first 50 postings
+        if (index >= 50) {
+          return { ...posting, matchCount: null };
+        }
+
         const truckCriteria = {
-          currentCity: posting.originCity?.name || '',
-          destinationCity: posting.destinationCity?.name || null,
-          availableDate: posting.availableFrom,
-          truckType: posting.truck?.truckType || '',
-          maxWeight: posting.availableWeight ? Number(posting.availableWeight) : null,
-          lengthM: posting.availableLength ? Number(posting.availableLength) : null,
+          currentCity: posting.currentCity,
+          destinationCity: posting.destinationCity,
+          availableDate: posting.availableDate,
+          truckType: posting.truckType,
+          maxWeight: posting.maxWeight ? Number(posting.maxWeight) : null,
+          lengthM: posting.lengthM ? Number(posting.lengthM) : null,
           fullPartial: posting.fullPartial,
         };
-
-        const loadsCriteria = loads
-          .filter(load => load.pickupCity && load.deliveryCity && load.truckType)
-          .map(load => ({
-            pickupCity: load.pickupCity!,
-            deliveryCity: load.deliveryCity!,
-            pickupDate: load.pickupDate,
-            truckType: load.truckType,
-            weight: load.weight ? Number(load.weight) : null,
-            lengthM: load.lengthM ? Number(load.lengthM) : null,
-            fullPartial: load.fullPartial,
-          }));
 
         const matches = findMatchingLoads(truckCriteria, loadsCriteria, 50);
 
@@ -643,15 +645,6 @@ export async function GET(request: NextRequest) {
           matchCount: matches.length,
         };
       });
-
-      // Postings beyond limit get matchCount: null (not calculated)
-      // FIX: Remove any - type inferred from postings array
-      const uncalculatedPostings = postingsWithoutCalc.map((posting) => ({
-        ...posting,
-        matchCount: null,
-      }));
-
-      postingsWithMatchCount = [...calculatedPostings, ...uncalculatedPostings];
     }
 
     return NextResponse.json({

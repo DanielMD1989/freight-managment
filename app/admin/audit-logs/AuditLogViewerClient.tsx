@@ -11,6 +11,10 @@
 
 import { useEffect, useState } from 'react';
 
+interface AuditLogMetadata {
+  [key: string]: string | number | boolean | null | undefined | AuditLogMetadata;
+}
+
 interface AuditLog {
   id: string;
   eventType: string;
@@ -24,7 +28,7 @@ interface AuditLog {
   action: string | null;
   result: string;
   message: string;
-  metadata: any;
+  metadata: AuditLogMetadata | null;
   timestamp: string;
   user?: {
     id: string;
