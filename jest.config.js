@@ -1,25 +1,31 @@
 /**
- * Jest Configuration for Security Testing
+ * Jest Configuration
  *
- * Sprint 9 - Story 9.10: Security Testing & QA
+ * Supports both API tests (node) and React component tests (jsdom)
+ * Uses @jest/environment-jsdom docblock directive for component tests
  */
 
 const nextJest = require('next/jest')
 
 const createJestConfig = nextJest({
-  // Provide the path to your Next.js app to load next.config.js and .env files in your test environment
   dir: './',
 })
 
-// Add any custom config to be passed to Jest
+// Custom Jest config
 const customJestConfig = {
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/$1',
+  },
+  transformIgnorePatterns: [
+    '/node_modules/(?!jose)',
+  ],
+  // Default to node environment for API tests
+  // Component tests should use @jest-environment jsdom docblock
   testEnvironment: 'node',
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testMatch: [
     '**/__tests__/**/*.test.ts',
     '**/__tests__/**/*.test.tsx',
-    '**/*.test.ts',
-    '**/*.test.tsx',
   ],
   testPathIgnorePatterns: [
     '/node_modules/',
@@ -29,15 +35,10 @@ const customJestConfig = {
   collectCoverageFrom: [
     'app/**/*.{js,jsx,ts,tsx}',
     'lib/**/*.{js,jsx,ts,tsx}',
+    'components/**/*.{js,jsx,ts,tsx}',
     '!**/*.d.ts',
     '!**/node_modules/**',
     '!**/.next/**',
-  ],
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/$1',
-  },
-  transformIgnorePatterns: [
-    '/node_modules/(?!jose)',
   ],
   coverageThreshold: {
     global: {
@@ -49,5 +50,4 @@ const customJestConfig = {
   },
 }
 
-// createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
 module.exports = createJestConfig(customJestConfig)
