@@ -21,7 +21,18 @@
     "loadtest:api": "npx tsx scripts/load-test-api.ts",
     "health:check": "curl -s http://localhost:3000/api/health?detailed=true | npx json",
     "storage:migrate": "npx tsx scripts/migrate-storage-to-s3.ts",
-    "storage:migrate:dry-run": "npx tsx scripts/migrate-storage-to-s3.ts --dry-run"
+    "storage:migrate:dry-run": "npx tsx scripts/migrate-storage-to-s3.ts --dry-run",
+    "prepare": "husky",
+    "type-check": "tsc -p tsconfig.build.json --noEmit"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yaml,yml}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.974.0",
@@ -72,8 +83,10 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
     "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
     "jest": "^29.7.0",
     "jest-environment-node": "^29.7.0",
+    "lint-staged": "^16.2.7",
     "prettier": "^3.7.4",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "tailwindcss": "^4",
