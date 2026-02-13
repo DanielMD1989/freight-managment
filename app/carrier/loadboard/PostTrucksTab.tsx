@@ -118,6 +118,11 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     setLoadingCities(true);
     try {
       const response = await fetch('/api/ethiopian-locations');
+      // L41 FIX: Check response.ok before parsing
+      if (!response.ok) {
+        console.error('Failed to fetch Ethiopian cities:', response.status);
+        return;
+      }
       const data = await response.json();
       setEthiopianCities(data.locations || []);
     } catch (error) {
@@ -134,6 +139,11 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     setLoadingApprovedTrucks(true);
     try {
       const response = await fetch('/api/trucks?myTrucks=true&approvalStatus=APPROVED');
+      // L41 FIX: Check response.ok before parsing
+      if (!response.ok) {
+        console.error('Failed to fetch approved trucks:', response.status);
+        return;
+      }
       const data = await response.json();
       setApprovedTrucks(data.trucks || []);
     } catch (error) {
@@ -257,6 +267,8 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       setStatusCounts(counts);
     } catch (error) {
       console.error('Failed to fetch trucks:', error);
+      // L41 FIX: Show error to user
+      toast.error('Failed to load trucks. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -269,6 +281,11 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     setLoadingMatches(true);
     try {
       const response = await fetch(`/api/truck-postings/${truckId}/matching-loads?limit=50`);
+      // L41 FIX: Check response.ok before parsing
+      if (!response.ok) {
+        console.error('Failed to fetch matching loads:', response.status);
+        return [];
+      }
       const data = await response.json();
       return data.matches || [];
     } catch (error) {
@@ -533,8 +550,13 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       }
 
       toast.success('Truck posted successfully!');
-      // Switch to POSTED tab and refresh (useEffect will fetch)
-      setActiveStatus('POSTED');
+      // L41 FIX: Always refresh and switch to POSTED tab
+      // If already on POSTED, setActiveStatus won't trigger useEffect, so call fetchTrucks directly
+      if (activeStatus === 'POSTED') {
+        await fetchTrucks();
+      } else {
+        setActiveStatus('POSTED');
+      }
     } catch (error: unknown) {
       console.error('Post truck error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to post truck');

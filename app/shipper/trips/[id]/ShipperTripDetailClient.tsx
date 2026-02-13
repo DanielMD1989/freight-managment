@@ -130,6 +130,10 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmationNotes, setConfirmationNotes] = useState('');
   const [podDocuments, setPodDocuments] = useState<TripPod[]>(initialTrip.podDocuments || []);
+  // L41 FIX: Add loading and error states
+  const [loadingPod, setLoadingPod] = useState(false);
+  const [podError, setPodError] = useState<string | null>(null);
+  const [loadingProgress, setLoadingProgress] = useState(false);
 
   const statusConfig = STATUS_CONFIG[trip.status] || STATUS_CONFIG.ASSIGNED;
   const isActiveTrip = trip.status === 'IN_TRANSIT';
@@ -146,14 +150,23 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
   }, [trip.id, trip.status]);
 
   const fetchPodDocuments = async () => {
+    setLoadingPod(true);
+    setPodError(null);
     try {
       const response = await fetch(`/api/trips/${trip.id}/pod`);
       if (response.ok) {
         const data = await response.json();
         setPodDocuments(data.pods || []);
+      } else {
+        // L41 FIX: Set error state for user feedback
+        setPodError('Failed to load POD documents');
       }
     } catch (error) {
       console.error('Failed to fetch POD documents:', error);
+      // L41 FIX: Set error state for user feedback
+      setPodError('Failed to load POD documents');
+    } finally {
+      setLoadingPod(false);
     }
   };
 
@@ -205,6 +218,7 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
   }, [isActiveTrip, trip.id]);
 
   const fetchTripProgress = async () => {
+    setLoadingProgress(true);
     try {
       const response = await fetch(`/api/loads/${trip.id}/progress`);
       if (response.ok) {
@@ -219,6 +233,8 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
       }
     } catch (error) {
       console.error('Failed to fetch progress:', error);
+    } finally {
+      setLoadingProgress(false);
     }
   };
 

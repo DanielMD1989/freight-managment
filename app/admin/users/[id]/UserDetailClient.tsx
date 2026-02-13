@@ -113,6 +113,8 @@ export default function UserDetailClient({
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [walletLoading, setWalletLoading] = useState(true);
+  // L41 FIX: Add wallet error state to surface API failures
+  const [walletError, setWalletError] = useState<string | null>(null);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
   const [topUpAmount, setTopUpAmount] = useState('');
   const [topUpPaymentMethod, setTopUpPaymentMethod] = useState('BANK_TRANSFER');
@@ -140,6 +142,7 @@ export default function UserDetailClient({
 
   const fetchWalletData = async () => {
     try {
+      setWalletError(null);
       // Fetch wallet and transactions for the user
       const response = await fetch(`/api/admin/users/${user.id}/wallet`);
       if (response.ok) {
@@ -148,8 +151,13 @@ export default function UserDetailClient({
           setWallet(data.wallet);
           setTransactions(data.transactions || []);
         }
+      } else {
+        // L41 FIX: Set wallet error state instead of silently failing
+        setWalletError('Failed to fetch wallet data');
       }
     } catch (err) {
+      // L41 FIX: Set wallet error state instead of just logging
+      setWalletError('Network error while fetching wallet');
       console.error('Failed to fetch wallet:', err);
     } finally {
       setWalletLoading(false);
@@ -276,6 +284,9 @@ export default function UserDetailClient({
     setError(null);
   };
 
+  // L41 FIX: Add delete loading state
+  const [isDeleting, setIsDeleting] = useState(false);
+
   /**
    * Handle delete
    */
@@ -283,6 +294,10 @@ export default function UserDetailClient({
     if (!confirm(`Are you sure you want to delete ${user.email}? This action cannot be undone.`)) {
       return;
     }
+
+    // L41 FIX: Set loading state during deletion
+    setIsDeleting(true);
+    setError(null);
 
     try {
       const csrfToken = await getCSRFToken();
@@ -301,6 +316,8 @@ export default function UserDetailClient({
       }
     } catch (err) {
       setError('An error occurred while deleting');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -519,9 +536,10 @@ export default function UserDetailClient({
             </div>
             <button
               onClick={handleDelete}
-              className="px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors font-medium"
+              disabled={isDeleting}
+              className="px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Delete User
+              {isDeleting ? 'Deleting...' : 'Delete User'}
             </button>
           </div>
         )}
@@ -552,6 +570,17 @@ export default function UserDetailClient({
 
           {walletLoading ? (
             <div className="text-center py-4 text-gray-500">Loading wallet...</div>
+          ) : walletError ? (
+            /* L41 FIX: Show wallet error state */
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-700">{walletError}</p>
+              <button
+                onClick={fetchWalletData}
+                className="mt-2 text-sm text-red-600 hover:text-red-800 font-medium"
+              >
+                Retry
+              </button>
+            </div>
           ) : wallet ? (
             <div className="space-y-6">
               {/* Balance Card */}

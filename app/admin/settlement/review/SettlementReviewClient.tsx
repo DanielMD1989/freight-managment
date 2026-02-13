@@ -83,6 +83,8 @@ export default function SettlementReviewClient() {
   const [approving, setApproving] = useState(false);
   const [approvalError, setApprovalError] = useState<string | null>(null);
   const [approvalSuccess, setApprovalSuccess] = useState<string | null>(null);
+  // L41 FIX: Add fetch error state to surface API failures
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSettlements();
@@ -91,6 +93,7 @@ export default function SettlementReviewClient() {
   const fetchSettlements = async () => {
     try {
       setLoading(true);
+      setFetchError(null);
       const response = await fetch(
         `/api/admin/settlements?status=${activeTab}&limit=100`
       );
@@ -100,9 +103,13 @@ export default function SettlementReviewClient() {
         setLoads(data.loads);
         setTotalCount(data.totalCount);
       } else {
+        // L41 FIX: Set error state instead of just logging
+        setFetchError('Failed to fetch settlements');
         console.error('Failed to fetch settlements');
       }
     } catch (error) {
+      // L41 FIX: Set error state instead of just logging
+      setFetchError('Network error while fetching settlements');
       console.error('Error fetching settlements:', error);
     } finally {
       setLoading(false);
@@ -173,6 +180,22 @@ export default function SettlementReviewClient() {
       <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-12 text-center">
         <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#1e9c99]"></div>
         <p className="text-[#064d51]/70 mt-4">Loading settlements...</p>
+      </div>
+    );
+  }
+
+  // L41 FIX: Show error state to user
+  if (fetchError) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+        <h3 className="text-red-800 font-semibold mb-2">Error</h3>
+        <p className="text-red-700">{fetchError}</p>
+        <button
+          onClick={fetchSettlements}
+          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+        >
+          Retry
+        </button>
       </div>
     );
   }
