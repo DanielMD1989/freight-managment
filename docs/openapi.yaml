@@ -1,0 +1,2898 @@
+openapi: 3.0.3
+info:
+  title: Freight Management Platform API
+  description: |
+    Comprehensive API for Ethiopian freight logistics platform.
+
+    ## Authentication
+    Most endpoints require authentication via session cookie or Bearer token.
+    - **Web clients**: Use session cookie with CSRF token in X-CSRF-Token header
+    - **Mobile clients**: Use Bearer token in Authorization header
+
+    ## Rate Limiting
+    All endpoints are rate-limited. When exceeded, returns 429 with Retry-After header.
+
+    ## Error Handling
+    - 400: Validation error (Zod schema)
+    - 401: Unauthorized
+    - 403: Forbidden (insufficient permissions)
+    - 404: Resource not found
+    - 409: Conflict (state machine violation)
+    - 429: Rate limit exceeded
+    - 500: Internal server error
+  version: 1.0.0
+  contact:
+    name: Freight Platform Support
+    email: support@freightplatform.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:3000/api
+    description: Development
+  - url: https://api.freightplatform.com/api
+    description: Production
+
+tags:
+  - name: auth
+    description: Authentication & session management
+  - name: user
+    description: User profile & security settings
+  - name: loads
+    description: Load/shipment management
+  - name: trucks
+    description: Truck/vehicle management
+  - name: truck-postings
+    description: Carrier truck availability postings
+  - name: trips
+    description: Trip lifecycle management
+  - name: wallet
+    description: Financial operations & wallet
+  - name: organizations
+    description: Organization management
+  - name: dispatcher
+    description: Dispatcher panel operations
+  - name: admin
+    description: Admin panel operations
+  - name: matching
+    description: Load/truck matching
+  - name: gps
+    description: GPS & tracking
+  - name: documents
+    description: Document management
+  - name: notifications
+    description: Notification system
+
+paths:
+  # ============================================================================
+  # AUTHENTICATION
+  # ============================================================================
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: User login
+      description: Authenticate user with email/password. May require MFA.
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful or MFA required
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/LoginResponse'
+                  - $ref: '#/components/schemas/MFARequiredResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /auth/register:
+    post:
+      tags: [auth]
+      summary: Register new user
+      description: Create new user account with organization
+      operationId: register
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          description: Email already registered
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Logout user
+      description: Invalidate current session
+      operationId: logout
+      responses:
+        '200':
+          description: Logout successful
+
+  /auth/me:
+    get:
+      tags: [auth]
+      summary: Get current user
+      description: Get authenticated user's profile
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/verify-mfa:
+    post:
+      tags: [auth]
+      summary: Verify MFA code
+      description: Complete login with MFA OTP code
+      operationId: verifyMFA
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mfaToken, code]
+              properties:
+                mfaToken:
+                  type: string
+                code:
+                  type: string
+                  pattern: '^[0-9]{6}$'
+      responses:
+        '200':
+          description: MFA verified, login complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid or expired MFA code
+
+  /auth/forgot-password:
+    post:
+      tags: [auth]
+      summary: Request password reset
+      operationId: forgotPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Reset email sent (always returns 200 for security)
+
+  /auth/reset-password:
+    post:
+      tags: [auth]
+      summary: Reset password with token
+      operationId: resetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token:
+                  type: string
+                password:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Password reset successful
+        '400':
+          description: Invalid or expired token
+
+  # ============================================================================
+  # USER MANAGEMENT
+  # ============================================================================
+  /user/profile:
+    get:
+      tags: [user]
+      summary: Get user profile
+      operationId: getUserProfile
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+    patch:
+      tags: [user]
+      summary: Update user profile
+      operationId: updateUserProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profile updated
+
+  /user/change-password:
+    post:
+      tags: [user]
+      summary: Change password
+      operationId: changePassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Password changed
+        '401':
+          description: Current password incorrect
+
+  /user/mfa/enable:
+    post:
+      tags: [user]
+      summary: Enable MFA
+      operationId: enableMFA
+      responses:
+        '200':
+          description: MFA enabled, verification code sent
+
+  /user/mfa/disable:
+    post:
+      tags: [user]
+      summary: Disable MFA
+      operationId: disableMFA
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+      responses:
+        '200':
+          description: MFA disabled
+
+  /user/sessions:
+    get:
+      tags: [user]
+      summary: List active sessions
+      operationId: listSessions
+      responses:
+        '200':
+          description: List of active sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Session'
+
+  /user/sessions/revoke-all:
+    post:
+      tags: [user]
+      summary: Revoke all sessions except current
+      operationId: revokeAllSessions
+      responses:
+        '200':
+          description: All other sessions revoked
+
+  # ============================================================================
+  # LOADS
+  # ============================================================================
+  /loads:
+    get:
+      tags: [loads]
+      summary: List loads
+      description: Get paginated list of loads with filters
+      operationId: listLoads
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+          description: Filter by status (comma-separated)
+        - name: pickupCity
+          in: query
+          schema:
+            type: string
+        - name: deliveryCity
+          in: query
+          schema:
+            type: string
+        - name: truckType
+          in: query
+          schema:
+            $ref: '#/components/schemas/TruckType'
+        - name: myLoads
+          in: query
+          schema:
+            type: boolean
+          description: Shipper's own loads only
+        - name: myTrips
+          in: query
+          schema:
+            type: boolean
+          description: Carrier's assigned loads only
+        - name: bookMode
+          in: query
+          schema:
+            type: string
+            enum: [REQUEST, INSTANT]
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [age, postedAt, tripKm, pickupDate, createdAt]
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+      responses:
+        '200':
+          description: List of loads
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoadListResponse'
+    post:
+      tags: [loads]
+      summary: Create load
+      description: Create a new load/shipment
+      operationId: createLoad
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLoadRequest'
+      responses:
+        '201':
+          description: Load created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  load:
+                    $ref: '#/components/schemas/Load'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /loads/{id}:
+    get:
+      tags: [loads]
+      summary: Get load details
+      operationId: getLoad
+      parameters:
+        - $ref: '#/components/parameters/LoadId'
+      responses:
+        '200':
+          description: Load details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoadDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [loads]
+      summary: Update load
+      operationId: updateLoad
+      parameters:
+        - $ref: '#/components/parameters/LoadId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLoadRequest'
+      responses:
+        '200':
+          description: Load updated
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          description: Invalid state transition
+    delete:
+      tags: [loads]
+      summary: Delete load
+      operationId: deleteLoad
+      parameters:
+        - $ref: '#/components/parameters/LoadId'
+      responses:
+        '200':
+          description: Load deleted
+        '409':
+          description: Cannot delete assigned/in-transit load
+
+  /loads/{id}/status:
+    patch:
+      tags: [loads]
+      summary: Update load status
+      operationId: updateLoadStatus
+      parameters:
+        - $ref: '#/components/parameters/LoadId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  $ref: '#/components/schemas/LoadStatus'
+      responses:
+        '200':
+          description: Status updated
+        '409':
+          description: Invalid state transition
+
+  /loads/{id}/assign:
+    post:
+      tags: [loads]
+      summary: Assign truck to load
+      operationId: assignTruckToLoad
+      parameters:
+        - $ref: '#/components/parameters/LoadId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [truckId]
+              properties:
+                truckId:
+                  type: string
+      responses:
+        '200':
+          description: Truck assigned, trip created
+        '400':
+          description: Truck unavailable or incompatible
+
+  /loads/{id}/matching-trucks:
+    get:
+      tags: [loads, matching]
+      summary: Find matching trucks for load
+      operationId: findMatchingTrucks
+      parameters:
+        - $ref: '#/components/parameters/LoadId'
+        - name: minScore
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+      responses:
+        '200':
+          description: Matching trucks with scores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TruckMatch'
+
+  /loads/{id}/pod:
+    post:
+      tags: [loads, documents]
+      summary: Upload proof of delivery
+      operationId: uploadPOD
+      parameters:
+        - $ref: '#/components/parameters/LoadId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                receiverName:
+                  type: string
+                receiverPhone:
+                  type: string
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: POD uploaded
+
+  /loads/{id}/tracking:
+    get:
+      tags: [loads, gps]
+      summary: Get load tracking info
+      operationId: getLoadTracking
+      parameters:
+        - $ref: '#/components/parameters/LoadId'
+      responses:
+        '200':
+          description: Tracking information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackingInfo'
+
+  /loads/{id}/service-fee:
+    get:
+      tags: [loads, wallet]
+      summary: Get service fee preview
+      operationId: getServiceFee
+      parameters:
+        - $ref: '#/components/parameters/LoadId'
+      responses:
+        '200':
+          description: Service fee breakdown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceFeePreview'
+
+  # ============================================================================
+  # TRUCKS
+  # ============================================================================
+  /trucks:
+    get:
+      tags: [trucks]
+      summary: List trucks
+      operationId: listTrucks
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: truckType
+          in: query
+          schema:
+            $ref: '#/components/schemas/TruckType'
+        - name: isAvailable
+          in: query
+          schema:
+            type: boolean
+        - name: myTrucks
+          in: query
+          schema:
+            type: boolean
+        - name: hasActivePosting
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of trucks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TruckListResponse'
+    post:
+      tags: [trucks]
+      summary: Register truck
+      operationId: createTruck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTruckRequest'
+      responses:
+        '201':
+          description: Truck registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  truck:
+                    $ref: '#/components/schemas/Truck'
+
+  /trucks/{id}:
+    get:
+      tags: [trucks]
+      summary: Get truck details
+      operationId: getTruck
+      parameters:
+        - $ref: '#/components/parameters/TruckId'
+      responses:
+        '200':
+          description: Truck details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TruckDetail'
+    patch:
+      tags: [trucks]
+      summary: Update truck
+      operationId: updateTruck
+      parameters:
+        - $ref: '#/components/parameters/TruckId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTruckRequest'
+      responses:
+        '200':
+          description: Truck updated
+    delete:
+      tags: [trucks]
+      summary: Delete truck
+      operationId: deleteTruck
+      parameters:
+        - $ref: '#/components/parameters/TruckId'
+      responses:
+        '200':
+          description: Truck deleted
+        '409':
+          description: Cannot delete truck with active trips
+
+  /trucks/{id}/nearby-loads:
+    get:
+      tags: [trucks, matching]
+      summary: Find nearby loads for truck
+      operationId: findNearbyLoads
+      parameters:
+        - $ref: '#/components/parameters/TruckId'
+        - name: radiusKm
+          in: query
+          schema:
+            type: integer
+            default: 200
+      responses:
+        '200':
+          description: Nearby matching loads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LoadMatch'
+
+  /trucks/{id}/position:
+    post:
+      tags: [trucks, gps]
+      summary: Update truck position
+      operationId: updateTruckPosition
+      parameters:
+        - $ref: '#/components/parameters/TruckId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PositionUpdate'
+      responses:
+        '200':
+          description: Position updated
+
+  # ============================================================================
+  # TRUCK POSTINGS
+  # ============================================================================
+  /truck-postings:
+    get:
+      tags: [truck-postings]
+      summary: List truck postings
+      operationId: listTruckPostings
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: originCity
+          in: query
+          schema:
+            type: string
+        - name: destinationCity
+          in: query
+          schema:
+            type: string
+        - name: truckType
+          in: query
+          schema:
+            $ref: '#/components/schemas/TruckType'
+        - name: myPostings
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of truck postings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TruckPostingListResponse'
+    post:
+      tags: [truck-postings]
+      summary: Create truck posting
+      operationId: createTruckPosting
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTruckPostingRequest'
+      responses:
+        '201':
+          description: Posting created
+
+  /truck-postings/{id}:
+    get:
+      tags: [truck-postings]
+      summary: Get truck posting details
+      operationId: getTruckPosting
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Posting details
+    patch:
+      tags: [truck-postings]
+      summary: Update truck posting
+      operationId: updateTruckPosting
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Posting updated
+    delete:
+      tags: [truck-postings]
+      summary: Delete truck posting
+      operationId: deleteTruckPosting
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Posting deleted
+
+  /truck-postings/{id}/matching-loads:
+    get:
+      tags: [truck-postings, matching]
+      summary: Find loads matching posting
+      operationId: findMatchingLoadsForPosting
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Matching loads
+
+  # ============================================================================
+  # TRIPS
+  # ============================================================================
+  /trips:
+    get:
+      tags: [trips]
+      summary: List trips
+      operationId: listTrips
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+          description: Comma-separated statuses
+      responses:
+        '200':
+          description: List of trips
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TripListResponse'
+    post:
+      tags: [trips]
+      summary: Create trip
+      operationId: createTrip
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [loadId, truckId]
+              properties:
+                loadId:
+                  type: string
+                truckId:
+                  type: string
+      responses:
+        '201':
+          description: Trip created
+
+  /trips/{tripId}:
+    get:
+      tags: [trips]
+      summary: Get trip details
+      operationId: getTrip
+      parameters:
+        - $ref: '#/components/parameters/TripId'
+      responses:
+        '200':
+          description: Trip details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TripDetail'
+    patch:
+      tags: [trips]
+      summary: Update trip
+      operationId: updateTrip
+      parameters:
+        - $ref: '#/components/parameters/TripId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTripRequest'
+      responses:
+        '200':
+          description: Trip updated
+        '409':
+          description: Invalid state transition
+
+  /trips/{tripId}/confirm:
+    post:
+      tags: [trips]
+      summary: Confirm trip pickup
+      operationId: confirmTripPickup
+      parameters:
+        - $ref: '#/components/parameters/TripId'
+      responses:
+        '200':
+          description: Trip confirmed, status → PICKUP_PENDING
+
+  /trips/{tripId}/cancel:
+    post:
+      tags: [trips]
+      summary: Cancel trip
+      operationId: cancelTrip
+      parameters:
+        - $ref: '#/components/parameters/TripId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Trip cancelled
+
+  /trips/{tripId}/pod:
+    post:
+      tags: [trips, documents]
+      summary: Upload trip POD
+      operationId: uploadTripPOD
+      parameters:
+        - $ref: '#/components/parameters/TripId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: POD uploaded, trip completed
+
+  /trips/{tripId}/live:
+    get:
+      tags: [trips, gps]
+      summary: Get live trip position
+      operationId: getLiveTripPosition
+      parameters:
+        - $ref: '#/components/parameters/TripId'
+      responses:
+        '200':
+          description: Current position
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LivePosition'
+
+  /trips/{tripId}/history:
+    get:
+      tags: [trips, gps]
+      summary: Get trip route history
+      operationId: getTripHistory
+      parameters:
+        - $ref: '#/components/parameters/TripId'
+      responses:
+        '200':
+          description: Route history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RoutePoint'
+
+  # ============================================================================
+  # WALLET
+  # ============================================================================
+  /wallet/balance:
+    get:
+      tags: [wallet]
+      summary: Get wallet balance
+      operationId: getWalletBalance
+      responses:
+        '200':
+          description: Wallet balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletBalance'
+
+  /wallet/transactions:
+    get:
+      tags: [wallet]
+      summary: List wallet transactions
+      operationId: listWalletTransactions
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [CREDIT, DEBIT, SERVICE_FEE, REFUND]
+      responses:
+        '200':
+          description: Transaction history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionListResponse'
+
+  /financial/wallet:
+    post:
+      tags: [wallet]
+      summary: Top up wallet
+      operationId: topUpWallet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount:
+                  type: number
+                  minimum: 100
+      responses:
+        '200':
+          description: Payment initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkoutUrl:
+                    type: string
+                    format: uri
+
+  /financial/withdraw:
+    post:
+      tags: [wallet]
+      summary: Request withdrawal
+      operationId: requestWithdrawal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, bankAccount]
+              properties:
+                amount:
+                  type: number
+                  minimum: 100
+                bankAccount:
+                  type: string
+      responses:
+        '200':
+          description: Withdrawal requested
+
+  # ============================================================================
+  # DISPATCHER PANEL
+  # ============================================================================
+  /dispatcher/dashboard:
+    get:
+      tags: [dispatcher]
+      summary: Get dispatcher dashboard
+      operationId: getDispatcherDashboard
+      responses:
+        '200':
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispatcherDashboard'
+
+  /dispatch:
+    get:
+      tags: [dispatcher]
+      summary: Get dispatch queue
+      operationId: getDispatchQueue
+      responses:
+        '200':
+          description: Loads pending dispatch
+    post:
+      tags: [dispatcher]
+      summary: Dispatch load to truck
+      operationId: dispatchLoad
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [loadId, truckId]
+              properties:
+                loadId:
+                  type: string
+                truckId:
+                  type: string
+      responses:
+        '200':
+          description: Load dispatched
+
+  /match-proposals:
+    get:
+      tags: [dispatcher, matching]
+      summary: List match proposals
+      operationId: listMatchProposals
+      responses:
+        '200':
+          description: Match proposals
+
+  /match-proposals/{id}/respond:
+    post:
+      tags: [dispatcher, matching]
+      summary: Respond to match proposal
+      operationId: respondToMatchProposal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [ACCEPT, REJECT]
+      responses:
+        '200':
+          description: Response recorded
+
+  /escalations:
+    get:
+      tags: [dispatcher]
+      summary: List escalations
+      operationId: listEscalations
+      responses:
+        '200':
+          description: Active escalations
+    post:
+      tags: [dispatcher]
+      summary: Create escalation
+      operationId: createEscalation
+      responses:
+        '201':
+          description: Escalation created
+
+  /escalations/{id}:
+    patch:
+      tags: [dispatcher]
+      summary: Resolve escalation
+      operationId: resolveEscalation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Escalation resolved
+
+  # ============================================================================
+  # ADMIN PANEL
+  # ============================================================================
+  /admin/dashboard:
+    get:
+      tags: [admin]
+      summary: Get admin dashboard
+      operationId: getAdminDashboard
+      responses:
+        '200':
+          description: Admin statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminDashboard'
+
+  /admin/users:
+    get:
+      tags: [admin]
+      summary: List all users
+      operationId: listUsers
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: role
+          in: query
+          schema:
+            $ref: '#/components/schemas/UserRole'
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+    patch:
+      tags: [admin]
+      summary: Update user role
+      operationId: updateUserRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, role]
+              properties:
+                userId:
+                  type: string
+                role:
+                  $ref: '#/components/schemas/UserRole'
+      responses:
+        '200':
+          description: Role updated
+
+  /admin/users/{id}:
+    get:
+      tags: [admin]
+      summary: Get user details
+      operationId: getUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User details
+    patch:
+      tags: [admin]
+      summary: Update user
+      operationId: updateUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User updated
+    delete:
+      tags: [admin]
+      summary: Deactivate user
+      operationId: deactivateUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User deactivated
+
+  /admin/users/{id}/verify:
+    post:
+      tags: [admin]
+      summary: Verify user
+      operationId: verifyUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User verified
+
+  /admin/users/{id}/wallet:
+    get:
+      tags: [admin, wallet]
+      summary: Get user wallet
+      operationId: getUserWallet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User wallet details
+
+  /admin/users/{id}/wallet/topup:
+    post:
+      tags: [admin, wallet]
+      summary: Admin top up user wallet
+      operationId: adminTopUpWallet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, reason]
+              properties:
+                amount:
+                  type: number
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Wallet topped up
+
+  /admin/organizations:
+    get:
+      tags: [admin]
+      summary: List organizations
+      operationId: listOrganizations
+      responses:
+        '200':
+          description: List of organizations
+
+  /admin/organizations/{id}/verify:
+    post:
+      tags: [admin]
+      summary: Verify organization
+      operationId: verifyOrganization
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Organization verified
+
+  /admin/corridors:
+    get:
+      tags: [admin]
+      summary: List corridors
+      operationId: listCorridors
+      responses:
+        '200':
+          description: List of corridors
+    post:
+      tags: [admin]
+      summary: Create corridor
+      operationId: createCorridor
+      responses:
+        '201':
+          description: Corridor created
+
+  /admin/corridors/{id}:
+    patch:
+      tags: [admin]
+      summary: Update corridor
+      operationId: updateCorridor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Corridor updated
+    delete:
+      tags: [admin]
+      summary: Delete corridor
+      operationId: deleteCorridor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Corridor deleted
+
+  /admin/settlements:
+    get:
+      tags: [admin, wallet]
+      summary: List settlements
+      operationId: listSettlements
+      responses:
+        '200':
+          description: Settlement queue
+
+  /admin/settlements/{id}/approve:
+    post:
+      tags: [admin, wallet]
+      summary: Approve settlement
+      operationId: approveSettlement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Settlement approved
+
+  /admin/audit-logs:
+    get:
+      tags: [admin]
+      summary: List audit logs
+      operationId: listAuditLogs
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: userId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Audit log entries
+
+  /admin/platform-metrics:
+    get:
+      tags: [admin]
+      summary: Get platform metrics
+      operationId: getPlatformMetrics
+      responses:
+        '200':
+          description: Platform-wide metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlatformMetrics'
+
+  /admin/analytics:
+    get:
+      tags: [admin]
+      summary: Get analytics data
+      operationId: getAnalytics
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Analytics data
+
+  # ============================================================================
+  # GPS & TRACKING
+  # ============================================================================
+  /gps/position:
+    post:
+      tags: [gps]
+      summary: Submit GPS position
+      operationId: submitGPSPosition
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PositionUpdate'
+      responses:
+        '200':
+          description: Position recorded
+
+  /gps/batch:
+    post:
+      tags: [gps]
+      summary: Submit batch GPS positions
+      operationId: submitBatchGPS
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [positions]
+              properties:
+                positions:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/PositionUpdate'
+      responses:
+        '200':
+          description: Positions recorded
+
+  /gps/live:
+    get:
+      tags: [gps]
+      summary: Get live positions
+      operationId: getLivePositions
+      parameters:
+        - name: truckIds
+          in: query
+          schema:
+            type: string
+          description: Comma-separated truck IDs
+      responses:
+        '200':
+          description: Live positions
+
+  /gps/devices:
+    get:
+      tags: [gps]
+      summary: List GPS devices
+      operationId: listGPSDevices
+      responses:
+        '200':
+          description: List of GPS devices
+    post:
+      tags: [gps]
+      summary: Register GPS device
+      operationId: registerGPSDevice
+      responses:
+        '201':
+          description: Device registered
+
+  /gps/eta:
+    get:
+      tags: [gps]
+      summary: Get ETA for trip
+      operationId: getETA
+      parameters:
+        - name: tripId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ETA information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  etaMinutes:
+                    type: integer
+                  distanceRemainingKm:
+                    type: number
+
+  /tracking/{trackingId}:
+    get:
+      tags: [gps]
+      summary: Public tracking page
+      operationId: getPublicTracking
+      security: []
+      parameters:
+        - name: trackingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tracking information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicTracking'
+
+  # ============================================================================
+  # ORGANIZATIONS
+  # ============================================================================
+  /organizations:
+    get:
+      tags: [organizations]
+      summary: List organizations
+      operationId: listOrganizationsPublic
+      responses:
+        '200':
+          description: List of organizations
+    post:
+      tags: [organizations]
+      summary: Create organization
+      operationId: createOrganization
+      responses:
+        '201':
+          description: Organization created
+
+  /organizations/me:
+    get:
+      tags: [organizations]
+      summary: Get my organization
+      operationId: getMyOrganization
+      responses:
+        '200':
+          description: Current user's organization
+
+  /organizations/{id}:
+    get:
+      tags: [organizations]
+      summary: Get organization
+      operationId: getOrganization
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Organization details
+    patch:
+      tags: [organizations]
+      summary: Update organization
+      operationId: updateOrganization
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Organization updated
+
+  /organizations/invitations:
+    get:
+      tags: [organizations]
+      summary: List organization invitations
+      operationId: listInvitations
+      responses:
+        '200':
+          description: List of invitations
+    post:
+      tags: [organizations]
+      summary: Send invitation
+      operationId: sendInvitation
+      responses:
+        '201':
+          description: Invitation sent
+
+  /organizations/invitations/{id}:
+    post:
+      tags: [organizations]
+      summary: Accept/reject invitation
+      operationId: respondToInvitation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Response recorded
+    delete:
+      tags: [organizations]
+      summary: Cancel invitation
+      operationId: cancelInvitation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Invitation cancelled
+
+  # ============================================================================
+  # DOCUMENTS
+  # ============================================================================
+  /documents:
+    get:
+      tags: [documents]
+      summary: List documents
+      operationId: listDocuments
+      responses:
+        '200':
+          description: List of documents
+
+  /documents/upload:
+    post:
+      tags: [documents]
+      summary: Upload document
+      operationId: uploadDocument
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, type]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                type:
+                  type: string
+                  enum: [LICENSE, INSURANCE, REGISTRATION, POD, OTHER]
+                entityType:
+                  type: string
+                  enum: [TRUCK, ORGANIZATION, LOAD, TRIP]
+                entityId:
+                  type: string
+      responses:
+        '201':
+          description: Document uploaded
+
+  /documents/{id}:
+    get:
+      tags: [documents]
+      summary: Get document
+      operationId: getDocument
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Document metadata
+    delete:
+      tags: [documents]
+      summary: Delete document
+      operationId: deleteDocument
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Document deleted
+
+  # ============================================================================
+  # NOTIFICATIONS
+  # ============================================================================
+  /notifications:
+    get:
+      tags: [notifications]
+      summary: List notifications
+      operationId: listNotifications
+      parameters:
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+
+  /notifications/{id}/read:
+    post:
+      tags: [notifications]
+      summary: Mark notification as read
+      operationId: markNotificationRead
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Marked as read
+
+  /notifications/mark-all-read:
+    post:
+      tags: [notifications]
+      summary: Mark all notifications as read
+      operationId: markAllNotificationsRead
+      responses:
+        '200':
+          description: All marked as read
+
+  # ============================================================================
+  # COMMON ENDPOINTS
+  # ============================================================================
+  /health:
+    get:
+      tags: [common]
+      summary: Health check
+      operationId: healthCheck
+      security: []
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy]
+                  database:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /csrf-token:
+    get:
+      tags: [common]
+      summary: Get CSRF token
+      operationId: getCSRFToken
+      security: []
+      responses:
+        '200':
+          description: CSRF token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  csrfToken:
+                    type: string
+
+  /ethiopian-locations:
+    get:
+      tags: [common]
+      summary: List Ethiopian cities/regions
+      operationId: listEthiopianLocations
+      security: []
+      responses:
+        '200':
+          description: List of locations
+
+  /distance:
+    get:
+      tags: [common]
+      summary: Calculate distance between points
+      operationId: calculateDistance
+      parameters:
+        - name: originLat
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: originLon
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: destLat
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: destLon
+          in: query
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Distance result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  distanceKm:
+                    type: number
+                  durationMinutes:
+                    type: integer
+
+  /corridors/calculate-fee:
+    post:
+      tags: [common]
+      summary: Calculate service fee for corridor
+      operationId: calculateCorridorFee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [originCity, destinationCity]
+              properties:
+                originCity:
+                  type: string
+                destinationCity:
+                  type: string
+                distanceKm:
+                  type: number
+      responses:
+        '200':
+          description: Fee calculation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceFeePreview'
+
+# ============================================================================
+# COMPONENTS
+# ============================================================================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    LoadId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    TruckId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    TripId:
+      name: tripId
+      in: path
+      required: true
+      schema:
+        type: string
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+    RateLimitExceeded:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    # --------------------------------------------------------------------------
+    # ENUMS
+    # --------------------------------------------------------------------------
+    UserRole:
+      type: string
+      enum: [SHIPPER, CARRIER, DISPATCHER, ADMIN, SUPER_ADMIN]
+
+    TruckType:
+      type: string
+      enum: [FLATBED, REFRIGERATED, TANKER, CONTAINER, DRY_VAN, LOWBOY, DUMP_TRUCK, BOX_TRUCK]
+
+    LoadStatus:
+      type: string
+      enum: [DRAFT, POSTED, UNPOSTED, SEARCHING, OFFERED, ASSIGNED, PICKUP_PENDING, IN_TRANSIT, DELIVERED, COMPLETED, CANCELLED, EXPIRED, EXCEPTION]
+
+    TripStatus:
+      type: string
+      enum: [ASSIGNED, PICKUP_PENDING, IN_TRANSIT, DELIVERED, COMPLETED, CANCELLED]
+
+    # --------------------------------------------------------------------------
+    # AUTH
+    # --------------------------------------------------------------------------
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+
+    LoginResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+        csrfToken:
+          type: string
+        sessionToken:
+          type: string
+          description: Mobile clients only
+        limitedAccess:
+          type: boolean
+        allowedActions:
+          type: array
+          items:
+            type: string
+
+    MFARequiredResponse:
+      type: object
+      properties:
+        mfaRequired:
+          type: boolean
+          example: true
+        message:
+          type: string
+        mfaToken:
+          type: string
+        phoneLastFour:
+          type: string
+        expiresIn:
+          type: integer
+          example: 300
+
+    RegisterRequest:
+      type: object
+      required: [email, password, firstName, lastName, role]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        companyName:
+          type: string
+        carrierType:
+          type: string
+          enum: [CARRIER_COMPANY, CARRIER_INDIVIDUAL, FLEET_OWNER]
+
+    RegisterResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+
+    # --------------------------------------------------------------------------
+    # USER
+    # --------------------------------------------------------------------------
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        status:
+          type: string
+        organizationId:
+          type: string
+        isEmailVerified:
+          type: boolean
+        isPhoneVerified:
+          type: boolean
+
+    UserProfile:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            organization:
+              $ref: '#/components/schemas/OrganizationSummary'
+            createdAt:
+              type: string
+              format: date-time
+            lastLoginAt:
+              type: string
+              format: date-time
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+        userAgent:
+          type: string
+        ipAddress:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        lastActiveAt:
+          type: string
+          format: date-time
+        isCurrent:
+          type: boolean
+
+    UserListResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserProfile'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # --------------------------------------------------------------------------
+    # ORGANIZATION
+    # --------------------------------------------------------------------------
+    OrganizationSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        isVerified:
+          type: boolean
+
+    # --------------------------------------------------------------------------
+    # LOAD
+    # --------------------------------------------------------------------------
+    Load:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          $ref: '#/components/schemas/LoadStatus'
+        pickupCity:
+          type: string
+        deliveryCity:
+          type: string
+        pickupDate:
+          type: string
+          format: date-time
+        deliveryDate:
+          type: string
+          format: date-time
+        truckType:
+          $ref: '#/components/schemas/TruckType'
+        weight:
+          type: number
+        cargoDescription:
+          type: string
+        isAnonymous:
+          type: boolean
+        ageMinutes:
+          type: integer
+        shipper:
+          $ref: '#/components/schemas/OrganizationSummary'
+
+    LoadDetail:
+      allOf:
+        - $ref: '#/components/schemas/Load'
+        - type: object
+          properties:
+            pickupAddress:
+              type: string
+            deliveryAddress:
+              type: string
+            volume:
+              type: number
+            tripKm:
+              type: number
+            specialInstructions:
+              type: string
+            safetyNotes:
+              type: string
+            assignedTruck:
+              $ref: '#/components/schemas/TruckSummary'
+            serviceFeeEtb:
+              type: number
+
+    CreateLoadRequest:
+      type: object
+      required: [pickupCity, deliveryCity, pickupDate, deliveryDate, truckType, weight, cargoDescription]
+      properties:
+        pickupCity:
+          type: string
+          minLength: 2
+        pickupAddress:
+          type: string
+        pickupDate:
+          type: string
+          format: date
+        deliveryCity:
+          type: string
+          minLength: 2
+        deliveryAddress:
+          type: string
+        deliveryDate:
+          type: string
+          format: date
+        truckType:
+          $ref: '#/components/schemas/TruckType'
+        weight:
+          type: number
+          minimum: 1
+        volume:
+          type: number
+        cargoDescription:
+          type: string
+          minLength: 5
+        isFullLoad:
+          type: boolean
+        fullPartial:
+          type: string
+          enum: [FULL, PARTIAL]
+        isFragile:
+          type: boolean
+        requiresRefrigeration:
+          type: boolean
+        bookMode:
+          type: string
+          enum: [REQUEST, INSTANT]
+        isAnonymous:
+          type: boolean
+        specialInstructions:
+          type: string
+        safetyNotes:
+          type: string
+        status:
+          type: string
+          enum: [DRAFT, POSTED]
+
+    UpdateLoadRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/LoadStatus'
+        pickupCity:
+          type: string
+        deliveryCity:
+          type: string
+        weight:
+          type: number
+        cargoDescription:
+          type: string
+        specialInstructions:
+          type: string
+
+    LoadListResponse:
+      type: object
+      properties:
+        loads:
+          type: array
+          items:
+            $ref: '#/components/schemas/Load'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    LoadMatch:
+      type: object
+      properties:
+        load:
+          $ref: '#/components/schemas/Load'
+        matchScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        dhOriginKm:
+          type: number
+        matchReasons:
+          type: array
+          items:
+            type: string
+
+    # --------------------------------------------------------------------------
+    # TRUCK
+    # --------------------------------------------------------------------------
+    Truck:
+      type: object
+      properties:
+        id:
+          type: string
+        licensePlate:
+          type: string
+        truckType:
+          $ref: '#/components/schemas/TruckType'
+        capacity:
+          type: number
+        volume:
+          type: number
+        isAvailable:
+          type: boolean
+        hasActivePosting:
+          type: boolean
+        carrier:
+          $ref: '#/components/schemas/OrganizationSummary'
+
+    TruckSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        licensePlate:
+          type: string
+        truckType:
+          $ref: '#/components/schemas/TruckType'
+        capacity:
+          type: number
+
+    TruckDetail:
+      allOf:
+        - $ref: '#/components/schemas/Truck'
+        - type: object
+          properties:
+            currentCity:
+              type: string
+            currentRegion:
+              type: string
+            gpsDeviceId:
+              type: string
+            currentLocationLat:
+              type: number
+            currentLocationLon:
+              type: number
+            lastPositionAt:
+              type: string
+              format: date-time
+
+    CreateTruckRequest:
+      type: object
+      required: [licensePlate, truckType, capacity]
+      properties:
+        licensePlate:
+          type: string
+          minLength: 3
+        truckType:
+          $ref: '#/components/schemas/TruckType'
+        capacity:
+          type: number
+          minimum: 1
+        volume:
+          type: number
+        currentCity:
+          type: string
+        currentRegion:
+          type: string
+        isAvailable:
+          type: boolean
+        gpsDeviceId:
+          type: string
+        imei:
+          type: string
+          pattern: '^[0-9]{15}$'
+
+    UpdateTruckRequest:
+      type: object
+      properties:
+        truckType:
+          $ref: '#/components/schemas/TruckType'
+        licensePlate:
+          type: string
+        capacity:
+          type: number
+        volume:
+          type: number
+        currentCity:
+          type: string
+        isAvailable:
+          type: boolean
+        status:
+          type: string
+          enum: [ACTIVE, IN_TRANSIT, MAINTENANCE, INACTIVE]
+
+    TruckListResponse:
+      type: object
+      properties:
+        trucks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Truck'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    TruckMatch:
+      type: object
+      properties:
+        truck:
+          $ref: '#/components/schemas/Truck'
+        matchScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        dhOriginKm:
+          type: number
+        matchReasons:
+          type: array
+          items:
+            type: string
+
+    # --------------------------------------------------------------------------
+    # TRUCK POSTING
+    # --------------------------------------------------------------------------
+    CreateTruckPostingRequest:
+      type: object
+      required: [truckId, originCity, availableDate]
+      properties:
+        truckId:
+          type: string
+        originCity:
+          type: string
+        destinationCity:
+          type: string
+        availableDate:
+          type: string
+          format: date
+        expiresAt:
+          type: string
+          format: date-time
+        notes:
+          type: string
+
+    TruckPostingListResponse:
+      type: object
+      properties:
+        postings:
+          type: array
+          items:
+            type: object
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # --------------------------------------------------------------------------
+    # TRIP
+    # --------------------------------------------------------------------------
+    Trip:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          $ref: '#/components/schemas/TripStatus'
+        referenceNumber:
+          type: string
+        loadId:
+          type: string
+        truckId:
+          type: string
+        carrierId:
+          type: string
+        shipperId:
+          type: string
+        estimatedDistanceKm:
+          type: number
+
+    TripDetail:
+      allOf:
+        - $ref: '#/components/schemas/Trip'
+        - type: object
+          properties:
+            load:
+              $ref: '#/components/schemas/LoadDetail'
+            truck:
+              $ref: '#/components/schemas/TruckDetail'
+            carrier:
+              $ref: '#/components/schemas/OrganizationSummary'
+            shipper:
+              $ref: '#/components/schemas/OrganizationSummary'
+            startedAt:
+              type: string
+              format: date-time
+            pickedUpAt:
+              type: string
+              format: date-time
+            deliveredAt:
+              type: string
+              format: date-time
+            completedAt:
+              type: string
+              format: date-time
+            routeHistory:
+              type: array
+              items:
+                $ref: '#/components/schemas/RoutePoint'
+
+    UpdateTripRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/TripStatus'
+        receiverName:
+          type: string
+          maxLength: 100
+        receiverPhone:
+          type: string
+          maxLength: 20
+        deliveryNotes:
+          type: string
+          maxLength: 500
+
+    TripListResponse:
+      type: object
+      properties:
+        trips:
+          type: array
+          items:
+            $ref: '#/components/schemas/Trip'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # --------------------------------------------------------------------------
+    # GPS & TRACKING
+    # --------------------------------------------------------------------------
+    PositionUpdate:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        truckId:
+          type: string
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+        speed:
+          type: number
+        heading:
+          type: number
+        altitude:
+          type: number
+        accuracy:
+          type: number
+        timestamp:
+          type: string
+          format: date-time
+
+    LivePosition:
+      type: object
+      properties:
+        truckId:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        speed:
+          type: number
+        heading:
+          type: number
+        timestamp:
+          type: string
+          format: date-time
+        isStale:
+          type: boolean
+
+    RoutePoint:
+      type: object
+      properties:
+        latitude:
+          type: number
+        longitude:
+          type: number
+        speed:
+          type: number
+        heading:
+          type: number
+        timestamp:
+          type: string
+          format: date-time
+
+    TrackingInfo:
+      type: object
+      properties:
+        tripId:
+          type: string
+        status:
+          $ref: '#/components/schemas/TripStatus'
+        currentPosition:
+          $ref: '#/components/schemas/LivePosition'
+        etaMinutes:
+          type: integer
+        distanceRemainingKm:
+          type: number
+        trackingUrl:
+          type: string
+          format: uri
+
+    PublicTracking:
+      type: object
+      properties:
+        tripId:
+          type: string
+        status:
+          $ref: '#/components/schemas/TripStatus'
+        pickupCity:
+          type: string
+        deliveryCity:
+          type: string
+        currentPosition:
+          $ref: '#/components/schemas/LivePosition'
+        etaMinutes:
+          type: integer
+        lastUpdated:
+          type: string
+          format: date-time
+
+    # --------------------------------------------------------------------------
+    # WALLET & FINANCIAL
+    # --------------------------------------------------------------------------
+    WalletBalance:
+      type: object
+      properties:
+        wallets:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              type:
+                type: string
+                enum: [SHIPPER_WALLET, CARRIER_WALLET]
+              balance:
+                type: number
+              currency:
+                type: string
+        totalBalance:
+          type: number
+        currency:
+          type: string
+          default: ETB
+        recentTransactionsCount:
+          type: integer
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [CREDIT, DEBIT, SERVICE_FEE, REFUND]
+        amount:
+          type: number
+        balance:
+          type: number
+        description:
+          type: string
+        reference:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    TransactionListResponse:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    ServiceFeePreview:
+      type: object
+      properties:
+        corridorId:
+          type: string
+        distanceKm:
+          type: number
+        shipper:
+          type: object
+          properties:
+            baseFee:
+              type: number
+            discount:
+              type: number
+            finalFee:
+              type: number
+        carrier:
+          type: object
+          properties:
+            baseFee:
+              type: number
+            discount:
+              type: number
+            finalFee:
+              type: number
+        totalPlatformFee:
+          type: number
+
+    # --------------------------------------------------------------------------
+    # DASHBOARDS
+    # --------------------------------------------------------------------------
+    DispatcherDashboard:
+      type: object
+      properties:
+        stats:
+          type: object
+          properties:
+            postedLoads:
+              type: integer
+            assignedLoads:
+              type: integer
+            inTransitLoads:
+              type: integer
+            availableTrucks:
+              type: integer
+            deliveriesToday:
+              type: integer
+            onTimeRate:
+              type: number
+            alertCount:
+              type: integer
+        pickupsToday:
+          type: array
+          items:
+            $ref: '#/components/schemas/Load'
+
+    AdminDashboard:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        totalOrganizations:
+          type: integer
+        totalLoads:
+          type: integer
+        totalTrips:
+          type: integer
+        platformRevenue:
+          type: number
+        pendingVerifications:
+          type: integer
+
+    PlatformMetrics:
+      type: object
+      properties:
+        activeUsers:
+          type: integer
+        loadsThisMonth:
+          type: integer
+        tripsCompleted:
+          type: integer
+        averageDeliveryTime:
+          type: number
+        onTimeDeliveryRate:
+          type: number
+        totalRevenue:
+          type: number
+
+    # --------------------------------------------------------------------------
+    # NOTIFICATIONS
+    # --------------------------------------------------------------------------
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+
+    # --------------------------------------------------------------------------
+    # COMMON
+    # --------------------------------------------------------------------------
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        statusCode:
+          type: integer
+
+    ValidationError:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+security:
+  - bearerAuth: []
+  - cookieAuth: []
