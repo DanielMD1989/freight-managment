@@ -27,6 +27,7 @@ jest.mock('@/lib/db', () => {
     corridors: new Map(),
     financialAccounts: new Map(),
     journalEntries: new Map(),
+    userMFAs: new Map(),
   };
 
   let userIdCounter = 1;
@@ -38,6 +39,7 @@ jest.mock('@/lib/db', () => {
   let corridorIdCounter = 1;
   let financialAccountIdCounter = 1;
   let journalEntryIdCounter = 1;
+  let userMFAIdCounter = 1;
 
   // Default values for different model types
   const modelDefaults = {
@@ -69,6 +71,9 @@ jest.mock('@/lib/db', () => {
       currency: 'ETB',
     },
     journalEntry: {},
+    userMFA: {
+      enabled: false,
+    },
   };
 
   // Helper to create model methods with in-memory storage
@@ -188,6 +193,7 @@ jest.mock('@/lib/db', () => {
     corridor: { value: corridorIdCounter },
     financialAccount: { value: financialAccountIdCounter },
     journalEntry: { value: journalEntryIdCounter },
+    userMFA: { value: userMFAIdCounter },
   };
 
   return {
@@ -201,6 +207,51 @@ jest.mock('@/lib/db', () => {
       corridor: createModelMethods(stores.corridors, 'corridor', counters.corridor),
       financialAccount: createModelMethods(stores.financialAccounts, 'financialAccount', counters.financialAccount),
       journalEntry: createModelMethods(stores.journalEntries, 'journalEntry', counters.journalEntry),
+      userMFA: {
+        ...createModelMethods(stores.userMFAs, 'userMFA', counters.userMFA),
+        // UserMFA has unique constraint on userId, so findUnique/update use userId
+        findUnique: jest.fn(({ where }) => {
+          const id = where.id || where.userId;
+          // Search by userId if not found by id
+          if (where.userId) {
+            for (const record of stores.userMFAs.values()) {
+              if (record.userId === where.userId) return Promise.resolve(record);
+            }
+          }
+          return Promise.resolve(stores.userMFAs.get(id) || null);
+        }),
+        upsert: jest.fn(({ where, create, update }) => {
+          const existingId = where.userId;
+          let existing = null;
+          for (const record of stores.userMFAs.values()) {
+            if (record.userId === existingId) {
+              existing = record;
+              break;
+            }
+          }
+          if (existing) {
+            const updated = { ...existing, ...update, updatedAt: new Date() };
+            stores.userMFAs.set(existing.id, updated);
+            return Promise.resolve(updated);
+          } else {
+            const id = `userMFA-${counters.userMFA.value++}`;
+            const record = { id, ...create, createdAt: new Date(), updatedAt: new Date() };
+            stores.userMFAs.set(id, record);
+            return Promise.resolve(record);
+          }
+        }),
+        update: jest.fn(({ where, data }) => {
+          const userId = where.userId;
+          for (const [id, record] of stores.userMFAs.entries()) {
+            if (record.userId === userId) {
+              const updated = { ...record, ...data, updatedAt: new Date() };
+              stores.userMFAs.set(id, updated);
+              return Promise.resolve(updated);
+            }
+          }
+          return Promise.reject(new Error('Record not found'));
+        }),
+      },
       auditLog: {
         create: jest.fn(() => Promise.resolve({ id: 'audit-1' })),
         createMany: jest.fn(() => Promise.resolve({ count: 0 })),
