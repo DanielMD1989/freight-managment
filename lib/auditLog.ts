@@ -170,7 +170,7 @@ async function writeAuditLogToDatabase(entry: AuditLogEntry): Promise<void> {
         action: entry.action || null,
         result: entry.result,
         message: entry.message,
-        metadata: entry.metadata || {},
+        metadata: (entry.metadata || {}) as Prisma.InputJsonValue,
         timestamp: entry.timestamp,
       },
     });
