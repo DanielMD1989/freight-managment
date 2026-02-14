@@ -8,15 +8,16 @@
  * Note: Service fees are handled via Corridor-based pricing in lib/serviceFeeManagement.ts
  */
 
-import { db } from './db';
-import { LoadStatus } from '@prisma/client';
+import { db } from "./db";
+import { LoadStatus } from "@prisma/client";
+import { logger } from "./logger";
 
 // Settlement status values (stored as String in database)
 const SettlementStatus = {
-  PENDING: 'PENDING',
-  IN_PROGRESS: 'IN_PROGRESS',
-  PAID: 'PAID',
-  DISPUTED: 'DISPUTED',
+  PENDING: "PENDING",
+  IN_PROGRESS: "IN_PROGRESS",
+  PAID: "PAID",
+  DISPUTED: "DISPUTED",
 } as const;
 
 /**
@@ -28,7 +29,7 @@ const SettlementStatus = {
 export async function autoVerifyExpiredPODs(): Promise<number> {
   // Get system settings for timeout configuration
   const settings = await db.systemSettings.findUnique({
-    where: { id: 'system' },
+    where: { id: "system" },
     select: {
       autoVerifyPodEnabled: true,
       autoVerifyPodTimeoutHours: true,
@@ -51,7 +52,7 @@ export async function autoVerifyExpiredPODs(): Promise<number> {
       podSubmittedAt: {
         lt: timeoutAgo,
       },
-      settlementStatus: 'PENDING',
+      settlementStatus: "PENDING",
     },
     select: {
       id: true,
@@ -89,7 +90,7 @@ async function markLoadAsSettled(loadId: string): Promise<void> {
   await db.load.update({
     where: { id: loadId },
     data: {
-      settlementStatus: 'PAID',
+      settlementStatus: "PAID",
       settledAt: new Date(),
     },
   });
@@ -104,7 +105,7 @@ async function markLoadAsSettled(loadId: string): Promise<void> {
 export async function processReadySettlements(): Promise<number> {
   // Get system settings for batch size and automation toggle
   const settings = await db.systemSettings.findUnique({
-    where: { id: 'system' },
+    where: { id: "system" },
     select: {
       settlementAutomationEnabled: true,
       settlementBatchSize: true,
@@ -161,18 +162,21 @@ export async function processReadySettlements(): Promise<number> {
 
   // Process settlements in parallel instead of sequentially
   const results = await Promise.allSettled(
-    loadsToSettle.map(load => markLoadAsSettled(load.id))
+    loadsToSettle.map((load) => markLoadAsSettled(load.id))
   );
 
   const errorIds: string[] = [];
   let successCount = 0;
 
   results.forEach((result, index) => {
-    if (result.status === 'fulfilled') {
+    if (result.status === "fulfilled") {
       successCount++;
     } else {
       errorIds.push(loadsToSettle[index].id);
-      console.error(`✗ Failed to settle load ${loadsToSettle[index].id}:`, result.reason?.message || result.reason);
+      console.error(
+        `✗ Failed to settle load ${loadsToSettle[index].id}:`,
+        result.reason?.message || result.reason
+      );
     }
   });
 
@@ -180,13 +184,14 @@ export async function processReadySettlements(): Promise<number> {
   if (errorIds.length > 0) {
     await db.load.updateMany({
       where: { id: { in: errorIds } },
-      data: { settlementStatus: 'DISPUTE' },
+      data: { settlementStatus: "DISPUTE" },
     });
   }
 
-  console.log(
-    `Settlement batch complete: ${successCount} succeeded, ${errorIds.length} failed`
-  );
+  logger.info("Settlement batch complete", {
+    successCount,
+    failedCount: errorIds.length,
+  });
 
   return successCount;
 }
@@ -205,7 +210,9 @@ export async function processReadySettlements(): Promise<number> {
  * @param loadId - Load ID to complete
  * @returns Promise<void>
  */
-export async function completeLoadWithSettlement(loadId: string): Promise<void> {
+export async function completeLoadWithSettlement(
+  loadId: string
+): Promise<void> {
   // Get load details
   const load = await db.load.findUnique({
     where: { id: loadId },
@@ -224,10 +231,10 @@ export async function completeLoadWithSettlement(loadId: string): Promise<void> 
   });
 
   if (!load) {
-    throw new Error('Load not found');
+    throw new Error("Load not found");
   }
 
-  if (load.status === 'DELIVERED') {
+  if (load.status === "DELIVERED") {
     return;
   }
 
@@ -235,7 +242,7 @@ export async function completeLoadWithSettlement(loadId: string): Promise<void> 
   await db.load.update({
     where: { id: loadId },
     data: {
-      status: 'DELIVERED',
+      status: "DELIVERED",
     },
   });
 
@@ -243,19 +250,22 @@ export async function completeLoadWithSettlement(loadId: string): Promise<void> 
   if (load.podSubmitted && load.podVerified) {
     try {
       await markLoadAsSettled(loadId);
-      } catch (error: unknown) {
-      console.error(`✗ Settlement failed for load ${loadId}:`, error instanceof Error ? error.message : 'Unknown error');
+    } catch (error: unknown) {
+      console.error(
+        `✗ Settlement failed for load ${loadId}:`,
+        error instanceof Error ? error.message : "Unknown error"
+      );
 
       // Mark as dispute if settlement fails
       await db.load.update({
         where: { id: loadId },
         data: {
-          settlementStatus: 'DISPUTE',
+          settlementStatus: "DISPUTE",
         },
       });
     }
   } else {
-    }
+  }
 }
 
 /**
@@ -304,38 +314,38 @@ export async function getSettlementStats(): Promise<{
     // Delivered but no POD submitted
     db.load.count({
       where: {
-        status: 'DELIVERED',
+        status: "DELIVERED",
         podSubmitted: false,
-        settlementStatus: 'PENDING',
+        settlementStatus: "PENDING",
       },
     }),
     // POD submitted but not verified
     db.load.count({
       where: {
-        status: 'DELIVERED',
+        status: "DELIVERED",
         podSubmitted: true,
         podVerified: false,
-        settlementStatus: 'PENDING',
+        settlementStatus: "PENDING",
       },
     }),
     // POD verified, ready for settlement
     db.load.count({
       where: {
-        status: 'DELIVERED',
+        status: "DELIVERED",
         podVerified: true,
-        settlementStatus: 'PENDING',
+        settlementStatus: "PENDING",
       },
     }),
     // Already settled
     db.load.count({
       where: {
-        settlementStatus: 'PAID',
+        settlementStatus: "PAID",
       },
     }),
     // Disputes
     db.load.count({
       where: {
-        settlementStatus: 'DISPUTE',
+        settlementStatus: "DISPUTE",
       },
     }),
   ]);

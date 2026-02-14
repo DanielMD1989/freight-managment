@@ -9,10 +9,11 @@
  * POST /api/cron/gps-monitor
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { pollAllGpsDevices, checkForOfflineTrucks } from '@/lib/gpsMonitoring';
-import { triggerGpsOfflineAlerts } from '@/lib/gpsAlerts';
-import { checkAllGeofenceEvents } from '@/lib/geofenceNotifications';
+import { NextRequest, NextResponse } from "next/server";
+import { pollAllGpsDevices, checkForOfflineTrucks } from "@/lib/gpsMonitoring";
+import { triggerGpsOfflineAlerts } from "@/lib/gpsAlerts";
+import { checkAllGeofenceEvents } from "@/lib/geofenceNotifications";
+import { logger } from "@/lib/logger";
 
 /**
  * GPS monitoring cron endpoint
@@ -22,48 +23,50 @@ import { checkAllGeofenceEvents } from '@/lib/geofenceNotifications';
 export async function POST(request: NextRequest) {
   try {
     // Verify cron secret (REQUIRED - not optional)
-    const authHeader = request.headers.get('authorization');
+    const authHeader = request.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
 
     // SECURITY: Always require CRON_SECRET - never allow unauthenticated access
     if (!cronSecret) {
-      console.error('[GPS Monitor] CRON_SECRET environment variable not set');
+      console.error("[GPS Monitor] CRON_SECRET environment variable not set");
       return NextResponse.json(
-        { error: 'Server misconfigured - CRON_SECRET required' },
+        { error: "Server misconfigured - CRON_SECRET required" },
         { status: 500 }
       );
     }
 
     if (authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log('[GPS Monitor] Starting GPS device polling...');
+    logger.info("[GPS Monitor] Starting GPS device polling...");
 
     // Poll all GPS devices
     const pollingSummary = await pollAllGpsDevices();
 
-    console.log('[GPS Monitor] Polling complete:', pollingSummary);
+    logger.debug("[GPS Monitor] Polling complete", { pollingSummary });
 
     // Check for newly offline trucks
     const offlineTruckIds = await checkForOfflineTrucks();
 
-    console.log(
-      `[GPS Monitor] Found ${offlineTruckIds.length} offline trucks with active loads`
-    );
+    logger.info("[GPS Monitor] Checked for offline trucks", {
+      offlineCount: offlineTruckIds.length,
+    });
 
     // Trigger alerts for offline trucks
     if (offlineTruckIds.length > 0) {
       await triggerGpsOfflineAlerts(offlineTruckIds);
-      console.log('[GPS Monitor] Offline alerts triggered');
+      logger.info("[GPS Monitor] Offline alerts triggered", {
+        count: offlineTruckIds.length,
+      });
     }
 
     // Check for geofence events (arrivals at pickup/delivery)
-    console.log('[GPS Monitor] Checking geofence events...');
+    logger.debug("[GPS Monitor] Checking geofence events...");
     const geofenceNotifications = await checkAllGeofenceEvents();
-    console.log(
-      `[GPS Monitor] Sent ${geofenceNotifications} geofence notifications`
-    );
+    logger.info("[GPS Monitor] Geofence check complete", {
+      geofenceNotifications,
+    });
 
     return NextResponse.json({
       success: true,
@@ -73,12 +76,12 @@ export async function POST(request: NextRequest) {
       geofenceNotifications,
     });
   } catch (error) {
-    console.error('[GPS Monitor] Error:', error);
+    console.error("[GPS Monitor] Error:", error);
 
     return NextResponse.json(
       {
-        error: 'GPS monitoring failed',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        error: "GPS monitoring failed",
+        message: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
@@ -90,8 +93,8 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   // Only allow in development
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'Not allowed' }, { status: 403 });
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not allowed" }, { status: 403 });
   }
 
   // Same logic as POST for testing

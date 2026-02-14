@@ -16,6 +16,7 @@ import { zodErrorResponse } from "@/lib/validation";
 import { CacheInvalidation } from "@/lib/cache";
 // CRITICAL FIX: Import notification helper for status change notifications
 import { createNotification } from "@/lib/notifications";
+import { logger } from "@/lib/logger";
 
 /**
  * Helper function to apply RPS rate limiting
@@ -726,7 +727,9 @@ export async function DELETE(
     Promise.all(notificationPromises).catch(console.error);
 
     // Audit log
-    console.log(`[LoadAPI] Load ${id} deleted by user ${session.userId}`, {
+    logger.info("[LoadAPI] Load deleted", {
+      loadId: id,
+      userId: session.userId,
       rejectedLoadRequests: deletionResult.rejectedLoadRequests.length,
       rejectedTruckRequests: deletionResult.rejectedTruckRequests.length,
     });

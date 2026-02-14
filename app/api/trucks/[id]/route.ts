@@ -9,6 +9,7 @@ import { TripStatus } from "@prisma/client";
 // P1-001-B FIX: Import CacheInvalidation for update/delete operations
 import { CacheInvalidation } from "@/lib/cache";
 import { zodErrorResponse } from "@/lib/validation";
+import { logger } from "@/lib/logger";
 
 /**
  * Helper function to apply RPS rate limiting for fleet endpoints
@@ -347,7 +348,7 @@ export async function DELETE(
 
     if (activeTrip) {
       // Log detailed info server-side for debugging
-      console.log("Truck deletion blocked - active trip:", {
+      logger.warn("Truck deletion blocked - active trip", {
         truckId: id,
         tripId: activeTrip.id,
         tripStatus: activeTrip.status,

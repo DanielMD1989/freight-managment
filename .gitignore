@@ -54,3 +54,8 @@ next-env.d.ts
 
 # Development database
 prisma/dev.db
+
+# Test artifacts & screenshots
+*.bak
+e2e-screenshots/
+*.test.png

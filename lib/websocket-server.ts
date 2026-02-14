@@ -9,15 +9,16 @@
  * With Redis adapter support for multi-instance deployments
  */
 
-import { Server as HTTPServer } from 'http';
-import { Server as SocketIOServer, Socket } from 'socket.io';
-import { createAdapter } from '@socket.io/redis-adapter';
-import { createClient } from 'redis';
-import { db } from './db';
-import { UserRole, LoadStatus } from '@prisma/client';
-import { isRedisEnabled } from './redis';
-import { getAllowedOrigins, isOriginAllowed } from './cors';
-import { validateSessionByToken } from './auth';
+import { Server as HTTPServer } from "http";
+import { Server as SocketIOServer, Socket } from "socket.io";
+import { createAdapter } from "@socket.io/redis-adapter";
+import { createClient } from "redis";
+import { db } from "./db";
+import { UserRole, LoadStatus } from "@prisma/client";
+import { isRedisEnabled } from "./redis";
+import { getAllowedOrigins, isOriginAllowed } from "./cors";
+import { validateSessionByToken } from "./auth";
+import { logger } from "./logger";
 
 /**
  * Socket session data stored after authentication
@@ -42,15 +43,19 @@ interface PermissionResult {
  * Active trip statuses that allow GPS tracking
  */
 const TRACKABLE_TRIP_STATUSES: LoadStatus[] = [
-  'ASSIGNED',
-  'PICKUP_PENDING',
-  'IN_TRANSIT',
+  "ASSIGNED",
+  "PICKUP_PENDING",
+  "IN_TRANSIT",
 ];
 
 /**
  * Roles allowed to access all GPS data
  */
-const ALL_GPS_ALLOWED_ROLES: UserRole[] = ['ADMIN', 'SUPER_ADMIN', 'DISPATCHER'];
+const ALL_GPS_ALLOWED_ROLES: UserRole[] = [
+  "ADMIN",
+  "SUPER_ADMIN",
+  "DISPATCHER",
+];
 
 /**
  * Check if user has permission to subscribe to a trip's GPS updates
@@ -83,7 +88,7 @@ function checkTripSubscriptionPermission(
   if (!organizationId) {
     return {
       allowed: false,
-      reason: 'You must belong to an organization to access trip data',
+      reason: "You must belong to an organization to access trip data",
     };
   }
 
@@ -91,31 +96,31 @@ function checkTripSubscriptionPermission(
   const carrierId = load.trip?.carrierId || load.assignedTruck?.carrierId;
 
   // SHIPPER: Can access trips for their own loads
-  if (role === 'SHIPPER') {
+  if (role === "SHIPPER") {
     if (load.shipperId === organizationId) {
       return { allowed: true };
     }
     return {
       allowed: false,
-      reason: 'You can only track loads that belong to your organization',
+      reason: "You can only track loads that belong to your organization",
     };
   }
 
   // CARRIER: Can access trips assigned to them
-  if (role === 'CARRIER') {
+  if (role === "CARRIER") {
     if (carrierId === organizationId) {
       return { allowed: true };
     }
     return {
       allowed: false,
-      reason: 'You can only track trips assigned to your organization',
+      reason: "You can only track trips assigned to your organization",
     };
   }
 
   // Default: deny access for unknown roles
   return {
     allowed: false,
-    reason: 'Your role does not have permission to access trip data',
+    reason: "Your role does not have permission to access trip data",
   };
 }
 
@@ -123,7 +128,7 @@ function checkTripSubscriptionPermission(
  * Log security events for audit trail
  */
 function logSecurityEvent(
-  eventType: 'SUBSCRIBE_DENIED' | 'SUBSCRIBE_ALLOWED',
+  eventType: "SUBSCRIBE_DENIED" | "SUBSCRIBE_ALLOWED",
   userId: string,
   role: string,
   resource: string,
@@ -140,7 +145,7 @@ function logSecurityEvent(
     resourceId,
     reason,
   };
-  }
+}
 
 export interface NotificationPayload {
   id: string;
@@ -169,7 +174,9 @@ let redisAdapterInitialized = false;
  * Initialize Redis adapter for horizontal scaling
  * Allows WebSocket rooms to be shared across multiple server instances
  */
-async function initializeRedisAdapter(socketServer: SocketIOServer): Promise<boolean> {
+async function initializeRedisAdapter(
+  socketServer: SocketIOServer
+): Promise<boolean> {
   if (redisAdapterInitialized) {
     return true;
   }
@@ -192,18 +199,18 @@ async function initializeRedisAdapter(socketServer: SocketIOServer): Promise<boo
 
     redisAdapterInitialized = true;
     // Handle Redis client errors
-    pubClient.on('error', (err) => {
-      console.error('[WebSocket Redis Pub] Error:', err.message);
+    pubClient.on("error", (err) => {
+      console.error("[WebSocket Redis Pub] Error:", err.message);
     });
 
-    subClient.on('error', (err) => {
-      console.error('[WebSocket Redis Sub] Error:', err.message);
+    subClient.on("error", (err) => {
+      console.error("[WebSocket Redis Sub] Error:", err.message);
     });
 
     return true;
   } catch (error) {
-    console.error('[WebSocket] Failed to initialize Redis adapter:', error);
-    console.log('[WebSocket] Falling back to in-memory adapter');
+    console.error("[WebSocket] Failed to initialize Redis adapter:", error);
+    logger.info("[WebSocket] Falling back to in-memory adapter");
     return false;
   }
 }
@@ -211,7 +218,9 @@ async function initializeRedisAdapter(socketServer: SocketIOServer): Promise<boo
 /**
  * Initialize WebSocket server
  */
-export async function initializeWebSocketServer(httpServer: HTTPServer): Promise<SocketIOServer> {
+export async function initializeWebSocketServer(
+  httpServer: HTTPServer
+): Promise<SocketIOServer> {
   if (io) {
     return io;
   }
@@ -233,14 +242,19 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
           callback(null, true);
         } else {
           console.warn(`[WebSocket CORS] Rejected origin: ${origin}`);
-          callback(new Error('Origin not allowed by CORS policy'), false);
+          callback(new Error("Origin not allowed by CORS policy"), false);
         }
       },
-      methods: ['GET', 'POST'],
+      methods: ["GET", "POST"],
       credentials: true,
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'x-client-type'],
+      allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "X-CSRF-Token",
+        "x-client-type",
+      ],
     },
-    path: '/api/socket',
+    path: "/api/socket",
     // Connection security options
     allowEIO3: false, // Disable legacy Engine.IO v3 (security)
     pingTimeout: 30000, // 30s ping timeout
@@ -251,120 +265,139 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
   await initializeRedisAdapter(io);
 
   // Log allowed origins on startup
-  io.on('connection', (socket) => {
+  io.on("connection", (socket) => {
     // Log connection with origin info for security audit
-    const origin = socket.handshake.headers.origin || 'unknown';
-    const clientIP = socket.handshake.headers['x-forwarded-for']
-      || socket.handshake.headers['x-real-ip']
-      || socket.handshake.address
-      || 'unknown';
+    const origin = socket.handshake.headers.origin || "unknown";
+    const clientIP =
+      socket.handshake.headers["x-forwarded-for"] ||
+      socket.handshake.headers["x-real-ip"] ||
+      socket.handshake.address ||
+      "unknown";
     // Authenticate user and store session data for permission checks
     // Accepts either: { userId: string, token?: string } or just userId string (legacy)
-    socket.on('authenticate', async (authData: string | { userId: string; token?: string }) => {
-      // Parse authentication data (support both legacy and new formats)
-      let userId: string;
-      let sessionToken: string | undefined;
+    socket.on(
+      "authenticate",
+      async (authData: string | { userId: string; token?: string }) => {
+        // Parse authentication data (support both legacy and new formats)
+        let userId: string;
+        let sessionToken: string | undefined;
 
-      if (typeof authData === 'string') {
-        // Legacy format: just userId
-        userId = authData;
-      } else if (authData && typeof authData === 'object') {
-        // New format: { userId, token }
-        userId = authData.userId;
-        sessionToken = authData.token;
-      } else {
-        socket.emit('error', { code: 'AUTH_REQUIRED', message: 'User ID required for authentication' });
-        socket.disconnect();
-        return;
-      }
-
-      if (!userId) {
-        socket.emit('error', { code: 'AUTH_REQUIRED', message: 'User ID required for authentication' });
-        socket.disconnect();
-        return;
-      }
-
-      // P1 FIX: Validate session token if provided (session revocation check)
-      if (sessionToken) {
-        const sessionValidation = await validateSessionByToken(sessionToken);
-        if (!sessionValidation.valid) {
-          socket.emit('error', {
-            code: 'SESSION_INVALID',
-            message: sessionValidation.reason || 'Session is invalid or revoked',
+        if (typeof authData === "string") {
+          // Legacy format: just userId
+          userId = authData;
+        } else if (authData && typeof authData === "object") {
+          // New format: { userId, token }
+          userId = authData.userId;
+          sessionToken = authData.token;
+        } else {
+          socket.emit("error", {
+            code: "AUTH_REQUIRED",
+            message: "User ID required for authentication",
           });
           socket.disconnect();
           return;
         }
 
-        // Verify token belongs to the claimed user
-        if (sessionValidation.session && sessionValidation.session.userId !== userId) {
-          socket.emit('error', {
-            code: 'USER_MISMATCH',
-            message: 'Session does not belong to the specified user',
+        if (!userId) {
+          socket.emit("error", {
+            code: "AUTH_REQUIRED",
+            message: "User ID required for authentication",
           });
           socket.disconnect();
           return;
         }
+
+        // P1 FIX: Validate session token if provided (session revocation check)
+        if (sessionToken) {
+          const sessionValidation = await validateSessionByToken(sessionToken);
+          if (!sessionValidation.valid) {
+            socket.emit("error", {
+              code: "SESSION_INVALID",
+              message:
+                sessionValidation.reason || "Session is invalid or revoked",
+            });
+            socket.disconnect();
+            return;
+          }
+
+          // Verify token belongs to the claimed user
+          if (
+            sessionValidation.session &&
+            sessionValidation.session.userId !== userId
+          ) {
+            socket.emit("error", {
+              code: "USER_MISMATCH",
+              message: "Session does not belong to the specified user",
+            });
+            socket.disconnect();
+            return;
+          }
+        }
+
+        // Verify user exists and get full session data
+        const user = await db.user.findUnique({
+          where: { id: userId },
+          select: {
+            id: true,
+            role: true,
+            organizationId: true,
+            isActive: true,
+            status: true,
+          },
+        });
+
+        if (!user) {
+          socket.emit("error", {
+            code: "USER_NOT_FOUND",
+            message: "User not found",
+          });
+          socket.disconnect();
+          return;
+        }
+
+        // Verify user is active
+        if (!user.isActive || user.status !== "ACTIVE") {
+          socket.emit("error", {
+            code: "USER_INACTIVE",
+            message: "User account is not active",
+          });
+          socket.disconnect();
+          return;
+        }
+
+        // Store session data in socket for permission checks
+        const sessionData: SocketSessionData = {
+          userId: user.id,
+          role: user.role,
+          organizationId: user.organizationId,
+          isAuthenticated: true,
+        };
+        socket.data.session = sessionData;
+
+        // Join user-specific room
+        socket.join(`user:${userId}`);
+        // Send any unread notifications
+        const unreadNotifications = await db.notification.findMany({
+          where: {
+            userId,
+            read: false,
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 10,
+        });
+
+        socket.emit("unread-notifications", unreadNotifications);
       }
-
-      // Verify user exists and get full session data
-      const user = await db.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          role: true,
-          organizationId: true,
-          isActive: true,
-          status: true,
-        },
-      });
-
-      if (!user) {
-        socket.emit('error', { code: 'USER_NOT_FOUND', message: 'User not found' });
-        socket.disconnect();
-        return;
-      }
-
-      // Verify user is active
-      if (!user.isActive || user.status !== 'ACTIVE') {
-        socket.emit('error', { code: 'USER_INACTIVE', message: 'User account is not active' });
-        socket.disconnect();
-        return;
-      }
-
-      // Store session data in socket for permission checks
-      const sessionData: SocketSessionData = {
-        userId: user.id,
-        role: user.role,
-        organizationId: user.organizationId,
-        isAuthenticated: true,
-      };
-      socket.data.session = sessionData;
-
-      // Join user-specific room
-      socket.join(`user:${userId}`);
-      // Send any unread notifications
-      const unreadNotifications = await db.notification.findMany({
-        where: {
-          userId,
-          read: false,
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        take: 10,
-      });
-
-      socket.emit('unread-notifications', unreadNotifications);
-    });
+    );
 
     // Handle disconnect
-    socket.on('disconnect', () => {
-      });
+    socket.on("disconnect", () => {});
 
     // Ping/pong for connection health
-    socket.on('ping', () => {
-      socket.emit('pong');
+    socket.on("ping", () => {
+      socket.emit("pong");
     });
 
     // ==========================================
@@ -384,17 +417,23 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
      * 5. State rule: Only trackable statuses (ASSIGNED, PICKUP_PENDING, IN_TRANSIT)
      *    allow GPS tracking. Completed/Cancelled trips are not trackable.
      */
-    socket.on('subscribe-trip', async (loadId: string) => {
+    socket.on("subscribe-trip", async (loadId: string) => {
       // Validate input
       if (!loadId) {
-        socket.emit('error', { code: 'INVALID_INPUT', message: 'Load ID is required' });
+        socket.emit("error", {
+          code: "INVALID_INPUT",
+          message: "Load ID is required",
+        });
         return;
       }
 
       // SECURITY: Require authentication
       const session = socket.data.session as SocketSessionData | undefined;
       if (!session?.isAuthenticated) {
-        socket.emit('error', { code: 'AUTH_REQUIRED', message: 'Authentication required to subscribe to trip updates' });
+        socket.emit("error", {
+          code: "AUTH_REQUIRED",
+          message: "Authentication required to subscribe to trip updates",
+        });
         return;
       }
 
@@ -426,16 +465,18 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
       });
 
       if (!load) {
-        socket.emit('error', { code: 'NOT_FOUND', message: 'Load not found' });
+        socket.emit("error", { code: "NOT_FOUND", message: "Load not found" });
         return;
       }
 
       // PERMISSION CHECK: Determine if user can access this trip
       const permissionResult = checkTripSubscriptionPermission(session, load);
       if (!permissionResult.allowed) {
-        socket.emit('error', {
-          code: 'PERMISSION_DENIED',
-          message: permissionResult.reason || 'You do not have permission to track this load',
+        socket.emit("error", {
+          code: "PERMISSION_DENIED",
+          message:
+            permissionResult.reason ||
+            "You do not have permission to track this load",
         });
         return;
       }
@@ -446,8 +487,8 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
 
       // Admin/Dispatcher can see all statuses, but shippers/carriers only see active trips
       if (!isTrackable && !ALL_GPS_ALLOWED_ROLES.includes(session.role)) {
-        socket.emit('error', {
-          code: 'TRIP_NOT_TRACKABLE',
+        socket.emit("error", {
+          code: "TRIP_NOT_TRACKABLE",
           message: `Trip is not currently trackable (status: ${load.status}). GPS tracking is only available for active trips.`,
         });
         return;
@@ -460,7 +501,7 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
         const truck = load.assignedTruck;
 
         if (truck?.currentLocationLat && truck?.currentLocationLon) {
-          socket.emit('gps-position', {
+          socket.emit("gps-position", {
             loadId,
             lat: Number(truck.currentLocationLat),
             lng: Number(truck.currentLocationLon),
@@ -471,10 +512,10 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
     });
 
     // Unsubscribe from trip updates
-    socket.on('unsubscribe-trip', (loadId: string) => {
+    socket.on("unsubscribe-trip", (loadId: string) => {
       const session = socket.data.session as SocketSessionData | undefined;
       socket.leave(`trip:${loadId}`);
-      });
+    });
 
     /**
      * Subscribe to all GPS updates for a carrier's fleet
@@ -485,17 +526,23 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
      * 3. Carrier/Shipper can only access their own organization's fleet
      * 4. Organization boundary check: user.organizationId must match requested organizationId
      */
-    socket.on('subscribe-fleet', async (organizationId: string) => {
+    socket.on("subscribe-fleet", async (organizationId: string) => {
       // Validate input
       if (!organizationId) {
-        socket.emit('error', { code: 'INVALID_INPUT', message: 'Organization ID is required' });
+        socket.emit("error", {
+          code: "INVALID_INPUT",
+          message: "Organization ID is required",
+        });
         return;
       }
 
       // SECURITY: Require authentication
       const session = socket.data.session as SocketSessionData | undefined;
       if (!session?.isAuthenticated) {
-        socket.emit('error', { code: 'AUTH_REQUIRED', message: 'Authentication required to subscribe to fleet updates' });
+        socket.emit("error", {
+          code: "AUTH_REQUIRED",
+          message: "Authentication required to subscribe to fleet updates",
+        });
         return;
       }
 
@@ -510,17 +557,17 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
 
       // ORGANIZATION BOUNDARY CHECK: Non-privileged users can only see their own fleet
       if (!session.organizationId) {
-        socket.emit('error', {
-          code: 'NO_ORGANIZATION',
-          message: 'You must belong to an organization to access fleet data',
+        socket.emit("error", {
+          code: "NO_ORGANIZATION",
+          message: "You must belong to an organization to access fleet data",
         });
         return;
       }
 
       if (session.organizationId !== organizationId) {
-        socket.emit('error', {
-          code: 'ORGANIZATION_MISMATCH',
-          message: 'You can only subscribe to your own organization\'s fleet',
+        socket.emit("error", {
+          code: "ORGANIZATION_MISMATCH",
+          message: "You can only subscribe to your own organization's fleet",
         });
         return;
       }
@@ -532,28 +579,36 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
       });
 
       if (!organization) {
-        socket.emit('error', { code: 'NOT_FOUND', message: 'Organization not found' });
+        socket.emit("error", {
+          code: "NOT_FOUND",
+          message: "Organization not found",
+        });
         return;
       }
 
       // Only carrier-type organizations have fleets
-      const carrierTypes = ['CARRIER_COMPANY', 'CARRIER_INDIVIDUAL', 'CARRIER_ASSOCIATION', 'FLEET_OWNER'];
+      const carrierTypes = [
+        "CARRIER_COMPANY",
+        "CARRIER_INDIVIDUAL",
+        "CARRIER_ASSOCIATION",
+        "FLEET_OWNER",
+      ];
       if (!carrierTypes.includes(organization.type)) {
-        socket.emit('error', {
-          code: 'NOT_A_CARRIER',
-          message: 'Only carrier organizations have fleet GPS tracking',
+        socket.emit("error", {
+          code: "NOT_A_CARRIER",
+          message: "Only carrier organizations have fleet GPS tracking",
         });
         return;
       }
 
       socket.join(`fleet:${organizationId}`);
-      });
+    });
 
     // Unsubscribe from fleet updates
-    socket.on('unsubscribe-fleet', (organizationId: string) => {
+    socket.on("unsubscribe-fleet", (organizationId: string) => {
       const session = socket.data.session as SocketSessionData | undefined;
       socket.leave(`fleet:${organizationId}`);
-      });
+    });
 
     /**
      * Subscribe to all GPS updates (admin/dispatcher only)
@@ -563,31 +618,35 @@ export async function initializeWebSocketServer(httpServer: HTTPServer): Promise
      * 2. Only ADMIN, SUPER_ADMIN, and DISPATCHER roles are allowed
      * 3. This is for platform-wide GPS monitoring
      */
-    socket.on('subscribe-all-gps', async () => {
+    socket.on("subscribe-all-gps", async () => {
       // SECURITY: Require authentication
       const session = socket.data.session as SocketSessionData | undefined;
       if (!session?.isAuthenticated) {
-        socket.emit('error', { code: 'AUTH_REQUIRED', message: 'Authentication required to subscribe to all GPS updates' });
+        socket.emit("error", {
+          code: "AUTH_REQUIRED",
+          message: "Authentication required to subscribe to all GPS updates",
+        });
         return;
       }
 
       // STRICT PERMISSION CHECK: Only admin/dispatcher can see all GPS
       if (!ALL_GPS_ALLOWED_ROLES.includes(session.role)) {
-        socket.emit('error', {
-          code: 'ADMIN_REQUIRED',
-          message: 'Only administrators and dispatchers can subscribe to all GPS updates',
+        socket.emit("error", {
+          code: "ADMIN_REQUIRED",
+          message:
+            "Only administrators and dispatchers can subscribe to all GPS updates",
         });
         return;
       }
 
-      socket.join('all-gps');
-      });
+      socket.join("all-gps");
+    });
 
     // Unsubscribe from all GPS updates
-    socket.on('unsubscribe-all-gps', () => {
+    socket.on("unsubscribe-all-gps", () => {
       const session = socket.data.session as SocketSessionData | undefined;
-      socket.leave('all-gps');
-      });
+      socket.leave("all-gps");
+    });
   });
 
   return io;
@@ -608,23 +667,23 @@ export async function sendRealtimeNotification(
   notification: NotificationPayload
 ): Promise<void> {
   if (!io) {
-    console.warn('WebSocket server not initialized');
+    console.warn("WebSocket server not initialized");
     return;
   }
 
   // Send to user's room
-  io.to(`user:${userId}`).emit('notification', notification);
-  }
+  io.to(`user:${userId}`).emit("notification", notification);
+}
 
 /**
  * Broadcast notification to all users with specific role
  */
 export async function broadcastToRole(
   role: string,
-  notification: Omit<NotificationPayload, 'userId'>
+  notification: Omit<NotificationPayload, "userId">
 ): Promise<void> {
   if (!io) {
-    console.warn('WebSocket server not initialized');
+    console.warn("WebSocket server not initialized");
     return;
   }
 
@@ -636,27 +695,26 @@ export async function broadcastToRole(
 
   // Send to each user's room
   users.forEach((user) => {
-    io!.to(`user:${user.id}`).emit('notification', {
+    io!.to(`user:${user.id}`).emit("notification", {
       ...notification,
       userId: user.id,
     });
   });
-
-  }
+}
 
 /**
  * Broadcast notification to all connected clients
  */
 export async function broadcastToAll(
-  notification: Omit<NotificationPayload, 'userId'>
+  notification: Omit<NotificationPayload, "userId">
 ): Promise<void> {
   if (!io) {
-    console.warn('WebSocket server not initialized');
+    console.warn("WebSocket server not initialized");
     return;
   }
 
-  io.emit('notification', notification);
-  }
+  io.emit("notification", notification);
+}
 
 /**
  * Get connected users count
@@ -690,25 +748,24 @@ export async function broadcastGpsPosition(
   position: GpsPositionPayload
 ): Promise<void> {
   if (!io) {
-    console.warn('WebSocket server not initialized');
+    console.warn("WebSocket server not initialized");
     return;
   }
 
   // Broadcast to trip room (shippers watching their specific load)
   if (loadId) {
-    io.to(`trip:${loadId}`).emit('gps-position', {
+    io.to(`trip:${loadId}`).emit("gps-position", {
       ...position,
       loadId,
     });
   }
 
   // Broadcast to carrier's fleet room
-  io.to(`fleet:${carrierId}`).emit('gps-position', position);
+  io.to(`fleet:${carrierId}`).emit("gps-position", position);
 
   // Broadcast to admin/dispatcher all-gps room
-  io.to('all-gps').emit('gps-position', position);
-
-  }
+  io.to("all-gps").emit("gps-position", position);
+}
 
 /**
  * Broadcast trip status change
@@ -720,25 +777,24 @@ export async function broadcastTripStatusChange(
   metadata?: Record<string, unknown>
 ): Promise<void> {
   if (!io) {
-    console.warn('WebSocket server not initialized');
+    console.warn("WebSocket server not initialized");
     return;
   }
 
-  io.to(`trip:${loadId}`).emit('trip-status', {
+  io.to(`trip:${loadId}`).emit("trip-status", {
     loadId,
     status,
     timestamp: new Date().toISOString(),
     ...metadata,
   });
 
-  io.to('all-gps').emit('trip-status', {
+  io.to("all-gps").emit("trip-status", {
     loadId,
     status,
     timestamp: new Date().toISOString(),
     ...metadata,
   });
-
-  }
+}
 
 /**
  * Broadcast GPS device status change
@@ -747,10 +803,10 @@ export async function broadcastTripStatusChange(
 export async function broadcastGpsDeviceStatus(
   truckId: string,
   carrierId: string,
-  status: 'ACTIVE' | 'OFFLINE' | 'SIGNAL_LOST'
+  status: "ACTIVE" | "OFFLINE" | "SIGNAL_LOST"
 ): Promise<void> {
   if (!io) {
-    console.warn('WebSocket server not initialized');
+    console.warn("WebSocket server not initialized");
     return;
   }
 
@@ -761,12 +817,11 @@ export async function broadcastGpsDeviceStatus(
   };
 
   // Broadcast to carrier's fleet room
-  io.to(`fleet:${carrierId}`).emit('gps-device-status', payload);
+  io.to(`fleet:${carrierId}`).emit("gps-device-status", payload);
 
   // Broadcast to admin/dispatcher
-  io.to('all-gps').emit('gps-device-status', payload);
-
-  }
+  io.to("all-gps").emit("gps-device-status", payload);
+}
 
 /**
  * Get count of subscribers for a trip

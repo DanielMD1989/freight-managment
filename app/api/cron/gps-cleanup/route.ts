@@ -9,8 +9,9 @@
  * POST /api/cron/gps-cleanup
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { deleteOldPositions } from '@/lib/gpsQuery';
+import { NextRequest, NextResponse } from "next/server";
+import { deleteOldPositions } from "@/lib/gpsQuery";
+import { logger } from "@/lib/logger";
 
 /**
  * GPS data cleanup cron endpoint
@@ -22,29 +23,29 @@ import { deleteOldPositions } from '@/lib/gpsQuery';
 export async function POST(request: NextRequest) {
   try {
     // Verify cron secret (REQUIRED - not optional)
-    const authHeader = request.headers.get('authorization');
+    const authHeader = request.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
 
     // SECURITY: Always require CRON_SECRET - never allow unauthenticated access
     if (!cronSecret) {
-      console.error('[GPS Cleanup] CRON_SECRET environment variable not set');
+      console.error("[GPS Cleanup] CRON_SECRET environment variable not set");
       return NextResponse.json(
-        { error: 'Server misconfigured - CRON_SECRET required' },
+        { error: "Server misconfigured - CRON_SECRET required" },
         { status: 500 }
       );
     }
 
     if (authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log('[GPS Cleanup] Starting data retention cleanup...');
+    logger.info("[GPS Cleanup] Starting data retention cleanup...");
 
     // Delete positions older than 90 days
     const daysToKeep = 90;
     const deletedCount = await deleteOldPositions(daysToKeep);
 
-    console.log(`[GPS Cleanup] Deleted ${deletedCount} old GPS positions`);
+    logger.info("[GPS Cleanup] Deleted old GPS positions", { deletedCount });
 
     return NextResponse.json({
       success: true,
@@ -53,12 +54,12 @@ export async function POST(request: NextRequest) {
       retentionDays: daysToKeep,
     });
   } catch (error) {
-    console.error('[GPS Cleanup] Error:', error);
+    console.error("[GPS Cleanup] Error:", error);
 
     return NextResponse.json(
       {
-        error: 'GPS cleanup failed',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        error: "GPS cleanup failed",
+        message: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
@@ -70,8 +71,8 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   // Only allow in development
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'Not allowed' }, { status: 403 });
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not allowed" }, { status: 403 });
   }
 
   // Same logic as POST for testing

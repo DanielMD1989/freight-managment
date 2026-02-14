@@ -23,83 +23,84 @@
  * - Admin actions
  */
 
-import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
-import { Prisma } from '@prisma/client';
+import { NextRequest } from "next/server";
+import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
+import { logger } from "@/lib/logger";
 
 /**
  * Audit event types
  */
 export enum AuditEventType {
   // Authentication
-  AUTH_LOGIN_SUCCESS = 'AUTH_LOGIN_SUCCESS',
-  AUTH_LOGIN_FAILURE = 'AUTH_LOGIN_FAILURE',
-  AUTH_LOGOUT = 'AUTH_LOGOUT',
-  AUTH_SESSION_EXPIRED = 'AUTH_SESSION_EXPIRED',
-  AUTH_TOKEN_REFRESH = 'AUTH_TOKEN_REFRESH',
+  AUTH_LOGIN_SUCCESS = "AUTH_LOGIN_SUCCESS",
+  AUTH_LOGIN_FAILURE = "AUTH_LOGIN_FAILURE",
+  AUTH_LOGOUT = "AUTH_LOGOUT",
+  AUTH_SESSION_EXPIRED = "AUTH_SESSION_EXPIRED",
+  AUTH_TOKEN_REFRESH = "AUTH_TOKEN_REFRESH",
 
   // Authorization
-  AUTHZ_ACCESS_DENIED = 'AUTHZ_ACCESS_DENIED',
-  AUTHZ_PERMISSION_CHECK = 'AUTHZ_PERMISSION_CHECK',
+  AUTHZ_ACCESS_DENIED = "AUTHZ_ACCESS_DENIED",
+  AUTHZ_PERMISSION_CHECK = "AUTHZ_PERMISSION_CHECK",
 
   // File Operations
-  FILE_UPLOAD = 'FILE_UPLOAD',
-  FILE_DOWNLOAD = 'FILE_DOWNLOAD',
-  FILE_DELETE = 'FILE_DELETE',
+  FILE_UPLOAD = "FILE_UPLOAD",
+  FILE_DOWNLOAD = "FILE_DOWNLOAD",
+  FILE_DELETE = "FILE_DELETE",
 
   // Document Operations
-  DOCUMENT_CREATED = 'DOCUMENT_CREATED',
-  DOCUMENT_VERIFIED = 'DOCUMENT_VERIFIED',
-  DOCUMENT_REJECTED = 'DOCUMENT_REJECTED',
-  DOCUMENT_DELETED = 'DOCUMENT_DELETED',
+  DOCUMENT_CREATED = "DOCUMENT_CREATED",
+  DOCUMENT_VERIFIED = "DOCUMENT_VERIFIED",
+  DOCUMENT_REJECTED = "DOCUMENT_REJECTED",
+  DOCUMENT_DELETED = "DOCUMENT_DELETED",
 
   // Rate Limiting
-  RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED',
-  RATE_LIMIT_WARNING = 'RATE_LIMIT_WARNING',
+  RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED",
+  RATE_LIMIT_WARNING = "RATE_LIMIT_WARNING",
 
   // Account Operations
-  ACCOUNT_CREATED = 'ACCOUNT_CREATED',
-  ACCOUNT_UPDATED = 'ACCOUNT_UPDATED',
-  ACCOUNT_DELETED = 'ACCOUNT_DELETED',
-  PASSWORD_CHANGED = 'PASSWORD_CHANGED',
-  EMAIL_CHANGED = 'EMAIL_CHANGED',
+  ACCOUNT_CREATED = "ACCOUNT_CREATED",
+  ACCOUNT_UPDATED = "ACCOUNT_UPDATED",
+  ACCOUNT_DELETED = "ACCOUNT_DELETED",
+  PASSWORD_CHANGED = "PASSWORD_CHANGED",
+  EMAIL_CHANGED = "EMAIL_CHANGED",
 
   // Admin Actions
-  ADMIN_ACTION = 'ADMIN_ACTION',
-  USER_ROLE_CHANGED = 'USER_ROLE_CHANGED',
-  ORG_VERIFIED = 'ORG_VERIFIED',
+  ADMIN_ACTION = "ADMIN_ACTION",
+  USER_ROLE_CHANGED = "USER_ROLE_CHANGED",
+  ORG_VERIFIED = "ORG_VERIFIED",
 
   // Truck & Load Operations
-  TRUCK_POSTED = 'TRUCK_POSTED',
-  TRUCK_UPDATED = 'TRUCK_UPDATED',
-  TRUCK_DELETED = 'TRUCK_DELETED',
-  LOAD_POSTED = 'LOAD_POSTED',
-  LOAD_UPDATED = 'LOAD_UPDATED',
-  LOAD_DELETED = 'LOAD_DELETED',
+  TRUCK_POSTED = "TRUCK_POSTED",
+  TRUCK_UPDATED = "TRUCK_UPDATED",
+  TRUCK_DELETED = "TRUCK_DELETED",
+  LOAD_POSTED = "LOAD_POSTED",
+  LOAD_UPDATED = "LOAD_UPDATED",
+  LOAD_DELETED = "LOAD_DELETED",
 
   // Phase 2: Foundation Rule Events
-  MATCH_PROPOSAL_CREATED = 'MATCH_PROPOSAL_CREATED',
-  MATCH_PROPOSAL_APPROVED = 'MATCH_PROPOSAL_APPROVED',
-  MATCH_PROPOSAL_REJECTED = 'MATCH_PROPOSAL_REJECTED',
-  TRUCK_REQUEST_CREATED = 'TRUCK_REQUEST_CREATED',
-  TRUCK_REQUEST_APPROVED = 'TRUCK_REQUEST_APPROVED',
-  TRUCK_REQUEST_REJECTED = 'TRUCK_REQUEST_REJECTED',
-  AUTHORITY_VIOLATION = 'AUTHORITY_VIOLATION', // Attempts to bypass carrier authority
-  VISIBILITY_VIOLATION = 'VISIBILITY_VIOLATION', // Attempts to access restricted resources
+  MATCH_PROPOSAL_CREATED = "MATCH_PROPOSAL_CREATED",
+  MATCH_PROPOSAL_APPROVED = "MATCH_PROPOSAL_APPROVED",
+  MATCH_PROPOSAL_REJECTED = "MATCH_PROPOSAL_REJECTED",
+  TRUCK_REQUEST_CREATED = "TRUCK_REQUEST_CREATED",
+  TRUCK_REQUEST_APPROVED = "TRUCK_REQUEST_APPROVED",
+  TRUCK_REQUEST_REJECTED = "TRUCK_REQUEST_REJECTED",
+  AUTHORITY_VIOLATION = "AUTHORITY_VIOLATION", // Attempts to bypass carrier authority
+  VISIBILITY_VIOLATION = "VISIBILITY_VIOLATION", // Attempts to access restricted resources
 
   // System Events
-  SYSTEM_ERROR = 'SYSTEM_ERROR',
-  CSRF_VIOLATION = 'CSRF_VIOLATION',
+  SYSTEM_ERROR = "SYSTEM_ERROR",
+  CSRF_VIOLATION = "CSRF_VIOLATION",
 }
 
 /**
  * Audit log severity levels
  */
 export enum AuditSeverity {
-  INFO = 'INFO',
-  WARNING = 'WARNING',
-  ERROR = 'ERROR',
-  CRITICAL = 'CRITICAL',
+  INFO = "INFO",
+  WARNING = "WARNING",
+  ERROR = "ERROR",
+  CRITICAL = "CRITICAL",
 }
 
 /**
@@ -115,9 +116,9 @@ export interface AuditLogEntry {
   resource?: string;
   resourceId?: string;
   action?: string;
-  result: 'SUCCESS' | 'FAILURE';
+  result: "SUCCESS" | "FAILURE";
   message: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   timestamp: Date;
 }
 
@@ -129,9 +130,9 @@ export interface AuditLogEntry {
  */
 function getIpAddress(request: NextRequest): string {
   return (
-    request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
+    request.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown"
   );
 }
 
@@ -142,7 +143,7 @@ function getIpAddress(request: NextRequest): string {
  * @returns User agent
  */
 function getUserAgent(request: NextRequest): string {
-  return request.headers.get('user-agent') || 'unknown';
+  return request.headers.get("user-agent") || "unknown";
 }
 
 /**
@@ -175,8 +176,8 @@ async function writeAuditLogToDatabase(entry: AuditLogEntry): Promise<void> {
     });
   } catch (error) {
     // If database write fails, log to console as fallback
-    console.error('[AUDIT LOG DB ERROR]', error);
-    console.log('[AUDIT LOG FALLBACK]', JSON.stringify(entry, null, 2));
+    console.error("[AUDIT LOG DB ERROR]", error);
+    logger.warn("[AUDIT LOG FALLBACK]", { entry });
   }
 }
 
@@ -206,7 +207,7 @@ export async function writeAuditLog(entry: AuditLogEntry): Promise<void> {
       console.warn(logPrefix, JSON.stringify(logData, null, 2));
       break;
     default:
-      }
+  }
 
   // Database storage (async, doesn't block)
   await writeAuditLogToDatabase(entry);
@@ -230,8 +231,8 @@ export async function logAuthSuccess(
     userId,
     ipAddress: getIpAddress(request),
     userAgent: getUserAgent(request),
-    action: 'LOGIN',
-    result: 'SUCCESS',
+    action: "LOGIN",
+    result: "SUCCESS",
     message: `User ${email} logged in successfully`,
     metadata: { email },
     timestamp: new Date(),
@@ -255,8 +256,8 @@ export async function logAuthFailure(
     severity: AuditSeverity.WARNING,
     ipAddress: getIpAddress(request),
     userAgent: getUserAgent(request),
-    action: 'LOGIN',
-    result: 'FAILURE',
+    action: "LOGIN",
+    result: "FAILURE",
     message: `Login failed for ${email}: ${reason}`,
     metadata: { email, reason },
     timestamp: new Date(),
@@ -289,7 +290,7 @@ export async function logAuthzFailure(
     userAgent: getUserAgent(request),
     resource,
     action,
-    result: 'FAILURE',
+    result: "FAILURE",
     message: `Access denied to ${resource}: ${reason}`,
     metadata: { reason },
     timestamp: new Date(),
@@ -321,9 +322,9 @@ export async function logFileUpload(
     organizationId,
     ipAddress: getIpAddress(request),
     userAgent: getUserAgent(request),
-    resource: 'FILE',
-    action: 'UPLOAD',
-    result: 'SUCCESS',
+    resource: "FILE",
+    action: "UPLOAD",
+    result: "SUCCESS",
     message: `File uploaded: ${fileName}`,
     metadata: { fileName, fileSize, fileType },
     timestamp: new Date(),
@@ -345,14 +346,14 @@ export async function logDocumentVerification(
   adminUserId: string,
   documentId: string,
   documentType: string,
-  verificationStatus: 'APPROVED' | 'REJECTED',
+  verificationStatus: "APPROVED" | "REJECTED",
   organizationId: string,
   request: NextRequest,
   rejectionReason?: string
 ): Promise<void> {
   await writeAuditLog({
     eventType:
-      verificationStatus === 'APPROVED'
+      verificationStatus === "APPROVED"
         ? AuditEventType.DOCUMENT_VERIFIED
         : AuditEventType.DOCUMENT_REJECTED,
     severity: AuditSeverity.INFO,
@@ -360,10 +361,10 @@ export async function logDocumentVerification(
     organizationId,
     ipAddress: getIpAddress(request),
     userAgent: getUserAgent(request),
-    resource: 'DOCUMENT',
+    resource: "DOCUMENT",
     resourceId: documentId,
-    action: 'VERIFY',
-    result: 'SUCCESS',
+    action: "VERIFY",
+    result: "SUCCESS",
     message: `Document ${documentType} ${verificationStatus.toLowerCase()} for organization ${organizationId}`,
     metadata: {
       documentType,
@@ -398,8 +399,8 @@ export async function logRateLimitViolation(
     ipAddress: getIpAddress(request),
     userAgent: getUserAgent(request),
     resource: endpoint,
-    action: 'RATE_LIMIT',
-    result: 'FAILURE',
+    action: "RATE_LIMIT",
+    result: "FAILURE",
     message: `Rate limit exceeded for ${limitName} on ${endpoint}`,
     metadata: { limitName, endpoint },
     timestamp: new Date(),
@@ -425,8 +426,8 @@ export async function logCSRFViolation(
     ipAddress: getIpAddress(request),
     userAgent: getUserAgent(request),
     resource: endpoint,
-    action: 'CSRF_CHECK',
-    result: 'FAILURE',
+    action: "CSRF_CHECK",
+    result: "FAILURE",
     message: `CSRF token validation failed on ${endpoint}`,
     metadata: { endpoint },
     timestamp: new Date(),
@@ -449,7 +450,7 @@ export async function logAdminAction(
   resource: string,
   resourceId: string,
   request: NextRequest,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): Promise<void> {
   await writeAuditLog({
     eventType: AuditEventType.ADMIN_ACTION,
@@ -460,7 +461,7 @@ export async function logAdminAction(
     resource,
     resourceId,
     action,
-    result: 'SUCCESS',
+    result: "SUCCESS",
     message: `Admin ${action} on ${resource} ${resourceId}`,
     metadata: metadata || {},
     timestamp: new Date(),
@@ -502,7 +503,7 @@ export async function queryAuditLogs(filters: {
   const [logs, total] = await Promise.all([
     db.auditLog.findMany({
       where,
-      orderBy: { timestamp: 'desc' },
+      orderBy: { timestamp: "desc" },
       take: limit,
       skip: offset,
     }),
@@ -550,15 +551,30 @@ export async function getAuditLogStats(
     documentVerifications,
   ] = await Promise.all([
     db.auditLog.count({ where }),
-    db.auditLog.count({ where: { ...where, eventType: AuditEventType.AUTH_LOGIN_FAILURE } }),
-    db.auditLog.count({ where: { ...where, eventType: AuditEventType.AUTHZ_ACCESS_DENIED } }),
-    db.auditLog.count({ where: { ...where, eventType: AuditEventType.RATE_LIMIT_EXCEEDED } }),
-    db.auditLog.count({ where: { ...where, eventType: AuditEventType.CSRF_VIOLATION } }),
-    db.auditLog.count({ where: { ...where, eventType: AuditEventType.FILE_UPLOAD } }),
+    db.auditLog.count({
+      where: { ...where, eventType: AuditEventType.AUTH_LOGIN_FAILURE },
+    }),
+    db.auditLog.count({
+      where: { ...where, eventType: AuditEventType.AUTHZ_ACCESS_DENIED },
+    }),
+    db.auditLog.count({
+      where: { ...where, eventType: AuditEventType.RATE_LIMIT_EXCEEDED },
+    }),
+    db.auditLog.count({
+      where: { ...where, eventType: AuditEventType.CSRF_VIOLATION },
+    }),
+    db.auditLog.count({
+      where: { ...where, eventType: AuditEventType.FILE_UPLOAD },
+    }),
     db.auditLog.count({
       where: {
         ...where,
-        eventType: { in: [AuditEventType.DOCUMENT_VERIFIED, AuditEventType.DOCUMENT_REJECTED] },
+        eventType: {
+          in: [
+            AuditEventType.DOCUMENT_VERIFIED,
+            AuditEventType.DOCUMENT_REJECTED,
+          ],
+        },
       },
     }),
   ]);
@@ -602,10 +618,10 @@ export async function logMatchProposalCreated(
     organizationId,
     ipAddress: getIpAddress(request),
     userAgent: getUserAgent(request),
-    resource: 'MATCH_PROPOSAL',
+    resource: "MATCH_PROPOSAL",
     resourceId: proposalId,
-    action: 'CREATE',
-    result: 'SUCCESS',
+    action: "CREATE",
+    result: "SUCCESS",
     message: `Match proposal created: Load ${loadId} -> Truck ${truckId}`,
     metadata: { loadId, truckId, proposalId },
     timestamp: new Date(),
@@ -623,23 +639,24 @@ export async function logMatchProposalCreated(
 export async function logMatchProposalResponse(
   userId: string,
   proposalId: string,
-  action: 'APPROVE' | 'REJECT',
+  action: "APPROVE" | "REJECT",
   request: NextRequest,
   organizationId?: string
 ): Promise<void> {
   await writeAuditLog({
-    eventType: action === 'APPROVE'
-      ? AuditEventType.MATCH_PROPOSAL_APPROVED
-      : AuditEventType.MATCH_PROPOSAL_REJECTED,
+    eventType:
+      action === "APPROVE"
+        ? AuditEventType.MATCH_PROPOSAL_APPROVED
+        : AuditEventType.MATCH_PROPOSAL_REJECTED,
     severity: AuditSeverity.INFO,
     userId,
     organizationId,
     ipAddress: getIpAddress(request),
     userAgent: getUserAgent(request),
-    resource: 'MATCH_PROPOSAL',
+    resource: "MATCH_PROPOSAL",
     resourceId: proposalId,
     action,
-    result: 'SUCCESS',
+    result: "SUCCESS",
     message: `Match proposal ${action.toLowerCase()}d by carrier`,
     metadata: { proposalId, action },
     timestamp: new Date(),
@@ -670,10 +687,10 @@ export async function logTruckRequestCreated(
     organizationId,
     ipAddress: getIpAddress(request),
     userAgent: getUserAgent(request),
-    resource: 'TRUCK_REQUEST',
+    resource: "TRUCK_REQUEST",
     resourceId: requestId,
-    action: 'CREATE',
-    result: 'SUCCESS',
+    action: "CREATE",
+    result: "SUCCESS",
     message: `Truck request created: Load ${loadId} -> Truck ${truckId}`,
     metadata: { loadId, truckId, requestId },
     timestamp: new Date(),
@@ -691,23 +708,24 @@ export async function logTruckRequestCreated(
 export async function logTruckRequestResponse(
   userId: string,
   requestId: string,
-  action: 'APPROVE' | 'REJECT',
+  action: "APPROVE" | "REJECT",
   request: NextRequest,
   organizationId?: string
 ): Promise<void> {
   await writeAuditLog({
-    eventType: action === 'APPROVE'
-      ? AuditEventType.TRUCK_REQUEST_APPROVED
-      : AuditEventType.TRUCK_REQUEST_REJECTED,
+    eventType:
+      action === "APPROVE"
+        ? AuditEventType.TRUCK_REQUEST_APPROVED
+        : AuditEventType.TRUCK_REQUEST_REJECTED,
     severity: AuditSeverity.INFO,
     userId,
     organizationId,
     ipAddress: getIpAddress(request),
     userAgent: getUserAgent(request),
-    resource: 'TRUCK_REQUEST',
+    resource: "TRUCK_REQUEST",
     resourceId: requestId,
     action,
-    result: 'SUCCESS',
+    result: "SUCCESS",
     message: `Truck request ${action.toLowerCase()}d by carrier`,
     metadata: { requestId, action },
     timestamp: new Date(),
@@ -746,7 +764,7 @@ export async function logAuthorityViolation(
     resource,
     resourceId,
     action: attemptedAction,
-    result: 'FAILURE',
+    result: "FAILURE",
     message: `Authority violation: Attempted ${attemptedAction} on ${resource} ${resourceId}`,
     metadata: { rule, attemptedAction },
     timestamp: new Date(),
@@ -779,8 +797,8 @@ export async function logVisibilityViolation(
     ipAddress: getIpAddress(request),
     userAgent: getUserAgent(request),
     resource,
-    action: 'ACCESS',
-    result: 'FAILURE',
+    action: "ACCESS",
+    result: "FAILURE",
     message: `Visibility violation: Attempted to access ${resource}`,
     metadata: { rule },
     timestamp: new Date(),
