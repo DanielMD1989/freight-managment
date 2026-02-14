@@ -3,10 +3,10 @@
  * PUT /api/notifications/mark-all-read
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
-import { markAllAsRead } from '@/lib/notifications';
-import { validateCSRFWithMobile } from '@/lib/csrf';
+import { NextRequest, NextResponse } from "next/server";
+import { getSessionAny } from "@/lib/auth";
+import { markAllAsRead } from "@/lib/notifications";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 
 export async function PUT(request: NextRequest) {
   try {
@@ -14,19 +14,19 @@ export async function PUT(request: NextRequest) {
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await getSession();
+    const session = await getSessionAny();
 
     if (!session?.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await markAllAsRead(session.userId);
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Failed to mark all notifications as read:', error);
+    console.error("Failed to mark all notifications as read:", error);
     return NextResponse.json(
-      { error: 'Failed to update notifications' },
+      { error: "Failed to update notifications" },
       { status: 500 }
     );
   }

@@ -919,6 +919,216 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'ETB'**
   String get etb;
+
+  /// Account verification screen title
+  ///
+  /// In en, this message translates to:
+  /// **'Account Verification'**
+  String get accountVerification;
+
+  /// Verification progress label
+  ///
+  /// In en, this message translates to:
+  /// **'Progress'**
+  String get verificationProgress;
+
+  /// Verification steps section title
+  ///
+  /// In en, this message translates to:
+  /// **'Verification Steps'**
+  String get verificationSteps;
+
+  /// Account created step
+  ///
+  /// In en, this message translates to:
+  /// **'Account Created'**
+  String get stepAccountCreated;
+
+  /// Documents uploaded step
+  ///
+  /// In en, this message translates to:
+  /// **'Documents Uploaded'**
+  String get stepDocumentsUploaded;
+
+  /// Admin review step
+  ///
+  /// In en, this message translates to:
+  /// **'Admin Review'**
+  String get stepAdminReview;
+
+  /// Account activated step
+  ///
+  /// In en, this message translates to:
+  /// **'Account Activated'**
+  String get stepAccountActivated;
+
+  /// Registration complete status
+  ///
+  /// In en, this message translates to:
+  /// **'Registration Complete'**
+  String get statusRegistrationComplete;
+
+  /// Under review status
+  ///
+  /// In en, this message translates to:
+  /// **'Under Review'**
+  String get statusUnderReview;
+
+  /// In progress indicator
+  ///
+  /// In en, this message translates to:
+  /// **'In Progress'**
+  String get inProgress;
+
+  /// Upload documents button
+  ///
+  /// In en, this message translates to:
+  /// **'Upload Documents'**
+  String get uploadDocuments;
+
+  /// Awaiting review status
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting Review'**
+  String get awaitingReview;
+
+  /// Documents being reviewed message
+  ///
+  /// In en, this message translates to:
+  /// **'Your documents are being reviewed. This usually takes 1-2 business days.'**
+  String get documentsBeingReviewed;
+
+  /// Upload documents prompt
+  ///
+  /// In en, this message translates to:
+  /// **'Please upload your verification documents to continue.'**
+  String get uploadVerificationDocuments;
+
+  /// Estimated review time label
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated review time'**
+  String get estimatedReviewTime;
+
+  /// 1-2 business days estimate
+  ///
+  /// In en, this message translates to:
+  /// **'1-2 business days'**
+  String get oneToTwoBusinessDays;
+
+  /// Contact support button
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Support'**
+  String get contactSupport;
+
+  /// Verification pending status
+  ///
+  /// In en, this message translates to:
+  /// **'Verification Pending'**
+  String get verificationPending;
+
+  /// Account pending verification message
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is pending verification'**
+  String get accountPendingVerification;
+
+  /// Limited access message
+  ///
+  /// In en, this message translates to:
+  /// **'You have limited access until your account is verified.'**
+  String get limitedAccessMessage;
+
+  /// Dashboard navigation label
+  ///
+  /// In en, this message translates to:
+  /// **'Dashboard'**
+  String get dashboard;
+
+  /// Find loads navigation label
+  ///
+  /// In en, this message translates to:
+  /// **'Find Loads'**
+  String get findLoads;
+
+  /// Post trucks navigation label
+  ///
+  /// In en, this message translates to:
+  /// **'Post Trucks'**
+  String get postTrucks;
+
+  /// My loads navigation label
+  ///
+  /// In en, this message translates to:
+  /// **'My Loads'**
+  String get myLoads;
+
+  /// My trucks navigation label
+  ///
+  /// In en, this message translates to:
+  /// **'My Trucks'**
+  String get myTrucks;
+
+  /// My trips navigation label
+  ///
+  /// In en, this message translates to:
+  /// **'My Trips'**
+  String get myTrips;
+
+  /// Find trucks navigation label
+  ///
+  /// In en, this message translates to:
+  /// **'Find Trucks'**
+  String get findTrucks;
+
+  /// Track navigation label
+  ///
+  /// In en, this message translates to:
+  /// **'Track'**
+  String get track;
+
+  /// Shipments navigation label
+  ///
+  /// In en, this message translates to:
+  /// **'Shipments'**
+  String get shipments;
+
+  /// Truck bookings navigation label
+  ///
+  /// In en, this message translates to:
+  /// **'Truck Bookings'**
+  String get truckBookings;
+
+  /// Track map navigation label
+  ///
+  /// In en, this message translates to:
+  /// **'Track Map'**
+  String get trackMap;
+
+  /// Post new load navigation label
+  ///
+  /// In en, this message translates to:
+  /// **'Post New Load'**
+  String get postNewLoad;
+
+  /// My shipments navigation label
+  ///
+  /// In en, this message translates to:
+  /// **'My Shipments'**
+  String get myShipments;
+
+  /// My truck requests navigation label
+  ///
+  /// In en, this message translates to:
+  /// **'My Truck Requests'**
+  String get myTruckRequests;
+
+  /// Track shipments navigation label
+  ///
+  /// In en, this message translates to:
+  /// **'Track Shipments'**
+  String get trackShipments;
 }
 
 class _AppLocalizationsDelegate

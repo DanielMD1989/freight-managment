@@ -39,6 +39,10 @@ import 'features/shared/screens/profile_screen.dart';
 import 'features/shared/screens/notifications_screen.dart';
 import 'features/shared/screens/wallet_screen.dart';
 import 'features/shared/screens/settings_screen.dart';
+import 'features/shared/screens/pending_verification_screen.dart';
+import 'core/models/user.dart';
+import 'core/api/api_client.dart';
+import 'core/services/push_notification_service.dart';
 
 /// Provider for onboarding completion status
 final onboardingCompleteProvider = FutureProvider<bool>((ref) async {
@@ -136,6 +140,11 @@ class FreightManagementApp extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
     final locale = settings.locale;
     final themeMode = settings.themeMode;
+
+    // BUG-3 FIX: Wire up 401 handler to clear auth state and trigger router redirect
+    ApiClient.onUnauthorized = () {
+      ref.read(authStateProvider.notifier).logout();
+    };
 
     return MaterialApp.router(
       title: 'FreightFlow',
@@ -519,6 +528,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         }
 
         if (isLoggedIn && (isLoggingIn || isRegistering)) {
+          // Check user status before redirecting to portal
+          final userStatus = authState.user?.status ?? UserStatus.registered;
+
+          // If user is not ACTIVE, redirect to pending verification
+          if (userStatus != UserStatus.active) {
+            return '/verification-pending';
+          }
+
           // Redirect to role-specific home
           if (authState.user?.isCarrier == true) {
             return '/carrier';
@@ -526,6 +543,36 @@ final routerProvider = Provider<GoRouter>((ref) {
             return '/shipper';
           }
           return '/login';
+        }
+
+        // Check if logged in user tries to access protected routes while not ACTIVE
+        if (isLoggedIn) {
+          final userStatus = authState.user?.status ?? UserStatus.registered;
+          final isVerificationPending = state.matchedLocation == '/verification-pending';
+          final isProfile = state.matchedLocation == '/profile';
+          final isSettings = state.matchedLocation == '/settings';
+
+          // If not ACTIVE and trying to access protected marketplace routes
+          if (userStatus != UserStatus.active) {
+            final isProtectedRoute = state.matchedLocation.startsWith('/carrier') ||
+                state.matchedLocation.startsWith('/shipper') ||
+                state.matchedLocation.startsWith('/wallet') ||
+                state.matchedLocation.startsWith('/notifications');
+
+            // Allow profile, settings, verification-pending
+            if (isProtectedRoute && !isVerificationPending && !isProfile && !isSettings) {
+              return '/verification-pending';
+            }
+          }
+
+          // If ACTIVE and on verification-pending, redirect to portal
+          if (userStatus == UserStatus.active && isVerificationPending) {
+            if (authState.user?.isCarrier == true) {
+              return '/carrier';
+            } else if (authState.user?.isShipper == true) {
+              return '/shipper';
+            }
+          }
         }
       }
 
@@ -545,6 +592,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      // Verification pending route
+      GoRoute(
+        path: '/verification-pending',
+        builder: (context, state) => const PendingVerificationScreen(),
       ),
 
       // Carrier routes
@@ -721,36 +773,41 @@ class CarrierShell extends StatelessWidget {
       key: carrierScaffoldKey,
       body: child,
       drawer: _CarrierDrawer(),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _calculateSelectedIndex(context),
-        onDestinationSelected: (index) => _onItemTapped(index, context),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.search_outlined),
-            selectedIcon: Icon(Icons.search),
-            label: 'Find Loads',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.publish_outlined),
-            selectedIcon: Icon(Icons.publish),
-            label: 'Post Trucks',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.route_outlined),
-            selectedIcon: Icon(Icons.route),
-            label: 'Trips',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.local_shipping_outlined),
-            selectedIcon: Icon(Icons.local_shipping),
-            label: 'Trucks',
-          ),
-        ],
+      bottomNavigationBar: Builder(
+        builder: (context) {
+          final l10n = AppLocalizations.of(context)!;
+          return NavigationBar(
+            selectedIndex: _calculateSelectedIndex(context),
+            onDestinationSelected: (index) => _onItemTapped(index, context),
+            destinations: [
+              NavigationDestination(
+                icon: const Icon(Icons.home_outlined),
+                selectedIcon: const Icon(Icons.home),
+                label: l10n.home,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.search_outlined),
+                selectedIcon: const Icon(Icons.search),
+                label: l10n.findLoads,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.publish_outlined),
+                selectedIcon: const Icon(Icons.publish),
+                label: l10n.postTrucks,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.route_outlined),
+                selectedIcon: const Icon(Icons.route),
+                label: l10n.trips,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.local_shipping_outlined),
+                selectedIcon: const Icon(Icons.local_shipping),
+                label: l10n.trucks,
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -844,125 +901,162 @@ class _CarrierDrawer extends ConsumerWidget {
 
             // Menu items
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                children: [
-                  _DrawerItem(
-                    icon: Icons.home,
-                    label: 'Dashboard',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go('/carrier');
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.local_shipping,
-                    label: 'My Trucks',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go('/carrier/trucks');
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.route,
-                    label: 'My Trips',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go('/carrier/trips');
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.search,
-                    label: 'Find Loads',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go('/carrier/loadboard');
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.publish,
-                    label: 'Post Trucks',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go('/carrier/post-trucks');
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.inbox,
-                    label: 'Load Requests',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go('/carrier/requests');
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.bookmark,
-                    label: 'Truck Bookings',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go('/carrier/bookings');
-                    },
-                  ),
-                  const Divider(),
-                  _DrawerItem(
-                    icon: Icons.map,
-                    label: 'Track Map',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go('/carrier/map');
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.account_balance_wallet,
-                    label: 'Wallet',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.push('/wallet');
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.notifications,
-                    label: 'Notifications',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.push('/notifications');
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.person,
-                    label: 'Profile',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.push('/profile');
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.settings,
-                    label: 'Settings',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.push('/settings');
-                    },
-                  ),
-                ],
+              child: Builder(
+                builder: (context) {
+                  final l10n = AppLocalizations.of(context)!;
+                  return ListView(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    children: [
+                      _DrawerItem(
+                        icon: Icons.home,
+                        label: l10n.dashboard,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.go('/carrier');
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.local_shipping,
+                        label: l10n.myTrucks,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.go('/carrier/trucks');
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.route,
+                        label: l10n.myTrips,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.go('/carrier/trips');
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.search,
+                        label: l10n.findLoads,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.go('/carrier/loadboard');
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.publish,
+                        label: l10n.postTrucks,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.go('/carrier/post-trucks');
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.inbox,
+                        label: l10n.loadRequests,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.go('/carrier/requests');
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.bookmark,
+                        label: l10n.truckBookings,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.go('/carrier/bookings');
+                        },
+                      ),
+                      const Divider(),
+                      _DrawerItem(
+                        icon: Icons.map,
+                        label: l10n.trackMap,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.go('/carrier/map');
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.account_balance_wallet,
+                        label: l10n.wallet,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.push('/wallet');
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.notifications,
+                        label: l10n.notifications,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.push('/notifications');
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.person,
+                        label: l10n.profile,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.push('/profile');
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.settings,
+                        label: l10n.settings,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.push('/settings');
+                        },
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
 
             // Logout
             const Divider(),
-            _DrawerItem(
-              icon: Icons.logout,
-              label: 'Logout',
-              color: AppColors.error,
-              onTap: () {
-                Navigator.pop(context);
-                ref.read(authStateProvider.notifier).logout();
-                context.go('/login');
+            Builder(
+              builder: (context) {
+                final l10n = AppLocalizations.of(context)!;
+                return _DrawerItem(
+                  icon: Icons.logout,
+                  label: l10n.logout,
+                  color: AppColors.error,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showLogoutDialog(context, ref);
+                  },
+                );
               },
             ),
             const SizedBox(height: 16),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.logoutConfirmTitle),
+        content: Text(l10n.logoutConfirmMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await PushNotificationService().unregisterToken();
+              await ref.read(authStateProvider.notifier).logout();
+              if (context.mounted) {
+                context.go('/login');
+              }
+            },
+            child: Text(l10n.logout, style: const TextStyle(color: AppColors.error)),
+          ),
+        ],
       ),
     );
   }
@@ -1009,36 +1103,41 @@ class ShipperShell extends StatelessWidget {
       key: shipperScaffoldKey,
       body: child,
       drawer: _ShipperDrawer(),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _calculateSelectedIndex(context),
-        onDestinationSelected: (index) => _onItemTapped(index, context),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.inventory_2_outlined),
-            selectedIcon: Icon(Icons.inventory_2),
-            label: 'My Loads',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.map_outlined),
-            selectedIcon: Icon(Icons.map),
-            label: 'Track',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.route_outlined),
-            selectedIcon: Icon(Icons.route),
-            label: 'Shipments',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.local_shipping_outlined),
-            selectedIcon: Icon(Icons.local_shipping),
-            label: 'Find Trucks',
-          ),
-        ],
+      bottomNavigationBar: Builder(
+        builder: (context) {
+          final l10n = AppLocalizations.of(context)!;
+          return NavigationBar(
+            selectedIndex: _calculateSelectedIndex(context),
+            onDestinationSelected: (index) => _onItemTapped(index, context),
+            destinations: [
+              NavigationDestination(
+                icon: const Icon(Icons.home_outlined),
+                selectedIcon: const Icon(Icons.home),
+                label: l10n.home,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.inventory_2_outlined),
+                selectedIcon: const Icon(Icons.inventory_2),
+                label: l10n.myLoads,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.map_outlined),
+                selectedIcon: const Icon(Icons.map),
+                label: l10n.track,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.route_outlined),
+                selectedIcon: const Icon(Icons.route),
+                label: l10n.shipments,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.local_shipping_outlined),
+                selectedIcon: const Icon(Icons.local_shipping),
+                label: l10n.findTrucks,
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -1132,117 +1231,154 @@ class _ShipperDrawer extends ConsumerWidget {
 
             // Menu items
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                children: [
-                  _DrawerItem(
-                    icon: Icons.home,
-                    label: 'Dashboard',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go('/shipper');
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.inventory_2,
-                    label: 'My Loads',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go('/shipper/loads');
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.add_box,
-                    label: 'Post New Load',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.push('/shipper/loads/post');
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.route,
-                    label: 'My Shipments',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go('/shipper/trips');
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.local_shipping,
-                    label: 'Find Trucks',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go('/shipper/trucks');
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.bookmark,
-                    label: 'My Truck Requests',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go('/shipper/bookings');
-                    },
-                  ),
-                  const Divider(),
-                  _DrawerItem(
-                    icon: Icons.map,
-                    label: 'Track Shipments',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go('/shipper/map');
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.account_balance_wallet,
-                    label: 'Wallet',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.push('/wallet');
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.notifications,
-                    label: 'Notifications',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.push('/notifications');
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.person,
-                    label: 'Profile',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.push('/profile');
-                    },
-                  ),
-                  _DrawerItem(
-                    icon: Icons.settings,
-                    label: 'Settings',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.push('/settings');
-                    },
-                  ),
-                ],
+              child: Builder(
+                builder: (context) {
+                  final l10n = AppLocalizations.of(context)!;
+                  return ListView(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    children: [
+                      _DrawerItem(
+                        icon: Icons.home,
+                        label: l10n.dashboard,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.go('/shipper');
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.inventory_2,
+                        label: l10n.myLoads,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.go('/shipper/loads');
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.add_box,
+                        label: l10n.postNewLoad,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.push('/shipper/loads/post');
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.route,
+                        label: l10n.myShipments,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.go('/shipper/trips');
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.local_shipping,
+                        label: l10n.findTrucks,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.go('/shipper/trucks');
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.bookmark,
+                        label: l10n.myTruckRequests,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.go('/shipper/bookings');
+                        },
+                      ),
+                      const Divider(),
+                      _DrawerItem(
+                        icon: Icons.map,
+                        label: l10n.trackShipments,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.go('/shipper/map');
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.account_balance_wallet,
+                        label: l10n.wallet,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.push('/wallet');
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.notifications,
+                        label: l10n.notifications,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.push('/notifications');
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.person,
+                        label: l10n.profile,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.push('/profile');
+                        },
+                      ),
+                      _DrawerItem(
+                        icon: Icons.settings,
+                        label: l10n.settings,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.push('/settings');
+                        },
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
 
             // Logout
             const Divider(),
-            _DrawerItem(
-              icon: Icons.logout,
-              label: 'Logout',
-              color: AppColors.error,
-              onTap: () {
-                Navigator.pop(context);
-                ref.read(authStateProvider.notifier).logout();
-                context.go('/login');
+            Builder(
+              builder: (context) {
+                final l10n = AppLocalizations.of(context)!;
+                return _DrawerItem(
+                  icon: Icons.logout,
+                  label: l10n.logout,
+                  color: AppColors.error,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showLogoutDialog(context, ref);
+                  },
+                );
               },
             ),
             const SizedBox(height: 16),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.logoutConfirmTitle),
+        content: Text(l10n.logoutConfirmMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await PushNotificationService().unregisterToken();
+              await ref.read(authStateProvider.notifier).logout();
+              if (context.mounted) {
+                context.go('/login');
+              }
+            },
+            child: Text(l10n.logout, style: const TextStyle(color: AppColors.error)),
+          ),
+        ],
       ),
     );
   }

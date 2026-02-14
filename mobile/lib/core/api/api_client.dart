@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'dart:ui' show VoidCallback;
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -50,6 +51,9 @@ class ApiClient {
   late final Dio _dio;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   SharedPreferences? _webPrefs;
+
+  /// Callback invoked on 401 Unauthorized to notify auth state
+  static VoidCallback? onUnauthorized;
 
   ApiClient._internal() {
     assert(() {
@@ -147,10 +151,11 @@ class ApiClient {
         handler.next(response);
       },
       onError: (error, handler) async {
-        // Handle 401 Unauthorized - clear tokens and redirect to login
+        // Handle 401 Unauthorized - clear tokens and notify auth state
         if (error.response?.statusCode == 401) {
           await clearAuth();
-          // Note: Navigation to login should be handled by the app's auth state
+          // Notify auth state so router redirects to login
+          onUnauthorized?.call();
         }
         handler.next(error);
       },

@@ -690,5 +690,185 @@
   "etb": "ETB",
   "@etb": {
     "description": "Ethiopian Birr currency code"
+  },
+
+  "accountVerification": "Account Verification",
+  "@accountVerification": {
+    "description": "Account verification screen title"
+  },
+
+  "verificationProgress": "Progress",
+  "@verificationProgress": {
+    "description": "Verification progress label"
+  },
+
+  "verificationSteps": "Verification Steps",
+  "@verificationSteps": {
+    "description": "Verification steps section title"
+  },
+
+  "stepAccountCreated": "Account Created",
+  "@stepAccountCreated": {
+    "description": "Account created step"
+  },
+
+  "stepDocumentsUploaded": "Documents Uploaded",
+  "@stepDocumentsUploaded": {
+    "description": "Documents uploaded step"
+  },
+
+  "stepAdminReview": "Admin Review",
+  "@stepAdminReview": {
+    "description": "Admin review step"
+  },
+
+  "stepAccountActivated": "Account Activated",
+  "@stepAccountActivated": {
+    "description": "Account activated step"
+  },
+
+  "statusRegistrationComplete": "Registration Complete",
+  "@statusRegistrationComplete": {
+    "description": "Registration complete status"
+  },
+
+  "statusUnderReview": "Under Review",
+  "@statusUnderReview": {
+    "description": "Under review status"
+  },
+
+  "inProgress": "In Progress",
+  "@inProgress": {
+    "description": "In progress indicator"
+  },
+
+  "uploadDocuments": "Upload Documents",
+  "@uploadDocuments": {
+    "description": "Upload documents button"
+  },
+
+  "awaitingReview": "Awaiting Review",
+  "@awaitingReview": {
+    "description": "Awaiting review status"
+  },
+
+  "documentsBeingReviewed": "Your documents are being reviewed. This usually takes 1-2 business days.",
+  "@documentsBeingReviewed": {
+    "description": "Documents being reviewed message"
+  },
+
+  "uploadVerificationDocuments": "Please upload your verification documents to continue.",
+  "@uploadVerificationDocuments": {
+    "description": "Upload documents prompt"
+  },
+
+  "estimatedReviewTime": "Estimated review time",
+  "@estimatedReviewTime": {
+    "description": "Estimated review time label"
+  },
+
+  "oneToTwoBusinessDays": "1-2 business days",
+  "@oneToTwoBusinessDays": {
+    "description": "1-2 business days estimate"
+  },
+
+  "contactSupport": "Contact Support",
+  "@contactSupport": {
+    "description": "Contact support button"
+  },
+
+  "pullToRefresh": "Pull to refresh",
+  "@pullToRefresh": {
+    "description": "Pull to refresh hint"
+  },
+
+  "verificationPending": "Verification Pending",
+  "@verificationPending": {
+    "description": "Verification pending status"
+  },
+
+  "accountPendingVerification": "Your account is pending verification",
+  "@accountPendingVerification": {
+    "description": "Account pending verification message"
+  },
+
+  "limitedAccessMessage": "You have limited access until your account is verified.",
+  "@limitedAccessMessage": {
+    "description": "Limited access message"
+  },
+
+  "dashboard": "Dashboard",
+  "@dashboard": {
+    "description": "Dashboard navigation label"
+  },
+
+  "findLoads": "Find Loads",
+  "@findLoads": {
+    "description": "Find loads navigation label"
+  },
+
+  "postTrucks": "Post Trucks",
+  "@postTrucks": {
+    "description": "Post trucks navigation label"
+  },
+
+  "myLoads": "My Loads",
+  "@myLoads": {
+    "description": "My loads navigation label"
+  },
+
+  "myTrucks": "My Trucks",
+  "@myTrucks": {
+    "description": "My trucks navigation label"
+  },
+
+  "myTrips": "My Trips",
+  "@myTrips": {
+    "description": "My trips navigation label"
+  },
+
+  "findTrucks": "Find Trucks",
+  "@findTrucks": {
+    "description": "Find trucks navigation label"
+  },
+
+  "track": "Track",
+  "@track": {
+    "description": "Track navigation label"
+  },
+
+  "shipments": "Shipments",
+  "@shipments": {
+    "description": "Shipments navigation label"
+  },
+
+  "truckBookings": "Truck Bookings",
+  "@truckBookings": {
+    "description": "Truck bookings navigation label"
+  },
+
+  "trackMap": "Track Map",
+  "@trackMap": {
+    "description": "Track map navigation label"
+  },
+
+  "postNewLoad": "Post New Load",
+  "@postNewLoad": {
+    "description": "Post new load navigation label"
+  },
+
+  "myShipments": "My Shipments",
+  "@myShipments": {
+    "description": "My shipments navigation label"
+  },
+
+  "myTruckRequests": "My Truck Requests",
+  "@myTruckRequests": {
+    "description": "My truck requests navigation label"
+  },
+
+  "trackShipments": "Track Shipments",
+  "@trackShipments": {
+    "description": "Track shipments navigation label"
   }
 }

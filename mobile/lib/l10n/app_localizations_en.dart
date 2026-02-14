@@ -423,4 +423,113 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get etb => 'ETB';
+
+  @override
+  String get accountVerification => 'Account Verification';
+
+  @override
+  String get verificationProgress => 'Progress';
+
+  @override
+  String get verificationSteps => 'Verification Steps';
+
+  @override
+  String get stepAccountCreated => 'Account Created';
+
+  @override
+  String get stepDocumentsUploaded => 'Documents Uploaded';
+
+  @override
+  String get stepAdminReview => 'Admin Review';
+
+  @override
+  String get stepAccountActivated => 'Account Activated';
+
+  @override
+  String get statusRegistrationComplete => 'Registration Complete';
+
+  @override
+  String get statusUnderReview => 'Under Review';
+
+  @override
+  String get inProgress => 'In Progress';
+
+  @override
+  String get uploadDocuments => 'Upload Documents';
+
+  @override
+  String get awaitingReview => 'Awaiting Review';
+
+  @override
+  String get documentsBeingReviewed =>
+      'Your documents are being reviewed. This usually takes 1-2 business days.';
+
+  @override
+  String get uploadVerificationDocuments =>
+      'Please upload your verification documents to continue.';
+
+  @override
+  String get estimatedReviewTime => 'Estimated review time';
+
+  @override
+  String get oneToTwoBusinessDays => '1-2 business days';
+
+  @override
+  String get contactSupport => 'Contact Support';
+
+  @override
+  String get verificationPending => 'Verification Pending';
+
+  @override
+  String get accountPendingVerification =>
+      'Your account is pending verification';
+
+  @override
+  String get limitedAccessMessage =>
+      'You have limited access until your account is verified.';
+
+  @override
+  String get dashboard => 'Dashboard';
+
+  @override
+  String get findLoads => 'Find Loads';
+
+  @override
+  String get postTrucks => 'Post Trucks';
+
+  @override
+  String get myLoads => 'My Loads';
+
+  @override
+  String get myTrucks => 'My Trucks';
+
+  @override
+  String get myTrips => 'My Trips';
+
+  @override
+  String get findTrucks => 'Find Trucks';
+
+  @override
+  String get track => 'Track';
+
+  @override
+  String get shipments => 'Shipments';
+
+  @override
+  String get truckBookings => 'Truck Bookings';
+
+  @override
+  String get trackMap => 'Track Map';
+
+  @override
+  String get postNewLoad => 'Post New Load';
+
+  @override
+  String get myShipments => 'My Shipments';
+
+  @override
+  String get myTruckRequests => 'My Truck Requests';
+
+  @override
+  String get trackShipments => 'Track Shipments';
 }

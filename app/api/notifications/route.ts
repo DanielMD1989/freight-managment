@@ -3,16 +3,16 @@
  * GET /api/notifications - Get user notifications with unread count
  */
 
-import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
-import { getRecentNotifications, getUnreadCount } from '@/lib/notifications';
+import { NextResponse } from "next/server";
+import { getSessionAny } from "@/lib/auth";
+import { getRecentNotifications, getUnreadCount } from "@/lib/notifications";
 
 export async function GET() {
   try {
-    const session = await getSession();
+    const session = await getSessionAny();
 
     if (!session?.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const notifications = await getRecentNotifications(session.userId, 20);
@@ -20,9 +20,9 @@ export async function GET() {
 
     return NextResponse.json({ notifications, unreadCount });
   } catch (error) {
-    console.error('Failed to fetch notifications:', error);
+    console.error("Failed to fetch notifications:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch notifications' },
+      { error: "Failed to fetch notifications" },
       { status: 500 }
     );
   }

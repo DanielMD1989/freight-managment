@@ -13,11 +13,13 @@ import { zodErrorResponse } from "@/lib/validation";
 /**
  * Helper function to apply RPS rate limiting for fleet endpoints
  */
-async function applyFleetRpsLimit(request: NextRequest): Promise<NextResponse | null> {
+async function applyFleetRpsLimit(
+  request: NextRequest
+): Promise<NextResponse | null> {
   const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown';
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown";
   const rpsResult = await checkRpsLimit(
     RPS_CONFIGS.fleet.endpoint,
     ip,
@@ -26,13 +28,13 @@ async function applyFleetRpsLimit(request: NextRequest): Promise<NextResponse | 
   );
   if (!rpsResult.allowed) {
     return NextResponse.json(
-      { error: 'Rate limit exceeded. Please slow down.', retryAfter: 1 },
+      { error: "Rate limit exceeded. Please slow down.", retryAfter: 1 },
       {
         status: 429,
         headers: {
-          'X-RateLimit-Limit': rpsResult.limit.toString(),
-          'X-RateLimit-Remaining': rpsResult.remaining.toString(),
-          'Retry-After': '1',
+          "X-RateLimit-Limit": rpsResult.limit.toString(),
+          "X-RateLimit-Remaining": rpsResult.remaining.toString(),
+          "Retry-After": "1",
         },
       }
     );
@@ -41,14 +43,27 @@ async function applyFleetRpsLimit(request: NextRequest): Promise<NextResponse | 
 }
 
 const updateTruckSchema = z.object({
-  truckType: z.enum(["FLATBED", "REFRIGERATED", "TANKER", "CONTAINER", "DRY_VAN", "LOWBOY", "DUMP_TRUCK", "BOX_TRUCK"]).optional(),
+  truckType: z
+    .enum([
+      "FLATBED",
+      "REFRIGERATED",
+      "TANKER",
+      "CONTAINER",
+      "DRY_VAN",
+      "LOWBOY",
+      "DUMP_TRUCK",
+      "BOX_TRUCK",
+    ])
+    .optional(),
   licensePlate: z.string().min(3).optional(),
   capacity: z.number().positive().optional(),
   volume: z.number().positive().optional().nullable(),
   currentCity: z.string().optional().nullable(),
   currentRegion: z.string().optional().nullable(),
   isAvailable: z.boolean().optional(),
-  status: z.enum(["ACTIVE", "IN_TRANSIT", "MAINTENANCE", "INACTIVE"]).optional(),
+  status: z
+    .enum(["ACTIVE", "IN_TRANSIT", "MAINTENANCE", "INACTIVE"])
+    .optional(),
   // Support resubmission of rejected trucks
   approvalStatus: z.enum(["PENDING"]).optional(), // Only allow setting to PENDING (resubmit)
   rejectionReason: z.null().optional(), // Clear rejection reason on resubmit
@@ -84,10 +99,7 @@ export async function GET(
     });
 
     if (!truck) {
-      return NextResponse.json(
-        { error: "Truck not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
     // Check if user has permission to view this truck
@@ -96,10 +108,14 @@ export async function GET(
       select: { organizationId: true, role: true },
     });
 
+    // Any authenticated user can view truck details (trucks are shown on public truckboard)
+    // Write operations (PATCH/DELETE) still require ownership
     const canView =
       user?.role === "SUPER_ADMIN" ||
       user?.role === "ADMIN" ||
-      truck.carrierId === user?.organizationId;
+      truck.carrierId === user?.organizationId ||
+      user?.role === "SHIPPER" ||
+      user?.role === "CARRIER";
 
     if (!canView) {
       return NextResponse.json(
@@ -133,12 +149,14 @@ export async function PATCH(
     // CSRF protection for state-changing operation
     // Mobile clients MUST use Bearer token authentication (inherently CSRF-safe)
     // Web clients MUST provide CSRF token
-    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
-    const hasBearerAuth = request.headers.get('authorization')?.startsWith('Bearer ');
+    const isMobileClient = request.headers.get("x-client-type") === "mobile";
+    const hasBearerAuth = request.headers
+      .get("authorization")
+      ?.startsWith("Bearer ");
 
     if (isMobileClient && !hasBearerAuth) {
       return NextResponse.json(
-        { error: 'Mobile clients require Bearer authentication' },
+        { error: "Mobile clients require Bearer authentication" },
         { status: 401 }
       );
     }
@@ -159,10 +177,7 @@ export async function PATCH(
     });
 
     if (!truck) {
-      return NextResponse.json(
-        { error: "Truck not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
     // Check if user owns this truck
@@ -172,8 +187,7 @@ export async function PATCH(
     });
 
     const canUpdate =
-      user?.role === "SUPER_ADMIN" ||
-      truck.carrierId === user?.organizationId;
+      user?.role === "SUPER_ADMIN" || truck.carrierId === user?.organizationId;
 
     if (!canUpdate) {
       return NextResponse.json(
@@ -186,7 +200,10 @@ export async function PATCH(
     const validatedData = updateTruckSchema.parse(body);
 
     // If license plate is being updated, check for duplicates
-    if (validatedData.licensePlate && validatedData.licensePlate !== truck.licensePlate) {
+    if (
+      validatedData.licensePlate &&
+      validatedData.licensePlate !== truck.licensePlate
+    ) {
       const existing = await db.truck.findUnique({
         where: { licensePlate: validatedData.licensePlate },
       });
@@ -215,7 +232,11 @@ export async function PATCH(
     });
 
     // P1-001-B FIX: Invalidate cache after truck update to ensure fresh data
-    await CacheInvalidation.truck(updatedTruck.id, updatedTruck.carrierId, updatedTruck.carrierId);
+    await CacheInvalidation.truck(
+      updatedTruck.id,
+      updatedTruck.carrierId,
+      updatedTruck.carrierId
+    );
 
     return NextResponse.json(updatedTruck);
   } catch (error) {
@@ -246,12 +267,14 @@ export async function DELETE(
     // CSRF protection for state-changing operation
     // Mobile clients MUST use Bearer token authentication (inherently CSRF-safe)
     // Web clients MUST provide CSRF token
-    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
-    const hasBearerAuth = request.headers.get('authorization')?.startsWith('Bearer ');
+    const isMobileClient = request.headers.get("x-client-type") === "mobile";
+    const hasBearerAuth = request.headers
+      .get("authorization")
+      ?.startsWith("Bearer ");
 
     if (isMobileClient && !hasBearerAuth) {
       return NextResponse.json(
-        { error: 'Mobile clients require Bearer authentication' },
+        { error: "Mobile clients require Bearer authentication" },
         { status: 401 }
       );
     }
@@ -272,10 +295,7 @@ export async function DELETE(
     });
 
     if (!truck) {
-      return NextResponse.json(
-        { error: "Truck not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
     // Check if user owns this truck
@@ -285,8 +305,7 @@ export async function DELETE(
     });
 
     const canDelete =
-      user?.role === "SUPER_ADMIN" ||
-      truck.carrierId === user?.organizationId;
+      user?.role === "SUPER_ADMIN" || truck.carrierId === user?.organizationId;
 
     if (!canDelete) {
       return NextResponse.json(
@@ -299,7 +318,12 @@ export async function DELETE(
     // GUARD: Check for active trips before allowing deletion
     // Active trip = any trip NOT in COMPLETED or CANCELLED status
     // =================================================================
-    const ACTIVE_TRIP_STATUSES: TripStatus[] = ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT', 'DELIVERED'];
+    const ACTIVE_TRIP_STATUSES: TripStatus[] = [
+      "ASSIGNED",
+      "PICKUP_PENDING",
+      "IN_TRANSIT",
+      "DELIVERED",
+    ];
 
     const activeTrip = await db.trip.findFirst({
       where: {
@@ -323,7 +347,7 @@ export async function DELETE(
 
     if (activeTrip) {
       // Log detailed info server-side for debugging
-      console.log('Truck deletion blocked - active trip:', {
+      console.log("Truck deletion blocked - active trip:", {
         truckId: id,
         tripId: activeTrip.id,
         tripStatus: activeTrip.status,
@@ -333,7 +357,8 @@ export async function DELETE(
       return NextResponse.json(
         {
           error: "Cannot delete truck with active assignments",
-          message: "This truck is currently assigned to an active trip. Complete or cancel the trip before deleting the truck.",
+          message:
+            "This truck is currently assigned to an active trip. Complete or cancel the trip before deleting the truck.",
         },
         { status: 409 }
       );
@@ -344,15 +369,19 @@ export async function DELETE(
       await db.truck.delete({
         where: { id },
       });
-    // FIX: Use unknown type with type guards
+      // FIX: Use unknown type with type guards
     } catch (deleteError: unknown) {
       // Handle foreign key constraint errors - Prisma error
       const prismaError = deleteError as { code?: string; message?: string };
-      if (prismaError?.code === 'P2003' || prismaError?.message?.includes('foreign key constraint')) {
+      if (
+        prismaError?.code === "P2003" ||
+        prismaError?.message?.includes("foreign key constraint")
+      ) {
         return NextResponse.json(
           {
             error: "Cannot delete truck with active postings",
-            message: "This truck has active postings or associated records. Please remove them first.",
+            message:
+              "This truck has active postings or associated records. Please remove them first.",
           },
           { status: 409 }
         );

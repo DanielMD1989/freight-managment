@@ -3,11 +3,7 @@ import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { z } from "zod";
-import {
-  calculateAge,
-  canSeeContact,
-  maskCompany,
-} from "@/lib/loadUtils";
+import { calculateAge, canSeeContact, maskCompany } from "@/lib/loadUtils";
 import {
   incrementCompletedLoads,
   incrementCancelledLoads,
@@ -20,16 +16,17 @@ import { zodErrorResponse } from "@/lib/validation";
 import { CacheInvalidation } from "@/lib/cache";
 // CRITICAL FIX: Import notification helper for status change notifications
 import { createNotification } from "@/lib/notifications";
-import { Prisma } from "@prisma/client";
 
 /**
  * Helper function to apply RPS rate limiting
  */
-async function applyRpsLimit(request: NextRequest): Promise<NextResponse | null> {
+async function applyRpsLimit(
+  request: NextRequest
+): Promise<NextResponse | null> {
   const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown';
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown";
   const rpsResult = await checkRpsLimit(
     RPS_CONFIGS.marketplace.endpoint,
     ip,
@@ -38,13 +35,13 @@ async function applyRpsLimit(request: NextRequest): Promise<NextResponse | null>
   );
   if (!rpsResult.allowed) {
     return NextResponse.json(
-      { error: 'Rate limit exceeded. Please slow down.', retryAfter: 1 },
+      { error: "Rate limit exceeded. Please slow down.", retryAfter: 1 },
       {
         status: 429,
         headers: {
-          'X-RateLimit-Limit': rpsResult.limit.toString(),
-          'X-RateLimit-Remaining': rpsResult.remaining.toString(),
-          'Retry-After': '1',
+          "X-RateLimit-Limit": rpsResult.limit.toString(),
+          "X-RateLimit-Remaining": rpsResult.remaining.toString(),
+          "Retry-After": "1",
         },
       }
     );
@@ -53,7 +50,20 @@ async function applyRpsLimit(request: NextRequest): Promise<NextResponse | null>
 }
 
 const updateLoadSchema = z.object({
-  status: z.enum(["DRAFT", "POSTED", "UNPOSTED", "ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT", "DELIVERED", "COMPLETED", "CANCELLED", "EXPIRED"]).optional(),
+  status: z
+    .enum([
+      "DRAFT",
+      "POSTED",
+      "UNPOSTED",
+      "ASSIGNED",
+      "PICKUP_PENDING",
+      "IN_TRANSIT",
+      "DELIVERED",
+      "COMPLETED",
+      "CANCELLED",
+      "EXPIRED",
+    ])
+    .optional(),
   pickupCity: z.string().min(2).optional(),
   pickupAddress: z.string().optional().nullable(),
   deliveryCity: z.string().min(2).optional(),
@@ -62,7 +72,18 @@ const updateLoadSchema = z.object({
   deliveryDockHours: z.string().optional().nullable(),
   pickupDate: z.string().optional(),
   deliveryDate: z.string().optional().nullable(),
-  truckType: z.enum(["FLATBED", "REFRIGERATED", "TANKER", "CONTAINER", "DRY_VAN", "LOWBOY", "DUMP_TRUCK", "BOX_TRUCK"]).optional(),
+  truckType: z
+    .enum([
+      "FLATBED",
+      "REFRIGERATED",
+      "TANKER",
+      "CONTAINER",
+      "DRY_VAN",
+      "LOWBOY",
+      "DUMP_TRUCK",
+      "BOX_TRUCK",
+    ])
+    .optional(),
   weight: z.number().positive().optional(),
   lengthM: z.number().positive().optional(),
   fullPartial: z.enum(["FULL", "PARTIAL"]).optional(),
@@ -104,8 +125,10 @@ export async function GET(
 
     // Fail if user not found - don't default to any role
     if (!user) {
-      console.error(`[SECURITY] User not found in database after requireAuth: ${session.userId}`);
-      return NextResponse.json({ error: 'User not found' }, { status: 401 });
+      console.error(
+        `[SECURITY] User not found in database after requireAuth: ${session.userId}`
+      );
+      return NextResponse.json({ error: "User not found" }, { status: 401 });
     }
 
     const load = await db.load.findUnique({
@@ -149,13 +172,22 @@ export async function GET(
       return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
-    // H1 FIX: Authorization check - only shipper, assigned carrier, dispatcher, or admin
+    // Authorization check - shipper, assigned carrier, dispatcher, admin, or public loadboard loads
     const isShipper = user.organizationId === load.shipperId;
-    const isAssignedCarrier = load.assignedTruck?.carrier?.id === user.organizationId;
-    const isDispatcher = user.role === 'DISPATCHER';
-    const isAdmin = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
+    const isAssignedCarrier =
+      load.assignedTruck?.carrier?.id === user.organizationId;
+    const isDispatcher = user.role === "DISPATCHER";
+    const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
+    // POSTED loads are on the public loadboard — any authenticated user can view them
+    const isPublicLoad = load.status === "POSTED";
 
-    if (!isShipper && !isAssignedCarrier && !isDispatcher && !isAdmin) {
+    if (
+      !isShipper &&
+      !isAssignedCarrier &&
+      !isDispatcher &&
+      !isAdmin &&
+      !isPublicLoad
+    ) {
       return NextResponse.json(
         { error: "You do not have permission to view this load" },
         { status: 403 }
@@ -254,12 +286,12 @@ export async function PATCH(
       session.role === "PLATFORM_OPS";
 
     if (!canEdit) {
-      console.error('Permission denied:', {
+      console.error("Permission denied:", {
         userId: session.userId,
         userOrgId: user?.organizationId,
         shipperId: existingLoad.shipperId,
         createdById: existingLoad.createdById,
-        role: session.role
+        role: session.role,
       });
       return NextResponse.json(
         { error: "You do not have permission to edit this load" },
@@ -268,7 +300,12 @@ export async function PATCH(
     }
 
     // H13 FIX: Cannot edit if already assigned or in PICKUP_PENDING
-    if (existingLoad.status === "ASSIGNED" || existingLoad.status === "PICKUP_PENDING" || existingLoad.status === "IN_TRANSIT" || existingLoad.status === "DELIVERED") {
+    if (
+      existingLoad.status === "ASSIGNED" ||
+      existingLoad.status === "PICKUP_PENDING" ||
+      existingLoad.status === "IN_TRANSIT" ||
+      existingLoad.status === "DELIVERED"
+    ) {
       return NextResponse.json(
         { error: "Cannot edit load after it has been assigned" },
         { status: 400 }
@@ -279,17 +316,23 @@ export async function PATCH(
     const validatedData = updateLoadSchema.parse(body);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let additionalData: Record<string, any> = {};
+    const additionalData: Record<string, any> = {};
 
     // Update postedAt when status changes to POSTED
-    if (validatedData.status === 'POSTED' && existingLoad.status !== 'POSTED') {
+    if (validatedData.status === "POSTED" && existingLoad.status !== "POSTED") {
       additionalData.postedAt = new Date();
     }
 
     // Sync tripKm and estimatedTripKm for backward compatibility
-    if (validatedData.tripKm !== undefined && validatedData.estimatedTripKm === undefined) {
+    if (
+      validatedData.tripKm !== undefined &&
+      validatedData.estimatedTripKm === undefined
+    ) {
       additionalData.estimatedTripKm = validatedData.tripKm;
-    } else if (validatedData.estimatedTripKm !== undefined && validatedData.tripKm === undefined) {
+    } else if (
+      validatedData.estimatedTripKm !== undefined &&
+      validatedData.tripKm === undefined
+    ) {
       additionalData.tripKm = validatedData.estimatedTripKm;
     }
 
@@ -309,8 +352,16 @@ export async function PATCH(
       }
 
       // Auto-unassign truck when status changes to terminal states
-      const terminalStatuses = ['DELIVERED', 'COMPLETED', 'CANCELLED', 'EXPIRED'];
-      if (terminalStatuses.includes(validatedData.status) && existingLoad.assignedTruckId) {
+      const terminalStatuses = [
+        "DELIVERED",
+        "COMPLETED",
+        "CANCELLED",
+        "EXPIRED",
+      ];
+      if (
+        terminalStatuses.includes(validatedData.status) &&
+        existingLoad.assignedTruckId
+      ) {
         additionalData.assignedTruckId = null;
         additionalData.trackingEnabled = false;
       }
@@ -323,7 +374,7 @@ export async function PATCH(
         data: {
           ...validatedData,
           ...additionalData,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any,
       });
 
@@ -331,12 +382,12 @@ export async function PATCH(
       let tripSynced = false;
       if (validatedData.status) {
         const tripStatusMap: Record<string, string> = {
-          'ASSIGNED': 'ASSIGNED',
-          'PICKUP_PENDING': 'PICKUP_PENDING',
-          'IN_TRANSIT': 'IN_TRANSIT',
-          'DELIVERED': 'DELIVERED',
-          'COMPLETED': 'COMPLETED',
-          'CANCELLED': 'CANCELLED',
+          ASSIGNED: "ASSIGNED",
+          PICKUP_PENDING: "PICKUP_PENDING",
+          IN_TRANSIT: "IN_TRANSIT",
+          DELIVERED: "DELIVERED",
+          COMPLETED: "COMPLETED",
+          CANCELLED: "CANCELLED",
         };
 
         const newTripStatus = tripStatusMap[validatedData.status];
@@ -353,20 +404,20 @@ export async function PATCH(
             };
 
             // Set appropriate timestamps based on status transition
-            if (validatedData.status === 'PICKUP_PENDING' && !trip.startedAt) {
+            if (validatedData.status === "PICKUP_PENDING" && !trip.startedAt) {
               tripUpdateData.startedAt = new Date();
             }
-            if (validatedData.status === 'IN_TRANSIT' && !trip.pickedUpAt) {
+            if (validatedData.status === "IN_TRANSIT" && !trip.pickedUpAt) {
               tripUpdateData.pickedUpAt = new Date();
             }
-            if (validatedData.status === 'DELIVERED' && !trip.deliveredAt) {
+            if (validatedData.status === "DELIVERED" && !trip.deliveredAt) {
               tripUpdateData.deliveredAt = new Date();
             }
-            if (validatedData.status === 'COMPLETED' && !trip.completedAt) {
+            if (validatedData.status === "COMPLETED" && !trip.completedAt) {
               tripUpdateData.completedAt = new Date();
               tripUpdateData.trackingEnabled = false;
             }
-            if (validatedData.status === 'CANCELLED' && !trip.cancelledAt) {
+            if (validatedData.status === "CANCELLED" && !trip.cancelledAt) {
               tripUpdateData.cancelledAt = new Date();
               tripUpdateData.cancelledBy = session.userId;
               tripUpdateData.trackingEnabled = false;
@@ -386,10 +437,10 @@ export async function PATCH(
     });
 
     if (tripSynced) {
-      }
+    }
 
     // Log truck unassignment if it happened
-    const terminalStatuses = ['DELIVERED', 'COMPLETED', 'CANCELLED', 'EXPIRED'];
+    const terminalStatuses = ["DELIVERED", "COMPLETED", "CANCELLED", "EXPIRED"];
     if (
       validatedData.status &&
       terminalStatuses.includes(validatedData.status) &&
@@ -398,7 +449,7 @@ export async function PATCH(
       await db.loadEvent.create({
         data: {
           loadId: id,
-          eventType: 'UNASSIGNED',
+          eventType: "UNASSIGNED",
           description: `Truck automatically unassigned - load status changed to ${validatedData.status}`,
           userId: session.userId,
         },
@@ -431,7 +482,12 @@ export async function PATCH(
     await db.loadEvent.create({
       data: {
         loadId: id,
-        eventType: validatedData.status === "POSTED" ? "POSTED" : validatedData.status === "UNPOSTED" ? "UNPOSTED" : "EDITED",
+        eventType:
+          validatedData.status === "POSTED"
+            ? "POSTED"
+            : validatedData.status === "UNPOSTED"
+              ? "UNPOSTED"
+              : "EDITED",
         description: `Load ${validatedData.status || "updated"}`,
         userId: session.userId,
       },
@@ -445,14 +501,17 @@ export async function PATCH(
       // Notify carrier if assigned
       if (existingLoad.assignedTruck?.carrierId) {
         const carrierUsers = await db.user.findMany({
-          where: { organizationId: existingLoad.assignedTruck.carrierId, status: 'ACTIVE' },
+          where: {
+            organizationId: existingLoad.assignedTruck.carrierId,
+            status: "ACTIVE",
+          },
           select: { id: true },
         });
         await Promise.all(
-          carrierUsers.map(user =>
+          carrierUsers.map((user) =>
             createNotification({
               userId: user.id,
-              type: 'LOAD_STATUS_CHANGE',
+              type: "LOAD_STATUS_CHANGE",
               title: `Load Status: ${validatedData.status}`,
               message: `Load status changed to ${validatedData.status}`,
               metadata: { loadId: id, status: validatedData.status },
@@ -519,9 +578,16 @@ export async function DELETE(
     }
 
     // Can only delete draft, unposted, or posted loads (not assigned/in-transit/delivered)
-    if (load.status === "ASSIGNED" || load.status === "IN_TRANSIT" || load.status === "DELIVERED") {
+    if (
+      load.status === "ASSIGNED" ||
+      load.status === "IN_TRANSIT" ||
+      load.status === "DELIVERED"
+    ) {
       return NextResponse.json(
-        { error: "Cannot delete loads that are assigned, in transit, or delivered" },
+        {
+          error:
+            "Cannot delete loads that are assigned, in transit, or delivered",
+        },
         { status: 400 }
       );
     }
@@ -531,23 +597,27 @@ export async function DELETE(
     const deletionResult = await db.$transaction(async (tx) => {
       // Find all pending LoadRequests for this load
       const pendingLoadRequests = await tx.loadRequest.findMany({
-        where: { loadId: id, status: 'PENDING' },
+        where: { loadId: id, status: "PENDING" },
         select: { id: true, carrierId: true },
       });
 
       // Find all pending TruckRequests for this load
       const pendingTruckRequests = await tx.truckRequest.findMany({
-        where: { loadId: id, status: 'PENDING' },
-        select: { id: true, truckId: true, truck: { select: { carrierId: true } } },
+        where: { loadId: id, status: "PENDING" },
+        select: {
+          id: true,
+          truckId: true,
+          truck: { select: { carrierId: true } },
+        },
       });
 
       // Reject all pending LoadRequests with system reason
       if (pendingLoadRequests.length > 0) {
         await tx.loadRequest.updateMany({
-          where: { loadId: id, status: 'PENDING' },
+          where: { loadId: id, status: "PENDING" },
           data: {
-            status: 'REJECTED',
-            responseNotes: 'Load was deleted by shipper',
+            status: "REJECTED",
+            responseNotes: "Load was deleted by shipper",
             respondedAt: new Date(),
           },
         });
@@ -556,10 +626,10 @@ export async function DELETE(
       // Reject all pending TruckRequests with system reason
       if (pendingTruckRequests.length > 0) {
         await tx.truckRequest.updateMany({
-          where: { loadId: id, status: 'PENDING' },
+          where: { loadId: id, status: "PENDING" },
           data: {
-            status: 'REJECTED',
-            responseNotes: 'Load was deleted by shipper',
+            status: "REJECTED",
+            responseNotes: "Load was deleted by shipper",
             respondedAt: new Date(),
           },
         });
@@ -579,23 +649,27 @@ export async function DELETE(
     await CacheInvalidation.load(id, load.shipperId);
 
     // P1-007 FIX: Notify affected carriers about rejected requests (fire-and-forget)
-    const notificationPromises: Promise<any>[] = [];
+    const notificationPromises: Promise<unknown>[] = [];
 
     // Batch-fetch all carrier users instead of querying per-request (N+1 fix)
     const allCarrierOrgIds = [
-      ...deletionResult.rejectedLoadRequests.map(r => r.carrierId),
+      ...deletionResult.rejectedLoadRequests.map((r) => r.carrierId),
       ...deletionResult.rejectedTruckRequests
-        .filter(r => r.truck?.carrierId)
-        .map(r => r.truck!.carrierId),
+        .filter((r) => r.truck?.carrierId)
+        .map((r) => r.truck!.carrierId),
     ];
     const uniqueCarrierOrgIds = [...new Set(allCarrierOrgIds)];
 
-    const allCarrierUsers = uniqueCarrierOrgIds.length > 0
-      ? await db.user.findMany({
-          where: { organizationId: { in: uniqueCarrierOrgIds }, status: 'ACTIVE' },
-          select: { id: true, organizationId: true },
-        })
-      : [];
+    const allCarrierUsers =
+      uniqueCarrierOrgIds.length > 0
+        ? await db.user.findMany({
+            where: {
+              organizationId: { in: uniqueCarrierOrgIds },
+              status: "ACTIVE",
+            },
+            select: { id: true, organizationId: true },
+          })
+        : [];
 
     // Group users by organizationId
     const usersByOrgId = new Map<string, string[]>();
@@ -612,10 +686,14 @@ export async function DELETE(
         notificationPromises.push(
           createNotification({
             userId,
-            type: 'LOAD_REQUEST_REJECTED',
-            title: 'Load Request Cancelled',
-            message: 'The load you requested has been deleted by the shipper.',
-            metadata: { loadRequestId: req.id, loadId: id, reason: 'Load deleted' },
+            type: "LOAD_REQUEST_REJECTED",
+            title: "Load Request Cancelled",
+            message: "The load you requested has been deleted by the shipper.",
+            metadata: {
+              loadRequestId: req.id,
+              loadId: id,
+              reason: "Load deleted",
+            },
           }).catch(console.error)
         );
       }
@@ -629,10 +707,15 @@ export async function DELETE(
           notificationPromises.push(
             createNotification({
               userId,
-              type: 'TRUCK_REQUEST_REJECTED',
-              title: 'Truck Request Cancelled',
-              message: 'The load for your truck request has been deleted by the shipper.',
-              metadata: { truckRequestId: req.id, loadId: id, reason: 'Load deleted' },
+              type: "TRUCK_REQUEST_REJECTED",
+              title: "Truck Request Cancelled",
+              message:
+                "The load for your truck request has been deleted by the shipper.",
+              metadata: {
+                truckRequestId: req.id,
+                loadId: id,
+                reason: "Load deleted",
+              },
             }).catch(console.error)
           );
         }

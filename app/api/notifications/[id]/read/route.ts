@@ -3,11 +3,11 @@
  * PUT /api/notifications/[id]/read
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
-import { markAsRead } from '@/lib/notifications';
-import { db } from '@/lib/db';
-import { validateCSRFWithMobile } from '@/lib/csrf';
+import { NextRequest, NextResponse } from "next/server";
+import { getSessionAny } from "@/lib/auth";
+import { markAsRead } from "@/lib/notifications";
+import { db } from "@/lib/db";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 
 export async function PUT(
   request: NextRequest,
@@ -18,10 +18,10 @@ export async function PUT(
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await getSession();
+    const session = await getSessionAny();
 
     if (!session?.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Await params (Next.js 15+)
@@ -35,7 +35,7 @@ export async function PUT(
 
     if (!notification || notification.userId !== session.userId) {
       return NextResponse.json(
-        { error: 'Notification not found' },
+        { error: "Notification not found" },
         { status: 404 }
       );
     }
@@ -44,9 +44,9 @@ export async function PUT(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Failed to mark notification as read:', error);
+    console.error("Failed to mark notification as read:", error);
     return NextResponse.json(
-      { error: 'Failed to update notification' },
+      { error: "Failed to update notification" },
       { status: 500 }
     );
   }

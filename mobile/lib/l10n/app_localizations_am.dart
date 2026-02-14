@@ -421,4 +421,110 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get etb => 'ብር';
+
+  @override
+  String get accountVerification => 'የመለያ ማረጋገጫ';
+
+  @override
+  String get verificationProgress => 'ሂደት';
+
+  @override
+  String get verificationSteps => 'የማረጋገጫ ደረጃዎች';
+
+  @override
+  String get stepAccountCreated => 'መለያ ተፈጠረ';
+
+  @override
+  String get stepDocumentsUploaded => 'ሰነዶች ተሰቅለዋል';
+
+  @override
+  String get stepAdminReview => 'የአስተዳዳሪ ግምገማ';
+
+  @override
+  String get stepAccountActivated => 'መለያ ገብር ተደርጓል';
+
+  @override
+  String get statusRegistrationComplete => 'ምዝገባ ተጠናቀቀ';
+
+  @override
+  String get statusUnderReview => 'በግምገማ ላይ';
+
+  @override
+  String get inProgress => 'በሂደት ላይ';
+
+  @override
+  String get uploadDocuments => 'ሰነዶች ስቀል';
+
+  @override
+  String get awaitingReview => 'ግምገማ በመጠባበቅ ላይ';
+
+  @override
+  String get documentsBeingReviewed =>
+      'ሰነዶችዎ በመገምገም ላይ ናቸው። ይህ ብዙውን ጊዜ 1-2 የስራ ቀናት ይወስዳል።';
+
+  @override
+  String get uploadVerificationDocuments => 'ለመቀጠል እባክዎ የማረጋገጫ ሰነዶችዎን ይስቀሉ።';
+
+  @override
+  String get estimatedReviewTime => 'የሚገመተው የግምገማ ጊዜ';
+
+  @override
+  String get oneToTwoBusinessDays => '1-2 የስራ ቀናት';
+
+  @override
+  String get contactSupport => 'ድጋፍ ያግኙ';
+
+  @override
+  String get verificationPending => 'ማረጋገጫ በመጠባበቅ ላይ';
+
+  @override
+  String get accountPendingVerification => 'መለያዎ ማረጋገጫ እየተጠበቀ ነው';
+
+  @override
+  String get limitedAccessMessage => 'መለያዎ እስኪረጋገጥ ድረስ ውስን መዳረሻ አለዎት።';
+
+  @override
+  String get dashboard => 'ዳሽቦርድ';
+
+  @override
+  String get findLoads => 'ጭነት ፈልግ';
+
+  @override
+  String get postTrucks => 'መኪና አስገባ';
+
+  @override
+  String get myLoads => 'ጭነቶቼ';
+
+  @override
+  String get myTrucks => 'መኪናዎቼ';
+
+  @override
+  String get myTrips => 'ጉዞዎቼ';
+
+  @override
+  String get findTrucks => 'መኪና ፈልግ';
+
+  @override
+  String get track => 'ክትትል';
+
+  @override
+  String get shipments => 'ጭነቶች';
+
+  @override
+  String get truckBookings => 'የመኪና ቦታ ይዞታ';
+
+  @override
+  String get trackMap => 'ካርታ ክትትል';
+
+  @override
+  String get postNewLoad => 'አዲስ ጭነት አስገባ';
+
+  @override
+  String get myShipments => 'ጭነቶቼ';
+
+  @override
+  String get myTruckRequests => 'የመኪና ጥያቄዎቼ';
+
+  @override
+  String get trackShipments => 'ጭነት ተከታተል';
 }
