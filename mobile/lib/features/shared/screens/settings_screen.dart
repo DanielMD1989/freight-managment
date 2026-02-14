@@ -51,7 +51,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         children: [
           // Language Section
-          _SectionHeader(title: 'Language'),
+          const _SectionHeader(title: 'Language'),
           _SettingsTile(
             icon: Icons.language,
             title: 'Language',
@@ -62,7 +62,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 16),
 
           // Appearance Section
-          _SectionHeader(title: 'Appearance'),
+          const _SectionHeader(title: 'Appearance'),
           _SettingsTile(
             icon: Icons.palette,
             title: 'Theme',
@@ -83,7 +83,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           // Notifications Section (push notifications are mobile-only)
           if (!kIsWeb) ...[
-            _SectionHeader(title: 'Notifications'),
+            const _SectionHeader(title: 'Notifications'),
             SwitchListTile(
               secondary: const Icon(Icons.notifications),
               title: const Text('Push Notifications'),
@@ -103,7 +103,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           // Location Section (GPS tracking is mobile-only)
           if (!kIsWeb) ...[
-            _SectionHeader(title: 'Location'),
+            const _SectionHeader(title: 'Location'),
             SwitchListTile(
               secondary: const Icon(Icons.location_on),
               title: const Text('GPS Tracking'),
@@ -118,7 +118,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 16),
 
           // Account Section
-          _SectionHeader(title: 'Account'),
+          const _SectionHeader(title: 'Account'),
           _SettingsTile(
             icon: Icons.person,
             title: 'Edit Profile',
@@ -141,7 +141,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 16),
 
           // About Section
-          _SectionHeader(title: 'About'),
+          const _SectionHeader(title: 'About'),
           _SettingsTile(
             icon: Icons.info,
             title: 'Version',
@@ -198,32 +198,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Select Language'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RadioListTile<Locale>(
-              title: const Text('English'),
-              value: const Locale('en'),
-              groupValue: settings.locale,
-              onChanged: (value) {
-                if (value != null) {
-                  notifier.setLocale(value);
-                  Navigator.pop(context);
-                }
-              },
-            ),
-            RadioListTile<Locale>(
-              title: const Text('አማርኛ (Amharic)'),
-              value: const Locale('am'),
-              groupValue: settings.locale,
-              onChanged: (value) {
-                if (value != null) {
-                  notifier.setLocale(value);
-                  Navigator.pop(context);
-                }
-              },
-            ),
-          ],
+        content: RadioGroup<Locale>(
+          groupValue: settings.locale,
+          onChanged: (value) {
+            if (value != null) {
+              notifier.setLocale(value);
+              Navigator.pop(context);
+            }
+          },
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<Locale>(
+                title: Text('English'),
+                value: Locale('en'),
+              ),
+              RadioListTile<Locale>(
+                title: Text('አማርኛ (Amharic)'),
+                value: Locale('am'),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -244,43 +239,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Select Theme'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RadioListTile<ThemeMode>(
-              title: const Text('Light'),
-              value: ThemeMode.light,
-              groupValue: settings.themeMode,
-              onChanged: (value) {
-                if (value != null) {
-                  notifier.setThemeMode(value);
-                  Navigator.pop(context);
-                }
-              },
-            ),
-            RadioListTile<ThemeMode>(
-              title: const Text('Dark'),
-              value: ThemeMode.dark,
-              groupValue: settings.themeMode,
-              onChanged: (value) {
-                if (value != null) {
-                  notifier.setThemeMode(value);
-                  Navigator.pop(context);
-                }
-              },
-            ),
-            RadioListTile<ThemeMode>(
-              title: const Text('System'),
-              value: ThemeMode.system,
-              groupValue: settings.themeMode,
-              onChanged: (value) {
-                if (value != null) {
-                  notifier.setThemeMode(value);
-                  Navigator.pop(context);
-                }
-              },
-            ),
-          ],
+        content: RadioGroup<ThemeMode>(
+          groupValue: settings.themeMode,
+          onChanged: (value) {
+            if (value != null) {
+              notifier.setThemeMode(value);
+              Navigator.pop(context);
+            }
+          },
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<ThemeMode>(
+                title: Text('Light'),
+                value: ThemeMode.light,
+              ),
+              RadioListTile<ThemeMode>(
+                title: Text('Dark'),
+                value: ThemeMode.dark,
+              ),
+              RadioListTile<ThemeMode>(
+                title: Text('System'),
+                value: ThemeMode.system,
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
