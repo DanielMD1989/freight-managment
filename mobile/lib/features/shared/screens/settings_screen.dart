@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -80,35 +81,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           const SizedBox(height: 16),
 
-          // Notifications Section
-          _SectionHeader(title: 'Notifications'),
-          SwitchListTile(
-            secondary: const Icon(Icons.notifications),
-            title: const Text('Push Notifications'),
-            subtitle: const Text('Receive alerts for loads, trips, and payments'),
-            value: settings.pushNotificationsEnabled,
-            onChanged: (value) async {
-              await settingsNotifier.setPushNotifications(value);
-              if (value) {
-                // Re-initialize push notifications if enabled
-                await PushNotificationService().initialize();
-              }
-            },
-          ),
+          // Notifications Section (push notifications are mobile-only)
+          if (!kIsWeb) ...[
+            _SectionHeader(title: 'Notifications'),
+            SwitchListTile(
+              secondary: const Icon(Icons.notifications),
+              title: const Text('Push Notifications'),
+              subtitle: const Text('Receive alerts for loads, trips, and payments'),
+              value: settings.pushNotificationsEnabled,
+              onChanged: (value) async {
+                await settingsNotifier.setPushNotifications(value);
+                if (value) {
+                  // Re-initialize push notifications if enabled
+                  await PushNotificationService().initialize();
+                }
+              },
+            ),
+          ],
 
           const SizedBox(height: 16),
 
-          // Location Section
-          _SectionHeader(title: 'Location'),
-          SwitchListTile(
-            secondary: const Icon(Icons.location_on),
-            title: const Text('GPS Tracking'),
-            subtitle: const Text('Enable real-time location tracking during trips'),
-            value: settings.gpsTrackingEnabled,
-            onChanged: (value) {
-              settingsNotifier.setGpsTracking(value);
-            },
-          ),
+          // Location Section (GPS tracking is mobile-only)
+          if (!kIsWeb) ...[
+            _SectionHeader(title: 'Location'),
+            SwitchListTile(
+              secondary: const Icon(Icons.location_on),
+              title: const Text('GPS Tracking'),
+              subtitle: const Text('Enable real-time location tracking during trips'),
+              value: settings.gpsTrackingEnabled,
+              onChanged: (value) {
+                settingsNotifier.setGpsTracking(value);
+              },
+            ),
+          ],
 
           const SizedBox(height: 16),
 

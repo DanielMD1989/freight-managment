@@ -29,8 +29,10 @@ void main() async {
     ),
   );
 
-  // Initialize GPS queue service
-  await GpsQueueService().initialize();
+  // Initialize GPS queue service (mobile only - uses platform channels)
+  if (!kIsWeb) {
+    await GpsQueueService().initialize();
+  }
 
   // Initialize push notifications (Firebase)
   // Note: For production, run `flutterfire configure` to generate firebase_options.dart

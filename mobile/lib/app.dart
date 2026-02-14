@@ -740,6 +740,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
+      // Redirect namespaced notification URLs to shared route
+      GoRoute(
+        path: '/shipper/notifications',
+        redirect: (context, state) => '/notifications',
+      ),
+      GoRoute(
+        path: '/carrier/notifications',
+        redirect: (context, state) => '/notifications',
+      ),
+
       // Shared routes
       GoRoute(
         path: '/profile',
