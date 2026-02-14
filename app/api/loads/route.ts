@@ -4,12 +4,13 @@ import { requireAuth, requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
-import {
-  calculateAge,
-  maskCompany,
-} from "@/lib/loadUtils";
+import { calculateAge, maskCompany } from "@/lib/loadUtils";
 import { LoadCache, CacheInvalidation, CacheTTL } from "@/lib/cache";
-import { checkRpsLimit, RPS_CONFIGS, addRateLimitHeaders } from "@/lib/rateLimit";
+import {
+  checkRpsLimit,
+  RPS_CONFIGS,
+  addRateLimitHeaders,
+} from "@/lib/rateLimit";
 import { zodErrorResponse } from "@/lib/validation";
 import { Prisma } from "@prisma/client";
 
@@ -17,15 +18,15 @@ const createLoadSchema = z.object({
   // Location & Schedule
   pickupCity: z.string().min(2),
   pickupAddress: z.string().optional(),
-  pickupDockHours: z.string().optional(),  // Changed to single field (string)
+  pickupDockHours: z.string().optional(), // Changed to single field (string)
   pickupDate: z.string(),
   appointmentRequired: z.boolean().default(false),
   deliveryCity: z.string().min(2),
   deliveryAddress: z.string().optional(),
-  deliveryDockHours: z.string().optional(),  // Changed to single field (string)
+  deliveryDockHours: z.string().optional(), // Changed to single field (string)
   deliveryDate: z.string(),
 
-  tripKm: z.number().positive().optional(),  // Required for POSTED status
+  tripKm: z.number().positive().optional(), // Required for POSTED status
   dhToOriginKm: z.number().positive().optional(),
   dhAfterDeliveryKm: z.number().positive().optional(),
   originLat: z.number().optional(),
@@ -34,12 +35,21 @@ const createLoadSchema = z.object({
   destinationLon: z.number().optional(),
 
   // Load Details
-  truckType: z.enum(["FLATBED", "REFRIGERATED", "TANKER", "CONTAINER", "DRY_VAN", "LOWBOY", "DUMP_TRUCK", "BOX_TRUCK"]),
+  truckType: z.enum([
+    "FLATBED",
+    "REFRIGERATED",
+    "TANKER",
+    "CONTAINER",
+    "DRY_VAN",
+    "LOWBOY",
+    "DUMP_TRUCK",
+    "BOX_TRUCK",
+  ]),
   weight: z.number().positive(),
   volume: z.number().positive().optional(),
   cargoDescription: z.string().min(5),
-  isFullLoad: z.boolean().default(true),  // Keep for backward compatibility
-  fullPartial: z.enum(["FULL", "PARTIAL"]).default("FULL"),  // [NEW]
+  isFullLoad: z.boolean().default(true), // Keep for backward compatibility
+  fullPartial: z.enum(["FULL", "PARTIAL"]).default("FULL"), // [NEW]
   isFragile: z.boolean().default(false),
   requiresRefrigeration: z.boolean().default(false),
 
@@ -47,15 +57,15 @@ const createLoadSchema = z.object({
   casesCount: z.number().int().positive().optional(),
 
   // Pricing is negotiated off-platform
-  bookMode: z.enum(["REQUEST", "INSTANT"]).default("REQUEST"),  // [NEW]
+  bookMode: z.enum(["REQUEST", "INSTANT"]).default("REQUEST"), // [NEW]
 
   dtpReference: z.string().optional(),
   factorRating: z.string().optional(),
 
   // Privacy & Safety
   isAnonymous: z.boolean().default(false),
-  shipperContactName: z.string().optional(),  // [NEW]
-  shipperContactPhone: z.string().optional(),  // [NEW]
+  shipperContactName: z.string().optional(), // [NEW]
+  shipperContactPhone: z.string().optional(), // [NEW]
   safetyNotes: z.string().optional(),
   specialInstructions: z.string().optional(),
 
@@ -72,9 +82,9 @@ export async function POST(request: NextRequest) {
 
     // Rate limiting: Apply RPS_CONFIGS.marketplace
     const ip =
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      request.headers.get('x-real-ip') ||
-      'unknown';
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
     const rpsResult = await checkRpsLimit(
       RPS_CONFIGS.marketplace.endpoint,
       ip,
@@ -83,13 +93,13 @@ export async function POST(request: NextRequest) {
     );
     if (!rpsResult.allowed) {
       return NextResponse.json(
-        { error: 'Rate limit exceeded. Please slow down.', retryAfter: 1 },
+        { error: "Rate limit exceeded. Please slow down.", retryAfter: 1 },
         {
           status: 429,
           headers: {
-            'X-RateLimit-Limit': rpsResult.limit.toString(),
-            'X-RateLimit-Remaining': rpsResult.remaining.toString(),
-            'Retry-After': '1',
+            "X-RateLimit-Limit": rpsResult.limit.toString(),
+            "X-RateLimit-Remaining": rpsResult.remaining.toString(),
+            "Retry-After": "1",
           },
         }
       );
@@ -142,7 +152,10 @@ export async function POST(request: NextRequest) {
       data: {
         loadId: load.id,
         eventType: validatedData.status === "POSTED" ? "POSTED" : "CREATED",
-        description: validatedData.status === "POSTED" ? "Load posted to marketplace" : "Load created as draft",
+        description:
+          validatedData.status === "POSTED"
+            ? "Load posted to marketplace"
+            : "Load created as draft",
         userId: session.userId,
       },
     });
@@ -153,21 +166,25 @@ export async function POST(request: NextRequest) {
     // PHASE 4: Send push notification to carriers when load is posted
     if (validatedData.status === "POSTED") {
       // Notify carriers about new load asynchronously (fire-and-forget)
-      import('@/lib/notifications').then(({ createNotificationForRole }) => {
-        createNotificationForRole({
-          role: 'CARRIER',
-          type: 'NEW_LOAD_POSTED',
-          title: 'New Load Available',
-          message: `New ${validatedData.truckType} load: ${validatedData.pickupCity} → ${validatedData.deliveryCity}`,
-          metadata: {
-            loadId: load.id,
-            pickupCity: validatedData.pickupCity,
-            deliveryCity: validatedData.deliveryCity,
-            truckType: validatedData.truckType,
-            weight: validatedData.weight,
-          },
-        }).catch(err => console.error('Failed to notify carriers:', err));
-      }).catch(err => console.error('Failed to load notifications module:', err));
+      import("@/lib/notifications")
+        .then(({ createNotificationForRole }) => {
+          createNotificationForRole({
+            role: "CARRIER",
+            type: "NEW_LOAD_POSTED",
+            title: "New Load Available",
+            message: `New ${validatedData.truckType} load: ${validatedData.pickupCity} → ${validatedData.deliveryCity}`,
+            metadata: {
+              loadId: load.id,
+              pickupCity: validatedData.pickupCity,
+              deliveryCity: validatedData.deliveryCity,
+              truckType: validatedData.truckType,
+              weight: validatedData.weight,
+            },
+          }).catch((err) => console.error("Failed to notify carriers:", err));
+        })
+        .catch((err) =>
+          console.error("Failed to load notifications module:", err)
+        );
     }
 
     return NextResponse.json({ load }, { status: 201 });
@@ -194,9 +211,9 @@ export async function GET(request: NextRequest) {
   try {
     // Rate limiting: Apply RPS_CONFIGS.marketplace
     const ip =
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      request.headers.get('x-real-ip') ||
-      'unknown';
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
     const rpsResult = await checkRpsLimit(
       RPS_CONFIGS.marketplace.endpoint,
       ip,
@@ -205,13 +222,13 @@ export async function GET(request: NextRequest) {
     );
     if (!rpsResult.allowed) {
       return NextResponse.json(
-        { error: 'Rate limit exceeded. Please slow down.', retryAfter: 1 },
+        { error: "Rate limit exceeded. Please slow down.", retryAfter: 1 },
         {
           status: 429,
           headers: {
-            'X-RateLimit-Limit': rpsResult.limit.toString(),
-            'X-RateLimit-Remaining': rpsResult.remaining.toString(),
-            'Retry-After': '1',
+            "X-RateLimit-Limit": rpsResult.limit.toString(),
+            "X-RateLimit-Remaining": rpsResult.remaining.toString(),
+            "Retry-After": "1",
           },
         }
       );
@@ -238,15 +255,29 @@ export async function GET(request: NextRequest) {
 
     // PHASE 4: Build cache key from filter parameters
     const cacheFilters = {
-      page, limit, status, pickupCity, deliveryCity, truckType,
-      myLoads, myTrips, tripKmMin, tripKmMax, fullPartial, bookMode,
-      rateMin, rateMax, role: session.role, orgId: session.organizationId,
-      sortBy: searchParams.get("sortBy"), sortOrder: searchParams.get("sortOrder"),
+      page,
+      limit,
+      status,
+      pickupCity,
+      deliveryCity,
+      truckType,
+      myLoads,
+      myTrips,
+      tripKmMin,
+      tripKmMax,
+      fullPartial,
+      bookMode,
+      rateMin,
+      rateMax,
+      role: session.role,
+      orgId: session.organizationId,
+      sortBy: searchParams.get("sortBy"),
+      sortOrder: searchParams.get("sortOrder"),
     };
 
     // Try cache first for marketplace queries (public loads only)
     // Only cache non-personalized queries
-    const isPublicQuery = !myLoads && !myTrips && session.role !== 'SHIPPER';
+    const isPublicQuery = !myLoads && !myTrips && session.role !== "SHIPPER";
     if (isPublicQuery) {
       const cachedResult = await LoadCache.getList(cacheFilters);
       if (cachedResult) {
@@ -264,7 +295,10 @@ export async function GET(request: NextRequest) {
     });
 
     // Sprint 16: Dispatcher can see all loads
-    const isDispatcher = user?.role === 'DISPATCHER' || user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN';
+    const isDispatcher =
+      user?.role === "DISPATCHER" ||
+      user?.role === "SUPER_ADMIN" ||
+      user?.role === "ADMIN";
 
     if (isDispatcher) {
       // Dispatcher/Admin: See all loads (no organization filter)
@@ -288,8 +322,8 @@ export async function GET(request: NextRequest) {
 
     if (status) {
       // Handle comma-separated statuses (e.g., "PICKUP_PENDING,IN_TRANSIT")
-      if (status.includes(',')) {
-        where.status = { in: status.split(',') };
+      if (status.includes(",")) {
+        where.status = { in: status.split(",") };
       } else {
         where.status = status;
       }
@@ -337,8 +371,8 @@ export async function GET(request: NextRequest) {
       case "postedAt":
         // Sort by postedAt desc with nulls last, then createdAt as fallback
         orderBy = [
-          { postedAt: { sort: sortOrder as 'asc' | 'desc', nulls: 'last' } },
-          { createdAt: sortOrder }
+          { postedAt: { sort: sortOrder as "asc" | "desc", nulls: "last" } },
+          { createdAt: sortOrder },
         ];
         break;
       case "tripKm":
@@ -359,16 +393,16 @@ export async function GET(request: NextRequest) {
         select: {
           id: true,
           status: true,
-          postedAt: true,  // [NEW] For age calculation
+          postedAt: true, // [NEW] For age calculation
           // Location & Schedule
           pickupCity: true,
           pickupAddress: true,
-          pickupDockHours: true,  // [NEW]
+          pickupDockHours: true, // [NEW]
           pickupDate: true,
-          appointmentRequired: true,  // [NEW]
+          appointmentRequired: true, // [NEW]
           deliveryCity: true,
           deliveryAddress: true,
-          deliveryDockHours: true,  // [NEW]
+          deliveryDockHours: true, // [NEW]
           deliveryDate: true,
           tripKm: true,
           dhToOriginKm: true,
@@ -383,14 +417,15 @@ export async function GET(request: NextRequest) {
           volume: true,
           cargoDescription: true,
           isFullLoad: true,
-          fullPartial: true,  // [NEW]
+          fullPartial: true, // [NEW]
           isFragile: true,
           requiresRefrigeration: true,
           lengthM: true,
           casesCount: true,
-          // Settings
+          // Settings & Fees
+          shipperServiceFee: true,
           currency: true,
-          bookMode: true,  // [NEW]
+          bookMode: true, // [NEW]
           // SPRINT 8: Market pricing (dtpReference, factorRating) removed per TRD
           // Privacy & Safety
           isAnonymous: true,
@@ -481,10 +516,13 @@ export async function GET(request: NextRequest) {
 
     // Handle specific error types
     if (error instanceof Error) {
-      if (error.message === 'Unauthorized' || error.name === 'UnauthorizedError') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      if (
+        error.message === "Unauthorized" ||
+        error.name === "UnauthorizedError"
+      ) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
-      if (error.name === 'ForbiddenError') {
+      if (error.name === "ForbiddenError") {
         return NextResponse.json({ error: error.message }, { status: 403 });
       }
     }
@@ -492,7 +530,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         error: "Internal server error",
-        details: process.env.NODE_ENV !== 'production' ? String(error) : undefined
+        details:
+          process.env.NODE_ENV !== "production" ? String(error) : undefined,
       },
       { status: 500 }
     );
