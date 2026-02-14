@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/providers/auth_provider.dart';
+import 'core/providers/settings_provider.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/register_screen.dart';
 import 'features/onboarding/screens/onboarding_screen.dart';
@@ -35,6 +38,7 @@ import 'features/shipper/screens/shipper_map_screen.dart';
 import 'features/shared/screens/profile_screen.dart';
 import 'features/shared/screens/notifications_screen.dart';
 import 'features/shared/screens/wallet_screen.dart';
+import 'features/shared/screens/settings_screen.dart';
 
 /// Provider for onboarding completion status
 final onboardingCompleteProvider = FutureProvider<bool>((ref) async {
@@ -129,13 +133,27 @@ class FreightManagementApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final settings = ref.watch(settingsProvider);
+    final locale = settings.locale;
+    final themeMode = settings.themeMode;
 
     return MaterialApp.router(
       title: 'FreightFlow',
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(),
       darkTheme: _buildDarkTheme(),
-      themeMode: ThemeMode.light,
+      themeMode: themeMode,
+      locale: locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en'), // English
+        Locale('am'), // Amharic
+      ],
       routerConfig: router,
     );
   }
@@ -683,6 +701,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/wallet',
         builder: (context, state) => const WalletScreen(),
       ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
     ],
   );
 });
@@ -912,6 +934,14 @@ class _CarrierDrawer extends ConsumerWidget {
                     onTap: () {
                       Navigator.pop(context);
                       context.push('/profile');
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.settings,
+                    label: 'Settings',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/settings');
                     },
                   ),
                 ],
@@ -1184,6 +1214,14 @@ class _ShipperDrawer extends ConsumerWidget {
                     onTap: () {
                       Navigator.pop(context);
                       context.push('/profile');
+                    },
+                  ),
+                  _DrawerItem(
+                    icon: Icons.settings,
+                    label: 'Settings',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/settings');
                     },
                   ),
                 ],

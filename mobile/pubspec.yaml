@@ -1,15 +1,17 @@
 name: freight_management_mobile
 description: Freight Management Mobile Apps - Carrier & Shipper
 
-publish_to: 'none'
+publish_to: "none"
 
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.2.0 <4.0.0'
+  sdk: ">=3.2.0 <4.0.0"
 
 dependencies:
   flutter:
+    sdk: flutter
+  flutter_localizations:
     sdk: flutter
 
   # State Management
@@ -44,9 +46,9 @@ dependencies:
   file_picker: ^6.1.1
   path_provider: ^2.1.2
 
-  # Push Notifications (Firebase temporarily disabled for Xcode 26 compatibility)
-  # firebase_core: ^2.25.4
-  # firebase_messaging: ^14.7.15
+  # Push Notifications
+  firebase_core: ^3.8.0
+  firebase_messaging: ^15.1.5
   flutter_local_notifications: ^16.3.2
 
   # UI Components
@@ -64,8 +66,8 @@ dependencies:
   # Utilities
   intl: any
   url_launcher: ^6.2.4
-  package_info_plus: ^5.0.1
-  connectivity_plus: ^5.0.2
+  package_info_plus: ^8.0.0
+  connectivity_plus: ^6.0.0
   permission_handler: ^11.2.0
 
   # Barcode/QR (temporarily disabled)
@@ -84,6 +86,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true
 
   # Assets will be added when available
   # assets:

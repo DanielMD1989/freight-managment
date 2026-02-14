@@ -1,0 +1,694 @@
+{
+  "@@locale": "en",
+  "@@last_modified": "2026-02-14T00:00:00.000Z",
+
+  "appName": "FreightFlow",
+  "@appName": {
+    "description": "The app name"
+  },
+
+  "login": "Login",
+  "@login": {
+    "description": "Login button text"
+  },
+
+  "logout": "Logout",
+  "@logout": {
+    "description": "Logout button text"
+  },
+
+  "register": "Register",
+  "@register": {
+    "description": "Register button text"
+  },
+
+  "email": "Email",
+  "@email": {
+    "description": "Email field label"
+  },
+
+  "password": "Password",
+  "@password": {
+    "description": "Password field label"
+  },
+
+  "confirmPassword": "Confirm Password",
+  "@confirmPassword": {
+    "description": "Confirm password field label"
+  },
+
+  "forgotPassword": "Forgot Password?",
+  "@forgotPassword": {
+    "description": "Forgot password link text"
+  },
+
+  "dontHaveAccount": "Don't have an account?",
+  "@dontHaveAccount": {
+    "description": "Sign up prompt text"
+  },
+
+  "alreadyHaveAccount": "Already have an account?",
+  "@alreadyHaveAccount": {
+    "description": "Sign in prompt text"
+  },
+
+  "home": "Home",
+  "@home": {
+    "description": "Home navigation label"
+  },
+
+  "loads": "Loads",
+  "@loads": {
+    "description": "Loads navigation label"
+  },
+
+  "trucks": "Trucks",
+  "@trucks": {
+    "description": "Trucks navigation label"
+  },
+
+  "trips": "Trips",
+  "@trips": {
+    "description": "Trips navigation label"
+  },
+
+  "wallet": "Wallet",
+  "@wallet": {
+    "description": "Wallet navigation label"
+  },
+
+  "notifications": "Notifications",
+  "@notifications": {
+    "description": "Notifications navigation label"
+  },
+
+  "profile": "Profile",
+  "@profile": {
+    "description": "Profile navigation label"
+  },
+
+  "settings": "Settings",
+  "@settings": {
+    "description": "Settings navigation label"
+  },
+
+  "loadboard": "Load Board",
+  "@loadboard": {
+    "description": "Load board screen title"
+  },
+
+  "truckboard": "Truck Board",
+  "@truckboard": {
+    "description": "Truck board screen title"
+  },
+
+  "postLoad": "Post Load",
+  "@postLoad": {
+    "description": "Post load button text"
+  },
+
+  "postTruck": "Post Truck",
+  "@postTruck": {
+    "description": "Post truck button text"
+  },
+
+  "searchLoads": "Search Loads",
+  "@searchLoads": {
+    "description": "Search loads placeholder"
+  },
+
+  "searchTrucks": "Search Trucks",
+  "@searchTrucks": {
+    "description": "Search trucks placeholder"
+  },
+
+  "noLoadsFound": "No loads found",
+  "@noLoadsFound": {
+    "description": "Empty state for loads"
+  },
+
+  "noTrucksFound": "No trucks found",
+  "@noTrucksFound": {
+    "description": "Empty state for trucks"
+  },
+
+  "pickup": "Pickup",
+  "@pickup": {
+    "description": "Pickup label"
+  },
+
+  "delivery": "Delivery",
+  "@delivery": {
+    "description": "Delivery label"
+  },
+
+  "pickupLocation": "Pickup Location",
+  "@pickupLocation": {
+    "description": "Pickup location field label"
+  },
+
+  "deliveryLocation": "Delivery Location",
+  "@deliveryLocation": {
+    "description": "Delivery location field label"
+  },
+
+  "pickupDate": "Pickup Date",
+  "@pickupDate": {
+    "description": "Pickup date field label"
+  },
+
+  "deliveryDate": "Delivery Date",
+  "@deliveryDate": {
+    "description": "Delivery date field label"
+  },
+
+  "weight": "Weight",
+  "@weight": {
+    "description": "Weight field label"
+  },
+
+  "price": "Price",
+  "@price": {
+    "description": "Price field label"
+  },
+
+  "distance": "Distance",
+  "@distance": {
+    "description": "Distance label"
+  },
+
+  "status": "Status",
+  "@status": {
+    "description": "Status label"
+  },
+
+  "statusPosted": "Posted",
+  "@statusPosted": {
+    "description": "Posted status"
+  },
+
+  "statusAssigned": "Assigned",
+  "@statusAssigned": {
+    "description": "Assigned status"
+  },
+
+  "statusInTransit": "In Transit",
+  "@statusInTransit": {
+    "description": "In transit status"
+  },
+
+  "statusDelivered": "Delivered",
+  "@statusDelivered": {
+    "description": "Delivered status"
+  },
+
+  "statusCompleted": "Completed",
+  "@statusCompleted": {
+    "description": "Completed status"
+  },
+
+  "statusCancelled": "Cancelled",
+  "@statusCancelled": {
+    "description": "Cancelled status"
+  },
+
+  "currentBalance": "Current Balance",
+  "@currentBalance": {
+    "description": "Wallet current balance label"
+  },
+
+  "recentTransactions": "Recent Transactions",
+  "@recentTransactions": {
+    "description": "Recent transactions section title"
+  },
+
+  "addFunds": "Add Funds",
+  "@addFunds": {
+    "description": "Add funds button"
+  },
+
+  "withdraw": "Withdraw",
+  "@withdraw": {
+    "description": "Withdraw button"
+  },
+
+  "commission": "Commission",
+  "@commission": {
+    "description": "Commission transaction type"
+  },
+
+  "payment": "Payment",
+  "@payment": {
+    "description": "Payment transaction type"
+  },
+
+  "refund": "Refund",
+  "@refund": {
+    "description": "Refund transaction type"
+  },
+
+  "noTransactions": "No transactions yet",
+  "@noTransactions": {
+    "description": "Empty transactions message"
+  },
+
+  "transactionHistoryWillAppear": "Your transaction history will appear here",
+  "@transactionHistoryWillAppear": {
+    "description": "Empty transactions description"
+  },
+
+  "proofOfDelivery": "Proof of Delivery",
+  "@proofOfDelivery": {
+    "description": "POD screen title"
+  },
+
+  "uploadPod": "Upload POD",
+  "@uploadPod": {
+    "description": "Upload POD button"
+  },
+
+  "takePhoto": "Take Photo",
+  "@takePhoto": {
+    "description": "Take photo button"
+  },
+
+  "fromGallery": "From Gallery",
+  "@fromGallery": {
+    "description": "From gallery button"
+  },
+
+  "uploadPhotos": "Upload {count} Photo(s)",
+  "@uploadPhotos": {
+    "description": "Upload photos button with count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "uploading": "Uploading...",
+  "@uploading": {
+    "description": "Uploading state text"
+  },
+
+  "uploadSuccess": "Upload successful",
+  "@uploadSuccess": {
+    "description": "Upload success message"
+  },
+
+  "uploadFailed": "Upload failed",
+  "@uploadFailed": {
+    "description": "Upload failed message"
+  },
+
+  "gpsTracking": "GPS Tracking",
+  "@gpsTracking": {
+    "description": "GPS tracking setting"
+  },
+
+  "gpsTrackingDescription": "Enable real-time location tracking during trips",
+  "@gpsTrackingDescription": {
+    "description": "GPS tracking description"
+  },
+
+  "pushNotifications": "Push Notifications",
+  "@pushNotifications": {
+    "description": "Push notifications setting"
+  },
+
+  "pushNotificationsDescription": "Receive alerts for loads, trips, and payments",
+  "@pushNotificationsDescription": {
+    "description": "Push notifications description"
+  },
+
+  "language": "Language",
+  "@language": {
+    "description": "Language setting"
+  },
+
+  "english": "English",
+  "@english": {
+    "description": "English language option"
+  },
+
+  "amharic": "Amharic",
+  "@amharic": {
+    "description": "Amharic language option"
+  },
+
+  "darkMode": "Dark Mode",
+  "@darkMode": {
+    "description": "Dark mode setting"
+  },
+
+  "account": "Account",
+  "@account": {
+    "description": "Account section title"
+  },
+
+  "editProfile": "Edit Profile",
+  "@editProfile": {
+    "description": "Edit profile button"
+  },
+
+  "changePassword": "Change Password",
+  "@changePassword": {
+    "description": "Change password button"
+  },
+
+  "general": "General",
+  "@general": {
+    "description": "General section title"
+  },
+
+  "about": "About",
+  "@about": {
+    "description": "About section title"
+  },
+
+  "version": "Version",
+  "@version": {
+    "description": "Version label"
+  },
+
+  "privacyPolicy": "Privacy Policy",
+  "@privacyPolicy": {
+    "description": "Privacy policy link"
+  },
+
+  "termsOfService": "Terms of Service",
+  "@termsOfService": {
+    "description": "Terms of service link"
+  },
+
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel button"
+  },
+
+  "confirm": "Confirm",
+  "@confirm": {
+    "description": "Confirm button"
+  },
+
+  "save": "Save",
+  "@save": {
+    "description": "Save button"
+  },
+
+  "delete": "Delete",
+  "@delete": {
+    "description": "Delete button"
+  },
+
+  "edit": "Edit",
+  "@edit": {
+    "description": "Edit button"
+  },
+
+  "retry": "Retry",
+  "@retry": {
+    "description": "Retry button"
+  },
+
+  "loading": "Loading...",
+  "@loading": {
+    "description": "Loading state text"
+  },
+
+  "error": "Error",
+  "@error": {
+    "description": "Error title"
+  },
+
+  "success": "Success",
+  "@success": {
+    "description": "Success title"
+  },
+
+  "somethingWentWrong": "Something went wrong",
+  "@somethingWentWrong": {
+    "description": "Generic error message"
+  },
+
+  "noInternetConnection": "No internet connection",
+  "@noInternetConnection": {
+    "description": "No internet error"
+  },
+
+  "connectionTimeout": "Connection timeout",
+  "@connectionTimeout": {
+    "description": "Timeout error"
+  },
+
+  "plateNumber": "Plate Number",
+  "@plateNumber": {
+    "description": "Plate number field label"
+  },
+
+  "truckType": "Truck Type",
+  "@truckType": {
+    "description": "Truck type field label"
+  },
+
+  "capacity": "Capacity",
+  "@capacity": {
+    "description": "Capacity field label"
+  },
+
+  "available": "Available",
+  "@available": {
+    "description": "Available status"
+  },
+
+  "unavailable": "Unavailable",
+  "@unavailable": {
+    "description": "Unavailable status"
+  },
+
+  "onTrip": "On Trip",
+  "@onTrip": {
+    "description": "On trip status"
+  },
+
+  "viewDetails": "View Details",
+  "@viewDetails": {
+    "description": "View details button"
+  },
+
+  "requestLoad": "Request Load",
+  "@requestLoad": {
+    "description": "Request load button"
+  },
+
+  "requestTruck": "Request Truck",
+  "@requestTruck": {
+    "description": "Request truck button"
+  },
+
+  "acceptRequest": "Accept Request",
+  "@acceptRequest": {
+    "description": "Accept request button"
+  },
+
+  "rejectRequest": "Reject Request",
+  "@rejectRequest": {
+    "description": "Reject request button"
+  },
+
+  "pendingRequests": "Pending Requests",
+  "@pendingRequests": {
+    "description": "Pending requests title"
+  },
+
+  "loadRequests": "Load Requests",
+  "@loadRequests": {
+    "description": "Load requests navigation"
+  },
+
+  "truckRequests": "Truck Requests",
+  "@truckRequests": {
+    "description": "Truck requests navigation"
+  },
+
+  "startTrip": "Start Trip",
+  "@startTrip": {
+    "description": "Start trip button"
+  },
+
+  "endTrip": "End Trip",
+  "@endTrip": {
+    "description": "End trip button"
+  },
+
+  "trackShipment": "Track Shipment",
+  "@trackShipment": {
+    "description": "Track shipment button"
+  },
+
+  "estimatedArrival": "Estimated Arrival",
+  "@estimatedArrival": {
+    "description": "ETA label"
+  },
+
+  "tripProgress": "Trip Progress",
+  "@tripProgress": {
+    "description": "Trip progress label"
+  },
+
+  "remainingDistance": "Remaining Distance",
+  "@remainingDistance": {
+    "description": "Remaining distance label"
+  },
+
+  "markAsRead": "Mark as Read",
+  "@markAsRead": {
+    "description": "Mark notification as read"
+  },
+
+  "markAllAsRead": "Mark All as Read",
+  "@markAllAsRead": {
+    "description": "Mark all notifications as read"
+  },
+
+  "noNotifications": "No notifications",
+  "@noNotifications": {
+    "description": "Empty notifications message"
+  },
+
+  "today": "Today",
+  "@today": {
+    "description": "Today date group"
+  },
+
+  "yesterday": "Yesterday",
+  "@yesterday": {
+    "description": "Yesterday date group"
+  },
+
+  "thisWeek": "This Week",
+  "@thisWeek": {
+    "description": "This week date group"
+  },
+
+  "earlier": "Earlier",
+  "@earlier": {
+    "description": "Earlier date group"
+  },
+
+  "comingSoon": "Coming Soon",
+  "@comingSoon": {
+    "description": "Coming soon message"
+  },
+
+  "featureComingSoon": "This feature is coming soon!",
+  "@featureComingSoon": {
+    "description": "Feature coming soon message"
+  },
+
+  "logoutConfirmTitle": "Logout",
+  "@logoutConfirmTitle": {
+    "description": "Logout confirmation title"
+  },
+
+  "logoutConfirmMessage": "Are you sure you want to logout?",
+  "@logoutConfirmMessage": {
+    "description": "Logout confirmation message"
+  },
+
+  "refreshing": "Refreshing...",
+  "@refreshing": {
+    "description": "Refreshing state"
+  },
+
+  "pullToRefresh": "Pull to refresh",
+  "@pullToRefresh": {
+    "description": "Pull to refresh hint"
+  },
+
+  "filterBy": "Filter by",
+  "@filterBy": {
+    "description": "Filter by label"
+  },
+
+  "sortBy": "Sort by",
+  "@sortBy": {
+    "description": "Sort by label"
+  },
+
+  "all": "All",
+  "@all": {
+    "description": "All filter option"
+  },
+
+  "active": "Active",
+  "@active": {
+    "description": "Active filter option"
+  },
+
+  "completed": "Completed",
+  "@completed": {
+    "description": "Completed filter option"
+  },
+
+  "shipper": "Shipper",
+  "@shipper": {
+    "description": "Shipper role"
+  },
+
+  "carrier": "Carrier",
+  "@carrier": {
+    "description": "Carrier role"
+  },
+
+  "driver": "Driver",
+  "@driver": {
+    "description": "Driver role"
+  },
+
+  "selectRole": "Select Role",
+  "@selectRole": {
+    "description": "Select role prompt"
+  },
+
+  "fullName": "Full Name",
+  "@fullName": {
+    "description": "Full name field label"
+  },
+
+  "phoneNumber": "Phone Number",
+  "@phoneNumber": {
+    "description": "Phone number field label"
+  },
+
+  "companyName": "Company Name",
+  "@companyName": {
+    "description": "Company name field label"
+  },
+
+  "tradeLicense": "Trade License",
+  "@tradeLicense": {
+    "description": "Trade license field label"
+  },
+
+  "km": "km",
+  "@km": {
+    "description": "Kilometers abbreviation"
+  },
+
+  "ton": "ton",
+  "@ton": {
+    "description": "Ton unit"
+  },
+
+  "tons": "tons",
+  "@tons": {
+    "description": "Tons unit plural"
+  },
+
+  "etb": "ETB",
+  "@etb": {
+    "description": "Ethiopian Birr currency code"
+  }
+}

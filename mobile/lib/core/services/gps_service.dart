@@ -2,10 +2,12 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:geolocator/geolocator.dart';
 import '../api/api_client.dart';
+import 'gps_queue_service.dart';
 
 /// GPS tracking service for carriers
 class GpsService {
   final ApiClient _apiClient = ApiClient();
+  final GpsQueueService _queueService = GpsQueueService();
 
   StreamSubscription<Position>? _positionSubscription;
   Timer? _uploadTimer;
@@ -16,6 +18,12 @@ class GpsService {
 
   /// Current truck ID being tracked
   String? _currentTruckId;
+
+  /// Get offline queue size
+  int get queuedPointsCount => _queueService.queueSize;
+
+  /// Check if online
+  bool get isOnline => _queueService.isOnline;
 
   /// Check and request location permissions
   Future<bool> checkPermissions() async {
@@ -136,23 +144,36 @@ class GpsService {
     _uploadPosition(position);
   }
 
-  /// Upload position to server
+  /// Upload position to server (with offline queue fallback)
   Future<void> _uploadPosition(Position position) async {
     if (_currentTruckId == null) return;
 
+    final gpsPoint = GpsPoint(
+      truckId: _currentTruckId!,
+      latitude: position.latitude,
+      longitude: position.longitude,
+      speed: position.speed,
+      heading: position.heading,
+      accuracy: position.accuracy,
+      altitude: position.altitude,
+      timestamp: position.timestamp,
+    );
+
+    // If offline, queue immediately
+    if (!_queueService.isOnline) {
+      await _queueService.enqueue(gpsPoint);
+      assert(() {
+        debugPrint('[GPS] Position queued (offline)');
+        return true;
+      }());
+      return;
+    }
+
+    // Try to upload directly
     try {
       await _apiClient.dio.post(
         '/api/tracking/ingest',
-        data: {
-          'truckId': _currentTruckId,
-          'latitude': position.latitude,
-          'longitude': position.longitude,
-          'speed': position.speed,
-          'heading': position.heading,
-          'accuracy': position.accuracy,
-          'altitude': position.altitude,
-          'timestamp': position.timestamp.toIso8601String(),
-        },
+        data: gpsPoint.toJson(),
       );
 
       assert(() {
@@ -160,13 +181,18 @@ class GpsService {
         return true;
       }());
     } catch (e) {
+      // Upload failed - queue for later
+      await _queueService.enqueue(gpsPoint);
       assert(() {
-        debugPrint('[GPS] Error uploading position: $e');
+        debugPrint('[GPS] Error uploading, queued for later: $e');
         return true;
       }());
-      // Store locally for later sync if offline
-      // TODO: Implement offline queue
     }
+  }
+
+  /// Manually sync queued positions
+  Future<void> syncQueuedPositions() async {
+    await _queueService.syncQueue();
   }
 
   /// Upload current position (for timer)
