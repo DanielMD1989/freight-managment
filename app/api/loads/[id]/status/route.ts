@@ -3,43 +3,50 @@
  * API endpoint for updating load status with state machine validation
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth, requireActiveUser } from '@/lib/auth';
-import { validateCSRFWithMobile } from '@/lib/csrf';
-import { getAccessRoles } from '@/lib/rbac';
-import { z } from 'zod';
-import { validateStateTransition, LoadStatus, getStatusDescription } from '@/lib/loadStateMachine';
-import { TripStatus, Prisma } from '@prisma/client'; // P0-001 FIX: Import TripStatus enum
-import { deductServiceFee } from '@/lib/serviceFeeManagement'; // Service Fee Implementation
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth, requireActiveUser } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { getAccessRoles } from "@/lib/rbac";
+import { z } from "zod";
+import {
+  validateStateTransition,
+  LoadStatus,
+  getStatusDescription,
+} from "@/lib/loadStateMachine";
+import { TripStatus, Prisma } from "@prisma/client"; // P0-001 FIX: Import TripStatus enum
+import { deductServiceFee } from "@/lib/serviceFeeManagement"; // Service Fee Implementation
 // CRITICAL FIX: Import CacheInvalidation for status changes
-import { CacheInvalidation } from '@/lib/cache';
+import { CacheInvalidation } from "@/lib/cache";
 // CRITICAL FIX: Import notification helper for status change notifications
-import { createNotification } from '@/lib/notifications';
+import { notifyLoadStakeholders } from "@/lib/notifications";
 // CRITICAL FIX: Import trust metrics for analytics tracking
-import { incrementCompletedLoads, incrementCancelledLoads } from '@/lib/trustMetrics';
+import {
+  incrementCompletedLoads,
+  incrementCancelledLoads,
+} from "@/lib/trustMetrics";
 // CRITICAL FIX: Import bypass detection for suspicious cancellations
-import { checkSuspiciousCancellation } from '@/lib/bypassDetection';
-import { zodErrorResponse } from '@/lib/validation';
+import { checkSuspiciousCancellation } from "@/lib/bypassDetection";
+import { zodErrorResponse } from "@/lib/validation";
 
 const updateStatusSchema = z.object({
   status: z.enum([
-    'DRAFT',
-    'POSTED',
-    'SEARCHING',
-    'OFFERED',
-    'ASSIGNED',
-    'PICKUP_PENDING',
-    'IN_TRANSIT',
-    'DELIVERED',
-    'COMPLETED',
-    'EXCEPTION',
-    'CANCELLED',
-    'EXPIRED',
-    'UNPOSTED',
+    "DRAFT",
+    "POSTED",
+    "SEARCHING",
+    "OFFERED",
+    "ASSIGNED",
+    "PICKUP_PENDING",
+    "IN_TRANSIT",
+    "DELIVERED",
+    "COMPLETED",
+    "EXCEPTION",
+    "CANCELLED",
+    "EXPIRED",
+    "UNPOSTED",
   ]),
   reason: z.string().optional(), // Optional reason for status change
-  notes: z.string().optional(),  // Optional notes
+  notes: z.string().optional(), // Optional notes
 });
 
 // PATCH /api/loads/[id]/status - Update load status
@@ -90,10 +97,7 @@ export async function PATCH(
     });
 
     if (!load) {
-      return NextResponse.json(
-        { error: 'Load not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // Validate state transition
@@ -104,10 +108,7 @@ export async function PATCH(
     );
 
     if (!validation.valid) {
-      return NextResponse.json(
-        { error: validation.error },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
     // Get user's organization for ownership check
@@ -117,19 +118,25 @@ export async function PATCH(
     });
 
     // Check ownership permissions
-    const isShipper = session.role === 'SHIPPER' && load.shipperId === user?.organizationId;
-    const isCarrier = session.role === 'CARRIER' && load.assignedTruck?.carrierId === user?.organizationId;
-    const isDispatcher = session.role === 'DISPATCHER';
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+    const isShipper =
+      session.role === "SHIPPER" && load.shipperId === user?.organizationId;
+    const isCarrier =
+      session.role === "CARRIER" &&
+      load.assignedTruck?.carrierId === user?.organizationId;
+    const isDispatcher = session.role === "DISPATCHER";
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     // Additional permission check based on role
     if (!isAdmin && !isDispatcher) {
       // Shippers can only update their own loads
       if (isShipper) {
-        const shipperStatuses = ['DRAFT', 'POSTED', 'CANCELLED', 'UNPOSTED'];
+        const shipperStatuses = ["DRAFT", "POSTED", "CANCELLED", "UNPOSTED"];
         if (!shipperStatuses.includes(newStatus)) {
           return NextResponse.json(
-            { error: 'Shippers can only set status to DRAFT, POSTED, CANCELLED, or UNPOSTED' },
+            {
+              error:
+                "Shippers can only set status to DRAFT, POSTED, CANCELLED, or UNPOSTED",
+            },
             { status: 403 }
           );
         }
@@ -137,10 +144,18 @@ export async function PATCH(
 
       // Carriers can only update assigned loads
       if (isCarrier) {
-        const carrierStatuses = ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT', 'DELIVERED'];
+        const carrierStatuses = [
+          "ASSIGNED",
+          "PICKUP_PENDING",
+          "IN_TRANSIT",
+          "DELIVERED",
+        ];
         if (!carrierStatuses.includes(newStatus)) {
           return NextResponse.json(
-            { error: 'Carriers can only set status to ASSIGNED, PICKUP_PENDING, IN_TRANSIT, or DELIVERED' },
+            {
+              error:
+                "Carriers can only set status to ASSIGNED, PICKUP_PENDING, IN_TRANSIT, or DELIVERED",
+            },
             { status: 403 }
           );
         }
@@ -149,36 +164,37 @@ export async function PATCH(
       // If not owner and not admin/dispatcher, deny
       if (!isShipper && !isCarrier) {
         return NextResponse.json(
-          { error: 'You do not have permission to update this load' },
+          { error: "You do not have permission to update this load" },
           { status: 403 }
         );
       }
     }
 
     // Determine if truck should be unassigned (terminal states)
-    const terminalStatuses = ['COMPLETED', 'DELIVERED', 'CANCELLED', 'EXPIRED'];
-    const shouldUnassignTruck = terminalStatuses.includes(newStatus) && load.assignedTruckId;
+    const terminalStatuses = ["COMPLETED", "DELIVERED", "CANCELLED", "EXPIRED"];
+    const shouldUnassignTruck =
+      terminalStatuses.includes(newStatus) && load.assignedTruckId;
 
     // P0-001 FIX: Map Load status to Trip status for synchronization
     const loadStatusToTripStatus: Record<string, TripStatus | null> = {
-      'ASSIGNED': TripStatus.ASSIGNED,
-      'PICKUP_PENDING': TripStatus.PICKUP_PENDING,
-      'IN_TRANSIT': TripStatus.IN_TRANSIT,
-      'DELIVERED': TripStatus.DELIVERED,
-      'COMPLETED': TripStatus.COMPLETED,
-      'CANCELLED': TripStatus.CANCELLED,
-      'EXPIRED': TripStatus.CANCELLED,
-      'EXCEPTION': null, // Don't change trip status for exceptions
+      ASSIGNED: TripStatus.ASSIGNED,
+      PICKUP_PENDING: TripStatus.PICKUP_PENDING,
+      IN_TRANSIT: TripStatus.IN_TRANSIT,
+      DELIVERED: TripStatus.DELIVERED,
+      COMPLETED: TripStatus.COMPLETED,
+      CANCELLED: TripStatus.CANCELLED,
+      EXPIRED: TripStatus.CANCELLED,
+      EXCEPTION: null, // Don't change trip status for exceptions
     };
 
     // CRITICAL FIX (ISSUE #2): If transitioning to COMPLETED, deduct fees FIRST
     // If fee deduction fails, block the status change
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let serviceFeeResult: Record<string, any> | null = null;
-    if (newStatus === 'COMPLETED') {
+    if (newStatus === "COMPLETED") {
       // Check if fee already deducted (idempotency)
       const existingFeeEvent = await db.loadEvent.findFirst({
-        where: { loadId, eventType: 'SERVICE_FEE_DEDUCTED' },
+        where: { loadId, eventType: "SERVICE_FEE_DEDUCTED" },
       });
 
       if (!existingFeeEvent) {
@@ -189,8 +205,9 @@ export async function PATCH(
             // Fee deduction failed - block completion
             return NextResponse.json(
               {
-                error: 'Cannot complete trip: fee deduction failed',
-                details: serviceFeeResult.error || 'Unknown fee deduction error',
+                error: "Cannot complete trip: fee deduction failed",
+                details:
+                  serviceFeeResult.error || "Unknown fee deduction error",
                 feeDetails: {
                   shipperFee: serviceFeeResult.shipperFee?.toFixed(2),
                   carrierFee: serviceFeeResult.carrierFee?.toFixed(2),
@@ -199,14 +216,17 @@ export async function PATCH(
               { status: 400 }
             );
           }
-        // FIX: Use unknown type with type guard
+          // FIX: Use unknown type with type guard
         } catch (feeError: unknown) {
           // Exception during fee deduction - block completion
-          console.error('Service fee deduction exception:', feeError);
+          console.error("Service fee deduction exception:", feeError);
           return NextResponse.json(
             {
-              error: 'Cannot complete trip: fee deduction failed',
-              details: feeError instanceof Error ? feeError.message : 'Fee deduction exception',
+              error: "Cannot complete trip: fee deduction failed",
+              details:
+                feeError instanceof Error
+                  ? feeError.message
+                  : "Fee deduction exception",
             },
             { status: 400 }
           );
@@ -249,8 +269,8 @@ export async function PATCH(
             status: tripStatus,
             updatedAt: new Date(),
             // Set completion time for terminal states
-            ...(tripStatus === 'COMPLETED' && { completedAt: new Date() }),
-            ...(tripStatus === 'CANCELLED' && { cancelledAt: new Date() }),
+            ...(tripStatus === "COMPLETED" && { completedAt: new Date() }),
+            ...(tripStatus === "CANCELLED" && { cancelledAt: new Date() }),
           },
         });
 
@@ -258,14 +278,14 @@ export async function PATCH(
         await tx.loadEvent.create({
           data: {
             loadId,
-            eventType: 'TRIP_STATUS_SYNCED',
+            eventType: "TRIP_STATUS_SYNCED",
             description: `Trip status synced to ${tripStatus} (Load status: ${newStatus})`,
             userId: session.userId,
             metadata: {
               tripId: load.trip.id,
               previousTripStatus: load.trip.status,
               newTripStatus: tripStatus,
-              triggeredBy: 'load_status_change',
+              triggeredBy: "load_status_change",
               loadStatus: newStatus,
             },
           },
@@ -279,7 +299,7 @@ export async function PATCH(
         await tx.loadEvent.create({
           data: {
             loadId,
-            eventType: 'UNASSIGNED',
+            eventType: "UNASSIGNED",
             description: `Truck automatically unassigned - load status changed to ${newStatus}`,
             userId: session.userId,
           },
@@ -291,17 +311,21 @@ export async function PATCH(
 
     // Log the service fee deduction event (fee was already deducted before transaction)
     // ISSUE #2 FIX: Fee deduction now happens BEFORE status update and blocks on failure
-    if (newStatus === 'COMPLETED' && serviceFeeResult?.success && serviceFeeResult.transactionId) {
+    if (
+      newStatus === "COMPLETED" &&
+      serviceFeeResult?.success &&
+      serviceFeeResult.transactionId
+    ) {
       // Check if event already logged (idempotency)
       const existingFeeEvent = await db.loadEvent.findFirst({
-        where: { loadId, eventType: 'SERVICE_FEE_DEDUCTED' },
+        where: { loadId, eventType: "SERVICE_FEE_DEDUCTED" },
       });
 
       if (!existingFeeEvent) {
         await db.loadEvent.create({
           data: {
             loadId,
-            eventType: 'SERVICE_FEE_DEDUCTED',
+            eventType: "SERVICE_FEE_DEDUCTED",
             description: `Service fees deducted - Shipper: ${serviceFeeResult.shipperFee.toFixed(2)} ETB, Carrier: ${serviceFeeResult.carrierFee.toFixed(2)} ETB, Total: ${serviceFeeResult.totalPlatformFee.toFixed(2)} ETB`,
             userId: session.userId,
             metadata: {
@@ -318,7 +342,10 @@ export async function PATCH(
 
     // CRITICAL FIX (ISSUE #3): Auto-reset truck availability after trip completion or cancellation
     // When trip ends (COMPLETED or CANCELLED), make the truck available again
-    if ((newStatus === 'COMPLETED' || newStatus === 'CANCELLED') && load.trip?.id) {
+    if (
+      (newStatus === "COMPLETED" || newStatus === "CANCELLED") &&
+      load.trip?.id
+    ) {
       try {
         // Get the truck that was assigned to this trip
         const trip = await db.trip.findUnique({
@@ -340,10 +367,10 @@ export async function PATCH(
           await db.truckPosting.updateMany({
             where: {
               truckId: trip.truckId,
-              status: 'MATCHED',
+              status: "MATCHED",
             },
             data: {
-              status: 'EXPIRED',
+              status: "EXPIRED",
               updatedAt: new Date(),
             },
           });
@@ -352,20 +379,23 @@ export async function PATCH(
           await db.loadEvent.create({
             data: {
               loadId,
-              eventType: 'TRUCK_AVAILABILITY_RESET',
+              eventType: "TRUCK_AVAILABILITY_RESET",
               description: `Truck availability reset to available after trip ${newStatus.toLowerCase()}`,
               userId: session.userId,
               metadata: {
                 truckId: trip.truckId,
                 tripId: load.trip.id,
-                reason: newStatus === 'COMPLETED' ? 'trip_completed' : 'trip_cancelled',
+                reason:
+                  newStatus === "COMPLETED"
+                    ? "trip_completed"
+                    : "trip_cancelled",
               },
             },
           });
         }
       } catch (truckError) {
         // Non-blocking: Log error but don't fail the status update
-        console.error('Failed to reset truck availability:', truckError);
+        console.error("Failed to reset truck availability:", truckError);
       }
     }
 
@@ -383,8 +413,8 @@ export async function PATCH(
     await db.loadEvent.create({
       data: {
         loadId,
-        eventType: 'STATUS_CHANGED',
-        description: `Status changed from ${load.status} to ${newStatus}${reason ? ` - ${reason}` : ''}`,
+        eventType: "STATUS_CHANGED",
+        description: `Status changed from ${load.status} to ${newStatus}${reason ? ` - ${reason}` : ""}`,
         userId: session.userId,
         metadata: {
           previousStatus: load.status,
@@ -395,59 +425,27 @@ export async function PATCH(
       },
     });
 
-    // CRITICAL FIX: Trigger notifications to relevant parties
-    const notificationPromises: Promise<any>[] = [];
-
-    // Notify shipper of status changes
-    const shipperUsers = await db.user.findMany({
-      where: { organizationId: load.shipperId, status: 'ACTIVE' },
-      select: { id: true },
-    });
-    for (const user of shipperUsers) {
-      notificationPromises.push(
-        createNotification({
-          userId: user.id,
-          type: 'LOAD_STATUS_CHANGE',
-          title: `Load Status: ${newStatus}`,
-          message: `Your load status has been updated to ${getStatusDescription(newStatus as LoadStatus)}`,
-          metadata: { loadId, previousStatus: load.status, newStatus },
-        }).catch(console.error)
-      );
-    }
-
-    // Notify carrier if assigned
-    if (load.assignedTruck?.carrierId) {
-      const carrierUsers = await db.user.findMany({
-        where: { organizationId: load.assignedTruck.carrierId, status: 'ACTIVE' },
-        select: { id: true },
-      });
-      for (const user of carrierUsers) {
-        notificationPromises.push(
-          createNotification({
-            userId: user.id,
-            type: 'LOAD_STATUS_CHANGE',
-            title: `Load Status: ${newStatus}`,
-            message: `Load status has been updated to ${getStatusDescription(newStatus as LoadStatus)}`,
-            metadata: { loadId, previousStatus: load.status, newStatus },
-          }).catch(console.error)
-        );
-      }
-    }
-
-    // Fire-and-forget notifications
-    Promise.all(notificationPromises).catch(console.error);
+    // CRITICAL FIX: Trigger notifications to relevant parties (shipper + carrier)
+    await notifyLoadStakeholders(
+      loadId,
+      "LOAD_STATUS_CHANGE",
+      `Load Status: ${newStatus}`,
+      `Load status has been updated to ${getStatusDescription(newStatus as LoadStatus)}`
+    );
 
     // CRITICAL FIX: Update trust metrics for analytics tracking
-    if (newStatus === 'DELIVERED' || newStatus === 'COMPLETED') {
+    if (newStatus === "DELIVERED" || newStatus === "COMPLETED") {
       // Increment completed loads for shipper
       if (load.shipperId) {
         await incrementCompletedLoads(load.shipperId).catch(console.error);
       }
       // Increment completed loads for carrier if assigned
       if (load.assignedTruck?.carrierId) {
-        await incrementCompletedLoads(load.assignedTruck.carrierId).catch(console.error);
+        await incrementCompletedLoads(load.assignedTruck.carrierId).catch(
+          console.error
+        );
       }
-    } else if (newStatus === 'CANCELLED') {
+    } else if (newStatus === "CANCELLED") {
       // Increment cancelled loads for shipper
       if (load.shipperId) {
         await incrementCancelledLoads(load.shipperId).catch(console.error);
@@ -461,14 +459,14 @@ export async function PATCH(
     // Build service fee response based on action type
     let serviceFeeResponse = null;
     if (serviceFeeResult) {
-      if (newStatus === 'COMPLETED' && 'shipperFee' in serviceFeeResult) {
+      if (newStatus === "COMPLETED" && "shipperFee" in serviceFeeResult) {
         // Deduction result with dual-party fees
         serviceFeeResponse = {
           success: serviceFeeResult.success,
           shipperFee: serviceFeeResult.shipperFee.toFixed(2),
           carrierFee: serviceFeeResult.carrierFee.toFixed(2),
           totalPlatformFee: serviceFeeResult.totalPlatformFee.toFixed(2),
-          action: 'deducted',
+          action: "deducted",
           error: serviceFeeResult.error,
           details: serviceFeeResult.details,
         };
@@ -477,7 +475,7 @@ export async function PATCH(
         serviceFeeResponse = {
           success: serviceFeeResult.success,
           amount: serviceFeeResult.serviceFee.toFixed(2),
-          action: newStatus === 'CANCELLED' ? 'refunded' : null,
+          action: newStatus === "CANCELLED" ? "refunded" : null,
           error: serviceFeeResult.error,
         };
       }
@@ -491,15 +489,14 @@ export async function PATCH(
       // P0-001 FIX: Include trip sync status in response
       tripSynced: tripUpdated,
     });
-
   } catch (error) {
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
 
-    console.error('Load status update error:', error);
+    console.error("Load status update error:", error);
     return NextResponse.json(
-      { error: 'Failed to update load status' },
+      { error: "Failed to update load status" },
       { status: 500 }
     );
   }
@@ -523,13 +520,10 @@ export async function GET(
     });
 
     if (!load) {
-      return NextResponse.json(
-        { error: 'Load not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
-    const { getValidNextStates } = await import('@/lib/loadStateMachine');
+    const { getValidNextStates } = await import("@/lib/loadStateMachine");
     const validNextStates = getValidNextStates(load.status as LoadStatus);
 
     return NextResponse.json({
@@ -537,11 +531,10 @@ export async function GET(
       description: getStatusDescription(load.status as LoadStatus),
       validNextStates,
     });
-
   } catch (error) {
-    console.error('Load status fetch error:', error);
+    console.error("Load status fetch error:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch load status' },
+      { error: "Failed to fetch load status" },
       { status: 500 }
     );
   }
