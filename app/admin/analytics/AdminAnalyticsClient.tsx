@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
-type TimePeriod = 'day' | 'week' | 'month' | 'year';
+type TimePeriod = "day" | "week" | "month" | "year";
 
 interface AnalyticsData {
   period: TimePeriod;
@@ -10,8 +10,8 @@ interface AnalyticsData {
   summary: {
     revenue: {
       platformBalance: number;
-      activeTripsCount: number;
       serviceFeeCollected: number;
+      pendingWithdrawals: number;
       transactionsInPeriod: number;
       transactionVolume: number;
     };
@@ -23,17 +23,34 @@ interface AnalyticsData {
     };
     loads: {
       total: number;
-      posted: number;
-      assigned: number;
-      inTransit: number;
+      active: number;
+      inProgress: number;
       delivered: number;
+      completed: number;
       cancelled: number;
+      byStatus: {
+        draft: number;
+        posted: number;
+        searching: number;
+        offered: number;
+        assigned: number;
+        pickupPending: number;
+        inTransit: number;
+        delivered: number;
+        completed: number;
+        exception: number;
+        cancelled: number;
+        expired: number;
+        unposted: number;
+      };
       newInPeriod: number;
     };
     trips: {
+      total: number;
+      active: number;
       completed: number;
-      inTransit: number;
       cancelled: number;
+      byStatus: Record<string, number>;
     };
     users: {
       total: number;
@@ -50,24 +67,28 @@ interface AnalyticsData {
   charts: {
     loadsOverTime: Array<{ date: string; count: number }>;
     revenueOverTime: Array<{ date: string; total: number }>;
-    tripsOverTime: Array<{ date: string; completed: number; cancelled: number }>;
+    tripsOverTime: Array<{
+      date: string;
+      completed: number;
+      cancelled: number;
+    }>;
     loadsByStatus: Array<{ status: string; count: number }>;
   };
 }
 
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-ET', {
-    style: 'currency',
-    currency: 'ETB',
+  return new Intl.NumberFormat("en-ET", {
+    style: "currency",
+    currency: "ETB",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
 }
 
 function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
+  return new Date(dateString).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
   });
 }
 
@@ -82,23 +103,25 @@ function StatCard({
   value: string | number;
   subtitle?: string;
   icon: string;
-  trend?: 'up' | 'down' | 'neutral';
+  trend?: "up" | "down" | "neutral";
 }) {
   const trendColors = {
-    up: 'text-green-600',
-    down: 'text-red-600',
-    neutral: 'text-gray-500',
+    up: "text-green-600",
+    down: "text-red-600",
+    neutral: "text-gray-500",
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-5 hover:shadow-md transition-shadow">
+    <div className="rounded-xl border border-[#064d51]/10 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-[#064d51]/70">{title}</h3>
         <span className="text-xl">{icon}</span>
       </div>
-      <p className="text-2xl font-bold text-[#064d51] mt-2">{value}</p>
+      <p className="mt-2 text-2xl font-bold text-[#064d51]">{value}</p>
       {subtitle && (
-        <p className={`text-sm mt-1 ${trend ? trendColors[trend] : 'text-[#064d51]/60'}`}>
+        <p
+          className={`mt-1 text-sm ${trend ? trendColors[trend] : "text-[#064d51]/60"}`}
+        >
           {subtitle}
         </p>
       )}
@@ -109,7 +132,7 @@ function StatCard({
 function MiniBarChart({
   data,
   valueKey,
-  color = 'blue',
+  color = "blue",
 }: {
   data: Array<{ date: string; [key: string]: string | number }>;
   valueKey: string;
@@ -117,30 +140,30 @@ function MiniBarChart({
 }) {
   if (!data || data.length === 0) {
     return (
-      <div className="h-32 flex items-center justify-center text-gray-400 text-sm">
+      <div className="flex h-32 items-center justify-center text-sm text-gray-400">
         No data available
       </div>
     );
   }
 
-  const maxValue = Math.max(...data.map(d => Number(d[valueKey]) || 0));
+  const maxValue = Math.max(...data.map((d) => Number(d[valueKey]) || 0));
   const colorClasses: Record<string, string> = {
-    blue: 'bg-[#1e9c99]',
-    green: 'bg-emerald-500',
-    yellow: 'bg-amber-500',
-    red: 'bg-rose-500',
-    teal: 'bg-[#064d51]',
+    blue: "bg-[#1e9c99]",
+    green: "bg-emerald-500",
+    yellow: "bg-amber-500",
+    red: "bg-rose-500",
+    teal: "bg-[#064d51]",
   };
 
   return (
-    <div className="h-32 flex items-end gap-1">
+    <div className="flex h-32 items-end gap-1">
       {data.slice(-14).map((item, index) => {
         const value = Number(item[valueKey]) || 0;
         const height = maxValue > 0 ? (value / maxValue) * 100 : 0;
         return (
           <div
             key={index}
-            className="flex-1 flex flex-col items-center"
+            className="flex flex-1 flex-col items-center"
             title={`${formatDate(item.date)}: ${value}`}
           >
             <div
@@ -154,25 +177,29 @@ function MiniBarChart({
   );
 }
 
-function StatusDistribution({ data }: { data: Array<{ status: string; count: number }> }) {
+function StatusDistribution({
+  data,
+}: {
+  data: Array<{ status: string; count: number }>;
+}) {
   const total = data.reduce((sum, item) => sum + item.count, 0);
 
   const statusColors: Record<string, string> = {
-    POSTED: 'bg-[#1e9c99]',
-    ASSIGNED: 'bg-indigo-500',
-    IN_TRANSIT: 'bg-amber-500',
-    DELIVERED: 'bg-emerald-500',
-    COMPLETED: 'bg-[#064d51]',
-    CANCELLED: 'bg-rose-500',
+    POSTED: "bg-[#1e9c99]",
+    ASSIGNED: "bg-indigo-500",
+    IN_TRANSIT: "bg-amber-500",
+    DELIVERED: "bg-emerald-500",
+    COMPLETED: "bg-[#064d51]",
+    CANCELLED: "bg-rose-500",
   };
 
   const statusLabels: Record<string, string> = {
-    POSTED: 'Posted',
-    ASSIGNED: 'Assigned',
-    IN_TRANSIT: 'In Transit',
-    DELIVERED: 'Delivered',
-    COMPLETED: 'Completed',
-    CANCELLED: 'Cancelled',
+    POSTED: "Posted",
+    ASSIGNED: "Assigned",
+    IN_TRANSIT: "In Transit",
+    DELIVERED: "Delivered",
+    COMPLETED: "Completed",
+    CANCELLED: "Cancelled",
   };
 
   return (
@@ -181,13 +208,15 @@ function StatusDistribution({ data }: { data: Array<{ status: string; count: num
         const percentage = total > 0 ? (item.count / total) * 100 : 0;
         return (
           <div key={item.status}>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-[#064d51]/70">{statusLabels[item.status] || item.status}</span>
+            <div className="mb-1 flex justify-between text-sm">
+              <span className="text-[#064d51]/70">
+                {statusLabels[item.status] || item.status}
+              </span>
               <span className="font-medium text-[#064d51]">{item.count}</span>
             </div>
-            <div className="w-full bg-[#064d51]/10 rounded-full h-2">
+            <div className="h-2 w-full rounded-full bg-[#064d51]/10">
               <div
-                className={`h-2 rounded-full ${statusColors[item.status] || 'bg-gray-500'}`}
+                className={`h-2 rounded-full ${statusColors[item.status] || "bg-gray-500"}`}
                 style={{ width: `${percentage}%` }}
               />
             </div>
@@ -199,7 +228,7 @@ function StatusDistribution({ data }: { data: Array<{ status: string; count: num
 }
 
 export default function AdminAnalyticsClient() {
-  const [period, setPeriod] = useState<TimePeriod>('month');
+  const [period, setPeriod] = useState<TimePeriod>("month");
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -212,12 +241,12 @@ export default function AdminAnalyticsClient() {
       try {
         const response = await fetch(`/api/admin/analytics?period=${period}`);
         if (!response.ok) {
-          throw new Error('Failed to fetch analytics');
+          throw new Error("Failed to fetch analytics");
         }
         const result = await response.json();
         setData(result);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
+        setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
         setLoading(false);
       }
@@ -227,23 +256,23 @@ export default function AdminAnalyticsClient() {
   }, [period]);
 
   const periodLabels: Record<TimePeriod, string> = {
-    day: 'Today',
-    week: 'This Week',
-    month: 'This Month',
-    year: 'This Year',
+    day: "Today",
+    week: "This Week",
+    month: "This Month",
+    year: "This Year",
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1e9c99]" />
+      <div className="flex min-h-96 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-[#1e9c99]" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
         {error}
       </div>
     );
@@ -256,25 +285,27 @@ export default function AdminAnalyticsClient() {
   return (
     <div className="space-y-6">
       {/* Header with Period Selector */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#064d51]">Platform Analytics</h1>
-          <p className="text-[#064d51]/70 mt-1">
-            {periodLabels[period]} &bull;{' '}
-            {new Date(data.dateRange.start).toLocaleDateString()} -{' '}
+          <h1 className="text-2xl font-bold text-[#064d51]">
+            Platform Analytics
+          </h1>
+          <p className="mt-1 text-[#064d51]/70">
+            {periodLabels[period]} &bull;{" "}
+            {new Date(data.dateRange.start).toLocaleDateString()} -{" "}
             {new Date(data.dateRange.end).toLocaleDateString()}
           </p>
         </div>
 
         <div className="flex gap-2">
-          {(['day', 'week', 'month', 'year'] as TimePeriod[]).map((p) => (
+          {(["day", "week", "month", "year"] as TimePeriod[]).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
                 period === p
-                  ? 'bg-[#064d51] text-white shadow-md'
-                  : 'bg-white text-[#064d51] hover:bg-[#064d51]/10 border border-[#064d51]/20'
+                  ? "bg-[#064d51] text-white shadow-md"
+                  : "border border-[#064d51]/20 bg-white text-[#064d51] hover:bg-[#064d51]/10"
               }`}
             >
               {p.charAt(0).toUpperCase() + p.slice(1)}
@@ -284,7 +315,7 @@ export default function AdminAnalyticsClient() {
       </div>
 
       {/* Revenue Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Platform Revenue"
           value={formatCurrency(data.summary.revenue.platformBalance)}
@@ -301,7 +332,7 @@ export default function AdminAnalyticsClient() {
         />
         <StatCard
           title="Active Trips"
-          value={data.summary.revenue.activeTripsCount}
+          value={data.summary.trips.active}
           subtitle="Currently in transit"
           icon="🚚"
         />
@@ -314,13 +345,13 @@ export default function AdminAnalyticsClient() {
       </div>
 
       {/* Users & Organizations */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Users"
           value={data.summary.users.total.toLocaleString()}
           subtitle={`+${data.summary.users.newInPeriod} ${periodLabels[period].toLowerCase()}`}
           icon="👥"
-          trend={data.summary.users.newInPeriod > 0 ? 'up' : 'neutral'}
+          trend={data.summary.users.newInPeriod > 0 ? "up" : "neutral"}
         />
         <StatCard
           title="Organizations"
@@ -333,7 +364,7 @@ export default function AdminAnalyticsClient() {
           value={data.summary.disputes.open}
           subtitle={`${data.summary.disputes.resolvedInPeriod} resolved ${periodLabels[period].toLowerCase()}`}
           icon="⚠️"
-          trend={data.summary.disputes.open > 0 ? 'down' : 'neutral'}
+          trend={data.summary.disputes.open > 0 ? "down" : "neutral"}
         />
         <StatCard
           title="Total Trucks"
@@ -344,18 +375,20 @@ export default function AdminAnalyticsClient() {
       </div>
 
       {/* Load & Trip Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Loads"
           value={data.summary.loads.total.toLocaleString()}
           subtitle={`+${data.summary.loads.newInPeriod} ${periodLabels[period].toLowerCase()}`}
           icon="📦"
-          trend={data.summary.loads.newInPeriod > 0 ? 'up' : 'neutral'}
+          trend={data.summary.loads.newInPeriod > 0 ? "up" : "neutral"}
         />
         <StatCard
           title="Active Loads"
-          value={(data.summary.loads.posted + data.summary.loads.assigned + data.summary.loads.inTransit).toLocaleString()}
-          subtitle={`${data.summary.loads.inTransit} in transit`}
+          value={(
+            data.summary.loads.active + data.summary.loads.inProgress
+          ).toLocaleString()}
+          subtitle={`${data.summary.loads.inProgress} in progress`}
           icon="🚚"
         />
         <StatCard
@@ -370,63 +403,79 @@ export default function AdminAnalyticsClient() {
           value={data.summary.trips.cancelled.toLocaleString()}
           subtitle={`${periodLabels[period].toLowerCase()}`}
           icon="❌"
-          trend={data.summary.trips.cancelled > 0 ? 'down' : 'neutral'}
+          trend={data.summary.trips.cancelled > 0 ? "down" : "neutral"}
         />
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Loads Over Time */}
-        <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
-          <h3 className="text-lg font-semibold text-[#064d51] mb-4">New Loads</h3>
-          <MiniBarChart data={data.charts.loadsOverTime} valueKey="count" color="teal" />
-          <p className="text-sm text-[#064d51]/60 mt-2 text-center">
+        <div className="rounded-xl border border-[#064d51]/10 bg-white p-6 shadow-sm">
+          <h3 className="mb-4 text-lg font-semibold text-[#064d51]">
+            New Loads
+          </h3>
+          <MiniBarChart
+            data={data.charts.loadsOverTime}
+            valueKey="count"
+            color="teal"
+          />
+          <p className="mt-2 text-center text-sm text-[#064d51]/60">
             {data.charts.loadsOverTime.length > 0
               ? `${formatDate(data.charts.loadsOverTime[0].date)} - ${formatDate(data.charts.loadsOverTime[data.charts.loadsOverTime.length - 1].date)}`
-              : 'No data'}
+              : "No data"}
           </p>
         </div>
 
         {/* Revenue Over Time */}
-        <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
-          <h3 className="text-lg font-semibold text-[#064d51] mb-4">Revenue (Service Fees)</h3>
-          <MiniBarChart data={data.charts.revenueOverTime} valueKey="total" color="green" />
-          <p className="text-sm text-[#064d51]/60 mt-2 text-center">
+        <div className="rounded-xl border border-[#064d51]/10 bg-white p-6 shadow-sm">
+          <h3 className="mb-4 text-lg font-semibold text-[#064d51]">
+            Revenue (Service Fees)
+          </h3>
+          <MiniBarChart
+            data={data.charts.revenueOverTime}
+            valueKey="total"
+            color="green"
+          />
+          <p className="mt-2 text-center text-sm text-[#064d51]/60">
             Total: {formatCurrency(data.summary.revenue.serviceFeeCollected)}
           </p>
         </div>
 
         {/* Load Status Distribution */}
-        <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
-          <h3 className="text-lg font-semibold text-[#064d51] mb-4">Load Status Distribution</h3>
+        <div className="rounded-xl border border-[#064d51]/10 bg-white p-6 shadow-sm">
+          <h3 className="mb-4 text-lg font-semibold text-[#064d51]">
+            Load Status Distribution
+          </h3>
           <StatusDistribution data={data.charts.loadsByStatus} />
         </div>
 
         {/* Trips Summary */}
-        <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
-          <h3 className="text-lg font-semibold text-[#064d51] mb-4">Trip Performance</h3>
+        <div className="rounded-xl border border-[#064d51]/10 bg-white p-6 shadow-sm">
+          <h3 className="mb-4 text-lg font-semibold text-[#064d51]">
+            Trip Performance
+          </h3>
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg">
+            <div className="flex items-center justify-between rounded-lg bg-emerald-50 p-3">
               <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-emerald-500 rounded-full" />
+                <div className="h-3 w-3 rounded-full bg-emerald-500" />
                 <span className="font-medium text-emerald-900">Completed</span>
               </div>
               <span className="text-xl font-bold text-emerald-900">
                 {data.summary.trips.completed}
               </span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg">
+            <div className="flex items-center justify-between rounded-lg bg-amber-50 p-3">
               <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-amber-500 rounded-full" />
+                <div className="h-3 w-3 rounded-full bg-amber-500" />
                 <span className="font-medium text-amber-900">In Transit</span>
               </div>
               <span className="text-xl font-bold text-amber-900">
-                {data.summary.trips.inTransit}
+                {data.summary.trips.active}
               </span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-rose-50 rounded-lg">
+            <div className="flex items-center justify-between rounded-lg bg-rose-50 p-3">
               <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-rose-500 rounded-full" />
+                <div className="h-3 w-3 rounded-full bg-rose-500" />
                 <span className="font-medium text-rose-900">Cancelled</span>
               </div>
               <span className="text-xl font-bold text-rose-900">
