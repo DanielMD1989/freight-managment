@@ -7,13 +7,20 @@
  * - Role-based access control
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { TripStatus, Prisma } from '@prisma/client';
-import { z } from 'zod';
-import { TripCache, CacheInvalidation, CacheTTL, cacheAside, CacheKeys, cache } from '@/lib/cache';
-import { zodErrorResponse } from '@/lib/validation';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { TripStatus, Prisma } from "@prisma/client";
+import { z } from "zod";
+import {
+  TripCache,
+  CacheInvalidation,
+  CacheTTL,
+  cacheAside,
+  CacheKeys,
+  cache,
+} from "@/lib/cache";
+import { zodErrorResponse } from "@/lib/validation";
 
 const createTripSchema = z.object({
   loadId: z.string(),
@@ -36,19 +43,29 @@ export async function GET(request: NextRequest) {
     const session = await requireAuth();
     const { searchParams } = new URL(request.url);
 
-    const statusParam = searchParams.get('status');
-    const page = parseInt(searchParams.get('page') || '1');
+    const statusParam = searchParams.get("status");
+    const page = parseInt(searchParams.get("page") || "1");
     // M3 FIX: Add pagination bounds
-    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '100'), 1), 200); // Higher default for UI
+    const limit = Math.min(
+      Math.max(parseInt(searchParams.get("limit") || "100"), 1),
+      200
+    ); // Higher default for UI
     const skip = (page - 1) * limit;
 
     // PHASE 4: Build cache key from filter parameters
     const cacheKey = `trips:list:${JSON.stringify({
-      status: statusParam, page, limit, role: session.role, orgId: session.organizationId,
+      status: statusParam,
+      page,
+      limit,
+      role: session.role,
+      orgId: session.organizationId,
     })}`;
 
     // Try cache first for admin/dispatcher queries (global view)
-    const isCacheableQuery = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN' || session.role === 'DISPATCHER';
+    const isCacheableQuery =
+      session.role === "ADMIN" ||
+      session.role === "SUPER_ADMIN" ||
+      session.role === "DISPATCHER";
     if (isCacheableQuery) {
       const cachedResult = await cache.get(cacheKey);
       if (cachedResult) {
@@ -57,32 +74,31 @@ export async function GET(request: NextRequest) {
     }
 
     // Build where clause based on role
-    let whereClause: Prisma.TripWhereInput = {};
+    const whereClause: Prisma.TripWhereInput = {};
 
     switch (session.role) {
-      case 'SUPER_ADMIN':
-      case 'ADMIN':
-      case 'DISPATCHER':
+      case "SUPER_ADMIN":
+      case "ADMIN":
+      case "DISPATCHER":
         // Can see all trips
         break;
-      case 'CARRIER':
+      case "CARRIER":
         // Can only see trips for their organization
         whereClause.carrierId = session.organizationId;
         break;
-      case 'SHIPPER':
+      case "SHIPPER":
         // Can only see trips for their loads
         whereClause.shipperId = session.organizationId;
         break;
       default:
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 403 }
-        );
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     // Add status filter if provided (supports comma-separated values)
     if (statusParam) {
-      const statuses = statusParam.split(',').map(s => s.trim()) as TripStatus[];
+      const statuses = statusParam
+        .split(",")
+        .map((s) => s.trim()) as TripStatus[];
       if (statuses.length === 1) {
         whereClause.status = statuses[0];
       } else {
@@ -125,16 +141,18 @@ export async function GET(request: NextRequest) {
               id: true,
               name: true,
               isVerified: true,
+              contactPhone: true,
             },
           },
           shipper: {
             select: {
               id: true,
               name: true,
+              contactPhone: true,
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take: limit,
       }),
@@ -142,7 +160,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Transform trips to include convenience fields from load
-    const transformedTrips = trips.map(trip => ({
+    const transformedTrips = trips.map((trip) => ({
       ...trip,
       // Add load fields at top level for convenience
       referenceNumber: `TRIP-${trip.id.slice(-8).toUpperCase()}`,
@@ -150,7 +168,9 @@ export async function GET(request: NextRequest) {
       truckType: trip.load?.truckType || trip.truck?.truckType,
       pickupDate: trip.load?.pickupDate,
       deliveryDate: trip.load?.deliveryDate,
-      distance: trip.estimatedDistanceKm ? Number(trip.estimatedDistanceKm) : null,
+      distance: trip.estimatedDistanceKm
+        ? Number(trip.estimatedDistanceKm)
+        : null,
     }));
 
     const response = {
@@ -171,20 +191,23 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('List trips error:', error);
+    console.error("List trips error:", error);
 
     // Handle specific error types
     if (error instanceof Error) {
-      if (error.message === 'Unauthorized' || error.name === 'UnauthorizedError') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      if (
+        error.message === "Unauthorized" ||
+        error.name === "UnauthorizedError"
+      ) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
-      if (error.name === 'ForbiddenError') {
+      if (error.name === "ForbiddenError") {
         return NextResponse.json({ error: error.message }, { status: 403 });
       }
     }
 
     return NextResponse.json(
-      { error: 'Failed to fetch trips' },
+      { error: "Failed to fetch trips" },
       { status: 500 }
     );
   }
@@ -201,11 +224,12 @@ export async function POST(request: NextRequest) {
     const session = await requireAuth();
 
     // Only dispatchers, admins, or the load assignment system should create trips
-    if (!['ADMIN', 'SUPER_ADMIN', 'DISPATCHER', 'SHIPPER', 'CARRIER'].includes(session.role)) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      );
+    if (
+      !["ADMIN", "SUPER_ADMIN", "DISPATCHER", "SHIPPER", "CARRIER"].includes(
+        session.role
+      )
+    ) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const body = await request.json();
@@ -222,10 +246,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!load) {
-      return NextResponse.json(
-        { error: 'Load not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // Check if trip already exists for this load
@@ -235,7 +256,7 @@ export async function POST(request: NextRequest) {
 
     if (existingTrip) {
       return NextResponse.json(
-        { error: 'Trip already exists for this load', trip: existingTrip },
+        { error: "Trip already exists for this load", trip: existingTrip },
         { status: 400 }
       );
     }
@@ -247,10 +268,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!truck) {
-      return NextResponse.json(
-        { error: 'Truck not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
     // Create the trip
@@ -260,7 +278,7 @@ export async function POST(request: NextRequest) {
         truckId: validatedData.truckId,
         carrierId: truck.carrierId,
         shipperId: load.shipperId,
-        status: 'ASSIGNED',
+        status: "ASSIGNED",
 
         // Pickup location
         pickupLat: load.originLat || load.pickupLocation?.latitude,
@@ -293,7 +311,7 @@ export async function POST(request: NextRequest) {
     await db.loadEvent.create({
       data: {
         loadId: validatedData.loadId,
-        eventType: 'TRIP_CREATED',
+        eventType: "TRIP_CREATED",
         description: `Trip created for load ${load.pickupCity} → ${load.deliveryCity}`,
         userId: session.userId,
         metadata: {
@@ -308,19 +326,22 @@ export async function POST(request: NextRequest) {
     await CacheInvalidation.trip(trip.id, truck.carrierId, load.shipperId);
     await CacheInvalidation.allListings();
 
-    return NextResponse.json({
-      message: 'Trip created successfully',
-      trip,
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        message: "Trip created successfully",
+        trip,
+      },
+      { status: 201 }
+    );
   } catch (error) {
-    console.error('Create trip error:', error);
+    console.error("Create trip error:", error);
 
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
 
     return NextResponse.json(
-      { error: 'Failed to create trip' },
+      { error: "Failed to create trip" },
       { status: 500 }
     );
   }

@@ -219,6 +219,7 @@ class FreightManagementApp extends ConsumerWidget {
           ),
           elevation: 0,
           textStyle: const TextStyle(
+            inherit: false,
             fontSize: 16,
             fontWeight: FontWeight.w600,
             letterSpacing: 0,
@@ -234,6 +235,7 @@ class FreightManagementApp extends ConsumerWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           textStyle: const TextStyle(
+            inherit: false,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -248,6 +250,7 @@ class FreightManagementApp extends ConsumerWidget {
           ),
           side: const BorderSide(color: AppColors.primary, width: 2),
           textStyle: const TextStyle(
+            inherit: false,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -258,6 +261,7 @@ class FreightManagementApp extends ConsumerWidget {
           foregroundColor: AppColors.primary,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           textStyle: const TextStyle(
+            inherit: false,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),

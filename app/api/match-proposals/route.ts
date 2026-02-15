@@ -10,16 +10,16 @@
  * GET: List proposals (filtered by role)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { z } from 'zod';
-import { Prisma, UserRole, ProposalStatus } from '@prisma/client';
-import { requireAuth, requireActiveUser } from '@/lib/auth';
-import { requireCSRF } from '@/lib/csrf';
-import { canProposeMatch } from '@/lib/dispatcherPermissions';
-import { RULE_DISPATCHER_COORDINATION_ONLY } from '@/lib/foundation-rules';
-import { createNotification, NotificationType } from '@/lib/notifications';
-import { zodErrorResponse } from '@/lib/validation';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { z } from "zod";
+import { Prisma, UserRole, ProposalStatus } from "@prisma/client";
+import { requireAuth, requireActiveUser } from "@/lib/auth";
+import { requireCSRF } from "@/lib/csrf";
+import { canProposeMatch } from "@/lib/dispatcherPermissions";
+import { RULE_DISPATCHER_COORDINATION_ONLY } from "@/lib/foundation-rules";
+import { createNotification, NotificationType } from "@/lib/notifications";
+import { zodErrorResponse } from "@/lib/validation";
 
 // Validation schema for match proposal
 const MatchProposalSchema = z.object({
@@ -64,9 +64,9 @@ export async function POST(request: NextRequest) {
     if (!canProposeMatch(user)) {
       return NextResponse.json(
         {
-          error: 'You do not have permission to create match proposals',
+          error: "You do not have permission to create match proposals",
           rule: RULE_DISPATCHER_COORDINATION_ONLY.id,
-          hint: 'Only dispatchers and admins can propose matches',
+          hint: "Only dispatchers and admins can propose matches",
         },
         { status: 403 }
       );
@@ -96,19 +96,16 @@ export async function POST(request: NextRequest) {
     });
 
     if (!load) {
-      return NextResponse.json(
-        { error: 'Load not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // Only allow proposals for loads that are not yet assigned
-    const proposableStatuses = ['POSTED', 'SEARCHING', 'OFFERED'];
+    const proposableStatuses = ["POSTED", "SEARCHING", "OFFERED"];
     if (!proposableStatuses.includes(load.status)) {
       return NextResponse.json(
         {
           error: `Cannot propose match for load with status ${load.status}`,
-          hint: 'Load must be in POSTED, SEARCHING, or OFFERED status',
+          hint: "Load must be in POSTED, SEARCHING, or OFFERED status",
         },
         { status: 400 }
       );
@@ -116,7 +113,7 @@ export async function POST(request: NextRequest) {
 
     if (load.assignedTruckId) {
       return NextResponse.json(
-        { error: 'Load is already assigned to a truck' },
+        { error: "Load is already assigned to a truck" },
         { status: 400 }
       );
     }
@@ -133,10 +130,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!truck) {
-      return NextResponse.json(
-        { error: 'Truck not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
     // Check if there's already a pending proposal for this load-truck pair
@@ -144,14 +138,14 @@ export async function POST(request: NextRequest) {
       where: {
         loadId: data.loadId,
         truckId: data.truckId,
-        status: 'PENDING',
+        status: "PENDING",
       },
     });
 
     if (existingProposal) {
       // H10 FIX: Don't leak proposal ID in error response
       return NextResponse.json(
-        { error: 'A pending proposal already exists for this load-truck pair' },
+        { error: "A pending proposal already exists for this load-truck pair" },
         { status: 409 }
       );
     }
@@ -170,7 +164,7 @@ export async function POST(request: NextRequest) {
         notes: data.notes,
         proposedRate: data.proposedRate,
         expiresAt,
-        status: 'PENDING',
+        status: "PENDING",
       },
       include: {
         load: {
@@ -207,8 +201,8 @@ export async function POST(request: NextRequest) {
       carrierUsers.map((user) =>
         createNotification({
           userId: user.id,
-          type: 'MATCH_PROPOSAL',
-          title: 'New Load Match Proposal',
+          type: "MATCH_PROPOSAL",
+          title: "New Load Match Proposal",
           message: `A dispatcher has proposed truck ${proposal.truck.licensePlate} for a load from ${proposal.load.pickupCity} to ${proposal.load.deliveryCity}`,
           metadata: {
             proposalId: proposal.id,
@@ -222,16 +216,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         proposal,
-        message: 'Match proposal created. Awaiting carrier approval.',
+        message: "Match proposal created. Awaiting carrier approval.",
         rule: RULE_DISPATCHER_COORDINATION_ONLY.id,
       },
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error creating match proposal:', error);
+    console.error("Error creating match proposal:", error);
 
     return NextResponse.json(
-      { error: 'Failed to create match proposal' },
+      { error: "Failed to create match proposal" },
       { status: 500 }
     );
   }
@@ -257,28 +251,27 @@ export async function GET(request: NextRequest) {
     const session = await requireAuth();
     const { searchParams } = new URL(request.url);
 
-    const status = searchParams.get('status');
-    const loadId = searchParams.get('loadId');
-    const truckId = searchParams.get('truckId');
-    const carrierId = searchParams.get('carrierId');
-    const limitParam = searchParams.get('limit');
-    const offsetParam = searchParams.get('offset');
+    const status = searchParams.get("status");
+    const loadId = searchParams.get("loadId");
+    const truckId = searchParams.get("truckId");
+    const carrierId = searchParams.get("carrierId");
+    const limitParam = searchParams.get("limit");
+    const offsetParam = searchParams.get("offset");
 
     // Pagination
-    const limit = Math.min(parseInt(limitParam || '20', 10), 100);
-    const offset = Math.max(parseInt(offsetParam || '0', 10), 0);
+    const limit = Math.min(parseInt(limitParam || "20", 10), 100);
+    const offset = Math.max(parseInt(offsetParam || "0", 10), 0);
 
     // H7 FIX: Use typed where clause instead of any
     const where: Prisma.MatchProposalWhereInput = {};
 
     // H11 FIX: Role-based filtering - handle all roles explicitly
-    if (session.role === 'CARRIER') {
+    if (session.role === "CARRIER") {
       // Carriers see proposals for their organization
       where.carrierId = session.organizationId;
-    } else if (session.role === 'DISPATCHER') {
-      // Dispatchers see proposals they created
-      where.proposedById = session.userId;
-    } else if (session.role === 'SHIPPER') {
+    } else if (session.role === "DISPATCHER") {
+      // Dispatchers see all proposals (for follow-up coordination)
+    } else if (session.role === "SHIPPER") {
       // H11 FIX: Shippers can only see proposals for their own loads
       where.load = { shipperId: session.organizationId };
     }
@@ -286,7 +279,10 @@ export async function GET(request: NextRequest) {
 
     // Apply additional filters
     // H7 FIX: Cast status to ProposalStatus enum for type safety
-    if (status && Object.values(ProposalStatus).includes(status as ProposalStatus)) {
+    if (
+      status &&
+      Object.values(ProposalStatus).includes(status as ProposalStatus)
+    ) {
       where.status = status as ProposalStatus;
     }
 
@@ -298,7 +294,10 @@ export async function GET(request: NextRequest) {
       where.truckId = truckId;
     }
 
-    if (carrierId && (session.role === 'ADMIN' || session.role === 'SUPER_ADMIN')) {
+    if (
+      carrierId &&
+      (session.role === "ADMIN" || session.role === "SUPER_ADMIN")
+    ) {
       where.carrierId = carrierId;
     }
 
@@ -337,7 +336,7 @@ export async function GET(request: NextRequest) {
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          createdAt: "desc",
         },
         skip: offset,
         take: limit,
@@ -352,10 +351,10 @@ export async function GET(request: NextRequest) {
       offset,
     });
   } catch (error) {
-    console.error('Error fetching match proposals:', error);
+    console.error("Error fetching match proposals:", error);
 
     return NextResponse.json(
-      { error: 'Failed to fetch match proposals' },
+      { error: "Failed to fetch match proposals" },
       { status: 500 }
     );
   }

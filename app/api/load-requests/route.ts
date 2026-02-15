@@ -10,19 +10,19 @@
  * GET: List load requests
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { z } from 'zod';
-import { requireAuth } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { z } from "zod";
+import { requireAuth } from "@/lib/auth";
 // P0-001 FIX: Removed requireCSRF import - middleware handles CSRF and exempts Bearer tokens (mobile)
-import { createNotification } from '@/lib/notifications';
-import { UserRole, Prisma } from '@prisma/client';
+import { createNotification } from "@/lib/notifications";
+import { UserRole, Prisma } from "@prisma/client";
 
 // Validation schema for load request
 // Note: No proposedRate field - price negotiation happens outside platform
 const LoadRequestSchema = z.object({
-  loadId: z.string().min(1, 'Load ID is required'),
-  truckId: z.string().min(1, 'Truck ID is required'),
+  loadId: z.string().min(1, "Load ID is required"),
+  truckId: z.string().min(1, "Truck ID is required"),
   notes: z.string().max(500).optional(),
   expiresInHours: z.number().min(1).max(72).default(24),
 });
@@ -48,16 +48,16 @@ export async function POST(request: NextRequest) {
     // Removing duplicate check that was blocking mobile carrier workflow
 
     // Only carriers can request loads
-    if (session.role !== 'CARRIER') {
+    if (session.role !== "CARRIER") {
       return NextResponse.json(
-        { error: 'Only carriers can request loads' },
+        { error: "Only carriers can request loads" },
         { status: 403 }
       );
     }
 
     if (!session.organizationId) {
       return NextResponse.json(
-        { error: 'Carrier must belong to an organization' },
+        { error: "Carrier must belong to an organization" },
         { status: 400 }
       );
     }
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     if (!validationResult.success) {
       // FIX: Use zodErrorResponse to avoid schema leak
-      const { zodErrorResponse } = await import('@/lib/validation');
+      const { zodErrorResponse } = await import("@/lib/validation");
       return zodErrorResponse(validationResult.error);
     }
 
@@ -88,14 +88,11 @@ export async function POST(request: NextRequest) {
     });
 
     if (!load) {
-      return NextResponse.json(
-        { error: 'Load not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // Check load status - must be available
-    const availableStatuses = ['POSTED', 'SEARCHING', 'OFFERED'];
+    const availableStatuses = ["POSTED", "SEARCHING", "OFFERED"];
     if (!availableStatuses.includes(load.status)) {
       return NextResponse.json(
         { error: `Load is not available (status: ${load.status})` },
@@ -106,7 +103,7 @@ export async function POST(request: NextRequest) {
     // Check if load is already assigned
     if (load.assignedTruckId) {
       return NextResponse.json(
-        { error: 'Load is already assigned to a truck' },
+        { error: "Load is already assigned to a truck" },
         { status: 400 }
       );
     }
@@ -125,24 +122,21 @@ export async function POST(request: NextRequest) {
     });
 
     if (!truck) {
-      return NextResponse.json(
-        { error: 'Truck not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
     // Verify carrier owns the truck
     if (truck.carrierId !== session.organizationId) {
       return NextResponse.json(
-        { error: 'You can only request loads for your own trucks' },
+        { error: "You can only request loads for your own trucks" },
         { status: 403 }
       );
     }
 
     // Verify truck is approved
-    if (truck.approvalStatus !== 'APPROVED') {
+    if (truck.approvalStatus !== "APPROVED") {
       return NextResponse.json(
-        { error: 'Truck must be approved before requesting loads' },
+        { error: "Truck must be approved before requesting loads" },
         { status: 400 }
       );
     }
@@ -151,13 +145,13 @@ export async function POST(request: NextRequest) {
     const activePosting = await db.truckPosting.findFirst({
       where: {
         truckId: data.truckId,
-        status: 'ACTIVE',
+        status: "ACTIVE",
       },
     });
 
     if (!activePosting) {
       return NextResponse.json(
-        { error: 'Truck must have an active posting to request loads' },
+        { error: "Truck must have an active posting to request loads" },
         { status: 400 }
       );
     }
@@ -167,13 +161,16 @@ export async function POST(request: NextRequest) {
       where: {
         loadId: data.loadId,
         truckId: data.truckId,
-        status: 'PENDING',
+        status: "PENDING",
       },
     });
 
     if (existingRequest) {
       return NextResponse.json(
-        { error: 'A pending request already exists for this load-truck combination' },
+        {
+          error:
+            "A pending request already exists for this load-truck combination",
+        },
         { status: 400 }
       );
     }
@@ -229,7 +226,7 @@ export async function POST(request: NextRequest) {
     await db.loadEvent.create({
       data: {
         loadId: data.loadId,
-        eventType: 'LOAD_REQUESTED',
+        eventType: "LOAD_REQUESTED",
         description: `Carrier ${truck.carrier.name} requested this load with truck ${truck.licensePlate}`,
         userId: session.userId,
         metadata: {
@@ -244,17 +241,17 @@ export async function POST(request: NextRequest) {
     const shipperUsers = await db.user.findMany({
       where: {
         organizationId: load.shipperId!,
-        status: 'ACTIVE',
+        status: "ACTIVE",
       },
       select: { id: true },
     });
 
     await Promise.all(
-      shipperUsers.map(user =>
+      shipperUsers.map((user) =>
         createNotification({
           userId: user.id,
-          type: 'LOAD_REQUEST_RECEIVED',
-          title: 'New Load Request',
+          type: "LOAD_REQUEST_RECEIVED",
+          title: "New Load Request",
           message: `${truck.carrier.name} wants to haul your load from ${load.pickupCity} to ${load.deliveryCity}`,
           metadata: {
             loadRequestId: loadRequest.id,
@@ -266,15 +263,18 @@ export async function POST(request: NextRequest) {
       )
     );
 
-    return NextResponse.json({
-      loadRequest,
-      message: 'Load request sent to shipper',
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        loadRequest,
+        message: "Load request sent to shipper",
+      },
+      { status: 201 }
+    );
   } catch (error) {
-    console.error('Error creating load request:', error);
+    console.error("Error creating load request:", error);
 
     return NextResponse.json(
-      { error: 'Failed to create load request' },
+      { error: "Failed to create load request" },
       { status: 500 }
     );
   }
@@ -303,26 +303,25 @@ export async function GET(request: NextRequest) {
     const session = await requireAuth();
     const { searchParams } = new URL(request.url);
 
-    const status = searchParams.get('status');
-    const loadId = searchParams.get('loadId');
-    const truckId = searchParams.get('truckId');
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const status = searchParams.get("status");
+    const loadId = searchParams.get("loadId");
+    const truckId = searchParams.get("truckId");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
+    const offset = parseInt(searchParams.get("offset") || "0");
 
     // Build where clause based on role
     const where: Prisma.LoadRequestWhereInput = {};
 
-    if (session.role === 'CARRIER') {
+    if (session.role === "CARRIER") {
       // Carriers see their own requests
       where.carrierId = session.organizationId;
-    } else if (session.role === 'SHIPPER') {
+    } else if (session.role === "SHIPPER") {
       // Shippers see requests for their loads
       where.shipperId = session.organizationId;
-    } else if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      );
+    } else if (session.role === "DISPATCHER") {
+      // Dispatchers see all load requests (for follow-up)
+    } else if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     // Apply filters
@@ -377,7 +376,7 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         take: limit,
         skip: offset,
       }),
@@ -394,10 +393,10 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching load requests:', error);
+    console.error("Error fetching load requests:", error);
 
     return NextResponse.json(
-      { error: 'Failed to fetch load requests' },
+      { error: "Failed to fetch load requests" },
       { status: 500 }
     );
   }

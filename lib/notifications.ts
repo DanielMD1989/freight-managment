@@ -4,61 +4,61 @@
  * Handles creation and management of user notifications
  */
 
-import { db } from '@/lib/db';
-import { sendRealtimeNotification } from '@/lib/websocket-server';
-import { UserRole, Prisma } from '@prisma/client';
+import { db } from "@/lib/db";
+import { sendRealtimeNotification } from "@/lib/websocket-server";
+import { UserRole, Prisma } from "@prisma/client";
 
 /**
  * Notification Types
  */
 export const NotificationType = {
   // GPS Events
-  GPS_OFFLINE: 'GPS_OFFLINE',
-  TRUCK_AT_PICKUP: 'TRUCK_AT_PICKUP',
-  TRUCK_AT_DELIVERY: 'TRUCK_AT_DELIVERY',
+  GPS_OFFLINE: "GPS_OFFLINE",
+  TRUCK_AT_PICKUP: "TRUCK_AT_PICKUP",
+  TRUCK_AT_DELIVERY: "TRUCK_AT_DELIVERY",
 
   // Settlement Events
-  POD_SUBMITTED: 'POD_SUBMITTED',
-  POD_VERIFIED: 'POD_VERIFIED',
-  COMMISSION_DEDUCTED: 'COMMISSION_DEDUCTED',
-  SETTLEMENT_COMPLETE: 'SETTLEMENT_COMPLETE',
+  POD_SUBMITTED: "POD_SUBMITTED",
+  POD_VERIFIED: "POD_VERIFIED",
+  COMMISSION_DEDUCTED: "COMMISSION_DEDUCTED",
+  SETTLEMENT_COMPLETE: "SETTLEMENT_COMPLETE",
 
   // User Status
-  USER_STATUS_CHANGED: 'USER_STATUS_CHANGED',
+  USER_STATUS_CHANGED: "USER_STATUS_CHANGED",
 
   // Exceptions
-  EXCEPTION_CREATED: 'EXCEPTION_CREATED',
-  EXCEPTION_ESCALATED: 'EXCEPTION_ESCALATED',
-  ESCALATION_ASSIGNED: 'ESCALATION_ASSIGNED',
-  ESCALATION_RESOLVED: 'ESCALATION_RESOLVED',
+  EXCEPTION_CREATED: "EXCEPTION_CREATED",
+  EXCEPTION_ESCALATED: "EXCEPTION_ESCALATED",
+  ESCALATION_ASSIGNED: "ESCALATION_ASSIGNED",
+  ESCALATION_RESOLVED: "ESCALATION_RESOLVED",
 
   // Automation
-  AUTOMATION_TRIGGERED: 'AUTOMATION_TRIGGERED',
+  AUTOMATION_TRIGGERED: "AUTOMATION_TRIGGERED",
 
   // Bypass Detection
-  BYPASS_WARNING: 'BYPASS_WARNING',
-  ACCOUNT_FLAGGED: 'ACCOUNT_FLAGGED',
+  BYPASS_WARNING: "BYPASS_WARNING",
+  ACCOUNT_FLAGGED: "ACCOUNT_FLAGGED",
 
   // Matching Events
-  MATCH_PROPOSAL: 'MATCH_PROPOSAL',
-  LOAD_REQUEST: 'LOAD_REQUEST',
-  TRUCK_REQUEST: 'TRUCK_REQUEST',
-  REQUEST_APPROVED: 'REQUEST_APPROVED',
-  REQUEST_REJECTED: 'REQUEST_REJECTED',
+  MATCH_PROPOSAL: "MATCH_PROPOSAL",
+  LOAD_REQUEST: "LOAD_REQUEST",
+  TRUCK_REQUEST: "TRUCK_REQUEST",
+  REQUEST_APPROVED: "REQUEST_APPROVED",
+  REQUEST_REJECTED: "REQUEST_REJECTED",
 
   // Return Load Notifications (Service Fee Implementation)
-  RETURN_LOAD_AVAILABLE: 'RETURN_LOAD_AVAILABLE',
-  RETURN_LOAD_MATCHED: 'RETURN_LOAD_MATCHED',
-  TRIP_PROGRESS_80: 'TRIP_PROGRESS_80',
+  RETURN_LOAD_AVAILABLE: "RETURN_LOAD_AVAILABLE",
+  RETURN_LOAD_MATCHED: "RETURN_LOAD_MATCHED",
+  TRIP_PROGRESS_80: "TRIP_PROGRESS_80",
 
   // Service Fee Notifications (Service Fee Implementation)
-  SERVICE_FEE_RESERVED: 'SERVICE_FEE_RESERVED',
-  SERVICE_FEE_DEDUCTED: 'SERVICE_FEE_DEDUCTED',
-  SERVICE_FEE_REFUNDED: 'SERVICE_FEE_REFUNDED',
+  SERVICE_FEE_RESERVED: "SERVICE_FEE_RESERVED",
+  SERVICE_FEE_DEDUCTED: "SERVICE_FEE_DEDUCTED",
+  SERVICE_FEE_REFUNDED: "SERVICE_FEE_REFUNDED",
 
   // Trip Status Notifications
-  TRIP_CANCELLED: 'TRIP_CANCELLED',
-  DELIVERY_CONFIRMED: 'DELIVERY_CONFIRMED',
+  TRIP_CANCELLED: "TRIP_CANCELLED",
+  DELIVERY_CONFIRMED: "DELIVERY_CONFIRMED",
 } as const;
 
 /**
@@ -92,7 +92,7 @@ export async function isNotificationEnabled(
     // Default to enabled if not specified
     return preferences[type] !== false;
   } catch (error) {
-    console.error('Failed to check notification preferences:', error);
+    console.error("Failed to check notification preferences:", error);
     // Default to enabled on error to avoid missing important notifications
     return true;
   }
@@ -109,8 +109,20 @@ export async function createNotification(params: {
   message: string;
   metadata?: Record<string, unknown>;
   skipPreferenceCheck?: boolean; // For critical system notifications
-}): Promise<{ id: string; userId: string; type: string; skipped?: boolean } | null> {
-  const { userId, type, title, message, metadata, skipPreferenceCheck = false } = params;
+}): Promise<{
+  id: string;
+  userId: string;
+  type: string;
+  skipped?: boolean;
+} | null> {
+  const {
+    userId,
+    type,
+    title,
+    message,
+    metadata,
+    skipPreferenceCheck = false,
+  } = params;
 
   try {
     // Check user preferences before creating notification
@@ -118,7 +130,7 @@ export async function createNotification(params: {
       const enabled = await isNotificationEnabled(userId, type);
       if (!enabled) {
         // User has disabled this notification type
-        return { id: '', userId, type, skipped: true };
+        return { id: "", userId, type, skipped: true };
       }
     }
 
@@ -129,7 +141,9 @@ export async function createNotification(params: {
         title,
         message,
         read: false,
-        metadata: metadata ? (JSON.parse(JSON.stringify(metadata)) as Prisma.InputJsonValue) : undefined,
+        metadata: metadata
+          ? (JSON.parse(JSON.stringify(metadata)) as Prisma.InputJsonValue)
+          : undefined,
       },
     });
 
@@ -150,7 +164,7 @@ export async function createNotification(params: {
       type: notification.type,
     };
   } catch (error) {
-    console.error('Failed to create notification:', error);
+    console.error("Failed to create notification:", error);
     // Don't throw - notifications are non-critical
     return null;
   }
@@ -170,7 +184,10 @@ export async function createNotificationForRole(params: {
   const { role, type, title, message, metadata, organizationId } = params;
 
   try {
-    const where: Prisma.UserWhereInput = { role: role as UserRole, isActive: true };
+    const where: Prisma.UserWhereInput = {
+      role: role as UserRole,
+      isActive: true,
+    };
     if (organizationId) {
       where.organizationId = organizationId;
     }
@@ -190,7 +207,7 @@ export async function createNotificationForRole(params: {
       )
     );
   } catch (error) {
-    console.error('Failed to create role notifications:', error);
+    console.error("Failed to create role notifications:", error);
   }
 }
 
@@ -220,11 +237,11 @@ export async function notifyLoadStakeholders(
 
     const notifications = [];
 
-    // Notify shipper
+    // Notify shipper organization users
     if (load.shipperId) {
       notifications.push(
-        createNotification({
-          userId: load.shipperId,
+        notifyOrganization({
+          organizationId: load.shipperId,
           type,
           title,
           message,
@@ -233,11 +250,11 @@ export async function notifyLoadStakeholders(
       );
     }
 
-    // Notify carrier (through assigned truck's carrier organization)
+    // Notify carrier organization users (through assigned truck's carrier)
     if (load.assignedTruck?.carrierId) {
       notifications.push(
-        createNotification({
-          userId: load.assignedTruck.carrierId,
+        notifyOrganization({
+          organizationId: load.assignedTruck.carrierId,
           type,
           title,
           message,
@@ -248,7 +265,7 @@ export async function notifyLoadStakeholders(
 
     await Promise.all(notifications);
   } catch (error) {
-    console.error('Failed to notify load stakeholders:', error);
+    console.error("Failed to notify load stakeholders:", error);
   }
 }
 
@@ -261,7 +278,7 @@ export async function getUnreadCount(userId: string): Promise<number> {
       where: { userId, read: false },
     });
   } catch (error) {
-    console.error('Failed to get unread count:', error);
+    console.error("Failed to get unread count:", error);
     return 0;
   }
 }
@@ -276,7 +293,7 @@ export async function markAsRead(notificationId: string) {
       data: { read: true },
     });
   } catch (error) {
-    console.error('Failed to mark notification as read:', error);
+    console.error("Failed to mark notification as read:", error);
   }
 }
 
@@ -290,22 +307,25 @@ export async function markAllAsRead(userId: string) {
       data: { read: true },
     });
   } catch (error) {
-    console.error('Failed to mark all as read:', error);
+    console.error("Failed to mark all as read:", error);
   }
 }
 
 /**
  * Get recent notifications for a user
  */
-export async function getRecentNotifications(userId: string, limit: number = 20) {
+export async function getRecentNotifications(
+  userId: string,
+  limit: number = 20
+) {
   try {
     return await db.notification.findMany({
       where: { userId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: limit,
     });
   } catch (error) {
-    console.error('Failed to get notifications:', error);
+    console.error("Failed to get notifications:", error);
     return [];
   }
 }
@@ -328,7 +348,7 @@ export async function cleanupOldNotifications(daysToKeep: number = 90) {
 
     return result.count;
   } catch (error) {
-    console.error('Failed to cleanup notifications:', error);
+    console.error("Failed to cleanup notifications:", error);
     return 0;
   }
 }
@@ -351,7 +371,7 @@ export async function notifyOrganization(params: {
 
   try {
     const users = await db.user.findMany({
-      where: { organizationId, status: 'ACTIVE' },
+      where: { organizationId, status: "ACTIVE" },
       select: { id: true },
     });
 
@@ -367,7 +387,7 @@ export async function notifyOrganization(params: {
       )
     );
   } catch (error) {
-    console.error('Failed to notify organization:', error);
+    console.error("Failed to notify organization:", error);
   }
 }
 
@@ -381,12 +401,13 @@ export async function notifyTruckRequest(params: {
   truckPlate: string;
   requestId: string;
 }) {
-  const { carrierId, shipperName, loadReference, truckPlate, requestId } = params;
+  const { carrierId, shipperName, loadReference, truckPlate, requestId } =
+    params;
 
   await notifyOrganization({
     organizationId: carrierId,
-    type: 'TRUCK_REQUEST_RECEIVED',
-    title: 'New Truck Request',
+    type: "TRUCK_REQUEST_RECEIVED",
+    title: "New Truck Request",
     message: `${shipperName} has requested truck ${truckPlate} for load ${loadReference}. Please respond within 24 hours.`,
     metadata: { requestId, shipperName, loadReference, truckPlate },
   });
@@ -403,12 +424,13 @@ export async function notifyTruckRequestResponse(params: {
   requestId: string;
   loadId?: string; // Include loadId for navigation to trip/load page
 }) {
-  const { shipperId, carrierName, truckPlate, approved, requestId, loadId } = params;
+  const { shipperId, carrierName, truckPlate, approved, requestId, loadId } =
+    params;
 
   await notifyOrganization({
     organizationId: shipperId,
-    type: approved ? 'TRUCK_REQUEST_APPROVED' : 'TRUCK_REQUEST_REJECTED',
-    title: approved ? 'Truck Request Approved' : 'Truck Request Rejected',
+    type: approved ? "TRUCK_REQUEST_APPROVED" : "TRUCK_REQUEST_REJECTED",
+    title: approved ? "Truck Request Approved" : "Truck Request Rejected",
     message: approved
       ? `${carrierName} has approved your request for truck ${truckPlate}. The truck is now booked for your load.`
       : `${carrierName} has declined your request for truck ${truckPlate}.`,
@@ -426,12 +448,13 @@ export async function notifyMatchProposal(params: {
   proposalId: string;
   offeredRate?: number;
 }) {
-  const { carrierId, shipperName, loadReference, proposalId, offeredRate } = params;
+  const { carrierId, shipperName, loadReference, proposalId, offeredRate } =
+    params;
 
   await notifyOrganization({
     organizationId: carrierId,
-    type: 'LOAD_MATCHED',
-    title: 'New Load Match Proposal',
+    type: "LOAD_MATCHED",
+    title: "New Load Match Proposal",
     message: offeredRate
       ? `${shipperName} has proposed load ${loadReference} at ${offeredRate.toLocaleString()} ETB.`
       : `${shipperName} has proposed load ${loadReference}.`,
@@ -453,8 +476,8 @@ export async function notifyExceptionAssigned(params: {
   await createNotification({
     userId,
     type: NotificationType.EXCEPTION_CREATED,
-    title: 'Exception Assigned to You',
-    message: `You have been assigned a ${exceptionType.replace(/_/g, ' ').toLowerCase()} exception for load ${loadReference}.`,
+    title: "Exception Assigned to You",
+    message: `You have been assigned a ${exceptionType.replace(/_/g, " ").toLowerCase()} exception for load ${loadReference}.`,
     metadata: { exceptionId, exceptionType, loadReference },
   });
 }
@@ -488,8 +511,8 @@ export async function notifyExceptionResolved(params: {
       notifications.push(
         notifyOrganization({
           organizationId: load.shipperId,
-          type: 'EXCEPTION_RESOLVED',
-          title: 'Exception Resolved',
+          type: "EXCEPTION_RESOLVED",
+          title: "Exception Resolved",
           message: `An exception for your load has been resolved: ${resolution}`,
           metadata: { exceptionId, loadId, resolution },
         })
@@ -500,8 +523,8 @@ export async function notifyExceptionResolved(params: {
       notifications.push(
         notifyOrganization({
           organizationId: load.assignedTruck.carrierId,
-          type: 'EXCEPTION_RESOLVED',
-          title: 'Exception Resolved',
+          type: "EXCEPTION_RESOLVED",
+          title: "Exception Resolved",
           message: `An exception for your assigned load has been resolved: ${resolution}`,
           metadata: { exceptionId, loadId, resolution },
         })
@@ -510,7 +533,7 @@ export async function notifyExceptionResolved(params: {
 
     await Promise.all(notifications);
   } catch (error) {
-    console.error('Failed to notify exception resolution:', error);
+    console.error("Failed to notify exception resolution:", error);
   }
 }
 
@@ -526,9 +549,9 @@ export async function notifyLoadStatusChange(params: {
 
   await notifyLoadStakeholders(
     loadId,
-    'LOAD_STATUS_CHANGED',
-    'Load Status Updated',
-    `Load ${loadReference} status changed to ${newStatus.replace(/_/g, ' ')}.`
+    "LOAD_STATUS_CHANGED",
+    "Load Status Updated",
+    `Load ${loadReference} status changed to ${newStatus.replace(/_/g, " ")}.`
   );
 }
 
@@ -545,11 +568,11 @@ export async function notifyTruckApproval(params: {
 
   await notifyOrganization({
     organizationId: carrierId,
-    type: approved ? 'TRUCK_APPROVED' : 'TRUCK_REJECTED',
-    title: approved ? 'Truck Approved' : 'Truck Registration Rejected',
+    type: approved ? "TRUCK_APPROVED" : "TRUCK_REJECTED",
+    title: approved ? "Truck Approved" : "Truck Registration Rejected",
     message: approved
       ? `Your truck ${truckPlate} has been approved and is now visible on the DAT board.`
-      : `Your truck ${truckPlate} registration was rejected. ${reason || 'Please contact support for details.'}`,
+      : `Your truck ${truckPlate} registration was rejected. ${reason || "Please contact support for details."}`,
     metadata: { truckPlate, approved, reason },
   });
 }
@@ -567,10 +590,10 @@ export async function notifyUserVerification(params: {
   await createNotification({
     userId,
     type: NotificationType.USER_STATUS_CHANGED,
-    title: verified ? 'Account Verified' : 'Verification Update',
+    title: verified ? "Account Verified" : "Verification Update",
     message: verified
-      ? 'Your account has been verified. You now have full access to the platform.'
-      : `Your verification status has been updated. ${reason || 'Please check your profile for details.'}`,
+      ? "Your account has been verified. You now have full access to the platform."
+      : `Your verification status has been updated. ${reason || "Please check your profile for details."}`,
     metadata: { verified, reason },
   });
 }

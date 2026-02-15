@@ -123,12 +123,13 @@ export async function processReadySettlements(): Promise<number> {
 
   // Build where clause for loads ready for settlement
   // Note: Amount constraints removed since pricing is negotiated off-platform
+  // Include both DELIVERED and COMPLETED loads (load may sync to COMPLETED before settlement)
   const whereClause: {
-    status: LoadStatus;
+    status: { in: LoadStatus[] };
     podVerified: boolean;
     settlementStatus: string;
   } = {
-    status: LoadStatus.DELIVERED,
+    status: { in: [LoadStatus.DELIVERED, LoadStatus.COMPLETED] },
     podVerified: true,
     settlementStatus: SettlementStatus.PENDING,
   };

@@ -195,6 +195,8 @@ class _WelcomeCard extends StatelessWidget {
         children: [
           Text(
             'Hello, ${user?.fullName ?? 'Shipper'}!',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 24,
@@ -204,6 +206,8 @@ class _WelcomeCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Manage your shipments efficiently',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.8),
               fontSize: 14,
@@ -305,6 +309,8 @@ class _WelcomeCardError extends StatelessWidget {
         children: [
           Text(
             'Hello, ${user?.fullName ?? 'Shipper'}!',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 24,
@@ -314,6 +320,8 @@ class _WelcomeCardError extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Manage your shipments efficiently',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.8),
               fontSize: 14,
@@ -369,6 +377,8 @@ class _StatCard extends StatelessWidget {
             ),
             Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.8),
                 fontSize: 12,

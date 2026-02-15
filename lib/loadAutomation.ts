@@ -6,9 +6,9 @@
  * Automated workflows for load management
  */
 
-import { db } from '@/lib/db';
-import { createNotification, NotificationType } from '@/lib/notifications';
-import { deductServiceFee } from '@/lib/serviceFeeManagement'; // Service Fee Implementation
+import { db } from "@/lib/db";
+import { createNotification, NotificationType } from "@/lib/notifications";
+import { deductServiceFee } from "@/lib/serviceFeeManagement"; // Service Fee Implementation
 
 /**
  * Expire old loads that haven't been assigned
@@ -22,7 +22,7 @@ export async function expireOldLoads() {
     // Find loads that should be expired
     const loadsToExpire = await db.load.findMany({
       where: {
-        status: 'POSTED',
+        status: "POSTED",
         createdAt: {
           lt: expirationThreshold,
         },
@@ -42,20 +42,20 @@ export async function expireOldLoads() {
     // Batch update all loads to EXPIRED status (single query instead of N)
     if (loadsToExpire.length > 0) {
       await db.load.updateMany({
-        where: { id: { in: loadsToExpire.map(l => l.id) } },
-        data: { status: 'EXPIRED' },
+        where: { id: { in: loadsToExpire.map((l) => l.id) } },
+        data: { status: "EXPIRED" },
       });
     }
 
     // Batch notify shippers
     await Promise.all(
       loadsToExpire
-        .filter(load => load.shipper?.users?.[0]?.id)
-        .map(load =>
+        .filter((load) => load.shipper?.users?.[0]?.id)
+        .map((load) =>
           createNotification({
             userId: load.shipper!.users[0].id,
-            type: 'LOAD_EXPIRED',
-            title: 'Load Expired',
+            type: "LOAD_EXPIRED",
+            title: "Load Expired",
             message: `Your load from ${load.pickupCity} to ${load.deliveryCity} has expired due to no carrier assignment.`,
             metadata: { loadId: load.id },
           })
@@ -67,10 +67,10 @@ export async function expireOldLoads() {
       expiredCount: loadsToExpire.length,
     };
   } catch (error) {
-    console.error('Error expiring loads:', error);
+    console.error("Error expiring loads:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -84,10 +84,10 @@ export async function expireOldLoads() {
 export async function autoSettleCompletedLoads() {
   try {
     // Find loads ready for settlement (POD uploaded, verified)
+    // Include both DELIVERED and COMPLETED loads (load may sync to COMPLETED before settlement)
     const loadsToSettle = await db.load.findMany({
       where: {
-        status: 'DELIVERED',
-        // podUrl: { not: null }, // POD uploaded
+        status: { in: ["DELIVERED", "COMPLETED"] },
       },
       include: {
         shipper: {
@@ -112,7 +112,10 @@ export async function autoSettleCompletedLoads() {
     let settledCount = 0;
 
     // Process service fees per-load (financial operation must be individual)
-    const settledLoads: Array<{ load: typeof loadsToSettle[0]; serviceFeeAmount: number }> = [];
+    const settledLoads: Array<{
+      load: (typeof loadsToSettle)[0];
+      serviceFeeAmount: number;
+    }> = [];
 
     for (const load of loadsToSettle) {
       try {
@@ -123,7 +126,10 @@ export async function autoSettleCompletedLoads() {
             serviceFeeAmount = Number(serviceFeeResult.serviceFee);
           }
         } catch (error) {
-          console.error(`Service fee deduction error for load ${load.id}:`, error);
+          console.error(
+            `Service fee deduction error for load ${load.id}:`,
+            error
+          );
         }
 
         settledLoads.push({ load, serviceFeeAmount });
@@ -136,20 +142,20 @@ export async function autoSettleCompletedLoads() {
     // Batch update all settled loads to COMPLETED (single query instead of N)
     if (settledLoads.length > 0) {
       await db.load.updateMany({
-        where: { id: { in: settledLoads.map(s => s.load.id) } },
-        data: { status: 'COMPLETED' },
+        where: { id: { in: settledLoads.map((s) => s.load.id) } },
+        data: { status: "COMPLETED" },
       });
     }
 
     // Batch send all notifications in parallel
-    const notificationPromises: Promise<any>[] = [];
+    const notificationPromises: Promise<unknown>[] = [];
     for (const { load, serviceFeeAmount } of settledLoads) {
       if (load.shipper?.users?.[0]?.id) {
         notificationPromises.push(
           createNotification({
             userId: load.shipper.users[0].id,
             type: NotificationType.SETTLEMENT_COMPLETE,
-            title: 'Load Completed',
+            title: "Load Completed",
             message: `Load from ${load.pickupCity} to ${load.deliveryCity} has been completed. Platform service fee: ${serviceFeeAmount.toFixed(2)} ETB.`,
             metadata: { loadId: load.id, serviceFee: serviceFeeAmount },
           }).catch(console.error)
@@ -160,7 +166,7 @@ export async function autoSettleCompletedLoads() {
           createNotification({
             userId: load.assignedTruck.carrier.users[0].id,
             type: NotificationType.SETTLEMENT_COMPLETE,
-            title: 'Delivery Completed',
+            title: "Delivery Completed",
             message: `Delivery to ${load.deliveryCity} has been completed. Platform service fee: ${serviceFeeAmount.toFixed(2)} ETB.`,
             metadata: { loadId: load.id, serviceFee: serviceFeeAmount },
           }).catch(console.error)
@@ -175,10 +181,10 @@ export async function autoSettleCompletedLoads() {
       totalFound: loadsToSettle.length,
     };
   } catch (error) {
-    console.error('Error in auto-settlement:', error);
+    console.error("Error in auto-settlement:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -201,13 +207,13 @@ export async function cleanupOldData() {
 
     return {
       success: true,
-      message: 'Old data cleaned up successfully',
+      message: "Old data cleaned up successfully",
     };
   } catch (error) {
-    console.error('Error cleaning up old data:', error);
+    console.error("Error cleaning up old data:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -228,7 +234,7 @@ export async function sendLoadReminders() {
     // Find loads with pickup date tomorrow
     const upcomingLoads = await db.load.findMany({
       where: {
-        status: 'ASSIGNED',
+        status: "ASSIGNED",
         pickupDate: {
           gte: tomorrow,
           lt: dayAfter,
@@ -253,15 +259,15 @@ export async function sendLoadReminders() {
     });
 
     // Batch all reminder notifications in parallel
-    const reminderPromises: Promise<any>[] = [];
+    const reminderPromises: Promise<unknown>[] = [];
 
     for (const load of upcomingLoads) {
       if (load.shipper?.users?.[0]?.id) {
         reminderPromises.push(
           createNotification({
             userId: load.shipper.users[0].id,
-            type: 'PICKUP_REMINDER',
-            title: 'Pickup Tomorrow',
+            type: "PICKUP_REMINDER",
+            title: "Pickup Tomorrow",
             message: `Reminder: Load pickup scheduled for tomorrow from ${load.pickupCity}.`,
             metadata: { loadId: load.id },
           })
@@ -271,8 +277,8 @@ export async function sendLoadReminders() {
         reminderPromises.push(
           createNotification({
             userId: load.assignedTruck.carrier.users[0].id,
-            type: 'PICKUP_REMINDER',
-            title: 'Pickup Tomorrow',
+            type: "PICKUP_REMINDER",
+            title: "Pickup Tomorrow",
             message: `Reminder: Pickup scheduled for tomorrow from ${load.pickupCity}.`,
             metadata: { loadId: load.id },
           })
@@ -289,10 +295,10 @@ export async function sendLoadReminders() {
       notificationsSent,
     };
   } catch (error) {
-    console.error('Error sending load reminders:', error);
+    console.error("Error sending load reminders:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }

@@ -9,20 +9,20 @@
  * POST: Approve or reject a load request (SHIPPER only)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { z } from 'zod';
-import { requireAuth } from '@/lib/auth';
-import { createNotification } from '@/lib/notifications';
-import { enableTrackingForLoad } from '@/lib/gpsTracking';
-import { UserRole, Prisma } from '@prisma/client';
-import crypto from 'crypto';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { z } from "zod";
+import { requireAuth } from "@/lib/auth";
+import { createNotification } from "@/lib/notifications";
+import { enableTrackingForLoad } from "@/lib/gpsTracking";
+import { UserRole, Prisma } from "@prisma/client";
+import crypto from "crypto";
 // P0-003 FIX: Import CacheInvalidation for post-approval cache clearing
-import { CacheInvalidation } from '@/lib/cache';
+import { CacheInvalidation } from "@/lib/cache";
 
 // Validation schema for load request response
 const LoadRequestResponseSchema = z.object({
-  action: z.enum(['APPROVE', 'REJECT']),
+  action: z.enum(["APPROVE", "REJECT"]),
   responseNotes: z.string().max(500).optional(),
 });
 
@@ -82,19 +82,20 @@ export async function POST(
 
     if (!loadRequest) {
       return NextResponse.json(
-        { error: 'Load request not found' },
+        { error: "Load request not found" },
         { status: 404 }
       );
     }
 
     // Check if user is the shipper who owns the load
-    const isShipperOwner = session.role === 'SHIPPER' &&
+    const isShipperOwner =
+      session.role === "SHIPPER" &&
       session.organizationId === loadRequest.shipperId;
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isShipperOwner && !isAdmin) {
       return NextResponse.json(
-        { error: 'Only the shipper who owns the load can respond' },
+        { error: "Only the shipper who owns the load can respond" },
         { status: 403 }
       );
     }
@@ -105,18 +106,18 @@ export async function POST(
 
     if (!validationResult.success) {
       // FIX: Use zodErrorResponse to avoid schema leak
-      const { zodErrorResponse } = await import('@/lib/validation');
+      const { zodErrorResponse } = await import("@/lib/validation");
       return zodErrorResponse(validationResult.error);
     }
 
     const data = validationResult.data;
 
     // Check if request is still pending - handle idempotency
-    if (loadRequest.status !== 'PENDING') {
+    if (loadRequest.status !== "PENDING") {
       // Idempotent: If already in the desired state, return success
       if (
-        (loadRequest.status === 'APPROVED' && data.action === 'APPROVE') ||
-        (loadRequest.status === 'REJECTED' && data.action === 'REJECT')
+        (loadRequest.status === "APPROVED" && data.action === "APPROVE") ||
+        (loadRequest.status === "REJECTED" && data.action === "REJECT")
       ) {
         return NextResponse.json({
           request: loadRequest,
@@ -138,16 +139,16 @@ export async function POST(
     if (new Date() > loadRequest.expiresAt) {
       await db.loadRequest.update({
         where: { id: requestId },
-        data: { status: 'EXPIRED' },
+        data: { status: "EXPIRED" },
       });
 
       return NextResponse.json(
-        { error: 'Request has expired' },
+        { error: "Request has expired" },
         { status: 400 }
       );
     }
 
-    if (data.action === 'APPROVE') {
+    if (data.action === "APPROVE") {
       // P0-002 & P0-003 FIX: All checks and operations now inside atomic transaction
       // This prevents race conditions and ensures trip creation is atomic
       try {
@@ -174,15 +175,15 @@ export async function POST(
           });
 
           if (!freshLoad) {
-            throw new Error('LOAD_NOT_FOUND');
+            throw new Error("LOAD_NOT_FOUND");
           }
 
           // P0-002 FIX: Check availability INSIDE transaction
           if (freshLoad.assignedTruckId) {
-            throw new Error('LOAD_ALREADY_ASSIGNED');
+            throw new Error("LOAD_ALREADY_ASSIGNED");
           }
 
-          const availableStatuses = ['POSTED', 'SEARCHING', 'OFFERED'];
+          const availableStatuses = ["POSTED", "SEARCHING", "OFFERED"];
           if (!availableStatuses.includes(freshLoad.status)) {
             throw new Error(`LOAD_NOT_AVAILABLE:${freshLoad.status}`);
           }
@@ -191,20 +192,31 @@ export async function POST(
           const existingAssignment = await tx.load.findFirst({
             where: {
               assignedTruckId: loadRequest.truckId,
-              status: { notIn: ['DELIVERED', 'COMPLETED', 'CANCELLED', 'EXPIRED'] },
+              status: {
+                notIn: ["DELIVERED", "COMPLETED", "CANCELLED", "EXPIRED"],
+              },
             },
-            select: { id: true, pickupCity: true, deliveryCity: true, status: true },
+            select: {
+              id: true,
+              pickupCity: true,
+              deliveryCity: true,
+              status: true,
+            },
           });
 
           if (existingAssignment) {
-            throw new Error(`TRUCK_BUSY:${existingAssignment.pickupCity}:${existingAssignment.deliveryCity}`);
+            throw new Error(
+              `TRUCK_BUSY:${existingAssignment.pickupCity}:${existingAssignment.deliveryCity}`
+            );
           }
 
           // Unassign truck from any completed loads
           await tx.load.updateMany({
             where: {
               assignedTruckId: loadRequest.truckId,
-              status: { in: ['DELIVERED', 'COMPLETED', 'CANCELLED', 'EXPIRED'] },
+              status: {
+                in: ["DELIVERED", "COMPLETED", "CANCELLED", "EXPIRED"],
+              },
             },
             data: { assignedTruckId: null },
           });
@@ -213,7 +225,7 @@ export async function POST(
           const updatedRequest = await tx.loadRequest.update({
             where: { id: requestId },
             data: {
-              status: 'APPROVED',
+              status: "APPROVED",
               respondedAt: new Date(),
               responseNotes: data.responseNotes,
               respondedById: session.userId,
@@ -226,12 +238,12 @@ export async function POST(
             data: {
               assignedTruckId: loadRequest.truckId,
               assignedAt: new Date(),
-              status: 'ASSIGNED',
+              status: "ASSIGNED",
             },
           });
 
           // P0-003 FIX: Create trip INSIDE transaction (atomic with assignment)
-          const trackingUrl = `trip-${loadRequest.loadId.slice(-6)}-${crypto.randomBytes(12).toString('hex')}`;
+          const trackingUrl = `trip-${loadRequest.loadId.slice(-6)}-${crypto.randomBytes(12).toString("hex")}`;
 
           const trip = await tx.trip.create({
             data: {
@@ -239,7 +251,7 @@ export async function POST(
               truckId: loadRequest.truckId,
               carrierId: loadRequest.carrierId,
               shipperId: freshLoad.shipperId,
-              status: 'ASSIGNED',
+              status: "ASSIGNED",
               pickupLat: freshLoad.originLat,
               pickupLng: freshLoad.originLon,
               pickupAddress: freshLoad.pickupAddress,
@@ -248,7 +260,8 @@ export async function POST(
               deliveryLng: freshLoad.destinationLon,
               deliveryAddress: freshLoad.deliveryAddress,
               deliveryCity: freshLoad.deliveryCity,
-              estimatedDistanceKm: freshLoad.tripKm || freshLoad.estimatedTripKm,
+              estimatedDistanceKm:
+                freshLoad.tripKm || freshLoad.estimatedTripKm,
               trackingUrl,
               trackingEnabled: true,
             },
@@ -258,7 +271,7 @@ export async function POST(
           await tx.loadEvent.create({
             data: {
               loadId: loadRequest.loadId,
-              eventType: 'ASSIGNED',
+              eventType: "ASSIGNED",
               description: `Load assigned to ${loadRequest.carrier.name} (${loadRequest.truck.licensePlate}) via carrier request`,
               userId: session.userId,
               metadata: {
@@ -275,27 +288,38 @@ export async function POST(
             where: {
               loadId: loadRequest.loadId,
               id: { not: requestId },
-              status: 'PENDING',
+              status: "PENDING",
             },
-            data: { status: 'CANCELLED' },
+            data: { status: "CANCELLED" },
           });
 
           // Cancel pending truck requests for this load
           await tx.truckRequest.updateMany({
             where: {
               loadId: loadRequest.loadId,
-              status: 'PENDING',
+              status: "PENDING",
             },
-            data: { status: 'CANCELLED' },
+            data: { status: "CANCELLED" },
           });
 
           // Cancel pending match proposals
           await tx.matchProposal.updateMany({
             where: {
               loadId: loadRequest.loadId,
-              status: 'PENDING',
+              status: "PENDING",
             },
-            data: { status: 'CANCELLED' },
+            data: { status: "CANCELLED" },
+          });
+
+          // Mark truck posting as MATCHED so it disappears from loadboard
+          await tx.truckPosting.updateMany({
+            where: { truckId: loadRequest.truckId, status: "ACTIVE" },
+            data: { status: "MATCHED", updatedAt: new Date() },
+          });
+          // Mark truck as unavailable
+          await tx.truck.update({
+            where: { id: loadRequest.truckId },
+            data: { isAvailable: false },
           });
 
           return { request: updatedRequest, load: updatedLoad, trip };
@@ -304,69 +328,88 @@ export async function POST(
         // P0-003 FIX: Invalidate cache after approval to prevent stale data
         // This ensures the load no longer appears as available in searches
         // Note: truck() invalidation also clears matching:* and truck-postings:* caches
-        await CacheInvalidation.load(loadRequest.loadId, loadRequest.load.shipperId);
-        await CacheInvalidation.truck(loadRequest.truckId, loadRequest.truck.carrierId);
+        await CacheInvalidation.load(
+          loadRequest.loadId,
+          loadRequest.load.shipperId
+        );
+        await CacheInvalidation.truck(
+          loadRequest.truckId,
+          loadRequest.truck.carrierId
+        );
 
         // Non-critical: Enable GPS tracking outside transaction (fire-and-forget)
         let trackingUrl: string | null = result.trip?.trackingUrl || null;
         if (loadRequest.truck.imei && loadRequest.truck.gpsVerifiedAt) {
           enableTrackingForLoad(loadRequest.loadId, loadRequest.truckId)
-            .then(url => { if (url) trackingUrl = url; })
-            .catch(err => console.error('Failed to enable GPS tracking:', err));
+            .then((url) => {
+              if (url) trackingUrl = url;
+            })
+            .catch((err) =>
+              console.error("Failed to enable GPS tracking:", err)
+            );
         }
 
         // Non-critical: Notify carrier users (fire-and-forget)
-        db.user.findMany({
-          where: { organizationId: loadRequest.carrierId, status: 'ACTIVE' },
-          select: { id: true },
-        }).then(async (carrierUsers) => {
-          for (const user of carrierUsers) {
-            await createNotification({
-              userId: user.id,
-              type: 'LOAD_REQUEST_APPROVED',
-              title: 'Load Request Approved',
-              message: `Your request for the load from ${loadRequest.load.pickupCity} to ${loadRequest.load.deliveryCity} has been approved!`,
-              metadata: {
-                loadRequestId: requestId,
-                loadId: loadRequest.loadId,
-                truckId: loadRequest.truckId,
-              },
-            });
-          }
-        }).catch(err => console.error('Failed to notify carriers:', err));
+        db.user
+          .findMany({
+            where: { organizationId: loadRequest.carrierId, status: "ACTIVE" },
+            select: { id: true },
+          })
+          .then(async (carrierUsers) => {
+            for (const user of carrierUsers) {
+              await createNotification({
+                userId: user.id,
+                type: "LOAD_REQUEST_APPROVED",
+                title: "Load Request Approved",
+                message: `Your request for the load from ${loadRequest.load.pickupCity} to ${loadRequest.load.deliveryCity} has been approved!`,
+                metadata: {
+                  loadRequestId: requestId,
+                  loadId: loadRequest.loadId,
+                  truckId: loadRequest.truckId,
+                },
+              });
+            }
+          })
+          .catch((err) => console.error("Failed to notify carriers:", err));
 
         return NextResponse.json({
           request: result.request,
           load: result.load,
           trip: result.trip,
           trackingUrl,
-          message: 'Load request approved. Load has been assigned to the carrier.',
+          message:
+            "Load request approved. Load has been assigned to the carrier.",
         });
 
-      // FIX: Use unknown type with type guard
+        // FIX: Use unknown type with type guard
       } catch (error: unknown) {
         // Handle specific transaction errors
-        const errorMessage = error instanceof Error ? error.message : '';
-        if (errorMessage === 'LOAD_NOT_FOUND') {
-          return NextResponse.json({ error: 'Load not found' }, { status: 404 });
-        }
-        if (errorMessage === 'LOAD_ALREADY_ASSIGNED') {
+        const errorMessage = error instanceof Error ? error.message : "";
+        if (errorMessage === "LOAD_NOT_FOUND") {
           return NextResponse.json(
-            { error: 'Load has already been assigned to another truck' },
+            { error: "Load not found" },
+            { status: 404 }
+          );
+        }
+        if (errorMessage === "LOAD_ALREADY_ASSIGNED") {
+          return NextResponse.json(
+            { error: "Load has already been assigned to another truck" },
             { status: 409 }
           );
         }
-        if (errorMessage.startsWith('LOAD_NOT_AVAILABLE:')) {
-          const status = errorMessage.split(':')[1];
+        if (errorMessage.startsWith("LOAD_NOT_AVAILABLE:")) {
+          const status = errorMessage.split(":")[1];
           return NextResponse.json(
             { error: `Load is no longer available (status: ${status})` },
             { status: 400 }
           );
         }
-        if (errorMessage.startsWith('TRUCK_BUSY:')) {
-          const [, pickup, delivery] = errorMessage.split(':');
+        if (errorMessage.startsWith("TRUCK_BUSY:")) {
+          const [, pickup, delivery] = errorMessage.split(":");
           return NextResponse.json(
-            { error: `This truck is already assigned to an active load (${pickup} → ${delivery})` },
+            {
+              error: `This truck is already assigned to an active load (${pickup} → ${delivery})`,
+            },
             { status: 400 }
           );
         }
@@ -378,7 +421,7 @@ export async function POST(
         const updatedRequest = await tx.loadRequest.update({
           where: { id: requestId },
           data: {
-            status: 'REJECTED',
+            status: "REJECTED",
             respondedAt: new Date(),
             responseNotes: data.responseNotes,
             respondedById: session.userId,
@@ -389,7 +432,7 @@ export async function POST(
         await tx.loadEvent.create({
           data: {
             loadId: loadRequest.loadId,
-            eventType: 'LOAD_REQUEST_REJECTED',
+            eventType: "LOAD_REQUEST_REJECTED",
             description: `Load request from ${loadRequest.carrier.name} was rejected`,
             userId: session.userId,
             metadata: {
@@ -406,7 +449,7 @@ export async function POST(
       const carrierUsers = await db.user.findMany({
         where: {
           organizationId: loadRequest.carrierId,
-          status: 'ACTIVE',
+          status: "ACTIVE",
         },
         select: { id: true },
       });
@@ -414,44 +457,50 @@ export async function POST(
       for (const user of carrierUsers) {
         createNotification({
           userId: user.id,
-          type: 'LOAD_REQUEST_REJECTED',
-          title: 'Load Request Rejected',
-          message: `Your request for the load from ${loadRequest.load.pickupCity} to ${loadRequest.load.deliveryCity} was rejected.${data.responseNotes ? ` Reason: ${data.responseNotes}` : ''}`,
+          type: "LOAD_REQUEST_REJECTED",
+          title: "Load Request Rejected",
+          message: `Your request for the load from ${loadRequest.load.pickupCity} to ${loadRequest.load.deliveryCity} was rejected.${data.responseNotes ? ` Reason: ${data.responseNotes}` : ""}`,
           metadata: {
             loadRequestId: requestId,
             loadId: loadRequest.loadId,
             reason: data.responseNotes,
           },
-        }).catch(err => console.error('Failed to notify carrier:', err));
+        }).catch((err) => console.error("Failed to notify carrier:", err));
       }
 
       return NextResponse.json({
         request: updatedRequest,
-        message: 'Load request rejected.',
+        message: "Load request rejected.",
       });
     }
-  // FIX: Use unknown type with type guard
+    // FIX: Use unknown type with type guard
   } catch (error: unknown) {
-    console.error('Error responding to load request:', error);
+    console.error("Error responding to load request:", error);
 
     // Handle unique constraint violation (race condition) - Prisma error
-    const prismaError = error as { code?: string; meta?: { target?: string[] } };
-    if (prismaError?.code === 'P2002') {
-      const field = prismaError?.meta?.target?.[0] || 'field';
-      if (field === 'assignedTruckId') {
+    const prismaError = error as {
+      code?: string;
+      meta?: { target?: string[] };
+    };
+    if (prismaError?.code === "P2002") {
+      const field = prismaError?.meta?.target?.[0] || "field";
+      if (field === "assignedTruckId") {
         return NextResponse.json(
-          { error: 'This truck is already assigned to another load. Please refresh and try again.' },
+          {
+            error:
+              "This truck is already assigned to another load. Please refresh and try again.",
+          },
           { status: 409 }
         );
       }
       return NextResponse.json(
-        { error: 'A conflict occurred. Please refresh and try again.' },
+        { error: "A conflict occurred. Please refresh and try again." },
         { status: 409 }
       );
     }
 
     return NextResponse.json(
-      { error: 'Failed to respond to load request' },
+      { error: "Failed to respond to load request" },
       { status: 500 }
     );
   }

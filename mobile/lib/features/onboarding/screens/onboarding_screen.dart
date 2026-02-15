@@ -168,14 +168,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     ),
                     // Skip button
                     if (_currentPage < onboardingPages.length - 1)
-                      TextButton(
-                        onPressed: _completeOnboarding,
-                        child: const Text(
-                          'Skip',
-                          style: TextStyle(
-                            color: AppColors.primary300,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                      GestureDetector(
+                        onTap: _completeOnboarding,
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          child: Text(
+                            'Skip',
+                            style: TextStyle(
+                              color: AppColors.primary300,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
@@ -344,11 +347,12 @@ class _OnboardingPageView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          const SizedBox(height: 24),
           // Icon container with decorative elements
           Stack(
             alignment: Alignment.center,
@@ -448,6 +452,7 @@ class _OnboardingPageView extends StatelessWidget {
                   ],
                 ),
               )),
+          const SizedBox(height: 24),
         ],
       ),
     );

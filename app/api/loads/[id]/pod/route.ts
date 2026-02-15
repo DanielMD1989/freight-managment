@@ -4,13 +4,14 @@
  * Allows carriers to upload POD documents after delivery
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { validateCSRFWithMobile } from '@/lib/csrf';
-import { CacheInvalidation } from '@/lib/cache';
-import { createNotification, NotificationType } from '@/lib/notifications';
-import { uploadPOD } from '@/lib/storage';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { CacheInvalidation } from "@/lib/cache";
+import { createNotification, NotificationType } from "@/lib/notifications";
+import { uploadPOD } from "@/lib/storage";
+import { deductServiceFee } from "@/lib/serviceFeeManagement";
 
 /**
  * POST /api/loads/[id]/pod
@@ -48,13 +49,13 @@ export async function POST(
     });
 
     if (!load) {
-      return NextResponse.json({ error: 'Load not found' }, { status: 404 });
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // Only DELIVERED loads can have POD uploaded
-    if (load.status !== 'DELIVERED') {
+    if (load.status !== "DELIVERED") {
       return NextResponse.json(
-        { error: 'Load must be DELIVERED before uploading POD' },
+        { error: "Load must be DELIVERED before uploading POD" },
         { status: 400 }
       );
     }
@@ -66,11 +67,11 @@ export async function POST(
     });
 
     const isCarrier = user?.organizationId === load.assignedTruck?.carrierId;
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isCarrier && !isAdmin) {
       return NextResponse.json(
-        { error: 'Only the assigned carrier can upload POD' },
+        { error: "Only the assigned carrier can upload POD" },
         { status: 403 }
       );
     }
@@ -78,33 +79,33 @@ export async function POST(
     // Check if POD already submitted
     if (load.podSubmitted) {
       return NextResponse.json(
-        { error: 'POD already submitted for this load' },
+        { error: "POD already submitted for this load" },
         { status: 400 }
       );
     }
 
     // Parse form data for file upload
     const formData = await request.formData();
-    const file = formData.get('file') as File | null;
+    const file = formData.get("file") as File | null;
 
     if (!file) {
       return NextResponse.json(
-        { error: 'POD document file is required' },
+        { error: "POD document file is required" },
         { status: 400 }
       );
     }
 
     // Validate file type (image or PDF)
     const allowedTypes = [
-      'image/jpeg',
-      'image/png',
-      'image/jpg',
-      'application/pdf',
+      "image/jpeg",
+      "image/png",
+      "image/jpg",
+      "application/pdf",
     ];
 
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
-        { error: 'File must be an image (JPEG, PNG) or PDF' },
+        { error: "File must be an image (JPEG, PNG) or PDF" },
         { status: 400 }
       );
     }
@@ -113,7 +114,7 @@ export async function POST(
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
       return NextResponse.json(
-        { error: 'File size must be less than 10MB' },
+        { error: "File size must be less than 10MB" },
         { status: 400 }
       );
     }
@@ -122,9 +123,9 @@ export async function POST(
     const uploadResult = await uploadPOD(file, loadId);
 
     if (!uploadResult.success) {
-      console.error('POD upload failed:', uploadResult.error);
+      console.error("POD upload failed:", uploadResult.error);
       return NextResponse.json(
-        { error: 'Failed to upload POD file. Please try again.' },
+        { error: "Failed to upload POD file. Please try again." },
         { status: 500 }
       );
     }
@@ -145,8 +146,8 @@ export async function POST(
     await db.loadEvent.create({
       data: {
         loadId,
-        eventType: 'POD_SUBMITTED',
-        description: 'Proof of Delivery submitted by carrier',
+        eventType: "POD_SUBMITTED",
+        description: "Proof of Delivery submitted by carrier",
         userId: session.userId,
       },
     });
@@ -168,14 +169,14 @@ export async function POST(
       await createNotification({
         userId: loadWithShipper.shipperId,
         type: NotificationType.POD_SUBMITTED,
-        title: 'Proof of Delivery Submitted',
+        title: "Proof of Delivery Submitted",
         message: `Carrier has submitted POD for load ${loadWithShipper.pickupCity} → ${loadWithShipper.deliveryCity}. Please verify.`,
         metadata: { loadId },
       });
     }
 
     return NextResponse.json({
-      message: 'POD uploaded successfully',
+      message: "POD uploaded successfully",
       load: {
         id: updatedLoad.id,
         podUrl: updatedLoad.podUrl,
@@ -184,9 +185,9 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('Upload POD error:', error);
+    console.error("Upload POD error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
@@ -222,7 +223,7 @@ export async function PUT(
     });
 
     if (!load) {
-      return NextResponse.json({ error: 'Load not found' }, { status: 404 });
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // Check if user is the shipper
@@ -232,11 +233,11 @@ export async function PUT(
     });
 
     const isShipper = user?.organizationId === load.shipperId;
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isShipper && !isAdmin) {
       return NextResponse.json(
-        { error: 'Only the shipper can verify POD' },
+        { error: "Only the shipper can verify POD" },
         { status: 403 }
       );
     }
@@ -244,7 +245,7 @@ export async function PUT(
     // Check if POD was submitted
     if (!load.podSubmitted) {
       return NextResponse.json(
-        { error: 'No POD has been submitted for this load' },
+        { error: "No POD has been submitted for this load" },
         { status: 400 }
       );
     }
@@ -252,7 +253,7 @@ export async function PUT(
     // Check if already verified
     if (load.podVerified) {
       return NextResponse.json(
-        { error: 'POD already verified' },
+        { error: "POD already verified" },
         { status: 400 }
       );
     }
@@ -270,8 +271,8 @@ export async function PUT(
     await db.loadEvent.create({
       data: {
         loadId,
-        eventType: 'POD_VERIFIED',
-        description: 'Proof of Delivery verified by shipper',
+        eventType: "POD_VERIFIED",
+        description: "Proof of Delivery verified by shipper",
         userId: session.userId,
       },
     });
@@ -301,29 +302,123 @@ export async function PUT(
       },
     });
 
-    const carrierId = loadWithCarrier?.assignedTruck?.carrier?.users?.[0]?.id;
-    if (carrierId) {
+    const carrierUserId =
+      loadWithCarrier?.assignedTruck?.carrier?.users?.[0]?.id;
+    if (carrierUserId) {
       await createNotification({
-        userId: carrierId,
+        userId: carrierUserId,
         type: NotificationType.POD_VERIFIED,
-        title: 'POD Verified',
+        title: "POD Verified",
         message: `Your POD for load ${loadWithCarrier.pickupCity} → ${loadWithCarrier.deliveryCity} has been verified. Settlement can now proceed.`,
         metadata: { loadId },
       });
     }
 
+    // === AUTO-SETTLEMENT: Deduct service fees immediately on POD verification ===
+    let settlementResult: {
+      status: string;
+      shipperFee?: number;
+      carrierFee?: number;
+    } = { status: "skipped" };
+    try {
+      const feeResult = await deductServiceFee(loadId);
+
+      if (feeResult.success && feeResult.totalPlatformFee > 0) {
+        // Mark settlement as PAID
+        await db.load.update({
+          where: { id: loadId },
+          data: {
+            settlementStatus: "PAID",
+            settledAt: new Date(),
+          },
+        });
+
+        // Create settlement load event
+        await db.loadEvent.create({
+          data: {
+            loadId,
+            eventType: "SETTLEMENT_COMPLETED",
+            description: `Auto-settlement: Shipper fee ${feeResult.shipperFee.toFixed(2)} ETB, Carrier fee ${feeResult.carrierFee.toFixed(2)} ETB`,
+            userId: session.userId,
+            metadata: {
+              shipperFee: feeResult.shipperFee,
+              carrierFee: feeResult.carrierFee,
+              totalPlatformFee: feeResult.totalPlatformFee,
+              transactionId: feeResult.transactionId,
+              trigger: "pod_verification",
+            },
+          },
+        });
+
+        // Notify shipper about fee deduction
+        if (load.shipperId) {
+          // Find shipper user
+          const shipperOrg = await db.organization.findUnique({
+            where: { id: load.shipperId },
+            select: { users: { select: { id: true }, take: 1 } },
+          });
+          const shipperUserId = shipperOrg?.users?.[0]?.id;
+          if (shipperUserId) {
+            await createNotification({
+              userId: shipperUserId,
+              type: NotificationType.SETTLEMENT_COMPLETE,
+              title: "Settlement Completed",
+              message: `Service fee of ${feeResult.shipperFee.toFixed(2)} ETB deducted for load ${loadWithCarrier?.pickupCity} → ${loadWithCarrier?.deliveryCity}.`,
+              metadata: { loadId, fee: feeResult.shipperFee },
+            });
+          }
+        }
+
+        // Notify carrier about fee deduction
+        if (carrierUserId) {
+          await createNotification({
+            userId: carrierUserId,
+            type: NotificationType.SETTLEMENT_COMPLETE,
+            title: "Settlement Completed",
+            message: `Service fee of ${feeResult.carrierFee.toFixed(2)} ETB deducted for load ${loadWithCarrier?.pickupCity} → ${loadWithCarrier?.deliveryCity}.`,
+            metadata: { loadId, fee: feeResult.carrierFee },
+          });
+        }
+
+        settlementResult = {
+          status: "paid",
+          shipperFee: feeResult.shipperFee,
+          carrierFee: feeResult.carrierFee,
+        };
+      } else if (feeResult.success && feeResult.totalPlatformFee === 0) {
+        // Fees waived (no corridor match) — still mark settled
+        await db.load.update({
+          where: { id: loadId },
+          data: { settlementStatus: "PAID", settledAt: new Date() },
+        });
+        settlementResult = { status: "paid_waived" };
+      }
+      // If !feeResult.success — leave as PENDING for cron fallback
+    } catch (settlementError) {
+      console.error("Auto-settlement failed for load", loadId, settlementError);
+      await db.load.update({
+        where: { id: loadId },
+        data: { settlementStatus: "DISPUTE" },
+      });
+      settlementResult = { status: "failed" };
+    }
+
+    // Invalidate cache again after settlement updates
+    await CacheInvalidation.load(loadId, load.shipperId);
+
     return NextResponse.json({
-      message: 'POD verified successfully. Settlement can now be processed.',
+      message: "POD verified successfully. Settlement can now be processed.",
       load: {
         id: updatedLoad.id,
         podVerified: updatedLoad.podVerified,
         podVerifiedAt: updatedLoad.podVerifiedAt,
       },
+      settlement: settlementResult,
     });
   } catch (error) {
-    console.error('Verify POD error:', error);
+    console.error("Verify POD error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

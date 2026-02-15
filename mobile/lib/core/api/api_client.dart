@@ -152,10 +152,17 @@ class ApiClient {
       },
       onError: (error, handler) async {
         // Handle 401 Unauthorized - clear tokens and notify auth state
+        // Skip for auth endpoints where 401 means "wrong credentials", not "expired session"
         if (error.response?.statusCode == 401) {
-          await clearAuth();
-          // Notify auth state so router redirects to login
-          onUnauthorized?.call();
+          final path = error.requestOptions.path;
+          final isAuthEndpoint = path.contains('/auth/login') ||
+              path.contains('/auth/register') ||
+              path.contains('/auth/verify-mfa');
+          if (!isAuthEndpoint) {
+            await clearAuth();
+            // Notify auth state so router redirects to login
+            onUnauthorized?.call();
+          }
         }
         handler.next(error);
       },
