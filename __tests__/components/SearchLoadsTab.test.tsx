@@ -100,11 +100,12 @@ global.fetch = mockFetch;
 
 // Mock user prop
 const mockUser = {
-  id: "user-123",
-  companyId: "company-123",
-  name: "Test Carrier",
+  userId: "user-123",
   email: "carrier@test.com",
   role: "CARRIER" as const,
+  organizationId: "company-123",
+  firstName: "Test",
+  lastName: "Carrier",
 };
 
 describe("SearchLoadsTab", () => {
