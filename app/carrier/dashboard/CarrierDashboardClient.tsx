@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Carrier Dashboard Client Component
@@ -11,8 +11,8 @@
  * Sections: Active Jobs, Available Loads, Recent Activity, Fleet Overview, Notifications
  */
 
-import React from 'react';
-import Link from 'next/link';
+import React from "react";
+import Link from "next/link";
 import {
   StatCard,
   DashboardSection,
@@ -26,8 +26,8 @@ import {
   MapIcon,
   SearchIcon,
   CheckCircleIcon,
-} from '@/components/dashboard';
-import { formatCurrency } from '@/lib/formatters';
+} from "@/components/dashboard";
+import { formatCurrency } from "@/lib/formatters";
 
 interface DashboardData {
   totalTrucks: number;
@@ -48,8 +48,8 @@ interface DashboardData {
 
 interface Load {
   id: string;
-  origin: string;
-  destination: string;
+  pickupCity: string;
+  deliveryCity: string;
   status: string;
   price?: number;
   weight?: number;
@@ -89,14 +89,34 @@ interface CarrierDashboardClientProps {
 
 // PlusIcon and FleetIcon - keep local as they're not in shared icons yet
 const PlusIcon = () => (
-  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+  <svg
+    className="h-5 w-5"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M12 4v16m8-8H4"
+    />
   </svg>
 );
 
 const FleetIcon = () => (
-  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+  <svg
+    className="h-5 w-5"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+    />
   </svg>
 );
 
@@ -116,7 +136,7 @@ export default function CarrierDashboardClient({
     inTransitTrips: 0,
     totalRevenue: 0,
     totalDistance: 0,
-    wallet: { balance: 0, currency: 'ETB' },
+    wallet: { balance: 0, currency: "ETB" },
     recentPostings: 0,
     nearbyMatches: 0,
     pendingApprovals: 0,
@@ -126,33 +146,44 @@ export default function CarrierDashboardClient({
   const totalTrucks = data.totalTrucks;
   const availableTrucks = data.activeTrucks;
   const trucksOnJob = totalTrucks - availableTrucks;
-  const firstName = user.name?.split(' ')[0] || user.email?.split('@')[0] || 'Carrier';
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const firstName =
+    user.name?.split(" ")[0] || user.email?.split("@")[0] || "Carrier";
+  const today = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 
   // Get active loads (in transit or assigned)
   const activeJobs = recentLoads.filter(
-    l => l.status === 'IN_TRANSIT' || l.status === 'ASSIGNED' || l.status === 'PICKED_UP'
+    (l) =>
+      l.status === "IN_TRANSIT" ||
+      l.status === "ASSIGNED" ||
+      l.status === "PICKED_UP"
   );
 
   // Get recommended loads
-  const availableLoads = (recommendedLoads || recentLoads.filter(l => l.status === 'POSTED')).slice(0, 4);
+  const availableLoads = (
+    recommendedLoads || recentLoads.filter((l) => l.status === "POSTED")
+  ).slice(0, 4);
 
   return (
     <div className="min-h-screen p-6 lg:p-8">
-      <div className="max-w-[1400px] mx-auto">
+      <div className="mx-auto max-w-[1400px]">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
               <h1
-                className="text-2xl lg:text-[28px] font-bold tracking-tight"
-                style={{ color: 'var(--foreground)' }}
+                className="text-2xl font-bold tracking-tight lg:text-[28px]"
+                style={{ color: "var(--foreground)" }}
               >
                 Welcome back, {firstName}
               </h1>
               <p
-                className="text-sm mt-1"
-                style={{ color: 'var(--foreground-muted)' }}
+                className="mt-1 text-sm"
+                style={{ color: "var(--foreground-muted)" }}
               >
                 {today}
               </p>
@@ -161,7 +192,7 @@ export default function CarrierDashboardClient({
         </div>
 
         {/* Stats Grid - 5 cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 lg:gap-5 mb-8">
+        <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5 lg:gap-5">
           <StatCard
             title="Total Trucks"
             value={totalTrucks}
@@ -180,7 +211,9 @@ export default function CarrierDashboardClient({
             value={trucksOnJob}
             icon={<MapIcon />}
             color="accent"
-            trend={trucksOnJob > 0 ? { value: 'Active', positive: true } : undefined}
+            trend={
+              trucksOnJob > 0 ? { value: "Active", positive: true } : undefined
+            }
           />
           <StatCard
             title="Pending Approvals"
@@ -200,8 +233,8 @@ export default function CarrierDashboardClient({
         {/* Quick Actions */}
         <div className="mb-8">
           <h2
-            className="text-lg font-semibold mb-4"
-            style={{ color: 'var(--foreground)' }}
+            className="mb-4 text-lg font-semibold"
+            style={{ color: "var(--foreground)" }}
           >
             Quick Actions
           </h2>
@@ -231,44 +264,58 @@ export default function CarrierDashboardClient({
         </div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Active Jobs - 2/3 width */}
           <div className="lg:col-span-2">
             <DashboardSection
               title="My Active Jobs"
               subtitle="Currently assigned loads"
-              action={{ label: 'View All', href: '/carrier/map' }}
+              action={{ label: "View All", href: "/carrier/map" }}
               noPadding
             >
               {activeJobs.length > 0 ? (
-                <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                <div
+                  className="divide-y"
+                  style={{ borderColor: "var(--border)" }}
+                >
                   {activeJobs.slice(0, 5).map((load) => (
                     <Link
                       key={load.id}
                       href={`/carrier/loads/${load.id}`}
                       className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-[var(--bg-tinted)]"
                     >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1 flex items-center gap-2">
                           <span
-                            className="font-medium text-sm"
-                            style={{ color: 'var(--foreground)' }}
+                            className="text-sm font-medium"
+                            style={{ color: "var(--foreground)" }}
                           >
-                            {load.origin}
+                            {load.pickupCity || "N/A"}
                           </span>
-                          <svg className="w-4 h-4" style={{ color: 'var(--foreground-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                          <svg
+                            className="h-4 w-4"
+                            style={{ color: "var(--foreground-muted)" }}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M17 8l4 4m0 0l-4 4m4-4H3"
+                            />
                           </svg>
                           <span
-                            className="font-medium text-sm"
-                            style={{ color: 'var(--foreground)' }}
+                            className="text-sm font-medium"
+                            style={{ color: "var(--foreground)" }}
                           >
-                            {load.destination}
+                            {load.deliveryCity || "N/A"}
                           </span>
                         </div>
                         <div
-                          className="text-xs flex items-center gap-2"
-                          style={{ color: 'var(--foreground-muted)' }}
+                          className="flex items-center gap-2 text-xs"
+                          style={{ color: "var(--foreground-muted)" }}
                         >
                           {load.truckType && <span>{load.truckType}</span>}
                           {load.weight && (
@@ -288,8 +335,8 @@ export default function CarrierDashboardClient({
                       <div className="flex items-center gap-3">
                         {load.price && (
                           <span
-                            className="font-semibold text-sm"
-                            style={{ color: 'var(--foreground)' }}
+                            className="text-sm font-semibold"
+                            style={{ color: "var(--foreground)" }}
                           >
                             {formatCurrency(load.price)}
                           </span>
@@ -302,26 +349,26 @@ export default function CarrierDashboardClient({
               ) : (
                 <div className="py-12 text-center">
                   <div
-                    className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center"
-                    style={{ background: 'var(--bg-tinted)' }}
+                    className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full"
+                    style={{ background: "var(--bg-tinted)" }}
                   >
                     <TruckIcon />
                   </div>
                   <p
-                    className="text-sm font-medium mb-1"
-                    style={{ color: 'var(--foreground)' }}
+                    className="mb-1 text-sm font-medium"
+                    style={{ color: "var(--foreground)" }}
                   >
                     No active jobs
                   </p>
                   <p
-                    className="text-xs mb-4"
-                    style={{ color: 'var(--foreground-muted)' }}
+                    className="mb-4 text-xs"
+                    style={{ color: "var(--foreground-muted)" }}
                   >
                     Search for loads to find your next job
                   </p>
                   <Link
                     href="/carrier/loadboard?tab=SEARCH_LOADS"
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-lg bg-primary-500 hover:bg-primary-600 transition-colors"
+                    className="bg-primary-500 hover:bg-primary-600 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors"
                   >
                     <SearchIcon />
                     Search Loads
@@ -338,7 +385,10 @@ export default function CarrierDashboardClient({
               subtitle="Latest updates"
               noPadding
             >
-              <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+              <div
+                className="divide-y"
+                style={{ borderColor: "var(--border)" }}
+              >
                 {recentLoads.length > 0 ? (
                   recentLoads.slice(0, 4).map((load) => (
                     <Link
@@ -347,19 +397,26 @@ export default function CarrierDashboardClient({
                       className="flex items-start gap-3 px-6 py-4 transition-colors hover:bg-[var(--bg-tinted)]"
                     >
                       <div
-                        className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
-                        style={{ background: load.status === 'DELIVERED' || load.status === 'COMPLETED' ? 'var(--success-500)' : 'var(--primary-500)' }}
+                        className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full"
+                        style={{
+                          background:
+                            load.status === "DELIVERED" ||
+                            load.status === "COMPLETED"
+                              ? "var(--success-500)"
+                              : "var(--primary-500)",
+                        }}
                       />
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p
-                          className="text-sm font-medium truncate"
-                          style={{ color: 'var(--foreground)' }}
+                          className="truncate text-sm font-medium"
+                          style={{ color: "var(--foreground)" }}
                         >
-                          {load.origin} → {load.destination}
+                          {load.pickupCity || "N/A"} →{" "}
+                          {load.deliveryCity || "N/A"}
                         </p>
                         <p
-                          className="text-xs mt-0.5"
-                          style={{ color: 'var(--foreground-muted)' }}
+                          className="mt-0.5 text-xs"
+                          style={{ color: "var(--foreground-muted)" }}
                         >
                           {new Date(load.createdAt).toLocaleDateString()}
                         </p>
@@ -371,7 +428,7 @@ export default function CarrierDashboardClient({
                   <div className="py-8 text-center">
                     <p
                       className="text-sm"
-                      style={{ color: 'var(--foreground-muted)' }}
+                      style={{ color: "var(--foreground-muted)" }}
                     >
                       No recent activity
                     </p>
@@ -383,47 +440,70 @@ export default function CarrierDashboardClient({
         </div>
 
         {/* Second Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Available Loads */}
           <div className="lg:col-span-2">
             <DashboardSection
               title="Available Loads"
               subtitle="Recommended loads for your fleet"
-              action={{ label: 'View All', href: '/carrier/loadboard?tab=SEARCH_LOADS' }}
+              action={{
+                label: "View All",
+                href: "/carrier/loadboard?tab=SEARCH_LOADS",
+              }}
               noPadding
             >
               {availableLoads.length > 0 ? (
-                <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                <div
+                  className="divide-y"
+                  style={{ borderColor: "var(--border)" }}
+                >
                   {availableLoads.map((load) => (
                     <Link
                       key={load.id}
                       href={`/carrier/loads/${load.id}`}
                       className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-[var(--bg-tinted)]"
                     >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1 flex items-center gap-2">
                           <span
-                            className="font-medium text-sm"
-                            style={{ color: 'var(--foreground)' }}
+                            className="text-sm font-medium"
+                            style={{ color: "var(--foreground)" }}
                           >
-                            {load.origin}
+                            {load.pickupCity || "N/A"}
                           </span>
-                          <svg className="w-4 h-4" style={{ color: 'var(--foreground-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                          <svg
+                            className="h-4 w-4"
+                            style={{ color: "var(--foreground-muted)" }}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M17 8l4 4m0 0l-4 4m4-4H3"
+                            />
                           </svg>
                           <span
-                            className="font-medium text-sm"
-                            style={{ color: 'var(--foreground)' }}
+                            className="text-sm font-medium"
+                            style={{ color: "var(--foreground)" }}
                           >
-                            {load.destination}
+                            {load.deliveryCity || "N/A"}
                           </span>
                         </div>
                         <div
-                          className="text-xs flex items-center gap-2"
-                          style={{ color: 'var(--foreground-muted)' }}
+                          className="flex items-center gap-2 text-xs"
+                          style={{ color: "var(--foreground-muted)" }}
                         >
                           {(load.equipmentType || load.truckType) && (
-                            <span>{(load.equipmentType || load.truckType || '').replace(/_/g, ' ')}</span>
+                            <span>
+                              {(
+                                load.equipmentType ||
+                                load.truckType ||
+                                ""
+                              ).replace(/_/g, " ")}
+                            </span>
                           )}
                           {load.weight && (
                             <>
@@ -440,7 +520,9 @@ export default function CarrierDashboardClient({
                           {load.pickupDate && (
                             <>
                               <span>•</span>
-                              <span>{new Date(load.pickupDate).toLocaleDateString()}</span>
+                              <span>
+                                {new Date(load.pickupDate).toLocaleDateString()}
+                              </span>
                             </>
                           )}
                         </div>
@@ -448,8 +530,8 @@ export default function CarrierDashboardClient({
                       <div className="text-right">
                         {load.price && (
                           <div
-                            className="font-semibold text-sm"
-                            style={{ color: 'var(--foreground)' }}
+                            className="text-sm font-semibold"
+                            style={{ color: "var(--foreground)" }}
                           >
                             {formatCurrency(load.price)}
                           </div>
@@ -461,20 +543,20 @@ export default function CarrierDashboardClient({
               ) : (
                 <div className="py-12 text-center">
                   <div
-                    className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center"
-                    style={{ background: 'var(--bg-tinted)' }}
+                    className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full"
+                    style={{ background: "var(--bg-tinted)" }}
                   >
                     <PackageIcon />
                   </div>
                   <p
-                    className="text-sm font-medium mb-1"
-                    style={{ color: 'var(--foreground)' }}
+                    className="mb-1 text-sm font-medium"
+                    style={{ color: "var(--foreground)" }}
                   >
                     No available loads
                   </p>
                   <p
                     className="text-xs"
-                    style={{ color: 'var(--foreground-muted)' }}
+                    style={{ color: "var(--foreground-muted)" }}
                   >
                     Check back later for new shipments
                   </p>
@@ -489,11 +571,14 @@ export default function CarrierDashboardClient({
             <DashboardSection
               title="Fleet Overview"
               subtitle="Truck status summary"
-              action={{ label: 'Manage', href: '/carrier/trucks' }}
+              action={{ label: "Manage", href: "/carrier/trucks" }}
               noPadding
             >
               {trucks.length > 0 ? (
-                <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                <div
+                  className="divide-y"
+                  style={{ borderColor: "var(--border)" }}
+                >
                   {trucks.slice(0, 3).map((truck) => (
                     <Link
                       key={truck.id}
@@ -502,27 +587,29 @@ export default function CarrierDashboardClient({
                     >
                       <div className="flex items-center gap-3">
                         <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center"
-                          style={{ background: 'var(--bg-tinted)' }}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg"
+                          style={{ background: "var(--bg-tinted)" }}
                         >
                           <TruckIcon />
                         </div>
                         <div>
                           <p
                             className="text-sm font-medium"
-                            style={{ color: 'var(--foreground)' }}
+                            style={{ color: "var(--foreground)" }}
                           >
-                            {truck.plateNumber || 'Truck'}
+                            {truck.plateNumber || "Truck"}
                           </p>
                           <p
                             className="text-xs"
-                            style={{ color: 'var(--foreground-muted)' }}
+                            style={{ color: "var(--foreground-muted)" }}
                           >
-                            {truck.truckType || 'Standard'}
+                            {truck.truckType || "Standard"}
                           </p>
                         </div>
                       </div>
-                      <StatusBadge status={truck.isAvailable ? 'AVAILABLE' : 'ON_JOB'} />
+                      <StatusBadge
+                        status={truck.isAvailable ? "AVAILABLE" : "ON_JOB"}
+                      />
                     </Link>
                   ))}
                   {trucks.length > 3 && (
@@ -530,7 +617,7 @@ export default function CarrierDashboardClient({
                       <Link
                         href="/carrier/trucks"
                         className="text-sm font-medium transition-colors"
-                        style={{ color: 'var(--primary-500)' }}
+                        style={{ color: "var(--primary-500)" }}
                       >
                         View all {trucks.length} trucks
                       </Link>
@@ -540,26 +627,26 @@ export default function CarrierDashboardClient({
               ) : (
                 <div className="py-8 text-center">
                   <div
-                    className="w-10 h-10 rounded-full mx-auto mb-3 flex items-center justify-center"
-                    style={{ background: 'var(--bg-tinted)' }}
+                    className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full"
+                    style={{ background: "var(--bg-tinted)" }}
                   >
                     <FleetIcon />
                   </div>
                   <p
-                    className="text-sm font-medium mb-1"
-                    style={{ color: 'var(--foreground)' }}
+                    className="mb-1 text-sm font-medium"
+                    style={{ color: "var(--foreground)" }}
                   >
                     No trucks registered
                   </p>
                   <p
-                    className="text-xs mb-3"
-                    style={{ color: 'var(--foreground-muted)' }}
+                    className="mb-3 text-xs"
+                    style={{ color: "var(--foreground-muted)" }}
                   >
                     Add your first truck to start
                   </p>
                   <Link
                     href="/carrier/trucks/add"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-lg bg-primary-500 hover:bg-primary-600 transition-colors"
+                    className="bg-primary-500 hover:bg-primary-600 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-white transition-colors"
                   >
                     <PlusIcon />
                     Add Truck
@@ -569,10 +656,7 @@ export default function CarrierDashboardClient({
             </DashboardSection>
 
             {/* Earnings Chart */}
-            <DashboardSection
-              title="Earnings"
-              subtitle="Revenue overview"
-            >
+            <DashboardSection title="Earnings" subtitle="Revenue overview">
               <EarningsChart organizationId={user.organizationId} />
             </DashboardSection>
 
@@ -584,16 +668,27 @@ export default function CarrierDashboardClient({
             >
               <div className="py-8 text-center">
                 <div
-                  className="w-10 h-10 rounded-full mx-auto mb-3 flex items-center justify-center"
-                  style={{ background: 'var(--bg-tinted)' }}
+                  className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full"
+                  style={{ background: "var(--bg-tinted)" }}
                 >
-                  <svg className="w-5 h-5" style={{ color: 'var(--foreground-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  <svg
+                    className="h-5 w-5"
+                    style={{ color: "var(--foreground-muted)" }}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                    />
                   </svg>
                 </div>
                 <p
                   className="text-sm"
-                  style={{ color: 'var(--foreground-muted)' }}
+                  style={{ color: "var(--foreground-muted)" }}
                 >
                   No new notifications
                 </p>

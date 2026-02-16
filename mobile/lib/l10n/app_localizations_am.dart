@@ -9,7 +9,7 @@ class AppLocalizationsAm extends AppLocalizations {
   AppLocalizationsAm([String locale = 'am']) : super(locale);
 
   @override
-  String get appName => 'FreightFlow';
+  String get appName => 'FreightET';
 
   @override
   String get login => 'ግባ';

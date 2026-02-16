@@ -26,7 +26,7 @@ class OnboardingPage {
 /// Onboarding pages content
 const List<OnboardingPage> onboardingPages = [
   OnboardingPage(
-    title: "Welcome to FreightFlow",
+    title: "Welcome to FreightET",
     description: "Ethiopia's leading freight platform connecting shippers with verified carriers across the nation.",
     icon: Icons.local_shipping_rounded,
     iconBgColor: AppColors.primary100,
@@ -157,7 +157,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         ),
                         const SizedBox(width: 10),
                         const Text(
-                          'FreightFlow',
+                          'FreightET',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 18,
@@ -190,6 +190,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               Expanded(
                 child: PageView.builder(
                   controller: _pageController,
+                  physics: const PageScrollPhysics(),
                   onPageChanged: (index) {
                     setState(() {
                       _currentPage = index;

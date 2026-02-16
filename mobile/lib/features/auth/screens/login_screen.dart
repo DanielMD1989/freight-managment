@@ -94,7 +94,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 20),
                     const Text(
-                      'FreightFlow',
+                      'FreightET',
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
@@ -359,7 +359,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 16),
                                 child: Text(
-                                  'New to FreightFlow?',
+                                  'New to FreightET?',
                                   style: TextStyle(
                                     color: AppColors.slate500,
                                     fontSize: 13,

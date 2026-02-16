@@ -268,7 +268,7 @@ export default function AdminLoadsClient() {
                         ? formatCurrency(load.shipperServiceFee)
                         : "—"}
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
+                    <td className="px-4 py-3 text-sm whitespace-nowrap text-slate-500 dark:text-slate-400">
                       {formatDate(load.createdAt)}
                     </td>
                   </tr>

@@ -147,7 +147,7 @@ class FreightManagementApp extends ConsumerWidget {
     };
 
     return MaterialApp.router(
-      title: 'FreightFlow',
+      title: 'FreightET',
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(),
       darkTheme: _buildDarkTheme(),

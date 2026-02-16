@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * System Settings Client Component
@@ -7,9 +7,9 @@
  * Sprint 10 - Story 10.6: System Configuration
  */
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { getCSRFToken } from '@/lib/csrfFetch';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { getCSRFToken } from "@/lib/csrfFetch";
 
 interface SystemSettings {
   id: string;
@@ -47,7 +47,13 @@ interface SystemSettings {
   createdAt: string;
 }
 
-type TabType = 'rate-limits' | 'matching' | 'notifications' | 'fees' | 'files' | 'general';
+type TabType =
+  | "rate-limits"
+  | "matching"
+  | "notifications"
+  | "fees"
+  | "files"
+  | "general";
 
 export default function SystemSettingsClient({
   initialSettings,
@@ -56,12 +62,13 @@ export default function SystemSettingsClient({
 }) {
   const router = useRouter();
   const [settings, setSettings] = useState(initialSettings);
-  const [activeTab, setActiveTab] = useState<TabType>('rate-limits');
+  const [activeTab, setActiveTab] = useState<TabType>("rate-limits");
   const [isSaving, setIsSaving] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const hasChanges = JSON.stringify(settings) !== JSON.stringify(initialSettings);
+  const hasChanges =
+    JSON.stringify(settings) !== JSON.stringify(initialSettings);
 
   /**
    * Handle number input change
@@ -76,7 +83,10 @@ export default function SystemSettingsClient({
   /**
    * Handle boolean input change
    */
-  const handleBooleanChange = (field: keyof SystemSettings, checked: boolean) => {
+  const handleBooleanChange = (
+    field: keyof SystemSettings,
+    checked: boolean
+  ) => {
     setSettings({ ...settings, [field]: checked });
   };
 
@@ -93,10 +103,10 @@ export default function SystemSettingsClient({
   const validateSettings = (): string | null => {
     // Validate match score thresholds
     if (settings.matchScoreMinimum >= settings.matchScoreGood) {
-      return 'Minimum match score must be less than good match score';
+      return "Minimum match score must be less than good match score";
     }
     if (settings.matchScoreGood >= settings.matchScoreExcellent) {
-      return 'Good match score must be less than excellent match score';
+      return "Good match score must be less than excellent match score";
     }
 
     return null;
@@ -109,34 +119,36 @@ export default function SystemSettingsClient({
     const validationError = validateSettings();
     if (validationError) {
       setErrorMessage(validationError);
-      setSuccessMessage('');
+      setSuccessMessage("");
       return;
     }
 
     setIsSaving(true);
-    setErrorMessage('');
-    setSuccessMessage('');
+    setErrorMessage("");
+    setSuccessMessage("");
 
     try {
       const csrfToken = await getCSRFToken();
-      const response = await fetch('/api/admin/settings', {
-        method: 'PATCH',
+      const response = await fetch("/api/admin/settings", {
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
         body: JSON.stringify(settings),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to save settings');
+        throw new Error(error.error || "Failed to save settings");
       }
 
-      setSuccessMessage('Settings saved successfully');
+      setSuccessMessage("Settings saved successfully");
       router.refresh();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to save settings');
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to save settings"
+      );
     } finally {
       setIsSaving(false);
     }
@@ -147,16 +159,16 @@ export default function SystemSettingsClient({
    */
   const handleReset = () => {
     setSettings(initialSettings);
-    setErrorMessage('');
-    setSuccessMessage('');
+    setErrorMessage("");
+    setSuccessMessage("");
   };
 
   return (
     <div className="space-y-6">
       {/* Alert Messages */}
       {successMessage && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <p className="text-green-800 flex items-center gap-2">
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+          <p className="flex items-center gap-2 text-green-800">
             <span className="text-lg">✓</span>
             {successMessage}
           </p>
@@ -164,8 +176,8 @@ export default function SystemSettingsClient({
       )}
 
       {errorMessage && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800 flex items-center gap-2">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <p className="flex items-center gap-2 text-red-800">
             <span className="text-lg">⚠</span>
             {errorMessage}
           </p>
@@ -173,42 +185,42 @@ export default function SystemSettingsClient({
       )}
 
       {/* Tabs */}
-      <div className="bg-white rounded-lg shadow">
+      <div className="rounded-lg bg-white shadow">
         <div className="border-b border-gray-200">
-          <nav className="flex -mb-px">
+          <nav className="-mb-px flex">
             <TabButton
-              active={activeTab === 'rate-limits'}
-              onClick={() => setActiveTab('rate-limits')}
+              active={activeTab === "rate-limits"}
+              onClick={() => setActiveTab("rate-limits")}
             >
               Rate Limits
             </TabButton>
             <TabButton
-              active={activeTab === 'matching'}
-              onClick={() => setActiveTab('matching')}
+              active={activeTab === "matching"}
+              onClick={() => setActiveTab("matching")}
             >
               Matching
             </TabButton>
             <TabButton
-              active={activeTab === 'notifications'}
-              onClick={() => setActiveTab('notifications')}
+              active={activeTab === "notifications"}
+              onClick={() => setActiveTab("notifications")}
             >
               Notifications
             </TabButton>
             <TabButton
-              active={activeTab === 'fees'}
-              onClick={() => setActiveTab('fees')}
+              active={activeTab === "fees"}
+              onClick={() => setActiveTab("fees")}
             >
               Platform Fees
             </TabButton>
             <TabButton
-              active={activeTab === 'files'}
-              onClick={() => setActiveTab('files')}
+              active={activeTab === "files"}
+              onClick={() => setActiveTab("files")}
             >
               File Uploads
             </TabButton>
             <TabButton
-              active={activeTab === 'general'}
-              onClick={() => setActiveTab('general')}
+              active={activeTab === "general"}
+              onClick={() => setActiveTab("general")}
             >
               General
             </TabButton>
@@ -218,20 +230,24 @@ export default function SystemSettingsClient({
         {/* Tab Content */}
         <div className="p-6">
           {/* Rate Limits Tab */}
-          {activeTab === 'rate-limits' && (
+          {activeTab === "rate-limits" && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Rate Limiting Configuration</h3>
-                <p className="text-sm text-gray-600 mb-6">
+                <h3 className="mb-4 text-lg font-medium text-gray-900">
+                  Rate Limiting Configuration
+                </h3>
+                <p className="mb-6 text-sm text-gray-600">
                   Control how frequently users can perform certain actions
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <NumberInput
                   label="Document Upload Limit"
                   value={settings.rateLimitDocumentUpload}
-                  onChange={(val) => handleNumberChange('rateLimitDocumentUpload', val)}
+                  onChange={(val) =>
+                    handleNumberChange("rateLimitDocumentUpload", val)
+                  }
                   helperText="Per hour per user"
                   min={1}
                   max={1000}
@@ -240,7 +256,9 @@ export default function SystemSettingsClient({
                 <NumberInput
                   label="Truck Posting Limit"
                   value={settings.rateLimitTruckPosting}
-                  onChange={(val) => handleNumberChange('rateLimitTruckPosting', val)}
+                  onChange={(val) =>
+                    handleNumberChange("rateLimitTruckPosting", val)
+                  }
                   helperText="Per day per carrier"
                   min={1}
                   max={1000}
@@ -249,7 +267,9 @@ export default function SystemSettingsClient({
                 <NumberInput
                   label="File Download Limit"
                   value={settings.rateLimitFileDownload}
-                  onChange={(val) => handleNumberChange('rateLimitFileDownload', val)}
+                  onChange={(val) =>
+                    handleNumberChange("rateLimitFileDownload", val)
+                  }
                   helperText="Per hour per user"
                   min={1}
                   max={10000}
@@ -258,7 +278,9 @@ export default function SystemSettingsClient({
                 <NumberInput
                   label="Authentication Attempts"
                   value={settings.rateLimitAuthAttempts}
-                  onChange={(val) => handleNumberChange('rateLimitAuthAttempts', val)}
+                  onChange={(val) =>
+                    handleNumberChange("rateLimitAuthAttempts", val)
+                  }
                   helperText="Per 15 minutes per IP"
                   min={1}
                   max={100}
@@ -268,20 +290,24 @@ export default function SystemSettingsClient({
           )}
 
           {/* Matching Tab */}
-          {activeTab === 'matching' && (
+          {activeTab === "matching" && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Match Score Thresholds</h3>
-                <p className="text-sm text-gray-600 mb-6">
+                <h3 className="mb-4 text-lg font-medium text-gray-900">
+                  Match Score Thresholds
+                </h3>
+                <p className="mb-6 text-sm text-gray-600">
                   Set thresholds for truck/load match quality ratings
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                 <NumberInput
                   label="Minimum Score"
                   value={settings.matchScoreMinimum}
-                  onChange={(val) => handleNumberChange('matchScoreMinimum', val)}
+                  onChange={(val) =>
+                    handleNumberChange("matchScoreMinimum", val)
+                  }
                   helperText="Minimum score to show match"
                   min={0}
                   max={100}
@@ -290,7 +316,7 @@ export default function SystemSettingsClient({
                 <NumberInput
                   label="Good Match Score"
                   value={settings.matchScoreGood}
-                  onChange={(val) => handleNumberChange('matchScoreGood', val)}
+                  onChange={(val) => handleNumberChange("matchScoreGood", val)}
                   helperText="Good match threshold"
                   min={0}
                   max={100}
@@ -299,27 +325,32 @@ export default function SystemSettingsClient({
                 <NumberInput
                   label="Excellent Match Score"
                   value={settings.matchScoreExcellent}
-                  onChange={(val) => handleNumberChange('matchScoreExcellent', val)}
+                  onChange={(val) =>
+                    handleNumberChange("matchScoreExcellent", val)
+                  }
                   helperText="Excellent match threshold"
                   min={0}
                   max={100}
                 />
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                 <p className="text-sm text-blue-800">
-                  <strong>Note:</strong> Scores must be in ascending order (Minimum &lt; Good &lt; Excellent)
+                  <strong>Note:</strong> Scores must be in ascending order
+                  (Minimum &lt; Good &lt; Excellent)
                 </p>
               </div>
             </div>
           )}
 
           {/* Notifications Tab */}
-          {activeTab === 'notifications' && (
+          {activeTab === "notifications" && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Email Notifications</h3>
-                <p className="text-sm text-gray-600 mb-6">
+                <h3 className="mb-4 text-lg font-medium text-gray-900">
+                  Email Notifications
+                </h3>
+                <p className="mb-6 text-sm text-gray-600">
                   Configure which email notifications are sent to users
                 </p>
               </div>
@@ -328,17 +359,26 @@ export default function SystemSettingsClient({
                 <SwitchInput
                   label="Enable Email Notifications"
                   checked={settings.emailNotificationsEnabled}
-                  onChange={(checked) => handleBooleanChange('emailNotificationsEnabled', checked)}
+                  onChange={(checked) =>
+                    handleBooleanChange("emailNotificationsEnabled", checked)
+                  }
                   helperText="Master toggle for all email notifications"
                 />
 
                 <div className="border-t border-gray-200 pt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3">Notification Types</h4>
-                  <div className="space-y-3 ml-4">
+                  <h4 className="mb-3 text-sm font-medium text-gray-700">
+                    Notification Types
+                  </h4>
+                  <div className="ml-4 space-y-3">
                     <SwitchInput
                       label="Document Approval"
                       checked={settings.emailNotifyDocumentApproval}
-                      onChange={(checked) => handleBooleanChange('emailNotifyDocumentApproval', checked)}
+                      onChange={(checked) =>
+                        handleBooleanChange(
+                          "emailNotifyDocumentApproval",
+                          checked
+                        )
+                      }
                       helperText="Notify when documents are approved"
                       disabled={!settings.emailNotificationsEnabled}
                     />
@@ -346,7 +386,12 @@ export default function SystemSettingsClient({
                     <SwitchInput
                       label="Document Rejection"
                       checked={settings.emailNotifyDocumentRejection}
-                      onChange={(checked) => handleBooleanChange('emailNotifyDocumentRejection', checked)}
+                      onChange={(checked) =>
+                        handleBooleanChange(
+                          "emailNotifyDocumentRejection",
+                          checked
+                        )
+                      }
                       helperText="Notify when documents are rejected"
                       disabled={!settings.emailNotificationsEnabled}
                     />
@@ -354,7 +399,12 @@ export default function SystemSettingsClient({
                     <SwitchInput
                       label="Load Assignment"
                       checked={settings.emailNotifyLoadAssignment}
-                      onChange={(checked) => handleBooleanChange('emailNotifyLoadAssignment', checked)}
+                      onChange={(checked) =>
+                        handleBooleanChange(
+                          "emailNotifyLoadAssignment",
+                          checked
+                        )
+                      }
                       helperText="Notify when loads are assigned"
                       disabled={!settings.emailNotificationsEnabled}
                     />
@@ -362,7 +412,12 @@ export default function SystemSettingsClient({
                     <SwitchInput
                       label="POD Verification"
                       checked={settings.emailNotifyPodVerification}
-                      onChange={(checked) => handleBooleanChange('emailNotifyPodVerification', checked)}
+                      onChange={(checked) =>
+                        handleBooleanChange(
+                          "emailNotifyPodVerification",
+                          checked
+                        )
+                      }
                       helperText="Notify when proof of delivery is verified"
                       disabled={!settings.emailNotificationsEnabled}
                     />
@@ -373,31 +428,37 @@ export default function SystemSettingsClient({
           )}
 
           {/* Platform Fees Tab */}
-          {activeTab === 'fees' && (
+          {activeTab === "fees" && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Service Fee Configuration</h3>
-                <p className="text-sm text-gray-600 mb-6">
-                  Service fees are configured per corridor based on distance and route.
+                <h3 className="mb-4 text-lg font-medium text-gray-900">
+                  Service Fee Configuration
+                </h3>
+                <p className="mb-6 text-sm text-gray-600">
+                  Service fees are configured per corridor based on distance and
+                  route.
                 </p>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <p className="text-sm text-blue-800 mb-4">
-                  Service fees are calculated using the Corridor pricing system (ETB per kilometer).
-                  To configure service fees, manage corridors in the Corridors settings.
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-6">
+                <p className="mb-4 text-sm text-blue-800">
+                  Service fees are calculated using the Corridor pricing system
+                  (ETB per kilometer). To configure service fees, manage
+                  corridors in the Corridors settings.
                 </p>
                 <a
                   href="/admin/corridors"
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
                 >
                   Manage Corridors →
                 </a>
               </div>
 
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <h4 className="font-medium text-gray-900 mb-2">How Service Fees Work</h4>
-                <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <h4 className="mb-2 font-medium text-gray-900">
+                  How Service Fees Work
+                </h4>
+                <ul className="list-inside list-disc space-y-1 text-sm text-gray-600">
                   <li>Fees are calculated as: Distance (km) × Price per km</li>
                   <li>Separate rates can be set for shippers and carriers</li>
                   <li>Promotional discounts can be applied per corridor</li>
@@ -408,20 +469,24 @@ export default function SystemSettingsClient({
           )}
 
           {/* File Uploads Tab */}
-          {activeTab === 'files' && (
+          {activeTab === "files" && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">File Upload Configuration</h3>
-                <p className="text-sm text-gray-600 mb-6">
+                <h3 className="mb-4 text-lg font-medium text-gray-900">
+                  File Upload Configuration
+                </h3>
+                <p className="mb-6 text-sm text-gray-600">
                   Set limits for file uploads and document storage
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <NumberInput
                   label="Maximum File Size"
                   value={settings.maxFileUploadSizeMb}
-                  onChange={(val) => handleNumberChange('maxFileUploadSizeMb', val)}
+                  onChange={(val) =>
+                    handleNumberChange("maxFileUploadSizeMb", val)
+                  }
                   helperText="Maximum size per file in MB"
                   min={1}
                   max={100}
@@ -431,7 +496,9 @@ export default function SystemSettingsClient({
                 <NumberInput
                   label="Maximum Documents Per Entity"
                   value={settings.maxDocumentsPerEntity}
-                  onChange={(val) => handleNumberChange('maxDocumentsPerEntity', val)}
+                  onChange={(val) =>
+                    handleNumberChange("maxDocumentsPerEntity", val)
+                  }
                   helperText="Max documents per organization/user"
                   min={1}
                   max={50}
@@ -441,11 +508,13 @@ export default function SystemSettingsClient({
           )}
 
           {/* General Tab */}
-          {activeTab === 'general' && (
+          {activeTab === "general" && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">General Settings</h3>
-                <p className="text-sm text-gray-600 mb-6">
+                <h3 className="mb-4 text-lg font-medium text-gray-900">
+                  General Settings
+                </h3>
+                <p className="mb-6 text-sm text-gray-600">
                   Platform-wide general configuration
                 </p>
               </div>
@@ -454,43 +523,57 @@ export default function SystemSettingsClient({
                 <SwitchInput
                   label="Maintenance Mode"
                   checked={settings.platformMaintenanceMode}
-                  onChange={(checked) => handleBooleanChange('platformMaintenanceMode', checked)}
+                  onChange={(checked) =>
+                    handleBooleanChange("platformMaintenanceMode", checked)
+                  }
                   helperText="Enable to put platform in maintenance mode"
                 />
 
                 {settings.platformMaintenanceMode && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
                       Maintenance Message
                     </label>
                     <textarea
-                      value={settings.platformMaintenanceMessage || ''}
-                      onChange={(e) => handleStringChange('platformMaintenanceMessage', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={settings.platformMaintenanceMessage || ""}
+                      onChange={(e) =>
+                        handleStringChange(
+                          "platformMaintenanceMessage",
+                          e.target.value
+                        )
+                      }
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                       rows={3}
                       placeholder="Message to display during maintenance..."
                       maxLength={500}
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      {settings.platformMaintenanceMessage?.length || 0} / 500 characters
+                    <p className="mt-1 text-xs text-gray-500">
+                      {settings.platformMaintenanceMessage?.length || 0} / 500
+                      characters
                     </p>
                   </div>
                 )}
 
                 <div className="border-t border-gray-200 pt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3">Verification Requirements</h4>
+                  <h4 className="mb-3 text-sm font-medium text-gray-700">
+                    Verification Requirements
+                  </h4>
                   <div className="space-y-3">
                     <SwitchInput
                       label="Require Email Verification"
                       checked={settings.requireEmailVerification}
-                      onChange={(checked) => handleBooleanChange('requireEmailVerification', checked)}
+                      onChange={(checked) =>
+                        handleBooleanChange("requireEmailVerification", checked)
+                      }
                       helperText="Users must verify email before accessing platform"
                     />
 
                     <SwitchInput
                       label="Require Phone Verification"
                       checked={settings.requirePhoneVerification}
-                      onChange={(checked) => handleBooleanChange('requirePhoneVerification', checked)}
+                      onChange={(checked) =>
+                        handleBooleanChange("requirePhoneVerification", checked)
+                      }
                       helperText="Users must verify phone number before accessing platform"
                     />
                   </div>
@@ -502,10 +585,12 @@ export default function SystemSettingsClient({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex items-center justify-between bg-white rounded-lg shadow p-6">
+      <div className="flex items-center justify-between rounded-lg bg-white p-6 shadow">
         <div className="text-sm text-gray-600">
           {hasChanges ? (
-            <span className="text-yellow-600 font-medium">⚠ You have unsaved changes</span>
+            <span className="font-medium text-yellow-600">
+              ⚠ You have unsaved changes
+            </span>
           ) : (
             <span>All changes saved</span>
           )}
@@ -516,7 +601,7 @@ export default function SystemSettingsClient({
             type="button"
             onClick={handleReset}
             disabled={!hasChanges || isSaving}
-            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-lg border border-gray-300 px-6 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Reset
           </button>
@@ -525,7 +610,7 @@ export default function SystemSettingsClient({
             type="button"
             onClick={handleSave}
             disabled={!hasChanges || isSaving}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSaving ? (
               <>
@@ -533,17 +618,19 @@ export default function SystemSettingsClient({
                 Saving...
               </>
             ) : (
-              'Save Changes'
+              "Save Changes"
             )}
           </button>
         </div>
       </div>
 
       {/* Metadata */}
-      <div className="bg-gray-50 rounded-lg p-4 text-xs text-gray-600">
+      <div className="rounded-lg bg-gray-50 p-4 text-xs text-gray-600">
         <div className="flex justify-between">
-          <span>Last modified: {new Date(settings.lastModifiedAt).toLocaleString()}</span>
-          <span>Last modified by: {settings.lastModifiedBy}</span>
+          <span>
+            Last modified: {new Date(settings.lastModifiedAt).toLocaleString()}
+          </span>
+          <span title={settings.lastModifiedBy}>Last modified by: Admin</span>
         </div>
       </div>
     </div>
@@ -566,14 +653,11 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`
-        px-6 py-3 text-sm font-medium border-b-2 transition-colors
-        ${
-          active
-            ? 'border-blue-500 text-blue-600'
-            : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'
-        }
-      `}
+      className={`border-b-2 px-6 py-3 text-sm font-medium transition-colors ${
+        active
+          ? "border-blue-500 text-blue-600"
+          : "border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-800"
+      } `}
     >
       {children}
     </button>
@@ -604,7 +688,9 @@ function NumberInput({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+      <label className="mb-2 block text-sm font-medium text-gray-700">
+        {label}
+      </label>
       <div className="relative">
         <input
           type="number"
@@ -613,15 +699,15 @@ function NumberInput({
           min={min}
           max={max}
           step={step}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
         />
         {suffix && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
+          <span className="absolute top-1/2 right-3 -translate-y-1/2 text-sm text-gray-500">
             {suffix}
           </span>
         )}
       </div>
-      {helperText && <p className="text-xs text-gray-500 mt-1">{helperText}</p>}
+      {helperText && <p className="mt-1 text-xs text-gray-500">{helperText}</p>}
     </div>
   );
 }
@@ -650,25 +736,22 @@ function SwitchInput({
         aria-checked={checked}
         onClick={() => !disabled && onChange(!checked)}
         disabled={disabled}
-        className={`
-          relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-          ${checked ? 'bg-blue-600' : 'bg-gray-200'}
-          ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-        `}
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${checked ? "bg-blue-600" : "bg-gray-200"} ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"} `}
       >
         <span
-          className={`
-            inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-            ${checked ? 'translate-x-6' : 'translate-x-1'}
-          `}
+          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? "translate-x-6" : "translate-x-1"} `}
         />
       </button>
       <div className="flex-1">
-        <label className={`block text-sm font-medium ${disabled ? 'text-gray-400' : 'text-gray-700'}`}>
+        <label
+          className={`block text-sm font-medium ${disabled ? "text-gray-400" : "text-gray-700"}`}
+        >
           {label}
         </label>
         {helperText && (
-          <p className={`text-xs mt-1 ${disabled ? 'text-gray-400' : 'text-gray-500'}`}>
+          <p
+            className={`mt-1 text-xs ${disabled ? "text-gray-400" : "text-gray-500"}`}
+          >
             {helperText}
           </p>
         )}

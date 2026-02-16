@@ -101,7 +101,7 @@ abstract class AppLocalizations {
   /// The app name
   ///
   /// In en, this message translates to:
-  /// **'FreightFlow'**
+  /// **'FreightET'**
   String get appName;
 
   /// Login button text

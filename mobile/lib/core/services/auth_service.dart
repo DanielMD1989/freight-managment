@@ -221,8 +221,10 @@ class AuthService {
   Future<void> logout() async {
     try {
       await _apiClient.dio.post('/api/auth/logout');
+    } on DioException {
+      // Ignore network errors on logout
     } catch (e) {
-      // Ignore errors on logout
+      // Ignore any other errors (including Firebase web exceptions) on logout
     } finally {
       await _apiClient.clearAuth();
     }

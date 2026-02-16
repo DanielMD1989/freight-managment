@@ -8,7 +8,7 @@
  * Uses A2 Modern Navy design system with professional SVG icons
  */
 
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
@@ -958,12 +958,45 @@ const portalConfig: Record<
   },
 };
 
+const MenuIcon = () => (
+  <svg
+    className="h-6 w-6"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M4 6h16M4 12h16M4 18h16"
+    />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg
+    className="h-6 w-6"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M6 18L18 6M6 6l12 12"
+    />
+  </svg>
+);
+
 export default function RoleAwareSidebar({
   userRole,
   portalType,
 }: RoleAwareSidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const sections = navigationSections[portalType] || [];
   const config = portalConfig[portalType];
   const PortalIcon = PortalIcons[portalType];
@@ -1009,7 +1042,7 @@ export default function RoleAwareSidebar({
     return Component ? <Component /> : <DashboardIcon />;
   };
 
-  return (
+  const sidebarContent = (
     <aside
       className="flex min-h-[calc(100vh-4rem)] w-64 flex-col"
       style={{
@@ -1166,5 +1199,65 @@ export default function RoleAwareSidebar({
         </Link>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      {/* Mobile hamburger button */}
+      <button
+        type="button"
+        className="fixed top-4 left-4 z-50 rounded-lg p-2 lg:hidden"
+        style={{
+          background: "var(--sidebar-bg)",
+          color: "var(--sidebar-text)",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+        }}
+        onClick={() => setIsMobileMenuOpen(true)}
+        aria-label="Open menu"
+      >
+        <MenuIcon />
+      </button>
+
+      {/* Mobile overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Mobile sidebar */}
+      <div
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 transition-transform duration-300 lg:hidden",
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+        onClick={(e) => {
+          // Close menu when a nav link is clicked
+          if ((e.target as HTMLElement).closest("a")) {
+            setIsMobileMenuOpen(false);
+          }
+        }}
+      >
+        <div className="relative">
+          <button
+            type="button"
+            className="absolute top-4 right-[-44px] z-50 rounded-lg p-2"
+            style={{
+              background: "var(--sidebar-bg)",
+              color: "var(--sidebar-text)",
+            }}
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-label="Close menu"
+          >
+            <CloseIcon />
+          </button>
+          {sidebarContent}
+        </div>
+      </div>
+
+      {/* Desktop sidebar */}
+      <div className="hidden lg:block">{sidebarContent}</div>
+    </>
   );
 }
