@@ -1,3 +1,5 @@
+import '../utils/parse_utils.dart';
+
 /// Truck types matching the web app's TruckType enum
 enum TruckType {
   flatbed,
@@ -170,25 +172,17 @@ class Truck {
   });
 
   factory Truck.fromJson(Map<String, dynamic> json) {
-    // Helper to parse number from string or number
-    double parseDouble(dynamic value, [double defaultValue = 0]) {
-      if (value == null) return defaultValue;
-      if (value is num) return value.toDouble();
-      if (value is String) return double.tryParse(value) ?? defaultValue;
-      return defaultValue;
-    }
-
     return Truck(
       id: json['id'] ?? '',
       truckType: truckTypeFromString(json['truckType']),
       licensePlate: json['licensePlate'] ?? '',
-      capacity: parseDouble(json['capacity']),
-      volume: json['volume'] != null ? parseDouble(json['volume']) : null,
+      capacity: parseDoubleOrDefault(json['capacity'], 0),
+      volume: parseDoubleOrNull(json['volume']),
       isAvailable: json['isAvailable'] ?? true,
       currentCity: json['currentCity'],
       currentRegion: json['currentRegion'],
-      currentLocationLat: json['currentLocationLat'] != null ? parseDouble(json['currentLocationLat']) : null,
-      currentLocationLon: json['currentLocationLon'] != null ? parseDouble(json['currentLocationLon']) : null,
+      currentLocationLat: parseDoubleOrNull(json['currentLocationLat']),
+      currentLocationLon: parseDoubleOrNull(json['currentLocationLon']),
       locationUpdatedAt: json['locationUpdatedAt'] != null
           ? DateTime.parse(json['locationUpdatedAt'])
           : null,
@@ -199,10 +193,10 @@ class Truck {
           ? DateTime.parse(json['gpsLastSeenAt'])
           : null,
       // P1-003 FIX: Parse GPS tracking fields
-      lastLatitude: json['lastLatitude'] != null ? parseDouble(json['lastLatitude']) : null,
-      lastLongitude: json['lastLongitude'] != null ? parseDouble(json['lastLongitude']) : null,
-      heading: json['heading'] != null ? parseDouble(json['heading']) : null,
-      speed: json['speed'] != null ? parseDouble(json['speed']) : null,
+      lastLatitude: parseDoubleOrNull(json['lastLatitude']),
+      lastLongitude: parseDoubleOrNull(json['lastLongitude']),
+      heading: parseDoubleOrNull(json['heading']),
+      speed: parseDoubleOrNull(json['speed']),
       gpsUpdatedAt: json['gpsUpdatedAt'] != null
           ? DateTime.parse(json['gpsUpdatedAt'])
           : null,
@@ -212,7 +206,7 @@ class Truck {
       ownerName: json['ownerName'],
       contactName: json['contactName'],
       contactPhone: json['contactPhone'],
-      lengthM: json['lengthM'] != null ? parseDouble(json['lengthM']) : null,
+      lengthM: parseDoubleOrNull(json['lengthM']),
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : DateTime.now(),
@@ -394,10 +388,10 @@ class TruckPosting {
       originCityName: originCity is Map ? originCity['name'] : (json['originCityName'] ?? originCity),
       destinationCityName: destinationCity is Map ? destinationCity['name'] : (json['destinationCityName'] ?? destinationCity),
       // Parse coordinates for direction calculation
-      originLat: originCity is Map ? _parseDouble(originCity['latitude']) : null,
-      originLng: originCity is Map ? _parseDouble(originCity['longitude']) : null,
-      destinationLat: destinationCity is Map ? _parseDouble(destinationCity['latitude']) : null,
-      destinationLng: destinationCity is Map ? _parseDouble(destinationCity['longitude']) : null,
+      originLat: originCity is Map ? parseDoubleOrNull(originCity['latitude']) : null,
+      originLng: originCity is Map ? parseDoubleOrNull(originCity['longitude']) : null,
+      destinationLat: destinationCity is Map ? parseDoubleOrNull(destinationCity['latitude']) : null,
+      destinationLng: destinationCity is Map ? parseDoubleOrNull(destinationCity['longitude']) : null,
       availableFrom: json['availableFrom'] != null
           ? DateTime.parse(json['availableFrom'])
           : DateTime.now(),
@@ -405,8 +399,8 @@ class TruckPosting {
           ? DateTime.parse(json['availableTo'])
           : null,
       fullPartial: json['fullPartial'],
-      availableLength: _parseDouble(json['availableLength']),
-      availableWeight: _parseDouble(json['availableWeight']),
+      availableLength: parseDoubleOrNull(json['availableLength']),
+      availableWeight: parseDoubleOrNull(json['availableWeight']),
       notes: json['notes'],
       contactName: json['contactName'],
       contactPhone: json['contactPhone'],
@@ -424,12 +418,6 @@ class TruckPosting {
     );
   }
 
-  static double? _parseDouble(dynamic value) {
-    if (value == null) return null;
-    if (value is num) return value.toDouble();
-    if (value is String) return double.tryParse(value);
-    return null;
-  }
 
   bool get isActive => status == 'ACTIVE';
 

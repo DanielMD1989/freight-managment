@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../services/push_notification_service.dart';
 
 /// Shared logout confirmation dialog.
 /// Call from any screen that needs a logout button.
 void showLogoutDialog(BuildContext context, WidgetRef ref) {
+  final l10n = AppLocalizations.of(context)!;
   showDialog(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Logout'),
-      content: const Text('Are you sure you want to logout?'),
+      title: Text(l10n.logoutConfirmTitle),
+      content: Text(l10n.logoutConfirmMessage),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
         TextButton(
           onPressed: () async {
@@ -26,7 +28,7 @@ void showLogoutDialog(BuildContext context, WidgetRef ref) {
               context.go('/login');
             }
           },
-          child: const Text('Logout', style: TextStyle(color: Colors.red)),
+          child: Text(l10n.logout, style: const TextStyle(color: Colors.red)),
         ),
       ],
     ),

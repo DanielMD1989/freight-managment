@@ -42,7 +42,7 @@ import 'features/shared/screens/settings_screen.dart';
 import 'features/shared/screens/pending_verification_screen.dart';
 import 'core/models/user.dart';
 import 'core/api/api_client.dart';
-import 'core/services/push_notification_service.dart';
+import 'core/utils/logout_dialog.dart';
 
 /// Provider for onboarding completion status
 final onboardingCompleteProvider = FutureProvider<bool>((ref) async {
@@ -1037,7 +1037,7 @@ class _CarrierDrawer extends ConsumerWidget {
                   color: AppColors.error,
                   onTap: () {
                     Navigator.pop(context);
-                    _showLogoutDialog(context, ref);
+                    showLogoutDialog(context, ref);
                   },
                 );
               },
@@ -1049,33 +1049,6 @@ class _CarrierDrawer extends ConsumerWidget {
     );
   }
 
-  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.logoutConfirmTitle),
-        content: Text(l10n.logoutConfirmMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await PushNotificationService().unregisterToken();
-              await ref.read(authStateProvider.notifier).logout();
-              if (context.mounted) {
-                context.go('/login');
-              }
-            },
-            child: Text(l10n.logout, style: const TextStyle(color: AppColors.error)),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _DrawerItem extends StatelessWidget {
@@ -1359,7 +1332,7 @@ class _ShipperDrawer extends ConsumerWidget {
                   color: AppColors.error,
                   onTap: () {
                     Navigator.pop(context);
-                    _showLogoutDialog(context, ref);
+                    showLogoutDialog(context, ref);
                   },
                 );
               },
@@ -1371,31 +1344,4 @@ class _ShipperDrawer extends ConsumerWidget {
     );
   }
 
-  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.logoutConfirmTitle),
-        content: Text(l10n.logoutConfirmMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await PushNotificationService().unregisterToken();
-              await ref.read(authStateProvider.notifier).logout();
-              if (context.mounted) {
-                context.go('/login');
-              }
-            },
-            child: Text(l10n.logout, style: const TextStyle(color: AppColors.error)),
-          ),
-        ],
-      ),
-    );
-  }
 }
