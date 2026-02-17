@@ -53,6 +53,12 @@ const createLoadSchema = z.object({
   isFragile: z.boolean().default(false),
   requiresRefrigeration: z.boolean().default(false),
 
+  // Insurance
+  isInsured: z.boolean().default(false),
+  insuranceProvider: z.string().optional(),
+  insurancePolicyNumber: z.string().optional(),
+  insuranceCoverageAmount: z.number().positive().optional(),
+
   lengthM: z.number().positive().optional(),
   casesCount: z.number().int().positive().optional(),
 
@@ -250,6 +256,7 @@ export async function GET(request: NextRequest) {
     const tripKmMax = searchParams.get("tripKmMax");
     const fullPartial = searchParams.get("fullPartial");
     const bookMode = searchParams.get("bookMode");
+    const pickupFrom = searchParams.get("pickupFrom");
     const rateMin = searchParams.get("rateMin");
     const rateMax = searchParams.get("rateMax");
 
@@ -267,6 +274,7 @@ export async function GET(request: NextRequest) {
       tripKmMax,
       fullPartial,
       bookMode,
+      pickupFrom,
       rateMin,
       rateMax,
       role: session.role,
@@ -357,6 +365,13 @@ export async function GET(request: NextRequest) {
 
     if (bookMode && (bookMode === "REQUEST" || bookMode === "INSTANT")) {
       where.bookMode = bookMode;
+    }
+
+    if (pickupFrom) {
+      const parsedDate = new Date(pickupFrom);
+      if (!isNaN(parsedDate.getTime())) {
+        where.pickupDate = { gte: parsedDate };
+      }
     }
 
     const sortBy = searchParams.get("sortBy") || "createdAt";

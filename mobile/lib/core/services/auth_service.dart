@@ -181,8 +181,10 @@ class AuthService {
     required String lastName,
     required String phone,
     required UserRole role,
-    String? organizationName,
-    String? tinNumber,
+    String? companyName,
+    String? carrierType,
+    String? associationId,
+    String? taxId,
   }) async {
     try {
       final response = await _apiClient.dio.post(
@@ -194,8 +196,10 @@ class AuthService {
           'lastName': lastName,
           'phone': phone,
           'role': role.name.toUpperCase(),
-          if (organizationName != null) 'organizationName': organizationName,
-          if (tinNumber != null) 'tinNumber': tinNumber,
+          if (companyName != null) 'companyName': companyName,
+          if (carrierType != null) 'carrierType': carrierType,
+          if (associationId != null) 'associationId': associationId,
+          if (taxId != null) 'taxId': taxId,
         },
       );
 
@@ -260,8 +264,9 @@ class AuthService {
   }
 
   /// Reset password with OTP verification
+  /// Backend expects email (not resetToken) to look up the user and verify the OTP
   Future<ApiResponse<bool>> resetPassword({
-    required String resetToken,
+    required String email,
     required String otp,
     required String newPassword,
   }) async {
@@ -269,7 +274,7 @@ class AuthService {
       final response = await _apiClient.dio.post(
         '/api/auth/reset-password',
         data: {
-          'resetToken': resetToken,
+          'email': email,
           'otp': otp,
           'newPassword': newPassword,
         },

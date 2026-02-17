@@ -21,7 +21,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _lastNameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _organizationController = TextEditingController();
-  final _tinController = TextEditingController();
+  final _taxIdController = TextEditingController();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -36,7 +36,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _lastNameController.dispose();
     _phoneController.dispose();
     _organizationController.dispose();
-    _tinController.dispose();
+    _taxIdController.dispose();
     super.dispose();
   }
 
@@ -50,11 +50,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           lastName: _lastNameController.text.trim(),
           phone: _phoneController.text.trim(),
           role: _selectedRole,
-          organizationName: _organizationController.text.trim().isNotEmpty
+          companyName: _organizationController.text.trim().isNotEmpty
               ? _organizationController.text.trim()
               : null,
-          tinNumber: _tinController.text.trim().isNotEmpty
-              ? _tinController.text.trim()
+          taxId: _taxIdController.text.trim().isNotEmpty
+              ? _taxIdController.text.trim()
               : null,
         );
 
@@ -213,9 +213,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
-                  controller: _tinController,
+                  controller: _taxIdController,
                   decoration: const InputDecoration(
-                    labelText: 'TIN Number',
+                    labelText: 'Tax ID',
                     prefixIcon: Icon(Icons.badge_outlined),
                   ),
                 ),

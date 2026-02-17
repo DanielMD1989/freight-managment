@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Verification Queue Client Component
@@ -7,9 +7,9 @@
  * Sprint 10 - Story 10.4: Document Verification Queue
  */
 
-import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { getCSRFToken } from '@/lib/csrfFetch';
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { getCSRFToken } from "@/lib/csrfFetch";
 
 interface Document {
   id: string;
@@ -23,8 +23,13 @@ interface Document {
   verifiedAt: string | null;
   rejectionReason: string | null;
   expiresAt: string | null;
-  entityType: 'company' | 'truck';
+  entityType: "company" | "truck";
   entityName: string;
+  // Insurance-specific fields
+  policyNumber?: string | null;
+  insuranceProvider?: string | null;
+  coverageAmount?: number | string | null;
+  coverageType?: string | null;
   organization: {
     id: string;
     name: string;
@@ -58,35 +63,35 @@ interface Statistics {
 }
 
 const STATUS_OPTIONS = [
-  { value: 'PENDING', label: 'Pending Review', color: 'yellow' },
-  { value: 'APPROVED', label: 'Approved', color: 'green' },
-  { value: 'REJECTED', label: 'Rejected', color: 'red' },
+  { value: "PENDING", label: "Pending Review", color: "yellow" },
+  { value: "APPROVED", label: "Approved", color: "green" },
+  { value: "REJECTED", label: "Rejected", color: "red" },
 ];
 
 const ENTITY_TYPE_OPTIONS = [
-  { value: 'all', label: 'All Documents' },
-  { value: 'company', label: 'Company Documents' },
-  { value: 'truck', label: 'Truck Documents' },
+  { value: "all", label: "All Documents" },
+  { value: "company", label: "Company Documents" },
+  { value: "truck", label: "Truck Documents" },
 ];
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(date);
 }
 
 function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
 
-function getUploaderName(uploader: Document['uploadedBy']): string {
+function getUploaderName(uploader: Document["uploadedBy"]): string {
   if (uploader.firstName && uploader.lastName) {
     return `${uploader.firstName} ${uploader.lastName}`;
   }
@@ -109,14 +114,14 @@ export default function VerificationQueueClient({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [statusFilter, setStatusFilter] = useState(initialStatus || 'PENDING');
+  const [statusFilter, setStatusFilter] = useState(initialStatus || "PENDING");
   const [entityTypeFilter, setEntityTypeFilter] = useState(
-    initialEntityType || 'all'
+    initialEntityType || "all"
   );
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(
     null
   );
-  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectionReason, setRejectionReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   /**
@@ -125,8 +130,8 @@ export default function VerificationQueueClient({
   const handleStatusChange = (status: string) => {
     setStatusFilter(status);
     const params = new URLSearchParams(searchParams.toString());
-    params.set('status', status);
-    params.delete('page');
+    params.set("status", status);
+    params.delete("page");
     router.push(`/admin/verification?${params.toString()}`);
   };
 
@@ -136,8 +141,8 @@ export default function VerificationQueueClient({
   const handleEntityTypeChange = (entityType: string) => {
     setEntityTypeFilter(entityType);
     const params = new URLSearchParams(searchParams.toString());
-    params.set('entityType', entityType);
-    params.delete('page');
+    params.set("entityType", entityType);
+    params.delete("page");
     router.push(`/admin/verification?${params.toString()}`);
   };
 
@@ -146,7 +151,7 @@ export default function VerificationQueueClient({
    */
   const handlePageChange = (newPage: number) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set('page', newPage.toString());
+    params.set("page", newPage.toString());
     router.push(`/admin/verification?${params.toString()}`);
   };
 
@@ -167,33 +172,33 @@ export default function VerificationQueueClient({
     try {
       const csrfToken = await getCSRFToken();
       if (!csrfToken) {
-        alert('Failed to get CSRF token. Please try again.');
+        alert("Failed to get CSRF token. Please try again.");
         return;
       }
 
       const response = await fetch(`/api/documents/${doc.id}`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
         body: JSON.stringify({
           entityType: doc.entityType,
-          verificationStatus: 'APPROVED',
+          verificationStatus: "APPROVED",
         }),
-        credentials: 'include',
+        credentials: "include",
       });
 
       if (response.ok) {
-        alert('Document approved successfully!');
+        alert("Document approved successfully!");
         router.refresh();
       } else {
         const error = await response.json();
-        alert(`Failed to approve document: ${error.error || 'Unknown error'}`);
+        alert(`Failed to approve document: ${error.error || "Unknown error"}`);
       }
     } catch (error) {
-      console.error('Error approving document:', error);
-      alert('Failed to approve document. Please try again.');
+      console.error("Error approving document:", error);
+      alert("Failed to approve document. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -204,7 +209,7 @@ export default function VerificationQueueClient({
    */
   const handleReject = async (doc: Document) => {
     setSelectedDocument(doc);
-    setRejectionReason('');
+    setRejectionReason("");
   };
 
   /**
@@ -214,7 +219,7 @@ export default function VerificationQueueClient({
     if (!selectedDocument) return;
 
     if (!rejectionReason.trim()) {
-      alert('Please provide a reason for rejection');
+      alert("Please provide a reason for rejection");
       return;
     }
 
@@ -223,36 +228,36 @@ export default function VerificationQueueClient({
     try {
       const csrfToken = await getCSRFToken();
       if (!csrfToken) {
-        alert('Failed to get CSRF token. Please try again.');
+        alert("Failed to get CSRF token. Please try again.");
         return;
       }
 
       const response = await fetch(`/api/documents/${selectedDocument.id}`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
         body: JSON.stringify({
           entityType: selectedDocument.entityType,
-          verificationStatus: 'REJECTED',
+          verificationStatus: "REJECTED",
           rejectionReason: rejectionReason.trim(),
         }),
-        credentials: 'include',
+        credentials: "include",
       });
 
       if (response.ok) {
-        alert('Document rejected successfully!');
+        alert("Document rejected successfully!");
         setSelectedDocument(null);
-        setRejectionReason('');
+        setRejectionReason("");
         router.refresh();
       } else {
         const error = await response.json();
-        alert(`Failed to reject document: ${error.error || 'Unknown error'}`);
+        alert(`Failed to reject document: ${error.error || "Unknown error"}`);
       }
     } catch (error) {
-      console.error('Error rejecting document:', error);
-      alert('Failed to reject document. Please try again.');
+      console.error("Error rejecting document:", error);
+      alert("Failed to reject document. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -261,35 +266,35 @@ export default function VerificationQueueClient({
   return (
     <div className="space-y-6">
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg shadow p-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="rounded-lg bg-white p-4 shadow">
           <div className="text-sm text-gray-600">Total Pending</div>
-          <div className="text-2xl font-bold text-yellow-600 mt-1">
+          <div className="mt-1 text-2xl font-bold text-yellow-600">
             {statistics.total}
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="rounded-lg bg-white p-4 shadow">
           <div className="text-sm text-gray-600">Company Documents</div>
-          <div className="text-2xl font-bold text-blue-600 mt-1">
+          <div className="mt-1 text-2xl font-bold text-blue-600">
             {statistics.companyDocuments}
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="rounded-lg bg-white p-4 shadow">
           <div className="text-sm text-gray-600">Truck Documents</div>
-          <div className="text-2xl font-bold text-green-600 mt-1">
+          <div className="mt-1 text-2xl font-bold text-green-600">
             {statistics.truckDocuments}
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="rounded-lg bg-white p-6 shadow">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {/* Status Filter */}
           <div>
             <label
               htmlFor="status"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="mb-2 block text-sm font-medium text-gray-700"
             >
               Filter by Status
             </label>
@@ -297,7 +302,7 @@ export default function VerificationQueueClient({
               id="status"
               value={statusFilter}
               onChange={(e) => handleStatusChange(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
             >
               {STATUS_OPTIONS.map((status) => (
                 <option key={status.value} value={status.value}>
@@ -311,7 +316,7 @@ export default function VerificationQueueClient({
           <div>
             <label
               htmlFor="entityType"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="mb-2 block text-sm font-medium text-gray-700"
             >
               Filter by Type
             </label>
@@ -319,7 +324,7 @@ export default function VerificationQueueClient({
               id="entityType"
               value={entityTypeFilter}
               onChange={(e) => handleEntityTypeChange(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
             >
               {ENTITY_TYPE_OPTIONS.map((type) => (
                 <option key={type.value} value={type.value}>
@@ -332,49 +337,90 @@ export default function VerificationQueueClient({
       </div>
 
       {/* Documents Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="overflow-hidden rounded-lg bg-white shadow">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                   Document
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                   Organization
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                   Uploaded By
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                   Upload Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 bg-white">
               {initialDocuments.map((doc) => (
                 <tr key={doc.id} className="hover:bg-gray-50">
                   {/* Document */}
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
                       <div className="text-sm font-medium text-gray-900">
-                        {doc.type.replace(/_/g, ' ')}
+                        {doc.type.replace(/_/g, " ")}
                       </div>
                       <div className="text-xs text-gray-500">
                         {doc.fileName}
                       </div>
                       <div className="text-xs text-gray-400">
-                        {formatFileSize(doc.fileSize)} •{' '}
-                        <span className="capitalize">
-                          {doc.entityType}
-                        </span>
+                        {formatFileSize(doc.fileSize)} •{" "}
+                        <span className="capitalize">{doc.entityType}</span>
                       </div>
+                      {/* Insurance metadata */}
+                      {(doc.type === "INSURANCE" ||
+                        doc.type === "INSURANCE_CERTIFICATE") &&
+                        (doc.policyNumber ||
+                          doc.insuranceProvider ||
+                          doc.coverageAmount ||
+                          doc.coverageType) && (
+                          <div className="mt-1.5 space-y-0.5 rounded border border-blue-100 bg-blue-50 p-2 text-xs">
+                            {doc.policyNumber && (
+                              <div>
+                                <span className="font-medium text-blue-700">
+                                  Policy:
+                                </span>{" "}
+                                {doc.policyNumber}
+                              </div>
+                            )}
+                            {doc.insuranceProvider && (
+                              <div>
+                                <span className="font-medium text-blue-700">
+                                  Provider:
+                                </span>{" "}
+                                {doc.insuranceProvider}
+                              </div>
+                            )}
+                            {doc.coverageAmount && (
+                              <div>
+                                <span className="font-medium text-blue-700">
+                                  Coverage:
+                                </span>{" "}
+                                {Number(doc.coverageAmount).toLocaleString()}{" "}
+                                ETB
+                              </div>
+                            )}
+                            {doc.coverageType && (
+                              <div>
+                                <span className="font-medium text-blue-700">
+                                  Type:
+                                </span>{" "}
+                                {doc.coverageType.replace(/_/g, " ")}
+                              </div>
+                            )}
+                          </div>
+                        )}
                     </div>
                   </td>
 
@@ -385,11 +431,11 @@ export default function VerificationQueueClient({
                         {doc.organization.name}
                       </div>
                       <div className="text-xs text-gray-500">
-                        {doc.organization.type.replace(/_/g, ' ')}
+                        {doc.organization.type.replace(/_/g, " ")}
                       </div>
-                      {doc.entityType === 'truck' && (
+                      {doc.entityType === "truck" && (
                         <div className="text-xs text-gray-400">
-                          {doc.entityName.split(' - ')[1]}
+                          {doc.entityName.split(" - ")[1]}
                         </div>
                       )}
                     </div>
@@ -401,36 +447,36 @@ export default function VerificationQueueClient({
                   </td>
 
                   {/* Upload Date */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
                     {formatDate(doc.uploadedAt)}
                   </td>
 
                   {/* Status */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {doc.verificationStatus === 'PENDING' && (
-                      <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                    {doc.verificationStatus === "PENDING" && (
+                      <span className="inline-flex rounded-full bg-yellow-100 px-2 py-1 text-xs leading-5 font-semibold text-yellow-800">
                         Pending
                       </span>
                     )}
-                    {doc.verificationStatus === 'APPROVED' && (
+                    {doc.verificationStatus === "APPROVED" && (
                       <div className="flex flex-col">
-                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        <span className="inline-flex rounded-full bg-green-100 px-2 py-1 text-xs leading-5 font-semibold text-green-800">
                           Approved
                         </span>
                         {doc.verifiedAt && (
-                          <span className="text-xs text-gray-500 mt-1">
+                          <span className="mt-1 text-xs text-gray-500">
                             {formatDate(doc.verifiedAt)}
                           </span>
                         )}
                       </div>
                     )}
-                    {doc.verificationStatus === 'REJECTED' && (
+                    {doc.verificationStatus === "REJECTED" && (
                       <div className="flex flex-col">
-                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                        <span className="inline-flex rounded-full bg-red-100 px-2 py-1 text-xs leading-5 font-semibold text-red-800">
                           Rejected
                         </span>
                         {doc.rejectionReason && (
-                          <span className="text-xs text-gray-500 mt-1">
+                          <span className="mt-1 text-xs text-gray-500">
                             {doc.rejectionReason}
                           </span>
                         )}
@@ -439,21 +485,21 @@ export default function VerificationQueueClient({
                   </td>
 
                   {/* Actions */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <td className="px-6 py-4 text-sm font-medium whitespace-nowrap">
                     <a
                       href={doc.fileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-900 mr-3"
+                      className="mr-3 text-blue-600 hover:text-blue-900"
                     >
                       View
                     </a>
-                    {doc.verificationStatus === 'PENDING' && (
+                    {doc.verificationStatus === "PENDING" && (
                       <>
                         <button
                           onClick={() => handleApprove(doc)}
                           disabled={isSubmitting}
-                          className="text-green-600 hover:text-green-900 mr-3 disabled:opacity-50"
+                          className="mr-3 text-green-600 hover:text-green-900 disabled:opacity-50"
                         >
                           Approve
                         </button>
@@ -486,24 +532,24 @@ export default function VerificationQueueClient({
 
         {/* Pagination */}
         {pagination.pages > 1 && (
-          <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
+          <div className="flex items-center justify-between border-t border-gray-200 bg-gray-50 px-6 py-4">
             <div className="text-sm text-gray-700">
-              Showing{' '}
+              Showing{" "}
               <span className="font-medium">
                 {(pagination.page - 1) * pagination.limit + 1}
-              </span>{' '}
-              to{' '}
+              </span>{" "}
+              to{" "}
               <span className="font-medium">
                 {Math.min(pagination.page * pagination.limit, pagination.total)}
-              </span>{' '}
-              of <span className="font-medium">{pagination.total}</span>{' '}
+              </span>{" "}
+              of <span className="font-medium">{pagination.total}</span>{" "}
               documents
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => handlePageChange(pagination.page - 1)}
                 disabled={pagination.page === 1}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Previous
               </button>
@@ -513,7 +559,7 @@ export default function VerificationQueueClient({
               <button
                 onClick={() => handlePageChange(pagination.page + 1)}
                 disabled={pagination.page === pagination.pages}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Next
               </button>
@@ -524,13 +570,13 @@ export default function VerificationQueueClient({
 
       {/* Rejection Modal */}
       {selectedDocument && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
+          <div className="mx-4 w-full max-w-md rounded-lg bg-white shadow-xl">
             <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              <h3 className="mb-4 text-lg font-semibold text-gray-900">
                 Reject Document
               </h3>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="mb-4 text-sm text-gray-600">
                 Please provide a reason for rejecting this document. The user
                 will be notified via email.
               </p>
@@ -539,25 +585,25 @@ export default function VerificationQueueClient({
                 onChange={(e) => setRejectionReason(e.target.value)}
                 placeholder="Enter rejection reason..."
                 rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-red-500"
               />
-              <div className="mt-6 flex gap-3 justify-end">
+              <div className="mt-6 flex justify-end gap-3">
                 <button
                   onClick={() => {
                     setSelectedDocument(null);
-                    setRejectionReason('');
+                    setRejectionReason("");
                   }}
                   disabled={isSubmitting}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={submitRejection}
                   disabled={isSubmitting || !rejectionReason.trim()}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {isSubmitting ? 'Rejecting...' : 'Reject Document'}
+                  {isSubmitting ? "Rejecting..." : "Reject Document"}
                 </button>
               </div>
             </div>

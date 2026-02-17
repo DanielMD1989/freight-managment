@@ -349,7 +349,7 @@ class _TruckDetailsScreenState extends ConsumerState<TruckDetailsScreen> {
             if (truck.isAvailable)
               ElevatedButton.icon(
                 onPressed: () =>
-                    context.push('/carrier/postings/create?truckId=${truck.id}'),
+                    context.push('/carrier/post-trucks?truckId=${truck.id}'),
                 icon: const Icon(Icons.post_add),
                 label: const Text('Post This Truck'),
                 style: ElevatedButton.styleFrom(

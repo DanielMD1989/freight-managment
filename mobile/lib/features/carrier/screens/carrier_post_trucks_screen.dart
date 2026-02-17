@@ -46,7 +46,9 @@ final allActivePostingsProvider =
 
 /// Carrier Post Trucks Screen
 class CarrierPostTrucksScreen extends ConsumerStatefulWidget {
-  const CarrierPostTrucksScreen({super.key});
+  final String? preSelectedTruckId;
+
+  const CarrierPostTrucksScreen({super.key, this.preSelectedTruckId});
 
   @override
   ConsumerState<CarrierPostTrucksScreen> createState() =>
@@ -72,6 +74,14 @@ class _CarrierPostTrucksScreenState
             statuses[_tabController.index];
       }
     });
+
+    // If a truckId was passed (e.g. from My Trucks → Post Truck button),
+    // auto-open the Post Truck modal with that truck pre-selected
+    if (widget.preSelectedTruckId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showPostTruckModal(context, preSelectedTruckId: widget.preSelectedTruckId);
+      });
+    }
   }
 
   @override
@@ -189,11 +199,11 @@ class _CarrierPostTrucksScreenState
     );
   }
 
-  Future<void> _showPostTruckModal(BuildContext context) async {
+  Future<void> _showPostTruckModal(BuildContext context, {String? preSelectedTruckId}) async {
     final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      builder: (context) => const _PostTruckModal(),
+      builder: (context) => _PostTruckModal(preSelectedTruckId: preSelectedTruckId),
     );
 
     if (result == true) {
@@ -655,7 +665,9 @@ class _StatusBadge extends StatelessWidget {
 
 /// Post truck modal
 class _PostTruckModal extends ConsumerStatefulWidget {
-  const _PostTruckModal();
+  final String? preSelectedTruckId;
+
+  const _PostTruckModal({this.preSelectedTruckId});
 
   @override
   ConsumerState<_PostTruckModal> createState() => _PostTruckModalState();
@@ -678,6 +690,19 @@ class _PostTruckModalState extends ConsumerState<_PostTruckModal> {
   /// Per RULE_ONE_ACTIVE_POST_PER_TRUCK
   bool _truckHasActivePosting = false;
   String? _existingPostingInfo;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-select truck if passed from My Trucks screen
+    if (widget.preSelectedTruckId != null) {
+      _selectedTruckId = widget.preSelectedTruckId;
+      // Check active posting status after first frame (providers need to be ready)
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkTruckActivePosting(_selectedTruckId);
+      });
+    }
+  }
 
   @override
   void dispose() {

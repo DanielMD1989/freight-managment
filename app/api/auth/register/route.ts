@@ -12,23 +12,23 @@ const registerSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  role: z.enum([
-    "SHIPPER",
-    "CARRIER",
-    "DISPATCHER",
-    "ADMIN",
-    "SUPER_ADMIN",
-  ]),
+  role: z.enum(["SHIPPER", "CARRIER", "DISPATCHER", "ADMIN", "SUPER_ADMIN"]),
   organizationId: z.string().optional(), // Sprint 16: Story 16.4 - Assign dispatcher to organization
   // Organization fields
   companyName: z.string().optional(),
-  carrierType: z.enum(["CARRIER_COMPANY", "CARRIER_INDIVIDUAL", "FLEET_OWNER"]).optional(),
+  carrierType: z
+    .enum(["CARRIER_COMPANY", "CARRIER_INDIVIDUAL", "FLEET_OWNER"])
+    .optional(),
   associationId: z.string().optional(), // For individual carriers joining an association
+  taxId: z.string().optional(), // Organization tax ID (TIN)
 });
 
 // Map carrier type to organization type
 // FIX: Return proper OrganizationType enum
-function getOrganizationType(role: string, carrierType?: string): OrganizationType {
+function getOrganizationType(
+  role: string,
+  carrierType?: string
+): OrganizationType {
   if (role === "SHIPPER") {
     return OrganizationType.SHIPPER;
   }
@@ -65,13 +65,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Rate limiting: 3 registrations per hour per IP
-    const clientIp = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const clientIp =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
     const rateLimit = await checkRateLimit(
       {
-        name: 'register',
+        name: "register",
         limit: 3,
         windowMs: 60 * 60 * 1000, // 1 hour
-        message: 'Too many registration attempts. Please try again later.',
+        message: "Too many registration attempts. Please try again later.",
       },
       clientIp
     );
@@ -79,16 +82,18 @@ export async function POST(request: NextRequest) {
     if (!rateLimit.allowed) {
       return NextResponse.json(
         {
-          error: 'Too many registration attempts. Please try again later.',
+          error: "Too many registration attempts. Please try again later.",
           retryAfter: Math.ceil((rateLimit.retryAfter || 0) / 1000),
         },
         {
           status: 429,
           headers: {
-            'X-RateLimit-Limit': rateLimit.limit.toString(),
-            'X-RateLimit-Remaining': '0',
-            'X-RateLimit-Reset': new Date(rateLimit.resetTime).toISOString(),
-            'Retry-After': Math.ceil((rateLimit.retryAfter || 0) / 1000).toString(),
+            "X-RateLimit-Limit": rateLimit.limit.toString(),
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": new Date(rateLimit.resetTime).toISOString(),
+            "Retry-After": Math.ceil(
+              (rateLimit.retryAfter || 0) / 1000
+            ).toString(),
           },
         }
       );
@@ -99,9 +104,7 @@ export async function POST(request: NextRequest) {
       where: {
         OR: [
           { email: validatedData.email },
-          ...(validatedData.phone
-            ? [{ phone: validatedData.phone }]
-            : []),
+          ...(validatedData.phone ? [{ phone: validatedData.phone }] : []),
         ],
       },
     });
@@ -123,12 +126,21 @@ export async function POST(request: NextRequest) {
 
     // CRITICAL FIX (ISSUE #1): Create organization AND wallet atomically in a transaction
     // This ensures that every organization has a wallet from the start
-    if ((validatedData.role === "SHIPPER" || validatedData.role === "CARRIER") && validatedData.companyName) {
-      const orgType = getOrganizationType(validatedData.role, validatedData.carrierType);
+    if (
+      (validatedData.role === "SHIPPER" || validatedData.role === "CARRIER") &&
+      validatedData.companyName
+    ) {
+      const orgType = getOrganizationType(
+        validatedData.role,
+        validatedData.carrierType
+      );
 
       // Determine wallet type based on organization type
       // FIX: Use proper enum type
-      const walletType: AccountType = orgType === OrganizationType.SHIPPER ? AccountType.SHIPPER_WALLET : AccountType.CARRIER_WALLET;
+      const walletType: AccountType =
+        orgType === OrganizationType.SHIPPER
+          ? AccountType.SHIPPER_WALLET
+          : AccountType.CARRIER_WALLET;
 
       const { organization } = await db.$transaction(async (tx) => {
         // 1. Create organization
@@ -138,10 +150,12 @@ export async function POST(request: NextRequest) {
             type: orgType,
             contactEmail: validatedData.email,
             contactPhone: validatedData.phone || "N/A",
+            taxId: validatedData.taxId || null,
             isVerified: false,
-            associationId: validatedData.carrierType === "CARRIER_INDIVIDUAL"
-              ? validatedData.associationId || null
-              : null,
+            associationId:
+              validatedData.carrierType === "CARRIER_INDIVIDUAL"
+                ? validatedData.associationId || null
+                : null,
           },
         });
 
@@ -171,7 +185,7 @@ export async function POST(request: NextRequest) {
         firstName: validatedData.firstName,
         lastName: validatedData.lastName,
         role: validatedData.role,
-        status: 'REGISTERED', // Sprint 2: User verification workflow
+        status: "REGISTERED", // Sprint 2: User verification workflow
         organizationId,
       },
       select: {

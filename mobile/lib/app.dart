@@ -667,7 +667,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/carrier/post-trucks',
-            builder: (context, state) => const CarrierPostTrucksScreen(),
+            builder: (context, state) => CarrierPostTrucksScreen(
+              preSelectedTruckId: state.uri.queryParameters['truckId'],
+            ),
           ),
           GoRoute(
             path: '/carrier/requests',

@@ -97,8 +97,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String lastName,
     required String phone,
     required UserRole role,
-    String? organizationName,
-    String? tinNumber,
+    String? companyName,
+    String? carrierType,
+    String? associationId,
+    String? taxId,
   }) async {
     state = state.copyWith(isLoading: true, error: null);
 
@@ -109,8 +111,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       lastName: lastName,
       phone: phone,
       role: role,
-      organizationName: organizationName,
-      tinNumber: tinNumber,
+      companyName: companyName,
+      carrierType: carrierType,
+      associationId: associationId,
+      taxId: taxId,
     );
 
     if (result.success && result.data != null) {

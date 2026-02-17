@@ -17,6 +17,7 @@
 
 import { useState, useRef, ChangeEvent, DragEvent } from "react";
 import { CompanyDocumentType, TruckDocumentType } from "@prisma/client";
+import { getCSRFToken } from "@/lib/csrfFetch";
 
 interface DocumentUploadProps {
   entityType: "company" | "truck";
@@ -27,10 +28,16 @@ interface DocumentUploadProps {
   onUploadError?: (error: string) => void;
   label?: string;
   helperText?: string;
+  extraFormData?: Record<string, string>;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
+const ALLOWED_TYPES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+];
 const ALLOWED_EXTENSIONS = [".pdf", ".jpg", ".jpeg", ".png"];
 
 export default function DocumentUpload({
@@ -41,6 +48,7 @@ export default function DocumentUpload({
   onUploadError,
   label,
   helperText,
+  extraFormData,
 }: DocumentUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -133,6 +141,15 @@ export default function DocumentUpload({
       formData.append("entityType", entityType);
       formData.append("entityId", entityId);
 
+      // Append extra form data (e.g., insurance fields)
+      if (extraFormData) {
+        for (const [key, value] of Object.entries(extraFormData)) {
+          if (value) {
+            formData.append(key, value);
+          }
+        }
+      }
+
       // Simulate progress (since fetch doesn't support upload progress)
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => {
@@ -141,9 +158,18 @@ export default function DocumentUpload({
         });
       }, 200);
 
+      // Get CSRF token for the upload request
+      const csrfToken = await getCSRFToken();
+      const headers: Record<string, string> = {};
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
+
       const response = await fetch("/api/documents/upload", {
         method: "POST",
         body: formData,
+        credentials: "include",
+        headers,
       });
 
       clearInterval(progressInterval);
@@ -167,7 +193,8 @@ export default function DocumentUpload({
         fileInputRef.current.value = "";
       }
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to upload document";
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to upload document";
       setError(errorMessage);
       setUploadProgress(0);
 
@@ -181,7 +208,10 @@ export default function DocumentUpload({
 
   // Format document type for display
   const formatDocumentType = (type: string) => {
-    return type.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (l) => l.toUpperCase());
+    return type
+      .replace(/_/g, " ")
+      .toLowerCase()
+      .replace(/\b\w/g, (l) => l.toUpperCase());
   };
 
   return (
@@ -199,16 +229,13 @@ export default function DocumentUpload({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`
-          relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer
-          transition-colors
-          ${isDragging
+        className={`relative cursor-pointer rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
+          isDragging
             ? "border-[#1e9c99] bg-[#1e9c99]/10"
             : selectedFile
-            ? "border-green-500 bg-green-50"
-            : "border-[#064d51]/30 bg-[#f0fdfa] hover:border-[#1e9c99]"
-          }
-        `}
+              ? "border-green-500 bg-green-50"
+              : "border-[#064d51]/30 bg-[#f0fdfa] hover:border-[#1e9c99]"
+        } `}
       >
         <input
           ref={fileInputRef}
@@ -247,7 +274,8 @@ export default function DocumentUpload({
           ) : (
             <div>
               <p className="text-sm text-[#064d51]/70">
-                <span className="font-semibold">Click to upload</span> or drag and drop
+                <span className="font-semibold">Click to upload</span> or drag
+                and drop
               </p>
               <p className="text-xs text-[#064d51]/60">
                 PDF, JPG, or PNG (max 10MB)
@@ -256,7 +284,7 @@ export default function DocumentUpload({
           )}
 
           {helperText && !selectedFile && (
-            <p className="text-xs text-[#064d51]/60 mt-2">{helperText}</p>
+            <p className="mt-2 text-xs text-[#064d51]/60">{helperText}</p>
           )}
         </div>
       </div>
@@ -268,7 +296,7 @@ export default function DocumentUpload({
             <span className="text-[#064d51]/70">Uploading...</span>
             <span className="text-[#064d51]/70">{uploadProgress}%</span>
           </div>
-          <div className="h-2 bg-[#064d51]/10 rounded-full overflow-hidden">
+          <div className="h-2 overflow-hidden rounded-full bg-[#064d51]/10">
             <div
               className="h-full bg-[#1e9c99] transition-all duration-300"
               style={{ width: `${uploadProgress}%` }}
@@ -328,9 +356,11 @@ export default function DocumentUpload({
         <button
           onClick={handleUpload}
           disabled={uploading}
-          className="w-full rounded-md bg-[#1e9c99] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#064d51] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full rounded-md bg-[#1e9c99] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#064d51] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {uploading ? "Uploading..." : `Upload ${formatDocumentType(documentType)}`}
+          {uploading
+            ? "Uploading..."
+            : `Upload ${formatDocumentType(documentType)}`}
         </button>
       )}
     </div>

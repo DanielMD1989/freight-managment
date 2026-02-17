@@ -77,7 +77,7 @@ class CarrierTrucksScreen extends ConsumerWidget {
                             return TruckCard(
                               truck: filteredTrucks[index],
                               onTap: () => context.push('/carrier/trucks/${filteredTrucks[index].id}'),
-                              onPostTruck: () => context.push('/carrier/postings/create?truckId=${filteredTrucks[index].id}'),
+                              onPostTruck: () => context.push('/carrier/post-trucks?truckId=${filteredTrucks[index].id}'),
                             );
                           },
                         ),

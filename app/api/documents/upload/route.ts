@@ -19,31 +19,35 @@
  * Sprint 9 - Story 9.6: CSRF Protection
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { db } from "@/lib/db";
 import {
   saveFile,
   validateUploadedFile,
   MAX_FILE_SIZE,
-} from '@/lib/fileStorage';
-import { CompanyDocumentType, TruckDocumentType } from '@prisma/client';
-import { requireRegistrationAccess } from '@/lib/auth';
-import { validateFileName, validateIdFormat } from '@/lib/validation';
+} from "@/lib/fileStorage";
+import {
+  CompanyDocumentType,
+  TruckDocumentType,
+  InsuranceCoverageType,
+} from "@prisma/client";
+import { requireRegistrationAccess } from "@/lib/auth";
+import { validateFileName, validateIdFormat } from "@/lib/validation";
 import {
   checkRateLimit,
   addRateLimitHeaders,
   RATE_LIMIT_DOCUMENT_UPLOAD,
-} from '@/lib/rateLimit';
-import { requireCSRF } from '@/lib/csrf';
+} from "@/lib/rateLimit";
+import { requireCSRF } from "@/lib/csrf";
 
 // Form data schema for document upload
 const documentUploadSchema = z.object({
-  type: z.string().min(1, 'Document type is required'),
-  entityType: z.enum(['company', 'truck'], {
-    message: 'Entity type must be "company" or "truck"'
+  type: z.string().min(1, "Document type is required"),
+  entityType: z.enum(["company", "truck"], {
+    message: 'Entity type must be "company" or "truck"',
   }),
-  entityId: z.string().min(1, 'Entity ID is required'),
+  entityId: z.string().min(1, "Entity ID is required"),
 });
 
 /**
@@ -80,21 +84,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Check rate limit: 10 uploads per hour per user
-    const rateLimitResult = await checkRateLimit(RATE_LIMIT_DOCUMENT_UPLOAD, userId);
+    const rateLimitResult = await checkRateLimit(
+      RATE_LIMIT_DOCUMENT_UPLOAD,
+      userId
+    );
 
     if (!rateLimitResult.allowed) {
       return NextResponse.json(
         {
-          error: 'Document upload limit exceeded. Maximum 10 uploads per hour.',
+          error: "Document upload limit exceeded. Maximum 10 uploads per hour.",
           retryAfter: rateLimitResult.retryAfter,
         },
         {
           status: 429,
           headers: {
-            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
-            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-            'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString(),
-            'Retry-After': rateLimitResult.retryAfter!.toString(),
+            "X-RateLimit-Limit": rateLimitResult.limit.toString(),
+            "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+            "X-RateLimit-Reset": new Date(
+              rateLimitResult.resetTime
+            ).toISOString(),
+            "Retry-After": rateLimitResult.retryAfter!.toString(),
           },
         }
       );
@@ -102,17 +111,22 @@ export async function POST(request: NextRequest) {
 
     // Parse form data
     const formData = await request.formData();
-    const file = formData.get('file') as File | null;
-    const typeRaw = formData.get('type') as string | null;
-    const entityTypeRaw = formData.get('entityType') as string | null;
-    const entityIdRaw = formData.get('entityId') as string | null;
+    const file = formData.get("file") as File | null;
+    const typeRaw = formData.get("type") as string | null;
+    const entityTypeRaw = formData.get("entityType") as string | null;
+    const entityIdRaw = formData.get("entityId") as string | null;
+
+    // Insurance-specific fields (optional, only relevant when type = INSURANCE)
+    const policyNumber = formData.get("policyNumber") as string | null;
+    const insuranceProvider = formData.get("insuranceProvider") as
+      | string
+      | null;
+    const coverageAmountRaw = formData.get("coverageAmount") as string | null;
+    const coverageTypeRaw = formData.get("coverageType") as string | null;
 
     // Validate file separately (Zod doesn't handle File objects directly)
     if (!file) {
-      return NextResponse.json(
-        { error: 'File is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "File is required" }, { status: 400 });
     }
 
     // Validate form fields with Zod
@@ -124,19 +138,16 @@ export async function POST(request: NextRequest) {
 
     if (!parseResult.success) {
       // FIX: Use zodErrorResponse to avoid schema leak
-      const { zodErrorResponse } = await import('@/lib/validation');
+      const { zodErrorResponse } = await import("@/lib/validation");
       return zodErrorResponse(parseResult.error);
     }
 
     const { type, entityType, entityId } = parseResult.data;
 
     // Validate entity ID format
-    const idValidation = validateIdFormat(entityId, 'Entity ID');
+    const idValidation = validateIdFormat(entityId, "Entity ID");
     if (!idValidation.valid) {
-      return NextResponse.json(
-        { error: idValidation.error },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: idValidation.error }, { status: 400 });
     }
 
     // Validate document type enum
@@ -144,19 +155,25 @@ export async function POST(request: NextRequest) {
     const validTruckTypes = Object.values(TruckDocumentType);
 
     // FIX: Use proper enum types instead of any
-    if (entityType === 'company' && !validCompanyTypes.includes(type as CompanyDocumentType)) {
+    if (
+      entityType === "company" &&
+      !validCompanyTypes.includes(type as CompanyDocumentType)
+    ) {
       return NextResponse.json(
         {
-          error: `Invalid company document type. Must be one of: ${validCompanyTypes.join(', ')}`,
+          error: `Invalid company document type. Must be one of: ${validCompanyTypes.join(", ")}`,
         },
         { status: 400 }
       );
     }
 
-    if (entityType === 'truck' && !validTruckTypes.includes(type as TruckDocumentType)) {
+    if (
+      entityType === "truck" &&
+      !validTruckTypes.includes(type as TruckDocumentType)
+    ) {
       return NextResponse.json(
         {
-          error: `Invalid truck document type. Must be one of: ${validTruckTypes.join(', ')}`,
+          error: `Invalid truck document type. Must be one of: ${validTruckTypes.join(", ")}`,
         },
         { status: 400 }
       );
@@ -184,14 +201,11 @@ export async function POST(request: NextRequest) {
     const validation = validateUploadedFile(buffer, mimeType, fileSize);
 
     if (!validation.valid) {
-      return NextResponse.json(
-        { error: validation.error },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
     // Verify entity exists and user has access
-    if (entityType === 'company') {
+    if (entityType === "company") {
       const organization = await db.organization.findUnique({
         where: { id: entityId },
         select: { id: true },
@@ -199,15 +213,15 @@ export async function POST(request: NextRequest) {
 
       if (!organization) {
         return NextResponse.json(
-          { error: 'Organization not found' },
+          { error: "Organization not found" },
           { status: 404 }
         );
       }
 
       // Verify user belongs to this organization (admins can upload for any org)
-      if (entityId !== userOrgId && session.role !== 'ADMIN') {
+      if (entityId !== userOrgId && session.role !== "ADMIN") {
         return NextResponse.json(
-          { error: 'You can only upload documents for your own organization' },
+          { error: "You can only upload documents for your own organization" },
           { status: 403 }
         );
       }
@@ -218,16 +232,16 @@ export async function POST(request: NextRequest) {
       });
 
       if (!truck) {
-        return NextResponse.json(
-          { error: 'Truck not found' },
-          { status: 404 }
-        );
+        return NextResponse.json({ error: "Truck not found" }, { status: 404 });
       }
 
       // Verify user's organization owns this truck (admins can upload for any truck)
-      if (truck.carrierId !== userOrgId && session.role !== 'ADMIN') {
+      if (truck.carrierId !== userOrgId && session.role !== "ADMIN") {
         return NextResponse.json(
-          { error: 'You can only upload documents for trucks owned by your organization' },
+          {
+            error:
+              "You can only upload documents for trucks owned by your organization",
+          },
           { status: 403 }
         );
       }
@@ -238,7 +252,7 @@ export async function POST(request: NextRequest) {
     // For truck files, we need to get the truck's organization
     let organizationId = entityId;
 
-    if (entityType === 'truck') {
+    if (entityType === "truck") {
       const truck = await db.truck.findUnique({
         where: { id: entityId },
         select: { carrierId: true },
@@ -253,8 +267,29 @@ export async function POST(request: NextRequest) {
       mimeType
     );
 
+    // Parse insurance fields if document type is insurance-related
+    const isInsuranceDoc =
+      (entityType === "company" && type === "INSURANCE_CERTIFICATE") ||
+      (entityType === "truck" && type === "INSURANCE");
+
+    const insuranceData = isInsuranceDoc
+      ? {
+          ...(policyNumber && { policyNumber }),
+          ...(insuranceProvider && { insuranceProvider }),
+          ...(coverageAmountRaw && {
+            coverageAmount: parseFloat(coverageAmountRaw),
+          }),
+          ...(coverageTypeRaw &&
+            Object.values(InsuranceCoverageType).includes(
+              coverageTypeRaw as InsuranceCoverageType
+            ) && {
+              coverageType: coverageTypeRaw as InsuranceCoverageType,
+            }),
+        }
+      : {};
+
     // Create database record
-    if (entityType === 'company') {
+    if (entityType === "company") {
       const document = await db.companyDocument.create({
         data: {
           type: type as CompanyDocumentType,
@@ -262,9 +297,10 @@ export async function POST(request: NextRequest) {
           fileUrl,
           fileSize,
           mimeType,
-          verificationStatus: 'PENDING',
+          verificationStatus: "PENDING",
           organizationId: entityId,
           uploadedById: userId,
+          ...insuranceData,
         },
         select: {
           id: true,
@@ -274,18 +310,31 @@ export async function POST(request: NextRequest) {
           fileSize: true,
           verificationStatus: true,
           uploadedAt: true,
+          policyNumber: true,
+          insuranceProvider: true,
+          coverageAmount: true,
+          coverageType: true,
         },
       });
 
       const response = NextResponse.json({
-        message: 'Company document uploaded successfully',
+        message: "Company document uploaded successfully",
         document,
       });
 
       // Add rate limit headers
-      response.headers.set('X-RateLimit-Limit', rateLimitResult.limit.toString());
-      response.headers.set('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
-      response.headers.set('X-RateLimit-Reset', new Date(rateLimitResult.resetTime).toISOString());
+      response.headers.set(
+        "X-RateLimit-Limit",
+        rateLimitResult.limit.toString()
+      );
+      response.headers.set(
+        "X-RateLimit-Remaining",
+        rateLimitResult.remaining.toString()
+      );
+      response.headers.set(
+        "X-RateLimit-Reset",
+        new Date(rateLimitResult.resetTime).toISOString()
+      );
 
       return response;
     } else {
@@ -296,9 +345,10 @@ export async function POST(request: NextRequest) {
           fileUrl,
           fileSize,
           mimeType,
-          verificationStatus: 'PENDING',
+          verificationStatus: "PENDING",
           truckId: entityId,
           uploadedById: userId,
+          ...insuranceData,
         },
         select: {
           id: true,
@@ -308,35 +358,53 @@ export async function POST(request: NextRequest) {
           fileSize: true,
           verificationStatus: true,
           uploadedAt: true,
+          policyNumber: true,
+          insuranceProvider: true,
+          coverageAmount: true,
+          coverageType: true,
         },
       });
 
       const response = NextResponse.json({
-        message: 'Truck document uploaded successfully',
+        message: "Truck document uploaded successfully",
         document,
       });
 
       // Add rate limit headers
-      response.headers.set('X-RateLimit-Limit', rateLimitResult.limit.toString());
-      response.headers.set('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
-      response.headers.set('X-RateLimit-Reset', new Date(rateLimitResult.resetTime).toISOString());
+      response.headers.set(
+        "X-RateLimit-Limit",
+        rateLimitResult.limit.toString()
+      );
+      response.headers.set(
+        "X-RateLimit-Remaining",
+        rateLimitResult.remaining.toString()
+      );
+      response.headers.set(
+        "X-RateLimit-Reset",
+        new Date(rateLimitResult.resetTime).toISOString()
+      );
 
       return response;
     }
-  // FIX: Use unknown type with type guard
+    // FIX: Use unknown type with type guard
   } catch (error: unknown) {
-    console.error('Error uploading document:', error);
+    console.error(
+      "Error uploading document:",
+      error instanceof Error ? error.message : error
+    );
 
     // Handle specific errors
-    if (error instanceof Error && error.message?.includes('too large')) {
+    if (error instanceof Error && error.message?.includes("too large")) {
       return NextResponse.json(
-        { error: `File size exceeds maximum of ${MAX_FILE_SIZE / 1024 / 1024}MB` },
+        {
+          error: `File size exceeds maximum of ${MAX_FILE_SIZE / 1024 / 1024}MB`,
+        },
         { status: 413 }
       );
     }
 
     return NextResponse.json(
-      { error: 'Failed to upload document' },
+      { error: "Failed to upload document" },
       { status: 500 }
     );
   }

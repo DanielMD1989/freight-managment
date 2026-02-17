@@ -62,7 +62,8 @@ class TruckService {
       final response = await _apiClient.dio.get('/api/trucks/$id');
 
       if (response.statusCode == 200) {
-        final truck = Truck.fromJson(response.data);
+        final truckData = response.data['truck'] ?? response.data;
+        final truck = Truck.fromJson(truckData);
         return ApiResponse.success(truck);
       }
 
@@ -117,7 +118,8 @@ class TruckService {
       );
 
       if (response.statusCode == 201) {
-        final truck = Truck.fromJson(response.data);
+        final truckData = response.data['truck'] ?? response.data;
+        final truck = Truck.fromJson(truckData);
         return ApiResponse.success(truck);
       }
 
@@ -170,13 +172,14 @@ class TruckService {
       if (contactPhone != null) data['contactPhone'] = contactPhone;
       if (lengthM != null) data['lengthM'] = lengthM;
 
-      final response = await _apiClient.dio.put(
+      final response = await _apiClient.dio.patch(
         '/api/trucks/$id',
         data: data,
       );
 
       if (response.statusCode == 200) {
-        final truck = Truck.fromJson(response.data);
+        final truckData = response.data['truck'] ?? response.data;
+        final truck = Truck.fromJson(truckData);
         return ApiResponse.success(truck);
       }
 

@@ -243,7 +243,7 @@ class Organization {
   final String name;
   final OrganizationType type;
   final String? description;
-  final String? tinNumber;
+  final String? taxId;
   final String? licenseNumber;
   final String? address;
   final String? city;
@@ -258,7 +258,7 @@ class Organization {
     required this.name,
     required this.type,
     this.description,
-    this.tinNumber,
+    this.taxId,
     this.licenseNumber,
     this.address,
     this.city,
@@ -275,7 +275,7 @@ class Organization {
       name: json['name'] as String,
       type: OrganizationTypeExtension.fromString(json['type'] as String? ?? 'SHIPPER'),
       description: json['description'] as String?,
-      tinNumber: json['tinNumber'] as String?,
+      taxId: json['taxId'] as String?,
       licenseNumber: json['licenseNumber'] as String?,
       address: json['address'] as String?,
       city: json['city'] as String?,
@@ -295,7 +295,7 @@ class Organization {
       'name': name,
       'type': type.value,
       'description': description,
-      'tinNumber': tinNumber,
+      'taxId': taxId,
       'licenseNumber': licenseNumber,
       'address': address,
       'city': city,
