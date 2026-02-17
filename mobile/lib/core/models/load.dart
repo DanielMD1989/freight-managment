@@ -1,4 +1,5 @@
 import 'truck.dart';
+import '../utils/parse_utils.dart';
 
 /// Load status matching the web app's LoadStatus enum
 enum LoadStatus {
@@ -345,18 +346,6 @@ class Load {
   });
 
   factory Load.fromJson(Map<String, dynamic> json) {
-    // Helper to parse number from string or number
-    double? parseDoubleOrNull(dynamic value) {
-      if (value == null) return null;
-      if (value is num) return value.toDouble();
-      if (value is String) return double.tryParse(value);
-      return null;
-    }
-
-    double parseDouble(dynamic value, [double defaultValue = 0]) {
-      return parseDoubleOrNull(value) ?? defaultValue;
-    }
-
     int? parseIntOrNull(dynamic value) {
       if (value == null) return null;
       if (value is int) return value;
@@ -394,7 +383,7 @@ class Load {
       destinationLat: parseDoubleOrNull(json['destinationLat']),
       destinationLon: parseDoubleOrNull(json['destinationLon']),
       truckType: truckTypeFromString(json['truckType']),
-      weight: parseDouble(json['weight']),
+      weight: parseDoubleOrDefault(json['weight'], 0),
       volume: parseDoubleOrNull(json['volume']),
       cargoDescription: json['cargoDescription'] ?? '',
       fullPartial: json['fullPartial'] == 'PARTIAL'

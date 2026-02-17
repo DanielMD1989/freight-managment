@@ -3,12 +3,13 @@
  * Get, update, delete specific automation rules
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { requirePermission, Permission } from '@/lib/rbac';
-import { z } from 'zod';
-import { zodErrorResponse } from '@/lib/validation';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { requirePermission, Permission } from "@/lib/rbac";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { z } from "zod";
+import { zodErrorResponse } from "@/lib/validation";
 
 const updateRuleSchema = z.object({
   name: z.string().min(1).max(255).optional(),
@@ -34,7 +35,7 @@ export async function GET(
       where: { id },
       include: {
         executions: {
-          orderBy: { executedAt: 'desc' },
+          orderBy: { executedAt: "desc" },
           take: 10,
         },
         _count: {
@@ -45,15 +46,16 @@ export async function GET(
 
     if (!rule) {
       return NextResponse.json(
-        { error: 'Automation rule not found' },
+        { error: "Automation rule not found" },
         { status: 404 }
       );
     }
 
     // Calculate success rate
-    const successRate = rule.executionCount > 0
-      ? (rule.successCount / rule.executionCount) * 100
-      : 0;
+    const successRate =
+      rule.executionCount > 0
+        ? (rule.successCount / rule.executionCount) * 100
+        : 0;
 
     return NextResponse.json({
       rule: {
@@ -67,9 +69,9 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Get automation rule error:', error);
+    console.error("Get automation rule error:", error);
     return NextResponse.json(
-      { error: 'Failed to get automation rule' },
+      { error: "Failed to get automation rule" },
       { status: 500 }
     );
   }
@@ -81,6 +83,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     await requirePermission(Permission.MANAGE_RULES);
 
     const { id } = await params;
@@ -95,21 +101,21 @@ export async function PATCH(
 
     if (!existingRule) {
       return NextResponse.json(
-        { error: 'Automation rule not found' },
+        { error: "Automation rule not found" },
         { status: 404 }
       );
     }
 
     // Prevent editing system rules (can only enable/disable)
     if (existingRule.isSystem) {
-      const allowedFields = ['isEnabled'];
+      const allowedFields = ["isEnabled"];
       const hasDisallowedFields = Object.keys(validatedData).some(
         (key) => !allowedFields.includes(key)
       );
 
       if (hasDisallowedFields) {
         return NextResponse.json(
-          { error: 'System rules can only be enabled/disabled' },
+          { error: "System rules can only be enabled/disabled" },
           { status: 403 }
         );
       }
@@ -130,7 +136,7 @@ export async function PATCH(
     });
 
     return NextResponse.json({
-      message: 'Automation rule updated successfully',
+      message: "Automation rule updated successfully",
       rule: updatedRule,
     });
   } catch (error) {
@@ -138,9 +144,9 @@ export async function PATCH(
       return zodErrorResponse(error);
     }
 
-    console.error('Update automation rule error:', error);
+    console.error("Update automation rule error:", error);
     return NextResponse.json(
-      { error: 'Failed to update automation rule' },
+      { error: "Failed to update automation rule" },
       { status: 500 }
     );
   }
@@ -152,6 +158,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     await requirePermission(Permission.MANAGE_RULES);
 
     const { id } = await params;
@@ -164,14 +174,14 @@ export async function DELETE(
 
     if (!rule) {
       return NextResponse.json(
-        { error: 'Automation rule not found' },
+        { error: "Automation rule not found" },
         { status: 404 }
       );
     }
 
     if (rule.isSystem) {
       return NextResponse.json(
-        { error: 'System rules cannot be deleted' },
+        { error: "System rules cannot be deleted" },
         { status: 403 }
       );
     }
@@ -181,13 +191,13 @@ export async function DELETE(
     });
 
     return NextResponse.json({
-      message: 'Automation rule deleted successfully',
+      message: "Automation rule deleted successfully",
       rule: { id: rule.id, name: rule.name },
     });
   } catch (error) {
-    console.error('Delete automation rule error:', error);
+    console.error("Delete automation rule error:", error);
     return NextResponse.json(
-      { error: 'Failed to delete automation rule' },
+      { error: "Failed to delete automation rule" },
       { status: 500 }
     );
   }

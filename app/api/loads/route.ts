@@ -324,11 +324,14 @@ export async function GET(request: NextRequest) {
         where.shipperId = user.organizationId;
       }
     } else {
-      // Only show posted loads in marketplace
+      // Only show posted loads in marketplace - force POSTED status
+      // Do NOT allow status query param to override this (prevents draft load exposure)
       where.status = "POSTED";
     }
 
-    if (status) {
+    // Allow status filter only for authenticated views (myLoads, myTrips, dispatcher)
+    // Marketplace mode always forces POSTED
+    if (status && (myLoads || myTrips || isDispatcher)) {
       // Handle comma-separated statuses (e.g., "PICKUP_PENDING,IN_TRANSIT")
       if (status.includes(",")) {
         where.status = { in: status.split(",") };

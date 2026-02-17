@@ -243,6 +243,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     // Rate limiting: Apply RPS_CONFIGS.marketplace
     const rateLimitError = await applyRpsLimit(request);
     if (rateLimitError) return rateLimitError;

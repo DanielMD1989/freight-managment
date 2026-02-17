@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import { CacheInvalidation } from "@/lib/cache";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
@@ -14,6 +15,10 @@ const dispatchSchema = z.object({
 // POST /api/dispatch - Dispatch a load (assign truck to load)
 export async function POST(request: NextRequest) {
   try {
+    // CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireAuth();
 
     // Check if user has permission (carrier self-dispatch or ops dispatch)
@@ -130,7 +135,12 @@ export async function POST(request: NextRequest) {
 
     if (existingAssignment) {
       // If the existing load is completed/delivered/cancelled, unassign it first
-      const inactiveStatuses = ['DELIVERED', 'COMPLETED', 'CANCELLED', 'EXPIRED'];
+      const inactiveStatuses = [
+        "DELIVERED",
+        "COMPLETED",
+        "CANCELLED",
+        "EXPIRED",
+      ];
       if (!inactiveStatuses.includes(existingAssignment.status)) {
         return NextResponse.json(
           {
@@ -188,7 +198,7 @@ export async function POST(request: NextRequest) {
       message: "Load dispatched successfully",
       load: updatedLoad,
     });
-  // FIX: Use unknown type with type guards
+    // FIX: Use unknown type with type guards
   } catch (error: unknown) {
     console.error("Dispatch error:", error);
 
@@ -197,17 +207,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Handle unique constraint violation (race condition) - Prisma error
-    const prismaError = error as { code?: string; meta?: { target?: string[] } };
-    if (prismaError?.code === 'P2002') {
-      const field = prismaError?.meta?.target?.[0] || 'field';
-      if (field === 'assignedTruckId') {
+    const prismaError = error as {
+      code?: string;
+      meta?: { target?: string[] };
+    };
+    if (prismaError?.code === "P2002") {
+      const field = prismaError?.meta?.target?.[0] || "field";
+      if (field === "assignedTruckId") {
         return NextResponse.json(
-          { error: 'This truck is already assigned to another load. Please refresh and try again.' },
+          {
+            error:
+              "This truck is already assigned to another load. Please refresh and try again.",
+          },
           { status: 409 }
         );
       }
       return NextResponse.json(
-        { error: 'A conflict occurred. Please refresh and try again.' },
+        { error: "A conflict occurred. Please refresh and try again." },
         { status: 409 }
       );
     }

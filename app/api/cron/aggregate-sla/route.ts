@@ -9,15 +9,23 @@
  * - Exception MTTR
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { runDailySLAAggregation } from '@/lib/slaAggregation';
+import { NextRequest, NextResponse } from "next/server";
+import { runDailySLAAggregation } from "@/lib/slaAggregation";
 
 export async function POST(request: NextRequest) {
   try {
     // Verify cron secret
-    const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authHeader = request.headers.get("authorization");
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json(
+        {
+          error: !cronSecret
+            ? "Server misconfigured - CRON_SECRET required"
+            : "Unauthorized",
+        },
+        { status: !cronSecret ? 500 : 401 }
+      );
     }
 
     // Run SLA aggregation
@@ -38,7 +46,7 @@ export async function POST(request: NextRequest) {
       success: true,
       metrics: result.metrics
         ? {
-            date: result.metrics.startDate.toISOString().split('T')[0],
+            date: result.metrics.startDate.toISOString().split("T")[0],
             pickup: {
               rate: result.metrics.pickup.rate,
               total: result.metrics.pickup.total,
@@ -64,11 +72,11 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Error in aggregate-sla cron:', error);
+    console.error("Error in aggregate-sla cron:", error);
     return NextResponse.json(
       {
-        error: 'Failed to aggregate SLA metrics',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        error: "Failed to aggregate SLA metrics",
+        message: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
@@ -77,15 +85,15 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   return NextResponse.json({
-    name: 'aggregate-sla',
+    name: "aggregate-sla",
     description:
-      'Aggregates SLA metrics including pickup/delivery rates, cancellation rate, and exception MTTR',
-    schedule: '0 2 * * *', // Daily at 2 AM
+      "Aggregates SLA metrics including pickup/delivery rates, cancellation rate, and exception MTTR",
+    schedule: "0 2 * * *", // Daily at 2 AM
     metrics: [
-      'on-time pickup rate',
-      'on-time delivery rate',
-      'cancellation rate',
-      'exception MTTR',
+      "on-time pickup rate",
+      "on-time delivery rate",
+      "cancellation rate",
+      "exception MTTR",
     ],
     lastRun: null,
   });

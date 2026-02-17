@@ -50,14 +50,17 @@ jest.mock("next/link", () => {
   };
 });
 
-// Mock useToast
-const mockToast = {
-  success: jest.fn(),
-  error: jest.fn(),
-};
-jest.mock("@/components/Toast", () => ({
-  useToast: () => mockToast,
-}));
+// Mock react-hot-toast
+const mockToastSuccess = jest.fn();
+const mockToastError = jest.fn();
+jest.mock("react-hot-toast", () => {
+  const fn = Object.assign(jest.fn(), {
+    success: mockToastSuccess,
+    error: mockToastError,
+  });
+  return { __esModule: true, default: fn };
+});
+const mockToast = { success: mockToastSuccess, error: mockToastError };
 
 // Mock setCSRFToken
 jest.mock("@/lib/csrfFetch", () => ({

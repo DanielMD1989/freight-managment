@@ -228,67 +228,6 @@ class TruckService {
     return updateTruck(id: id, isAvailable: isAvailable);
   }
 
-  /// Search trucks on the marketplace (for shippers) - LEGACY method
-  /// @deprecated Use searchTruckPostings() for full posting data with direction
-  Future<ApiResponse<TruckSearchResult>> searchTrucks({
-    int page = 1,
-    int limit = 20,
-    String? availableCity,
-    String? truckType,
-    double? minCapacity,
-    double? maxCapacity,
-    bool? isAvailable,
-    String? sortBy,
-    String? sortOrder,
-  }) async {
-    try {
-      final params = <String, dynamic>{
-        'page': page.toString(),
-        'limit': limit.toString(),
-      };
-
-      if (availableCity != null && availableCity.isNotEmpty) {
-        params['availableCity'] = availableCity;
-      }
-      if (truckType != null) params['truckType'] = truckType;
-      if (minCapacity != null) params['minCapacity'] = minCapacity.toString();
-      if (maxCapacity != null) params['maxCapacity'] = maxCapacity.toString();
-      if (isAvailable != null) params['isAvailable'] = isAvailable.toString();
-      if (sortBy != null) params['sortBy'] = sortBy;
-      if (sortOrder != null) params['sortOrder'] = sortOrder;
-
-      final response = await _apiClient.dio.get(
-        '/api/truck-postings',
-        queryParameters: params,
-      );
-
-      if (response.statusCode == 200) {
-        final trucksData = response.data['trucks'] ?? response.data['postings'] ?? [];
-        final trucks = (trucksData as List)
-            .map((json) => Truck.fromJson(json['truck'] ?? json))
-            .toList();
-        final pagination = response.data['pagination'] ?? {};
-
-        return ApiResponse.success(TruckSearchResult(
-          trucks: trucks,
-          page: pagination['page'] ?? page,
-          limit: pagination['limit'] ?? limit,
-          total: pagination['total'] ?? trucks.length,
-          pages: pagination['pages'] ?? 1,
-        ));
-      }
-
-      return ApiResponse.error(
-        response.data['error'] ?? 'Failed to search trucks',
-        statusCode: response.statusCode,
-      );
-    } on DioException catch (e) {
-      return ApiResponse.error(e.friendlyMessage, statusCode: e.response?.statusCode);
-    } catch (e) {
-      return ApiResponse.error('An unexpected error occurred: $e');
-    }
-  }
-
   /// Search truck postings with FULL posting data (WEB PARITY)
   /// Returns TruckPosting objects with origin/destination, age, availability
   /// Matches web SearchTrucksTab.tsx filter parameters
@@ -774,25 +713,6 @@ class TruckService {
       return ApiResponse.error('An unexpected error occurred');
     }
   }
-}
-
-/// Truck search result with pagination (LEGACY - use TruckPostingSearchResult)
-class TruckSearchResult {
-  final List<Truck> trucks;
-  final int page;
-  final int limit;
-  final int total;
-  final int pages;
-
-  TruckSearchResult({
-    required this.trucks,
-    required this.page,
-    required this.limit,
-    required this.total,
-    required this.pages,
-  });
-
-  bool get hasMore => page < pages;
 }
 
 /// Truck POSTING search result with FULL posting data (WEB PARITY)

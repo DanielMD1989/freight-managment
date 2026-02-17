@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requirePermission, Permission } from '@/lib/rbac';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requirePermission, Permission } from "@/lib/rbac";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 
 // DELETE /api/gps/devices/[id] - Remove GPS device
 export async function DELETE(
@@ -8,6 +9,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     await requirePermission(Permission.MANAGE_GPS_DEVICES);
 
     const { id } = await params;
@@ -25,7 +30,7 @@ export async function DELETE(
 
     if (!device) {
       return NextResponse.json(
-        { error: 'GPS device not found' },
+        { error: "GPS device not found" },
         { status: 404 }
       );
     }
@@ -37,9 +42,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Delete GPS device error:', error);
+    console.error("Delete GPS device error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
@@ -63,7 +68,7 @@ export async function PATCH(
 
     if (!device) {
       return NextResponse.json(
-        { error: 'GPS device not found' },
+        { error: "GPS device not found" },
         { status: 404 }
       );
     }
@@ -93,9 +98,9 @@ export async function PATCH(
 
     return NextResponse.json({ device: updatedDevice });
   } catch (error) {
-    console.error('Update GPS device error:', error);
+    console.error("Update GPS device error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

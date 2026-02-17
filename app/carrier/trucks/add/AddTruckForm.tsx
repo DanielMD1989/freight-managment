@@ -11,22 +11,14 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/components/Toast";
+import toast from "react-hot-toast";
+import { getCSRFToken } from "@/lib/csrfFetch";
 import PlacesAutocomplete, {
   PlaceResult,
 } from "@/components/PlacesAutocomplete";
 import { TruckDocumentType } from "@prisma/client";
 
-const TRUCK_TYPES = [
-  { value: "FLATBED", label: "Flatbed" },
-  { value: "REFRIGERATED", label: "Refrigerated" },
-  { value: "TANKER", label: "Tanker" },
-  { value: "CONTAINER", label: "Container" },
-  { value: "DRY_VAN", label: "Dry Van" },
-  { value: "LOWBOY", label: "Lowboy" },
-  { value: "DUMP_TRUCK", label: "Dump Truck" },
-  { value: "BOX_TRUCK", label: "Box Truck" },
-];
+import { TRUCK_TYPES } from "@/lib/constants/truckTypes";
 
 const TRUCK_DOCUMENT_TYPES: {
   value: TruckDocumentType;
@@ -106,7 +98,6 @@ interface QueuedDocument {
 
 export default function AddTruckForm() {
   const router = useRouter();
-  const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
@@ -138,24 +129,6 @@ export default function AddTruckForm() {
     coverageAmount: "",
     coverageType: "",
   });
-
-  /**
-   * Get CSRF token
-   */
-  const getCSRFToken = async (): Promise<string | null> => {
-    try {
-      const response = await fetch("/api/csrf-token");
-      if (!response.ok) {
-        console.error("CSRF token request failed:", response.status);
-        return null;
-      }
-      const data = await response.json();
-      return data.csrfToken;
-    } catch (error) {
-      console.error("Failed to get CSRF token:", error);
-      return null;
-    }
-  };
 
   /**
    * Handle input change
@@ -385,10 +358,10 @@ export default function AddTruckForm() {
 
         // Upload queued documents if any
         if (queuedDocuments.length > 0) {
-          toast.info("Uploading documents...");
+          toast("Uploading documents...");
           const docsUploaded = await uploadQueuedDocuments(createdTruck.id);
           if (!docsUploaded) {
-            toast.warning(
+            toast(
               "Truck created but some documents failed to upload. You can upload them later."
             );
           } else {

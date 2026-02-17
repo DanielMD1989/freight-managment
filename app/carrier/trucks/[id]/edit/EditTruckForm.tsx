@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Edit Truck Form Component
@@ -7,36 +7,30 @@
  * Sprint 12 - Story 12.2: Truck Management
  */
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useToast } from '@/components/Toast';
-import PlacesAutocomplete, { PlaceResult } from '@/components/PlacesAutocomplete';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
+import { getCSRFToken } from "@/lib/csrfFetch";
+import PlacesAutocomplete, {
+  PlaceResult,
+} from "@/components/PlacesAutocomplete";
 
-const TRUCK_TYPES = [
-  { value: 'FLATBED', label: 'Flatbed' },
-  { value: 'REFRIGERATED', label: 'Refrigerated' },
-  { value: 'TANKER', label: 'Tanker' },
-  { value: 'CONTAINER', label: 'Container' },
-  { value: 'DRY_VAN', label: 'Dry Van' },
-  { value: 'LOWBOY', label: 'Lowboy' },
-  { value: 'DUMP_TRUCK', label: 'Dump Truck' },
-  { value: 'BOX_TRUCK', label: 'Box Truck' },
-];
+import { TRUCK_TYPES } from "@/lib/constants/truckTypes";
 
 const ETHIOPIAN_REGIONS = [
-  'Addis Ababa',
-  'Afar',
-  'Amhara',
-  'Benishangul-Gumuz',
-  'Dire Dawa',
-  'Gambela',
-  'Harari',
-  'Oromia',
-  'Sidama',
-  'Somali',
-  'Southern Nations, Nationalities, and Peoples',
-  'Southwest Ethiopia',
-  'Tigray',
+  "Addis Ababa",
+  "Afar",
+  "Amhara",
+  "Benishangul-Gumuz",
+  "Dire Dawa",
+  "Gambela",
+  "Harari",
+  "Oromia",
+  "Sidama",
+  "Somali",
+  "Southern Nations, Nationalities, and Peoples",
+  "Southwest Ethiopia",
+  "Tigray",
 ];
 
 interface Truck {
@@ -58,40 +52,24 @@ interface EditTruckFormProps {
   isResubmit: boolean;
 }
 
-export default function EditTruckForm({ truck, isResubmit }: EditTruckFormProps) {
+export default function EditTruckForm({
+  truck,
+  isResubmit,
+}: EditTruckFormProps) {
   const router = useRouter();
-  const toast = useToast();
 
   const [formData, setFormData] = useState({
     truckType: truck.truckType,
     licensePlate: truck.licensePlate,
     capacity: truck.capacity.toString(),
-    volume: truck.volume?.toString() || '',
-    currentCity: truck.currentCity || '',
-    currentRegion: truck.currentRegion || '',
+    volume: truck.volume?.toString() || "",
+    currentCity: truck.currentCity || "",
+    currentRegion: truck.currentRegion || "",
     isAvailable: truck.isAvailable,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
-
-  /**
-   * Get CSRF token
-   */
-  const getCSRFToken = async (): Promise<string | null> => {
-    try {
-      const response = await fetch('/api/csrf-token');
-      if (!response.ok) {
-        console.error('CSRF token request failed:', response.status);
-        return null;
-      }
-      const data = await response.json();
-      return data.csrfToken;
-    } catch (error) {
-      console.error('Failed to get CSRF token:', error);
-      return null;
-    }
-  };
+  const [error, setError] = useState("");
 
   /**
    * Handle input change
@@ -103,9 +81,7 @@ export default function EditTruckForm({ truck, isResubmit }: EditTruckFormProps)
     setFormData({
       ...formData,
       [name]:
-        type === 'checkbox'
-          ? (e.target as HTMLInputElement).checked
-          : value,
+        type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
     });
   };
 
@@ -117,7 +93,7 @@ export default function EditTruckForm({ truck, isResubmit }: EditTruckFormProps)
       setFormData({
         ...formData,
         currentCity: place.city || value,
-        currentRegion: place.region || '',
+        currentRegion: place.region || "",
       });
     } else {
       setFormData({
@@ -132,21 +108,21 @@ export default function EditTruckForm({ truck, isResubmit }: EditTruckFormProps)
    */
   const validateForm = (): boolean => {
     if (!formData.licensePlate.trim()) {
-      setError('License plate is required');
+      setError("License plate is required");
       return false;
     }
 
     if (!formData.capacity || parseFloat(formData.capacity) <= 0) {
-      setError('Capacity must be greater than 0');
+      setError("Capacity must be greater than 0");
       return false;
     }
 
     if (formData.volume && parseFloat(formData.volume) <= 0) {
-      setError('Volume must be greater than 0');
+      setError("Volume must be greater than 0");
       return false;
     }
 
-    setError('');
+    setError("");
     return true;
   };
 
@@ -161,12 +137,12 @@ export default function EditTruckForm({ truck, isResubmit }: EditTruckFormProps)
     }
 
     setIsSubmitting(true);
-    setError('');
+    setError("");
 
     try {
       const csrfToken = await getCSRFToken();
       if (!csrfToken) {
-        setError('Failed to get CSRF token. Please try again.');
+        setError("Failed to get CSRF token. Please try again.");
         setIsSubmitting(false);
         return;
       }
@@ -184,39 +160,39 @@ export default function EditTruckForm({ truck, isResubmit }: EditTruckFormProps)
 
       // If resubmitting, reset approval status to PENDING
       if (isResubmit) {
-        updateData.approvalStatus = 'PENDING';
+        updateData.approvalStatus = "PENDING";
         updateData.rejectionReason = null;
       }
 
       const response = await fetch(`/api/trucks/${truck.id}`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
         body: JSON.stringify(updateData),
-        credentials: 'include',
+        credentials: "include",
       });
 
       if (response.ok) {
         if (isResubmit) {
-          toast.success('Truck resubmitted for approval!');
-          router.push('/carrier/trucks?tab=pending&success=truck-resubmitted');
+          toast.success("Truck resubmitted for approval!");
+          router.push("/carrier/trucks?tab=pending&success=truck-resubmitted");
         } else {
-          toast.success('Truck updated successfully!');
-          router.push('/carrier/trucks?success=truck-updated');
+          toast.success("Truck updated successfully!");
+          router.push("/carrier/trucks?success=truck-updated");
         }
         router.refresh();
       } else {
         const errorData = await response.json();
-        const errorMessage = errorData.error || 'Failed to update truck';
+        const errorMessage = errorData.error || "Failed to update truck";
         setError(errorMessage);
         toast.error(errorMessage);
         setIsSubmitting(false);
       }
     } catch (error) {
-      console.error('Error updating truck:', error);
-      const errorMessage = 'Failed to update truck. Please try again.';
+      console.error("Error updating truck:", error);
+      const errorMessage = "Failed to update truck. Please try again.";
       setError(errorMessage);
       toast.error(errorMessage);
       setIsSubmitting(false);
@@ -224,31 +200,38 @@ export default function EditTruckForm({ truck, isResubmit }: EditTruckFormProps)
   };
 
   // Standard input class for consistency - Teal design system
-  const inputClass = "w-full px-4 py-3 bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99] placeholder-[#064d51]/50 dark:bg-slate-800 dark:text-gray-100 dark:border-slate-600";
-  const selectClass = "w-full px-4 py-3 bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99] dark:bg-slate-800 dark:text-gray-100 dark:border-slate-600";
-  const labelClass = "block text-sm font-semibold text-[#064d51] dark:text-gray-200 mb-2";
+  const inputClass =
+    "w-full px-4 py-3 bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99] placeholder-[#064d51]/50 dark:bg-slate-800 dark:text-gray-100 dark:border-slate-600";
+  const selectClass =
+    "w-full px-4 py-3 bg-white text-[#064d51] border border-[#064d51]/20 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99] dark:bg-slate-800 dark:text-gray-100 dark:border-slate-600";
+  const labelClass =
+    "block text-sm font-semibold text-[#064d51] dark:text-gray-200 mb-2";
   const hintClass = "text-xs text-[#064d51]/60 dark:text-gray-400 mt-1";
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 rounded-lg shadow-lg p-6 md:p-8">
+    <form
+      onSubmit={handleSubmit}
+      className="rounded-lg bg-white p-6 shadow-lg md:p-8 dark:bg-slate-900"
+    >
       <div className="space-y-6">
         {/* Form Header */}
-        <div className="border-b border-[#064d51]/10 dark:border-slate-700 pb-4">
+        <div className="border-b border-[#064d51]/10 pb-4 dark:border-slate-700">
           <h2 className="text-2xl font-bold text-[#064d51] dark:text-white">
-            {isResubmit ? 'Resubmit Truck' : 'Edit Truck'}
+            {isResubmit ? "Resubmit Truck" : "Edit Truck"}
           </h2>
-          <p className="text-[#064d51]/70 dark:text-gray-400 mt-1">
+          <p className="mt-1 text-[#064d51]/70 dark:text-gray-400">
             {isResubmit
-              ? 'Update and resubmit your truck for admin approval'
-              : 'Update your truck information'
-            }
+              ? "Update and resubmit your truck for admin approval"
+              : "Update your truck information"}
           </p>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
-            <p className="text-red-800 dark:text-red-300 text-sm font-medium">{error}</p>
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/30">
+            <p className="text-sm font-medium text-red-800 dark:text-red-300">
+              {error}
+            </p>
           </div>
         )}
 
@@ -286,13 +269,11 @@ export default function EditTruckForm({ truck, isResubmit }: EditTruckFormProps)
             placeholder="e.g., AA-12345"
             className={inputClass}
           />
-          <p className={hintClass}>
-            Must be unique and at least 3 characters
-          </p>
+          <p className={hintClass}>Must be unique and at least 3 characters</p>
         </div>
 
         {/* Capacity and Volume */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <div>
             <label className={labelClass}>
               Capacity (kg) <span className="text-red-500">*</span>
@@ -311,9 +292,7 @@ export default function EditTruckForm({ truck, isResubmit }: EditTruckFormProps)
           </div>
 
           <div>
-            <label className={labelClass}>
-              Volume (m³)
-            </label>
+            <label className={labelClass}>Volume (m³)</label>
             <input
               type="number"
               name="volume"
@@ -328,18 +307,16 @@ export default function EditTruckForm({ truck, isResubmit }: EditTruckFormProps)
         </div>
 
         {/* Current Location - Google Places Autocomplete */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <div>
-            <label className={labelClass}>
-              Current City
-            </label>
+            <label className={labelClass}>Current City</label>
             <PlacesAutocomplete
               value={formData.currentCity}
               onChange={handleLocationChange}
               placeholder="Search for city..."
               className={inputClass}
-              countryRestriction={['ET', 'DJ']}
-              types={['(cities)']}
+              countryRestriction={["ET", "DJ"]}
+              types={["(cities)"]}
               name="currentCity"
             />
             <p className={hintClass}>
@@ -348,9 +325,7 @@ export default function EditTruckForm({ truck, isResubmit }: EditTruckFormProps)
           </div>
 
           <div>
-            <label className={labelClass}>
-              Current Region
-            </label>
+            <label className={labelClass}>Current Region</label>
             <select
               name="currentRegion"
               value={formData.currentRegion}
@@ -364,20 +339,18 @@ export default function EditTruckForm({ truck, isResubmit }: EditTruckFormProps)
                 </option>
               ))}
             </select>
-            <p className={hintClass}>
-              Auto-populated when selecting a city
-            </p>
+            <p className={hintClass}>Auto-populated when selecting a city</p>
           </div>
         </div>
 
         {/* Is Available */}
-        <div className="flex items-center bg-[#f0fdfa] dark:bg-slate-800 p-4 rounded-lg">
+        <div className="flex items-center rounded-lg bg-[#f0fdfa] p-4 dark:bg-slate-800">
           <input
             type="checkbox"
             name="isAvailable"
             checked={formData.isAvailable}
             onChange={handleChange}
-            className="h-5 w-5 text-[#1e9c99] border-[#064d51]/30 rounded focus:ring-[#1e9c99]"
+            className="h-5 w-5 rounded border-[#064d51]/30 text-[#1e9c99] focus:ring-[#1e9c99]"
           />
           <label className="ml-3 block text-sm font-medium text-[#064d51] dark:text-gray-200">
             Mark truck as available for new loads
@@ -385,22 +358,25 @@ export default function EditTruckForm({ truck, isResubmit }: EditTruckFormProps)
         </div>
 
         {/* Submit Buttons */}
-        <div className="flex gap-4 pt-6 border-t border-[#064d51]/10 dark:border-slate-700">
+        <div className="flex gap-4 border-t border-[#064d51]/10 pt-6 dark:border-slate-700">
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex-1 px-6 py-3 bg-[#064d51] text-white rounded-lg font-semibold hover:bg-[#053d40] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+            className="flex-1 rounded-lg bg-[#064d51] px-6 py-3 font-semibold text-white shadow-sm transition-colors hover:bg-[#053d40] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSubmitting
-              ? (isResubmit ? 'Resubmitting...' : 'Saving...')
-              : (isResubmit ? 'Resubmit for Approval' : 'Save Changes')
-            }
+              ? isResubmit
+                ? "Resubmitting..."
+                : "Saving..."
+              : isResubmit
+                ? "Resubmit for Approval"
+                : "Save Changes"}
           </button>
           <button
             type="button"
             onClick={() => router.back()}
             disabled={isSubmitting}
-            className="px-6 py-3 bg-white dark:bg-slate-800 border border-[#064d51]/20 dark:border-slate-600 text-[#064d51] dark:text-gray-300 rounded-lg font-semibold hover:bg-[#f0fdfa] dark:hover:bg-slate-700 disabled:opacity-50 transition-colors"
+            className="rounded-lg border border-[#064d51]/20 bg-white px-6 py-3 font-semibold text-[#064d51] transition-colors hover:bg-[#f0fdfa] disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-gray-300 dark:hover:bg-slate-700"
           >
             Cancel
           </button>

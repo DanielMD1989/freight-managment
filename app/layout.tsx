@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ToastProvider, ToastContainer } from "@/components/Toast";
+import { Toaster } from "react-hot-toast";
 import CSRFProvider from "@/components/CSRFProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
@@ -20,18 +20,23 @@ export const metadata: Metadata = {
     default: "FreightHub - Ethiopian Freight Platform",
     template: "%s | FreightHub",
   },
-  description: "Ethiopian freight management and load board platform - Connect shippers with carriers seamlessly",
-  keywords: ["freight", "logistics", "Ethiopia", "shipping", "carriers", "load board", "trucking"],
+  description:
+    "Ethiopian freight management and load board platform - Connect shippers with carriers seamlessly",
+  keywords: [
+    "freight",
+    "logistics",
+    "Ethiopia",
+    "shipping",
+    "carriers",
+    "load board",
+    "trucking",
+  ],
   authors: [{ name: "FreightHub" }],
   icons: {
-    icon: [
-      { url: '/icon', sizes: '32x32', type: 'image/png' },
-    ],
-    apple: [
-      { url: '/apple-icon', sizes: '180x180', type: 'image/png' },
-    ],
+    icon: [{ url: "/icon", sizes: "32x32", type: "image/png" }],
+    apple: [{ url: "/apple-icon", sizes: "180x180", type: "image/png" }],
   },
-  manifest: '/manifest.json',
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
@@ -46,10 +51,8 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <CSRFProvider>
-            <ToastProvider>
-              {children}
-              <ToastContainer />
-            </ToastProvider>
+            {children}
+            <Toaster position="top-right" />
           </CSRFProvider>
         </ThemeProvider>
       </body>

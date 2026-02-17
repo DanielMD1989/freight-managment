@@ -11,6 +11,7 @@ import { requireAuth } from "@/lib/auth";
 import { requireCSRF } from "@/lib/csrf";
 import { getAccessRoles } from "@/lib/rbac";
 import { TripStatus, LoadStatus, Prisma } from "@prisma/client";
+import { VALID_TRIP_TRANSITIONS } from "@/lib/tripStateMachine";
 import { z } from "zod";
 // P1-002 FIX: Import CacheInvalidation for post-update cache clearing
 import { CacheInvalidation } from "@/lib/cache";
@@ -33,15 +34,9 @@ const updateTripSchema = z.object({
   deliveryNotes: z.string().max(500).optional(),
 });
 
-// Valid status transitions
-const validTransitions: Record<TripStatus, TripStatus[]> = {
-  ASSIGNED: ["PICKUP_PENDING", "CANCELLED"],
-  PICKUP_PENDING: ["IN_TRANSIT", "CANCELLED"],
-  IN_TRANSIT: ["DELIVERED", "CANCELLED"],
-  DELIVERED: ["COMPLETED", "CANCELLED"],
-  COMPLETED: [], // Terminal state
-  CANCELLED: [], // Terminal state
-};
+// Use canonical trip state machine (lib/tripStateMachine.ts)
+// Cast to Record<string, string[]> for Prisma TripStatus compatibility
+const validTransitions = VALID_TRIP_TRANSITIONS as Record<string, string[]>;
 
 /**
  * GET /api/trips/[tripId]

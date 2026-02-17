@@ -1,6 +1,7 @@
 import 'truck.dart';
 import 'load.dart';
 import 'user.dart' show Organization;
+import '../utils/parse_utils.dart';
 
 /// Trip status enum matching web app
 enum TripStatus {
@@ -160,13 +161,6 @@ class Trip {
   });
 
   factory Trip.fromJson(Map<String, dynamic> json) {
-    // Helper to parse number from string or number
-    double? parseDoubleOrNull(dynamic value) {
-      if (value == null) return null;
-      if (value is num) return value.toDouble();
-      if (value is String) return double.tryParse(value);
-      return null;
-    }
 
     return Trip(
       id: json['id'] ?? '',
@@ -339,21 +333,10 @@ class GpsPosition {
   });
 
   factory GpsPosition.fromJson(Map<String, dynamic> json) {
-    double? parseDoubleOrNull(dynamic value) {
-      if (value == null) return null;
-      if (value is num) return value.toDouble();
-      if (value is String) return double.tryParse(value);
-      return null;
-    }
-
-    double parseDouble(dynamic value, [double defaultValue = 0]) {
-      return parseDoubleOrNull(value) ?? defaultValue;
-    }
-
     return GpsPosition(
       id: json['id'] ?? '',
-      latitude: parseDouble(json['latitude']),
-      longitude: parseDouble(json['longitude']),
+      latitude: parseDoubleOrDefault(json['latitude'], 0),
+      longitude: parseDoubleOrDefault(json['longitude'], 0),
       speed: parseDoubleOrNull(json['speed']),
       heading: parseDoubleOrNull(json['heading']),
       altitude: parseDoubleOrNull(json['altitude']),

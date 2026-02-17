@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../app.dart';
-import '../../../core/providers/auth_provider.dart';
+import '../../../core/utils/logout_dialog.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/push_notification_service.dart';
 
@@ -173,7 +173,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: OutlinedButton.icon(
-              onPressed: () => _showLogoutDialog(context, ref),
+              onPressed: () => showLogoutDialog(context, ref),
               icon: const Icon(Icons.logout, color: AppColors.error),
               label: const Text('Logout', style: TextStyle(color: AppColors.error)),
               style: OutlinedButton.styleFrom(
@@ -275,34 +275,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              // Unregister FCM token
-              await PushNotificationService().unregisterToken();
-              // Logout
-              await ref.read(authStateProvider.notifier).logout();
-              if (context.mounted) {
-                context.go('/login');
-              }
-            },
-            child: const Text('Logout', style: TextStyle(color: AppColors.error)),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showComingSoon(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(

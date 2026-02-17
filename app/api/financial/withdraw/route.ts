@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth, requireActiveUser } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
 import { Prisma } from "@prisma/client";
@@ -16,6 +17,10 @@ const withdrawSchema = z.object({
 // POST /api/financial/withdraw - Request withdrawal
 export async function POST(request: NextRequest) {
   try {
+    // CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     // Require ACTIVE user status for financial transactions
     const session = await requireActiveUser();
     await requirePermission(Permission.WITHDRAW_FUNDS);
@@ -46,10 +51,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!wallet) {
-      return NextResponse.json(
-        { error: "Wallet not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
     }
 
     if (parseFloat(wallet.balance.toString()) < validatedData.amount) {

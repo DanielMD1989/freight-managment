@@ -5,15 +5,16 @@
  * Get and update individual disputes
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { requirePermission, Permission } from '@/lib/rbac';
-import { z } from 'zod';
-import { zodErrorResponse } from '@/lib/validation';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { requirePermission, Permission } from "@/lib/rbac";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { z } from "zod";
+import { zodErrorResponse } from "@/lib/validation";
 
 const updateDisputeSchema = z.object({
-  status: z.enum(['OPEN', 'UNDER_REVIEW', 'RESOLVED', 'CLOSED']).optional(),
+  status: z.enum(["OPEN", "UNDER_REVIEW", "RESOLVED", "CLOSED"]).optional(),
   resolution: z.string().optional(),
   resolutionNotes: z.string().optional(),
 });
@@ -67,32 +68,33 @@ export async function GET(
     });
 
     if (!dispute) {
-      return NextResponse.json({ error: 'Dispute not found' }, { status: 404 });
+      return NextResponse.json({ error: "Dispute not found" }, { status: 404 });
     }
 
     // Check access
     const isShipper = dispute.load.shipper?.id === session.organizationId;
-    const isCarrier = dispute.load.assignedTruck?.carrier?.id === session.organizationId;
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+    const isCarrier =
+      dispute.load.assignedTruck?.carrier?.id === session.organizationId;
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isShipper && !isCarrier && !isAdmin) {
       return NextResponse.json(
-        { error: 'Forbidden: You do not have access to this dispute' },
+        { error: "Forbidden: You do not have access to this dispute" },
         { status: 403 }
       );
     }
 
     return NextResponse.json({ dispute });
-  // FIX: Use unknown type with type guard
+    // FIX: Use unknown type with type guard
   } catch (error: unknown) {
-    console.error('Error fetching dispute:', error);
+    console.error("Error fetching dispute:", error);
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     return NextResponse.json(
-      { error: 'Failed to fetch dispute' },
+      { error: "Failed to fetch dispute" },
       { status: 500 }
     );
   }
@@ -107,6 +109,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requirePermission(Permission.MANAGE_DISPUTES);
 
     const { id: disputeId } = await params;
@@ -118,7 +124,7 @@ export async function PATCH(
     });
 
     if (!dispute) {
-      return NextResponse.json({ error: 'Dispute not found' }, { status: 404 });
+      return NextResponse.json({ error: "Dispute not found" }, { status: 404 });
     }
 
     // Update dispute
@@ -127,7 +133,8 @@ export async function PATCH(
       data: {
         ...validatedData,
         // Mark resolution time if status is resolved or closed
-        ...(validatedData.status === 'RESOLVED' || validatedData.status === 'CLOSED'
+        ...(validatedData.status === "RESOLVED" ||
+        validatedData.status === "CLOSED"
           ? { resolvedAt: new Date() }
           : {}),
       },
@@ -157,30 +164,33 @@ export async function PATCH(
     });
 
     return NextResponse.json({
-      message: 'Dispute updated successfully',
+      message: "Dispute updated successfully",
       dispute: updatedDispute,
     });
-  // FIX: Use unknown type with type guards
+    // FIX: Use unknown type with type guards
   } catch (error: unknown) {
-    console.error('Error updating dispute:', error);
+    console.error("Error updating dispute:", error);
 
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (error instanceof Error && error.message?.includes('Permission denied')) {
+    if (
+      error instanceof Error &&
+      error.message?.includes("Permission denied")
+    ) {
       return NextResponse.json(
-        { error: 'Forbidden: Admin access required' },
+        { error: "Forbidden: Admin access required" },
         { status: 403 }
       );
     }
 
     return NextResponse.json(
-      { error: 'Failed to update dispute' },
+      { error: "Failed to update dispute" },
       { status: 500 }
     );
   }

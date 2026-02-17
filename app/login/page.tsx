@@ -3,15 +3,13 @@
 import { useState, FormEvent, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useToast } from "@/components/Toast";
+import toast from "react-hot-toast";
 import { setCSRFToken } from "@/lib/csrfFetch";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
-  const toast = useToast();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -49,7 +47,7 @@ function LoginForm() {
       if (data.mfaRequired) {
         setMfaRequired(true);
         setMfaToken(data.mfaToken);
-        setPhoneLastFour(data.phoneLastFour || '****');
+        setPhoneLastFour(data.phoneLastFour || "****");
         toast.success("Verification code sent to your phone");
         return;
       }
@@ -63,7 +61,8 @@ function LoginForm() {
       router.push(redirect);
       router.refresh();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      const errorMessage =
+        err instanceof Error ? err.message : "An error occurred";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -110,7 +109,8 @@ function LoginForm() {
       router.push(redirect);
       router.refresh();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      const errorMessage =
+        err instanceof Error ? err.message : "An error occurred";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -121,32 +121,49 @@ function LoginForm() {
   return (
     <div className="flex min-h-screen">
       {/* Left Panel - Brand */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-primary-900 to-slate-900 relative overflow-hidden">
+      <div className="via-primary-900 relative hidden overflow-hidden bg-gradient-to-br from-slate-900 to-slate-900 lg:flex lg:w-1/2">
         {/* Decorative Elements */}
         <div className="absolute inset-0">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-primary-600/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-accent-600/20 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
+          <div className="bg-primary-600/20 absolute top-0 left-0 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"></div>
+          <div className="bg-accent-600/20 absolute right-0 bottom-0 h-96 w-96 translate-x-1/2 translate-y-1/2 rounded-full blur-3xl"></div>
         </div>
 
         <div className="relative z-10 flex flex-col justify-center px-16">
           {/* Logo */}
-          <div className="flex items-center gap-4 mb-12">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-xl">
-              <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+          <div className="mb-12 flex items-center gap-4">
+            <div className="from-primary-500 to-primary-600 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br shadow-xl">
+              <svg
+                className="h-8 w-8 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"
+                />
               </svg>
             </div>
             <span className="text-2xl font-bold text-white">FreightET</span>
           </div>
 
-          <h1 className="text-4xl font-bold text-white mb-6 leading-tight">
-            Ethiopia&apos;s Leading<br/>
+          <h1 className="mb-6 text-4xl leading-tight font-bold text-white">
+            Ethiopia&apos;s Leading
+            <br />
             <span className="text-primary-400">Freight Platform</span>
           </h1>
 
-          <p className="text-lg text-slate-300 mb-10 max-w-md">
-            Connect shippers with carriers, manage your fleet, and streamline logistics operations across Ethiopia.
+          <p className="mb-10 max-w-md text-lg text-slate-300">
+            Connect shippers with carriers, manage your fleet, and streamline
+            logistics operations across Ethiopia.
           </p>
 
           {/* Features */}
@@ -157,9 +174,19 @@ function LoginForm() {
               "Secure digital payments",
             ].map((feature, i) => (
               <div key={i} className="flex items-center gap-3 text-slate-200">
-                <div className="w-6 h-6 rounded-full bg-primary-500/30 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <div className="bg-primary-500/30 flex h-6 w-6 items-center justify-center rounded-full">
+                  <svg
+                    className="text-primary-400 h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                 </div>
                 {feature}
@@ -170,27 +197,44 @@ function LoginForm() {
       </div>
 
       {/* Right Panel - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center bg-slate-50 dark:bg-slate-950 px-6 py-12">
+      <div className="flex w-full items-center justify-center bg-slate-50 px-6 py-12 lg:w-1/2 dark:bg-slate-950">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center gap-3 mb-10 justify-center">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg">
-              <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+          <div className="mb-10 flex items-center justify-center gap-3 lg:hidden">
+            <div className="from-primary-500 to-primary-600 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br shadow-lg">
+              <svg
+                className="h-7 w-7 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"
+                />
               </svg>
             </div>
-            <span className="text-xl font-bold text-slate-900 dark:text-white">FreightET</span>
+            <span className="text-xl font-bold text-slate-900 dark:text-white">
+              FreightET
+            </span>
           </div>
 
-          <div className="text-center lg:text-left mb-8">
+          <div className="mb-8 text-center lg:text-left">
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-              {mfaRequired ? 'Verify your identity' : 'Welcome back'}
+              {mfaRequired ? "Verify your identity" : "Welcome back"}
             </h2>
             <p className="mt-2 text-slate-600 dark:text-slate-400">
               {mfaRequired
-                ? 'Enter the verification code sent to your phone'
-                : 'Sign in to your account to continue'}
+                ? "Enter the verification code sent to your phone"
+                : "Sign in to your account to continue"}
             </p>
           </div>
 
@@ -198,23 +242,34 @@ function LoginForm() {
           {mfaRequired ? (
             <form className="space-y-5" onSubmit={handleMFAVerify}>
               {error && (
-                <div className="rounded-xl bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 p-4">
-                  <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+                <div className="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/30">
+                  <p className="text-sm text-red-700 dark:text-red-300">
+                    {error}
+                  </p>
                 </div>
               )}
 
-              <div className="rounded-xl bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-800 p-4">
+              <div className="bg-primary-50 dark:bg-primary-900/30 border-primary-200 dark:border-primary-800 rounded-xl border p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary-100 dark:bg-primary-800 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-primary-600 dark:text-primary-400">
-                      <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
+                  <div className="bg-primary-100 dark:bg-primary-800 rounded-lg p-2">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      className="text-primary-600 dark:text-primary-400 h-5 w-5"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-primary-800 dark:text-primary-300">
+                    <p className="text-primary-800 dark:text-primary-300 text-sm font-medium">
                       Two-factor authentication
                     </p>
-                    <p className="text-xs text-primary-600 dark:text-primary-400">
+                    <p className="text-primary-600 dark:text-primary-400 text-xs">
                       Code sent to ****{phoneLastFour}
                     </p>
                   </div>
@@ -223,7 +278,10 @@ function LoginForm() {
 
               {!useRecoveryCode ? (
                 <div>
-                  <label htmlFor="otp" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  <label
+                    htmlFor="otp"
+                    className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                  >
                     Verification code
                   </label>
                   <input
@@ -234,15 +292,20 @@ function LoginForm() {
                     autoComplete="one-time-code"
                     required
                     value={mfaOtp}
-                    onChange={(e) => setMfaOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    onChange={(e) =>
+                      setMfaOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                    }
                     maxLength={6}
-                    className="block w-full rounded-xl border-0 px-4 py-3 text-slate-900 dark:text-white bg-white dark:bg-slate-900 ring-1 ring-inset ring-slate-300 dark:ring-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 dark:focus:ring-primary-500 transition-all text-center text-2xl tracking-widest font-mono"
+                    className="focus:ring-primary-600 dark:focus:ring-primary-500 block w-full rounded-xl border-0 bg-white px-4 py-3 text-center font-mono text-2xl tracking-widest text-slate-900 ring-1 ring-slate-300 transition-all ring-inset placeholder:text-slate-400 focus:ring-2 focus:ring-inset dark:bg-slate-900 dark:text-white dark:ring-slate-700"
                     placeholder="000000"
                   />
                 </div>
               ) : (
                 <div>
-                  <label htmlFor="recovery" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  <label
+                    htmlFor="recovery"
+                    className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                  >
                     Recovery code
                   </label>
                   <input
@@ -251,8 +314,10 @@ function LoginForm() {
                     type="text"
                     required
                     value={recoveryCode}
-                    onChange={(e) => setRecoveryCode(e.target.value.toUpperCase())}
-                    className="block w-full rounded-xl border-0 px-4 py-3 text-slate-900 dark:text-white bg-white dark:bg-slate-900 ring-1 ring-inset ring-slate-300 dark:ring-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 dark:focus:ring-primary-500 transition-all text-center text-lg tracking-widest font-mono"
+                    onChange={(e) =>
+                      setRecoveryCode(e.target.value.toUpperCase())
+                    }
+                    className="focus:ring-primary-600 dark:focus:ring-primary-500 block w-full rounded-xl border-0 bg-white px-4 py-3 text-center font-mono text-lg tracking-widest text-slate-900 ring-1 ring-slate-300 transition-all ring-inset placeholder:text-slate-400 focus:ring-2 focus:ring-inset dark:bg-slate-900 dark:text-white dark:ring-slate-700"
                     placeholder="XXXX-XXXX"
                   />
                 </div>
@@ -260,14 +325,33 @@ function LoginForm() {
 
               <button
                 type="submit"
-                disabled={isLoading || (!useRecoveryCode && mfaOtp.length !== 6) || (useRecoveryCode && !recoveryCode)}
-                className="w-full flex justify-center py-3.5 px-6 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-primary-700 to-primary-600 hover:from-primary-800 hover:to-primary-700 shadow-lg shadow-primary-500/25 hover:shadow-xl hover:shadow-primary-500/30 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={
+                  isLoading ||
+                  (!useRecoveryCode && mfaOtp.length !== 6) ||
+                  (useRecoveryCode && !recoveryCode)
+                }
+                className="from-primary-700 to-primary-600 hover:from-primary-800 hover:to-primary-700 shadow-primary-500/25 hover:shadow-primary-500/30 flex w-full justify-center rounded-xl bg-gradient-to-r px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition-all duration-200 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isLoading ? (
                   <span className="flex items-center gap-2">
-                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="h-5 w-5 animate-spin"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                     Verifying...
                   </span>
@@ -281,21 +365,23 @@ function LoginForm() {
                   type="button"
                   onClick={() => {
                     setUseRecoveryCode(!useRecoveryCode);
-                    setMfaOtp('');
-                    setRecoveryCode('');
+                    setMfaOtp("");
+                    setRecoveryCode("");
                   }}
                   className="text-primary-600 hover:text-primary-500 dark:text-primary-400 font-medium"
                 >
-                  {useRecoveryCode ? 'Use verification code' : 'Use recovery code'}
+                  {useRecoveryCode
+                    ? "Use verification code"
+                    : "Use recovery code"}
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     setMfaRequired(false);
-                    setMfaToken('');
-                    setMfaOtp('');
-                    setRecoveryCode('');
-                    setError('');
+                    setMfaToken("");
+                    setMfaOtp("");
+                    setRecoveryCode("");
+                    setError("");
                   }}
                   className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
                 >
@@ -304,89 +390,114 @@ function LoginForm() {
               </div>
             </form>
           ) : (
-          <form className="space-y-5" onSubmit={handleSubmit}>
-            {error && (
-              <div className="rounded-xl bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 p-4">
-                <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
-              </div>
-            )}
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="block w-full rounded-xl border-0 px-4 py-3 text-slate-900 dark:text-white bg-white dark:bg-slate-900 ring-1 ring-inset ring-slate-300 dark:ring-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 dark:focus:ring-primary-500 transition-all"
-                placeholder="you@example.com"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label htmlFor="password" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Password
-                </label>
-                <Link
-                  href="/forgot-password"
-                  className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="block w-full rounded-xl border-0 px-4 py-3 text-slate-900 dark:text-white bg-white dark:bg-slate-900 ring-1 ring-inset ring-slate-300 dark:ring-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 dark:focus:ring-primary-500 transition-all"
-                placeholder="Enter your password"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full flex justify-center py-3.5 px-6 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-primary-700 to-primary-600 hover:from-primary-800 hover:to-primary-700 shadow-lg shadow-primary-500/25 hover:shadow-xl hover:shadow-primary-500/30 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <span className="flex items-center gap-2">
-                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Signing in...
-                </span>
-              ) : (
-                "Sign in"
+            <form className="space-y-5" onSubmit={handleSubmit}>
+              {error && (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/30">
+                  <p className="text-sm text-red-700 dark:text-red-300">
+                    {error}
+                  </p>
+                </div>
               )}
-            </button>
 
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200 dark:border-slate-700"></div>
+              <div>
+                <label
+                  htmlFor="email"
+                  className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                >
+                  Email address
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="focus:ring-primary-600 dark:focus:ring-primary-500 block w-full rounded-xl border-0 bg-white px-4 py-3 text-slate-900 ring-1 ring-slate-300 transition-all ring-inset placeholder:text-slate-400 focus:ring-2 focus:ring-inset dark:bg-slate-900 dark:text-white dark:ring-slate-700"
+                  placeholder="you@example.com"
+                />
               </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-slate-50 dark:bg-slate-950 text-slate-500">New to FreightET?</span>
-              </div>
-            </div>
 
-            <Link
-              href="/register"
-              className="w-full flex justify-center py-3 px-6 rounded-xl text-sm font-semibold text-primary-700 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30 ring-1 ring-primary-200 dark:ring-primary-800 transition-all duration-200"
-            >
-              Create an account
-            </Link>
-          </form>
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-medium text-slate-700 dark:text-slate-300"
+                  >
+                    Password
+                  </label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-primary-600 hover:text-primary-500 dark:text-primary-400 text-sm font-medium"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="focus:ring-primary-600 dark:focus:ring-primary-500 block w-full rounded-xl border-0 bg-white px-4 py-3 text-slate-900 ring-1 ring-slate-300 transition-all ring-inset placeholder:text-slate-400 focus:ring-2 focus:ring-inset dark:bg-slate-900 dark:text-white dark:ring-slate-700"
+                  placeholder="Enter your password"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="from-primary-700 to-primary-600 hover:from-primary-800 hover:to-primary-700 shadow-primary-500/25 hover:shadow-primary-500/30 flex w-full justify-center rounded-xl bg-gradient-to-r px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition-all duration-200 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <svg
+                      className="h-5 w-5 animate-spin"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Signing in...
+                  </span>
+                ) : (
+                  "Sign in"
+                )}
+              </button>
+
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200 dark:border-slate-700"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="bg-slate-50 px-4 text-slate-500 dark:bg-slate-950">
+                    New to FreightET?
+                  </span>
+                </div>
+              </div>
+
+              <Link
+                href="/register"
+                className="text-primary-700 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30 ring-primary-200 dark:ring-primary-800 flex w-full justify-center rounded-xl px-6 py-3 text-sm font-semibold ring-1 transition-all duration-200"
+              >
+                Create an account
+              </Link>
+            </form>
           )}
         </div>
       </div>
@@ -396,11 +507,13 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="animate-spin h-10 w-10 border-4 border-primary-600 border-t-transparent rounded-full"></div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+          <div className="border-primary-600 h-10 w-10 animate-spin rounded-full border-4 border-t-transparent"></div>
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
   );

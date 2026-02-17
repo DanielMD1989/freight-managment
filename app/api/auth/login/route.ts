@@ -1,14 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { verifyPassword, setSession, isLoginAllowed, createSessionRecord, generateOTP, hashPassword } from "@/lib/auth";
+import {
+  verifyPassword,
+  setSession,
+  isLoginAllowed,
+  createSessionRecord,
+  generateOTP,
+  hashPassword,
+} from "@/lib/auth";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { logAuthFailure, logAuthSuccess } from "@/lib/auditLog";
-import { addCorsHeaders as addSecureCorsHeaders, isOriginAllowed } from "@/lib/cors";
+import {
+  addCorsHeaders as addSecureCorsHeaders,
+  isOriginAllowed,
+} from "@/lib/cors";
 import { zodErrorResponse } from "@/lib/validation";
 
 // Helper to add CORS headers to response (uses secure origin validation)
-function addCorsHeaders(response: NextResponse, request: NextRequest): NextResponse {
+function addCorsHeaders(
+  response: NextResponse,
+  request: NextRequest
+): NextResponse {
   return addSecureCorsHeaders(response, request);
 }
 // CSRF token generated inline - generateCSRFToken imported dynamically
@@ -26,8 +39,17 @@ import { sendMFAOTP, isAfroMessageConfigured } from "@/lib/sms/afromessage";
 import { SignJWT } from "jose";
 
 // MFA temporary token secret (for pre-auth tokens)
+if (
+  !process.env.MFA_TOKEN_SECRET &&
+  !process.env.JWT_SECRET &&
+  process.env.NODE_ENV === "production"
+) {
+  throw new Error("MFA_TOKEN_SECRET or JWT_SECRET must be set in production");
+}
 const MFA_TOKEN_SECRET = new TextEncoder().encode(
-  process.env.MFA_TOKEN_SECRET || process.env.JWT_SECRET || "mfa-temp-token-secret-32chars!"
+  process.env.MFA_TOKEN_SECRET ||
+    process.env.JWT_SECRET ||
+    "mfa-temp-token-secret-32chars!"
 );
 
 const loginSchema = z.object({
@@ -37,16 +59,22 @@ const loginSchema = z.object({
 
 // Handle CORS preflight requests (uses secure origin validation)
 export async function OPTIONS(request: NextRequest) {
-  const origin = request.headers.get('origin');
+  const origin = request.headers.get("origin");
   const response = new NextResponse(null, { status: 204 });
 
   // Only set CORS headers if origin is in the allowed list
   if (origin && isOriginAllowed(origin)) {
-    response.headers.set('Access-Control-Allow-Origin', origin);
-    response.headers.set('Access-Control-Allow-Credentials', 'true');
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-client-type, x-csrf-token, Accept');
-    response.headers.set('Access-Control-Max-Age', '86400');
+    response.headers.set("Access-Control-Allow-Origin", origin);
+    response.headers.set("Access-Control-Allow-Credentials", "true");
+    response.headers.set(
+      "Access-Control-Allow-Methods",
+      "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    );
+    response.headers.set(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, x-client-type, x-csrf-token, Accept"
+    );
+    response.headers.set("Access-Control-Max-Age", "86400");
   }
 
   return response;
@@ -63,17 +91,20 @@ export async function POST(request: NextRequest) {
     // Check if IP is blocked
     if (await isIPBlocked(clientIp)) {
       await logSecurityEvent({
-        type: 'IP_BLOCKED',
+        type: "IP_BLOCKED",
         ip: clientIp,
-        details: { endpoint: '/api/auth/login', email: validatedData.email },
+        details: { endpoint: "/api/auth/login", email: validatedData.email },
       });
 
-      return addCorsHeaders(NextResponse.json(
-        {
-          error: 'Access denied. Your IP address has been blocked.',
-        },
-        { status: 403 }
-      ), request);
+      return addCorsHeaders(
+        NextResponse.json(
+          {
+            error: "Access denied. Your IP address has been blocked.",
+          },
+          { status: 403 }
+        ),
+        request
+      );
     }
 
     // Check brute force protection
@@ -82,53 +113,61 @@ export async function POST(request: NextRequest) {
       const remainingTime = await getRemainingBlockTime(bruteForceKey);
 
       await logSecurityEvent({
-        type: 'BRUTE_FORCE',
+        type: "BRUTE_FORCE",
         ip: clientIp,
         details: {
-          endpoint: '/api/auth/login',
+          endpoint: "/api/auth/login",
           email: validatedData.email,
           remainingBlockTime: remainingTime,
         },
       });
 
-      return addCorsHeaders(NextResponse.json(
-        {
-          error: `Too many failed login attempts. Account temporarily locked. Please try again in ${Math.ceil(remainingTime / 60)} minutes.`,
-          retryAfter: remainingTime,
-        },
-        { status: 429 }
-      ), request);
+      return addCorsHeaders(
+        NextResponse.json(
+          {
+            error: `Too many failed login attempts. Account temporarily locked. Please try again in ${Math.ceil(remainingTime / 60)} minutes.`,
+            retryAfter: remainingTime,
+          },
+          { status: 429 }
+        ),
+        request
+      );
     }
 
     // Rate limiting: 5 login attempts per 15 minutes per email
     const rateLimitKey = `${validatedData.email}:${clientIp}`;
     const rateLimit = await checkRateLimit(
       {
-        name: 'login',
+        name: "login",
         limit: 5,
         windowMs: 15 * 60 * 1000, // 15 minutes
-        message: 'Too many login attempts. Please try again later.',
+        message: "Too many login attempts. Please try again later.",
       },
       rateLimitKey
     );
 
     if (!rateLimit.allowed) {
-      await logAuthFailure(validatedData.email, 'Rate limit exceeded', request);
-      return addCorsHeaders(NextResponse.json(
-        {
-          error: 'Too many login attempts. Please try again later.',
-          retryAfter: Math.ceil((rateLimit.retryAfter || 0) / 1000),
-        },
-        {
-          status: 429,
-          headers: {
-            'X-RateLimit-Limit': rateLimit.limit.toString(),
-            'X-RateLimit-Remaining': '0',
-            'X-RateLimit-Reset': new Date(rateLimit.resetTime).toISOString(),
-            'Retry-After': Math.ceil((rateLimit.retryAfter || 0) / 1000).toString(),
+      await logAuthFailure(validatedData.email, "Rate limit exceeded", request);
+      return addCorsHeaders(
+        NextResponse.json(
+          {
+            error: "Too many login attempts. Please try again later.",
+            retryAfter: Math.ceil((rateLimit.retryAfter || 0) / 1000),
           },
-        }
-      ), request);
+          {
+            status: 429,
+            headers: {
+              "X-RateLimit-Limit": rateLimit.limit.toString(),
+              "X-RateLimit-Remaining": "0",
+              "X-RateLimit-Reset": new Date(rateLimit.resetTime).toISOString(),
+              "Retry-After": Math.ceil(
+                (rateLimit.retryAfter || 0) / 1000
+              ).toString(),
+            },
+          }
+        ),
+        request
+      );
     }
 
     // Find user by email
@@ -150,37 +189,55 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      await logAuthFailure(validatedData.email, 'User not found', request);
-      return addCorsHeaders(NextResponse.json(
-        {
-          error: "Invalid email or password",
-        },
-        { status: 401 }
-      ), request);
+      await logAuthFailure(validatedData.email, "User not found", request);
+      return addCorsHeaders(
+        NextResponse.json(
+          {
+            error: "Invalid email or password",
+          },
+          { status: 401 }
+        ),
+        request
+      );
     }
 
     // Check user status using centralized function
     const loginCheck = isLoginAllowed(user.status);
 
     if (!loginCheck.allowed) {
-      await logAuthFailure(validatedData.email, `Account status: ${user.status}`, request);
-      return addCorsHeaders(NextResponse.json(
-        {
-          error: loginCheck.error || "Account inactive. Please contact support.",
-        },
-        { status: 403 }
-      ), request);
+      await logAuthFailure(
+        validatedData.email,
+        `Account status: ${user.status}`,
+        request
+      );
+      return addCorsHeaders(
+        NextResponse.json(
+          {
+            error:
+              loginCheck.error || "Account inactive. Please contact support.",
+          },
+          { status: 403 }
+        ),
+        request
+      );
     }
 
     // Legacy check (will be deprecated)
     if (!user.isActive) {
-      await logAuthFailure(validatedData.email, 'Account inactive (legacy)', request);
-      return addCorsHeaders(NextResponse.json(
-        {
-          error: "Account is inactive. Please contact support.",
-        },
-        { status: 403 }
-      ), request);
+      await logAuthFailure(
+        validatedData.email,
+        "Account inactive (legacy)",
+        request
+      );
+      return addCorsHeaders(
+        NextResponse.json(
+          {
+            error: "Account is inactive. Please contact support.",
+          },
+          { status: 403 }
+        ),
+        request
+      );
     }
 
     // Determine access level based on status
@@ -202,26 +259,36 @@ export async function POST(request: NextRequest) {
 
       if (ipShouldBlock) {
         // Permanently block IP after too many attempts
-        await blockIP(clientIp, 'Excessive failed login attempts', 24 * 60 * 60 * 1000); // 24 hours
+        await blockIP(
+          clientIp,
+          "Excessive failed login attempts",
+          24 * 60 * 60 * 1000
+        ); // 24 hours
       }
 
-      await logAuthFailure(validatedData.email, 'Invalid password', request);
+      await logAuthFailure(validatedData.email, "Invalid password", request);
 
       if (shouldBlock) {
-        return addCorsHeaders(NextResponse.json(
-          {
-            error: "Too many failed attempts. Account temporarily locked.",
-          },
-          { status: 429 }
-        ), request);
+        return addCorsHeaders(
+          NextResponse.json(
+            {
+              error: "Too many failed attempts. Account temporarily locked.",
+            },
+            { status: 429 }
+          ),
+          request
+        );
       }
 
-      return addCorsHeaders(NextResponse.json(
-        {
-          error: "Invalid email or password",
-        },
-        { status: 401 }
-      ), request);
+      return addCorsHeaders(
+        NextResponse.json(
+          {
+            error: "Invalid email or password",
+          },
+          { status: 401 }
+        ),
+        request
+      );
     }
 
     // Reset failed attempts on successful login
@@ -243,31 +310,34 @@ export async function POST(request: NextRequest) {
       const mfaToken = await new SignJWT({
         userId: user.id,
         email: user.email,
-        purpose: 'mfa_verification',
+        purpose: "mfa_verification",
         otpHash: hashedOTP,
       })
-        .setProtectedHeader({ alg: 'HS256' })
+        .setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
-        .setExpirationTime('5m')
+        .setExpirationTime("5m")
         .sign(MFA_TOKEN_SECRET);
 
       // Send OTP via SMS
       if (isAfroMessageConfigured()) {
         const result = await sendMFAOTP(userMFA.phone, otp);
         if (!result.success) {
-          console.error('[Login MFA] Failed to send OTP:', result.error);
+          console.error("[Login MFA] Failed to send OTP:", result.error);
           // Still allow login if SMS fails - fallback to recovery codes
         }
       }
       // SECURITY: OTP is never logged - use SMS service for delivery
 
-      return addCorsHeaders(NextResponse.json({
-        mfaRequired: true,
-        message: 'Two-factor authentication required',
-        mfaToken: mfaToken,
-        phoneLastFour: userMFA.phone.slice(-4),
-        expiresIn: 300, // 5 minutes
-      }), request);
+      return addCorsHeaders(
+        NextResponse.json({
+          mfaRequired: true,
+          message: "Two-factor authentication required",
+          mfaToken: mfaToken,
+          phoneLastFour: userMFA.phone.slice(-4),
+          expiresIn: 300, // 5 minutes
+        }),
+        request
+      );
     }
 
     // No MFA - proceed with normal login
@@ -280,7 +350,7 @@ export async function POST(request: NextRequest) {
 
     // Create server-side session record for session management
     // PHASE 4: Pass user details for Redis caching
-    const userAgent = request.headers.get('user-agent');
+    const userAgent = request.headers.get("user-agent");
     const { sessionId } = await createSessionRecord(
       user.id,
       clientIp,
@@ -294,7 +364,7 @@ export async function POST(request: NextRequest) {
 
     // Create JWT session with sessionId for session validation
     // Also get the raw token for mobile clients
-    const { createSessionToken } = await import('@/lib/auth');
+    const { createSessionToken } = await import("@/lib/auth");
     const sessionToken = await createSessionToken({
       userId: user.id,
       email: user.email,
@@ -322,13 +392,14 @@ export async function POST(request: NextRequest) {
 
     // Generate CSRF token for the session
     // We need to generate token first, then build response with it
-    const { generateCSRFToken } = await import('@/lib/csrf');
+    const { generateCSRFToken } = await import("@/lib/csrf");
     const csrfToken = generateCSRFToken();
 
     // Check if request is from mobile app (via header or user-agent)
-    const isMobileClient = request.headers.get('x-client-type') === 'mobile' ||
-      request.headers.get('user-agent')?.includes('Dart') ||
-      request.headers.get('user-agent')?.includes('Flutter');
+    const isMobileClient =
+      request.headers.get("x-client-type") === "mobile" ||
+      request.headers.get("user-agent")?.includes("Dart") ||
+      request.headers.get("user-agent")?.includes("Flutter");
 
     const response = NextResponse.json({
       message: isLimitedAccess
@@ -345,20 +416,24 @@ export async function POST(request: NextRequest) {
       },
       limitedAccess: isLimitedAccess,
       ...(isLimitedAccess && {
-        allowedActions: ['view_profile', 'upload_documents', 'complete_registration'],
-        restrictedMessage: 'Your account is pending verification. Some features are restricted.',
+        allowedActions: [
+          "view_profile",
+          "upload_documents",
+          "complete_registration",
+        ],
+        restrictedMessage:
+          "Your account is pending verification. Some features are restricted.",
       }),
-      csrfToken, // Include token for client-side caching
       // Include session token for mobile clients (for Authorization header)
       ...(isMobileClient && { sessionToken }),
     });
 
     // Set CSRF cookie
-    response.cookies.set('csrf_token', csrfToken, {
+    response.cookies.set("csrf_token", csrfToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
       maxAge: 60 * 60 * 24, // 24 hours
     });
 
@@ -366,18 +441,25 @@ export async function POST(request: NextRequest) {
     return addCorsHeaders(response, request);
   } catch (error) {
     console.error("Login error:", error);
-    console.error("Login error stack:", error instanceof Error ? error.stack : "No stack trace");
+    console.error(
+      "Login error stack:",
+      error instanceof Error ? error.stack : "No stack trace"
+    );
 
     if (error instanceof z.ZodError) {
       return addCorsHeaders(zodErrorResponse(error), request);
     }
 
-    return addCorsHeaders(NextResponse.json(
-      {
-        error: "Internal server error",
-        details: process.env.NODE_ENV !== 'production' ? String(error) : undefined,
-      },
-      { status: 500 }
-    ), request);
+    return addCorsHeaders(
+      NextResponse.json(
+        {
+          error: "Internal server error",
+          details:
+            process.env.NODE_ENV !== "production" ? String(error) : undefined,
+        },
+        { status: 500 }
+      ),
+      request
+    );
   }
 }

@@ -11,8 +11,8 @@
  * - Data integrity issues
  */
 
-import { z } from 'zod';
-import { NextResponse } from 'next/server';
+import { z } from "zod";
+import { NextResponse } from "next/server";
 
 /**
  * Email validation
@@ -20,16 +20,16 @@ import { NextResponse } from 'next/server';
  */
 export const emailSchema = z
   .string()
-  .email('Invalid email format')
-  .min(5, 'Email must be at least 5 characters')
-  .max(254, 'Email must not exceed 254 characters')
+  .email("Invalid email format")
+  .min(5, "Email must be at least 5 characters")
+  .max(254, "Email must not exceed 254 characters")
   .toLowerCase()
   .refine(
     (email) => {
       // Additional checks: no consecutive dots, no leading/trailing dots
       return !/\.\./.test(email) && !/^\./.test(email) && !/\.$/.test(email);
     },
-    { message: 'Invalid email format' }
+    { message: "Invalid email format" }
   );
 
 /**
@@ -52,19 +52,19 @@ export function validateEmail(email: string): boolean {
  */
 export const phoneSchema = z
   .string()
-  .min(9, 'Phone number must be at least 9 digits')
-  .max(15, 'Phone number must not exceed 15 characters')
+  .min(9, "Phone number must be at least 9 digits")
+  .max(15, "Phone number must not exceed 15 characters")
   .refine(
     (phone) => {
       // Remove spaces and dashes
-      const cleaned = phone.replace(/[\s\-]/g, '');
+      const cleaned = phone.replace(/[\s\-]/g, "");
 
       // Ethiopian format: starts with +251, 0, or 9
       const ethiopianPattern = /^(\+251|0)?9\d{8}$/;
 
       return ethiopianPattern.test(cleaned);
     },
-    { message: 'Invalid Ethiopian phone number format' }
+    { message: "Invalid Ethiopian phone number format" }
   );
 
 /**
@@ -86,19 +86,19 @@ export function validatePhoneNumber(phone: string): boolean {
  * Removes HTML tags and dangerous characters
  */
 export function sanitizeText(input: string, maxLength: number = 1000): string {
-  if (!input || typeof input !== 'string') {
-    return '';
+  if (!input || typeof input !== "string") {
+    return "";
   }
 
   // Remove HTML tags
-  let sanitized = input.replace(/<[^>]*>/g, '');
+  let sanitized = input.replace(/<[^>]*>/g, "");
 
   // Remove script-related content
-  sanitized = sanitized.replace(/javascript:/gi, '');
-  sanitized = sanitized.replace(/on\w+\s*=/gi, '');
+  sanitized = sanitized.replace(/javascript:/gi, "");
+  sanitized = sanitized.replace(/on\w+\s*=/gi, "");
 
   // Normalize whitespace
-  sanitized = sanitized.replace(/\s+/g, ' ').trim();
+  sanitized = sanitized.replace(/\s+/g, " ").trim();
 
   // Limit length
   if (sanitized.length > maxLength) {
@@ -117,38 +117,42 @@ export function validateFileName(fileName: string): {
   error?: string;
   sanitized?: string;
 } {
-  if (!fileName || typeof fileName !== 'string') {
-    return { valid: false, error: 'File name is required' };
+  if (!fileName || typeof fileName !== "string") {
+    return { valid: false, error: "File name is required" };
   }
 
   // Check length
   if (fileName.length > 255) {
-    return { valid: false, error: 'File name too long (max 255 characters)' };
+    return { valid: false, error: "File name too long (max 255 characters)" };
   }
 
   // Check for path traversal attempts
-  if (fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
-    return { valid: false, error: 'File name contains invalid characters' };
+  if (
+    fileName.includes("..") ||
+    fileName.includes("/") ||
+    fileName.includes("\\")
+  ) {
+    return { valid: false, error: "File name contains invalid characters" };
   }
 
   // Check for null bytes
-  if (fileName.includes('\0')) {
-    return { valid: false, error: 'File name contains null bytes' };
+  if (fileName.includes("\0")) {
+    return { valid: false, error: "File name contains null bytes" };
   }
 
   // Only allow alphanumeric, dash, underscore, dot, and space
   const validPattern = /^[a-zA-Z0-9\-_\.\s]+$/;
   if (!validPattern.test(fileName)) {
-    return { valid: false, error: 'File name contains invalid characters' };
+    return { valid: false, error: "File name contains invalid characters" };
   }
 
   // Must have an extension
-  if (!fileName.includes('.')) {
-    return { valid: false, error: 'File name must have an extension' };
+  if (!fileName.includes(".")) {
+    return { valid: false, error: "File name must have an extension" };
   }
 
   // Sanitize: remove multiple consecutive spaces/dots
-  let sanitized = fileName.replace(/\s+/g, ' ').replace(/\.+/g, '.');
+  let sanitized = fileName.replace(/\s+/g, " ").replace(/\.+/g, ".");
   sanitized = sanitized.trim();
 
   return { valid: true, sanitized };
@@ -163,7 +167,7 @@ export function validateNumericRange(
   max: number,
   fieldName: string
 ): { valid: boolean; error?: string } {
-  if (typeof value !== 'number' || isNaN(value)) {
+  if (typeof value !== "number" || isNaN(value)) {
     return { valid: false, error: `${fieldName} must be a valid number` };
   }
 
@@ -240,17 +244,17 @@ export function validateFutureDate(
  * Allows more characters but prevents XSS
  */
 export function sanitizeRejectionReason(reason: string): string {
-  if (!reason) return '';
+  if (!reason) return "";
 
   // Remove HTML tags
-  let sanitized = reason.replace(/<[^>]*>/g, '');
+  let sanitized = reason.replace(/<[^>]*>/g, "");
 
   // Remove script content
-  sanitized = sanitized.replace(/javascript:/gi, '');
-  sanitized = sanitized.replace(/on\w+\s*=/gi, '');
+  sanitized = sanitized.replace(/javascript:/gi, "");
+  sanitized = sanitized.replace(/on\w+\s*=/gi, "");
 
   // Normalize whitespace but preserve newlines
-  sanitized = sanitized.replace(/[ \t]+/g, ' ');
+  sanitized = sanitized.replace(/[ \t]+/g, " ");
 
   // Limit to 500 characters
   if (sanitized.length > 500) {
@@ -272,11 +276,14 @@ export function validateUUID(id: string): boolean {
 /**
  * Validate ID format (cuid or uuid)
  */
-export function validateIdFormat(id: string, fieldName: string = 'ID'): {
+export function validateIdFormat(
+  id: string,
+  fieldName: string = "ID"
+): {
   valid: boolean;
   error?: string;
 } {
-  if (!id || typeof id !== 'string') {
+  if (!id || typeof id !== "string") {
     return { valid: false, error: `${fieldName} is required` };
   }
 
@@ -286,7 +293,8 @@ export function validateIdFormat(id: string, fieldName: string = 'ID'): {
   }
 
   // Check for SQL injection attempts
-  const sqlPatterns = /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION)\b|--|;|\/\*|\*\/)/i;
+  const sqlPatterns =
+    /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION)\b|--|;|\/\*|\*\/)/i;
   if (sqlPatterns.test(id)) {
     return { valid: false, error: `Invalid ${fieldName} format` };
   }
@@ -305,10 +313,10 @@ export function validateIdFormat(id: string, fieldName: string = 'ID'): {
  */
 export const weightSchema = z
   .number()
-  .positive('Weight must be positive')
-  .min(1, 'Weight must be at least 1 kg')
-  .max(50000, 'Weight must not exceed 50,000 kg')
-  .finite('Weight must be a finite number');
+  .positive("Weight must be positive")
+  .min(1, "Weight must be at least 1 kg")
+  .max(50000, "Weight must not exceed 50,000 kg")
+  .finite("Weight must be a finite number");
 
 /**
  * Length validation (in meters)
@@ -316,10 +324,10 @@ export const weightSchema = z
  */
 export const lengthSchema = z
   .number()
-  .positive('Length must be positive')
-  .min(0.1, 'Length must be at least 0.1 m')
-  .max(20, 'Length must not exceed 20 m')
-  .finite('Length must be a finite number');
+  .positive("Length must be positive")
+  .min(0.1, "Length must be at least 0.1 m")
+  .max(20, "Length must not exceed 20 m")
+  .finite("Length must be a finite number");
 
 /**
  * Distance validation (in kilometers)
@@ -327,9 +335,9 @@ export const lengthSchema = z
  */
 export const distanceSchema = z
   .number()
-  .nonnegative('Distance must be non-negative')
-  .max(2000, 'Distance must not exceed 2,000 km')
-  .finite('Distance must be a finite number');
+  .nonnegative("Distance must be non-negative")
+  .max(2000, "Distance must not exceed 2,000 km")
+  .finite("Distance must be a finite number");
 
 /**
  * File size validation (in bytes)
@@ -340,8 +348,8 @@ export function validateFileSize(
 ): { valid: boolean; error?: string } {
   const maxBytes = maxSizeMB * 1024 * 1024;
 
-  if (typeof size !== 'number' || size <= 0) {
-    return { valid: false, error: 'Invalid file size' };
+  if (typeof size !== "number" || size <= 0) {
+    return { valid: false, error: "Invalid file size" };
   }
 
   if (size > maxBytes) {
@@ -362,7 +370,7 @@ export function validateFileSize(
  * - At least one number
  */
 export function validatePassword(password: string): boolean {
-  if (!password || typeof password !== 'string') {
+  if (!password || typeof password !== "string") {
     return false;
   }
 
@@ -385,6 +393,11 @@ export function validatePassword(password: string): boolean {
     return false;
   }
 
+  // Check for at least one special character
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    return false;
+  }
+
   return true;
 }
 
@@ -397,9 +410,9 @@ export function sanitizeZodError(error: z.ZodError): {
   fields: { field: string; message: string }[];
 } {
   return {
-    error: 'Validation error',
+    error: "Validation error",
     fields: error.issues.map((issue) => ({
-      field: issue.path.join('.'),
+      field: issue.path.join("."),
       message: issue.message,
     })),
   };

@@ -11,8 +11,9 @@
  * Access: Admin for management, any authenticated user for evaluation
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import {
   getAllFeatureFlags,
   createFeatureFlag,
@@ -20,8 +21,8 @@ import {
   getFeatureFlagStats,
   type FeatureFlag,
   type FlagCategory,
-} from '@/lib/featureFlags';
-import { logger } from '@/lib/logger';
+} from "@/lib/featureFlags";
+import { logger } from "@/lib/logger";
 
 /**
  * GET /api/feature-flags
@@ -30,11 +31,11 @@ export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth();
     const { searchParams } = request.nextUrl;
-    const evaluate = searchParams.get('evaluate') === 'true';
-    const category = searchParams.get('category') as FlagCategory | null;
+    const evaluate = searchParams.get("evaluate") === "true";
+    const category = searchParams.get("category") as FlagCategory | null;
 
     // For non-admins, only return evaluated flags
-    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
+    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       const evaluatedFlags = await getFeatureFlagsForClient({
         userId: session.userId,
         organizationId: session.organizationId,
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
 
     // Filter by category if specified
     if (category) {
-      flags = flags.filter(f => f.category === category);
+      flags = flags.filter((f) => f.category === category);
     }
 
     const stats = getFeatureFlagStats();
@@ -77,17 +78,17 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    logger.error('Feature flags GET error', error);
+    logger.error("Feature flags GET error", error);
 
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
+    if (error instanceof Error && error.message.includes("Unauthorized")) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: "Authentication required" },
         { status: 401 }
       );
     }
 
     return NextResponse.json(
-      { error: 'Failed to retrieve feature flags' },
+      { error: "Failed to retrieve feature flags" },
       { status: 500 }
     );
   }
@@ -98,12 +99,16 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    // CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireAuth();
 
     // Admin only
-    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
+    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: 'Unauthorized: Admin access required' },
+        { error: "Unauthorized: Admin access required" },
         { status: 403 }
       );
     }
@@ -114,7 +119,7 @@ export async function POST(request: NextRequest) {
       name,
       description,
       enabled = false,
-      category = 'beta',
+      category = "beta",
       rolloutPercentage = 0,
       targetRules,
       metadata,
@@ -123,7 +128,7 @@ export async function POST(request: NextRequest) {
     // Validation
     if (!key || !name) {
       return NextResponse.json(
-        { error: 'key and name are required' },
+        { error: "key and name are required" },
         { status: 400 }
       );
     }
@@ -131,14 +136,17 @@ export async function POST(request: NextRequest) {
     // Validate key format
     if (!/^[a-z][a-z0-9_]*$/.test(key)) {
       return NextResponse.json(
-        { error: 'key must be lowercase alphanumeric with underscores, starting with a letter' },
+        {
+          error:
+            "key must be lowercase alphanumeric with underscores, starting with a letter",
+        },
         { status: 400 }
       );
     }
 
     // Check if flag already exists
     const existing = await getAllFeatureFlags();
-    if (existing.some(f => f.key === key)) {
+    if (existing.some((f) => f.key === key)) {
       return NextResponse.json(
         { error: `Feature flag with key '${key}' already exists` },
         { status: 409 }
@@ -149,7 +157,7 @@ export async function POST(request: NextRequest) {
       {
         key,
         name,
-        description: description || '',
+        description: description || "",
         enabled,
         category,
         rolloutPercentage,
@@ -160,24 +168,24 @@ export async function POST(request: NextRequest) {
       session.userId
     );
 
-    logger.info('Feature flag created via API', {
+    logger.info("Feature flag created via API", {
       flagKey: key,
       userId: session.userId,
     });
 
     return NextResponse.json({ flag }, { status: 201 });
   } catch (error) {
-    logger.error('Feature flags POST error', error);
+    logger.error("Feature flags POST error", error);
 
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
+    if (error instanceof Error && error.message.includes("Unauthorized")) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: "Authentication required" },
         { status: 401 }
       );
     }
 
     return NextResponse.json(
-      { error: 'Failed to create feature flag' },
+      { error: "Failed to create feature flag" },
       { status: 500 }
     );
   }
@@ -190,8 +198,8 @@ export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
     },
   });
 }

@@ -5,17 +5,18 @@
  * Create and manage disputes for loads
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { z } from 'zod';
-import { zodErrorResponse } from '@/lib/validation';
-import { Prisma } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { z } from "zod";
+import { zodErrorResponse } from "@/lib/validation";
+import { Prisma } from "@prisma/client";
 
 const createDisputeSchema = z.object({
   loadId: z.string(),
-  type: z.enum(['PAYMENT_ISSUE', 'DAMAGE', 'LATE_DELIVERY', 'OTHER']),
-  description: z.string().min(10, 'Description must be at least 10 characters'),
+  type: z.enum(["PAYMENT_ISSUE", "DAMAGE", "LATE_DELIVERY", "OTHER"]),
+  description: z.string().min(10, "Description must be at least 10 characters"),
   evidence: z.string().optional(),
 });
 
@@ -25,6 +26,10 @@ const createDisputeSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
+    // CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireAuth();
     const body = await request.json();
     const validatedData = createDisputeSchema.parse(body);
@@ -43,16 +48,17 @@ export async function POST(request: NextRequest) {
     });
 
     if (!load) {
-      return NextResponse.json({ error: 'Load not found' }, { status: 404 });
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // Check if user is shipper or carrier for this load
     const isShipper = load.shipper?.id === session.organizationId;
-    const isCarrier = load.assignedTruck?.carrier?.id === session.organizationId;
+    const isCarrier =
+      load.assignedTruck?.carrier?.id === session.organizationId;
 
     if (!isShipper && !isCarrier) {
       return NextResponse.json(
-        { error: 'Forbidden: You do not have access to this load' },
+        { error: "Forbidden: You do not have access to this load" },
         { status: 403 }
       );
     }
@@ -66,7 +72,7 @@ export async function POST(request: NextRequest) {
         type: validatedData.type,
         description: validatedData.description,
         evidenceUrls: validatedData.evidence ? [validatedData.evidence] : [],
-        status: 'OPEN',
+        status: "OPEN",
       },
       include: {
         load: {
@@ -88,23 +94,23 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({
-      message: 'Dispute created successfully',
+      message: "Dispute created successfully",
       dispute,
     });
-  // FIX: Use unknown type with type guards
+    // FIX: Use unknown type with type guards
   } catch (error: unknown) {
-    console.error('Error creating dispute:', error);
+    console.error("Error creating dispute:", error);
 
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     return NextResponse.json(
-      { error: 'Failed to create dispute' },
+      { error: "Failed to create dispute" },
       { status: 500 }
     );
   }
@@ -119,8 +125,8 @@ export async function GET(request: NextRequest) {
     const session = await requireAuth();
     const { searchParams } = new URL(request.url);
 
-    const status = searchParams.get('status');
-    const loadId = searchParams.get('loadId');
+    const status = searchParams.get("status");
+    const loadId = searchParams.get("loadId");
 
     // Build where clause
     const where: Prisma.DisputeWhereInput = {
@@ -151,7 +157,7 @@ export async function GET(request: NextRequest) {
 
     const disputes = await db.dispute.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       include: {
         load: {
           select: {
@@ -179,16 +185,16 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ disputes });
-  // FIX: Use unknown type with type guard
+    // FIX: Use unknown type with type guard
   } catch (error: unknown) {
-    console.error('Error fetching disputes:', error);
+    console.error("Error fetching disputes:", error);
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     return NextResponse.json(
-      { error: 'Failed to fetch disputes' },
+      { error: "Failed to fetch disputes" },
       { status: 500 }
     );
   }

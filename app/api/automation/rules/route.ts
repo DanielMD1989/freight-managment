@@ -3,26 +3,27 @@
  * API endpoints for creating and managing automation rules
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { requirePermission, Permission } from '@/lib/rbac';
-import { z } from 'zod';
-import { zodErrorResponse } from '@/lib/validation';
-import { Prisma } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { requirePermission, Permission } from "@/lib/rbac";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { z } from "zod";
+import { zodErrorResponse } from "@/lib/validation";
+import { Prisma } from "@prisma/client";
 
 const createRuleSchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().optional(),
-  ruleType: z.enum(['TIME_BASED', 'GPS_BASED', 'THRESHOLD_BASED', 'CUSTOM']),
+  ruleType: z.enum(["TIME_BASED", "GPS_BASED", "THRESHOLD_BASED", "CUSTOM"]),
   trigger: z.enum([
-    'ON_LOAD_CREATED',
-    'ON_LOAD_ASSIGNED',
-    'ON_PICKUP_PENDING',
-    'ON_IN_TRANSIT',
-    'ON_STATUS_CHANGE',
-    'ON_SCHEDULE',
-    'ON_MANUAL',
+    "ON_LOAD_CREATED",
+    "ON_LOAD_ASSIGNED",
+    "ON_PICKUP_PENDING",
+    "ON_IN_TRANSIT",
+    "ON_STATUS_CHANGE",
+    "ON_SCHEDULE",
+    "ON_MANUAL",
   ]),
   conditions: z.record(z.string(), z.any()), // JSON object
   actions: z.array(z.record(z.string(), z.any())), // Array of action objects
@@ -34,6 +35,10 @@ const createRuleSchema = z.object({
 // POST /api/automation/rules - Create new automation rule
 export async function POST(request: NextRequest) {
   try {
+    // CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requirePermission(Permission.MANAGE_RULES);
 
     const body = await request.json();
@@ -41,7 +46,10 @@ export async function POST(request: NextRequest) {
 
     // Calculate next execution time for scheduled rules
     let nextExecutionAt = null;
-    if (validatedData.trigger === 'ON_SCHEDULE' && validatedData.schedulePattern) {
+    if (
+      validatedData.trigger === "ON_SCHEDULE" &&
+      validatedData.schedulePattern
+    ) {
       // Simplified: Set to 5 minutes from now
       // In production, use cron-parser to calculate next run
       nextExecutionAt = new Date(Date.now() + 5 * 60 * 1000);
@@ -56,7 +64,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({
-      message: 'Automation rule created successfully',
+      message: "Automation rule created successfully",
       rule,
     });
   } catch (error) {
@@ -64,9 +72,9 @@ export async function POST(request: NextRequest) {
       return zodErrorResponse(error);
     }
 
-    console.error('Create automation rule error:', error);
+    console.error("Create automation rule error:", error);
     return NextResponse.json(
-      { error: 'Failed to create automation rule' },
+      { error: "Failed to create automation rule" },
       { status: 500 }
     );
   }
@@ -78,11 +86,11 @@ export async function GET(request: NextRequest) {
     await requirePermission(Permission.VIEW_RULES);
 
     const { searchParams } = new URL(request.url);
-    const ruleType = searchParams.get('ruleType');
-    const trigger = searchParams.get('trigger');
-    const isEnabled = searchParams.get('isEnabled');
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const pageSize = parseInt(searchParams.get('pageSize') || '50', 10);
+    const ruleType = searchParams.get("ruleType");
+    const trigger = searchParams.get("trigger");
+    const isEnabled = searchParams.get("isEnabled");
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const pageSize = parseInt(searchParams.get("pageSize") || "50", 10);
 
     const where: Prisma.AutomationRuleWhereInput = {};
 
@@ -95,16 +103,13 @@ export async function GET(request: NextRequest) {
     }
 
     if (isEnabled !== null && isEnabled !== undefined) {
-      where.isEnabled = isEnabled === 'true';
+      where.isEnabled = isEnabled === "true";
     }
 
     const [rules, total] = await Promise.all([
       db.automationRule.findMany({
         where,
-        orderBy: [
-          { priority: 'desc' },
-          { createdAt: 'desc' },
-        ],
+        orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: {
@@ -126,9 +131,9 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('List automation rules error:', error);
+    console.error("List automation rules error:", error);
     return NextResponse.json(
-      { error: 'Failed to list automation rules' },
+      { error: "Failed to list automation rules" },
       { status: 500 }
     );
   }

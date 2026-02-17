@@ -173,7 +173,8 @@ class TripService {
       );
 
       if (response.statusCode == 200) {
-        final trip = Trip.fromJson(response.data);
+        final tripData = response.data['trip'] ?? response.data;
+        final trip = Trip.fromJson(tripData);
         return ApiResponse.success(trip);
       }
 

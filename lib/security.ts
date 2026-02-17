@@ -14,8 +14,15 @@
  * import from redis.ts.
  */
 
-import { NextResponse } from 'next/server';
-import { redis, isRedisEnabled, RedisKeys, setWithTTL, get, del } from './redis';
+import { NextResponse } from "next/server";
+import {
+  redis,
+  isRedisEnabled,
+  RedisKeys,
+  setWithTTL,
+  get,
+  del,
+} from "./redis";
 
 /**
  * Generate CSRF token (Edge-compatible using Web Crypto API)
@@ -23,7 +30,9 @@ import { redis, isRedisEnabled, RedisKeys, setWithTTL, get, del } from './redis'
 export function generateCSRFToken(): string {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
-  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+  return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join(
+    ""
+  );
 }
 
 /**
@@ -46,17 +55,17 @@ export function verifyCSRFToken(token: string, expectedToken: string): boolean {
  * Sanitize input to prevent XSS attacks
  */
 export function sanitizeInput(input: string): string {
-  if (typeof input !== 'string') {
-    return '';
+  if (typeof input !== "string") {
+    return "";
   }
 
   return input
     .replace(/[<>\"']/g, (char) => {
       const entities: Record<string, string> = {
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#x27;',
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#x27;",
       };
       return entities[char] || char;
     })
@@ -70,17 +79,23 @@ export function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
   const sanitized = {} as T;
 
   for (const [key, value] of Object.entries(obj)) {
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       (sanitized as Record<string, unknown>)[key] = sanitizeInput(value);
-    } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      (sanitized as Record<string, unknown>)[key] = sanitizeObject(value as Record<string, unknown>);
+    } else if (
+      typeof value === "object" &&
+      value !== null &&
+      !Array.isArray(value)
+    ) {
+      (sanitized as Record<string, unknown>)[key] = sanitizeObject(
+        value as Record<string, unknown>
+      );
     } else if (Array.isArray(value)) {
       (sanitized as Record<string, unknown>)[key] = value.map((item) =>
-        typeof item === 'string'
+        typeof item === "string"
           ? sanitizeInput(item)
-          : typeof item === 'object' && item !== null
-          ? sanitizeObject(item as Record<string, unknown>)
-          : item
+          : typeof item === "object" && item !== null
+            ? sanitizeObject(item as Record<string, unknown>)
+            : item
       );
     } else {
       (sanitized as Record<string, unknown>)[key] = value;
@@ -104,11 +119,15 @@ export function generateCSPNonce(): string {
  * Format: comma-separated list (e.g., "https://api.example.com,wss://ws.example.com")
  */
 function getConnectSrcDomains(): string {
-  const domains = process.env.CSP_CONNECT_SRC || '';
-  const baseDomains = "'self' https://maps.googleapis.com https://maps.google.com";
+  const domains = process.env.CSP_CONNECT_SRC || "";
+  const baseDomains =
+    "'self' https://maps.googleapis.com https://maps.google.com";
 
   if (domains) {
-    return `${baseDomains} ${domains.split(',').map(d => d.trim()).join(' ')}`;
+    return `${baseDomains} ${domains
+      .split(",")
+      .map((d) => d.trim())
+      .join(" ")}`;
   }
 
   return baseDomains;
@@ -123,24 +142,29 @@ function getConnectSrcDomains(): string {
  * - Added 'strict-dynamic' for trusted script loading
  * - Improved connect-src with WebSocket support
  */
-export function addSecurityHeaders(response: NextResponse, nonce?: string): NextResponse {
+export function addSecurityHeaders(
+  response: NextResponse,
+  nonce?: string
+): NextResponse {
   // Generate nonce if not provided
   const cspNonce = nonce || generateCSPNonce();
 
   // Build Content Security Policy
   // Note: 'strict-dynamic' allows scripts loaded by trusted scripts
   // In production, use nonces for inline scripts
-  const scriptSrc = process.env.NODE_ENV === 'production'
-    ? `'self' 'nonce-${cspNonce}' 'strict-dynamic' https://maps.googleapis.com`
-    : `'self' 'nonce-${cspNonce}' https://maps.googleapis.com`; // Dev: no strict-dynamic for easier debugging
+  const scriptSrc =
+    process.env.NODE_ENV === "production"
+      ? `'self' 'nonce-${cspNonce}' 'strict-dynamic' https://maps.googleapis.com`
+      : `'self' 'nonce-${cspNonce}' https://maps.googleapis.com`; // Dev: no strict-dynamic for easier debugging
 
   // Style-src: Use nonce for inline styles in production
-  const styleSrc = process.env.NODE_ENV === 'production'
-    ? `'self' 'nonce-${cspNonce}' https://fonts.googleapis.com`
-    : `'self' 'unsafe-inline' https://fonts.googleapis.com`; // Dev: allow inline for hot reload
+  const styleSrc =
+    process.env.NODE_ENV === "production"
+      ? `'self' 'nonce-${cspNonce}' https://fonts.googleapis.com`
+      : `'self' 'unsafe-inline' https://fonts.googleapis.com`; // Dev: allow inline for hot reload
 
   response.headers.set(
-    'Content-Security-Policy',
+    "Content-Security-Policy",
     [
       "default-src 'self'",
       `script-src ${scriptSrc}`,
@@ -152,41 +176,41 @@ export function addSecurityHeaders(response: NextResponse, nonce?: string): Next
       "base-uri 'self'",
       "form-action 'self'",
       "upgrade-insecure-requests",
-    ].join('; ')
+    ].join("; ")
   );
 
   // Set the nonce header for the app to use
-  response.headers.set('X-CSP-Nonce', cspNonce);
+  response.headers.set("X-CSP-Nonce", cspNonce);
 
   // XSS Protection (legacy, but still useful for older browsers)
-  response.headers.set('X-XSS-Protection', '1; mode=block');
+  response.headers.set("X-XSS-Protection", "1; mode=block");
 
   // Content Type Options - Prevent MIME type sniffing
-  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set("X-Content-Type-Options", "nosniff");
 
   // Frame Options - Prevent clickjacking
-  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set("X-Frame-Options", "DENY");
 
   // Referrer Policy - Control referrer information
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
 
   // Permissions Policy - Disable unnecessary features
   response.headers.set(
-    'Permissions-Policy',
-    'camera=(), microphone=(), geolocation=(self), payment=(), usb=()'
+    "Permissions-Policy",
+    "camera=(), microphone=(), geolocation=(self), payment=(), usb=()"
   );
 
   // Strict Transport Security (HSTS) - Force HTTPS
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === "production") {
     response.headers.set(
-      'Strict-Transport-Security',
-      'max-age=31536000; includeSubDomains; preload'
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
     );
   }
 
   // Cross-Origin policies for additional isolation
-  response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
-  response.headers.set('Cross-Origin-Resource-Policy', 'same-origin');
+  response.headers.set("Cross-Origin-Opener-Policy", "same-origin");
+  response.headers.set("Cross-Origin-Resource-Policy", "same-origin");
 
   return response;
 }
@@ -205,7 +229,7 @@ export function isValidEmail(email: string): boolean {
 export function isValidEthiopianPhone(phone: string): boolean {
   // Ethiopian phone: +251-XXX-XXX-XXX or 09XX-XXX-XXX
   const phoneRegex = /^(\+251|0)[79]\d{8}$/;
-  const cleanPhone = phone.replace(/[-\s]/g, '');
+  const cleanPhone = phone.replace(/[-\s]/g, "");
   return phoneRegex.test(cleanPhone);
 }
 
@@ -216,32 +240,21 @@ export function isStrongPassword(password: string): {
   isValid: boolean;
   errors: string[];
 } {
+  // Delegates to canonical password policy (same rules as lib/auth.ts validatePasswordPolicy)
   const errors: string[] = [];
 
-  if (password.length < 8) {
-    errors.push('Password must be at least 8 characters long');
-  }
+  if (password.length < 8)
+    errors.push("Password must be at least 8 characters long");
+  if (!/[a-z]/.test(password))
+    errors.push("Password must contain at least one lowercase letter");
+  if (!/[A-Z]/.test(password))
+    errors.push("Password must contain at least one uppercase letter");
+  if (!/[0-9]/.test(password))
+    errors.push("Password must contain at least one number");
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password))
+    errors.push("Password must contain at least one special character");
 
-  if (!/[a-z]/.test(password)) {
-    errors.push('Password must contain at least one lowercase letter');
-  }
-
-  if (!/[A-Z]/.test(password)) {
-    errors.push('Password must contain at least one uppercase letter');
-  }
-
-  if (!/[0-9]/.test(password)) {
-    errors.push('Password must contain at least one number');
-  }
-
-  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-    errors.push('Password must contain at least one special character');
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-  };
+  return { isValid: errors.length === 0, errors };
 }
 
 /**
@@ -250,7 +263,9 @@ export function isStrongPassword(password: string): {
 export function generateSecureToken(length: number = 32): string {
   const array = new Uint8Array(length);
   crypto.getRandomValues(array);
-  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+  return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join(
+    ""
+  );
 }
 
 /**
@@ -261,16 +276,16 @@ export function generateSecureToken(length: number = 32): string {
 export async function hashData(data: string): Promise<string> {
   const encoder = new TextEncoder();
   const dataBuffer = encoder.encode(data);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
+  return hashArray.map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 /**
  * Check if IP is in allowed list
  */
 export function isIPAllowed(ip: string, allowedIPs: string[]): boolean {
-  return allowedIPs.includes(ip) || allowedIPs.includes('*');
+  return allowedIPs.includes(ip) || allowedIPs.includes("*");
 }
 
 /**
@@ -293,13 +308,13 @@ export function hasSQLInjectionPattern(input: string): boolean {
  * Security event type mapping to database event types
  */
 const SECURITY_EVENT_TYPE_MAP: Record<string, string> = {
-  'RATE_LIMIT': 'SECURITY_RATE_LIMIT',
-  'SQL_INJECTION': 'SECURITY_SQL_INJECTION',
-  'XSS_ATTEMPT': 'SECURITY_XSS_ATTEMPT',
-  'UNAUTHORIZED_ACCESS': 'SECURITY_UNAUTHORIZED_ACCESS',
-  'CSRF_FAILURE': 'SECURITY_CSRF_FAILURE',
-  'BRUTE_FORCE': 'SECURITY_BRUTE_FORCE',
-  'IP_BLOCKED': 'SECURITY_IP_BLOCKED',
+  RATE_LIMIT: "SECURITY_RATE_LIMIT",
+  SQL_INJECTION: "SECURITY_SQL_INJECTION",
+  XSS_ATTEMPT: "SECURITY_XSS_ATTEMPT",
+  UNAUTHORIZED_ACCESS: "SECURITY_UNAUTHORIZED_ACCESS",
+  CSRF_FAILURE: "SECURITY_CSRF_FAILURE",
+  BRUTE_FORCE: "SECURITY_BRUTE_FORCE",
+  IP_BLOCKED: "SECURITY_IP_BLOCKED",
 };
 
 /**
@@ -307,7 +322,14 @@ const SECURITY_EVENT_TYPE_MAP: Record<string, string> = {
  * Stores in database for audit trail when userId is available
  */
 export async function logSecurityEvent(event: {
-  type: 'RATE_LIMIT' | 'SQL_INJECTION' | 'XSS_ATTEMPT' | 'UNAUTHORIZED_ACCESS' | 'CSRF_FAILURE' | 'BRUTE_FORCE' | 'IP_BLOCKED';
+  type:
+    | "RATE_LIMIT"
+    | "SQL_INJECTION"
+    | "XSS_ATTEMPT"
+    | "UNAUTHORIZED_ACCESS"
+    | "CSRF_FAILURE"
+    | "BRUTE_FORCE"
+    | "IP_BLOCKED";
   ip: string;
   userAgent?: string;
   userId?: string;
@@ -316,7 +338,7 @@ export async function logSecurityEvent(event: {
   const timestamp = new Date().toISOString();
 
   // Always log to console (for log aggregation services like DataDog, Sentry)
-  console.warn('[SECURITY]', {
+  console.warn("[SECURITY]", {
     timestamp,
     ...event,
   });
@@ -326,7 +348,7 @@ export async function logSecurityEvent(event: {
   if (event.userId) {
     try {
       // Dynamic import to avoid circular dependencies
-      const { db } = await import('./db');
+      const { db } = await import("./db");
 
       await db.securityEvent.create({
         data: {
@@ -335,12 +357,14 @@ export async function logSecurityEvent(event: {
           ipAddress: event.ip,
           userAgent: event.userAgent || null,
           success: false, // Security events are typically failures/threats
-          metadata: event.details ? JSON.parse(JSON.stringify(event.details)) : undefined,
+          metadata: event.details
+            ? JSON.parse(JSON.stringify(event.details))
+            : undefined,
         },
       });
     } catch (error) {
       // Don't let audit trail failures break the application
-      console.error('[SECURITY] Failed to store audit event:', error);
+      console.error("[SECURITY] Failed to store audit event:", error);
     }
   }
 }
@@ -356,7 +380,7 @@ export async function logSecurityEvent(event: {
 interface BruteForceAttempt {
   count: number;
   firstAttempt: number; // Unix timestamp
-  lastAttempt: number;  // Unix timestamp
+  lastAttempt: number; // Unix timestamp
 }
 
 // In-memory fallback store (used when Redis unavailable)
@@ -382,7 +406,7 @@ export async function recordFailedAttempt(
   config: BruteForceConfig = DEFAULT_BRUTE_FORCE_CONFIG
 ): Promise<boolean> {
   const now = Date.now();
-  const key = RedisKeys.bruteForce('login', identifier);
+  const key = RedisKeys.bruteForce("login", identifier);
 
   // Try Redis first
   if (isRedisEnabled() && redis) {
@@ -411,7 +435,7 @@ export async function recordFailedAttempt(
 
       return attempt.count >= config.maxAttempts;
     } catch (error) {
-      console.error('[Security] Redis brute force error:', error);
+      console.error("[Security] Redis brute force error:", error);
       // Fall through to in-memory fallback
     }
   }
@@ -422,7 +446,11 @@ export async function recordFailedAttempt(
     const timeSinceFirst = now - existing.firstAttempt;
 
     if (timeSinceFirst > config.windowMs) {
-      bruteForceStoreFallback.set(identifier, { count: 1, firstAttempt: now, lastAttempt: now });
+      bruteForceStoreFallback.set(identifier, {
+        count: 1,
+        firstAttempt: now,
+        lastAttempt: now,
+      });
       return false;
     }
 
@@ -431,7 +459,11 @@ export async function recordFailedAttempt(
     bruteForceStoreFallback.set(identifier, existing);
     return existing.count >= config.maxAttempts;
   } else {
-    bruteForceStoreFallback.set(identifier, { count: 1, firstAttempt: now, lastAttempt: now });
+    bruteForceStoreFallback.set(identifier, {
+      count: 1,
+      firstAttempt: now,
+      lastAttempt: now,
+    });
     return false;
   }
 }
@@ -444,7 +476,7 @@ export async function isBlockedByBruteForce(
   config: BruteForceConfig = DEFAULT_BRUTE_FORCE_CONFIG
 ): Promise<boolean> {
   const now = Date.now();
-  const key = RedisKeys.bruteForce('login', identifier);
+  const key = RedisKeys.bruteForce("login", identifier);
 
   // Try Redis first
   if (isRedisEnabled() && redis) {
@@ -455,7 +487,10 @@ export async function isBlockedByBruteForce(
       const attempt: BruteForceAttempt = JSON.parse(data);
       const timeSinceLast = now - attempt.lastAttempt;
 
-      if (attempt.count >= config.maxAttempts && timeSinceLast < config.blockDurationMs) {
+      if (
+        attempt.count >= config.maxAttempts &&
+        timeSinceLast < config.blockDurationMs
+      ) {
         return true;
       }
 
@@ -465,7 +500,7 @@ export async function isBlockedByBruteForce(
       }
       return false;
     } catch (error) {
-      console.error('[Security] Redis brute force check error:', error);
+      console.error("[Security] Redis brute force check error:", error);
       // Fall through to in-memory fallback
     }
   }
@@ -476,7 +511,10 @@ export async function isBlockedByBruteForce(
 
   const timeSinceLast = now - attempt.lastAttempt;
 
-  if (attempt.count >= config.maxAttempts && timeSinceLast < config.blockDurationMs) {
+  if (
+    attempt.count >= config.maxAttempts &&
+    timeSinceLast < config.blockDurationMs
+  ) {
     return true;
   }
 
@@ -491,13 +529,13 @@ export async function isBlockedByBruteForce(
  * Reset failed attempts for identifier (e.g., after successful login)
  */
 export async function resetFailedAttempts(identifier: string): Promise<void> {
-  const key = RedisKeys.bruteForce('login', identifier);
+  const key = RedisKeys.bruteForce("login", identifier);
 
   if (isRedisEnabled() && redis) {
     try {
       await del(key);
     } catch (error) {
-      console.error('[Security] Redis reset error:', error);
+      console.error("[Security] Redis reset error:", error);
     }
   }
 
@@ -512,7 +550,7 @@ export async function getRemainingBlockTime(
   config: BruteForceConfig = DEFAULT_BRUTE_FORCE_CONFIG
 ): Promise<number> {
   const now = Date.now();
-  const key = RedisKeys.bruteForce('login', identifier);
+  const key = RedisKeys.bruteForce("login", identifier);
 
   // Try Redis first
   if (isRedisEnabled() && redis) {
@@ -528,7 +566,7 @@ export async function getRemainingBlockTime(
 
       return remainingMs > 0 ? Math.ceil(remainingMs / 1000) : 0;
     } catch (error) {
-      console.error('[Security] Redis remaining time error:', error);
+      console.error("[Security] Redis remaining time error:", error);
     }
   }
 
@@ -582,10 +620,12 @@ export async function blockIP(
   if (isRedisEnabled() && redis) {
     try {
       // If no duration, use a very long TTL (1 year)
-      const ttlSeconds = durationMs ? Math.ceil(durationMs / 1000) : 365 * 24 * 60 * 60;
+      const ttlSeconds = durationMs
+        ? Math.ceil(durationMs / 1000)
+        : 365 * 24 * 60 * 60;
       await setWithTTL(key, JSON.stringify(entry), ttlSeconds);
     } catch (error) {
-      console.error('[Security] Redis IP block error:', error);
+      console.error("[Security] Redis IP block error:", error);
     }
   }
 
@@ -593,7 +633,7 @@ export async function blockIP(
   blockedIPsFallback.set(ip, entry);
 
   logSecurityEvent({
-    type: 'IP_BLOCKED',
+    type: "IP_BLOCKED",
     ip,
     details: { reason, durationMs },
   });
@@ -621,7 +661,7 @@ export async function isIPBlocked(ip: string): Promise<boolean> {
         return true;
       }
     } catch (error) {
-      console.error('[Security] Redis IP block check error:', error);
+      console.error("[Security] Redis IP block check error:", error);
     }
   }
 
@@ -650,7 +690,7 @@ export async function unblockIP(ip: string): Promise<boolean> {
       await del(key);
       deleted = true;
     } catch (error) {
-      console.error('[Security] Redis IP unblock error:', error);
+      console.error("[Security] Redis IP unblock error:", error);
     }
   }
 
@@ -681,7 +721,9 @@ export function getBlockedIPs(): IPBlockEntry[] {
 /**
  * Get block details for an IP (Redis-backed)
  */
-export async function getIPBlockDetails(ip: string): Promise<IPBlockEntry | undefined> {
+export async function getIPBlockDetails(
+  ip: string
+): Promise<IPBlockEntry | undefined> {
   const key = RedisKeys.ipBlock(ip);
 
   // Try Redis first
@@ -692,7 +734,7 @@ export async function getIPBlockDetails(ip: string): Promise<IPBlockEntry | unde
         return JSON.parse(data) as IPBlockEntry;
       }
     } catch (error) {
-      console.error('[Security] Redis IP block details error:', error);
+      console.error("[Security] Redis IP block details error:", error);
     }
   }
 
@@ -722,16 +764,16 @@ export function cleanupExpiredBlocks(): number {
  */
 export function getClientIP(headers: Headers): string {
   // Try common proxy headers first
-  const forwarded = headers.get('x-forwarded-for');
+  const forwarded = headers.get("x-forwarded-for");
   if (forwarded) {
-    return forwarded.split(',')[0].trim();
+    return forwarded.split(",")[0].trim();
   }
 
-  const realIP = headers.get('x-real-ip');
+  const realIP = headers.get("x-real-ip");
   if (realIP) {
     return realIP.trim();
   }
 
   // Fallback to connection IP
-  return headers.get('x-vercel-forwarded-for') || 'unknown';
+  return headers.get("x-vercel-forwarded-for") || "unknown";
 }

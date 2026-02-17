@@ -1,8 +1,19 @@
 import bcrypt from "bcryptjs";
-import { SignJWT, jwtVerify, EncryptJWT, jwtDecrypt, type JWTPayload } from "jose";
+import {
+  SignJWT,
+  jwtVerify,
+  EncryptJWT,
+  jwtDecrypt,
+  type JWTPayload,
+} from "jose";
 import { cookies, headers } from "next/headers";
 import { createHash, randomBytes } from "crypto";
-import { SessionCache, UserCache, CacheInvalidation, cache as globalCache } from "@/lib/cache";
+import {
+  SessionCache,
+  UserCache,
+  CacheInvalidation,
+  cache as globalCache,
+} from "@/lib/cache";
 
 /**
  * Production-Ready JWT Authentication
@@ -17,6 +28,9 @@ import { SessionCache, UserCache, CacheInvalidation, cache as globalCache } from
  */
 
 // Signing key (32+ bytes recommended for HS256)
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production") {
+  throw new Error("JWT_SECRET must be set in production");
+}
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "development-jwt-secret-min-32-chars!"
 );
@@ -24,7 +38,14 @@ const JWT_SECRET = new TextEncoder().encode(
 // Encryption key (must be exactly 32 bytes for A256GCM)
 // Pad or truncate to ensure exactly 32 bytes
 function getEncryptionKey(): Uint8Array {
-  const keyString = process.env.JWT_ENCRYPTION_KEY || "dev-encrypt-key-32bytes-padding!";
+  if (
+    !process.env.JWT_ENCRYPTION_KEY &&
+    process.env.NODE_ENV === "production"
+  ) {
+    throw new Error("JWT_ENCRYPTION_KEY must be set in production");
+  }
+  const keyString =
+    process.env.JWT_ENCRYPTION_KEY || "dev-encrypt-key-32bytes-padding!";
   const encoded = new TextEncoder().encode(keyString);
   const key = new Uint8Array(32);
   key.set(encoded.slice(0, 32));
@@ -107,10 +128,20 @@ export async function verifyToken(
     // If encryption is enabled, decrypt first
     if (ENABLE_ENCRYPTION) {
       try {
-        const { payload: encryptedPayload } = await jwtDecrypt(token, JWT_ENCRYPTION_KEY);
+        const { payload: encryptedPayload } = await jwtDecrypt(
+          token,
+          JWT_ENCRYPTION_KEY
+        );
         signedToken = encryptedPayload.token as string;
       } catch {
-        // Fallback: Try as unencrypted token (migration support)
+        // In production, do NOT silently fall back to unencrypted tokens
+        if (process.env.NODE_ENV === "production") {
+          console.error(
+            "Token decryption failed in production - rejecting token"
+          );
+          return null;
+        }
+        // Fallback: Try as unencrypted token (development/migration support only)
         signedToken = token;
       }
     }
@@ -139,8 +170,10 @@ export async function getSession(): Promise<SessionPayload | null> {
  * Get session from Authorization header (for mobile/API clients)
  * Use this when you need to support Bearer token auth
  */
-export async function getSessionFromHeader(authHeader: string | null): Promise<SessionPayload | null> {
-  if (!authHeader?.startsWith('Bearer ')) {
+export async function getSessionFromHeader(
+  authHeader: string | null
+): Promise<SessionPayload | null> {
+  if (!authHeader?.startsWith("Bearer ")) {
     return null;
   }
 
@@ -165,7 +198,9 @@ export async function getSessionFromHeader(authHeader: string | null): Promise<S
  * Checks cookies first, then falls back to Authorization header
  * If no authHeader provided, automatically reads from request headers
  */
-export async function getSessionAny(authHeader?: string | null): Promise<SessionPayload | null> {
+export async function getSessionAny(
+  authHeader?: string | null
+): Promise<SessionPayload | null> {
   // Try cookies first
   const cookieSession = await getSession();
   if (cookieSession) {
@@ -177,9 +212,8 @@ export async function getSessionAny(authHeader?: string | null): Promise<Session
   if (authorizationHeader === undefined) {
     try {
       const headerStore = await headers();
-      authorizationHeader = headerStore.get('authorization');
-    } catch {
-    }
+      authorizationHeader = headerStore.get("authorization");
+    } catch {}
   }
 
   // Fall back to Authorization header
@@ -216,13 +250,21 @@ export async function setSession(payload: SessionPayload): Promise<void> {
   // Also cache user profile for fast access
   // SECURITY: Do NOT default to ACTIVE - if status is missing, treat as PENDING_VERIFICATION
   // This prevents unauthorized access if JWT is malformed or tampered with
-  const validStatuses = ['ACTIVE', 'PENDING_VERIFICATION', 'SUSPENDED', 'REJECTED'];
-  const userStatus = payload.status && validStatuses.includes(payload.status)
-    ? payload.status
-    : 'PENDING_VERIFICATION';
+  const validStatuses = [
+    "ACTIVE",
+    "PENDING_VERIFICATION",
+    "SUSPENDED",
+    "REJECTED",
+  ];
+  const userStatus =
+    payload.status && validStatuses.includes(payload.status)
+      ? payload.status
+      : "PENDING_VERIFICATION";
 
   if (!payload.status || !validStatuses.includes(payload.status)) {
-    console.warn(`[AUTH] Invalid or missing status in JWT for user ${payload.userId}. Defaulting to PENDING_VERIFICATION.`);
+    console.warn(
+      `[AUTH] Invalid or missing status in JWT for user ${payload.userId}. Defaulting to PENDING_VERIFICATION.`
+    );
   }
 
   await UserCache.set(payload.userId, {
@@ -274,10 +316,15 @@ export async function requireAuth(): Promise<SessionPayload> {
  * Fallback: In-memory Map (5 second TTL)
  * At 10K DAU: reduces DB queries by 95%+ for status checks
  */
-const userStatusCache = new Map<string, { status: string; isActive: boolean; cachedAt: number }>();
+const userStatusCache = new Map<
+  string,
+  { status: string; isActive: boolean; cachedAt: number }
+>();
 const USER_STATUS_CACHE_TTL_MS = 5000; // 5 seconds for in-memory fallback
 
-export async function requireActiveUser(): Promise<SessionPayload & { dbStatus: string }> {
+export async function requireActiveUser(): Promise<
+  SessionPayload & { dbStatus: string }
+> {
   const session = await getSessionAny();
 
   if (!session) {
@@ -293,12 +340,21 @@ export async function requireActiveUser(): Promise<SessionPayload & { dbStatus: 
   // PHASE 4: Check Redis cache first (distributed)
   const cachedUser = await UserCache.get(session.userId);
   if (cachedUser && cachedUser.status) {
-    userStatus = { status: cachedUser.status, isActive: cachedUser.status === 'ACTIVE' };
+    userStatus = {
+      status: cachedUser.status,
+      isActive: cachedUser.status === "ACTIVE",
+    };
   } else {
     // Fallback: Check in-memory cache (local)
     const memoryCached = userStatusCache.get(session.userId);
-    if (memoryCached && (now - memoryCached.cachedAt) < USER_STATUS_CACHE_TTL_MS) {
-      userStatus = { status: memoryCached.status, isActive: memoryCached.isActive };
+    if (
+      memoryCached &&
+      now - memoryCached.cachedAt < USER_STATUS_CACHE_TTL_MS
+    ) {
+      userStatus = {
+        status: memoryCached.status,
+        isActive: memoryCached.isActive,
+      };
     } else {
       // Cache miss: Fetch from database
       const user = await db.user.findUnique({
@@ -336,14 +392,17 @@ export async function requireActiveUser(): Promise<SessionPayload & { dbStatus: 
   }
 
   // Check user status - only ACTIVE users can perform actions
-  if (userStatus.status !== 'ACTIVE') {
-    if (userStatus.status === 'SUSPENDED') {
+  if (userStatus.status !== "ACTIVE") {
+    if (userStatus.status === "SUSPENDED") {
       throw new Error("Forbidden: Account suspended");
     }
-    if (userStatus.status === 'REJECTED') {
+    if (userStatus.status === "REJECTED") {
       throw new Error("Forbidden: Account rejected");
     }
-    if (userStatus.status === 'REGISTERED' || userStatus.status === 'PENDING_VERIFICATION') {
+    if (
+      userStatus.status === "REGISTERED" ||
+      userStatus.status === "PENDING_VERIFICATION"
+    ) {
       throw new Error("Forbidden: Account pending verification");
     }
     throw new Error("Forbidden: Account inactive");
@@ -399,7 +458,9 @@ export async function requireActiveRole(
  * Permits REGISTERED and PENDING_VERIFICATION users for limited actions
  * (e.g., document upload, profile completion)
  */
-export async function requireRegistrationAccess(): Promise<SessionPayload & { dbStatus: string }> {
+export async function requireRegistrationAccess(): Promise<
+  SessionPayload & { dbStatus: string }
+> {
   const session = await getSession();
 
   if (!session) {
@@ -418,12 +479,12 @@ export async function requireRegistrationAccess(): Promise<SessionPayload & { db
   }
 
   // Allow REGISTERED, PENDING_VERIFICATION, and ACTIVE users
-  const allowedStatuses = ['REGISTERED', 'PENDING_VERIFICATION', 'ACTIVE'];
+  const allowedStatuses = ["REGISTERED", "PENDING_VERIFICATION", "ACTIVE"];
   if (!allowedStatuses.includes(user.status)) {
-    if (user.status === 'SUSPENDED') {
+    if (user.status === "SUSPENDED") {
       throw new Error("Forbidden: Account suspended");
     }
-    if (user.status === 'REJECTED') {
+    if (user.status === "REJECTED") {
       throw new Error("Forbidden: Account rejected");
     }
     throw new Error("Forbidden: Account inactive");
@@ -437,19 +498,31 @@ export async function requireRegistrationAccess(): Promise<SessionPayload & { db
  * SUSPENDED and REJECTED users cannot login
  * REGISTERED and PENDING_VERIFICATION get limited access
  */
-export function isLoginAllowed(status: string): { allowed: boolean; limited: boolean; error?: string } {
+export function isLoginAllowed(status: string): {
+  allowed: boolean;
+  limited: boolean;
+  error?: string;
+} {
   switch (status) {
-    case 'ACTIVE':
+    case "ACTIVE":
       return { allowed: true, limited: false };
-    case 'REGISTERED':
-    case 'PENDING_VERIFICATION':
+    case "REGISTERED":
+    case "PENDING_VERIFICATION":
       return { allowed: true, limited: true };
-    case 'SUSPENDED':
-      return { allowed: false, limited: false, error: 'Account suspended. Please contact support.' };
-    case 'REJECTED':
-      return { allowed: false, limited: false, error: 'Registration rejected. Please contact support.' };
+    case "SUSPENDED":
+      return {
+        allowed: false,
+        limited: false,
+        error: "Account suspended. Please contact support.",
+      };
+    case "REJECTED":
+      return {
+        allowed: false,
+        limited: false,
+        error: "Registration rejected. Please contact support.",
+      };
     default:
-      return { allowed: false, limited: false, error: 'Account inactive.' };
+      return { allowed: false, limited: false, error: "Account inactive." };
   }
 }
 
@@ -524,17 +597,24 @@ export function parseUserAgent(userAgent: string | null): string {
   if (userAgent.includes("Firefox/")) browser = "Firefox";
   else if (userAgent.includes("Edg/")) browser = "Edge";
   else if (userAgent.includes("Chrome/")) browser = "Chrome";
-  else if (userAgent.includes("Safari/") && !userAgent.includes("Chrome")) browser = "Safari";
-  else if (userAgent.includes("Opera") || userAgent.includes("OPR/")) browser = "Opera";
+  else if (userAgent.includes("Safari/") && !userAgent.includes("Chrome"))
+    browser = "Safari";
+  else if (userAgent.includes("Opera") || userAgent.includes("OPR/"))
+    browser = "Opera";
 
   // Detect OS
   if (userAgent.includes("Windows NT 10")) os = "Windows 10";
-  else if (userAgent.includes("Windows NT 11") || userAgent.includes("Windows NT 10.0; Win64; x64")) os = "Windows";
+  else if (
+    userAgent.includes("Windows NT 11") ||
+    userAgent.includes("Windows NT 10.0; Win64; x64")
+  )
+    os = "Windows";
   else if (userAgent.includes("Windows")) os = "Windows";
   else if (userAgent.includes("Mac OS X")) os = "macOS";
   else if (userAgent.includes("Linux")) os = "Linux";
   else if (userAgent.includes("Android")) os = "Android";
-  else if (userAgent.includes("iPhone") || userAgent.includes("iPad")) os = "iOS";
+  else if (userAgent.includes("iPhone") || userAgent.includes("iPad"))
+    os = "iOS";
 
   return `${browser} on ${os}`;
 }
@@ -591,7 +671,13 @@ export async function createSessionRecord(
  */
 export async function validateSessionByToken(token: string): Promise<{
   valid: boolean;
-  session: { id: string; userId: string; email?: string; role?: string; organizationId?: string } | null;
+  session: {
+    id: string;
+    userId: string;
+    email?: string;
+    role?: string;
+    organizationId?: string;
+  } | null;
   reason?: string;
 }> {
   const { db } = await import("./db");
@@ -681,7 +767,10 @@ export async function refreshSessionCacheTTL(sessionId: string): Promise<void> {
  * Revoke a specific session
  * PHASE 4: Also invalidates Redis cache
  */
-export async function revokeSession(sessionId: string, userId?: string): Promise<void> {
+export async function revokeSession(
+  sessionId: string,
+  userId?: string
+): Promise<void> {
   const { db } = await import("./db");
 
   await db.session.update({
@@ -725,7 +814,7 @@ export async function revokeAllSessions(
 
   // PHASE 4: Invalidate Redis cache for all revoked sessions
   await Promise.all(
-    sessions.map(session => CacheInvalidation.session(session.id, userId))
+    sessions.map((session) => CacheInvalidation.session(session.id, userId))
   );
 
   // Also clear user status cache
@@ -789,11 +878,12 @@ export interface PasswordValidation {
 }
 
 /**
- * Validate password against policy
+ * Validate password against policy (canonical source of truth)
  * - Minimum 8 characters
  * - At least 1 uppercase letter
  * - At least 1 lowercase letter
  * - At least 1 number
+ * - At least 1 special character
  */
 export function validatePasswordPolicy(password: string): PasswordValidation {
   const errors: string[] = [];
@@ -812,6 +902,10 @@ export function validatePasswordPolicy(password: string): PasswordValidation {
 
   if (!/[0-9]/.test(password)) {
     errors.push("Password must contain at least 1 number");
+  }
+
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    errors.push("Password must contain at least 1 special character");
   }
 
   return {
@@ -849,7 +943,9 @@ export function generateRecoveryCodes(): string[] {
  * Hash recovery codes for storage
  */
 export async function hashRecoveryCodes(codes: string[]): Promise<string[]> {
-  return Promise.all(codes.map(code => bcrypt.hash(code.replace("-", ""), 10)));
+  return Promise.all(
+    codes.map((code) => bcrypt.hash(code.replace("-", ""), 10))
+  );
 }
 
 /**
@@ -885,7 +981,9 @@ export function generateOTP(): string {
  * This token is sent in Authorization header instead of cookies
  * for mobile apps that can't easily handle cross-origin cookies
  */
-export async function createSessionToken(payload: SessionPayload): Promise<string> {
+export async function createSessionToken(
+  payload: SessionPayload
+): Promise<string> {
   // Create a signed JWT (not encrypted) for mobile clients
   const token = await new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })

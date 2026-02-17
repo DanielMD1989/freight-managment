@@ -11,15 +11,16 @@
  * Access: Admin only
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import {
   getFeatureFlag,
   updateFeatureFlag,
   deleteFeatureFlag,
   isFeatureEnabled,
-} from '@/lib/featureFlags';
-import { logger } from '@/lib/logger';
+} from "@/lib/featureFlags";
+import { logger } from "@/lib/logger";
 
 interface RouteParams {
   params: Promise<{ key: string }>;
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { key } = await params;
 
     // For non-admins, only return evaluation result
-    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
+    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       const enabled = await isFeatureEnabled(key, {
         userId: session.userId,
         organizationId: session.organizationId,
@@ -60,17 +61,17 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ flag });
   } catch (error) {
-    logger.error('Feature flag GET error', error);
+    logger.error("Feature flag GET error", error);
 
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
+    if (error instanceof Error && error.message.includes("Unauthorized")) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: "Authentication required" },
         { status: 401 }
       );
     }
 
     return NextResponse.json(
-      { error: 'Failed to retrieve feature flag' },
+      { error: "Failed to retrieve feature flag" },
       { status: 500 }
     );
   }
@@ -81,13 +82,17 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
+    // CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireAuth();
     const { key } = await params;
 
     // Admin only
-    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
+    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: 'Unauthorized: Admin access required' },
+        { error: "Unauthorized: Admin access required" },
         { status: 403 }
       );
     }
@@ -109,13 +114,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (description !== undefined) updates.description = description;
     if (enabled !== undefined) updates.enabled = enabled;
     if (category !== undefined) updates.category = category;
-    if (rolloutPercentage !== undefined) updates.rolloutPercentage = rolloutPercentage;
+    if (rolloutPercentage !== undefined)
+      updates.rolloutPercentage = rolloutPercentage;
     if (targetRules !== undefined) updates.targetRules = targetRules;
     if (metadata !== undefined) updates.metadata = metadata;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json(
-        { error: 'No updates provided' },
+        { error: "No updates provided" },
         { status: 400 }
       );
     }
@@ -129,7 +135,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    logger.info('Feature flag updated via API', {
+    logger.info("Feature flag updated via API", {
       flagKey: key,
       userId: session.userId,
       updates: Object.keys(updates),
@@ -137,17 +143,17 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ flag });
   } catch (error) {
-    logger.error('Feature flag PATCH error', error);
+    logger.error("Feature flag PATCH error", error);
 
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
+    if (error instanceof Error && error.message.includes("Unauthorized")) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: "Authentication required" },
         { status: 401 }
       );
     }
 
     return NextResponse.json(
-      { error: 'Failed to update feature flag' },
+      { error: "Failed to update feature flag" },
       { status: 500 }
     );
   }
@@ -158,22 +164,26 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    // CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireAuth();
     const { key } = await params;
 
     // Admin only
-    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
+    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: 'Unauthorized: Admin access required' },
+        { error: "Unauthorized: Admin access required" },
         { status: 403 }
       );
     }
 
     // Prevent deleting core flags
     const flag = await getFeatureFlag(key);
-    if (flag?.category === 'core') {
+    if (flag?.category === "core") {
       return NextResponse.json(
-        { error: 'Cannot delete core feature flags' },
+        { error: "Cannot delete core feature flags" },
         { status: 403 }
       );
     }
@@ -187,24 +197,24 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    logger.info('Feature flag deleted via API', {
+    logger.info("Feature flag deleted via API", {
       flagKey: key,
       userId: session.userId,
     });
 
     return NextResponse.json({ success: true, key });
   } catch (error) {
-    logger.error('Feature flag DELETE error', error);
+    logger.error("Feature flag DELETE error", error);
 
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
+    if (error instanceof Error && error.message.includes("Unauthorized")) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: "Authentication required" },
         { status: 401 }
       );
     }
 
     return NextResponse.json(
-      { error: 'Failed to delete feature flag' },
+      { error: "Failed to delete feature flag" },
       { status: 500 }
     );
   }
@@ -217,8 +227,8 @@ export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Methods': 'GET, PATCH, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      "Access-Control-Allow-Methods": "GET, PATCH, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
     },
   });
 }

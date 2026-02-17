@@ -6,23 +6,26 @@
  * Allows users to report issues, bad behavior, or submit feedback.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import { requireAuth } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { createNotificationForRole } from '@/lib/notifications';
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { db } from "@/lib/db";
+import { createNotificationForRole } from "@/lib/notifications";
 
 // Request body schema for support report
 const supportReportSchema = z.object({
-  type: z.enum(['BUG', 'MISCONDUCT', 'FEEDBACK', 'OTHER'], {
-    message: 'Invalid report type'
+  type: z.enum(["BUG", "MISCONDUCT", "FEEDBACK", "OTHER"], {
+    message: "Invalid report type",
   }),
-  subject: z.string()
-    .min(3, 'Subject must be at least 3 characters')
-    .max(200, 'Subject must not exceed 200 characters'),
-  description: z.string()
-    .min(10, 'Description must be at least 10 characters')
-    .max(5000, 'Description must not exceed 5000 characters'),
+  subject: z
+    .string()
+    .min(3, "Subject must be at least 3 characters")
+    .max(200, "Subject must not exceed 200 characters"),
+  description: z
+    .string()
+    .min(10, "Description must be at least 10 characters")
+    .max(5000, "Description must not exceed 5000 characters"),
   entityType: z.string().optional(),
   entityId: z.string().optional(),
 });
@@ -33,9 +36,15 @@ const supportReportSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
+    // CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireAuth();
-    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip');
-    const userAgent = request.headers.get('user-agent');
+    const ipAddress =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip");
+    const userAgent = request.headers.get("user-agent");
 
     const body = await request.json();
 
@@ -43,11 +52,12 @@ export async function POST(request: NextRequest) {
     const validation = supportReportSchema.safeParse(body);
     if (!validation.success) {
       // FIX: Use zodErrorResponse to avoid schema leak
-      const { zodErrorResponse } = await import('@/lib/validation');
+      const { zodErrorResponse } = await import("@/lib/validation");
       return zodErrorResponse(validation.error);
     }
 
-    const { type, subject, description, entityType, entityId } = validation.data;
+    const { type, subject, description, entityType, entityId } =
+      validation.data;
 
     // Get user details
     const user = await db.user.findUnique({
@@ -62,10 +72,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const reportId = `report-${Date.now()}`;
@@ -76,12 +83,12 @@ export async function POST(request: NextRequest) {
       data: {
         userId: session.userId,
         organizationId: user.organizationId,
-        eventType: 'SUPPORT_REPORT_SUBMITTED',
-        severity: type === 'MISCONDUCT' ? 'WARNING' : 'INFO',
-        resource: 'SUPPORT_REPORT',
+        eventType: "SUPPORT_REPORT_SUBMITTED",
+        severity: type === "MISCONDUCT" ? "WARNING" : "INFO",
+        resource: "SUPPORT_REPORT",
         resourceId: reportId,
         action: type,
-        result: 'SUCCESS',
+        result: "SUCCESS",
         message: subject,
         ipAddress,
         userAgent,
@@ -100,30 +107,30 @@ export async function POST(request: NextRequest) {
 
     // Notify admin/support team about new report
     await createNotificationForRole({
-      role: 'ADMIN',
-      type: 'SUPPORT_REPORT',
+      role: "ADMIN",
+      type: "SUPPORT_REPORT",
       title: `New Support Report: ${type}`,
       message: `${user.firstName} ${user.lastName} (${user.email}) submitted a ${type.toLowerCase()} report: "${subject}"`,
       metadata: { reportId, type, subject, userEmail: user.email },
-    }).catch((err) => console.error('Failed to notify admins about support report:', err));
+    }).catch((err) =>
+      console.error("Failed to notify admins about support report:", err)
+    );
 
     return NextResponse.json({
       success: true,
-      message: 'Report submitted successfully. Our support team will review it.',
+      message:
+        "Report submitted successfully. Our support team will review it.",
       referenceId: `SR-${Date.now().toString(36).toUpperCase()}`,
     });
   } catch (error) {
-    console.error('Failed to submit support report:', error);
+    console.error("Failed to submit support report:", error);
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     return NextResponse.json(
-      { error: 'Failed to submit report' },
+      { error: "Failed to submit report" },
       { status: 500 }
     );
   }
@@ -141,7 +148,7 @@ export async function GET() {
     const reports = await db.auditLog.findMany({
       where: {
         userId: session.userId,
-        eventType: 'SUPPORT_REPORT_SUBMITTED',
+        eventType: "SUPPORT_REPORT_SUBMITTED",
       },
       select: {
         id: true,
@@ -150,7 +157,7 @@ export async function GET() {
         message: true,
         action: true,
       },
-      orderBy: { id: 'desc' },
+      orderBy: { id: "desc" },
       take: 20,
     });
 
@@ -161,7 +168,7 @@ export async function GET() {
         referenceId: report.resourceId,
         type: report.action || (metadata?.reportType as string),
         subject: report.message || (metadata?.subject as string),
-        status: 'SUBMITTED', // In a real implementation, track status
+        status: "SUBMITTED", // In a real implementation, track status
         submittedAt: metadata?.submittedAt || null,
       };
     });
@@ -170,17 +177,14 @@ export async function GET() {
       reports: formattedReports,
     });
   } catch (error) {
-    console.error('Failed to get support reports:', error);
+    console.error("Failed to get support reports:", error);
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     return NextResponse.json(
-      { error: 'Failed to retrieve reports' },
+      { error: "Failed to retrieve reports" },
       { status: 500 }
     );
   }

@@ -12,7 +12,7 @@ const registerSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  role: z.enum(["SHIPPER", "CARRIER", "DISPATCHER", "ADMIN", "SUPER_ADMIN"]),
+  role: z.enum(["SHIPPER", "CARRIER", "DISPATCHER"]),
   organizationId: z.string().optional(), // Sprint 16: Story 16.4 - Assign dispatcher to organization
   // Organization fields
   companyName: z.string().optional(),

@@ -244,7 +244,8 @@ class LoadService {
       final response = await _apiClient.dio.patch('/api/loads/$id', data: data);
 
       if (response.statusCode == 200) {
-        final load = Load.fromJson(response.data);
+        final loadData = response.data['load'] ?? response.data;
+        final load = Load.fromJson(loadData);
         return ApiResponse.success(load);
       }
 

@@ -5,17 +5,22 @@
  * Automatically settle completed loads with POD verification
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { autoSettleCompletedLoads } from '@/lib/loadAutomation';
+import { NextRequest, NextResponse } from "next/server";
+import { autoSettleCompletedLoads } from "@/lib/loadAutomation";
 
 export async function POST(request: NextRequest) {
   try {
     // Verify cron secret
-    const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    const authHeader = request.headers.get("authorization");
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        {
+          error: !cronSecret
+            ? "Server misconfigured - CRON_SECRET required"
+            : "Unauthorized",
+        },
+        { status: !cronSecret ? 500 : 401 }
       );
     }
 
@@ -29,11 +34,11 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Error in auto-settle cron:', error);
+    console.error("Error in auto-settle cron:", error);
     return NextResponse.json(
       {
-        error: 'Failed to auto-settle loads',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        error: "Failed to auto-settle loads",
+        message: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
@@ -42,9 +47,10 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   return NextResponse.json({
-    name: 'auto-settle',
-    description: 'Automatically settles completed loads that have POD verification',
-    schedule: '0 3 * * *', // Daily at 3 AM
+    name: "auto-settle",
+    description:
+      "Automatically settles completed loads that have POD verification",
+    schedule: "0 3 * * *", // Daily at 3 AM
     lastRun: null,
   });
 }

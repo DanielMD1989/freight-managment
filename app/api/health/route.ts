@@ -14,16 +14,30 @@
  */
 
 // Force Node.js runtime (required for ioredis/bullmq compatibility)
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { checkDatabaseHealth, getPoolMetrics } from "@/lib/db";
 import { checkRedisHealth, isRedisEnabled } from "@/lib/redis";
 import { getRateLimitMetrics } from "@/lib/rateLimit";
 import { getCacheStats, getCacheMetrics } from "@/lib/cache";
-import { checkStorageHealth, getStorageProvider, isCDNEnabled } from "@/lib/storage";
-import { getMonitoringSummary, getSystemMetrics, getActiveAlerts } from "@/lib/monitoring";
-import { getQueueInfo, getAllQueueStats, isQueueReady, getWorkerStatus, getQueueHealthStatus } from "@/lib/queue";
+import {
+  checkStorageHealth,
+  getStorageProvider,
+  isCDNEnabled,
+} from "@/lib/storage";
+import {
+  getMonitoringSummary,
+  getSystemMetrics,
+  getActiveAlerts,
+} from "@/lib/monitoring";
+import {
+  getQueueInfo,
+  getAllQueueStats,
+  isQueueReady,
+  getWorkerStatus,
+  getQueueHealthStatus,
+} from "@/lib/queue";
 import { logger } from "@/lib/logger";
 
 /**
@@ -74,8 +88,20 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // Add detailed info if requested (protected in production)
+    // Add detailed info if requested (requires authentication in production)
     if (detailed || includeMetrics) {
+      if (process.env.NODE_ENV === "production") {
+        // In production, require authentication for detailed metrics
+        try {
+          const { requireAuth } = await import("@/lib/auth");
+          await requireAuth();
+        } catch {
+          return NextResponse.json(
+            { error: "Authentication required for detailed health metrics" },
+            { status: 401 }
+          );
+        }
+      }
       const metrics = getPoolMetrics();
 
       if (metrics) {
@@ -143,13 +169,16 @@ export async function GET(request: NextRequest) {
         const queueHealth = await getQueueHealthStatus();
 
         // Calculate totals
-        const totalJobs = queueStats.reduce((acc, q) => ({
-          waiting: acc.waiting + q.waiting,
-          active: acc.active + q.active,
-          completed: acc.completed + q.completed,
-          failed: acc.failed + q.failed,
-          delayed: acc.delayed + q.delayed,
-        }), { waiting: 0, active: 0, completed: 0, failed: 0, delayed: 0 });
+        const totalJobs = queueStats.reduce(
+          (acc, q) => ({
+            waiting: acc.waiting + q.waiting,
+            active: acc.active + q.active,
+            completed: acc.completed + q.completed,
+            failed: acc.failed + q.failed,
+            delayed: acc.delayed + q.delayed,
+          }),
+          { waiting: 0, active: 0, completed: 0, failed: 0, delayed: 0 }
+        );
 
         response.queues = {
           enabled: queueInfo.enabled,
@@ -159,10 +188,14 @@ export async function GET(request: NextRequest) {
           redisPingMs: queueHealth.redisPingMs,
           queuesInitialized: queueHealth.queuesInitialized,
           allQueuesOperational: queueHealth.allQueuesOperational,
-          status: queueHealth.ready ? "active" : (queueHealth.error || "not_ready"),
+          status: queueHealth.ready
+            ? "active"
+            : queueHealth.error || "not_ready",
           queueCount: queueInfo.queues.length,
           totals: totalJobs,
-          ...(queueHealth.pausedQueues.length > 0 && { pausedQueues: queueHealth.pausedQueues }),
+          ...(queueHealth.pausedQueues.length > 0 && {
+            pausedQueues: queueHealth.pausedQueues,
+          }),
           ...(queueHealth.error && { error: queueHealth.error }),
         };
 
@@ -176,7 +209,7 @@ export async function GET(request: NextRequest) {
         };
 
         if (detailed) {
-          response.queueDetails = queueStats.map(q => ({
+          response.queueDetails = queueStats.map((q) => ({
             name: q.name,
             waiting: q.waiting,
             active: q.active,
@@ -196,7 +229,8 @@ export async function GET(request: NextRequest) {
           queuesInitialized: false,
           allQueuesOperational: false,
           status: "error",
-          error: queueError instanceof Error ? queueError.message : "Unknown error",
+          error:
+            queueError instanceof Error ? queueError.message : "Unknown error",
         };
       }
 
@@ -241,7 +275,7 @@ export async function GET(request: NextRequest) {
       };
 
       if (activeAlerts.length > 0) {
-        response.alerts = activeAlerts.slice(0, 5).map(a => ({
+        response.alerts = activeAlerts.slice(0, 5).map((a) => ({
           type: a.type,
           severity: a.severity,
           message: a.message,
@@ -275,7 +309,7 @@ export async function GET(request: NextRequest) {
         redisEnabled: isRedisEnabled(),
         storageProvider: getStorageProvider(),
         cdnEnabled: isCDNEnabled(),
-        monitoringEnabled: process.env.MONITORING_ENABLED !== 'false',
+        monitoringEnabled: process.env.MONITORING_ENABLED !== "false",
         queueProvider: queueEnvInfo.provider,
         queueEnabled: queueEnvInfo.enabled,
       };
@@ -296,7 +330,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Cache control - don't cache health checks
-    jsonResponse.headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    jsonResponse.headers.set(
+      "Cache-Control",
+      "no-cache, no-store, must-revalidate"
+    );
 
     return jsonResponse;
   } catch (error) {

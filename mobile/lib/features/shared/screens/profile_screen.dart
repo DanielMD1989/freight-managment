@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../app.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/utils/logout_dialog.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -255,7 +256,7 @@ class ProfileScreen extends ConsumerWidget {
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       onPressed: () {
-                        _showLogoutDialog(context, ref);
+                        showLogoutDialog(context, ref);
                       },
                       icon: const Icon(Icons.logout, color: Colors.red),
                       label: const Text(
@@ -287,32 +288,6 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Log Out'),
-        content: const Text('Are you sure you want to log out?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              ref.read(authStateProvider.notifier).logout();
-              Navigator.pop(context);
-              context.go('/login');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
-            child: const Text('Log Out'),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _MenuCard extends StatelessWidget {

@@ -156,7 +156,7 @@ export default function ForgotPasswordPage() {
 
           {step === "otp" && (
             <form onSubmit={handleResetPassword} className="space-y-6">
-              {devOTP && (
+              {process.env.NODE_ENV === "development" && devOTP && (
                 <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-900/20">
                   <p className="text-xs text-yellow-800 dark:text-yellow-200">
                     <strong>Development Only:</strong> Your OTP is{" "}
