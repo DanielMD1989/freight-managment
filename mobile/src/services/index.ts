@@ -1,0 +1,8 @@
+export { authService } from "./auth";
+export { truckService } from "./truck";
+export { loadService } from "./load";
+export { tripService } from "./trip";
+export { notificationService } from "./notification";
+export { dashboardService } from "./dashboard";
+export { gpsQueueService } from "./gps-queue";
+export { pushService } from "./push";

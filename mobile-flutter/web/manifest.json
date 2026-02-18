@@ -1,0 +1,35 @@
+{
+  "name": "FreightHub - Ethiopian Freight Platform",
+  "short_name": "FreightHub",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f0fdfa",
+  "theme_color": "#0d9488",
+  "description": "Ethiopian freight management and load board platform",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "icons/Icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/Icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/Icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/Icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

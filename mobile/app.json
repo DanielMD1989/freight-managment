@@ -1,0 +1,82 @@
+{
+  "expo": {
+    "name": "Freight Management",
+    "slug": "freight-management",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "scheme": "freight",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0EA5E9"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.freight.management",
+      "config": {
+        "googleMapsApiKey": "YOUR_IOS_GOOGLE_MAPS_KEY"
+      },
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "We need your location to track shipments and provide accurate ETA.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Background location is needed for GPS tracking during active trips.",
+        "NSCameraUsageDescription": "Camera is needed to capture proof of delivery photos.",
+        "NSPhotoLibraryUsageDescription": "Photo library access is needed for uploading proof of delivery."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0EA5E9"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.freight.management",
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_ANDROID_GOOGLE_MAPS_KEY"
+        }
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-web-browser",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Freight Management to use your location for trip tracking."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Freight Management to access photos for proof of delivery.",
+          "cameraPermission": "Allow Freight Management to use the camera for proof of delivery."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#0EA5E9"
+        }
+      ]
+    ]
+  }
+}
