@@ -28,6 +28,15 @@ describe("Format Utilities", () => {
       const result = formatWeight(0);
       expect(result).toBeDefined();
     });
+
+    it("should handle string input (Prisma Decimal)", () => {
+      expect(formatWeight("2500" as any)).toBe("2.5 tons");
+      expect(formatWeight("500" as any)).toBe("500 kg");
+    });
+
+    it("should return N/A for non-numeric strings", () => {
+      expect(formatWeight("not-a-number" as any)).toBe("N/A");
+    });
   });
 
   describe("formatDistance", () => {
@@ -38,6 +47,15 @@ describe("Format Utilities", () => {
     it("should handle null/undefined", () => {
       expect(formatDistance(null as any)).toBe("N/A");
       expect(formatDistance(undefined as any)).toBe("N/A");
+    });
+
+    it("should handle string input (Prisma Decimal)", () => {
+      expect(formatDistance("150" as any)).toBe("150 km");
+      expect(formatDistance("0.5" as any)).toBe("500 m");
+    });
+
+    it("should return N/A for non-numeric strings", () => {
+      expect(formatDistance("not-a-number" as any)).toBe("N/A");
     });
   });
 

@@ -3,19 +3,23 @@
  */
 
 /** Format weight in kg to display string (e.g., "12.5 tons") */
-export function formatWeight(kg: number | null | undefined): string {
+export function formatWeight(kg: number | string | null | undefined): string {
   if (kg == null) return "N/A";
-  if (kg >= 1000) {
-    return `${(kg / 1000).toFixed(1)} tons`;
+  const n = Number(kg);
+  if (isNaN(n)) return "N/A";
+  if (n >= 1000) {
+    return `${(n / 1000).toFixed(1)} tons`;
   }
-  return `${kg.toFixed(0)} kg`;
+  return `${n.toFixed(0)} kg`;
 }
 
 /** Format distance in km */
-export function formatDistance(km: number | null | undefined): string {
+export function formatDistance(km: number | string | null | undefined): string {
   if (km == null) return "N/A";
-  if (km < 1) return `${(km * 1000).toFixed(0)} m`;
-  return `${km.toFixed(0)} km`;
+  const n = Number(km);
+  if (isNaN(n)) return "N/A";
+  if (n < 1) return `${(n * 1000).toFixed(0)} m`;
+  return `${n.toFixed(0)} km`;
 }
 
 /** Format age from a date to human-readable string (e.g., "2h", "3d") */
