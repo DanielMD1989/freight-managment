@@ -110,7 +110,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse form data
-    const formData = await request.formData();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const formData: any = await request.formData();
     const file = formData.get("file") as File | null;
     const typeRaw = formData.get("type") as string | null;
     const entityTypeRaw = formData.get("entityType") as string | null;

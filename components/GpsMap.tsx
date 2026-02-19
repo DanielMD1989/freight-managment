@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * GPS Map Component
@@ -13,22 +13,35 @@
  * - Auto-centering on truck
  */
 
-import React, { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import React, { useEffect, useState, useRef } from "react";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  Polyline,
+  useMap,
+} from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 // Fix Leaflet default icon issue with Next.js
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconRetinaUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+  iconUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
 // Custom truck icon
 const truckIcon = new L.Icon({
-  iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+  iconUrl:
+    "data:image/svg+xml;base64," +
+    btoa(`
     <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#00BCD4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <rect x="1" y="3" width="15" height="13"></rect>
       <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
@@ -43,7 +56,9 @@ const truckIcon = new L.Icon({
 
 // Pickup marker (green)
 const pickupIcon = new L.Icon({
-  iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+  iconUrl:
+    "data:image/svg+xml;base64," +
+    btoa(`
     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="#10B981">
       <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
     </svg>
@@ -55,7 +70,9 @@ const pickupIcon = new L.Icon({
 
 // Delivery marker (red)
 const deliveryIcon = new L.Icon({
-  iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+  iconUrl:
+    "data:image/svg+xml;base64," +
+    btoa(`
     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="#EF4444">
       <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
     </svg>
@@ -107,7 +124,7 @@ export default function GpsMap({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /**
    * Fetch current truck position
@@ -118,11 +135,11 @@ export default function GpsMap({
 
       if (!response.ok) {
         if (response.status === 404) {
-          setError('No GPS position available');
+          setError("No GPS position available");
         } else if (response.status === 400) {
-          setError('GPS tracking not enabled');
+          setError("GPS tracking not enabled");
         } else {
-          setError('Failed to fetch position');
+          setError("Failed to fetch position");
         }
         setLoading(false);
         return;
@@ -138,8 +155,8 @@ export default function GpsMap({
 
       setLoading(false);
     } catch (err) {
-      console.error('Failed to fetch GPS position:', err);
-      setError('Failed to fetch GPS position');
+      console.error("Failed to fetch GPS position:", err);
+      setError("Failed to fetch GPS position");
       setLoading(false);
     }
   };
@@ -210,9 +227,9 @@ export default function GpsMap({
 
   if (loading) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-100">
+      <div className="flex h-full w-full items-center justify-center bg-gray-100">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-cyan-500"></div>
           <p className="text-gray-600">Loading GPS tracking...</p>
         </div>
       </div>
@@ -221,12 +238,12 @@ export default function GpsMap({
 
   if (error && !truckPosition) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-100">
+      <div className="flex h-full w-full items-center justify-center bg-gray-100">
         <div className="text-center">
-          <p className="text-red-600 mb-2">⚠️ {error}</p>
+          <p className="mb-2 text-red-600">⚠️ {error}</p>
           <button
             onClick={fetchPosition}
-            className="px-4 py-2 bg-cyan-500 text-white rounded hover:bg-cyan-600"
+            className="rounded bg-cyan-500 px-4 py-2 text-white hover:bg-cyan-600"
           >
             Retry
           </button>
@@ -236,11 +253,11 @@ export default function GpsMap({
   }
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative h-full w-full">
       <MapContainer
         center={center}
         zoom={13}
-        style={{ width: '100%', height: '100%' }}
+        style={{ width: "100%", height: "100%" }}
         className="rounded-lg"
       >
         <TileLayer
@@ -253,7 +270,10 @@ export default function GpsMap({
 
         {/* Pickup marker */}
         {pickupLocation && (
-          <Marker position={[pickupLocation.lat, pickupLocation.lng]} icon={pickupIcon}>
+          <Marker
+            position={[pickupLocation.lat, pickupLocation.lng]}
+            icon={pickupIcon}
+          >
             <Popup>
               <div className="text-sm">
                 <strong className="text-green-600">📍 Pickup Location</strong>
@@ -265,7 +285,10 @@ export default function GpsMap({
 
         {/* Delivery marker */}
         {deliveryLocation && (
-          <Marker position={[deliveryLocation.lat, deliveryLocation.lng]} icon={deliveryIcon}>
+          <Marker
+            position={[deliveryLocation.lat, deliveryLocation.lng]}
+            icon={deliveryIcon}
+          >
             <Popup>
               <div className="text-sm">
                 <strong className="text-red-600">📍 Delivery Location</strong>
@@ -288,7 +311,8 @@ export default function GpsMap({
                   <p>Speed: {Math.round(truckPosition.speed)} km/h</p>
                 )}
                 <p className="text-xs text-gray-500">
-                  Last update: {new Date(truckPosition.timestamp).toLocaleTimeString()}
+                  Last update:{" "}
+                  {new Date(truckPosition.timestamp).toLocaleTimeString()}
                 </p>
               </div>
             </Popup>
@@ -309,11 +333,13 @@ export default function GpsMap({
 
       {/* Status overlay */}
       {lastUpdate && (
-        <div className="absolute top-4 right-4 bg-white px-4 py-2 rounded-lg shadow-lg border border-gray-200">
+        <div className="absolute top-4 right-4 rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-lg">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <div className="h-2 w-2 animate-pulse rounded-full bg-green-500"></div>
             <span className="text-xs text-gray-600">
-              Updated {Math.round((Date.now() - lastUpdate.getTime()) / 1000)}s ago
+              {/* eslint-disable-next-line react-hooks/purity */}
+              Updated {Math.round((Date.now() - lastUpdate.getTime()) / 1000)}s
+              ago
             </span>
           </div>
         </div>
@@ -321,7 +347,7 @@ export default function GpsMap({
 
       {/* Error notification */}
       {error && truckPosition && (
-        <div className="absolute top-4 left-4 bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-2 rounded-lg">
+        <div className="absolute top-4 left-4 rounded-lg border border-yellow-400 bg-yellow-100 px-4 py-2 text-yellow-800">
           <p className="text-sm">⚠️ {error}</p>
         </div>
       )}

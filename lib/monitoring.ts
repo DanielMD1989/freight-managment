@@ -18,7 +18,7 @@
  * - MONITORING_ENABLED: Enable monitoring (default: true)
  */
 
-import { logger } from './logger';
+import { logger } from "./logger";
 
 // =============================================================================
 // TYPES
@@ -49,8 +49,8 @@ export interface SystemMetrics {
 
 export interface Alert {
   id: string;
-  type: 'cpu' | 'memory' | 'slow_query' | 'error_rate' | 'event_loop';
-  severity: 'warning' | 'critical';
+  type: "cpu" | "memory" | "slow_query" | "error_rate" | "event_loop";
+  severity: "warning" | "critical";
   message: string;
   value: number;
   threshold: number;
@@ -71,7 +71,7 @@ export interface MonitoringConfig {
 
 export interface HealthScore {
   score: number; // 0-100
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: "healthy" | "degraded" | "unhealthy";
   factors: {
     cpu: number;
     memory: number;
@@ -86,13 +86,19 @@ export interface HealthScore {
 
 function getConfig(): MonitoringConfig {
   return {
-    enabled: process.env.MONITORING_ENABLED !== 'false',
-    cpuThreshold: parseInt(process.env.ALERT_CPU_THRESHOLD || '80'),
-    memoryThreshold: parseInt(process.env.ALERT_MEMORY_THRESHOLD || '85'),
-    slowQueryThresholdMs: parseInt(process.env.ALERT_SLOW_QUERY_THRESHOLD_MS || '1000'),
-    errorRateThreshold: parseInt(process.env.ALERT_ERROR_RATE_THRESHOLD || '5'),
-    eventLoopThresholdMs: parseInt(process.env.ALERT_EVENT_LOOP_THRESHOLD_MS || '100'),
-    checkIntervalMs: parseInt(process.env.MONITORING_CHECK_INTERVAL_MS || '60000'), // 1 minute
+    enabled: process.env.MONITORING_ENABLED !== "false",
+    cpuThreshold: parseInt(process.env.ALERT_CPU_THRESHOLD || "80"),
+    memoryThreshold: parseInt(process.env.ALERT_MEMORY_THRESHOLD || "85"),
+    slowQueryThresholdMs: parseInt(
+      process.env.ALERT_SLOW_QUERY_THRESHOLD_MS || "1000"
+    ),
+    errorRateThreshold: parseInt(process.env.ALERT_ERROR_RATE_THRESHOLD || "5"),
+    eventLoopThresholdMs: parseInt(
+      process.env.ALERT_EVENT_LOOP_THRESHOLD_MS || "100"
+    ),
+    checkIntervalMs: parseInt(
+      process.env.MONITORING_CHECK_INTERVAL_MS || "60000"
+    ), // 1 minute
   };
 }
 
@@ -139,14 +145,18 @@ export function getSystemMetrics(): SystemMetrics {
   const cpuUsage = process.cpuUsage();
 
   // Calculate CPU usage percentage (approximate)
-  const cpuPercent = Math.min(100, Math.round(
-    (cpuUsage.user + cpuUsage.system) / 1000000 // Convert to seconds
-  ));
+  const cpuPercent = Math.min(
+    100,
+    Math.round(
+      (cpuUsage.user + cpuUsage.system) / 1000000 // Convert to seconds
+    )
+  );
 
   // Get load average (Unix only, returns 0 on Windows)
   let loadAverage = [0, 0, 0];
   try {
-    const os = require('os');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const os = require("os");
     loadAverage = os.loadavg();
   } catch {
     // os module not available
@@ -155,15 +165,15 @@ export function getSystemMetrics(): SystemMetrics {
   // Get total system memory
   let totalMemory = 0;
   try {
-    const os = require('os');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const os = require("os");
     totalMemory = os.totalmem();
   } catch {
     totalMemory = memUsage.heapTotal * 2; // Fallback estimate
   }
 
-  const memoryUsagePercent = totalMemory > 0
-    ? Math.round((memUsage.rss / totalMemory) * 100)
-    : 0;
+  const memoryUsagePercent =
+    totalMemory > 0 ? Math.round((memUsage.rss / totalMemory) * 100) : 0;
 
   // Event loop latency (approximate using setImmediate)
   const eventLoopLatency = measureEventLoopLatency();
@@ -184,7 +194,9 @@ export function getSystemMetrics(): SystemMetrics {
     },
     eventLoop: {
       latencyMs: eventLoopLatency,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       activeHandles: (process as any)._getActiveHandles?.()?.length || 0,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       activeRequests: (process as any)._getActiveRequests?.()?.length || 0,
     },
     uptime: process.uptime(),
@@ -193,6 +205,7 @@ export function getSystemMetrics(): SystemMetrics {
 }
 
 // Track event loop latency
+// eslint-disable-next-line prefer-const
 let lastEventLoopCheck = Date.now();
 let eventLoopLatency = 0;
 
@@ -201,7 +214,7 @@ function measureEventLoopLatency(): number {
 }
 
 // Periodically measure event loop latency
-if (typeof setImmediate !== 'undefined') {
+if (typeof setImmediate !== "undefined") {
   setInterval(() => {
     const start = Date.now();
     setImmediate(() => {
@@ -218,8 +231,8 @@ if (typeof setImmediate !== 'undefined') {
  * Create a new alert
  */
 function createAlert(
-  type: Alert['type'],
-  severity: Alert['severity'],
+  type: Alert["type"],
+  severity: Alert["severity"],
   message: string,
   value: number,
   threshold: number
@@ -244,8 +257,12 @@ function createAlert(
   }
 
   // Log the alert
-  if (severity === 'critical') {
-    logger.error(`[ALERT] ${message}`, undefined, { alertType: type, value, threshold });
+  if (severity === "critical") {
+    logger.error(`[ALERT] ${message}`, undefined, {
+      alertType: type,
+      value,
+      threshold,
+    });
   } else {
     logger.warn(`[ALERT] ${message}`, { alertType: type, value, threshold });
   }
@@ -262,51 +279,59 @@ function checkAlerts(metrics: SystemMetrics): Alert[] {
 
   // CPU Alert
   if (metrics.cpu.usage > config.cpuThreshold) {
-    const severity = metrics.cpu.usage > 95 ? 'critical' : 'warning';
-    newAlerts.push(createAlert(
-      'cpu',
-      severity,
-      `High CPU usage: ${metrics.cpu.usage}%`,
-      metrics.cpu.usage,
-      config.cpuThreshold
-    ));
+    const severity = metrics.cpu.usage > 95 ? "critical" : "warning";
+    newAlerts.push(
+      createAlert(
+        "cpu",
+        severity,
+        `High CPU usage: ${metrics.cpu.usage}%`,
+        metrics.cpu.usage,
+        config.cpuThreshold
+      )
+    );
   }
 
   // Memory Alert
   if (metrics.memory.usagePercent > config.memoryThreshold) {
-    const severity = metrics.memory.usagePercent > 95 ? 'critical' : 'warning';
-    newAlerts.push(createAlert(
-      'memory',
-      severity,
-      `High memory usage: ${metrics.memory.usagePercent}%`,
-      metrics.memory.usagePercent,
-      config.memoryThreshold
-    ));
+    const severity = metrics.memory.usagePercent > 95 ? "critical" : "warning";
+    newAlerts.push(
+      createAlert(
+        "memory",
+        severity,
+        `High memory usage: ${metrics.memory.usagePercent}%`,
+        metrics.memory.usagePercent,
+        config.memoryThreshold
+      )
+    );
   }
 
   // Event Loop Alert
   if (metrics.eventLoop.latencyMs > config.eventLoopThresholdMs) {
-    const severity = metrics.eventLoop.latencyMs > 500 ? 'critical' : 'warning';
-    newAlerts.push(createAlert(
-      'event_loop',
-      severity,
-      `High event loop latency: ${metrics.eventLoop.latencyMs}ms`,
-      metrics.eventLoop.latencyMs,
-      config.eventLoopThresholdMs
-    ));
+    const severity = metrics.eventLoop.latencyMs > 500 ? "critical" : "warning";
+    newAlerts.push(
+      createAlert(
+        "event_loop",
+        severity,
+        `High event loop latency: ${metrics.eventLoop.latencyMs}ms`,
+        metrics.eventLoop.latencyMs,
+        config.eventLoopThresholdMs
+      )
+    );
   }
 
   // Error Rate Alert
   const errorRate = getErrorRate();
   if (errorRate > config.errorRateThreshold) {
-    const severity = errorRate > 10 ? 'critical' : 'warning';
-    newAlerts.push(createAlert(
-      'error_rate',
-      severity,
-      `High error rate: ${errorRate.toFixed(1)}%`,
-      errorRate,
-      config.errorRateThreshold
-    ));
+    const severity = errorRate > 10 ? "critical" : "warning";
+    newAlerts.push(
+      createAlert(
+        "error_rate",
+        severity,
+        `High error rate: ${errorRate.toFixed(1)}%`,
+        errorRate,
+        config.errorRateThreshold
+      )
+    );
   }
 
   return newAlerts;
@@ -334,7 +359,7 @@ export function recordRequest(isError: boolean = false): void {
  * Get active (unresolved) alerts
  */
 export function getActiveAlerts(): Alert[] {
-  return state.alerts.filter(a => !a.resolved);
+  return state.alerts.filter((a) => !a.resolved);
 }
 
 /**
@@ -348,7 +373,7 @@ export function getAllAlerts(limit: number = 50): Alert[] {
  * Resolve an alert
  */
 export function resolveAlert(alertId: string): boolean {
-  const alert = state.alerts.find(a => a.id === alertId);
+  const alert = state.alerts.find((a) => a.id === alertId);
   if (alert && !alert.resolved) {
     alert.resolved = true;
     alert.resolvedAt = new Date().toISOString();
@@ -375,28 +400,34 @@ export function calculateHealthScore(): HealthScore {
   const memoryScore = Math.max(0, 100 - metrics.memory.usagePercent);
 
   const errorRate = getErrorRate();
-  const errorRateScore = Math.max(0, 100 - (errorRate * 10)); // 10% error = 0 score
+  const errorRateScore = Math.max(0, 100 - errorRate * 10); // 10% error = 0 score
 
   const avgResponseTime = logMetrics.requests.avgDurationMs;
-  const responseTimeScore = avgResponseTime < 100 ? 100 :
-                           avgResponseTime < 500 ? 80 :
-                           avgResponseTime < 1000 ? 60 :
-                           avgResponseTime < 2000 ? 40 : 20;
+  const responseTimeScore =
+    avgResponseTime < 100
+      ? 100
+      : avgResponseTime < 500
+        ? 80
+        : avgResponseTime < 1000
+          ? 60
+          : avgResponseTime < 2000
+            ? 40
+            : 20;
 
   // Weighted average
   const score = Math.round(
     cpuScore * 0.2 +
-    memoryScore * 0.2 +
-    errorRateScore * 0.3 +
-    responseTimeScore * 0.3
+      memoryScore * 0.2 +
+      errorRateScore * 0.3 +
+      responseTimeScore * 0.3
   );
 
   // Determine status
-  let status: HealthScore['status'] = 'healthy';
+  let status: HealthScore["status"] = "healthy";
   if (score < 50) {
-    status = 'unhealthy';
+    status = "unhealthy";
   } else if (score < 80) {
-    status = 'degraded';
+    status = "degraded";
   }
 
   return {
@@ -415,7 +446,7 @@ export function calculateHealthScore(): HealthScore {
 // MONITORING SERVICE
 // =============================================================================
 
-let monitoringInterval: NodeJS.Timeout | null = null;
+let monitoringInterval: ReturnType<typeof setInterval> | null = null;
 
 /**
  * Start the monitoring service
@@ -424,16 +455,16 @@ export function startMonitoring(): void {
   const config = getConfig();
 
   if (!config.enabled) {
-    logger.info('Monitoring disabled');
+    logger.info("Monitoring disabled");
     return;
   }
 
   if (monitoringInterval) {
-    logger.warn('Monitoring already started');
+    logger.warn("Monitoring already started");
     return;
   }
 
-  logger.info('Starting monitoring service', {
+  logger.info("Starting monitoring service", {
     checkIntervalMs: config.checkIntervalMs,
     cpuThreshold: config.cpuThreshold,
     memoryThreshold: config.memoryThreshold,
@@ -453,7 +484,7 @@ export function stopMonitoring(): void {
   if (monitoringInterval) {
     clearInterval(monitoringInterval);
     monitoringInterval = null;
-    logger.info('Monitoring service stopped');
+    logger.info("Monitoring service stopped");
   }
 }
 
@@ -538,7 +569,7 @@ export function getMonitoringData(): {
  * Get a summary of monitoring status
  */
 export function getMonitoringSummary(): {
-  status: 'ok' | 'warning' | 'critical';
+  status: "ok" | "warning" | "critical";
   healthScore: number;
   activeAlerts: number;
   metrics: {
@@ -553,11 +584,11 @@ export function getMonitoringSummary(): {
   const metrics = getSystemMetrics();
   const logMetrics = logger.getMetrics();
 
-  let status: 'ok' | 'warning' | 'critical' = 'ok';
-  if (activeAlerts.some(a => a.severity === 'critical')) {
-    status = 'critical';
-  } else if (activeAlerts.length > 0 || health.status === 'degraded') {
-    status = 'warning';
+  let status: "ok" | "warning" | "critical" = "ok";
+  if (activeAlerts.some((a) => a.severity === "critical")) {
+    status = "critical";
+  } else if (activeAlerts.length > 0 || health.status === "degraded") {
+    status = "warning";
   }
 
   return {
@@ -585,8 +616,8 @@ export function recordSlowQuery(query: string, durationMs: number): void {
 
   if (durationMs > config.slowQueryThresholdMs) {
     createAlert(
-      'slow_query',
-      durationMs > config.slowQueryThresholdMs * 2 ? 'critical' : 'warning',
+      "slow_query",
+      durationMs > config.slowQueryThresholdMs * 2 ? "critical" : "warning",
       `Slow query detected: ${durationMs}ms`,
       durationMs,
       config.slowQueryThresholdMs
@@ -601,7 +632,7 @@ export function recordSlowQuery(query: string, durationMs: number): void {
 // =============================================================================
 
 // Auto-start monitoring in production
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === "production") {
   // Delay start to allow app initialization
   setTimeout(() => {
     startMonitoring();

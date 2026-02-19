@@ -7,15 +7,15 @@
  * Sprint 3 - Story 3.3: Document Management
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
-import { DocumentType } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { writeFile, mkdir } from "fs/promises";
+import { join } from "path";
+import { existsSync } from "fs";
+import { DocumentType } from "@prisma/client";
 // CSRF FIX: Add CSRF validation
-import { validateCSRFWithMobile } from '@/lib/csrf';
+import { validateCSRFWithMobile } from "@/lib/csrf";
 
 /**
  * GET /api/loads/[id]/documents
@@ -42,7 +42,7 @@ export async function GET(
       where: { id },
       include: {
         documents: {
-          orderBy: { uploadedAt: 'desc' },
+          orderBy: { uploadedAt: "desc" },
         },
         assignedTruck: {
           select: {
@@ -53,21 +53,18 @@ export async function GET(
     });
 
     if (!load) {
-      return NextResponse.json(
-        { error: 'Load not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // Check access (owner or assigned carrier or admin)
     const hasAccess =
       load.shipperId === session.organizationId ||
-      (load.assignedTruck?.carrierId === session.organizationId) ||
-      session.role === 'ADMIN';
+      load.assignedTruck?.carrierId === session.organizationId ||
+      session.role === "ADMIN";
 
     if (!hasAccess) {
       return NextResponse.json(
-        { error: 'Forbidden: You do not have access to these documents' },
+        { error: "Forbidden: You do not have access to these documents" },
         { status: 403 }
       );
     }
@@ -75,12 +72,12 @@ export async function GET(
     return NextResponse.json({
       documents: load.documents,
     });
-  // FIX: Use unknown type
+    // FIX: Use unknown type
   } catch (error: unknown) {
-    console.error('Error fetching load documents:', error);
+    console.error("Error fetching load documents:", error);
 
     return NextResponse.json(
-      { error: 'Failed to fetch documents' },
+      { error: "Failed to fetch documents" },
       { status: 500 }
     );
   }
@@ -128,65 +125,68 @@ export async function POST(
     });
 
     if (!load) {
-      return NextResponse.json(
-        { error: 'Load not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // Check ownership or carrier assignment
     const hasAccess =
       load.shipperId === session.organizationId ||
-      (load.assignedTruck?.carrierId === session.organizationId) ||
-      session.role === 'ADMIN';
+      load.assignedTruck?.carrierId === session.organizationId ||
+      session.role === "ADMIN";
 
     if (!hasAccess) {
       return NextResponse.json(
-        { error: 'Forbidden: You cannot upload documents for this load' },
+        { error: "Forbidden: You cannot upload documents for this load" },
         { status: 403 }
       );
     }
 
     // Parse form data
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const type = formData.get('type') as string;
-    const description = formData.get('description') as string | null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const formData: any = await request.formData();
+    const file = formData.get("file") as File;
+    const type = formData.get("type") as string;
+    const description = formData.get("description") as string | null;
 
     if (!file) {
-      return NextResponse.json(
-        { error: 'File is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "File is required" }, { status: 400 });
     }
 
     if (!type) {
       return NextResponse.json(
-        { error: 'Document type is required' },
+        { error: "Document type is required" },
         { status: 400 }
       );
     }
 
     // Validate document type
-    const validTypes = ['BOL', 'POD', 'INVOICE', 'RECEIPT', 'INSURANCE', 'PERMIT', 'OTHER'];
+    const validTypes = [
+      "BOL",
+      "POD",
+      "INVOICE",
+      "RECEIPT",
+      "INSURANCE",
+      "PERMIT",
+      "OTHER",
+    ];
     if (!validTypes.includes(type)) {
       return NextResponse.json(
-        { error: 'Invalid document type' },
+        { error: "Invalid document type" },
         { status: 400 }
       );
     }
 
     // Validate file type
     const allowedMimeTypes = [
-      'application/pdf',
-      'image/jpeg',
-      'image/jpg',
-      'image/png',
+      "application/pdf",
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
     ];
 
     if (!allowedMimeTypes.includes(file.type)) {
       return NextResponse.json(
-        { error: 'Invalid file type. Only PDF and images are allowed.' },
+        { error: "Invalid file type. Only PDF and images are allowed." },
         { status: 400 }
       );
     }
@@ -195,20 +195,20 @@ export async function POST(
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
       return NextResponse.json(
-        { error: 'File size too large. Maximum size is 10MB.' },
+        { error: "File size too large. Maximum size is 10MB." },
         { status: 400 }
       );
     }
 
     // Create uploads directory if it doesn't exist
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'loads', id);
+    const uploadDir = join(process.cwd(), "public", "uploads", "loads", id);
     if (!existsSync(uploadDir)) {
       await mkdir(uploadDir, { recursive: true });
     }
 
     // Generate unique filename
     const timestamp = Date.now();
-    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
     const fileName = `${timestamp}-${sanitizedFileName}`;
     const filePath = join(uploadDir, fileName);
 
@@ -231,15 +231,15 @@ export async function POST(
     });
 
     return NextResponse.json({
-      message: 'Document uploaded successfully',
+      message: "Document uploaded successfully",
       document,
     });
-  // FIX: Use unknown type
+    // FIX: Use unknown type
   } catch (error: unknown) {
-    console.error('Error uploading load document:', error);
+    console.error("Error uploading load document:", error);
 
     return NextResponse.json(
-      { error: 'Failed to upload document' },
+      { error: "Failed to upload document" },
       { status: 500 }
     );
   }

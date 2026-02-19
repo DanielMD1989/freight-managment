@@ -85,7 +85,8 @@ export async function POST(
     }
 
     // Parse form data for file upload
-    const formData = await request.formData();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const formData: any = await request.formData();
     const file = formData.get("file") as File | null;
 
     if (!file) {

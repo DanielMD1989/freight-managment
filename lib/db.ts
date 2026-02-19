@@ -168,7 +168,8 @@ class MetricsCollector {
   getMetrics(pool: Pool): PoolMetrics {
     const avgAcquireTime =
       this.acquireTimes.length > 0
-        ? this.acquireTimes.reduce((a, b) => a + b, 0) / this.acquireTimes.length
+        ? this.acquireTimes.reduce((a, b) => a + b, 0) /
+          this.acquireTimes.length
         : 0;
 
     return {
@@ -209,7 +210,7 @@ class DatabaseManager {
   private pool: Pool | null = null;
   private prisma: PrismaClient | null = null;
   private metrics: MetricsCollector;
-  private healthCheckInterval: NodeJS.Timeout | null = null;
+  private healthCheckInterval: ReturnType<typeof setInterval> | null = null;
   private isShuttingDown = false;
   private config: PoolConfig;
 
@@ -270,8 +271,7 @@ class DatabaseManager {
       }
     });
 
-    this.pool.on("remove", () => {
-      });
+    this.pool.on("remove", () => {});
 
     // Create Prisma client with pg adapter
     const adapter = new PrismaPg(this.pool);
@@ -309,7 +309,10 @@ class DatabaseManager {
    * Get a connection from the pool with timing measurement
    * Records actual acquire time for metrics
    */
-  private async timedConnect(): Promise<{ client: PoolClient; acquireTimeMs: number }> {
+  private async timedConnect(): Promise<{
+    client: PoolClient;
+    acquireTimeMs: number;
+  }> {
     if (!this.pool) {
       throw new Error("Pool not initialized");
     }
@@ -327,7 +330,12 @@ class DatabaseManager {
   /**
    * Perform health check
    */
-  async healthCheck(): Promise<{ healthy: boolean; latencyMs: number; acquireTimeMs?: number; error?: string }> {
+  async healthCheck(): Promise<{
+    healthy: boolean;
+    latencyMs: number;
+    acquireTimeMs?: number;
+    error?: string;
+  }> {
     if (!this.pool) {
       return { healthy: false, latencyMs: 0, error: "Pool not initialized" };
     }
@@ -364,7 +372,9 @@ class DatabaseManager {
    * Start periodic health monitoring
    */
   private startHealthMonitoring(): void {
-    const intervalMs = parseInt(process.env.DB_HEALTH_CHECK_INTERVAL_MS || "30000");
+    const intervalMs = parseInt(
+      process.env.DB_HEALTH_CHECK_INTERVAL_MS || "30000"
+    );
 
     this.healthCheckInterval = setInterval(async () => {
       const result = await this.healthCheck();
@@ -394,7 +404,7 @@ class DatabaseManager {
     try {
       const result = await this.healthCheck();
       if (result.healthy) {
-        } else {
+      } else {
         console.error("[DB] Recovery failed:", result.error);
       }
     } catch (error) {
@@ -424,11 +434,10 @@ class DatabaseManager {
       if (this.pool) {
         await this.pool.end();
       }
-
-      };
+    };
 
     // Guard for Edge Runtime compatibility (Edge Runtime doesn't support process.on)
-    if (typeof process !== 'undefined' && typeof process.on === 'function') {
+    if (typeof process !== "undefined" && typeof process.on === "function") {
       process.on("SIGTERM", () => shutdown("SIGTERM"));
       process.on("SIGINT", () => shutdown("SIGINT"));
     }
@@ -445,10 +454,7 @@ class DatabaseManager {
    * Execute raw query with automatic connection handling
    * Uses timedConnect for accurate acquire time metrics
    */
-  async executeRaw<T>(
-    query: string,
-    params?: unknown[]
-  ): Promise<T[]> {
+  async executeRaw<T>(query: string, params?: unknown[]): Promise<T[]> {
     if (!this.pool) {
       throw new Error("Database not initialized");
     }

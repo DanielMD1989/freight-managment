@@ -7,12 +7,12 @@
  * Supports multiple POD documents per trip via TripPod table
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { CacheInvalidation } from '@/lib/cache';
-import { createNotification, NotificationType } from '@/lib/notifications';
-import { uploadPOD } from '@/lib/storage';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { CacheInvalidation } from "@/lib/cache";
+import { createNotification, NotificationType } from "@/lib/notifications";
+import { uploadPOD } from "@/lib/storage";
 
 /**
  * POST /api/trips/[tripId]/pod
@@ -55,13 +55,13 @@ export async function POST(
     });
 
     if (!trip) {
-      return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
     // Only DELIVERED trips can have POD uploaded
-    if (trip.status !== 'DELIVERED') {
+    if (trip.status !== "DELIVERED") {
       return NextResponse.json(
-        { error: 'Trip must be in DELIVERED status before uploading POD' },
+        { error: "Trip must be in DELIVERED status before uploading POD" },
         { status: 400 }
       );
     }
@@ -73,38 +73,39 @@ export async function POST(
     });
 
     const isCarrier = user?.organizationId === trip.carrierId;
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isCarrier && !isAdmin) {
       return NextResponse.json(
-        { error: 'Only the carrier can upload POD' },
+        { error: "Only the carrier can upload POD" },
         { status: 403 }
       );
     }
 
     // Parse form data for file upload
-    const formData = await request.formData();
-    const file = formData.get('file') as File | null;
-    const notes = formData.get('notes') as string | null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const formData: any = await request.formData();
+    const file = formData.get("file") as File | null;
+    const notes = formData.get("notes") as string | null;
 
     if (!file) {
       return NextResponse.json(
-        { error: 'POD document file is required' },
+        { error: "POD document file is required" },
         { status: 400 }
       );
     }
 
     // Validate file type (image or PDF)
     const allowedTypes = [
-      'image/jpeg',
-      'image/png',
-      'image/jpg',
-      'application/pdf',
+      "image/jpeg",
+      "image/png",
+      "image/jpg",
+      "application/pdf",
     ];
 
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
-        { error: 'File must be an image (JPEG, PNG) or PDF' },
+        { error: "File must be an image (JPEG, PNG) or PDF" },
         { status: 400 }
       );
     }
@@ -113,21 +114,21 @@ export async function POST(
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
       return NextResponse.json(
-        { error: 'File size must be less than 10MB' },
+        { error: "File size must be less than 10MB" },
         { status: 400 }
       );
     }
 
     // Determine file type category
-    const fileType = file.type.startsWith('image/') ? 'IMAGE' : 'PDF';
+    const fileType = file.type.startsWith("image/") ? "IMAGE" : "PDF";
 
     // Upload file to storage service
     const uploadResult = await uploadPOD(file, tripId);
 
     if (!uploadResult.success) {
-      console.error('POD upload failed:', uploadResult.error);
+      console.error("POD upload failed:", uploadResult.error);
       return NextResponse.json(
-        { error: 'Failed to upload POD file. Please try again.' },
+        { error: "Failed to upload POD file. Please try again." },
         { status: 500 }
       );
     }
@@ -154,7 +155,7 @@ export async function POST(
     await db.load.update({
       where: { id: trip.loadId },
       data: {
-        podUrl,  // Always use latest POD
+        podUrl, // Always use latest POD
         podSubmitted: true,
         podSubmittedAt: new Date(),
         // Store POD count in metadata for reference
@@ -165,7 +166,7 @@ export async function POST(
     await db.loadEvent.create({
       data: {
         loadId: trip.loadId,
-        eventType: 'POD_SUBMITTED',
+        eventType: "POD_SUBMITTED",
         description: `Proof of Delivery uploaded: ${file.name}`,
         userId: session.userId,
         metadata: {
@@ -187,14 +188,14 @@ export async function POST(
       await createNotification({
         userId: shipperUserId,
         type: NotificationType.POD_SUBMITTED,
-        title: 'Proof of Delivery Submitted',
+        title: "Proof of Delivery Submitted",
         message: `Carrier has submitted POD for trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Please verify and confirm delivery.`,
         metadata: { tripId, loadId: trip.loadId },
       });
     }
 
     return NextResponse.json({
-      message: 'POD uploaded successfully',
+      message: "POD uploaded successfully",
       pod: {
         id: tripPod.id,
         fileUrl: tripPod.fileUrl,
@@ -204,9 +205,9 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('Upload trip POD error:', error);
+    console.error("Upload trip POD error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
@@ -236,7 +237,7 @@ export async function GET(
     });
 
     if (!trip) {
-      return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
     // Check if user has access to this trip
@@ -247,12 +248,14 @@ export async function GET(
 
     const isCarrier = user?.organizationId === trip.carrierId;
     const isShipper = user?.organizationId === trip.shipperId;
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
-    const isDispatcher = session.role === 'DISPATCHER';
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
+    const isDispatcher = session.role === "DISPATCHER";
 
     if (!isCarrier && !isShipper && !isAdmin && !isDispatcher) {
       return NextResponse.json(
-        { error: 'You do not have permission to view this trip\'s POD documents' },
+        {
+          error: "You do not have permission to view this trip's POD documents",
+        },
         { status: 403 }
       );
     }
@@ -260,7 +263,7 @@ export async function GET(
     // Get all POD documents for the trip
     const pods = await db.tripPod.findMany({
       where: { tripId },
-      orderBy: { uploadedAt: 'desc' },
+      orderBy: { uploadedAt: "desc" },
       select: {
         id: true,
         fileUrl: true,
@@ -280,9 +283,9 @@ export async function GET(
       count: pods.length,
     });
   } catch (error) {
-    console.error('Get trip PODs error:', error);
+    console.error("Get trip PODs error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
