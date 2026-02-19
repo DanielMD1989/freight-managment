@@ -170,6 +170,22 @@ class LoadService {
     }
   }
 
+  /** Get received load requests (shipper — carriers requesting your loads) */
+  async getReceivedLoadRequests(params?: {
+    status?: string;
+    limit?: number;
+  }): Promise<{ loadRequests: LoadRequest[]; pagination: PaginationInfo }> {
+    try {
+      const response = await apiClient.get("/api/load-requests", { params });
+      return {
+        loadRequests: response.data.loadRequests ?? [],
+        pagination: response.data.pagination,
+      };
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  }
+
   /** Get my load requests (carrier) */
   async getMyLoadRequests(params?: {
     page?: number;

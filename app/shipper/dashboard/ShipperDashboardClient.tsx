@@ -44,7 +44,7 @@ interface Load {
   pickupDate: string;
   truckType: string;
   weight: number;
-  rate: number;
+  shipperServiceFee?: number;
   status: string;
   createdAt: string;
 }
@@ -89,7 +89,7 @@ interface CarrierApplication {
     name: string;
   };
   truck?: {
-    plateNumber: string;
+    licensePlate: string;
     truckType: string;
   };
   load?: {
@@ -469,7 +469,7 @@ export default function ShipperDashboardClient({
                             className="text-sm font-semibold"
                             style={{ color: "var(--foreground)" }}
                           >
-                            {(load.rate || 0).toLocaleString()} ETB
+                            {(load.shipperServiceFee || 0).toLocaleString()} ETB
                           </div>
                         </div>
                       </Link>
@@ -639,7 +639,7 @@ export default function ShipperDashboardClient({
                           className="text-sm font-semibold"
                           style={{ color: "var(--foreground)" }}
                         >
-                          {(load.rate || 0).toLocaleString()} ETB
+                          {(load.shipperServiceFee || 0).toLocaleString()} ETB
                         </span>
                         <StatusBadge status={load.status} />
                       </div>

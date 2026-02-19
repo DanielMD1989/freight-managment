@@ -111,15 +111,76 @@ describe("Truck Service", () => {
   });
 
   describe("Truck Postings", () => {
-    it("should get truck postings via GET /api/truck-postings", async () => {
+    it("should get truck postings via GET /api/truck-postings with offset=0 for page 1", async () => {
       mockGet.mockResolvedValue({
-        data: { postings: [{ id: "p1", truckId: "1" }] },
+        data: { postings: [{ id: "p1", truckId: "1" }], total: 1 },
+      });
+
+      const result = await truckService.getTruckPostings({ page: 1 });
+      expect(mockGet).toHaveBeenCalledWith("/api/truck-postings", {
+        params: { offset: 0, limit: 20 },
+      });
+      expect(result.postings).toHaveLength(1);
+      expect(result.pagination.page).toBe(1);
+    });
+
+    it("should convert page 2 with limit 10 to offset 10", async () => {
+      mockGet.mockResolvedValue({
+        data: { postings: [{ id: "p2" }], total: 15 },
+      });
+
+      const result = await truckService.getTruckPostings({
+        page: 2,
+        limit: 10,
+      });
+      expect(mockGet).toHaveBeenCalledWith("/api/truck-postings", {
+        params: { offset: 10, limit: 10 },
+      });
+      expect(result.pagination.page).toBe(2);
+      expect(result.pagination.total).toBe(15);
+      expect(result.pagination.pages).toBe(2);
+    });
+
+    it("should default to offset 0 when no page is provided", async () => {
+      mockGet.mockResolvedValue({
+        data: { postings: [], total: 0 },
+      });
+
+      await truckService.getTruckPostings();
+      expect(mockGet).toHaveBeenCalledWith("/api/truck-postings", {
+        params: { offset: 0, limit: 20 },
+      });
+    });
+
+    it("should pass through filter params alongside offset/limit", async () => {
+      mockGet.mockResolvedValue({
+        data: { postings: [], total: 0 },
+      });
+
+      await truckService.getTruckPostings({
+        page: 1,
+        limit: 10,
+        truckType: "DRY_VAN",
+        origin: "Addis Ababa",
+      });
+      expect(mockGet).toHaveBeenCalledWith("/api/truck-postings", {
+        params: {
+          offset: 0,
+          limit: 10,
+          truckType: "DRY_VAN",
+          origin: "Addis Ababa",
+        },
+      });
+    });
+
+    it("should normalize response with truckPostings key", async () => {
+      mockGet.mockResolvedValue({
+        data: { truckPostings: [{ id: "p1" }], total: 1 },
       });
 
       const result = await truckService.getTruckPostings();
-      expect(mockGet).toHaveBeenCalledWith("/api/truck-postings", {
-        params: undefined,
-      });
+      expect(result.postings).toHaveLength(1);
+      expect(result.postings[0].id).toBe("p1");
     });
 
     it("should create truck posting via POST /api/truck-postings", async () => {

@@ -88,8 +88,24 @@ class TruckService {
     destination?: string;
   }): Promise<{ postings: TruckPosting[]; pagination: PaginationInfo }> {
     try {
-      const response = await apiClient.get("/api/truck-postings", { params });
-      return response.data;
+      const { page, limit = 20, ...rest } = params || {};
+      const offset = page && page > 1 ? (page - 1) * limit : 0;
+      const response = await apiClient.get("/api/truck-postings", {
+        params: { offset, limit, ...rest },
+      });
+      const data = response.data;
+      const postings: TruckPosting[] =
+        data.postings ?? data.truckPostings ?? [];
+      const total: number = data.total ?? postings.length;
+      return {
+        postings,
+        pagination: {
+          page: page ?? 1,
+          limit,
+          total,
+          pages: Math.ceil(total / limit),
+        },
+      };
     } catch (error) {
       throw new Error(getErrorMessage(error));
     }

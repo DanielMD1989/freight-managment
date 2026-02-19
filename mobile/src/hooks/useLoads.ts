@@ -109,6 +109,17 @@ export function useRespondToLoadRequest() {
   });
 }
 
+/** Received load requests (shipper — carriers requesting your loads) */
+export function useReceivedLoadRequests(params?: {
+  status?: string;
+  limit?: number;
+}) {
+  return useQuery({
+    queryKey: [...LOAD_REQUESTS_KEY, "received", params],
+    queryFn: () => loadService.getReceivedLoadRequests(params),
+  });
+}
+
 /** My load requests (carrier) */
 export function useMyLoadRequests(params?: {
   page?: number;

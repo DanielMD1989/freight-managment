@@ -35,14 +35,13 @@ interface DashboardData {
   activePostings: number;
   completedDeliveries: number;
   inTransitTrips?: number;
-  totalRevenue: number;
+  totalServiceFeesPaid: number;
   totalDistance?: number;
   wallet: {
     balance: number;
     currency: string;
   };
   recentPostings: number;
-  nearbyMatches?: number;
   pendingApprovals?: number;
 }
 
@@ -73,7 +72,7 @@ interface User {
 interface Truck {
   id: string;
   isAvailable: boolean;
-  plateNumber?: string;
+  licensePlate?: string;
   truckType?: string;
   status?: string;
 }
@@ -134,11 +133,10 @@ export default function CarrierDashboardClient({
     activePostings: 0,
     completedDeliveries: 0,
     inTransitTrips: 0,
-    totalRevenue: 0,
+    totalServiceFeesPaid: 0,
     totalDistance: 0,
     wallet: { balance: 0, currency: "ETB" },
     recentPostings: 0,
-    nearbyMatches: 0,
     pendingApprovals: 0,
   };
 
@@ -597,7 +595,7 @@ export default function CarrierDashboardClient({
                             className="text-sm font-medium"
                             style={{ color: "var(--foreground)" }}
                           >
-                            {truck.plateNumber || "Truck"}
+                            {truck.licensePlate || "Truck"}
                           </p>
                           <p
                             className="text-xs"

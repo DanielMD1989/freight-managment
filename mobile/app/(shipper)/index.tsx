@@ -14,7 +14,8 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useShipperDashboard } from "../../src/hooks/useDashboard";
-import { useLoads } from "../../src/hooks/useLoads";
+import { useLoads, useReceivedLoadRequests } from "../../src/hooks/useLoads";
+import { useTrips } from "../../src/hooks/useTrips";
 import { useAuthStore } from "../../src/stores/auth";
 import { Card } from "../../src/components/Card";
 import { StatusBadge } from "../../src/components/StatusBadge";
@@ -23,7 +24,7 @@ import { formatDate } from "../../src/utils/format";
 import { colors } from "../../src/theme/colors";
 import { spacing } from "../../src/theme/spacing";
 import { typography } from "../../src/theme/typography";
-import type { Load } from "../../src/types";
+import type { Load, Trip, LoadRequest } from "../../src/types";
 
 export default function ShipperDashboard() {
   const router = useRouter();
@@ -32,10 +33,20 @@ export default function ShipperDashboard() {
   const { data, isLoading, isError, error, refetch, isRefetching } =
     useShipperDashboard();
   const { data: recentLoadsData } = useLoads({ limit: 4, myLoads: true });
+  const { data: tripsData } = useTrips({
+    status: "ASSIGNED,PICKUP_PENDING,IN_TRANSIT",
+    limit: 5,
+  });
+  const { data: loadRequestsData } = useReceivedLoadRequests({
+    status: "PENDING",
+    limit: 5,
+  });
 
   if (isLoading && !data) return <LoadingSpinner fullScreen />;
 
   const recentLoads = recentLoadsData?.loads ?? [];
+  const activeTrips = tripsData?.trips ?? [];
+  const pendingApplications = loadRequestsData?.loadRequests ?? [];
 
   const stats = [
     {
@@ -159,6 +170,79 @@ export default function ShipperDashboard() {
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* Active Shipments */}
+      {activeTrips.length > 0 && (
+        <>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Active Shipments</Text>
+            <TouchableOpacity
+              onPress={() => router.push("/(shipper)/trips" as `/${string}`)}
+            >
+              <Text style={styles.viewAll}>View All</Text>
+            </TouchableOpacity>
+          </View>
+          {activeTrips.slice(0, 5).map((trip: Trip) => (
+            <TouchableOpacity
+              key={trip.id}
+              onPress={() =>
+                router.push(`/(shipper)/trips/${trip.id}` as `/${string}`)
+              }
+              style={styles.recentLoadWrapper}
+            >
+              <Card style={styles.recentLoadCard}>
+                <View style={styles.recentLoadHeader}>
+                  <Text style={styles.recentLoadRoute} numberOfLines={1}>
+                    {trip.load?.pickupCity ?? "Pickup"} →{" "}
+                    {trip.load?.deliveryCity ?? "Delivery"}
+                  </Text>
+                  <StatusBadge status={trip.status} type="trip" />
+                </View>
+                <Text style={styles.recentLoadDate}>
+                  {trip.carrier?.name ?? "Carrier"} •{" "}
+                  {trip.truck?.licensePlate ?? "—"}
+                </Text>
+              </Card>
+            </TouchableOpacity>
+          ))}
+        </>
+      )}
+
+      {/* Carrier Applications */}
+      {pendingApplications.length > 0 && (
+        <>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Carrier Applications</Text>
+            <TouchableOpacity
+              onPress={() => router.push("/(shipper)/loads" as `/${string}`)}
+            >
+              <Text style={styles.viewAll}>View All</Text>
+            </TouchableOpacity>
+          </View>
+          {pendingApplications.slice(0, 5).map((req: LoadRequest) => (
+            <TouchableOpacity
+              key={req.id}
+              onPress={() =>
+                router.push(`/(shipper)/loads/${req.loadId}` as `/${string}`)
+              }
+              style={styles.recentLoadWrapper}
+            >
+              <Card style={styles.recentLoadCard}>
+                <View style={styles.recentLoadHeader}>
+                  <Text style={styles.recentLoadRoute} numberOfLines={1}>
+                    {req.carrier?.name ?? "Carrier"}
+                  </Text>
+                  <StatusBadge status={req.status} type="load" />
+                </View>
+                <Text style={styles.recentLoadDate}>
+                  {req.load?.pickupCity ?? "—"} →{" "}
+                  {req.load?.deliveryCity ?? "—"}
+                </Text>
+              </Card>
+            </TouchableOpacity>
+          ))}
+        </>
+      )}
 
       {/* Loads by status breakdown */}
       {data?.loadsByStatus && data.loadsByStatus.length > 0 && (
