@@ -38,23 +38,32 @@ export type {
   TripWithProgress,
 } from "../../../types/domain";
 
-/** Dashboard stats returned by /api/dashboard */
-export interface DashboardStats {
-  totalLoads: number;
-  activeLoads: number;
-  totalTrips: number;
-  activeTrips: number;
+/** Carrier dashboard from GET /api/carrier/dashboard */
+export interface CarrierDashboardStats {
   totalTrucks: number;
-  availableTrucks: number;
-  pendingRequests: number;
-  completionRate: number;
-  revenue: number;
-  recentActivity: Array<{
-    id: string;
-    type: string;
-    message: string;
-    timestamp: string;
-  }>;
+  activeTrucks: number;
+  activePostings: number;
+  completedDeliveries: number;
+  inTransitTrips: number;
+  totalServiceFeesPaid: number;
+  totalDistance: number;
+  wallet: { balance: number; currency: string };
+  recentPostings: number;
+  pendingApprovals: number;
+}
+
+/** Shipper dashboard from GET /api/shipper/dashboard */
+export interface ShipperDashboardStats {
+  stats: {
+    totalLoads: number;
+    activeLoads: number;
+    inTransitLoads: number;
+    deliveredLoads: number;
+    totalSpent: number;
+    pendingPayments: number;
+  };
+  loadsByStatus: Array<{ status: string; count: number }>;
+  wallet: { balance: number; currency: string };
 }
 
 /** Auth response from login/register */

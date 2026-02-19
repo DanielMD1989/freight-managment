@@ -1,16 +1,23 @@
 /**
- * Dashboard query hooks
+ * Role-specific dashboard query hooks
  */
 import { useQuery } from "@tanstack/react-query";
 import { dashboardService } from "../services/dashboard";
 
-const DASHBOARD_KEY = ["dashboard"] as const;
-
-/** Fetch dashboard stats */
-export function useDashboard() {
+/** Fetch carrier dashboard stats */
+export function useCarrierDashboard() {
   return useQuery({
-    queryKey: DASHBOARD_KEY,
-    queryFn: () => dashboardService.getDashboard(),
-    refetchInterval: 60000, // Refresh every minute
+    queryKey: ["carrier-dashboard"],
+    queryFn: () => dashboardService.getCarrierDashboard(),
+    refetchInterval: 60000,
+  });
+}
+
+/** Fetch shipper dashboard stats */
+export function useShipperDashboard() {
+  return useQuery({
+    queryKey: ["shipper-dashboard"],
+    queryFn: () => dashboardService.getShipperDashboard(),
+    refetchInterval: 60000,
   });
 }

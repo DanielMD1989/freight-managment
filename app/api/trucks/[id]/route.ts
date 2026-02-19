@@ -299,14 +299,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
-    // Check if user owns this truck
+    // Only admins can delete trucks (carriers must request admin deletion)
     const user = await db.user.findUnique({
       where: { id: session.userId },
       select: { organizationId: true, role: true },
     });
 
-    const canDelete =
-      user?.role === "SUPER_ADMIN" || truck.carrierId === user?.organizationId;
+    const canDelete = user?.role === "SUPER_ADMIN" || user?.role === "ADMIN";
 
     if (!canDelete) {
       return NextResponse.json(

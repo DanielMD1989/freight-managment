@@ -11,14 +11,14 @@
  * - Admin override capabilities
  */
 
-import { Permission, hasPermission } from '@/lib/rbac/permissions';
+import { Permission, hasPermission } from "@/lib/rbac/permissions";
 import {
   createTestUser,
   createTestOrganization,
   cleanupTestData,
-} from './utils/testUtils';
+} from "./utils/testUtils";
 
-describe('RBAC System', () => {
+describe("RBAC System", () => {
   beforeEach(async () => {
     await cleanupTestData();
   });
@@ -27,8 +27,8 @@ describe('RBAC System', () => {
     await cleanupTestData();
   });
 
-  describe('Permission Definitions', () => {
-    it('should have all required permissions defined', () => {
+  describe("Permission Definitions", () => {
+    it("should have all required permissions defined", () => {
       const requiredPermissions = [
         // Load Management
         Permission.POST_LOADS,
@@ -67,7 +67,7 @@ describe('RBAC System', () => {
       }
     });
 
-    it('should have unique permission values', () => {
+    it("should have unique permission values", () => {
       const permissions = Object.values(Permission);
       const uniquePermissions = new Set(permissions);
 
@@ -75,18 +75,18 @@ describe('RBAC System', () => {
     });
   });
 
-  describe('Admin Role Permissions', () => {
-    it('should grant admin key administrative permissions', async () => {
+  describe("Admin Role Permissions", () => {
+    it("should grant admin key administrative permissions", async () => {
       const org = await createTestOrganization({
-        name: 'Admin Org',
-        type: 'CARRIER_COMPANY',
+        name: "Admin Org",
+        type: "CARRIER_COMPANY",
       });
 
       const admin = await createTestUser({
-        email: 'admin@platform.com',
-        password: 'AdminPass123!',
-        name: 'Platform Admin',
-        role: 'ADMIN',
+        email: "admin@platform.com",
+        password: "AdminPass123!",
+        name: "Platform Admin",
+        role: "ADMIN",
         organizationId: org.id,
       });
 
@@ -103,318 +103,364 @@ describe('RBAC System', () => {
       ];
 
       for (const permission of adminPermissions) {
-        const hasAccess = await hasPermission('ADMIN', permission);
+        const hasAccess = await hasPermission("ADMIN", permission);
         expect(hasAccess).toBe(true);
       }
 
       // ADMIN should NOT have SuperAdmin-only permissions
-      expect(await hasPermission('ADMIN', Permission.ASSIGN_ROLES)).toBe(false);
-      expect(await hasPermission('ADMIN', Permission.GLOBAL_OVERRIDE)).toBe(false);
+      expect(await hasPermission("ADMIN", Permission.ASSIGN_ROLES)).toBe(false);
+      expect(await hasPermission("ADMIN", Permission.GLOBAL_OVERRIDE)).toBe(
+        false
+      );
     });
 
-    it('should allow admin cross-organization access', async () => {
+    it("should grant admin truck deletion permission", async () => {
+      // Admin can delete trucks (carriers cannot)
+      expect(await hasPermission("ADMIN", Permission.DELETE_TRUCKS)).toBe(true);
+      expect(await hasPermission("CARRIER", Permission.DELETE_TRUCKS)).toBe(
+        false
+      );
+    });
+
+    it("should allow admin cross-organization access", async () => {
       const org1 = await createTestOrganization({
-        name: 'Org 1',
-        type: 'CARRIER_COMPANY',
+        name: "Org 1",
+        type: "CARRIER_COMPANY",
       });
 
       const org2 = await createTestOrganization({
-        name: 'Org 2',
-        type: 'CARRIER_COMPANY',
+        name: "Org 2",
+        type: "CARRIER_COMPANY",
       });
 
       // Admin should have access to both organizations
-      expect(await hasPermission('ADMIN', Permission.VIEW_LOADS)).toBe(true);
-      expect(await hasPermission('ADMIN', Permission.VIEW_LOADS)).toBe(true);
+      expect(await hasPermission("ADMIN", Permission.VIEW_LOADS)).toBe(true);
+      expect(await hasPermission("ADMIN", Permission.VIEW_LOADS)).toBe(true);
     });
   });
 
-  describe('Carrier Role Permissions', () => {
-    it('should grant carrier truck posting permissions', async () => {
+  describe("Carrier Role Permissions", () => {
+    it("should grant carrier truck posting permissions", async () => {
       const org = await createTestOrganization({
-        name: 'Carrier Org',
-        type: 'CARRIER_COMPANY',
+        name: "Carrier Org",
+        type: "CARRIER_COMPANY",
       });
 
       const carrier = await createTestUser({
-        email: 'carrier@example.com',
-        password: 'CarrierPass123!',
-        name: 'Carrier User',
-        role: 'CARRIER',
+        email: "carrier@example.com",
+        password: "CarrierPass123!",
+        name: "Carrier User",
+        role: "CARRIER",
         organizationId: org.id,
       });
 
-      // Carrier should have truck permissions
-      expect(await hasPermission('CARRIER', Permission.POST_TRUCKS)).toBe(true);
-      expect(await hasPermission('CARRIER', Permission.VIEW_TRUCKS)).toBe(true);
-      expect(await hasPermission('CARRIER', Permission.EDIT_TRUCKS)).toBe(true);
-      expect(await hasPermission('CARRIER', Permission.DELETE_TRUCKS)).toBe(true);
+      // Carrier should have truck permissions (except DELETE_TRUCKS, which is admin-only)
+      expect(await hasPermission("CARRIER", Permission.POST_TRUCKS)).toBe(true);
+      expect(await hasPermission("CARRIER", Permission.VIEW_TRUCKS)).toBe(true);
+      expect(await hasPermission("CARRIER", Permission.EDIT_TRUCKS)).toBe(true);
+      expect(await hasPermission("CARRIER", Permission.DELETE_TRUCKS)).toBe(
+        false
+      );
     });
 
-    it('should allow carrier to view loads', async () => {
+    it("should allow carrier to view loads", async () => {
       const org = await createTestOrganization({
-        name: 'Carrier Org',
-        type: 'CARRIER_COMPANY',
+        name: "Carrier Org",
+        type: "CARRIER_COMPANY",
       });
 
       const carrier = await createTestUser({
-        email: 'carrier@example.com',
-        password: 'CarrierPass123!',
-        name: 'Carrier User',
-        role: 'CARRIER',
+        email: "carrier@example.com",
+        password: "CarrierPass123!",
+        name: "Carrier User",
+        role: "CARRIER",
         organizationId: org.id,
       });
 
       // Carrier can view loads (to find work)
-      expect(await hasPermission('CARRIER', Permission.VIEW_LOADS)).toBe(true);
+      expect(await hasPermission("CARRIER", Permission.VIEW_LOADS)).toBe(true);
     });
 
-    it('should prevent carrier from posting loads', async () => {
+    it("should prevent carrier from posting loads", async () => {
       const org = await createTestOrganization({
-        name: 'Carrier Org',
-        type: 'CARRIER_COMPANY',
+        name: "Carrier Org",
+        type: "CARRIER_COMPANY",
       });
 
       const carrier = await createTestUser({
-        email: 'carrier@example.com',
-        password: 'CarrierPass123!',
-        name: 'Carrier User',
-        role: 'CARRIER',
+        email: "carrier@example.com",
+        password: "CarrierPass123!",
+        name: "Carrier User",
+        role: "CARRIER",
         organizationId: org.id,
       });
 
       // Carrier cannot post loads
-      expect(await hasPermission('CARRIER', Permission.POST_LOADS)).toBe(false);
+      expect(await hasPermission("CARRIER", Permission.POST_LOADS)).toBe(false);
     });
 
-    it('should prevent carrier from verifying documents', async () => {
+    it("should prevent carrier from verifying documents", async () => {
       const org = await createTestOrganization({
-        name: 'Carrier Org',
-        type: 'CARRIER_COMPANY',
+        name: "Carrier Org",
+        type: "CARRIER_COMPANY",
       });
 
       const carrier = await createTestUser({
-        email: 'carrier@example.com',
-        password: 'CarrierPass123!',
-        name: 'Carrier User',
-        role: 'CARRIER',
+        email: "carrier@example.com",
+        password: "CarrierPass123!",
+        name: "Carrier User",
+        role: "CARRIER",
         organizationId: org.id,
       });
 
       // Only admins can verify documents
-      expect(await hasPermission('CARRIER', Permission.VERIFY_DOCUMENTS)).toBe(false);
+      expect(await hasPermission("CARRIER", Permission.VERIFY_DOCUMENTS)).toBe(
+        false
+      );
     });
   });
 
-  describe('Shipper Role Permissions', () => {
-    it('should grant shipper load posting permissions', async () => {
+  describe("Shipper Role Permissions", () => {
+    it("should grant shipper load posting permissions", async () => {
       const org = await createTestOrganization({
-        name: 'Shipper Org',
-        type: 'SHIPPER',
+        name: "Shipper Org",
+        type: "SHIPPER",
       });
 
       const shipper = await createTestUser({
-        email: 'shipper@example.com',
-        password: 'ShipperPass123!',
-        name: 'Shipper User',
-        role: 'SHIPPER',
+        email: "shipper@example.com",
+        password: "ShipperPass123!",
+        name: "Shipper User",
+        role: "SHIPPER",
         organizationId: org.id,
       });
 
       // Shipper should have load permissions
-      expect(await hasPermission('SHIPPER', Permission.POST_LOADS)).toBe(true);
-      expect(await hasPermission('SHIPPER', Permission.VIEW_LOADS)).toBe(true);
-      expect(await hasPermission('SHIPPER', Permission.EDIT_LOADS)).toBe(true);
-      expect(await hasPermission('SHIPPER', Permission.DELETE_LOADS)).toBe(true);
+      expect(await hasPermission("SHIPPER", Permission.POST_LOADS)).toBe(true);
+      expect(await hasPermission("SHIPPER", Permission.VIEW_LOADS)).toBe(true);
+      expect(await hasPermission("SHIPPER", Permission.EDIT_LOADS)).toBe(true);
+      expect(await hasPermission("SHIPPER", Permission.DELETE_LOADS)).toBe(
+        true
+      );
     });
 
-    it('should allow shipper to view trucks', async () => {
+    it("should allow shipper to view trucks", async () => {
       const org = await createTestOrganization({
-        name: 'Shipper Org',
-        type: 'SHIPPER',
+        name: "Shipper Org",
+        type: "SHIPPER",
       });
 
       const shipper = await createTestUser({
-        email: 'shipper@example.com',
-        password: 'ShipperPass123!',
-        name: 'Shipper User',
-        role: 'SHIPPER',
+        email: "shipper@example.com",
+        password: "ShipperPass123!",
+        name: "Shipper User",
+        role: "SHIPPER",
         organizationId: org.id,
       });
 
       // Shipper can view trucks (to find carriers)
-      expect(await hasPermission('SHIPPER', Permission.VIEW_TRUCKS)).toBe(true);
+      expect(await hasPermission("SHIPPER", Permission.VIEW_TRUCKS)).toBe(true);
     });
 
-    it('should prevent shipper from posting trucks', async () => {
+    it("should prevent shipper from posting trucks", async () => {
       const org = await createTestOrganization({
-        name: 'Shipper Org',
-        type: 'SHIPPER',
+        name: "Shipper Org",
+        type: "SHIPPER",
       });
 
       const shipper = await createTestUser({
-        email: 'shipper@example.com',
-        password: 'ShipperPass123!',
-        name: 'Shipper User',
-        role: 'SHIPPER',
+        email: "shipper@example.com",
+        password: "ShipperPass123!",
+        name: "Shipper User",
+        role: "SHIPPER",
         organizationId: org.id,
       });
 
       // Shipper cannot post trucks
-      expect(await hasPermission('SHIPPER', Permission.POST_TRUCKS)).toBe(false);
+      expect(await hasPermission("SHIPPER", Permission.POST_TRUCKS)).toBe(
+        false
+      );
     });
   });
 
-  describe('Organization-Level Permissions', () => {
-    it('should enforce organization isolation', async () => {
+  describe("Organization-Level Permissions", () => {
+    it("should enforce organization isolation", async () => {
       const org1 = await createTestOrganization({
-        name: 'Carrier 1',
-        type: 'CARRIER_COMPANY',
+        name: "Carrier 1",
+        type: "CARRIER_COMPANY",
       });
 
       const org2 = await createTestOrganization({
-        name: 'Carrier 2',
-        type: 'CARRIER_COMPANY',
+        name: "Carrier 2",
+        type: "CARRIER_COMPANY",
       });
 
       const user = await createTestUser({
-        email: 'carrier@org1.com',
-        password: 'Password123!',
-        name: 'Carrier User',
-        role: 'CARRIER',
+        email: "carrier@org1.com",
+        password: "Password123!",
+        name: "Carrier User",
+        role: "CARRIER",
         organizationId: org1.id,
       });
 
       // hasPermission only checks role-based permissions, not organization membership
       // Both calls return true because CARRIER role has POST_TRUCKS permission
-      expect(hasPermission('CARRIER', Permission.POST_TRUCKS)).toBe(true);
+      expect(hasPermission("CARRIER", Permission.POST_TRUCKS)).toBe(true);
 
       // Organization isolation is enforced at the API/database query level
       expect(user.organizationId).not.toBe(org2.id);
     });
 
-    it('should prevent access without organization', async () => {
+    it("should prevent access without organization", async () => {
       const user = await createTestUser({
-        email: 'noorg@example.com',
-        password: 'Password123!',
-        name: 'No Org User',
-        role: 'CARRIER',
+        email: "noorg@example.com",
+        password: "Password123!",
+        name: "No Org User",
+        role: "CARRIER",
       });
 
       // hasPermission only checks role-based permissions
-      expect(hasPermission('CARRIER', Permission.POST_TRUCKS)).toBe(true);
+      expect(hasPermission("CARRIER", Permission.POST_TRUCKS)).toBe(true);
 
       // Organization enforcement happens at the API level
       expect(user.organizationId).toBeNull();
     });
   });
 
-  describe('Document Management Permissions', () => {
-    it('should allow users to upload documents', async () => {
+  describe("Document Management Permissions", () => {
+    it("should allow users to upload documents", async () => {
       const org = await createTestOrganization({
-        name: 'Test Org',
-        type: 'CARRIER_COMPANY',
+        name: "Test Org",
+        type: "CARRIER_COMPANY",
       });
 
       const carrier = await createTestUser({
-        email: 'carrier@example.com',
-        password: 'Password123!',
-        name: 'Carrier User',
-        role: 'CARRIER',
+        email: "carrier@example.com",
+        password: "Password123!",
+        name: "Carrier User",
+        role: "CARRIER",
         organizationId: org.id,
       });
 
-      expect(await hasPermission('CARRIER', Permission.UPLOAD_DOCUMENTS)).toBe(true);
+      expect(await hasPermission("CARRIER", Permission.UPLOAD_DOCUMENTS)).toBe(
+        true
+      );
     });
 
-    it('should only allow admins to verify documents', async () => {
+    it("should only allow admins to verify documents", async () => {
       const org = await createTestOrganization({
-        name: 'Test Org',
-        type: 'CARRIER_COMPANY',
+        name: "Test Org",
+        type: "CARRIER_COMPANY",
       });
 
       // Admin should be able to verify
-      expect(await hasPermission('ADMIN', Permission.VERIFY_DOCUMENTS)).toBe(true);
+      expect(await hasPermission("ADMIN", Permission.VERIFY_DOCUMENTS)).toBe(
+        true
+      );
 
       // Carrier should NOT be able to verify
-      expect(await hasPermission('CARRIER', Permission.VERIFY_DOCUMENTS)).toBe(false);
+      expect(await hasPermission("CARRIER", Permission.VERIFY_DOCUMENTS)).toBe(
+        false
+      );
 
       // Shipper should NOT be able to verify
-      expect(await hasPermission('SHIPPER', Permission.VERIFY_DOCUMENTS)).toBe(false);
+      expect(await hasPermission("SHIPPER", Permission.VERIFY_DOCUMENTS)).toBe(
+        false
+      );
     });
   });
 
-  describe('Wallet Permissions', () => {
-    it('should allow users to view their own wallet', async () => {
+  describe("Wallet Permissions", () => {
+    it("should allow users to view their own wallet", async () => {
       const org = await createTestOrganization({
-        name: 'Test Org',
-        type: 'CARRIER_COMPANY',
+        name: "Test Org",
+        type: "CARRIER_COMPANY",
       });
 
-      expect(await hasPermission('CARRIER', Permission.VIEW_WALLET)).toBe(true);
-      expect(await hasPermission('SHIPPER', Permission.VIEW_WALLET)).toBe(true);
+      expect(await hasPermission("CARRIER", Permission.VIEW_WALLET)).toBe(true);
+      expect(await hasPermission("SHIPPER", Permission.VIEW_WALLET)).toBe(true);
     });
 
-    it('should allow admins to manage all wallets', async () => {
+    it("should allow admins to manage all wallets", async () => {
       const org = await createTestOrganization({
-        name: 'Test Org',
-        type: 'CARRIER_COMPANY',
+        name: "Test Org",
+        type: "CARRIER_COMPANY",
       });
 
-      expect(await hasPermission('ADMIN', Permission.MANAGE_WALLET)).toBe(true);
+      expect(await hasPermission("ADMIN", Permission.MANAGE_WALLET)).toBe(true);
     });
 
-    it('should prevent regular users from managing wallets', async () => {
+    it("should prevent regular users from managing wallets", async () => {
       const org = await createTestOrganization({
-        name: 'Test Org',
-        type: 'CARRIER_COMPANY',
+        name: "Test Org",
+        type: "CARRIER_COMPANY",
       });
 
-      expect(await hasPermission('CARRIER', Permission.MANAGE_WALLET)).toBe(false);
-      expect(await hasPermission('SHIPPER', Permission.MANAGE_WALLET)).toBe(false);
+      expect(await hasPermission("CARRIER", Permission.MANAGE_WALLET)).toBe(
+        false
+      );
+      expect(await hasPermission("SHIPPER", Permission.MANAGE_WALLET)).toBe(
+        false
+      );
     });
   });
 
-  describe('System Admin Permissions', () => {
-    it('should only allow admins to view audit logs', async () => {
+  describe("System Admin Permissions", () => {
+    it("should only allow admins to view audit logs", async () => {
       const org = await createTestOrganization({
-        name: 'Test Org',
-        type: 'CARRIER_COMPANY',
+        name: "Test Org",
+        type: "CARRIER_COMPANY",
       });
 
-      expect(await hasPermission('ADMIN', Permission.VIEW_AUDIT_LOGS)).toBe(true);
-      expect(await hasPermission('CARRIER', Permission.VIEW_AUDIT_LOGS)).toBe(false);
-      expect(await hasPermission('SHIPPER', Permission.VIEW_AUDIT_LOGS)).toBe(false);
+      expect(await hasPermission("ADMIN", Permission.VIEW_AUDIT_LOGS)).toBe(
+        true
+      );
+      expect(await hasPermission("CARRIER", Permission.VIEW_AUDIT_LOGS)).toBe(
+        false
+      );
+      expect(await hasPermission("SHIPPER", Permission.VIEW_AUDIT_LOGS)).toBe(
+        false
+      );
     });
 
-    it('should only allow admins to manage system config', async () => {
+    it("should only allow admins to manage system config", async () => {
       const org = await createTestOrganization({
-        name: 'Test Org',
-        type: 'CARRIER_COMPANY',
+        name: "Test Org",
+        type: "CARRIER_COMPANY",
       });
 
-      expect(await hasPermission('ADMIN', Permission.MANAGE_SYSTEM_CONFIG)).toBe(true);
-      expect(await hasPermission('CARRIER', Permission.MANAGE_SYSTEM_CONFIG)).toBe(false);
-      expect(await hasPermission('SHIPPER', Permission.MANAGE_SYSTEM_CONFIG)).toBe(false);
+      expect(
+        await hasPermission("ADMIN", Permission.MANAGE_SYSTEM_CONFIG)
+      ).toBe(true);
+      expect(
+        await hasPermission("CARRIER", Permission.MANAGE_SYSTEM_CONFIG)
+      ).toBe(false);
+      expect(
+        await hasPermission("SHIPPER", Permission.MANAGE_SYSTEM_CONFIG)
+      ).toBe(false);
     });
   });
 
-  describe('Edge Cases', () => {
-    it('should handle invalid roles gracefully', async () => {
-      const invalidRole = 'INVALID_ROLE' as any;
+  describe("Edge Cases", () => {
+    it("should handle invalid roles gracefully", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const invalidRole = "INVALID_ROLE" as any;
 
-      expect(await hasPermission(invalidRole, Permission.VIEW_LOADS)).toBe(false);
+      expect(await hasPermission(invalidRole, Permission.VIEW_LOADS)).toBe(
+        false
+      );
     });
 
-    it('should handle undefined permissions gracefully', async () => {
-      const invalidPermission = 'INVALID_PERMISSION' as any;
+    it("should handle undefined permissions gracefully", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const invalidPermission = "INVALID_PERMISSION" as any;
 
-      expect(await hasPermission('CARRIER', invalidPermission)).toBe(false);
+      expect(await hasPermission("CARRIER", invalidPermission)).toBe(false);
     });
 
-    it('should handle null organization IDs', () => {
+    it("should handle null organization IDs", () => {
       // hasPermission only checks role-based permissions
-      expect(hasPermission('CARRIER', Permission.POST_TRUCKS)).toBe(true);
+      expect(hasPermission("CARRIER", Permission.POST_TRUCKS)).toBe(true);
     });
   });
 });

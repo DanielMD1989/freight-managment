@@ -16,6 +16,7 @@ export function useLoads(params?: {
   truckType?: string;
   origin?: string;
   destination?: string;
+  myLoads?: boolean;
 }) {
   return useQuery({
     queryKey: [...LOADS_KEY, params],

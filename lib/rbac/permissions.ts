@@ -201,7 +201,6 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.POST_TRUCKS,
     Permission.VIEW_TRUCKS,
     Permission.EDIT_TRUCKS,
-    Permission.DELETE_TRUCKS,
     Permission.MANAGE_OWN_TRUCKS,
 
     // Load search & acceptance
@@ -324,6 +323,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.VIEW_TRUCKS,
     Permission.VIEW_ALL_TRUCKS,
     Permission.MANAGE_ALL_TRUCKS,
+    Permission.DELETE_TRUCKS,
 
     // Wallet management
     Permission.MANAGE_WALLET,

@@ -1,15 +1,24 @@
 /**
- * Dashboard Service - API calls for dashboard stats
- * Ported from Flutter's dashboard_service.dart (129 LOC)
+ * Dashboard Service - Role-specific API calls for dashboard stats
  */
 import apiClient, { getErrorMessage } from "../api/client";
-import type { DashboardStats } from "../types";
+import type { CarrierDashboardStats, ShipperDashboardStats } from "../types";
 
 class DashboardService {
-  /** Get dashboard stats */
-  async getDashboard(): Promise<DashboardStats> {
+  /** Get carrier dashboard stats from /api/carrier/dashboard */
+  async getCarrierDashboard(): Promise<CarrierDashboardStats> {
     try {
-      const response = await apiClient.get("/api/dashboard");
+      const response = await apiClient.get("/api/carrier/dashboard");
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  }
+
+  /** Get shipper dashboard stats from /api/shipper/dashboard */
+  async getShipperDashboard(): Promise<ShipperDashboardStats> {
+    try {
+      const response = await apiClient.get("/api/shipper/dashboard");
       return response.data;
     } catch (error) {
       throw new Error(getErrorMessage(error));

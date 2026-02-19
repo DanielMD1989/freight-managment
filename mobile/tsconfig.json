@@ -8,11 +8,5 @@
       "@shared-types": ["../types/domain"]
     }
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts",
-    "../types/domain.ts"
-  ]
+  "include": ["**/*.ts", "**/*.tsx", "../types/domain.ts"]
 }

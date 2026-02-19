@@ -14,7 +14,7 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import { useDashboard } from "../../src/hooks/useDashboard";
+import { useCarrierDashboard } from "../../src/hooks/useDashboard";
 import { useAuthStore } from "../../src/stores/auth";
 import { Card } from "../../src/components/Card";
 import { LoadingSpinner } from "../../src/components/LoadingSpinner";
@@ -26,16 +26,23 @@ export default function CarrierDashboard() {
   const router = useRouter();
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
-  const { data, isLoading, refetch, isRefetching } = useDashboard();
+  const { data, isLoading, isError, error, refetch, isRefetching } =
+    useCarrierDashboard();
 
   if (isLoading && !data) {
     return <LoadingSpinner fullScreen />;
   }
 
+  const completionRate =
+    data && data.completedDeliveries + data.inTransitTrips > 0
+      ? data.completedDeliveries /
+        (data.completedDeliveries + data.inTransitTrips)
+      : 0;
+
   const stats = [
     {
       label: "Active Trips",
-      value: data?.activeTrips ?? 0,
+      value: data?.inTransitTrips ?? 0,
       icon: "navigate" as const,
       color: colors.primary500,
     },
@@ -47,13 +54,13 @@ export default function CarrierDashboard() {
     },
     {
       label: "Available",
-      value: data?.availableTrucks ?? 0,
+      value: data?.activeTrucks ?? 0,
       icon: "checkmark-circle" as const,
       color: colors.success,
     },
     {
       label: "Pending",
-      value: data?.pendingRequests ?? 0,
+      value: data?.pendingApprovals ?? 0,
       icon: "time" as const,
       color: colors.warning,
     },
@@ -97,6 +104,19 @@ export default function CarrierDashboard() {
         <Text style={styles.subtitle}>{t("carrier.dashboard")}</Text>
       </View>
 
+      {/* Error Banner */}
+      {isError && (
+        <View style={styles.errorBanner}>
+          <Ionicons name="alert-circle" size={20} color={colors.white} />
+          <Text style={styles.errorText}>
+            {error?.message ?? "Failed to load dashboard"}
+          </Text>
+          <TouchableOpacity onPress={() => refetch()}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Stats Grid */}
       <View style={styles.statsGrid}>
         {stats.map((stat) => (
@@ -130,19 +150,19 @@ export default function CarrierDashboard() {
       </View>
 
       {/* Completion Rate */}
-      {data?.completionRate != null && (
+      {completionRate > 0 && (
         <Card style={styles.rateCard}>
           <View style={styles.rateRow}>
             <Text style={styles.rateLabel}>Completion Rate</Text>
             <Text style={styles.rateValue}>
-              {Math.round(data.completionRate * 100)}%
+              {Math.round(completionRate * 100)}%
             </Text>
           </View>
           <View style={styles.rateBar}>
             <View
               style={[
                 styles.rateBarFill,
-                { width: `${data.completionRate * 100}%` },
+                { width: `${completionRate * 100}%` },
               ]}
             />
           </View>
@@ -171,6 +191,27 @@ const styles = StyleSheet.create({
     ...typography.bodyMedium,
     color: colors.textSecondary,
     marginTop: spacing.xs,
+  },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.error,
+    marginHorizontal: spacing["2xl"],
+    marginBottom: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 8,
+  },
+  errorText: {
+    ...typography.bodySmall,
+    color: colors.white,
+    flex: 1,
+  },
+  retryText: {
+    ...typography.labelMedium,
+    color: colors.white,
+    textDecorationLine: "underline",
   },
   statsGrid: {
     flexDirection: "row",

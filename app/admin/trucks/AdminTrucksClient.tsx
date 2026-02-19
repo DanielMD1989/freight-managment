@@ -8,6 +8,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { toast } from "react-hot-toast";
+import { getCSRFToken } from "@/lib/csrfFetch";
 
 type ApprovalStatus = "ALL" | "APPROVED" | "PENDING" | "REJECTED";
 
@@ -54,6 +56,8 @@ export default function AdminTrucksClient() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchTrucks = async () => {
     setLoading(true);
@@ -91,6 +95,42 @@ export default function AdminTrucksClient() {
       day: "numeric",
       year: "numeric",
     });
+  };
+
+  const handleDelete = async (truckId: string) => {
+    setIsDeleting(true);
+    try {
+      const csrfToken = await getCSRFToken();
+      const response = await fetch(`/api/trucks/${truckId}`, {
+        method: "DELETE",
+        credentials: "include",
+        headers: {
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        if (response.status === 409) {
+          toast.error(
+            error.message ||
+              "Cannot delete truck with active trips or postings."
+          );
+        } else {
+          toast.error(error.message || "Failed to delete truck");
+        }
+        return;
+      }
+
+      toast.success("Truck deleted successfully");
+      setDeleteConfirmId(null);
+      fetchTrucks();
+    } catch (error) {
+      console.error("Error deleting truck:", error);
+      toast.error("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -159,13 +199,16 @@ export default function AdminTrucksClient() {
                 <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
                   Created
                 </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
               {loading ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-4 py-8 text-center text-slate-500 dark:text-slate-400"
                   >
                     Loading...
@@ -174,7 +217,7 @@ export default function AdminTrucksClient() {
               ) : trucks.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-4 py-8 text-center text-slate-500 dark:text-slate-400"
                   >
                     No trucks found
@@ -227,6 +270,14 @@ export default function AdminTrucksClient() {
                     <td className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
                       {formatDate(truck.createdAt)}
                     </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => setDeleteConfirmId(truck.id)}
+                        className="rounded-lg px-3 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                      >
+                        Delete
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -259,6 +310,42 @@ export default function AdminTrucksClient() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-800">
+            <div className="bg-gradient-to-r from-rose-500 to-rose-600 px-6 py-4">
+              <h3 className="text-lg font-semibold text-white">
+                Confirm Delete
+              </h3>
+            </div>
+            <div className="p-6">
+              <p className="mb-6 text-slate-600 dark:text-slate-300">
+                Are you sure you want to delete this truck? This will also
+                remove associated postings, documents, and GPS records. This
+                action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirmId(null)}
+                  disabled={isDeleting}
+                  className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDelete(deleteConfirmId)}
+                  disabled={isDeleting}
+                  className="flex-1 rounded-xl bg-gradient-to-r from-rose-600 to-rose-500 px-4 py-2.5 font-medium text-white shadow-md shadow-rose-500/25 transition-all hover:from-rose-700 hover:to-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isDeleting ? "Deleting..." : "Delete Truck"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

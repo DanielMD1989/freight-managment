@@ -152,6 +152,37 @@ class TruckService {
     }
   }
 
+  // ---- Truck Requests (shipper requesting a truck) ----
+
+  /** Create a truck request (shipper requests a truck for a load) */
+  async createTruckRequest(data: {
+    loadId: string;
+    truckId: string;
+    notes?: string;
+    expiresInHours?: number;
+  }): Promise<{ request: unknown; message: string }> {
+    try {
+      const response = await apiClient.post("/api/truck-requests", data);
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  }
+
+  /** Get my truck requests (shipper) */
+  async getMyTruckRequests(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }): Promise<{ requests: unknown[]; total: number }> {
+    try {
+      const response = await apiClient.get("/api/truck-requests", { params });
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  }
+
   /** Get my truck postings (carrier) */
   async getMyTruckPostings(params?: {
     page?: number;

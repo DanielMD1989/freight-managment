@@ -19,6 +19,7 @@ class LoadService {
     truckType?: string;
     origin?: string;
     destination?: string;
+    myLoads?: boolean;
   }): Promise<LoadsResponse> {
     try {
       const response = await apiClient.get("/api/loads", { params });
@@ -51,9 +52,17 @@ class LoadService {
     cargoDescription: string;
     fullPartial?: string;
     bookMode?: string;
+    isFragile?: boolean;
+    requiresRefrigeration?: boolean;
+    isAnonymous?: boolean;
+    appointmentRequired?: boolean;
+    volume?: number;
+    shipperContactName?: string;
+    shipperContactPhone?: string;
     pickupAddress?: string;
     deliveryAddress?: string;
     specialInstructions?: string;
+    status?: string;
   }): Promise<Load> {
     try {
       const response = await apiClient.post("/api/loads", data);
@@ -117,8 +126,13 @@ class LoadService {
     loadId: string
   ): Promise<{ requests: LoadRequest[]; pagination: PaginationInfo }> {
     try {
-      const response = await apiClient.get(`/api/loads/${loadId}/requests`);
-      return response.data;
+      const response = await apiClient.get("/api/load-requests", {
+        params: { loadId },
+      });
+      return {
+        requests: response.data.loadRequests ?? response.data.requests ?? [],
+        pagination: response.data.pagination,
+      };
     } catch (error) {
       throw new Error(getErrorMessage(error));
     }
@@ -131,10 +145,11 @@ class LoadService {
     notes?: string
   ): Promise<LoadRequest> {
     try {
-      const response = await apiClient.patch(
-        `/api/load-requests/${requestId}`,
+      const apiAction = action === "APPROVED" ? "APPROVE" : "REJECT";
+      const response = await apiClient.post(
+        `/api/load-requests/${requestId}/respond`,
         {
-          status: action,
+          action: apiAction,
           responseNotes: notes,
         }
       );

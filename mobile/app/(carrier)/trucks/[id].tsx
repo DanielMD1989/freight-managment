@@ -2,11 +2,10 @@
  * Truck Details Screen (Carrier)
  */
 import React from "react";
-import { View, Text, ScrollView, StyleSheet, Alert } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useTruck, useDeleteTruck } from "../../../src/hooks/useTrucks";
+import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { useLocalSearchParams } from "expo-router";
+import { useTruck } from "../../../src/hooks/useTrucks";
 import { Card } from "../../../src/components/Card";
-import { Button } from "../../../src/components/Button";
 import { StatusBadge } from "../../../src/components/StatusBadge";
 import { LoadingSpinner } from "../../../src/components/LoadingSpinner";
 import { formatTruckType, formatWeight } from "../../../src/utils/format";
@@ -16,27 +15,9 @@ import { typography } from "../../../src/theme/typography";
 
 export default function TruckDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
   const { data: truck, isLoading } = useTruck(id);
-  const deleteTruck = useDeleteTruck();
 
   if (isLoading || !truck) return <LoadingSpinner fullScreen />;
-
-  const handleDelete = () => {
-    Alert.alert("Delete Truck", "Are you sure you want to delete this truck?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: () => {
-          deleteTruck.mutate(id!, {
-            onSuccess: () => router.back(),
-            onError: (err) => Alert.alert("Error", err.message),
-          });
-        },
-      },
-    ]);
-  };
 
   return (
     <ScrollView style={styles.container}>
@@ -75,16 +56,6 @@ export default function TruckDetailsScreen() {
         )}
         {truck.imei && <DetailRow label="GPS IMEI" value={truck.imei} />}
       </Card>
-
-      <View style={styles.actions}>
-        <Button
-          title="Delete Truck"
-          onPress={handleDelete}
-          variant="destructive"
-          loading={deleteTruck.isPending}
-          fullWidth
-        />
-      </View>
     </ScrollView>
   );
 }
@@ -121,5 +92,4 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: "500",
   },
-  actions: { padding: spacing.lg },
 });

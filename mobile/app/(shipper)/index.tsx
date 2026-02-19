@@ -1,5 +1,5 @@
 /**
- * Shipper Dashboard
+ * Shipper Dashboard - Enhanced with spending stats and loads-by-status
  */
 import React from "react";
 import {
@@ -13,46 +13,70 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import { useDashboard } from "../../src/hooks/useDashboard";
+import { useShipperDashboard } from "../../src/hooks/useDashboard";
+import { useLoads } from "../../src/hooks/useLoads";
 import { useAuthStore } from "../../src/stores/auth";
 import { Card } from "../../src/components/Card";
+import { StatusBadge } from "../../src/components/StatusBadge";
 import { LoadingSpinner } from "../../src/components/LoadingSpinner";
+import { formatDate } from "../../src/utils/format";
 import { colors } from "../../src/theme/colors";
 import { spacing } from "../../src/theme/spacing";
 import { typography } from "../../src/theme/typography";
+import type { Load } from "../../src/types";
 
 export default function ShipperDashboard() {
   const router = useRouter();
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
-  const { data, isLoading, refetch, isRefetching } = useDashboard();
+  const { data, isLoading, isError, error, refetch, isRefetching } =
+    useShipperDashboard();
+  const { data: recentLoadsData } = useLoads({ limit: 4, myLoads: true });
 
   if (isLoading && !data) return <LoadingSpinner fullScreen />;
+
+  const recentLoads = recentLoadsData?.loads ?? [];
 
   const stats = [
     {
       label: "Active Loads",
-      value: data?.activeLoads ?? 0,
+      value: data?.stats?.activeLoads ?? 0,
       icon: "cube" as const,
       color: colors.primary500,
     },
     {
-      label: "Active Trips",
-      value: data?.activeTrips ?? 0,
+      label: "In Transit",
+      value: data?.stats?.inTransitLoads ?? 0,
       icon: "navigate" as const,
       color: colors.accent500,
     },
     {
       label: "Total Loads",
-      value: data?.totalLoads ?? 0,
+      value: data?.stats?.totalLoads ?? 0,
       icon: "layers" as const,
       color: colors.info,
     },
     {
+      label: "Delivered",
+      value: data?.stats?.deliveredLoads ?? 0,
+      icon: "checkmark-circle" as const,
+      color: colors.success,
+    },
+    {
       label: "Pending",
-      value: data?.pendingRequests ?? 0,
-      icon: "time" as const,
+      value: data?.stats?.pendingPayments
+        ? `${data.stats.pendingPayments.toLocaleString()} ETB`
+        : "0 ETB",
+      icon: "time-outline" as const,
       color: colors.warning,
+    },
+    {
+      label: "Total Spent",
+      value: data?.stats?.totalSpent
+        ? `${data.stats.totalSpent.toLocaleString()} ETB`
+        : "0 ETB",
+      icon: "cash-outline" as const,
+      color: colors.error,
     },
   ];
 
@@ -93,6 +117,19 @@ export default function ShipperDashboard() {
         <Text style={styles.subtitle}>{t("shipper.dashboard")}</Text>
       </View>
 
+      {/* Error Banner */}
+      {isError && (
+        <View style={styles.errorBanner}>
+          <Ionicons name="alert-circle" size={20} color={colors.white} />
+          <Text style={styles.errorText}>
+            {error?.message ?? "Failed to load dashboard"}
+          </Text>
+          <TouchableOpacity onPress={() => refetch()}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View style={styles.statsGrid}>
         {stats.map((stat) => (
           <Card key={stat.label} style={styles.statCard} padding="lg">
@@ -123,6 +160,71 @@ export default function ShipperDashboard() {
         ))}
       </View>
 
+      {/* Loads by status breakdown */}
+      {data?.loadsByStatus && data.loadsByStatus.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>Loads by Status</Text>
+          <Card style={styles.statusBreakdown} padding="lg">
+            {data.loadsByStatus.map((item) => (
+              <View key={item.status} style={styles.statusRow}>
+                <StatusBadge status={item.status} type="load" />
+                <View style={styles.statusBar}>
+                  <View
+                    style={[
+                      styles.statusBarFill,
+                      {
+                        width: `${Math.min(
+                          100,
+                          ((item.count ?? 0) /
+                            Math.max(data.stats?.totalLoads ?? 1, 1)) *
+                            100
+                        )}%`,
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.statusCount}>{item.count ?? 0}</Text>
+              </View>
+            ))}
+          </Card>
+        </>
+      )}
+
+      {/* Recent loads */}
+      {recentLoads.length > 0 && (
+        <>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Recent Loads</Text>
+            <TouchableOpacity
+              onPress={() => router.push("/(shipper)/loads" as `/${string}`)}
+            >
+              <Text style={styles.viewAll}>View All</Text>
+            </TouchableOpacity>
+          </View>
+          {recentLoads.slice(0, 4).map((load: Load) => (
+            <TouchableOpacity
+              key={load.id}
+              onPress={() =>
+                router.push(`/(shipper)/loads/${load.id}` as `/${string}`)
+              }
+              style={styles.recentLoadWrapper}
+            >
+              <Card style={styles.recentLoadCard}>
+                <View style={styles.recentLoadHeader}>
+                  <Text style={styles.recentLoadRoute}>
+                    {load.pickupCity} → {load.deliveryCity}
+                  </Text>
+                  <StatusBadge status={load.status} type="load" />
+                </View>
+                <Text style={styles.recentLoadDate}>
+                  {formatDate(load.pickupDate)}
+                </Text>
+              </Card>
+            </TouchableOpacity>
+          ))}
+        </>
+      )}
+
       <View style={{ height: spacing["3xl"] }} />
     </ScrollView>
   );
@@ -136,6 +238,27 @@ const styles = StyleSheet.create({
     ...typography.bodyMedium,
     color: colors.textSecondary,
     marginTop: spacing.xs,
+  },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.error,
+    marginHorizontal: spacing["2xl"],
+    marginBottom: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 8,
+  },
+  errorText: {
+    ...typography.bodySmall,
+    color: colors.white,
+    flex: 1,
+  },
+  retryText: {
+    ...typography.labelMedium,
+    color: colors.white,
+    textDecorationLine: "underline",
   },
   statsGrid: {
     flexDirection: "row",
@@ -160,6 +283,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing["2xl"],
     marginTop: spacing["2xl"],
     marginBottom: spacing.md,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: spacing["2xl"],
+    marginTop: spacing["2xl"],
+    marginBottom: spacing.md,
+  },
+  viewAll: {
+    ...typography.labelMedium,
+    color: colors.primary600,
   },
   actionsRow: {
     flexDirection: "row",
@@ -189,5 +324,51 @@ const styles = StyleSheet.create({
     ...typography.labelMedium,
     color: colors.textPrimary,
     textAlign: "center",
+  },
+  statusBreakdown: {
+    marginHorizontal: spacing["2xl"],
+  },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  statusBar: {
+    flex: 1,
+    height: 6,
+    backgroundColor: colors.slate100,
+    borderRadius: 3,
+  },
+  statusBarFill: {
+    height: 6,
+    backgroundColor: colors.primary400,
+    borderRadius: 3,
+  },
+  statusCount: {
+    ...typography.labelSmall,
+    color: colors.textSecondary,
+    minWidth: 24,
+    textAlign: "right",
+  },
+  recentLoadWrapper: {
+    paddingHorizontal: spacing["2xl"],
+    marginBottom: spacing.sm,
+  },
+  recentLoadCard: {},
+  recentLoadHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  recentLoadRoute: {
+    ...typography.titleSmall,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  recentLoadDate: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
   },
 });

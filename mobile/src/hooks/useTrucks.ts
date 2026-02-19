@@ -99,6 +99,30 @@ export function useCreateTruckPosting() {
   });
 }
 
+/** Create truck request (shipper requests a truck) */
+export function useCreateTruckRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Parameters<typeof truckService.createTruckRequest>[0]) =>
+      truckService.createTruckRequest(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["truck-requests"] });
+    },
+  });
+}
+
+/** Get shipper's truck requests */
+export function useMyTruckRequests(params?: {
+  page?: number;
+  limit?: number;
+  status?: string;
+}) {
+  return useQuery({
+    queryKey: ["truck-requests", "mine", params],
+    queryFn: () => truckService.getMyTruckRequests(params),
+  });
+}
+
 /** My truck postings (carrier) */
 export function useMyTruckPostings(params?: {
   page?: number;

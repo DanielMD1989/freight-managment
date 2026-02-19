@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Truck Management Client Component
@@ -8,12 +8,10 @@
  * Sprint 18 - Updated: Tabs for Approved/Pending/Rejected trucks
  */
 
-import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { toast } from 'react-hot-toast';
-import { getCSRFToken } from '@/lib/csrfFetch';
-import { ROUTES } from '@/lib/routes';
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { ROUTES } from "@/lib/routes";
 
 interface Truck {
   id: string;
@@ -25,7 +23,7 @@ interface Truck {
   currentRegion: string | null;
   isAvailable: boolean;
   status: string;
-  approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
+  approvalStatus: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
   rejectionReason: string | null;
   createdAt: string;
   updatedAt: string;
@@ -43,52 +41,56 @@ interface Truck {
 }
 
 const TRUCK_TYPES = [
-  { value: 'all', label: 'All Types' },
-  { value: 'FLATBED', label: 'Flatbed' },
-  { value: 'REFRIGERATED', label: 'Refrigerated' },
-  { value: 'TANKER', label: 'Tanker' },
-  { value: 'CONTAINER', label: 'Container' },
-  { value: 'DRY_VAN', label: 'Dry Van' },
-  { value: 'LOWBOY', label: 'Lowboy' },
-  { value: 'DUMP_TRUCK', label: 'Dump Truck' },
-  { value: 'BOX_TRUCK', label: 'Box Truck' },
+  { value: "all", label: "All Types" },
+  { value: "FLATBED", label: "Flatbed" },
+  { value: "REFRIGERATED", label: "Refrigerated" },
+  { value: "TANKER", label: "Tanker" },
+  { value: "CONTAINER", label: "Container" },
+  { value: "DRY_VAN", label: "Dry Van" },
+  { value: "LOWBOY", label: "Lowboy" },
+  { value: "DUMP_TRUCK", label: "Dump Truck" },
+  { value: "BOX_TRUCK", label: "Box Truck" },
 ];
 
 const STATUS_OPTIONS = [
-  { value: 'all', label: 'All Status' },
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'IN_TRANSIT', label: 'In Transit' },
-  { value: 'MAINTENANCE', label: 'Maintenance' },
-  { value: 'INACTIVE', label: 'Inactive' },
+  { value: "all", label: "All Status" },
+  { value: "ACTIVE", label: "Active" },
+  { value: "IN_TRANSIT", label: "In Transit" },
+  { value: "MAINTENANCE", label: "Maintenance" },
+  { value: "INACTIVE", label: "Inactive" },
 ];
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   }).format(date);
 }
 
 function getStatusColor(status: string): string {
   const colors: Record<string, string> = {
-    ACTIVE: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-    IN_TRANSIT: 'bg-teal-50 text-teal-700 border border-teal-200',
-    MAINTENANCE: 'bg-amber-50 text-amber-700 border border-amber-200',
-    INACTIVE: 'bg-slate-100 text-slate-600 border border-slate-200',
+    ACTIVE: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+    IN_TRANSIT: "bg-teal-50 text-teal-700 border border-teal-200",
+    MAINTENANCE: "bg-amber-50 text-amber-700 border border-amber-200",
+    INACTIVE: "bg-slate-100 text-slate-600 border border-slate-200",
   };
-  return colors[status] || 'bg-slate-100 text-slate-600 border border-slate-200';
+  return (
+    colors[status] || "bg-slate-100 text-slate-600 border border-slate-200"
+  );
 }
 
 function getApprovalStatusColor(status: string): string {
   const colors: Record<string, string> = {
-    APPROVED: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-    PENDING: 'bg-amber-50 text-amber-700 border border-amber-200',
-    REJECTED: 'bg-rose-50 text-rose-700 border border-rose-200',
-    EXPIRED: 'bg-slate-100 text-slate-600 border border-slate-200',
+    APPROVED: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+    PENDING: "bg-amber-50 text-amber-700 border border-amber-200",
+    REJECTED: "bg-rose-50 text-rose-700 border border-rose-200",
+    EXPIRED: "bg-slate-100 text-slate-600 border border-slate-200",
   };
-  return colors[status] || 'bg-slate-100 text-slate-600 border border-slate-200';
+  return (
+    colors[status] || "bg-slate-100 text-slate-600 border border-slate-200"
+  );
 }
 
 interface Pagination {
@@ -123,24 +125,26 @@ export default function TruckManagementClient({
   const searchParams = useSearchParams();
 
   const [activeTab, setActiveTab] = useState(initialTab);
-  const [approvedTrucks, setApprovedTrucks] = useState<Truck[]>(initialApprovedTrucks);
-  const [pendingTrucks, setPendingTrucks] = useState<Truck[]>(initialPendingTrucks);
-  const [rejectedTrucks, setRejectedTrucks] = useState<Truck[]>(initialRejectedTrucks);
+  const [approvedTrucks, setApprovedTrucks] = useState<Truck[]>(
+    initialApprovedTrucks
+  );
+  const [pendingTrucks, setPendingTrucks] =
+    useState<Truck[]>(initialPendingTrucks);
+  const [rejectedTrucks, setRejectedTrucks] = useState<Truck[]>(
+    initialRejectedTrucks
+  );
   const [truckTypeFilter, setTruckTypeFilter] = useState(
-    searchParams.get('truckType') || 'all'
+    searchParams.get("truckType") || "all"
   );
   const [statusFilter, setStatusFilter] = useState(
-    searchParams.get('status') || 'all'
+    searchParams.get("status") || "all"
   );
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-
   // Get current trucks and pagination based on active tab
   const getCurrentTrucks = () => {
     switch (activeTab) {
-      case 'pending':
+      case "pending":
         return pendingTrucks;
-      case 'rejected':
+      case "rejected":
         return rejectedTrucks;
       default:
         return approvedTrucks;
@@ -149,9 +153,9 @@ export default function TruckManagementClient({
 
   const getCurrentPagination = () => {
     switch (activeTab) {
-      case 'pending':
+      case "pending":
         return pendingPagination;
-      case 'rejected':
+      case "rejected":
         return rejectedPagination;
       default:
         return approvedPagination;
@@ -167,8 +171,8 @@ export default function TruckManagementClient({
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     const params = new URLSearchParams(searchParams.toString());
-    params.set('tab', tab);
-    params.delete('page');
+    params.set("tab", tab);
+    params.delete("page");
     router.push(`/carrier/trucks?${params.toString()}`);
   };
 
@@ -178,12 +182,12 @@ export default function TruckManagementClient({
   const handleTruckTypeChange = (type: string) => {
     setTruckTypeFilter(type);
     const params = new URLSearchParams(searchParams.toString());
-    if (type !== 'all') {
-      params.set('truckType', type);
+    if (type !== "all") {
+      params.set("truckType", type);
     } else {
-      params.delete('truckType');
+      params.delete("truckType");
     }
-    params.delete('page');
+    params.delete("page");
     router.push(`/carrier/trucks?${params.toString()}`);
   };
 
@@ -193,12 +197,12 @@ export default function TruckManagementClient({
   const handleStatusChange = (status: string) => {
     setStatusFilter(status);
     const params = new URLSearchParams(searchParams.toString());
-    if (status !== 'all') {
-      params.set('status', status);
+    if (status !== "all") {
+      params.set("status", status);
     } else {
-      params.delete('status');
+      params.delete("status");
     }
-    params.delete('page');
+    params.delete("page");
     router.push(`/carrier/trucks?${params.toString()}`);
   };
 
@@ -207,58 +211,8 @@ export default function TruckManagementClient({
    */
   const handlePageChange = (newPage: number) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set('page', newPage.toString());
+    params.set("page", newPage.toString());
     router.push(`/carrier/trucks?${params.toString()}`);
-  };
-
-  /**
-   * Handle truck deletion
-   */
-  const handleDelete = async (truckId: string) => {
-    setIsDeleting(true);
-    try {
-      const csrfToken = await getCSRFToken();
-      const response = await fetch(`/api/trucks/${truckId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-        headers: {
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
-        },
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-
-        if (response.status === 409) {
-          toast.error(
-            error.message || 'Cannot delete truck with active postings. Please cancel or complete all active postings first.'
-          );
-        } else if (response.status === 404) {
-          toast.error('Truck not found');
-        } else {
-          toast.error(error.message || 'Failed to delete truck');
-        }
-        return;
-      }
-
-      // Remove truck from appropriate list
-      if (activeTab === 'approved') {
-        setApprovedTrucks(prev => prev.filter(t => t.id !== truckId));
-      } else if (activeTab === 'pending') {
-        setPendingTrucks(prev => prev.filter(t => t.id !== truckId));
-      } else {
-        setRejectedTrucks(prev => prev.filter(t => t.id !== truckId));
-      }
-
-      toast.success('Truck deleted successfully');
-      setDeleteConfirmId(null);
-      router.refresh();
-    } catch (error) {
-      console.error('Error deleting truck:', error);
-      toast.error('An unexpected error occurred. Please try again.');
-    } finally {
-      setIsDeleting(false);
-    }
   };
 
   // Tab counts
@@ -269,61 +223,101 @@ export default function TruckManagementClient({
   return (
     <div className="space-y-6">
       {/* Tabs */}
-      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-1.5 inline-flex gap-1">
+      <div className="inline-flex gap-1 rounded-2xl border border-slate-200/60 bg-white p-1.5 shadow-sm">
         <button
-          onClick={() => handleTabChange('approved')}
+          onClick={() => handleTabChange("approved")}
           className={`${
-            activeTab === 'approved'
-              ? 'bg-gradient-to-r from-teal-600 to-teal-500 text-white shadow-md shadow-teal-500/25'
-              : 'text-slate-600 hover:bg-slate-100'
-          } px-5 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 transition-all`}
+            activeTab === "approved"
+              ? "bg-gradient-to-r from-teal-600 to-teal-500 text-white shadow-md shadow-teal-500/25"
+              : "text-slate-600 hover:bg-slate-100"
+          } flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition-all`}
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
           Approved
-          <span className={`${
-            activeTab === 'approved' ? 'bg-white/20' : 'bg-slate-100'
-          } px-2 py-0.5 rounded-full text-xs font-bold`}>
+          <span
+            className={`${
+              activeTab === "approved" ? "bg-white/20" : "bg-slate-100"
+            } rounded-full px-2 py-0.5 text-xs font-bold`}
+          >
             {approvedCount}
           </span>
         </button>
         <button
-          onClick={() => handleTabChange('pending')}
+          onClick={() => handleTabChange("pending")}
           className={`${
-            activeTab === 'pending'
-              ? 'bg-gradient-to-r from-amber-500 to-amber-400 text-white shadow-md shadow-amber-500/25'
-              : 'text-slate-600 hover:bg-slate-100'
-          } px-5 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 transition-all`}
+            activeTab === "pending"
+              ? "bg-gradient-to-r from-amber-500 to-amber-400 text-white shadow-md shadow-amber-500/25"
+              : "text-slate-600 hover:bg-slate-100"
+          } flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition-all`}
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
           Pending
           {pendingCount > 0 && (
-            <span className={`${
-              activeTab === 'pending' ? 'bg-white/20' : 'bg-amber-100 text-amber-700'
-            } px-2 py-0.5 rounded-full text-xs font-bold ${activeTab !== 'pending' ? 'animate-pulse' : ''}`}>
+            <span
+              className={`${
+                activeTab === "pending"
+                  ? "bg-white/20"
+                  : "bg-amber-100 text-amber-700"
+              } rounded-full px-2 py-0.5 text-xs font-bold ${activeTab !== "pending" ? "animate-pulse" : ""}`}
+            >
               {pendingCount}
             </span>
           )}
         </button>
         <button
-          onClick={() => handleTabChange('rejected')}
+          onClick={() => handleTabChange("rejected")}
           className={`${
-            activeTab === 'rejected'
-              ? 'bg-gradient-to-r from-rose-500 to-rose-400 text-white shadow-md shadow-rose-500/25'
-              : 'text-slate-600 hover:bg-slate-100'
-          } px-5 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 transition-all`}
+            activeTab === "rejected"
+              ? "bg-gradient-to-r from-rose-500 to-rose-400 text-white shadow-md shadow-rose-500/25"
+              : "text-slate-600 hover:bg-slate-100"
+          } flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium transition-all`}
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
           Rejected
           {rejectedCount > 0 && (
-            <span className={`${
-              activeTab === 'rejected' ? 'bg-white/20' : 'bg-rose-100 text-rose-700'
-            } px-2 py-0.5 rounded-full text-xs font-bold`}>
+            <span
+              className={`${
+                activeTab === "rejected"
+                  ? "bg-white/20"
+                  : "bg-rose-100 text-rose-700"
+              } rounded-full px-2 py-0.5 text-xs font-bold`}
+            >
               {rejectedCount}
             </span>
           )}
@@ -331,19 +325,19 @@ export default function TruckManagementClient({
       </div>
 
       {/* Filters and Actions - Only show for approved tab */}
-      {activeTab === 'approved' && (
-        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-6">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div className="flex flex-col sm:flex-row gap-4">
+      {activeTab === "approved" && (
+        <div className="rounded-2xl border border-slate-200/60 bg-white p-6 shadow-sm">
+          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+            <div className="flex flex-col gap-4 sm:flex-row">
               {/* Truck Type Filter */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
                   Truck Type
                 </label>
                 <select
                   value={truckTypeFilter}
                   onChange={(e) => handleTruckTypeChange(e.target.value)}
-                  className="px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all bg-white text-sm"
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm transition-all outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
                 >
                   {TRUCK_TYPES.map((type) => (
                     <option key={type.value} value={type.value}>
@@ -355,13 +349,13 @@ export default function TruckManagementClient({
 
               {/* Status Filter */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
                   Status
                 </label>
                 <select
                   value={statusFilter}
                   onChange={(e) => handleStatusChange(e.target.value)}
-                  className="px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all bg-white text-sm"
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm transition-all outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
                 >
                   {STATUS_OPTIONS.map((status) => (
                     <option key={status.value} value={status.value}>
@@ -375,10 +369,20 @@ export default function TruckManagementClient({
             {/* Add Truck Button */}
             <Link
               href={ROUTES.carrier.trucks.add}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-teal-500 text-white rounded-xl font-medium hover:from-teal-700 hover:to-teal-600 transition-all shadow-md shadow-teal-500/25"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 px-5 py-2.5 font-medium text-white shadow-md shadow-teal-500/25 transition-all hover:from-teal-700 hover:to-teal-600"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
               </svg>
               Add Truck
             </Link>
@@ -387,14 +391,24 @@ export default function TruckManagementClient({
       )}
 
       {/* Add Truck Button for pending/rejected tabs */}
-      {activeTab !== 'approved' && (
+      {activeTab !== "approved" && (
         <div className="flex justify-end">
           <Link
             href={ROUTES.carrier.trucks.add}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-teal-500 text-white rounded-xl font-medium hover:from-teal-700 hover:to-teal-600 transition-all shadow-md shadow-teal-500/25"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 px-5 py-2.5 font-medium text-white shadow-md shadow-teal-500/25 transition-all hover:from-teal-700 hover:to-teal-600"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
             </svg>
             Add Truck
           </Link>
@@ -402,36 +416,62 @@ export default function TruckManagementClient({
       )}
 
       {/* Pending/Rejected Info Banner */}
-      {activeTab === 'pending' && pendingCount > 0 && (
-        <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-2xl p-5">
+      {activeTab === "pending" && pendingCount > 0 && (
+        <div className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 p-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
-              <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100">
+              <svg
+                className="h-5 w-5 text-amber-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
             </div>
             <div>
-              <p className="text-amber-800 font-semibold">Trucks awaiting admin approval</p>
-              <p className="text-amber-700 text-sm mt-0.5">
-                Once approved, trucks will appear in the Approved tab and can be posted for loads.
+              <p className="font-semibold text-amber-800">
+                Trucks awaiting admin approval
+              </p>
+              <p className="mt-0.5 text-sm text-amber-700">
+                Once approved, trucks will appear in the Approved tab and can be
+                posted for loads.
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {activeTab === 'rejected' && rejectedCount > 0 && (
-        <div className="bg-gradient-to-r from-rose-50 to-red-50 border border-rose-200 rounded-2xl p-5">
+      {activeTab === "rejected" && rejectedCount > 0 && (
+        <div className="rounded-2xl border border-rose-200 bg-gradient-to-r from-rose-50 to-red-50 p-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center">
-              <svg className="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-100">
+              <svg
+                className="h-5 w-5 text-rose-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
               </svg>
             </div>
             <div>
-              <p className="text-rose-800 font-semibold">These trucks were rejected by admin</p>
-              <p className="text-rose-700 text-sm mt-0.5">
-                You can edit and resubmit rejected trucks for approval. Check the rejection reason below.
+              <p className="font-semibold text-rose-800">
+                These trucks were rejected by admin
+              </p>
+              <p className="mt-0.5 text-sm text-rose-700">
+                You can edit and resubmit rejected trucks for approval. Check
+                the rejection reason below.
               </p>
             </div>
           </div>
@@ -439,58 +479,71 @@ export default function TruckManagementClient({
       )}
 
       {/* Trucks List */}
-      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-teal-50/30 border-b border-slate-100">
-          <h2 className="text-base font-semibold text-slate-800 flex items-center gap-2">
-            <svg className="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+      <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm">
+        <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-teal-50/30 px-6 py-4">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-slate-800">
+            <svg
+              className="h-5 w-5 text-teal-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"
+              />
             </svg>
-            {activeTab === 'approved' && `Approved Trucks (${approvedCount})`}
-            {activeTab === 'pending' && `Pending Approval (${pendingCount})`}
-            {activeTab === 'rejected' && `Rejected Trucks (${rejectedCount})`}
+            {activeTab === "approved" && `Approved Trucks (${approvedCount})`}
+            {activeTab === "pending" && `Pending Approval (${pendingCount})`}
+            {activeTab === "rejected" && `Rejected Trucks (${rejectedCount})`}
           </h2>
         </div>
 
         {trucks.length > 0 ? (
           <>
             {/* Desktop Table */}
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full">
-                <thead className="bg-gradient-to-r from-slate-100 to-slate-50 border-b border-slate-200">
+                <thead className="border-b border-slate-200 bg-gradient-to-r from-slate-100 to-slate-50">
                   <tr>
-                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className="px-6 py-3.5 text-left text-xs font-semibold tracking-wider text-slate-600 uppercase">
                       License Plate
                     </th>
-                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className="px-6 py-3.5 text-left text-xs font-semibold tracking-wider text-slate-600 uppercase">
                       Type
                     </th>
-                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className="px-6 py-3.5 text-left text-xs font-semibold tracking-wider text-slate-600 uppercase">
                       Capacity
                     </th>
-                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className="px-6 py-3.5 text-left text-xs font-semibold tracking-wider text-slate-600 uppercase">
                       Location
                     </th>
-                    {activeTab === 'approved' && (
-                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    {activeTab === "approved" && (
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold tracking-wider text-slate-600 uppercase">
                         Status
                       </th>
                     )}
-                    {activeTab === 'rejected' && (
-                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    {activeTab === "rejected" && (
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold tracking-wider text-slate-600 uppercase">
                         Rejection Reason
                       </th>
                     )}
-                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className="px-6 py-3.5 text-left text-xs font-semibold tracking-wider text-slate-600 uppercase">
                       GPS
                     </th>
-                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <th className="px-6 py-3.5 text-left text-xs font-semibold tracking-wider text-slate-600 uppercase">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 bg-white">
                   {trucks.map((truck) => (
-                    <tr key={truck.id} className="hover:bg-slate-50 transition-colors">
+                    <tr
+                      key={truck.id}
+                      className="transition-colors hover:bg-slate-50"
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="font-semibold text-slate-800">
                           {truck.licensePlate}
@@ -501,7 +554,7 @@ export default function TruckManagementClient({
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-slate-700">
-                          {truck.truckType.replace(/_/g, ' ')}
+                          {truck.truckType.replace(/_/g, " ")}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -516,7 +569,7 @@ export default function TruckManagementClient({
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-slate-700">
-                          {truck.currentCity || 'Not set'}
+                          {truck.currentCity || "Not set"}
                         </div>
                         {truck.currentRegion && (
                           <div className="text-xs text-slate-400">
@@ -524,10 +577,10 @@ export default function TruckManagementClient({
                           </div>
                         )}
                       </td>
-                      {activeTab === 'approved' && (
+                      {activeTab === "approved" && (
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
-                            className={`px-2.5 py-1 text-xs font-semibold rounded-lg ${getStatusColor(
+                            className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${getStatusColor(
                               truck.status
                             )}`}
                           >
@@ -535,18 +588,18 @@ export default function TruckManagementClient({
                           </span>
                         </td>
                       )}
-                      {activeTab === 'rejected' && (
+                      {activeTab === "rejected" && (
                         <td className="px-6 py-4">
-                          <div className="text-sm text-rose-600 max-w-xs">
-                            {truck.rejectionReason || 'No reason provided'}
+                          <div className="max-w-xs text-sm text-rose-600">
+                            {truck.rejectionReason || "No reason provided"}
                           </div>
                         </td>
                       )}
                       <td className="px-6 py-4 whitespace-nowrap">
                         {truck.gpsDevice ? (
                           <div className="text-sm">
-                            <div className="text-emerald-600 font-medium flex items-center gap-1">
-                              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                            <div className="flex items-center gap-1 font-medium text-emerald-600">
+                              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500"></span>
                               Connected
                             </div>
                             <div className="text-xs text-slate-400">
@@ -557,30 +610,24 @@ export default function TruckManagementClient({
                           <div className="text-sm text-slate-400">No GPS</div>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <td className="px-6 py-4 text-sm whitespace-nowrap">
                         <div className="flex gap-3">
                           <Link
                             href={`/carrier/trucks/${truck.id}`}
-                            className="text-teal-600 hover:text-teal-700 font-medium transition-colors"
+                            className="font-medium text-teal-600 transition-colors hover:text-teal-700"
                           >
                             View
                           </Link>
                           <Link
                             href={`/carrier/trucks/${truck.id}/edit`}
-                            className="text-slate-600 hover:text-slate-700 font-medium transition-colors"
+                            className="font-medium text-slate-600 transition-colors hover:text-slate-700"
                           >
                             Edit
                           </Link>
-                          <button
-                            onClick={() => setDeleteConfirmId(truck.id)}
-                            className="text-rose-600 hover:text-rose-700 font-medium transition-colors"
-                          >
-                            Delete
-                          </button>
-                          {activeTab === 'rejected' && (
+                          {activeTab === "rejected" && (
                             <Link
                               href={`/carrier/trucks/${truck.id}/edit?resubmit=true`}
-                              className="text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
+                              className="font-medium text-emerald-600 transition-colors hover:text-emerald-700"
                             >
                               Resubmit
                             </Link>
@@ -594,46 +641,46 @@ export default function TruckManagementClient({
             </div>
 
             {/* Mobile Cards */}
-            <div className="md:hidden divide-y divide-gray-200">
+            <div className="divide-y divide-gray-200 md:hidden">
               {trucks.map((truck) => (
                 <div key={truck.id} className="p-4">
-                  <div className="flex items-start justify-between mb-2">
+                  <div className="mb-2 flex items-start justify-between">
                     <div>
                       <div className="font-medium text-gray-900">
                         {truck.licensePlate}
                       </div>
                       <div className="text-sm text-gray-600">
-                        {truck.truckType.replace(/_/g, ' ')}
+                        {truck.truckType.replace(/_/g, " ")}
                       </div>
                     </div>
-                    {activeTab === 'approved' && (
+                    {activeTab === "approved" && (
                       <span
-                        className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
+                        className={`rounded-full px-2 py-1 text-xs font-semibold ${getStatusColor(
                           truck.status
                         )}`}
                       >
                         {truck.status}
                       </span>
                     )}
-                    {activeTab === 'pending' && (
-                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                    {activeTab === "pending" && (
+                      <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs font-semibold text-yellow-800">
                         Pending
                       </span>
                     )}
-                    {activeTab === 'rejected' && (
-                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                    {activeTab === "rejected" && (
+                      <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-800">
                         Rejected
                       </span>
                     )}
                   </div>
 
-                  {activeTab === 'rejected' && truck.rejectionReason && (
-                    <div className="bg-red-50 rounded p-2 mb-3 text-sm text-red-700">
+                  {activeTab === "rejected" && truck.rejectionReason && (
+                    <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">
                       <strong>Reason:</strong> {truck.rejectionReason}
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                  <div className="mb-3 grid grid-cols-2 gap-2 text-sm">
                     <div>
                       <div className="text-gray-500">Capacity</div>
                       <div className="font-medium">
@@ -643,85 +690,84 @@ export default function TruckManagementClient({
                     <div>
                       <div className="text-gray-500">Location</div>
                       <div className="font-medium">
-                        {truck.currentCity || 'Not set'}
+                        {truck.currentCity || "Not set"}
                       </div>
                     </div>
                   </div>
                   <div className="flex gap-2">
                     <Link
                       href={`/carrier/trucks/${truck.id}`}
-                      className="flex-1 px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 text-center font-medium"
+                      className="flex-1 rounded-lg border border-blue-600 px-4 py-2 text-center text-sm font-medium text-blue-600 hover:bg-blue-50"
                     >
                       View
                     </Link>
                     <Link
                       href={`/carrier/trucks/${truck.id}/edit`}
-                      className="flex-1 px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 text-center font-medium"
+                      className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-center text-sm font-medium text-gray-600 hover:bg-gray-50"
                     >
                       Edit
                     </Link>
-                    <button
-                      onClick={() => setDeleteConfirmId(truck.id)}
-                      className="flex-1 px-4 py-2 text-sm text-red-600 border border-red-600 rounded-lg hover:bg-red-50 text-center font-medium"
-                    >
-                      Delete
-                    </button>
                   </div>
                 </div>
               ))}
             </div>
 
             {/* Pagination */}
-            {pagination && (pagination.totalPages || pagination.pages || 0) > 1 && (
-              <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                <div className="text-sm text-gray-600">
-                  Page {pagination.page} of {pagination.totalPages || pagination.pages}
+            {pagination &&
+              (pagination.totalPages || pagination.pages || 0) > 1 && (
+                <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4">
+                  <div className="text-sm text-gray-600">
+                    Page {pagination.page} of{" "}
+                    {pagination.totalPages || pagination.pages}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      disabled={pagination.page === 1}
+                      className="rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      disabled={
+                        pagination.page ===
+                        (pagination.totalPages || pagination.pages)
+                      }
+                      className="rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handlePageChange(pagination.page - 1)}
-                    disabled={pagination.page === 1}
-                    className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Previous
-                  </button>
-                  <button
-                    onClick={() => handlePageChange(pagination.page + 1)}
-                    disabled={pagination.page === (pagination.totalPages || pagination.pages)}
-                    className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            )}
+              )}
           </>
         ) : (
           /* Empty State */
           <div className="px-6 py-12 text-center">
-            {activeTab === 'approved' && (
+            {activeTab === "approved" && (
               <>
-                <div className="text-6xl mb-4">🚛</div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <div className="mb-4 text-6xl">🚛</div>
+                <h3 className="mb-2 text-lg font-semibold text-gray-900">
                   No Approved Trucks Yet
                 </h3>
-                <p className="text-gray-600 mb-6">
+                <p className="mb-6 text-gray-600">
                   {pendingCount > 0
                     ? `You have ${pendingCount} truck(s) awaiting admin approval.`
-                    : 'Add your first truck to start finding loads and earning revenue.'}
+                    : "Add your first truck to start finding loads and earning revenue."}
                 </p>
                 <Link
                   href={ROUTES.carrier.trucks.add}
-                  className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  className="inline-block rounded-lg bg-blue-600 px-6 py-3 font-medium text-white transition-colors hover:bg-blue-700"
                 >
                   Add Your First Truck
                 </Link>
               </>
             )}
-            {activeTab === 'pending' && (
+            {activeTab === "pending" && (
               <>
-                <div className="text-6xl mb-4">✓</div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <div className="mb-4 text-6xl">✓</div>
+                <h3 className="mb-2 text-lg font-semibold text-gray-900">
                   No Pending Trucks
                 </h3>
                 <p className="text-gray-600">
@@ -729,10 +775,10 @@ export default function TruckManagementClient({
                 </p>
               </>
             )}
-            {activeTab === 'rejected' && (
+            {activeTab === "rejected" && (
               <>
-                <div className="text-6xl mb-4">✓</div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <div className="mb-4 text-6xl">✓</div>
+                <h3 className="mb-2 text-lg font-semibold text-gray-900">
                   No Rejected Trucks
                 </h3>
                 <p className="text-gray-600">
@@ -743,44 +789,6 @@ export default function TruckManagementClient({
           </div>
         )}
       </div>
-
-      {/* Delete Confirmation Modal */}
-      {deleteConfirmId && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200/60">
-            <div className="px-6 py-4 bg-gradient-to-r from-rose-500 to-rose-600">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                Confirm Delete
-              </h3>
-            </div>
-            <div className="p-6">
-              <p className="text-slate-600 mb-6">
-                Are you sure you want to delete this truck? This action cannot be undone.
-                {' '}If this truck has active postings, you&apos;ll need to cancel them first.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setDeleteConfirmId(null)}
-                  disabled={isDeleting}
-                  className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-medium disabled:opacity-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleDelete(deleteConfirmId)}
-                  disabled={isDeleting}
-                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-rose-600 to-rose-500 text-white rounded-xl hover:from-rose-700 hover:to-rose-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-rose-500/25"
-                >
-                  {isDeleting ? 'Deleting...' : 'Delete Truck'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
