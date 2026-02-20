@@ -1,0 +1,243 @@
+{
+  "timestamp": "2026-02-20T18:59:23.971Z",
+  "testName": "E2E Carrier Workflow",
+  "summary": {
+    "total": 31,
+    "passed": 31,
+    "failed": 0,
+    "warnings": 0
+  },
+  "feeVerification": {
+    "corridor": "Addis Ababa → Dire Dawa",
+    "distanceKm": 453,
+    "expected": {
+      "shipperFee": 1132.5,
+      "carrierFee": 1132.5,
+      "totalPlatformFee": 2265
+    },
+    "actual": {
+      "shipperDeduction": 1132.5,
+      "carrierDeduction": 1132.5,
+      "totalDeduction": 2265
+    },
+    "serviceFeeResponse": {
+      "success": true,
+      "shipperFee": "1132.50",
+      "carrierFee": "1132.50",
+      "totalPlatformFee": "2265.00",
+      "action": "deducted",
+      "details": {
+        "shipper": {
+          "baseFee": 1132.5,
+          "discount": 0,
+          "finalFee": 1132.5,
+          "walletDeducted": true
+        },
+        "carrier": {
+          "baseFee": 1132.5,
+          "discount": 0,
+          "finalFee": 1132.5,
+          "walletDeducted": true
+        }
+      }
+    }
+  },
+  "carrier": {
+    "email": "carrier-e2e-1771613850891@test.com",
+    "userId": "cmlv95clr0002yaulx0fuybl9",
+    "orgId": "cmlv95cle0000yaulpq5u4z0z",
+    "truckId": "cmlv96404000oyaulcefst1yz",
+    "licensePlate": "E2E-850891"
+  },
+  "loadId": "cmlv96pln000ryauli1q6zq2l",
+  "tripId": "cmlv97020001oyaulxfnxkiin",
+  "loadRequestId": "cmlv96zl8001lyauljnxcds9s",
+  "tests": [
+    {
+      "phase": "Phase 1",
+      "test": "1a. Register carrier (browser)",
+      "status": "PASS",
+      "details": "http://localhost:3000/carrier"
+    },
+    {
+      "phase": "Phase 1",
+      "test": "1b. Login (fresh registration)",
+      "status": "PASS",
+      "details": "limitedAccess=true"
+    },
+    {
+      "phase": "Phase 2",
+      "test": "2. Upload COMPANY_LICENSE",
+      "status": "PASS",
+      "details": "status=200, verification=PENDING"
+    },
+    {
+      "phase": "Phase 2",
+      "test": "2. Upload TIN_CERTIFICATE",
+      "status": "PASS",
+      "details": "status=200, verification=PENDING"
+    },
+    {
+      "phase": "Phase 2",
+      "test": "2. Upload INSURANCE_CERTIFICATE",
+      "status": "PASS",
+      "details": "status=200, verification=PENDING"
+    },
+    {
+      "phase": "Phase 3",
+      "test": "3a. Activate carrier user",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "phase": "Phase 3",
+      "test": "3b. Verify carrier org",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "phase": "Phase 3",
+      "test": "3c. Top up carrier wallet (50,000 ETB)",
+      "status": "PASS",
+      "details": "status=200, newBalance=50000"
+    },
+    {
+      "phase": "Phase 3",
+      "test": "3d. Shipper wallet sufficient",
+      "status": "PASS",
+      "details": "balance=644337.5"
+    },
+    {
+      "phase": "Phase 3",
+      "test": "3e. Approve carrier documents",
+      "status": "PASS",
+      "details": "approved=3/3"
+    },
+    {
+      "phase": "Phase 3",
+      "test": "3f. Carrier full access",
+      "status": "PASS",
+      "details": "limitedAccess=false"
+    },
+    {
+      "phase": "Phase 4",
+      "test": "4a. Submit truck form",
+      "status": "PASS",
+      "details": "http://localhost:3000/carrier/trucks?tab=pending&success=truck-added"
+    },
+    {
+      "phase": "Phase 5",
+      "test": "5. Admin approves truck",
+      "status": "PASS",
+      "details": "truckId=cefst1yz"
+    },
+    {
+      "phase": "Phase 6",
+      "test": "6. Post truck on loadboard",
+      "status": "PASS",
+      "details": "postingId=3trdzsnd"
+    },
+    {
+      "phase": "Phase 7",
+      "test": "7a. Shipper creates load (API)",
+      "status": "PASS",
+      "details": "status=201, loadId=i1q6zq2l"
+    },
+    {
+      "phase": "Phase 7",
+      "test": "7b. Load visible on carrier loadboard",
+      "status": "PASS",
+      "details": "hasDireDawa=true"
+    },
+    {
+      "phase": "Phase 7",
+      "test": "7c. Carrier requests load (API)",
+      "status": "PASS",
+      "details": "status=201, requestId=jnxcds9s"
+    },
+    {
+      "phase": "Phase 7",
+      "test": "7d. Shipper approves → trip created",
+      "status": "PASS",
+      "details": "tripId=xfnxkiin, tripStatus=ASSIGNED"
+    },
+    {
+      "phase": "Phase 8",
+      "test": "8a. Trip visible on carrier trips page",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "phase": "Phase 8",
+      "test": "8b. Wallet balances recorded",
+      "status": "PASS",
+      "details": "carrier=50000, shipper=644337.5"
+    },
+    {
+      "phase": "Phase 8",
+      "test": "8c. ASSIGNED → PICKUP_PENDING",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "phase": "Phase 8",
+      "test": "8c. PICKUP_PENDING → IN_TRANSIT",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "phase": "Phase 8",
+      "test": "8c. IN_TRANSIT → DELIVERED",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "phase": "Phase 8",
+      "test": "8d-i. Upload POD (carrier)",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "phase": "Phase 8",
+      "test": "8e. Load → COMPLETED + fees deducted",
+      "status": "PASS",
+      "details": "shipperFee=1132.50, carrierFee=1132.50, total=2265.00"
+    },
+    {
+      "phase": "Phase 9",
+      "test": "9b-i. Carrier fee ≈ 1132.5 ETB",
+      "status": "PASS",
+      "details": "actual=1132.5, expected=1132.5"
+    },
+    {
+      "phase": "Phase 9",
+      "test": "9b-ii. Shipper fee ≈ 1132.5 ETB",
+      "status": "PASS",
+      "details": "actual=1132.5, expected=1132.5"
+    },
+    {
+      "phase": "Phase 9",
+      "test": "9b-iii. Total platform ≈ 2265 ETB",
+      "status": "PASS",
+      "details": "actual=2265, expected=2265"
+    },
+    {
+      "phase": "Phase 9",
+      "test": "9c. SERVICE_FEE_DEDUCT transaction exists",
+      "status": "PASS",
+      "details": "found=true"
+    },
+    {
+      "phase": "Phase 9",
+      "test": "9d. Carrier wallet page shows balance",
+      "status": "PASS",
+      "details": "hasBalance=true, hasFeeEntry=true"
+    },
+    {
+      "phase": "Phase 9",
+      "test": "9e. Shipper wallet screenshot",
+      "status": "PASS",
+      "details": ""
+    }
+  ]
+}

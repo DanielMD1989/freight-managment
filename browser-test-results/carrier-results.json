@@ -1,0 +1,43 @@
+{
+  "web": {
+    "login": true,
+    "dashboardStats": true,
+    "dashboardQuickActions": true,
+    "dashboardSections": true,
+    "loadboardPage": true,
+    "loadboardSearchLoads": true,
+    "trucksPage": true,
+    "trucksTabs": {
+      "Approved": true,
+      "Pending": true,
+      "Rejected": true
+    },
+    "truckDetail": true,
+    "truckAddForm": true,
+    "tripsPage": true,
+    "tripsActive": true,
+    "tripDetail": true,
+    "tripHistory": true,
+    "mapPage": true,
+    "matchesPage": true,
+    "requestsPage": true,
+    "requestsLoadRequests": true,
+    "requestsProposals": true,
+    "walletPage": true,
+    "documentsPage": true,
+    "settingsPage": true,
+    "teamPage": true,
+    "gpsPage": true,
+    "sidebar": {
+      "Dashboard": true,
+      "Map": true,
+      "Loadboard": true,
+      "Requests": true,
+      "My Trucks": true,
+      "Trips": true,
+      "GPS Tracking": true,
+      "Wallet": true,
+      "Documents": true
+    }
+  }
+}
