@@ -675,6 +675,7 @@ export default function CreateLoadScreen() {
           onPress={goBack}
           variant="outline"
           style={styles.navBtn}
+          testID="create-load-back"
         />
         {step < STEPS.length - 1 ? (
           <Button
@@ -682,6 +683,7 @@ export default function CreateLoadScreen() {
             onPress={goNext}
             variant="primary"
             style={styles.navBtn}
+            testID="create-load-next"
           />
         ) : (
           <Button
@@ -690,6 +692,7 @@ export default function CreateLoadScreen() {
             loading={createLoad.isPending}
             variant="primary"
             style={styles.navBtn}
+            testID="create-load-submit"
           />
         )}
       </View>

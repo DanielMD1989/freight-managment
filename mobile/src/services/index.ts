@@ -6,3 +6,7 @@ export { notificationService } from "./notification";
 export { dashboardService } from "./dashboard";
 export { gpsQueueService } from "./gps-queue";
 export { pushService } from "./push";
+export { walletService } from "./wallet";
+export { organizationService } from "./organization";
+export { documentService } from "./document";
+export { matchService } from "./match";

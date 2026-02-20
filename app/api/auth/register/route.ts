@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { hashPassword, setSession, validatePasswordPolicy } from "@/lib/auth";
+import {
+  hashPassword,
+  setSession,
+  validatePasswordPolicy,
+  createSessionRecord,
+  createSessionToken,
+} from "@/lib/auth";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { zodErrorResponse } from "@/lib/validation";
@@ -199,14 +205,44 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Create session
+    // Create server-side session record (reuse clientIp from rate limiting above)
+    const userAgent = request.headers.get("user-agent");
+    const { sessionId } = await createSessionRecord(
+      user.id,
+      clientIp,
+      userAgent,
+      {
+        email: user.email,
+        role: user.role,
+        organizationId: user.organizationId || undefined,
+      }
+    );
+
+    // Create JWT session token for mobile clients
+    const sessionToken = await createSessionToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      organizationId: user.organizationId || undefined,
+      sessionId,
+    });
+
+    // Set the session cookie for web clients
     await setSession({
       userId: user.id,
       email: user.email,
       role: user.role,
-      status: user.status, // Sprint 2: Include status in session
+      status: user.status,
       organizationId: user.organizationId || undefined,
+      sessionId,
     });
+
+    // Check if request is from mobile app
+    const isMobileClient =
+      request.headers.get("x-client-type") === "mobile" ||
+      request.headers.get("user-agent")?.includes("Dart") ||
+      request.headers.get("user-agent")?.includes("Flutter");
 
     return NextResponse.json(
       {
@@ -217,7 +253,18 @@ export async function POST(request: NextRequest) {
           firstName: user.firstName,
           lastName: user.lastName,
           role: user.role,
+          status: user.status,
+          organizationId: user.organizationId,
         },
+        limitedAccess: true,
+        allowedActions: [
+          "view_profile",
+          "upload_documents",
+          "complete_registration",
+        ],
+        restrictedMessage:
+          "Your account is pending verification. Some features are restricted.",
+        ...(isMobileClient && { sessionToken }),
       },
       { status: 201 }
     );

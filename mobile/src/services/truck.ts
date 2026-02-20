@@ -199,6 +199,15 @@ class TruckService {
     }
   }
 
+  /** Cancel a truck request */
+  async cancelTruckRequest(id: string): Promise<void> {
+    try {
+      await apiClient.delete(`/api/truck-requests/${id}`);
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  }
+
   /** Get my truck postings (carrier) */
   async getMyTruckPostings(params?: {
     page?: number;

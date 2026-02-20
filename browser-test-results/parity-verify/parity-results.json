@@ -1,0 +1,21 @@
+{
+  "web": {
+    "login": true,
+    "serviceFees": true,
+    "carrierApplications": true,
+    "activeShipments": true,
+    "dashboardStats": true,
+    "quickActions": true,
+    "recentLoads": true,
+    "spendingOverview": true
+  },
+  "mobile": {
+    "login": true,
+    "activeShipments": true,
+    "carrierApplications": false,
+    "dashboardStats": true,
+    "quickActions": true,
+    "recentLoads": true,
+    "loadsByStatus": true
+  }
+}

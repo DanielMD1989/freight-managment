@@ -80,7 +80,14 @@
     "findTrucks": "Find Trucks",
     "postLoad": "Post New Load",
     "truckRequests": "My Truck Requests",
-    "map": "Map"
+    "map": "Map",
+    "requests": "Requests",
+    "wallet": "Wallet",
+    "settings": "Settings",
+    "documents": "Documents",
+    "matches": "Matching Trucks",
+    "spendingOverview": "Spending Overview",
+    "more": "More"
   },
   "truck": {
     "addTruck": "Add Truck",
@@ -159,6 +166,50 @@
     "gpsTracking": "GPS Tracking",
     "security": "Security",
     "changePassword": "Change Password",
-    "about": "About"
+    "about": "About",
+    "companyProfile": "Company Profile",
+    "contactInfo": "Contact Information",
+    "legalInfo": "Legal Information",
+    "privacy": "Privacy",
+    "allowNameDisplay": "Display Company Name",
+    "save": "Save"
+  },
+  "wallet": {
+    "balance": "Balance",
+    "available": "Available",
+    "pending": "Pending",
+    "totalDeposited": "Total Deposited",
+    "totalSpent": "Total Spent",
+    "transactions": "Transactions",
+    "deposit": "Deposit",
+    "noTransactions": "No transactions yet"
+  },
+  "requests": {
+    "carrierRequests": "Carrier Requests",
+    "myTruckRequests": "My Truck Requests",
+    "approve": "Approve",
+    "reject": "Reject",
+    "cancel": "Cancel",
+    "expired": "Expired",
+    "noRequests": "No requests found",
+    "proposedRate": "Proposed Rate",
+    "offeredRate": "Offered Rate"
+  },
+  "documents": {
+    "upload": "Upload Document",
+    "type": "Document Type",
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "delete": "Delete",
+    "noDocuments": "No documents uploaded"
+  },
+  "matches": {
+    "selectLoad": "Select Load",
+    "minScore": "Minimum Score",
+    "matchScore": "Match Score",
+    "assignTruck": "Assign Truck",
+    "noMatches": "No matching trucks found",
+    "matchReasons": "Match Reasons"
   }
 }

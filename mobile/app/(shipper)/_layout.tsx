@@ -1,6 +1,6 @@
 /**
  * Shipper Navigation Shell - Bottom tabs
- * 5 tabs: Dashboard, My Loads, Track, Shipments, Find Trucks
+ * 4 visible tabs + hidden screens accessible via navigation
  */
 import React from "react";
 import { Tabs } from "expo-router";
@@ -67,6 +67,7 @@ export default function ShipperLayout() {
           headerShown: false,
         }}
       />
+      {/* Hidden screens - accessible via router.push */}
       <Tabs.Screen
         name="map"
         options={{
@@ -74,6 +75,46 @@ export default function ShipperLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="map-outline" size={size} color={color} />
           ),
+          tabBarItemStyle: { display: "none" },
+        }}
+      />
+      <Tabs.Screen
+        name="requests"
+        options={{
+          title: "Requests",
+          headerShown: false,
+          tabBarItemStyle: { display: "none" },
+        }}
+      />
+      <Tabs.Screen
+        name="wallet"
+        options={{
+          title: "Wallet",
+          headerShown: false,
+          tabBarItemStyle: { display: "none" },
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: "Settings",
+          headerShown: false,
+          tabBarItemStyle: { display: "none" },
+        }}
+      />
+      <Tabs.Screen
+        name="documents"
+        options={{
+          title: "Documents",
+          headerShown: false,
+          tabBarItemStyle: { display: "none" },
+        }}
+      />
+      <Tabs.Screen
+        name="matches"
+        options={{
+          title: "Matching Trucks",
+          headerShown: false,
           tabBarItemStyle: { display: "none" },
         }}
       />

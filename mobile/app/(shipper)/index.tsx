@@ -244,6 +244,98 @@ export default function ShipperDashboard() {
         </>
       )}
 
+      {/* Spending Overview */}
+      {data?.wallet && (
+        <>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Spending Overview</Text>
+            <TouchableOpacity
+              onPress={() => router.push("/(shipper)/wallet" as `/${string}`)}
+            >
+              <Text style={styles.viewAll}>View Wallet</Text>
+            </TouchableOpacity>
+          </View>
+          <Card style={styles.spendingCard} padding="lg">
+            <View style={styles.spendingRow}>
+              <View style={styles.spendingItem}>
+                <Text style={styles.spendingLabel}>Balance</Text>
+                <Text style={styles.spendingValue}>
+                  {(data.wallet.balance ?? 0).toLocaleString()}{" "}
+                  {data.wallet.currency ?? "ETB"}
+                </Text>
+              </View>
+              <View style={styles.spendingItem}>
+                <Text style={styles.spendingLabel}>Total Spent</Text>
+                <Text style={styles.spendingValue}>
+                  {(data.stats?.totalSpent ?? 0).toLocaleString()} ETB
+                </Text>
+              </View>
+            </View>
+            {(data.stats?.totalSpent ?? 0) > 0 && (
+              <View style={styles.spendingBarContainer}>
+                <View
+                  style={[
+                    styles.spendingBarFill,
+                    {
+                      width: `${Math.min(
+                        100,
+                        ((data.stats?.totalSpent ?? 0) /
+                          ((data.wallet.balance ?? 0) +
+                            (data.stats?.totalSpent ?? 1))) *
+                          100
+                      )}%`,
+                    },
+                  ]}
+                />
+              </View>
+            )}
+          </Card>
+        </>
+      )}
+
+      {/* More Actions */}
+      <Text style={styles.sectionTitle}>More</Text>
+      <View style={styles.moreGrid}>
+        {[
+          {
+            label: "Wallet",
+            icon: "wallet-outline" as const,
+            route: "/(shipper)/wallet",
+          },
+          {
+            label: "Requests",
+            icon: "chatbubbles-outline" as const,
+            route: "/(shipper)/requests",
+          },
+          {
+            label: "Documents",
+            icon: "document-text-outline" as const,
+            route: "/(shipper)/documents",
+          },
+          {
+            label: "Settings",
+            icon: "settings-outline" as const,
+            route: "/(shipper)/settings",
+          },
+          {
+            label: "Matches",
+            icon: "analytics-outline" as const,
+            route: "/(shipper)/matches",
+          },
+        ].map((item) => (
+          <TouchableOpacity
+            key={item.label}
+            style={styles.moreItem}
+            onPress={() => router.push(item.route as `/${string}`)}
+          >
+            <View style={styles.moreIcon}>
+              <Ionicons name={item.icon} size={22} color={colors.primary600} />
+            </View>
+            <Text style={styles.moreLabel}>{item.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       {/* Loads by status breakdown */}
       {data?.loadsByStatus && data.loadsByStatus.length > 0 && (
         <>
@@ -454,5 +546,57 @@ const styles = StyleSheet.create({
   recentLoadDate: {
     ...typography.bodySmall,
     color: colors.textSecondary,
+  },
+  spendingCard: {
+    marginHorizontal: spacing["2xl"],
+  },
+  spendingRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: spacing.md,
+  },
+  spendingItem: { flex: 1 },
+  spendingLabel: {
+    ...typography.labelSmall,
+    color: colors.textSecondary,
+  },
+  spendingValue: {
+    ...typography.titleMedium,
+    color: colors.textPrimary,
+    marginTop: 2,
+  },
+  spendingBarContainer: {
+    height: 8,
+    backgroundColor: colors.slate100,
+    borderRadius: 4,
+  },
+  spendingBarFill: {
+    height: 8,
+    backgroundColor: colors.accent500,
+    borderRadius: 4,
+  },
+  moreGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.md,
+    paddingHorizontal: spacing["2xl"],
+  },
+  moreItem: {
+    alignItems: "center",
+    width: 72,
+  },
+  moreIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary50,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  moreLabel: {
+    ...typography.labelSmall,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+    textAlign: "center",
   },
 });

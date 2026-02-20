@@ -81,7 +81,8 @@ export function useTripPods(tripId: string | undefined) {
 export function useConfirmDelivery() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (tripId: string) => tripService.confirmDelivery(tripId),
+    mutationFn: ({ tripId, notes }: { tripId: string; notes?: string }) =>
+      tripService.confirmDelivery(tripId, notes),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TRIPS_KEY });
     },

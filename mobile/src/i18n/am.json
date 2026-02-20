@@ -80,7 +80,14 @@
     "findTrucks": "ተሽከርካሪ ፈልግ",
     "postLoad": "አዲስ ጭነት ለጥፍ",
     "truckRequests": "የተሽከርካሪ ጥያቄዎቼ",
-    "map": "ካርታ"
+    "map": "ካርታ",
+    "requests": "ጥያቄዎች",
+    "wallet": "ቦርሳ",
+    "settings": "ቅንብሮች",
+    "documents": "ሰነዶች",
+    "matches": "ተመሳሳይ ተሽከርካሪዎች",
+    "spendingOverview": "የወጪ ማጠቃለያ",
+    "more": "ተጨማሪ"
   },
   "truck": {
     "addTruck": "ተሽከርካሪ ጨምር",
@@ -159,6 +166,50 @@
     "gpsTracking": "ጂፒኤስ ክትትል",
     "security": "ደህንነት",
     "changePassword": "የይለፍ ቃል ቀይር",
-    "about": "ስለ"
+    "about": "ስለ",
+    "companyProfile": "የድርጅት መገለጫ",
+    "contactInfo": "የእውቂያ መረጃ",
+    "legalInfo": "ህጋዊ መረጃ",
+    "privacy": "ግላዊነት",
+    "allowNameDisplay": "የድርጅት ስም አሳይ",
+    "save": "አስቀምጥ"
+  },
+  "wallet": {
+    "balance": "ቀሪ ሂሳብ",
+    "available": "ያለ",
+    "pending": "በመጠበቅ ላይ",
+    "totalDeposited": "ጠቅላላ ገቢ",
+    "totalSpent": "ጠቅላላ ወጪ",
+    "transactions": "ግብይቶች",
+    "deposit": "አስገባ",
+    "noTransactions": "ምንም ግብይት የለም"
+  },
+  "requests": {
+    "carrierRequests": "የአጓጓዥ ጥያቄዎች",
+    "myTruckRequests": "የተሽከርካሪ ጥያቄዎቼ",
+    "approve": "ፍቀድ",
+    "reject": "ከልክል",
+    "cancel": "ሰርዝ",
+    "expired": "ጊዜው ያለፈበት",
+    "noRequests": "ምንም ጥያቄ አልተገኘም",
+    "proposedRate": "የቀረበ ዋጋ",
+    "offeredRate": "የቀረበ ዋጋ"
+  },
+  "documents": {
+    "upload": "ሰነድ ጫን",
+    "type": "የሰነድ ዓይነት",
+    "pending": "በመጠበቅ ላይ",
+    "approved": "ጸድቋል",
+    "rejected": "ተከልክሏል",
+    "delete": "ሰርዝ",
+    "noDocuments": "ምንም ሰነድ አልተጫነም"
+  },
+  "matches": {
+    "selectLoad": "ጭነት ምረጥ",
+    "minScore": "ዝቅተኛ ውጤት",
+    "matchScore": "የተዛማጅነት ውጤት",
+    "assignTruck": "ተሽከርካሪ ምደብ",
+    "noMatches": "ተዛማጅ ተሽከርካሪ አልተገኘም",
+    "matchReasons": "የተዛማጅነት ምክንያቶች"
   }
 }

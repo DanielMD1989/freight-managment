@@ -123,6 +123,17 @@ export function useMyTruckRequests(params?: {
   });
 }
 
+/** Cancel a truck request */
+export function useCancelTruckRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => truckService.cancelTruckRequest(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["truck-requests"] });
+    },
+  });
+}
+
 /** My truck postings (carrier) */
 export function useMyTruckPostings(params?: {
   page?: number;

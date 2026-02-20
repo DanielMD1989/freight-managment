@@ -64,9 +64,18 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Role-based routing
-      if (inAuthGroup || inOnboarding) {
-        const role = user.role;
+      // Role-based routing — redirect from auth/onboarding or wrong role layout
+      const role = user.role;
+      const inCarrierGroup = segments[0] === "(carrier)";
+      const inShipperGroup = segments[0] === "(shipper)";
+      const inSharedGroup = segments[0] === "(shared)";
+      const needsRedirect =
+        inAuthGroup ||
+        inOnboarding ||
+        (role === "SHIPPER" && !inShipperGroup && !inSharedGroup) ||
+        (role === "CARRIER" && !inCarrierGroup && !inSharedGroup);
+
+      if (needsRedirect) {
         if (role === "CARRIER") {
           router.replace("/(carrier)/");
         } else if (role === "SHIPPER") {

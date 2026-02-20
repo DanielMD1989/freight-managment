@@ -1,0 +1,419 @@
+{
+  "timestamp": "2026-02-19T20:31:38.941Z",
+  "summary": {
+    "total": 68,
+    "passed": 66,
+    "failed": 0,
+    "warnings": 2
+  },
+  "tests": [
+    {
+      "phase": "Phase 1",
+      "test": "1a. Register Shipper A (browser)",
+      "status": "PASS",
+      "details": "http://localhost:3000/shipper"
+    },
+    {
+      "phase": "Phase 1",
+      "test": "1b. Register Shipper B (API)",
+      "status": "PASS",
+      "details": "status=201"
+    },
+    {
+      "phase": "Phase 1",
+      "test": "1c-i. Login returns limitedAccess=true",
+      "status": "PASS",
+      "details": "limitedAccess=true"
+    },
+    {
+      "phase": "Phase 1",
+      "test": "1c-ii. POST /api/loads blocked (not 201)",
+      "status": "PASS",
+      "details": "status=500"
+    },
+    {
+      "phase": "Phase 1",
+      "test": "1d-i. Activate Shipper A",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "phase": "Phase 1",
+      "test": "1d-ii. Verify Shipper A org",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "phase": "Phase 1",
+      "test": "1d-iii. Activate Shipper B",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "phase": "Phase 1",
+      "test": "1d-iv. Verify Shipper B org",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "phase": "Phase 1",
+      "test": "1e-i. Re-login returns limitedAccess=false",
+      "status": "PASS",
+      "details": "limitedAccess=false"
+    },
+    {
+      "phase": "Phase 1",
+      "test": "1e-ii. POST /api/loads succeeds (201)",
+      "status": "PASS",
+      "details": "status=201"
+    },
+    {
+      "phase": "Phase 1",
+      "test": "1e-iii. Full access verified via API",
+      "status": "PASS",
+      "details": "tokens refreshed"
+    },
+    {
+      "phase": "Phase 2",
+      "test": "2a-i. Upload COMPANY_LICENSE (PDF)",
+      "status": "PASS",
+      "details": "status=200, verification=PENDING"
+    },
+    {
+      "phase": "Phase 2",
+      "test": "2a-ii. Upload TIN_CERTIFICATE (JPEG)",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "phase": "Phase 2",
+      "test": "2a-iii. Upload INSURANCE_CERTIFICATE",
+      "status": "PASS",
+      "details": "status=200, policyNumber=INS-2026-001"
+    },
+    {
+      "phase": "Phase 2",
+      "test": "2b. Upload COMPANY_LICENSE (Shipper B)",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "phase": "Phase 2",
+      "test": "2b. Upload TIN_CERTIFICATE (Shipper B)",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "phase": "Phase 2",
+      "test": "2b. Upload INSURANCE_CERTIFICATE (Shipper B)",
+      "status": "PASS",
+      "details": "status=200"
+    },
+    {
+      "phase": "Phase 2",
+      "test": "2c. Shipper A docs listed (count=3)",
+      "status": "PASS",
+      "details": "count=3, allPending=true"
+    },
+    {
+      "phase": "Phase 2",
+      "test": "2c. Shipper B docs listed (count=3)",
+      "status": "PASS",
+      "details": "count=3, allPending=true"
+    },
+    {
+      "phase": "Phase 2",
+      "test": "2d. Admin approves all documents",
+      "status": "PASS",
+      "details": "approved=6/6"
+    },
+    {
+      "phase": "Phase 3",
+      "test": "3a. Shipper A posts load (web wizard)",
+      "status": "PASS",
+      "details": "loadId=cmltwzwm6000usxul8yvkk2vx"
+    },
+    {
+      "phase": "Phase 3",
+      "test": "3b. Shipper B posts load (API)",
+      "status": "PASS",
+      "details": "status=201, loadId=cmltx00kb001hsxulktf344tv"
+    },
+    {
+      "phase": "Phase 3",
+      "test": "3c. Carrier sees both loads",
+      "status": "PASS",
+      "details": "total=20, seesA=true, seesB=true"
+    },
+    {
+      "phase": "Phase 3",
+      "test": "3d. Dispatcher sees both loads",
+      "status": "PASS",
+      "details": "total=20, seesA=true, seesB=true"
+    },
+    {
+      "phase": "Phase 4",
+      "test": "4a. Find available trucks",
+      "status": "PASS",
+      "details": "truck1=m0keo5yh, truck2=dgqsl067"
+    },
+    {
+      "phase": "Phase 4",
+      "test": "4b. Shipper A truck request",
+      "status": "PASS",
+      "details": "status=201, requestId=mwh68fg8"
+    },
+    {
+      "phase": "Phase 4",
+      "test": "4c-i. Carrier approves request",
+      "status": "PASS",
+      "details": "tripId=cy7ak3ku, tripStatus=ASSIGNED"
+    },
+    {
+      "phase": "Phase 4",
+      "test": "4c-ii. Truck1 removed from marketplace",
+      "status": "PASS",
+      "details": "truck1Active=false"
+    },
+    {
+      "phase": "Phase 4",
+      "test": "4d. Shipper B truck request",
+      "status": "PASS",
+      "details": "status=201"
+    },
+    {
+      "phase": "Phase 4",
+      "test": "4e-i. Carrier rejects request",
+      "status": "PASS",
+      "details": "noTrip=true"
+    },
+    {
+      "phase": "Phase 4",
+      "test": "4e-ii. Truck2 still on marketplace",
+      "status": "PASS",
+      "details": "truck2Active=true"
+    },
+    {
+      "phase": "Phase 4",
+      "test": "4f. Request statuses",
+      "status": "PASS",
+      "details": "approved=10, rejected=10"
+    },
+    {
+      "phase": "Phase 5",
+      "test": "5a. ASSIGNED → PICKUP_PENDING",
+      "status": "PASS",
+      "details": "startedAt=set"
+    },
+    {
+      "phase": "Phase 5",
+      "test": "5a. PICKUP_PENDING → IN_TRANSIT",
+      "status": "PASS",
+      "details": "pickedUpAt=set"
+    },
+    {
+      "phase": "Phase 5",
+      "test": "5a. IN_TRANSIT → DELIVERED",
+      "status": "PASS",
+      "details": "deliveredAt=set"
+    },
+    {
+      "phase": "Phase 5",
+      "test": "5b-i. Carrier browser login",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "phase": "Phase 5",
+      "test": "5b-ii. Carrier trip detail page",
+      "status": "PASS",
+      "details": "tripId=cmltx01as002bsxulcy7ak3ku"
+    },
+    {
+      "phase": "Phase 5",
+      "test": "5b-iii. POD upload modal opened",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "phase": "Phase 5",
+      "test": "5b-iv. POD file uploaded",
+      "status": "PASS",
+      "details": "uploadIndicatorVisible=true"
+    },
+    {
+      "phase": "Phase 5",
+      "test": "5b. Carrier uploads POD (browser)",
+      "status": "PASS",
+      "details": "visible upload flow completed"
+    },
+    {
+      "phase": "Phase 5",
+      "test": "5c-i. Shipper A browser login",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "phase": "Phase 5",
+      "test": "5c-ii. Shipper trip detail (POD submitted)",
+      "status": "PASS",
+      "details": "tripId=cmltx01as002bsxulcy7ak3ku"
+    },
+    {
+      "phase": "Phase 5",
+      "test": "5c-iii. Delivery confirmation alert visible",
+      "status": "PASS",
+      "details": "alertVisible=true"
+    },
+    {
+      "phase": "Phase 5",
+      "test": "5c-iv. Confirm delivery modal opened",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "phase": "Phase 5",
+      "test": "5c-v. Delivery confirmed & trip completed",
+      "status": "PASS",
+      "details": "browser confirmation flow completed"
+    },
+    {
+      "phase": "Phase 5",
+      "test": "5d-i. Trip COMPLETED",
+      "status": "PASS",
+      "details": "status=COMPLETED, completedAt=true, trackingEnabled=false"
+    },
+    {
+      "phase": "Phase 5",
+      "test": "5d-ii. Load POD verified & synced",
+      "status": "PASS",
+      "details": "loadStatus=COMPLETED, podVerified=true"
+    },
+    {
+      "phase": "Phase 5",
+      "test": "5e. Truck1 back on marketplace",
+      "status": "WARN",
+      "details": "truck1Active=false, totalPostings=20"
+    },
+    {
+      "phase": "Phase 5",
+      "test": "5f-i. Shipper A wallet",
+      "status": "PASS",
+      "details": "balance=0 ETB"
+    },
+    {
+      "phase": "Phase 5",
+      "test": "5f-ii. Carrier wallet",
+      "status": "PASS",
+      "details": "balance=45513.68 ETB"
+    },
+    {
+      "phase": "Phase 5",
+      "test": "5g. Final state screenshots",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "phase": "Phase 6",
+      "test": "6a-i. Mobile auth via token injection",
+      "status": "PASS",
+      "details": "url=http://localhost:8081/"
+    },
+    {
+      "phase": "Phase 6",
+      "test": "6a-ii. Mobile dashboard loaded",
+      "status": "PASS",
+      "details": "hasStats=true"
+    },
+    {
+      "phase": "Phase 6",
+      "test": "6a-iii. Mobile loads list",
+      "status": "PASS",
+      "details": "tabClicked=true, hasRoute=true"
+    },
+    {
+      "phase": "Phase 6",
+      "test": "6a-v. Mobile trips list",
+      "status": "PASS",
+      "details": "hasRoute=true, hasCompleted=true"
+    },
+    {
+      "phase": "Phase 6",
+      "test": "6a-vi. Mobile trip detail",
+      "status": "WARN",
+      "details": "Could not click trip card"
+    },
+    {
+      "phase": "Phase 6",
+      "test": "6a-vii. Mobile requests page",
+      "status": "PASS",
+      "details": "hasRequestContent=true"
+    },
+    {
+      "phase": "Phase 6",
+      "test": "6a-viii. Mobile wallet page",
+      "status": "PASS",
+      "details": "hasWalletContent=true"
+    },
+    {
+      "phase": "Phase 6",
+      "test": "6b-i. Web login as Shipper B",
+      "status": "PASS",
+      "details": "url=http://localhost:3000/shipper"
+    },
+    {
+      "phase": "Phase 6",
+      "test": "6b-ii. Web requests page loaded",
+      "status": "PASS",
+      "details": "hasRequestContent=true"
+    },
+    {
+      "phase": "Phase 6",
+      "test": "6b-iii. REJECTED request visible",
+      "status": "PASS",
+      "details": "showsRejected=true, showsRoute=true"
+    },
+    {
+      "phase": "Phase 6",
+      "test": "6b-iv. Shipper B has no trips (rejected)",
+      "status": "PASS",
+      "details": "noTrips=true"
+    },
+    {
+      "phase": "Phase 6",
+      "test": "6b-v. Shipper B load still visible",
+      "status": "PASS",
+      "details": "hasLoad=true"
+    },
+    {
+      "phase": "Phase 6",
+      "test": "6c-i. Shipper A trip visible on web",
+      "status": "PASS",
+      "details": "hasTrip=true"
+    },
+    {
+      "phase": "Phase 6",
+      "test": "6c-ii. Trip detail page on web",
+      "status": "PASS",
+      "details": "hasDetail=true"
+    },
+    {
+      "phase": "Phase 6",
+      "test": "6c-iii. Shipper A APPROVED request on web",
+      "status": "PASS",
+      "details": "hasApproved=true"
+    },
+    {
+      "phase": "Phase 6",
+      "test": "6c-iv. Shipper A wallet on web",
+      "status": "PASS",
+      "details": "hasWallet=true"
+    },
+    {
+      "phase": "Phase 6",
+      "test": "6c. Web Shipper A complete",
+      "status": "PASS",
+      "details": ""
+    }
+  ]
+}

@@ -82,9 +82,11 @@ class TripService {
   }
 
   /** Confirm delivery (shipper) */
-  async confirmDelivery(tripId: string): Promise<Trip> {
+  async confirmDelivery(tripId: string, notes?: string): Promise<Trip> {
     try {
-      const response = await apiClient.post(`/api/trips/${tripId}/confirm`);
+      const response = await apiClient.post(`/api/trips/${tripId}/confirm`, {
+        ...(notes ? { notes } : {}),
+      });
       return response.data.trip ?? response.data;
     } catch (error) {
       throw new Error(getErrorMessage(error));

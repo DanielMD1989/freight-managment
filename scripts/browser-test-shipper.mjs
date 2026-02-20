@@ -75,12 +75,12 @@ async function clickByExactText(page, text, description) {
 }
 
 // Helper: click an RN Web card that contains specific text (force click)
-async function clickCardContaining(page, textParts, description) {
+async function clickCardContaining(page, textParts, description, { minLen = 15 } = {}) {
   try {
     const els = await page.$$('div[tabindex="0"]');
     for (const el of els) {
       const t = await el.textContent().catch(() => '');
-      if (textParts.every(part => t.includes(part)) && t.length > 15) {
+      if (textParts.every(part => t.includes(part)) && t.length > minLen) {
         await el.click({ force: true, timeout: 5000 });
         console.log(`   ✓ Clicked: ${description}`);
         return true;
@@ -89,6 +89,35 @@ async function clickCardContaining(page, textParts, description) {
   } catch { /* ignore */ }
   console.log(`   ✗ Could not click: ${description}`);
   return false;
+}
+
+// Helper: navigate to root URL to reset Expo Router state and ensure tab bar is visible.
+// Full page reload — use sparingly (only when goBack can't recover).
+async function resetToRoot(page) {
+  await page.goto(MOBILE_URL, { waitUntil: 'domcontentloaded' });
+  // Wait for the tab bar to appear (Expo web bundle re-init + auth hydration)
+  try {
+    await page.waitForSelector('a[role="tab"]', { timeout: 15000 });
+    await sleep(2000); // extra settle time for dashboard data
+  } catch {
+    await sleep(8000); // fallback: same as initial bundle load
+  }
+}
+
+// Helper: go back in browser history and wait for page to settle
+async function goBackAndWait(page, ms = 2000) {
+  await page.goBack();
+  await sleep(ms);
+}
+
+// Helper: navigate to a tab by clicking tab bar link
+async function navigateToTab(page, href, label) {
+  const clicked = await tryClick(page, [
+    `a[role="tab"][href="${href}"]`,
+    `a[href="${href}"]`,
+  ], `${label} tab`);
+  if (clicked) await sleep(3000);
+  return clicked;
 }
 
 // Helper: check text presence
@@ -702,28 +731,26 @@ async function testMobileShipper(browser) {
     console.log(`   Recent loads: ${r.dashboardRecentLoads ? '✓' : '✗'}`);
     await screenshot(page, 'mobile-04-dashboard');
 
-    // Click "Post New Load" quick action
+    // Click "Post New Load" quick action (partial match — icon text precedes label)
     console.log('\n[MOBILE] 2b. Dashboard → Post New Load quick action');
-    const mPostLoad = await clickByExactText(page, 'Post New Load', 'Post New Load quick action');
+    const mPostLoad = await clickCardContaining(page, ['Post', 'Load'], 'Post New Load quick action', { minLen: 5 });
     if (mPostLoad) {
       await sleep(3000);
       r.dashboardPostLoad = page.url().includes('create') || (await safeText(page)).includes('Route');
       console.log(`   Navigated to create: ${r.dashboardPostLoad ? '✓' : '✗'}`);
       await screenshot(page, 'mobile-04b-dashboard-postload');
-      await page.goBack();
-      await sleep(2000);
+      await goBackAndWait(page, 3000);
     }
 
-    // Click "Find Trucks" quick action
+    // Click "Find Trucks" quick action (partial match)
     console.log('\n[MOBILE] 2c. Dashboard → Find Trucks quick action');
-    const mFindTrucks = await clickByExactText(page, 'Find Trucks', 'Find Trucks quick action');
+    const mFindTrucks = await clickCardContaining(page, ['Find', 'Truck'], 'Find Trucks quick action', { minLen: 5 });
     if (mFindTrucks) {
       await sleep(3000);
       r.dashboardFindTrucks = page.url().includes('trucks') || (await safeText(page)).includes('Search by city');
       console.log(`   Navigated to trucks: ${r.dashboardFindTrucks ? '✓' : '✗'}`);
       await screenshot(page, 'mobile-04c-dashboard-findtrucks');
-      await page.goBack();
-      await sleep(2000);
+      await goBackAndWait(page, 3000);
     }
 
     // Click a recent load card
@@ -738,13 +765,12 @@ async function testMobileShipper(browser) {
       }
     }
     if (recentLoad) {
-      await recentLoad.click();
+      await recentLoad.click({ force: true });
       await sleep(3000);
       r.dashboardRecentLoadClick = page.url().includes('loads/') || (await safeText(page)).includes('Cargo');
       console.log(`   Load detail opened: ${r.dashboardRecentLoadClick ? '✓' : '✗'}`);
       await screenshot(page, 'mobile-04d-dashboard-recent-load');
-      await page.goBack();
-      await sleep(2000);
+      await goBackAndWait(page, 2000);
     }
 
     // ── 3. MY LOADS ───────────────────────────────────────────────────
@@ -809,12 +835,10 @@ async function testMobileShipper(browser) {
           r.loadEdit = hasText(editText, 'Pickup City', 'Delivery City', 'Weight', 'Update');
           console.log(`   Edit form: ${r.loadEdit ? '✓' : '✗'}`);
           await screenshot(page, 'mobile-06b-load-edit');
-          await page.goBack();
-          await sleep(2000);
+          await goBackAndWait(page); // edit → detail
         }
 
-        await page.goBack();
-        await sleep(2000);
+        await goBackAndWait(page); // detail → loads list
       } else {
         console.log('   No loads to click');
         r.loadDetailRoute = false;
@@ -828,15 +852,11 @@ async function testMobileShipper(browser) {
     // ── 5. CREATE LOAD (multi-step wizard) ────────────────────────────
     console.log('\n[MOBILE] 5. Create Load');
     try {
-      // Navigate to create — go to Dashboard first, then click quick action
-      await tryClick(page, ['a[role="tab"][href="/"]', 'a[href="/"]'], 'Dashboard tab');
-      await sleep(3000);
-      const mCreateNav = await clickByExactText(page, 'Post New Load', 'Navigate to Create');
+      // Navigate to dashboard tab, then click "Post New Load" quick action
+      await navigateToTab(page, '/', 'Dashboard');
+      const mCreateNav = await clickCardContaining(page, ['Post', 'Load'], 'Navigate to Create', { minLen: 5 });
       if (mCreateNav) {
         await sleep(3000);
-      } else {
-        await page.goto(`${MOBILE_URL}/loads/create`, { waitUntil: 'domcontentloaded' }).catch(() => {});
-        await sleep(4000);
       }
 
       const mCreateText = await safeText(page);
@@ -905,8 +925,8 @@ async function testMobileShipper(browser) {
         }
       }
       r.createLoadWizard = r.createStep1 || false;
-      await page.goBack();
-      await sleep(2000);
+      // Go back to dashboard — click dashboard tab (avoids full reload)
+      await navigateToTab(page, '/', 'Dashboard (recovery)');
     } catch (e) {
       console.log(`   Create load error: ${e.message.substring(0, 80)}`);
       r.createLoadWizard = false;
@@ -915,11 +935,7 @@ async function testMobileShipper(browser) {
     // ── 6. FIND TRUCKS ────────────────────────────────────────────────
     console.log('\n[MOBILE] 6. Find Trucks');
     try {
-      const mTrucksTabClicked = await tryClick(page, [
-        'a[role="tab"][href="/trucks"]',
-        'a[href="/trucks"]',
-      ], 'Find Trucks tab');
-      if (mTrucksTabClicked) await sleep(3000);
+      const mTrucksTabClicked = await navigateToTab(page, '/trucks', 'Find Trucks');
 
       const mTrucksBody = await safeText(page);
       r.findTrucksPage = hasText(mTrucksBody, 'Truck', 'Search', 'FLATBED', 'DRY_VAN', 'Available', 'Find', 'city');
@@ -942,11 +958,6 @@ async function testMobileShipper(browser) {
         await sleep(3000);
         r.findTrucksCardClick = true;
         await screenshot(page, 'mobile-08d-truck-detail-modal');
-        await tryClick(page, [
-          'div[tabindex="0"]:has-text("Cancel")',
-          'div[tabindex="0"]:has-text("Close")',
-        ], 'Dismiss modal', { force: true });
-        await sleep(1500);
       }
     } catch (e) {
       console.log(`   Find trucks error: ${e.message.substring(0, 80)}`);
@@ -955,11 +966,7 @@ async function testMobileShipper(browser) {
     // ── 7. TRIPS / SHIPMENTS ──────────────────────────────────────────
     console.log('\n[MOBILE] 7. Shipments');
     try {
-      const mTripsTabClicked = await tryClick(page, [
-        'a[role="tab"][href="/trips"]',
-        'a[href="/trips"]',
-      ], 'Shipments tab');
-      if (mTripsTabClicked) await sleep(3000);
+      await navigateToTab(page, '/trips', 'Shipments');
 
       const mTripsBody = await safeText(page);
       r.tripsPage = hasText(mTripsBody, 'Trip', 'Shipment', '→', 'Deliver');
@@ -974,8 +981,7 @@ async function testMobileShipper(browser) {
         r.tripDetail = hasText(mTripDetailText, 'Status', 'Route', 'Truck', 'Carrier', '→');
         console.log(`   Trip detail: ${r.tripDetail ? '✓' : '✗'}`);
         await screenshot(page, 'mobile-09b-trip-detail');
-        await page.goBack();
-        await sleep(2000);
+        await goBackAndWait(page); // trip detail → trips list
       } else {
         console.log('   No trips to click');
         r.tripDetail = false;
@@ -987,9 +993,13 @@ async function testMobileShipper(browser) {
     // ── 8. MAP / TRACK ────────────────────────────────────────────────
     console.log('\n[MOBILE] 8. Map / Track');
     try {
+      // Map tab is hidden from tab bar — navigate via dashboard or direct URL
+      await navigateToTab(page, '/', 'Dashboard');
+      // Try clicking a "Track" or "Map" link on dashboard, or use hidden tab href
       const mapTabClicked = await tryClick(page, [
         'a[role="tab"][href="/map"]',
         'a[href="/map"]',
+        'a[href="/(shipper)/map"]',
       ], 'Map tab');
       if (mapTabClicked) await sleep(3000);
       const mMapBody = await safeText(page);
@@ -1011,12 +1021,8 @@ async function testMobileShipper(browser) {
     ];
     r.tabBar = {};
     for (const tab of mobileTabs) {
-      const tabClicked = await tryClick(page, [
-        `a[role="tab"][href="${tab.href}"]`,
-        `a[href="${tab.href}"]`,
-      ], `Tab: ${tab.label}`);
+      const tabClicked = await navigateToTab(page, tab.href, tab.label);
       if (tabClicked) {
-        await sleep(2500);
         r.tabBar[tab.label] = true;
         console.log(`   ${tab.label}: ✓ loaded at ${page.url()}`);
       } else {

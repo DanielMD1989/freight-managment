@@ -24,6 +24,7 @@ export async function GET() {
         firstName: true,
         lastName: true,
         role: true,
+        status: true,
         isEmailVerified: true,
         isPhoneVerified: true,
         isActive: true,
