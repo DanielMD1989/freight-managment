@@ -102,6 +102,10 @@ export function mockAuth() {
       }
       return { ...session, dbStatus: session.status };
     }),
+    getSessionAny: jest.fn(async () => {
+      const { getAuthSession } = require("../utils/routeTestUtils");
+      return getAuthSession();
+    }),
     hashPassword: jest.fn(async (pw: string) => `hashed_${pw}`),
     verifyPassword: jest.fn(
       async (pw: string, hash: string) => hash === `hashed_${pw}`
@@ -153,6 +157,8 @@ export function mockRateLimit() {
     RPS_CONFIGS: {
       marketplace: { endpoint: "loads", rps: 50, burst: 100 },
       fleet: { endpoint: "trucks", rps: 30, burst: 60 },
+      dashboard: { endpoint: "dashboard", rps: 5, burst: 10 },
+      gps: { endpoint: "gps", rps: 30, burst: 60 },
     },
     RATE_LIMIT_TRUCK_POSTING: { maxRequests: 100, windowMs: 86400000 },
   }));
@@ -231,6 +237,14 @@ export function mockNotifications() {
     notifyTruckRequest: jest.fn(async () => {}),
     getRecentNotifications: jest.fn(async () => []),
     getUnreadCount: jest.fn(async () => 0),
+    markAsRead: jest.fn(async () => {}),
+    NotificationType: {
+      LOAD_REQUEST: "LOAD_REQUEST",
+      TRUCK_REQUEST: "TRUCK_REQUEST",
+      TRIP_STATUS: "TRIP_STATUS",
+      TRIP_CANCELLED: "TRIP_CANCELLED",
+      SYSTEM: "SYSTEM",
+    },
   }));
 }
 
@@ -411,6 +425,128 @@ export function mockDispatcherPermissions() {
     hasElevatedPermissions: jest.fn(() => false),
     canRequestTruck: jest.fn(() => true),
     canApproveRequests: jest.fn(() => true),
+  }));
+}
+
+export function mockStorage() {
+  jest.mock("@/lib/storage", () => ({
+    uploadPOD: jest.fn(async () => ({
+      success: true,
+      url: "https://storage.test/pod-123.jpg",
+      key: "pods/pod-123.jpg",
+    })),
+    uploadDocument: jest.fn(async () => ({
+      success: true,
+      url: "https://storage.test/doc-123.pdf",
+      key: "docs/doc-123.pdf",
+    })),
+    uploadFile: jest.fn(async () => ({
+      success: true,
+      url: "https://storage.test/file-123.bin",
+      key: "files/file-123.bin",
+    })),
+    deleteFile: jest.fn(async () => true),
+    getSignedUrl: jest.fn(async () => "https://storage.test/signed-url"),
+    generateFileKey: jest.fn(
+      (prefix: string, name: string) => `${prefix}/${name}`
+    ),
+    getPublicUrl: jest.fn((key: string) => `https://storage.test/${key}`),
+    fileExists: jest.fn(async () => true),
+    getStorageProvider: jest.fn(() => "local"),
+    isCDNEnabled: jest.fn(() => false),
+  }));
+}
+
+export function mockValidation() {
+  jest.mock("@/lib/validation", () => ({
+    ...jest.requireActual("@/lib/validation"),
+    sanitizeText: jest.fn((text: string) => text),
+  }));
+}
+
+export function mockServiceFee() {
+  jest.mock("@/lib/serviceFeeManagement", () => ({
+    validateWalletBalancesForTrip: jest.fn(async () => ({
+      valid: true,
+      shipperFee: "100.00",
+      carrierFee: "50.00",
+    })),
+    deductServiceFees: jest.fn(async () => ({ success: true })),
+  }));
+}
+
+export function mockGeo() {
+  jest.mock("@/lib/geo", () => ({
+    calculateDistanceKm: jest.fn(() => 250),
+    isValidCoordinate: jest.fn(() => true),
+  }));
+}
+
+export function mockLoadUtils() {
+  jest.mock("@/lib/loadUtils", () => ({
+    calculateAge: jest.fn(() => 30),
+    canSeeContact: jest.fn(() => true),
+    maskCompany: jest.fn((name: string) => name),
+  }));
+}
+
+export function mockLoadStateMachine() {
+  jest.mock("@/lib/loadStateMachine", () => ({
+    validateStateTransition: jest.fn(() => true),
+    LoadStatus: {
+      DRAFT: "DRAFT",
+      POSTED: "POSTED",
+      ASSIGNED: "ASSIGNED",
+      PICKUP_PENDING: "PICKUP_PENDING",
+      IN_TRANSIT: "IN_TRANSIT",
+      DELIVERED: "DELIVERED",
+      COMPLETED: "COMPLETED",
+      CANCELLED: "CANCELLED",
+    },
+  }));
+}
+
+export function mockTrustMetrics() {
+  jest.mock("@/lib/trustMetrics", () => ({
+    incrementCompletedLoads: jest.fn(async () => {}),
+    incrementCancelledLoads: jest.fn(async () => {}),
+  }));
+}
+
+export function mockBypassDetection() {
+  jest.mock("@/lib/bypassDetection", () => ({
+    checkSuspiciousCancellation: jest.fn(async () => ({
+      suspicious: false,
+    })),
+  }));
+}
+
+export function mockLogger() {
+  jest.mock("@/lib/logger", () => ({
+    logger: {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
+    },
+  }));
+}
+
+export function mockApiErrors() {
+  jest.mock("@/lib/apiErrors", () => ({
+    handleApiError: jest.fn((error: any) => {
+      const status =
+        error.name === "ForbiddenError"
+          ? 403
+          : error.name === "UnauthorizedError"
+            ? 401
+            : 500;
+      const { NextResponse } = require("next/server");
+      return NextResponse.json(
+        { error: error.message || "Internal server error" },
+        { status }
+      );
+    }),
   }));
 }
 

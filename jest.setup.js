@@ -35,6 +35,10 @@ jest.mock('@/lib/db', () => {
     loadEvents: new Map(),
     ethiopianLocations: new Map(),
     sessions: new Map(),
+    gpsPositions: new Map(),
+    gpsDevices: new Map(),
+    tripPods: new Map(),
+    disputes: new Map(),
   };
 
   let userIdCounter = 1;
@@ -54,6 +58,10 @@ jest.mock('@/lib/db', () => {
   let loadEventIdCounter = 1;
   let ethiopianLocationIdCounter = 1;
   let sessionIdCounter = 1;
+  let gpsPositionIdCounter = 1;
+  let gpsDeviceIdCounter = 1;
+  let tripPodIdCounter = 1;
+  let disputeIdCounter = 1;
 
   // Default values for different model types
   const modelDefaults = {
@@ -105,6 +113,14 @@ jest.mock('@/lib/db', () => {
       isActive: true,
     },
     session: {},
+    gpsPosition: {},
+    gpsDevice: {
+      status: 'ACTIVE',
+    },
+    tripPod: {},
+    dispute: {
+      status: 'OPEN',
+    },
   };
 
   // Helper to create model methods with in-memory storage
@@ -300,6 +316,19 @@ jest.mock('@/lib/db', () => {
       });
       return Promise.resolve(count);
     }),
+    aggregate: jest.fn(({ where, _sum } = {}) => {
+      const result = {};
+      if (_sum) {
+        result._sum = {};
+        for (const field of Object.keys(_sum)) {
+          result._sum[field] = 0;
+        }
+      }
+      return Promise.resolve(result);
+    }),
+    groupBy: jest.fn(({ by, where, _count } = {}) => {
+      return Promise.resolve([]);
+    }),
   });
 
   // Counter objects (so they can be passed by reference)
@@ -321,6 +350,10 @@ jest.mock('@/lib/db', () => {
     loadEvent: { value: loadEventIdCounter },
     ethiopianLocation: { value: ethiopianLocationIdCounter },
     session: { value: sessionIdCounter },
+    gpsPosition: { value: gpsPositionIdCounter },
+    gpsDevice: { value: gpsDeviceIdCounter },
+    tripPod: { value: tripPodIdCounter },
+    dispute: { value: disputeIdCounter },
   };
 
   const result = {
@@ -485,6 +518,10 @@ jest.mock('@/lib/db', () => {
       loadEvent: createModelMethods(stores.loadEvents, 'loadEvent', counters.loadEvent),
       ethiopianLocation: createModelMethods(stores.ethiopianLocations, 'ethiopianLocation', counters.ethiopianLocation),
       session: createModelMethods(stores.sessions, 'session', counters.session),
+      gpsPosition: createModelMethods(stores.gpsPositions, 'gpsPosition', counters.gpsPosition),
+      gpsDevice: createModelMethods(stores.gpsDevices, 'gpsDevice', counters.gpsDevice),
+      tripPod: createModelMethods(stores.tripPods, 'tripPod', counters.tripPod),
+      dispute: createModelMethods(stores.disputes, 'dispute', counters.dispute),
       $transaction: jest.fn(),
       // Helper to clear all stores between tests if needed
       _clearStores: () => {
