@@ -28,6 +28,13 @@ jest.mock('@/lib/db', () => {
     financialAccounts: new Map(),
     journalEntries: new Map(),
     userMFAs: new Map(),
+    trips: new Map(),
+    loadRequests: new Map(),
+    truckRequests: new Map(),
+    matchProposals: new Map(),
+    loadEvents: new Map(),
+    ethiopianLocations: new Map(),
+    sessions: new Map(),
   };
 
   let userIdCounter = 1;
@@ -40,6 +47,13 @@ jest.mock('@/lib/db', () => {
   let financialAccountIdCounter = 1;
   let journalEntryIdCounter = 1;
   let userMFAIdCounter = 1;
+  let tripIdCounter = 1;
+  let loadRequestIdCounter = 1;
+  let truckRequestIdCounter = 1;
+  let matchProposalIdCounter = 1;
+  let loadEventIdCounter = 1;
+  let ethiopianLocationIdCounter = 1;
+  let sessionIdCounter = 1;
 
   // Default values for different model types
   const modelDefaults = {
@@ -56,7 +70,7 @@ jest.mock('@/lib/db', () => {
     load: {
       serviceFeeStatus: 'PENDING',
     },
-    truck: {},
+    truck: { postings: [], gpsDevice: null },
     notification: {
       read: false,
     },
@@ -74,6 +88,23 @@ jest.mock('@/lib/db', () => {
     userMFA: {
       enabled: false,
     },
+    trip: {
+      status: 'ASSIGNED',
+    },
+    loadRequest: {
+      status: 'PENDING',
+    },
+    truckRequest: {
+      status: 'PENDING',
+    },
+    matchProposal: {
+      status: 'PENDING',
+    },
+    loadEvent: {},
+    ethiopianLocation: {
+      isActive: true,
+    },
+    session: {},
   };
 
   // Helper to create model methods with in-memory storage
@@ -92,7 +123,17 @@ jest.mock('@/lib/db', () => {
       return Promise.resolve(record);
     }),
     findUnique: jest.fn(({ where, include, select }) => {
-      const record = store.get(where.id);
+      // Support lookup by id or any unique field (email, etc.)
+      let record = store.get(where.id);
+      if (!record && where) {
+        // Search by other fields (e.g., where: { email: '...' })
+        const entries = Object.entries(where).filter(([k]) => k !== 'id');
+        if (entries.length > 0) {
+          record = Array.from(store.values()).find(r =>
+            entries.every(([key, value]) => r[key] === value)
+          );
+        }
+      }
       if (!record) return Promise.resolve(null);
 
       // Handle includes for relationships
@@ -121,6 +162,26 @@ jest.mock('@/lib/db', () => {
         records = records.filter(r => {
           return Object.entries(where).every(([key, value]) => {
             if (value === undefined) return true;
+            // Handle OR operator
+            if (key === 'OR' && Array.isArray(value)) {
+              return value.some(condition =>
+                Object.entries(condition).every(([k, v]) => r[k] === v)
+              );
+            }
+            // Handle nested objects (e.g., { in: [...] })
+            if (value && typeof value === 'object' && value.in) {
+              return value.in.includes(r[key]);
+            }
+            if (value && typeof value === 'object' && value.notIn) {
+              return !value.notIn.includes(r[key]);
+            }
+            if (value && typeof value === 'object' && value.not !== undefined) {
+              return r[key] !== value.not;
+            }
+            // Handle nested relation filters (e.g., { assignedTruck: { carrierId: ... } })
+            if (value && typeof value === 'object' && !Array.isArray(value) && !value.in && !value.not && !value.notIn) {
+              return true; // Skip complex relation filters in mock
+            }
             return r[key] === value;
           });
         });
@@ -134,16 +195,53 @@ jest.mock('@/lib/db', () => {
       }
       return Promise.resolve(record);
     }),
-    findMany: jest.fn(({ where, include } = {}) => {
+    findMany: jest.fn(({ where, include, skip, take, orderBy } = {}) => {
       let records = Array.from(store.values());
       if (where) {
         records = records.filter(r => {
           return Object.entries(where).every(([key, value]) => {
             if (value === undefined) return true;
+            // Handle OR operator
+            if (key === 'OR' && Array.isArray(value)) {
+              return value.some(condition =>
+                Object.entries(condition).every(([k, v]) => r[k] === v)
+              );
+            }
+            // Handle { in: [...] } operator
+            if (value && typeof value === 'object' && value.in) {
+              return value.in.includes(r[key]);
+            }
+            // Handle { notIn: [...] } operator
+            if (value && typeof value === 'object' && value.notIn) {
+              return !value.notIn.includes(r[key]);
+            }
+            // Handle { not: ... } operator
+            if (value && typeof value === 'object' && value.not !== undefined) {
+              return r[key] !== value.not;
+            }
+            // Handle { some: ... }, { none: ... } for array relations - skip
+            if (value && typeof value === 'object' && (value.some !== undefined || value.none !== undefined)) {
+              return true;
+            }
+            // Handle { gte: ... }, { lte: ... } operators
+            if (value && typeof value === 'object' && (value.gte !== undefined || value.lte !== undefined)) {
+              return true;
+            }
+            // Handle { contains: ... } for string search
+            if (value && typeof value === 'object' && value.contains !== undefined) {
+              return String(r[key] || '').toLowerCase().includes(String(value.contains).toLowerCase());
+            }
+            // Handle nested relation filters (skip in mock)
+            if (value && typeof value === 'object' && !Array.isArray(value)) {
+              return true;
+            }
             return r[key] === value;
           });
         });
       }
+      // Handle pagination
+      if (skip) records = records.slice(skip);
+      if (take) records = records.slice(0, take);
       return Promise.resolve(records);
     }),
     update: jest.fn(({ where, data }) => {
@@ -152,6 +250,28 @@ jest.mock('@/lib/db', () => {
       const updated = { ...record, ...data, updatedAt: new Date() };
       store.set(where.id, updated);
       return Promise.resolve(updated);
+    }),
+    updateMany: jest.fn(({ where, data } = {}) => {
+      let count = 0;
+      store.forEach((record, id) => {
+        if (!where) {
+          store.set(id, { ...record, ...data, updatedAt: new Date() });
+          count++;
+          return;
+        }
+        const matches = Object.entries(where).every(([key, value]) => {
+          if (value === undefined) return true;
+          if (value && typeof value === 'object' && value.in) return value.in.includes(record[key]);
+          if (value && typeof value === 'object' && value.notIn) return !value.notIn.includes(record[key]);
+          if (value && typeof value === 'object' && value.not !== undefined) return record[key] !== value.not;
+          return record[key] === value;
+        });
+        if (matches) {
+          store.set(id, { ...record, ...data, updatedAt: new Date() });
+          count++;
+        }
+      });
+      return Promise.resolve({ count });
     }),
     delete: jest.fn(({ where }) => {
       const record = store.get(where.id);
@@ -194,9 +314,16 @@ jest.mock('@/lib/db', () => {
     financialAccount: { value: financialAccountIdCounter },
     journalEntry: { value: journalEntryIdCounter },
     userMFA: { value: userMFAIdCounter },
+    trip: { value: tripIdCounter },
+    loadRequest: { value: loadRequestIdCounter },
+    truckRequest: { value: truckRequestIdCounter },
+    matchProposal: { value: matchProposalIdCounter },
+    loadEvent: { value: loadEventIdCounter },
+    ethiopianLocation: { value: ethiopianLocationIdCounter },
+    session: { value: sessionIdCounter },
   };
 
-  return {
+  const result = {
     db: {
       user: createModelMethods(stores.users, 'user', counters.user),
       organization: createModelMethods(stores.organizations, 'org', counters.org),
@@ -267,21 +394,119 @@ jest.mock('@/lib/db', () => {
       document: {
         deleteMany: jest.fn(() => Promise.resolve({ count: 0 })),
       },
-      loadEvent: {
-        create: jest.fn(() => Promise.resolve({ id: 'event-1' })),
+      trip: createModelMethods(stores.trips, 'trip', counters.trip),
+      loadRequest: {
+        ...createModelMethods(stores.loadRequests, 'loadRequest', counters.loadRequest),
+        findUnique: jest.fn(({ where, include }) => {
+          const record = stores.loadRequests.get(where.id);
+          if (!record) return Promise.resolve(null);
+          if (include) {
+            const result = { ...record };
+            if (include.load && record.loadId) {
+              result.load = stores.loads.get(record.loadId) || null;
+            }
+            if (include.truck && record.truckId) {
+              result.truck = stores.trucks.get(record.truckId) || null;
+            }
+            if (include.carrier && record.carrierId) {
+              result.carrier = stores.organizations.get(record.carrierId) || null;
+            }
+            return Promise.resolve(result);
+          }
+          return Promise.resolve(record);
+        }),
+        updateMany: jest.fn(({ where, data }) => {
+          let count = 0;
+          stores.loadRequests.forEach((record, id) => {
+            const matches = Object.entries(where).every(([key, value]) => {
+              if (value && typeof value === 'object' && value.not !== undefined) return record[key] !== value.not;
+              if (value && typeof value === 'object' && value.in) return value.in.includes(record[key]);
+              return record[key] === value;
+            });
+            if (matches) {
+              stores.loadRequests.set(id, { ...record, ...data, updatedAt: new Date() });
+              count++;
+            }
+          });
+          return Promise.resolve({ count });
+        }),
       },
-      $transaction: jest.fn((callback) => {
-        if (typeof callback === 'function') {
-          return callback({});
-        }
-        return Promise.resolve();
-      }),
+      truckRequest: {
+        ...createModelMethods(stores.truckRequests, 'truckRequest', counters.truckRequest),
+        findUnique: jest.fn(({ where, include }) => {
+          const record = stores.truckRequests.get(where.id);
+          if (!record) return Promise.resolve(null);
+          if (include) {
+            const result = { ...record };
+            if (include.load && record.loadId) {
+              result.load = stores.loads.get(record.loadId) || null;
+            }
+            if (include.truck && record.truckId) {
+              const truck = stores.trucks.get(record.truckId);
+              result.truck = truck ? { ...truck, carrierId: truck.carrierId } : null;
+            }
+            return Promise.resolve(result);
+          }
+          return Promise.resolve(record);
+        }),
+        updateMany: jest.fn(({ where, data }) => {
+          let count = 0;
+          stores.truckRequests.forEach((record, id) => {
+            const matches = Object.entries(where).every(([key, value]) => {
+              if (value && typeof value === 'object' && value.not !== undefined) return record[key] !== value.not;
+              if (value && typeof value === 'object' && value.in) return value.in.includes(record[key]);
+              return record[key] === value;
+            });
+            if (matches) {
+              stores.truckRequests.set(id, { ...record, ...data, updatedAt: new Date() });
+              count++;
+            }
+          });
+          return Promise.resolve({ count });
+        }),
+      },
+      matchProposal: {
+        ...createModelMethods(stores.matchProposals, 'matchProposal', counters.matchProposal),
+        updateMany: jest.fn(({ where, data }) => {
+          let count = 0;
+          stores.matchProposals.forEach((record, id) => {
+            const matches = Object.entries(where).every(([key, value]) => {
+              if (value && typeof value === 'object' && value.not !== undefined) return record[key] !== value.not;
+              return record[key] === value;
+            });
+            if (matches) {
+              stores.matchProposals.set(id, { ...record, ...data, updatedAt: new Date() });
+              count++;
+            }
+          });
+          return Promise.resolve({ count });
+        }),
+      },
+      loadEvent: createModelMethods(stores.loadEvents, 'loadEvent', counters.loadEvent),
+      ethiopianLocation: createModelMethods(stores.ethiopianLocations, 'ethiopianLocation', counters.ethiopianLocation),
+      session: createModelMethods(stores.sessions, 'session', counters.session),
+      $transaction: jest.fn(),
       // Helper to clear all stores between tests if needed
       _clearStores: () => {
         Object.values(stores).forEach(store => store.clear());
       },
     },
   };
+
+  // Fix $transaction: pass db (self-reference) so transactional code can access model methods
+  const dbRef = result.db;
+  dbRef.$transaction.mockImplementation((callback) => {
+    if (typeof callback === 'function') {
+      return callback(dbRef);
+    }
+    // Array of promises
+    if (Array.isArray(callback)) {
+      return Promise.all(callback);
+    }
+    return Promise.resolve();
+  });
+
+  return result;
 });
 
 // Mock jose library to handle ESM imports in Jest
@@ -291,7 +516,7 @@ jest.mock('jose', () => {
   return {
     SignJWT: class SignJWT {
       constructor(payload) {
-        this.payload = payload;
+        this.payload = { ...payload };
       }
 
       setProtectedHeader() {
@@ -299,14 +524,40 @@ jest.mock('jose', () => {
       }
 
       setIssuedAt() {
+        this.payload.iat = Math.floor(Date.now() / 1000);
         return this;
       }
 
-      setExpirationTime() {
+      setExpirationTime(duration) {
+        const now = Math.floor(Date.now() / 1000);
+        if (typeof duration === 'string') {
+          // Parse durations like '24h', '5m', '1d'
+          const match = duration.match(/^(\d+)([smhd])$/);
+          if (match) {
+            const value = parseInt(match[1]);
+            const unit = match[2];
+            const multipliers = { s: 1, m: 60, h: 3600, d: 86400 };
+            this.payload.exp = now + value * (multipliers[unit] || 3600);
+          } else {
+            this.payload.exp = now + 3600; // Default 1h
+          }
+        } else if (typeof duration === 'number') {
+          this.payload.exp = duration;
+        } else {
+          this.payload.exp = now + 3600;
+        }
         return this;
       }
 
       async sign(secret) {
+        // Ensure iat is set if not already
+        if (!this.payload.iat) {
+          this.payload.iat = Math.floor(Date.now() / 1000);
+        }
+        // Ensure exp is set if not already
+        if (!this.payload.exp) {
+          this.payload.exp = Math.floor(Date.now() / 1000) + 3600;
+        }
         const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
         const payload = Buffer.from(JSON.stringify(this.payload)).toString('base64url');
         const signature = crypto
