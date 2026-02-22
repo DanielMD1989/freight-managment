@@ -454,7 +454,21 @@ export async function PATCH(
       await checkSuspiciousCancellation(loadId).catch(console.error);
     }
 
-    // TODO: Trigger automation rules based on new status
+    // Trigger automation rules based on new status (best-effort, non-blocking)
+    import("@/lib/automationRules")
+      .then(({ evaluateRulesForTrigger }) =>
+        import("@/lib/automationActions").then(
+          ({ executeAndRecordRuleActions }) =>
+            evaluateRulesForTrigger(loadId, "ON_STATUS_CHANGE")
+              .then((results) =>
+                Promise.all(
+                  results.map((r) => executeAndRecordRuleActions(loadId, r))
+                )
+              )
+              .catch(console.error)
+        )
+      )
+      .catch(console.error);
 
     // Build service fee response based on action type
     let serviceFeeResponse = null;

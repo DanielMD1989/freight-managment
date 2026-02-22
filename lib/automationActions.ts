@@ -9,9 +9,11 @@
  * - Trigger webhooks
  */
 
-import { db } from '@/lib/db';
-import { LoadStatus } from '@prisma/client';
-import type { RuleAction, RuleEvaluationResult } from './automationRules';
+import { db } from "@/lib/db";
+import { LoadStatus } from "@prisma/client";
+import { sendEmailDirect } from "@/lib/email";
+import { logger } from "@/lib/logger";
+import type { RuleAction, RuleEvaluationResult } from "./automationRules";
 
 export interface ActionExecutionResult {
   action: RuleAction;
@@ -26,19 +28,24 @@ export interface ActionExecutionResult {
 export async function executeRuleActions(
   loadId: string,
   result: RuleEvaluationResult,
-  createdBy: string = 'SYSTEM'
+  createdBy: string = "SYSTEM"
 ): Promise<ActionExecutionResult[]> {
   const results: ActionExecutionResult[] = [];
 
   for (const action of result.actionsToExecute) {
     try {
-      const executionResult = await executeAction(loadId, action, result, createdBy);
+      const executionResult = await executeAction(
+        loadId,
+        action,
+        result,
+        createdBy
+      );
       results.push(executionResult);
     } catch (error) {
       results.push({
         action,
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }
@@ -56,19 +63,19 @@ async function executeAction(
   createdBy: string
 ): Promise<ActionExecutionResult> {
   switch (action.type) {
-    case 'CREATE_ESCALATION':
+    case "CREATE_ESCALATION":
       return await executeCreateEscalation(loadId, action, result, createdBy);
 
-    case 'SEND_NOTIFICATION':
+    case "SEND_NOTIFICATION":
       return await executeSendNotification(loadId, action, result);
 
-    case 'CHANGE_LOAD_STATUS':
+    case "CHANGE_LOAD_STATUS":
       return await executeChangeLoadStatus(loadId, action);
 
-    case 'SEND_EMAIL':
+    case "SEND_EMAIL":
       return await executeSendEmail(loadId, action, result);
 
-    case 'WEBHOOK':
+    case "WEBHOOK":
       return await executeWebhook(loadId, action, result);
 
     default:
@@ -93,8 +100,9 @@ async function executeCreateEscalation(
   const existingEscalation = await db.loadEscalation.findFirst({
     where: {
       loadId,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Prisma enum type mismatch with dynamic string
       escalationType: action.escalationType as any,
-      status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] },
+      status: { in: ["OPEN", "ASSIGNED", "IN_PROGRESS"] },
     },
   });
 
@@ -105,22 +113,25 @@ async function executeCreateEscalation(
       data: {
         escalationId: existingEscalation.id,
         duplicate: true,
-        message: 'Escalation already exists'
+        message: "Escalation already exists",
       },
     };
   }
 
   // Determine title and description
-  const title = action.title || result.reason || `Automation: ${action.escalationType}`;
-  const description = action.description ||
+  const title =
+    action.title || result.reason || `Automation: ${action.escalationType}`;
+  const description =
+    action.description ||
     `Automatically created by rule "${result.ruleName}": ${result.reason}`;
 
   const escalation = await db.loadEscalation.create({
     data: {
       loadId,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Prisma enum type mismatch with dynamic string
       escalationType: action.escalationType as any,
-      priority: action.priority || 'MEDIUM',
-      status: 'OPEN',
+      priority: action.priority || "MEDIUM",
+      status: "OPEN",
       title,
       description,
       createdBy,
@@ -133,7 +144,7 @@ async function executeCreateEscalation(
     data: {
       escalationId: escalation.id,
       escalationType: escalation.escalationType,
-      priority: escalation.priority
+      priority: escalation.priority,
     },
   };
 }
@@ -164,7 +175,7 @@ async function executeSendNotification(
     return {
       action,
       success: false,
-      error: 'Load not found',
+      error: "Load not found",
     };
   }
 
@@ -186,17 +197,19 @@ async function executeSendNotification(
       select: { id: true },
     });
 
-    recipientIds.push(...users.map(u => u.id));
+    recipientIds.push(...users.map((u) => u.id));
   }
 
   // Create notifications
-  const title = action.notificationTitle || `Automation Alert: ${result.ruleName}`;
-  const message = action.notificationMessage || result.reason || 'Automated notification';
+  const title =
+    action.notificationTitle || `Automation Alert: ${result.ruleName}`;
+  const message =
+    action.notificationMessage || result.reason || "Automated notification";
 
   const notifications = await db.notification.createMany({
-    data: recipientIds.map(userId => ({
+    data: recipientIds.map((userId) => ({
       userId,
-      type: action.notificationType || 'AUTOMATION_ALERT',
+      type: action.notificationType || "AUTOMATION_ALERT",
       title,
       message,
       metadata: {
@@ -229,7 +242,7 @@ async function executeChangeLoadStatus(
     return {
       action,
       success: false,
-      error: 'No new status specified',
+      error: "No new status specified",
     };
   }
 
@@ -242,7 +255,7 @@ async function executeChangeLoadStatus(
     return {
       action,
       success: false,
-      error: 'Load not found',
+      error: "Load not found",
     };
   }
 
@@ -277,24 +290,40 @@ async function executeSendEmail(
     return {
       action,
       success: false,
-      error: 'No email recipient specified',
+      error: "No email recipient specified",
     };
   }
 
   const subject = action.emailSubject || `Automation Alert: ${result.ruleName}`;
-  const body = action.emailBody || result.reason || 'Automated email notification';
+  const body =
+    action.emailBody || result.reason || "Automated email notification";
 
-  // Log the email (would actually send in production)
-  return {
-    action,
-    success: true,
-    data: {
-      emailTo: action.emailTo,
+  try {
+    const emailResult = await sendEmailDirect({
+      to: action.emailTo,
       subject,
-      sent: false, // Would be true after actual send
-      note: 'Email sending not implemented - logged to console',
-    },
-  };
+      html: `<p>${body}</p><p><small>Load ID: ${loadId} | Rule: ${result.ruleName}</small></p>`,
+      text: `${body}\n\nLoad ID: ${loadId} | Rule: ${result.ruleName}`,
+    });
+
+    return {
+      action,
+      success: emailResult.success,
+      data: {
+        emailTo: action.emailTo,
+        subject,
+        sent: emailResult.success,
+        messageId: emailResult.messageId,
+      },
+    };
+  } catch (error) {
+    logger.error("Automation email send failed", error);
+    return {
+      action,
+      success: false,
+      error: `Email send failed: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
 }
 
 /**
@@ -309,11 +338,11 @@ async function executeWebhook(
     return {
       action,
       success: false,
-      error: 'No webhook URL specified',
+      error: "No webhook URL specified",
     };
   }
 
-  const method = action.webhookMethod || 'POST';
+  const method = action.webhookMethod || "POST";
   const payload = action.webhookPayload || {
     loadId,
     ruleId: result.ruleId,
@@ -327,10 +356,10 @@ async function executeWebhook(
     const response = await fetch(action.webhookUrl, {
       method,
       headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'FreightPlatform-Automation/1.0',
+        "Content-Type": "application/json",
+        "User-Agent": "FreightPlatform-Automation/1.0",
       },
-      body: method === 'POST' ? JSON.stringify(payload) : undefined,
+      body: method === "POST" ? JSON.stringify(payload) : undefined,
     });
 
     return {
@@ -341,13 +370,15 @@ async function executeWebhook(
         url: action.webhookUrl,
         method,
       },
-      error: response.ok ? undefined : `Webhook failed with status ${response.status}`,
+      error: response.ok
+        ? undefined
+        : `Webhook failed with status ${response.status}`,
     };
   } catch (error) {
     return {
       action,
       success: false,
-      error: `Webhook request failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      error: `Webhook request failed: ${error instanceof Error ? error.message : "Unknown error"}`,
     };
   }
 }
@@ -358,7 +389,7 @@ async function executeWebhook(
 export async function executeAndRecordRuleActions(
   loadId: string,
   result: RuleEvaluationResult,
-  createdBy: string = 'SYSTEM'
+  createdBy: string = "SYSTEM"
 ): Promise<{
   executionId: string;
   actionsExecuted: number;
@@ -369,14 +400,14 @@ export async function executeAndRecordRuleActions(
   // Execute actions
   const actionResults = await executeRuleActions(loadId, result, createdBy);
 
-  const successful = actionResults.filter(r => r.success).length;
-  const failed = actionResults.filter(r => !r.success).length;
+  const successful = actionResults.filter((r) => r.success).length;
+  const failed = actionResults.filter((r) => !r.success).length;
 
   // Record execution
   const execution = await db.automationRuleExecution.create({
     data: {
       ruleId: result.ruleId,
-      status: failed > 0 ? 'FAILED' : 'COMPLETED',
+      status: failed > 0 ? "FAILED" : "COMPLETED",
       executedAt: new Date(),
       completedAt: new Date(),
       result: {
@@ -384,12 +415,13 @@ export async function executeAndRecordRuleActions(
         matched: result.matched,
         reason: result.reason,
         metadata: result.metadata,
-        actionResults: actionResults.map(ar => ({
+        actionResults: actionResults.map((ar) => ({
           type: ar.action.type,
           success: ar.success,
           error: ar.error,
           data: ar.data,
         })),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Prisma Json field accepts dynamic shape
       } as any,
       matchedLoads: 1,
       actionsExecuted: actionResults.length,

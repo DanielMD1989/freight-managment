@@ -34,7 +34,7 @@ jobs:
         run: npx prettier --check .
 
       - name: Type check
-        run: npx tsc --noEmit
+        run: npm run type-check
 
   build:
     name: Build
@@ -111,3 +111,30 @@ jobs:
           DATABASE_URL: "postgresql://test:test@localhost:5432/test"
           NEXTAUTH_SECRET: "test-secret"
           JWT_SECRET: "test-jwt-secret"
+
+  mobile-test:
+    name: Mobile Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: mobile
+
+      - name: Type check
+        run: npx tsc --noEmit
+        working-directory: mobile
+
+      - name: Run tests
+        run: npm test
+        working-directory: mobile

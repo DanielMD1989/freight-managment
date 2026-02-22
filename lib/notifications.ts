@@ -6,6 +6,7 @@
 
 import { db } from "@/lib/db";
 import { sendRealtimeNotification } from "@/lib/websocket-server";
+import { sendPushNotification } from "@/lib/push";
 import { UserRole, Prisma } from "@prisma/client";
 
 /**
@@ -156,6 +157,16 @@ export async function createNotification(params: {
       message: notification.message,
       metadata: notification.metadata as Record<string, unknown> | undefined,
       createdAt: notification.createdAt,
+    });
+
+    // Send push notification to mobile devices (best-effort)
+    sendPushNotification({
+      userId,
+      title,
+      body: message,
+      data: { type, notificationId: notification.id },
+    }).catch(() => {
+      // Non-critical — don't block on push delivery failures
     });
 
     return {

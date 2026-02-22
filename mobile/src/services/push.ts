@@ -6,7 +6,7 @@
  */
 import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
-import * as Device from "expo-constants";
+import Constants from "expo-constants";
 import apiClient, { getErrorMessage } from "../api/client";
 
 // Configure notification handler (foreground display)
@@ -42,7 +42,7 @@ class PushService {
     // Get push token
     try {
       const tokenData = await Notifications.getExpoPushTokenAsync({
-        projectId: Device.default.expoConfig?.extra?.eas?.projectId,
+        projectId: Constants.expoConfig?.extra?.eas?.projectId,
       });
       const token = tokenData.data;
 

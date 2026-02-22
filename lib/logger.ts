@@ -22,7 +22,7 @@
 // TYPES
 // =============================================================================
 
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+export type LogLevel = "debug" | "info" | "warn" | "error" | "fatal";
 
 export interface LogContext {
   requestId?: string;
@@ -58,7 +58,7 @@ export interface LogEntry {
 
 interface LoggerConfig {
   level: LogLevel;
-  format: 'json' | 'pretty';
+  format: "json" | "pretty";
   sampleRate: number;
   enableConsole: boolean;
   enableMetrics: boolean;
@@ -77,11 +77,13 @@ const LOG_LEVELS: Record<LogLevel, number> = {
 };
 
 function getConfig(): LoggerConfig {
-  const isProd = process.env.NODE_ENV === 'production';
+  const isProd = process.env.NODE_ENV === "production";
   return {
-    level: (process.env.LOG_LEVEL as LogLevel) || (isProd ? 'info' : 'debug'),
-    format: (process.env.LOG_FORMAT as 'json' | 'pretty') || (isProd ? 'json' : 'pretty'),
-    sampleRate: parseFloat(process.env.LOG_SAMPLE_RATE || '1'),
+    level: (process.env.LOG_LEVEL as LogLevel) || (isProd ? "info" : "debug"),
+    format:
+      (process.env.LOG_FORMAT as "json" | "pretty") ||
+      (isProd ? "json" : "pretty"),
+    sampleRate: parseFloat(process.env.LOG_SAMPLE_RATE || "1"),
     enableConsole: true,
     enableMetrics: true,
   };
@@ -181,34 +183,34 @@ class Logger {
    * Format log entry for output
    */
   private formatEntry(entry: LogEntry): string {
-    if (this.config.format === 'json') {
+    if (this.config.format === "json") {
       return JSON.stringify(entry);
     }
 
     // Pretty format for development
     const levelColors: Record<LogLevel, string> = {
-      debug: '\x1b[36m', // cyan
-      info: '\x1b[32m',  // green
-      warn: '\x1b[33m',  // yellow
-      error: '\x1b[31m', // red
-      fatal: '\x1b[35m', // magenta
+      debug: "\x1b[36m", // cyan
+      info: "\x1b[32m", // green
+      warn: "\x1b[33m", // yellow
+      error: "\x1b[31m", // red
+      fatal: "\x1b[35m", // magenta
     };
-    const reset = '\x1b[0m';
+    const reset = "\x1b[0m";
     const color = levelColors[entry.level];
 
     let output = `${color}[${entry.level.toUpperCase()}]${reset} ${entry.message}`;
 
     if (entry.context?.requestId) {
-      output += ` ${'\x1b[90m'}(${entry.context.requestId})${reset}`;
+      output += ` ${"\x1b[90m"}(${entry.context.requestId})${reset}`;
     }
 
     if (entry.context?.durationMs !== undefined) {
-      output += ` ${'\x1b[90m'}${entry.context.durationMs}ms${reset}`;
+      output += ` ${"\x1b[90m"}${entry.context.durationMs}ms${reset}`;
     }
 
     if (entry.error) {
       output += `\n  Error: ${entry.error.message}`;
-      if (entry.error.stack && this.config.level === 'debug') {
+      if (entry.error.stack && this.config.level === "debug") {
         output += `\n  ${entry.error.stack}`;
       }
     }
@@ -219,9 +221,14 @@ class Logger {
   /**
    * Write log entry
    */
-  private write(level: LogLevel, message: string, context?: LogContext, error?: Error): void {
+  private write(
+    level: LogLevel,
+    message: string,
+    context?: LogContext,
+    error?: Error
+  ): void {
     if (!this.shouldLog(level)) return;
-    if (level === 'debug' && !this.shouldSample()) return;
+    if (level === "debug" && !this.shouldSample()) return;
 
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
@@ -241,46 +248,48 @@ class Logger {
 
     // Update metrics
     if (this.config.enableMetrics) {
-      if (level === 'error' || level === 'fatal') {
+      if (level === "error" || level === "fatal") {
         metrics.errors.count++;
-        const errorType = error?.name || 'Unknown';
-        metrics.errors.byType[errorType] = (metrics.errors.byType[errorType] || 0) + 1;
+        const errorType = error?.name || "Unknown";
+        metrics.errors.byType[errorType] =
+          (metrics.errors.byType[errorType] || 0) + 1;
       }
     }
 
     // Output
     if (this.config.enableConsole) {
       const formatted = this.formatEntry(entry);
-      if (level === 'error' || level === 'fatal') {
+      if (level === "error" || level === "fatal") {
         console.error(formatted);
-      } else if (level === 'warn') {
+      } else if (level === "warn") {
         console.warn(formatted);
       } else {
-        }
+        console.log(formatted);
+      }
     }
   }
 
   // Log level methods
   debug(message: string, context?: LogContext): void {
-    this.write('debug', message, context);
+    this.write("debug", message, context);
   }
 
   info(message: string, context?: LogContext): void {
-    this.write('info', message, context);
+    this.write("info", message, context);
   }
 
   warn(message: string, context?: LogContext): void {
-    this.write('warn', message, context);
+    this.write("warn", message, context);
   }
 
   error(message: string, error?: Error | unknown, context?: LogContext): void {
     const err = error instanceof Error ? error : undefined;
-    this.write('error', message, context, err);
+    this.write("error", message, context, err);
   }
 
   fatal(message: string, error?: Error | unknown, context?: LogContext): void {
     const err = error instanceof Error ? error : undefined;
-    this.write('fatal', message, context, err);
+    this.write("fatal", message, context, err);
   }
 
   // =============================================================================
@@ -320,7 +329,10 @@ class Logger {
     if (this.config.enableMetrics) {
       metrics.requests.count++;
       metrics.requests.totalDurationMs += context.durationMs;
-      metrics.requests.maxDurationMs = Math.max(metrics.requests.maxDurationMs, context.durationMs);
+      metrics.requests.maxDurationMs = Math.max(
+        metrics.requests.maxDurationMs,
+        context.durationMs
+      );
 
       if (context.statusCode >= 400) {
         metrics.requests.errorCount++;
@@ -334,9 +346,14 @@ class Logger {
         (metrics.requests.statusCodes[context.statusCode] || 0) + 1;
     }
 
-    const level: LogLevel = context.statusCode >= 500 ? 'error' :
-                           context.statusCode >= 400 ? 'warn' :
-                           context.durationMs > SLOW_REQUEST_THRESHOLD_MS ? 'warn' : 'info';
+    const level: LogLevel =
+      context.statusCode >= 500
+        ? "error"
+        : context.statusCode >= 400
+          ? "warn"
+          : context.durationMs > SLOW_REQUEST_THRESHOLD_MS
+            ? "warn"
+            : "info";
 
     const message = `${context.method} ${context.path} ${context.statusCode} ${context.durationMs}ms`;
 
@@ -365,7 +382,10 @@ class Logger {
         metrics.slowQueries.queries.shift();
       }
 
-      this.warn(`Slow query: ${durationMs}ms`, { ...context, query: query.substring(0, 200) });
+      this.warn(`Slow query: ${durationMs}ms`, {
+        ...context,
+        query: query.substring(0, 200),
+      });
     }
   }
 
@@ -378,13 +398,14 @@ class Logger {
    */
   getMetrics(): {
     requests: RequestMetrics & { avgDurationMs: number };
-    errors: LogMetrics['errors'];
-    slowQueries: LogMetrics['slowQueries'];
+    errors: LogMetrics["errors"];
+    slowQueries: LogMetrics["slowQueries"];
     uptime: number;
   } {
-    const avgDurationMs = metrics.requests.count > 0
-      ? Math.round(metrics.requests.totalDurationMs / metrics.requests.count)
-      : 0;
+    const avgDurationMs =
+      metrics.requests.count > 0
+        ? Math.round(metrics.requests.totalDurationMs / metrics.requests.count)
+        : 0;
 
     return {
       requests: {
@@ -465,7 +486,10 @@ export const logger = new Logger();
 /**
  * Create a request-scoped logger
  */
-export function createRequestLogger(requestId: string, context?: LogContext): ChildLogger {
+export function createRequestLogger(
+  requestId: string,
+  context?: LogContext
+): ChildLogger {
   return logger.child({ requestId, ...context });
 }
 
@@ -502,7 +526,6 @@ export function timed(name?: string) {
     const originalMethod = descriptor.value;
     const methodName = name || `${target.constructor.name}.${propertyKey}`;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Decorator wrapper must accept any arguments
     descriptor.value = async function (...args: unknown[]) {
       const start = Date.now();
       try {

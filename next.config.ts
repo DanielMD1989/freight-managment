@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
+  // Standalone output for Docker deployment
+  output: "standalone",
+
   // CORS is handled dynamically in proxy.ts
 
   // PHASE 4: Production optimizations

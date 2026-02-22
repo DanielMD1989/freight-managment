@@ -200,11 +200,11 @@ describe("Auth Service", () => {
   });
 
   describe("changePassword", () => {
-    it("should call POST /api/auth/change-password", async () => {
+    it("should call POST /api/user/change-password", async () => {
       mockPost.mockResolvedValue({ data: { success: true } });
 
       await authService.changePassword("oldPass", "newPass");
-      expect(mockPost).toHaveBeenCalledWith("/api/auth/change-password", {
+      expect(mockPost).toHaveBeenCalledWith("/api/user/change-password", {
         currentPassword: "oldPass",
         newPassword: "newPass",
       });
