@@ -1,5 +1,6 @@
 /**
  * Notifications Screen
+ * Supports deep linking - tapping a notification navigates to the relevant screen
  */
 import React from "react";
 import {
@@ -11,11 +12,17 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import {
   useNotifications,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
 } from "../../src/hooks/useNotifications";
+import { useAuthStore } from "../../src/stores/auth";
+import {
+  getNotificationRoute,
+  type NotificationMetadata,
+} from "../../src/utils/notificationRouting";
 import { Card } from "../../src/components/Card";
 import { Button } from "../../src/components/Button";
 import { LoadingSpinner } from "../../src/components/LoadingSpinner";
@@ -27,37 +34,65 @@ import { typography } from "../../src/theme/typography";
 import type { Notification } from "../../src/types";
 
 export default function NotificationsScreen() {
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
   const { data, isLoading, refetch, isRefetching } = useNotifications();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
 
   const notifications = data?.notifications ?? [];
 
-  const renderNotification = ({ item }: { item: Notification }) => (
-    <TouchableOpacity
-      onPress={() => !item.read && markRead.mutate(item.id)}
-      activeOpacity={0.7}
-    >
-      <Card style={[styles.card, !item.read ? styles.unread : undefined]}>
-        <View style={styles.row}>
-          <Ionicons
-            name={item.read ? "notifications-outline" : "notifications"}
-            size={20}
-            color={item.read ? colors.slate400 : colors.primary500}
-          />
-          <View style={styles.content}>
-            <Text style={[styles.title, !item.read && styles.titleUnread]}>
-              {item.title}
-            </Text>
-            <Text style={styles.message} numberOfLines={2}>
-              {item.message}
-            </Text>
-            <Text style={styles.time}>{formatDateTime(item.createdAt)}</Text>
+  const handleNotificationPress = (item: Notification) => {
+    // Mark as read if unread
+    if (!item.read) markRead.mutate(item.id);
+
+    // Navigate to the relevant screen based on notification type
+    const metadata = (item.metadata ?? {}) as NotificationMetadata;
+    const route = getNotificationRoute(item.type, metadata, user?.role ?? "");
+    if (route) {
+      router.push(route as `/${string}`);
+    }
+  };
+
+  const renderNotification = ({ item }: { item: Notification }) => {
+    const metadata = (item.metadata ?? {}) as NotificationMetadata;
+    const route = getNotificationRoute(item.type, metadata, user?.role ?? "");
+    const isNavigable = !!route;
+
+    return (
+      <TouchableOpacity
+        onPress={() => handleNotificationPress(item)}
+        activeOpacity={0.7}
+      >
+        <Card style={[styles.card, !item.read ? styles.unread : undefined]}>
+          <View style={styles.row}>
+            <Ionicons
+              name={item.read ? "notifications-outline" : "notifications"}
+              size={20}
+              color={item.read ? colors.slate400 : colors.primary500}
+            />
+            <View style={styles.content}>
+              <Text style={[styles.title, !item.read && styles.titleUnread]}>
+                {item.title}
+              </Text>
+              <Text style={styles.message} numberOfLines={2}>
+                {item.message}
+              </Text>
+              <Text style={styles.time}>{formatDateTime(item.createdAt)}</Text>
+            </View>
+            {isNavigable && (
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={colors.slate300}
+                style={styles.chevron}
+              />
+            )}
           </View>
-        </View>
-      </Card>
-    </TouchableOpacity>
-  );
+        </Card>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -96,9 +131,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   list: { padding: spacing.lg, gap: spacing.sm },
   markAll: { alignSelf: "flex-end", marginBottom: spacing.sm },
-  card: { marginBottom: spacing.sm },
+  card: {},
   unread: { borderLeftWidth: 3, borderLeftColor: colors.primary500 },
-  row: { flexDirection: "row", gap: spacing.md },
+  row: { flexDirection: "row", gap: spacing.md, alignItems: "center" },
   content: { flex: 1 },
   title: { ...typography.titleSmall, color: colors.textPrimary },
   titleUnread: { fontWeight: "700" },
@@ -111,5 +146,8 @@ const styles = StyleSheet.create({
     ...typography.labelSmall,
     color: colors.textTertiary,
     marginTop: spacing.xs,
+  },
+  chevron: {
+    marginLeft: spacing.xs,
   },
 });

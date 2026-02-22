@@ -193,10 +193,13 @@ class LoadService {
     status?: string;
   }): Promise<{ requests: LoadRequest[]; pagination: PaginationInfo }> {
     try {
-      const response = await apiClient.get("/api/load-requests/mine", {
+      const response = await apiClient.get("/api/load-requests", {
         params,
       });
-      return response.data;
+      return {
+        requests: response.data.loadRequests ?? response.data.requests ?? [],
+        pagination: response.data.pagination,
+      };
     } catch (error) {
       throw new Error(getErrorMessage(error));
     }

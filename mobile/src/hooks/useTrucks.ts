@@ -3,7 +3,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { truckService } from "../services/truck";
-import type { Truck } from "../types";
+import type { Truck, TruckPosting } from "../types";
 
 const TRUCKS_KEY = ["trucks"] as const;
 const TRUCK_POSTINGS_KEY = ["truck-postings"] as const;
@@ -134,14 +134,92 @@ export function useCancelTruckRequest() {
   });
 }
 
+/** Received truck requests (carrier) */
+export function useReceivedTruckRequests(params?: {
+  status?: string;
+  limit?: number;
+}) {
+  return useQuery({
+    queryKey: ["truck-requests", "received", params],
+    queryFn: () => truckService.getReceivedTruckRequests(params),
+  });
+}
+
+/** Respond to truck request */
+export function useRespondToTruckRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      action,
+      notes,
+    }: {
+      id: string;
+      action: "APPROVED" | "REJECTED";
+      notes?: string;
+    }) => truckService.respondToTruckRequest(id, action, notes),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["truck-requests"] });
+    },
+  });
+}
+
 /** My truck postings (carrier) */
 export function useMyTruckPostings(params?: {
   page?: number;
   limit?: number;
   status?: string;
+  organizationId?: string;
 }) {
   return useQuery({
     queryKey: [...TRUCK_POSTINGS_KEY, "mine", params],
     queryFn: () => truckService.getMyTruckPostings(params),
+    enabled: !!params?.organizationId,
+  });
+}
+
+/** Update truck posting */
+export function useUpdateTruckPosting() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<TruckPosting> }) =>
+      truckService.updateTruckPosting(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: TRUCK_POSTINGS_KEY });
+    },
+  });
+}
+
+/** Cancel truck posting */
+export function useCancelTruckPosting() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => truckService.cancelTruckPosting(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: TRUCK_POSTINGS_KEY });
+    },
+  });
+}
+
+/** Get matching loads for a posting */
+export function useMatchingLoadsForPosting(
+  postingId: string | undefined,
+  params?: { minScore?: number; limit?: number }
+) {
+  return useQuery({
+    queryKey: [...TRUCK_POSTINGS_KEY, postingId, "matching-loads", params],
+    queryFn: () => truckService.getMatchingLoadsForPosting(postingId!, params),
+    enabled: !!postingId,
+  });
+}
+
+/** Duplicate truck posting */
+export function useDuplicateTruckPosting() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => truckService.duplicateTruckPosting(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: TRUCK_POSTINGS_KEY });
+    },
   });
 }

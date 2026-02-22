@@ -80,12 +80,70 @@ export default function CarrierLayout() {
         }}
       />
       <Tabs.Screen
+        name="documents"
+        options={{
+          title: t("carrier.documents", { defaultValue: "Documents" }),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="document-text-outline" size={size} color={color} />
+          ),
+          headerShown: false,
+          tabBarItemStyle: { display: "none" },
+        }}
+      />
+      <Tabs.Screen
         name="map"
         options={{
           title: "Fleet Map",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="map-outline" size={size} color={color} />
           ),
+          tabBarItemStyle: { display: "none" },
+        }}
+      />
+      <Tabs.Screen
+        name="requests"
+        options={{
+          title: "Requests",
+          headerShown: false,
+          tabBarItemStyle: { display: "none" },
+        }}
+      />
+      <Tabs.Screen
+        name="wallet"
+        options={{
+          title: "Wallet",
+          headerShown: false,
+          tabBarItemStyle: { display: "none" },
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: "Settings",
+          headerShown: false,
+          tabBarItemStyle: { display: "none" },
+        }}
+      />
+      <Tabs.Screen
+        name="my-postings"
+        options={{
+          title: "My Postings",
+          headerShown: false,
+          tabBarItemStyle: { display: "none" },
+        }}
+      />
+      <Tabs.Screen
+        name="matches"
+        options={{
+          title: "Load Matches",
+          headerShown: false,
+          tabBarItemStyle: { display: "none" },
+        }}
+      />
+      <Tabs.Screen
+        name="trip-history"
+        options={{
+          title: "Trip History",
           tabBarItemStyle: { display: "none" },
         }}
       />

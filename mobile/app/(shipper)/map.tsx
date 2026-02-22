@@ -1,6 +1,6 @@
 /**
  * Shipper Map Screen - Shipment Tracking
- * Shows active shipments with progress tracking
+ * Shows active shipments with progress tracking and expandable trip details
  */
 import React, { useState } from "react";
 import {
@@ -10,12 +10,12 @@ import {
   StyleSheet,
   Dimensions,
   RefreshControl,
+  TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useTranslation } from "react-i18next";
+import { useRouter } from "expo-router";
 import { useTrips } from "../../src/hooks/useTrips";
 import { Card } from "../../src/components/Card";
-import { Badge } from "../../src/components/Badge";
 import { Button } from "../../src/components/Button";
 import { LoadingSpinner } from "../../src/components/LoadingSpinner";
 import { EmptyState } from "../../src/components/EmptyState";
@@ -29,7 +29,7 @@ import type { Trip } from "../../src/types";
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 export default function ShipperMapScreen() {
-  const { t } = useTranslation();
+  const router = useRouter();
   const {
     data: tripsData,
     isLoading,
@@ -38,13 +38,9 @@ export default function ShipperMapScreen() {
   } = useTrips({
     status: "IN_TRANSIT",
   });
-  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  const [expandedTripId, setExpandedTripId] = useState<string | null>(null);
 
   const trips = tripsData?.trips ?? [];
-  const effectiveSelectedId = selectedTripId ?? trips[0]?.id ?? null;
-  const selectedTrip = trips.find(
-    (trip: Trip) => trip.id === effectiveSelectedId
-  );
 
   if (isLoading) return <LoadingSpinner fullScreen />;
 
@@ -57,6 +53,10 @@ export default function ShipperMapScreen() {
       />
     );
   }
+
+  const toggleExpand = (tripId: string) => {
+    setExpandedTripId(expandedTripId === tripId ? null : tripId);
+  };
 
   return (
     <ScrollView
@@ -75,121 +75,195 @@ export default function ShipperMapScreen() {
           />
           <Text style={styles.mapPlaceholderText}>Shipment Tracking Map</Text>
           <Text style={styles.mapSubtext}>
-            Google Maps integration required
+            Google Maps API key required for live tracking
           </Text>
         </View>
       </View>
 
-      {/* Trip selector chips */}
-      {trips.length > 1 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipContainer}
-        >
-          {trips.map((trip: Trip) => (
-            <Button
+      {/* Summary bar */}
+      <View style={styles.summaryBar}>
+        <View style={styles.summaryChip}>
+          <View
+            style={[styles.summaryDot, { backgroundColor: colors.primary500 }]}
+          />
+          <Text style={styles.summaryText}>
+            {trips.length} Active Shipment{trips.length !== 1 ? "s" : ""}
+          </Text>
+        </View>
+      </View>
+
+      {/* Active shipment cards */}
+      <View style={styles.tripsSection}>
+        <Text style={styles.sectionTitle}>Active Shipments</Text>
+
+        {trips.map((trip: Trip) => {
+          const isExpanded = expandedTripId === trip.id;
+
+          return (
+            <TouchableOpacity
               key={trip.id}
-              title={`${trip.pickupCity ?? "N/A"} → ${trip.deliveryCity ?? "N/A"}`}
-              onPress={() => setSelectedTripId(trip.id)}
-              variant={trip.id === effectiveSelectedId ? "primary" : "outline"}
-              size="sm"
-            />
-          ))}
-        </ScrollView>
-      )}
+              onPress={() => toggleExpand(trip.id)}
+              activeOpacity={0.7}
+            >
+              <Card
+                style={[
+                  styles.tripCard,
+                  isExpanded ? styles.tripCardExpanded : undefined,
+                ]}
+              >
+                {/* Trip header row */}
+                <View style={styles.tripHeader}>
+                  <View style={styles.routeContainer}>
+                    <View style={styles.routeEndpoint}>
+                      <Ionicons
+                        name="radio-button-on"
+                        size={12}
+                        color={colors.success}
+                      />
+                      <Text style={styles.routeCity} numberOfLines={1}>
+                        {trip.pickupCity ?? "N/A"}
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name="arrow-forward"
+                      size={14}
+                      color={colors.slate400}
+                      style={styles.routeArrow}
+                    />
+                    <View style={styles.routeEndpoint}>
+                      <Ionicons
+                        name="location"
+                        size={12}
+                        color={colors.error}
+                      />
+                      <Text style={styles.routeCity} numberOfLines={1}>
+                        {trip.deliveryCity ?? "N/A"}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.headerRight}>
+                    <StatusBadge status={trip.status} type="trip" size="sm" />
+                    <Ionicons
+                      name={isExpanded ? "chevron-up" : "chevron-down"}
+                      size={18}
+                      color={colors.slate400}
+                      style={styles.expandIcon}
+                    />
+                  </View>
+                </View>
 
-      {selectedTrip && (
-        <>
-          {/* Trip info card */}
-          <Card style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Shipment Info</Text>
-              <StatusBadge status={selectedTrip.status} type="trip" size="sm" />
-            </View>
+                {/* Summary info (always visible) */}
+                <View style={styles.tripSummary}>
+                  {trip.carrier && (
+                    <View style={styles.detailChip}>
+                      <Ionicons
+                        name="business-outline"
+                        size={14}
+                        color={colors.slate500}
+                      />
+                      <Text style={styles.detailText}>
+                        {trip.carrier.name ?? "Carrier"}
+                      </Text>
+                    </View>
+                  )}
+                  {trip.truck && (
+                    <View style={styles.detailChip}>
+                      <Ionicons
+                        name="bus-outline"
+                        size={14}
+                        color={colors.slate500}
+                      />
+                      <Text style={styles.detailText}>
+                        {trip.truck.licensePlate}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={styles.detailChip}>
+                    <Ionicons
+                      name="speedometer-outline"
+                      size={14}
+                      color={colors.slate500}
+                    />
+                    <Text style={styles.detailText}>
+                      {formatDistance(trip.estimatedDistanceKm)}
+                    </Text>
+                  </View>
+                </View>
 
-            <View style={styles.routeDisplay}>
-              <View style={styles.routeEndpoint}>
-                <Ionicons
-                  name="radio-button-on"
-                  size={14}
-                  color={colors.success}
-                />
-                <Text style={styles.routeText}>
-                  {selectedTrip.pickupCity ?? "N/A"}
-                </Text>
-              </View>
-              <View style={styles.routeLine} />
-              <View style={styles.routeEndpoint}>
-                <Ionicons name="location" size={14} color={colors.error} />
-                <Text style={styles.routeText}>
-                  {selectedTrip.deliveryCity ?? "N/A"}
-                </Text>
-              </View>
-            </View>
+                {/* Progress bar */}
+                <View style={styles.progressBarContainer}>
+                  <View style={styles.progressBarBg}>
+                    <View
+                      style={[
+                        styles.progressBarFill,
+                        {
+                          width: `${getProgressPercent(trip.status)}%`,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.progressText}>
+                    {getProgressPercent(trip.status)}% complete
+                  </Text>
+                </View>
 
-            {selectedTrip.truck && (
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Truck</Text>
-                <Text style={styles.infoValue}>
-                  {selectedTrip.truck.licensePlate}
-                </Text>
-              </View>
-            )}
+                {/* Expanded details */}
+                {isExpanded && (
+                  <View style={styles.expandedDetails}>
+                    <View style={styles.divider} />
 
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Distance</Text>
-              <Text style={styles.infoValue}>
-                {formatDistance(selectedTrip.estimatedDistanceKm)}
-              </Text>
-            </View>
+                    {trip.pickupAddress && (
+                      <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Pickup</Text>
+                        <Text style={styles.infoValue} numberOfLines={2}>
+                          {trip.pickupAddress}
+                        </Text>
+                      </View>
+                    )}
 
-            {selectedTrip.startedAt && (
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Started</Text>
-                <Text style={styles.infoValue}>
-                  {formatDate(selectedTrip.startedAt)}
-                </Text>
-              </View>
-            )}
-          </Card>
+                    {trip.deliveryAddress && (
+                      <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Delivery</Text>
+                        <Text style={styles.infoValue} numberOfLines={2}>
+                          {trip.deliveryAddress}
+                        </Text>
+                      </View>
+                    )}
 
-          {/* Progress card */}
-          <Card style={styles.card}>
-            <Text style={styles.cardTitle}>Trip Progress</Text>
+                    {trip.startedAt && (
+                      <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Started</Text>
+                        <Text style={styles.infoValue}>
+                          {formatDate(trip.startedAt)}
+                        </Text>
+                      </View>
+                    )}
 
-            <View style={styles.progressBarContainer}>
-              <View style={styles.progressBarBg}>
-                <View
-                  style={[
-                    styles.progressBarFill,
-                    {
-                      width: `${getProgressPercent(selectedTrip.status)}%`,
-                    },
-                  ]}
-                />
-              </View>
-              <Text style={styles.progressText}>
-                {getProgressPercent(selectedTrip.status)}% complete
-              </Text>
-            </View>
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Status</Text>
+                      <Text style={styles.infoValue}>
+                        {trip.status.replace(/_/g, " ")}
+                      </Text>
+                    </View>
 
-            <View style={styles.statsRow}>
-              <View style={styles.stat}>
-                <Ionicons
-                  name="time-outline"
-                  size={16}
-                  color={colors.slate400}
-                />
-                <Text style={styles.statLabel}>Status</Text>
-                <Text style={styles.statValue}>
-                  {selectedTrip.status.replace(/_/g, " ")}
-                </Text>
-              </View>
-            </View>
-          </Card>
-        </>
-      )}
+                    <Button
+                      title="View Full Details"
+                      onPress={() =>
+                        router.push(
+                          `/(shipper)/trips/${trip.id}` as `/${string}`
+                        )
+                      }
+                      variant="outline"
+                      size="sm"
+                      style={styles.viewButton}
+                    />
+                  </View>
+                )}
+              </Card>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
       <View style={{ height: spacing["3xl"] }} />
     </ScrollView>
@@ -215,7 +289,7 @@ function getProgressPercent(status: string): number {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  mapContainer: { height: SCREEN_HEIGHT * 0.3 },
+  mapContainer: { height: SCREEN_HEIGHT * 0.25 },
   mapPlaceholder: {
     flex: 1,
     backgroundColor: colors.primary50,
@@ -232,82 +306,140 @@ const styles = StyleSheet.create({
     color: colors.primary300,
     marginTop: spacing.xs,
   },
-  chipContainer: {
+  summaryBar: {
+    flexDirection: "row",
     padding: spacing.md,
-    gap: spacing.sm,
+    gap: spacing.lg,
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  card: { margin: spacing.lg, marginBottom: 0 },
-  cardHeader: {
+  summaryChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  summaryDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  summaryText: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    fontWeight: "500",
+  },
+  tripsSection: {
+    padding: spacing.lg,
+  },
+  sectionTitle: {
+    ...typography.titleSmall,
+    color: colors.textTertiary,
+    textTransform: "uppercase",
+    marginBottom: spacing.md,
+  },
+  tripCard: {
+    marginBottom: spacing.md,
+  },
+  tripCardExpanded: {
+    borderWidth: 1,
+    borderColor: colors.primary200,
+  },
+  tripHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  cardTitle: {
-    ...typography.titleMedium,
-    color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
-  routeDisplay: {
-    marginBottom: spacing.md,
-    paddingLeft: spacing.sm,
+  routeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: spacing.sm,
   },
   routeEndpoint: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: 4,
+    flex: 1,
   },
-  routeLine: {
-    width: 1,
-    height: 20,
-    backgroundColor: colors.slate300,
-    marginLeft: 6,
-    marginVertical: 2,
-  },
-  routeText: {
-    ...typography.bodyMedium,
-    color: colors.textPrimary,
-  },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.slate100,
-  },
-  infoLabel: { ...typography.bodySmall, color: colors.textSecondary },
-  infoValue: {
+  routeCity: {
     ...typography.bodyMedium,
     color: colors.textPrimary,
     fontWeight: "500",
   },
-  progressBarContainer: { marginVertical: spacing.md },
+  routeArrow: {
+    marginHorizontal: spacing.xs,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  expandIcon: {
+    marginLeft: 2,
+  },
+  tripSummary: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  detailChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  detailText: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+  },
+  progressBarContainer: {
+    marginTop: spacing.xs,
+  },
   progressBarBg: {
-    height: 8,
-    borderRadius: 4,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: colors.slate100,
     overflow: "hidden",
   },
   progressBarFill: {
     height: "100%",
-    borderRadius: 4,
+    borderRadius: 3,
     backgroundColor: colors.primary500,
   },
   progressText: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
+    ...typography.labelSmall,
+    color: colors.textTertiary,
+    marginTop: 4,
     textAlign: "right",
   },
-  statsRow: {
-    flexDirection: "row",
-    gap: spacing.lg,
+  expandedDetails: {
+    marginTop: spacing.sm,
   },
-  stat: { alignItems: "center", gap: 2 },
-  statLabel: { ...typography.labelSmall, color: colors.textTertiary },
-  statValue: {
+  divider: {
+    height: 1,
+    backgroundColor: colors.slate100,
+    marginBottom: spacing.sm,
+  },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: spacing.xs,
+  },
+  infoLabel: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  infoValue: {
     ...typography.bodySmall,
     color: colors.textPrimary,
     fontWeight: "500",
+    flex: 2,
+    textAlign: "right",
+  },
+  viewButton: {
+    marginTop: spacing.md,
   },
 });

@@ -7,6 +7,7 @@ export default function SharedLayout() {
       <Stack.Screen name="notifications" options={{ title: "Notifications" }} />
       <Stack.Screen name="settings" options={{ title: "Settings" }} />
       <Stack.Screen name="wallet" options={{ title: "Wallet" }} />
+      <Stack.Screen name="team" options={{ title: "Team" }} />
       <Stack.Screen
         name="pending-verification"
         options={{ title: "Account Pending", headerShown: false }}

@@ -135,6 +135,54 @@ describe("Load Service", () => {
     });
   });
 
+  describe("getMyLoadRequests", () => {
+    it("should call GET /api/load-requests (not /mine) and normalize loadRequests key", async () => {
+      mockGet.mockResolvedValue({
+        data: {
+          loadRequests: [{ id: "r1" }],
+          pagination: { total: 1, limit: 20, offset: 0, hasMore: false },
+        },
+      });
+
+      const result = await loadService.getMyLoadRequests({ page: 1 });
+      expect(mockGet).toHaveBeenCalledWith("/api/load-requests", {
+        params: { page: 1 },
+      });
+      // Should NOT call /mine sub-route
+      expect(mockGet).not.toHaveBeenCalledWith(
+        expect.stringContaining("/mine"),
+        expect.anything()
+      );
+      // Should normalize loadRequests -> requests
+      expect(result.requests).toHaveLength(1);
+      expect(result.requests[0].id).toBe("r1");
+    });
+
+    it("should fall back to requests key if loadRequests is missing", async () => {
+      mockGet.mockResolvedValue({
+        data: {
+          requests: [{ id: "r2" }],
+          pagination: { total: 1, limit: 20, offset: 0, hasMore: false },
+        },
+      });
+
+      const result = await loadService.getMyLoadRequests();
+      expect(result.requests).toHaveLength(1);
+      expect(result.requests[0].id).toBe("r2");
+    });
+
+    it("should default to empty array when no requests key exists", async () => {
+      mockGet.mockResolvedValue({
+        data: {
+          pagination: { total: 0, limit: 20, offset: 0, hasMore: false },
+        },
+      });
+
+      const result = await loadService.getMyLoadRequests();
+      expect(result.requests).toEqual([]);
+    });
+  });
+
   describe("createLoadRequest", () => {
     it("should call POST /api/load-requests", async () => {
       const reqData = { loadId: "l1", truckId: "t1" };

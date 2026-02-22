@@ -112,6 +112,11 @@ export default function ShipperDashboard() {
       icon: "cube-outline" as const,
       route: "/(shipper)/loads",
     },
+    {
+      label: "Team",
+      icon: "people-outline" as const,
+      route: "/(shared)/team",
+    },
   ];
 
   return (

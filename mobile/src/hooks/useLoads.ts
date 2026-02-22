@@ -120,6 +120,17 @@ export function useReceivedLoadRequests(params?: {
   });
 }
 
+/** Cancel load request (carrier) */
+export function useCancelLoadRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (requestId: string) => loadService.cancelLoadRequest(requestId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: LOAD_REQUESTS_KEY });
+    },
+  });
+}
+
 /** My load requests (carrier) */
 export function useMyLoadRequests(params?: {
   page?: number;

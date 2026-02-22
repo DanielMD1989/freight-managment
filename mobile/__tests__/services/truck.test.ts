@@ -183,6 +183,25 @@ describe("Truck Service", () => {
       expect(result.postings[0].id).toBe("p1");
     });
 
+    it("should get carrier's own postings via GET /api/truck-postings (not /mine)", async () => {
+      mockGet.mockResolvedValue({
+        data: {
+          postings: [{ id: "p1" }],
+          pagination: { page: 1, limit: 20, total: 1, pages: 1 },
+        },
+      });
+
+      const result = await truckService.getMyTruckPostings({ page: 1 });
+      expect(mockGet).toHaveBeenCalledWith("/api/truck-postings", {
+        params: { page: 1 },
+      });
+      // Should NOT call /mine sub-route
+      expect(mockGet).not.toHaveBeenCalledWith(
+        expect.stringContaining("/mine"),
+        expect.anything()
+      );
+    });
+
     it("should create truck posting via POST /api/truck-postings", async () => {
       const postingData = {
         truckId: "1",
@@ -197,6 +216,47 @@ describe("Truck Service", () => {
 
       const result = await truckService.createTruckPosting(postingData);
       expect(mockPost).toHaveBeenCalledWith("/api/truck-postings", postingData);
+    });
+  });
+
+  describe("getMatchingLoadsForPosting", () => {
+    it("should normalize API response with matches and totalMatches", async () => {
+      const apiResponse = {
+        truckPostingId: "p1",
+        totalMatches: 2,
+        matches: [
+          {
+            load: { id: "l1", pickupCity: "Addis Ababa" },
+            matchScore: 85,
+            isExactMatch: true,
+          },
+          {
+            load: { id: "l2", pickupCity: "Dire Dawa" },
+            matchScore: 60,
+            isExactMatch: false,
+          },
+        ],
+      };
+      mockGet.mockResolvedValue({ data: apiResponse });
+
+      const result = await truckService.getMatchingLoadsForPosting("p1", {
+        minScore: 50,
+      });
+      expect(mockGet).toHaveBeenCalledWith(
+        "/api/truck-postings/p1/matching-loads",
+        { params: { minScore: 50 } }
+      );
+      expect(result.matches).toHaveLength(2);
+      expect(result.total).toBe(2);
+      expect((result.matches[0] as any).load.id).toBe("l1");
+    });
+
+    it("should default to empty array when matches is missing", async () => {
+      mockGet.mockResolvedValue({ data: {} });
+
+      const result = await truckService.getMatchingLoadsForPosting("p1");
+      expect(result.matches).toEqual([]);
+      expect(result.total).toBe(0);
     });
   });
 });

@@ -26,7 +26,12 @@ import { Card } from "../../../src/components/Card";
 import { Button } from "../../../src/components/Button";
 import { StatusBadge } from "../../../src/components/StatusBadge";
 import { LoadingSpinner } from "../../../src/components/LoadingSpinner";
-import { formatDate, formatDistance } from "../../../src/utils/format";
+import {
+  formatDate,
+  formatDistance,
+  formatTruckType,
+  formatWeight,
+} from "../../../src/utils/format";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { borderRadius } from "../../../src/theme/spacing";
@@ -124,7 +129,110 @@ export default function ShipperTripDetailsScreen() {
         <Card style={styles.card}>
           <Text style={styles.sectionTitle}>Carrier</Text>
           <DetailRow label="Company" value={trip.carrier.name ?? "N/A"} />
+          {trip.carrier.contactPhone && (
+            <View style={styles.contactRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.detailLabel}>Phone</Text>
+                <Text style={styles.detailValue}>
+                  {trip.carrier.contactPhone}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.contactBtn}
+                onPress={() =>
+                  Linking.openURL(`tel:${trip.carrier!.contactPhone}`)
+                }
+              >
+                <Ionicons
+                  name="call-outline"
+                  size={18}
+                  color={colors.primary600}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
+          {trip.carrier.contactEmail && (
+            <View style={styles.contactRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.detailLabel}>Email</Text>
+                <Text style={styles.detailValue}>
+                  {trip.carrier.contactEmail}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.contactBtn}
+                onPress={() =>
+                  Linking.openURL(`mailto:${trip.carrier!.contactEmail}`)
+                }
+              >
+                <Ionicons
+                  name="mail-outline"
+                  size={18}
+                  color={colors.primary600}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
         </Card>
+      )}
+
+      {/* Load Details */}
+      {trip.load && (
+        <Card style={styles.card}>
+          <Text style={styles.sectionTitle}>Load Details</Text>
+          {trip.load.cargoDescription && (
+            <DetailRow label="Cargo" value={trip.load.cargoDescription} />
+          )}
+          {trip.load.truckType && (
+            <DetailRow
+              label="Truck Type"
+              value={formatTruckType(trip.load.truckType)}
+            />
+          )}
+          {trip.load.weight != null && (
+            <DetailRow label="Weight" value={formatWeight(trip.load.weight)} />
+          )}
+          {trip.load.fullPartial && (
+            <DetailRow label="Load Type" value={trip.load.fullPartial} />
+          )}
+          {trip.load.pickupDate && (
+            <DetailRow
+              label="Pickup Date"
+              value={formatDate(trip.load.pickupDate)}
+            />
+          )}
+          {trip.load.deliveryDate && (
+            <DetailRow
+              label="Delivery Date"
+              value={formatDate(trip.load.deliveryDate)}
+            />
+          )}
+        </Card>
+      )}
+
+      {/* Track Shipment */}
+      {trip.status === "IN_TRANSIT" && (
+        <View style={styles.actions}>
+          <Button
+            title="Track Shipment"
+            variant="primary"
+            size="lg"
+            fullWidth
+            onPress={() =>
+              Alert.alert(
+                "Track Shipment",
+                "Live tracking will open the map view for this trip."
+              )
+            }
+            icon={
+              <Ionicons
+                name="navigate-outline"
+                size={18}
+                color={colors.white}
+              />
+            }
+          />
+        </View>
       )}
 
       {/* Shipment Details */}
@@ -298,6 +406,22 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   actions: { padding: spacing.lg },
+  contactRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.slate100,
+  },
+  contactBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primary50,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: spacing.sm,
+  },
 
   // Completed banner
   completedCard: {

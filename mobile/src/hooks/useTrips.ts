@@ -31,8 +31,19 @@ export function useTrip(id: string | undefined) {
 export function useUpdateTripStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      tripService.updateTripStatus(id, status),
+    mutationFn: ({
+      id,
+      status,
+      extra,
+    }: {
+      id: string;
+      status: string;
+      extra?: {
+        receiverName?: string;
+        receiverPhone?: string;
+        deliveryNotes?: string;
+      };
+    }) => tripService.updateTripStatus(id, status, extra),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TRIPS_KEY });
     },

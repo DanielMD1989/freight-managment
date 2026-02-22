@@ -208,17 +208,94 @@ class TruckService {
     }
   }
 
+  /** Get received truck requests (carrier — shippers requesting carrier trucks) */
+  async getReceivedTruckRequests(params?: {
+    status?: string;
+    limit?: number;
+  }): Promise<{ requests: unknown[]; total: number }> {
+    try {
+      const response = await apiClient.get("/api/truck-requests", {
+        params: { ...params, received: true },
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  }
+
+  /** Respond to truck request */
+  async respondToTruckRequest(
+    id: string,
+    action: "APPROVED" | "REJECTED",
+    notes?: string
+  ): Promise<unknown> {
+    try {
+      const apiAction = action === "APPROVED" ? "APPROVE" : "REJECT";
+      const response = await apiClient.post(
+        `/api/truck-requests/${id}/respond`,
+        {
+          action: apiAction,
+          responseNotes: notes,
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  }
+
   /** Get my truck postings (carrier) */
   async getMyTruckPostings(params?: {
     page?: number;
     limit?: number;
     status?: string;
+    organizationId?: string;
   }): Promise<{ postings: TruckPosting[]; pagination: PaginationInfo }> {
     try {
-      const response = await apiClient.get("/api/truck-postings/mine", {
+      const response = await apiClient.get("/api/truck-postings", {
         params,
       });
-      return response.data;
+      const data = response.data;
+      return {
+        postings: data.postings ?? data.truckPostings ?? [],
+        pagination: data.pagination ?? {
+          total: data.total ?? 0,
+          limit: params?.limit ?? 20,
+          page: params?.page ?? 1,
+          pages: 1,
+        },
+      };
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  }
+
+  /** Get matching loads for a posting */
+  async getMatchingLoadsForPosting(
+    postingId: string,
+    params?: { minScore?: number; limit?: number }
+  ): Promise<{ matches: unknown[]; total: number }> {
+    try {
+      const response = await apiClient.get(
+        `/api/truck-postings/${postingId}/matching-loads`,
+        { params }
+      );
+      return {
+        matches: response.data.matches ?? [],
+        total: response.data.totalMatches ?? response.data.matches?.length ?? 0,
+      };
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  }
+
+  /** Duplicate truck posting */
+  async duplicateTruckPosting(id: string): Promise<TruckPosting> {
+    try {
+      const response = await apiClient.post(
+        `/api/truck-postings/${id}/duplicate`
+      );
+      return response.data.posting ?? response.data;
     } catch (error) {
       throw new Error(getErrorMessage(error));
     }

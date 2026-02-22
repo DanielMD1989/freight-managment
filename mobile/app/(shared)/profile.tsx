@@ -1,5 +1,13 @@
 /**
- * Profile Screen
+ * Profile Screen - View profile info
+ *
+ * NOTE: Edit profile and change password features are disabled because the
+ * required API endpoints do not exist yet:
+ * - PATCH /api/users/me (for profile updates)
+ * - POST /api/auth/change-password (for password changes)
+ *
+ * When those endpoints are implemented, re-enable the editing UI by restoring
+ * the useState calls for isEditing/showPasswordChange and the handler functions.
  */
 import React from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
@@ -39,7 +47,7 @@ export default function ProfileScreen() {
         />
       </View>
 
-      {/* Details */}
+      {/* Read-only details */}
       <Card style={styles.card}>
         <DetailRow
           icon="person-outline"
@@ -53,6 +61,38 @@ export default function ProfileScreen() {
           label="Status"
           value={user.status}
         />
+      </Card>
+
+      {/* Edit Profile - disabled until API endpoint exists */}
+      <Card style={styles.card}>
+        <View style={styles.disabledHeader}>
+          <View style={styles.disabledHeaderLeft}>
+            <Ionicons name="pencil-outline" size={20} color={colors.slate400} />
+            <Text style={styles.disabledTitle}>Edit Profile</Text>
+          </View>
+          <Badge label="Coming Soon" variant="neutral" size="sm" />
+        </View>
+        <Text style={styles.comingSoonText}>
+          Profile editing will be available in a future update.
+        </Text>
+      </Card>
+
+      {/* Change Password - disabled until API endpoint exists */}
+      <Card style={styles.card}>
+        <View style={styles.disabledHeader}>
+          <View style={styles.disabledHeaderLeft}>
+            <Ionicons
+              name="lock-closed-outline"
+              size={20}
+              color={colors.slate400}
+            />
+            <Text style={styles.disabledTitle}>Change Password</Text>
+          </View>
+          <Badge label="Coming Soon" variant="neutral" size="sm" />
+        </View>
+        <Text style={styles.comingSoonText}>
+          Password changes will be available in a future update.
+        </Text>
       </Card>
 
       <View style={styles.actions}>
@@ -126,5 +166,24 @@ const styles = StyleSheet.create({
   detailContent: { flex: 1 },
   detailLabel: { ...typography.bodySmall, color: colors.textTertiary },
   detailValue: { ...typography.bodyMedium, color: colors.textPrimary },
-  actions: { padding: spacing.lg },
+  disabledHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  disabledHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  disabledTitle: {
+    ...typography.titleMedium,
+    color: colors.slate400,
+  },
+  comingSoonText: {
+    ...typography.bodySmall,
+    color: colors.textTertiary,
+    marginTop: spacing.sm,
+  },
+  actions: { padding: spacing.lg, paddingBottom: spacing["3xl"] },
 });

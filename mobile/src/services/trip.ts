@@ -31,10 +31,19 @@ class TripService {
   }
 
   /** Update trip status */
-  async updateTripStatus(id: string, status: string): Promise<Trip> {
+  async updateTripStatus(
+    id: string,
+    status: string,
+    extra?: {
+      receiverName?: string;
+      receiverPhone?: string;
+      deliveryNotes?: string;
+    }
+  ): Promise<Trip> {
     try {
-      const response = await apiClient.patch(`/api/trips/${id}/status`, {
+      const response = await apiClient.patch(`/api/trips/${id}`, {
         status,
+        ...extra,
       });
       return response.data.trip ?? response.data;
     } catch (error) {
@@ -45,9 +54,8 @@ class TripService {
   /** Cancel trip */
   async cancelTrip(id: string, reason: string): Promise<Trip> {
     try {
-      const response = await apiClient.patch(`/api/trips/${id}/status`, {
-        status: "CANCELLED",
-        cancelReason: reason,
+      const response = await apiClient.post(`/api/trips/${id}/cancel`, {
+        reason,
       });
       return response.data.trip ?? response.data;
     } catch (error) {

@@ -87,6 +87,31 @@ export default function CarrierDashboard() {
       icon: "bus-outline" as const,
       route: "/(carrier)/trucks",
     },
+    {
+      label: "Requests",
+      icon: "chatbubbles-outline" as const,
+      route: "/(carrier)/requests",
+    },
+    {
+      label: "Wallet",
+      icon: "wallet-outline" as const,
+      route: "/(carrier)/wallet",
+    },
+    {
+      label: "Settings",
+      icon: "settings-outline" as const,
+      route: "/(carrier)/settings",
+    },
+    {
+      label: "Trip History",
+      icon: "time-outline" as const,
+      route: "/(carrier)/trip-history",
+    },
+    {
+      label: "Team",
+      icon: "people-outline" as const,
+      route: "/(shared)/team",
+    },
   ];
 
   return (

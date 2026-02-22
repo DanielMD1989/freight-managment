@@ -114,7 +114,11 @@ class AuthService {
     }
   }
 
-  /** Change password (authenticated) */
+  /**
+   * Change password (authenticated)
+   * TODO: API endpoint POST /api/auth/change-password does not exist yet.
+   * This method will throw until the endpoint is implemented on the server.
+   */
   async changePassword(
     currentPassword: string,
     newPassword: string
@@ -124,6 +128,24 @@ class AuthService {
         currentPassword,
         newPassword,
       });
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  }
+
+  /**
+   * Update profile
+   * TODO: API endpoint PATCH /api/users/me does not exist yet.
+   * This method will throw until the endpoint is implemented on the server.
+   */
+  async updateProfile(data: {
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+  }): Promise<unknown> {
+    try {
+      const response = await apiClient.patch("/api/users/me", data);
+      return response.data.user ?? response.data;
     } catch (error) {
       throw new Error(getErrorMessage(error));
     }
