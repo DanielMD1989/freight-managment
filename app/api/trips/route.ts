@@ -23,8 +23,8 @@ import {
 import { zodErrorResponse } from "@/lib/validation";
 
 const createTripSchema = z.object({
-  loadId: z.string(),
-  truckId: z.string(),
+  loadId: z.string().max(50),
+  truckId: z.string().max(50),
 });
 
 /**

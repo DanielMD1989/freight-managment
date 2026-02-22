@@ -9,24 +9,27 @@ import {
 } from "@/lib/auth";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rateLimit";
-import { zodErrorResponse } from "@/lib/validation";
+import { zodErrorResponse, sanitizeText } from "@/lib/validation";
 import { OrganizationType, AccountType } from "@prisma/client";
 
 const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
-  phone: z.string().optional(),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
+  phone: z.string().max(20).optional(),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(128),
+  firstName: z.string().min(1, "First name is required").max(100),
+  lastName: z.string().min(1, "Last name is required").max(100),
   role: z.enum(["SHIPPER", "CARRIER", "DISPATCHER"]),
-  organizationId: z.string().optional(), // Sprint 16: Story 16.4 - Assign dispatcher to organization
+  organizationId: z.string().max(50).optional(), // Sprint 16: Story 16.4 - Assign dispatcher to organization
   // Organization fields
-  companyName: z.string().optional(),
+  companyName: z.string().max(200).optional(),
   carrierType: z
     .enum(["CARRIER_COMPANY", "CARRIER_INDIVIDUAL", "FLEET_OWNER"])
     .optional(),
-  associationId: z.string().optional(), // For individual carriers joining an association
-  taxId: z.string().optional(), // Organization tax ID (TIN)
+  associationId: z.string().max(50).optional(), // For individual carriers joining an association
+  taxId: z.string().max(50).optional(), // Organization tax ID (TIN)
 });
 
 // Map carrier type to organization type
@@ -57,6 +60,12 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const validatedData = registerSchema.parse(body);
+
+    // Sanitize user-provided text fields
+    validatedData.firstName = sanitizeText(validatedData.firstName, 100);
+    validatedData.lastName = sanitizeText(validatedData.lastName, 100);
+    if (validatedData.companyName)
+      validatedData.companyName = sanitizeText(validatedData.companyName, 200);
 
     // Validate password policy (uppercase, lowercase, numeric requirements)
     const passwordValidation = validatePasswordPolicy(validatedData.password);

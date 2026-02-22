@@ -7,9 +7,10 @@
  * GET /api/organizations/invitations/[id] - Get invitation details
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/organizations/invitations/[id]
@@ -37,7 +38,7 @@ export async function GET(
 
     if (!invitation) {
       return NextResponse.json(
-        { error: 'Invitation not found' },
+        { error: "Invitation not found" },
         { status: 404 }
       );
     }
@@ -45,12 +46,12 @@ export async function GET(
     // Check if expired
     if (invitation.expiresAt < new Date()) {
       return NextResponse.json(
-        { error: 'Invitation has expired' },
+        { error: "Invitation has expired" },
         { status: 410 }
       );
     }
 
-    if (invitation.status !== 'PENDING') {
+    if (invitation.status !== "PENDING") {
       return NextResponse.json(
         { error: `Invitation is ${invitation.status.toLowerCase()}` },
         { status: 400 }
@@ -68,11 +69,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Get invitation error:', error);
-    return NextResponse.json(
-      { error: 'Failed to get invitation' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Get invitation error");
   }
 }
 
@@ -96,7 +93,7 @@ export async function DELETE(
 
     if (!user?.organizationId) {
       return NextResponse.json(
-        { error: 'User not associated with an organization' },
+        { error: "User not associated with an organization" },
         { status: 400 }
       );
     }
@@ -108,21 +105,21 @@ export async function DELETE(
 
     if (!invitation) {
       return NextResponse.json(
-        { error: 'Invitation not found' },
+        { error: "Invitation not found" },
         { status: 404 }
       );
     }
 
     if (invitation.organizationId !== user.organizationId) {
       return NextResponse.json(
-        { error: 'You can only cancel invitations from your organization' },
+        { error: "You can only cancel invitations from your organization" },
         { status: 403 }
       );
     }
 
-    if (invitation.status !== 'PENDING') {
+    if (invitation.status !== "PENDING") {
       return NextResponse.json(
-        { error: 'Only pending invitations can be cancelled' },
+        { error: "Only pending invitations can be cancelled" },
         { status: 400 }
       );
     }
@@ -130,17 +127,13 @@ export async function DELETE(
     // Cancel the invitation
     await db.invitation.update({
       where: { id },
-      data: { status: 'CANCELLED' },
+      data: { status: "CANCELLED" },
     });
 
     return NextResponse.json({
-      message: 'Invitation cancelled successfully',
+      message: "Invitation cancelled successfully",
     });
   } catch (error) {
-    console.error('Cancel invitation error:', error);
-    return NextResponse.json(
-      { error: 'Failed to cancel invitation' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Cancel invitation error");
   }
 }

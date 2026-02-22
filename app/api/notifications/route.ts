@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import { getSessionAny } from "@/lib/auth";
 import { getRecentNotifications, getUnreadCount } from "@/lib/notifications";
+import { handleApiError } from "@/lib/apiErrors";
 
 export async function GET() {
   try {
@@ -20,10 +21,6 @@ export async function GET() {
 
     return NextResponse.json({ notifications, unreadCount });
   } catch (error) {
-    console.error("Failed to fetch notifications:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch notifications" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Failed to fetch notifications");
   }
 }

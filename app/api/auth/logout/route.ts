@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { clearSession, getSession, revokeAllSessions } from "@/lib/auth";
 import { clearCSRFToken } from "@/lib/csrf";
+import { handleApiError } from "@/lib/apiErrors";
 
 export async function POST() {
   try {
@@ -23,13 +24,6 @@ export async function POST() {
 
     return response;
   } catch (error) {
-    console.error("Logout error:", error);
-
-    return NextResponse.json(
-      {
-        error: "Internal server error",
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, "Logout error");
   }
 }

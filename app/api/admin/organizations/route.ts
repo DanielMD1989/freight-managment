@@ -7,10 +7,11 @@
  * Requires admin role authentication
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { Prisma } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/admin/organizations
@@ -27,19 +28,22 @@ export async function GET(request: NextRequest) {
     const session = await requireAuth();
 
     // Check admin access
-    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
+    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: 'Admin access required' },
+        { error: "Admin access required" },
         { status: 403 }
       );
     }
 
     const { searchParams } = new URL(request.url);
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20')));
-    const type = searchParams.get('type');
-    const search = searchParams.get('search');
-    const isVerified = searchParams.get('isVerified');
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const limit = Math.min(
+      100,
+      Math.max(1, parseInt(searchParams.get("limit") || "20"))
+    );
+    const type = searchParams.get("type");
+    const search = searchParams.get("search");
+    const isVerified = searchParams.get("isVerified");
 
     // Build where clause
     const where: Prisma.OrganizationWhereInput = {};
@@ -49,11 +53,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      where.name = { contains: search, mode: 'insensitive' };
+      where.name = { contains: search, mode: "insensitive" };
     }
 
     if (isVerified !== null && isVerified !== undefined) {
-      where.isVerified = isVerified === 'true';
+      where.isVerified = isVerified === "true";
     }
 
     // Get organizations with aggregated counts
@@ -82,7 +86,7 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -125,10 +129,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Admin organizations error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch organizations' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Admin organizations error");
   }
 }

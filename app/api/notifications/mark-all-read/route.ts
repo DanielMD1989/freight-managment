@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionAny } from "@/lib/auth";
 import { markAllAsRead } from "@/lib/notifications";
 import { validateCSRFWithMobile } from "@/lib/csrf";
+import { handleApiError } from "@/lib/apiErrors";
 
 export async function PUT(request: NextRequest) {
   try {
@@ -24,10 +25,6 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Failed to mark all notifications as read:", error);
-    return NextResponse.json(
-      { error: "Failed to update notifications" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Failed to mark all notifications as read");
   }
 }

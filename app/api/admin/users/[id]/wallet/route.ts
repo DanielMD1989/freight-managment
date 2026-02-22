@@ -4,9 +4,10 @@
  * Get wallet information for a specific user
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/admin/users/[id]/wallet
@@ -21,11 +22,8 @@ export async function GET(
     const session = await requireAuth();
 
     // Only admins can access this endpoint
-    if (!['ADMIN', 'SUPER_ADMIN'].includes(session.role)) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
+    if (!["ADMIN", "SUPER_ADMIN"].includes(session.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { id } = await params;
@@ -41,15 +39,12 @@ export async function GET(
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     if (!user.organizationId) {
       return NextResponse.json(
-        { error: 'User has no organization' },
+        { error: "User has no organization" },
         { status: 400 }
       );
     }
@@ -59,7 +54,7 @@ export async function GET(
       where: {
         organizationId: user.organizationId,
         accountType: {
-          in: ['SHIPPER_WALLET', 'CARRIER_WALLET'],
+          in: ["SHIPPER_WALLET", "CARRIER_WALLET"],
         },
         isActive: true,
       },
@@ -74,7 +69,7 @@ export async function GET(
 
     if (!wallet) {
       return NextResponse.json(
-        { error: 'No wallet found for this user' },
+        { error: "No wallet found for this user" },
         { status: 404 }
       );
     }
@@ -84,10 +79,7 @@ export async function GET(
       where: {
         lines: {
           some: {
-            OR: [
-              { accountId: wallet.id },
-              { creditAccountId: wallet.id },
-            ],
+            OR: [{ accountId: wallet.id }, { creditAccountId: wallet.id }],
           },
         },
       },
@@ -99,10 +91,7 @@ export async function GET(
         createdAt: true,
         lines: {
           where: {
-            OR: [
-              { accountId: wallet.id },
-              { creditAccountId: wallet.id },
-            ],
+            OR: [{ accountId: wallet.id }, { creditAccountId: wallet.id }],
           },
           select: {
             amount: true,
@@ -112,7 +101,7 @@ export async function GET(
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
       take: 10,
     });
@@ -144,10 +133,6 @@ export async function GET(
       transactions: formattedTransactions,
     });
   } catch (error) {
-    console.error('Get user wallet error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Get user wallet error");
   }
 }

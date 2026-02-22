@@ -8,10 +8,11 @@
  * PATCH /api/organizations/members/[id] - Update member role
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { validateCSRFWithMobile } from '@/lib/csrf';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * DELETE /api/organizations/members/[id]
@@ -32,7 +33,7 @@ export async function DELETE(
     // Prevent self-removal
     if (memberId === session.userId) {
       return NextResponse.json(
-        { error: 'You cannot remove yourself from the organization' },
+        { error: "You cannot remove yourself from the organization" },
         { status: 400 }
       );
     }
@@ -45,7 +46,7 @@ export async function DELETE(
 
     if (!currentUser?.organizationId) {
       return NextResponse.json(
-        { error: 'User not associated with an organization' },
+        { error: "User not associated with an organization" },
         { status: 400 }
       );
     }
@@ -53,19 +54,21 @@ export async function DELETE(
     // Verify member belongs to same organization
     const member = await db.user.findUnique({
       where: { id: memberId },
-      select: { organizationId: true, firstName: true, lastName: true, email: true },
+      select: {
+        organizationId: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+      },
     });
 
     if (!member) {
-      return NextResponse.json(
-        { error: 'Member not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Member not found" }, { status: 404 });
     }
 
     if (member.organizationId !== currentUser.organizationId) {
       return NextResponse.json(
-        { error: 'You can only remove members from your organization' },
+        { error: "You can only remove members from your organization" },
         { status: 403 }
       );
     }
@@ -76,16 +79,14 @@ export async function DELETE(
       data: { organizationId: null },
     });
 
-    const memberName = [member.firstName, member.lastName].filter(Boolean).join(' ') || member.email;
+    const memberName =
+      [member.firstName, member.lastName].filter(Boolean).join(" ") ||
+      member.email;
     return NextResponse.json({
       message: `${memberName} has been removed from the organization`,
     });
   } catch (error) {
-    console.error('Remove member error:', error);
-    return NextResponse.json(
-      { error: 'Failed to remove member' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Remove member error");
   }
 }
 
@@ -113,7 +114,7 @@ export async function PATCH(
 
     if (!currentUser?.organizationId) {
       return NextResponse.json(
-        { error: 'User not associated with an organization' },
+        { error: "User not associated with an organization" },
         { status: 400 }
       );
     }
@@ -126,7 +127,7 @@ export async function PATCH(
 
     if (!member || member.organizationId !== currentUser.organizationId) {
       return NextResponse.json(
-        { error: 'Member not found in your organization' },
+        { error: "Member not found in your organization" },
         { status: 404 }
       );
     }
@@ -136,13 +137,9 @@ export async function PATCH(
     // For now, we don't allow role changes within an organization
     // This could be extended to support team roles (admin, member, viewer)
     return NextResponse.json({
-      message: 'Member role updates are not currently supported',
+      message: "Member role updates are not currently supported",
     });
   } catch (error) {
-    console.error('Update member error:', error);
-    return NextResponse.json(
-      { error: 'Failed to update member' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Update member error");
   }
 }

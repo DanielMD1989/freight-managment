@@ -15,7 +15,7 @@ import { VALID_TRIP_TRANSITIONS } from "@/lib/tripStateMachine";
 import { z } from "zod";
 // P1-002 FIX: Import CacheInvalidation for post-update cache clearing
 import { CacheInvalidation } from "@/lib/cache";
-import { zodErrorResponse } from "@/lib/validation";
+import { handleApiError } from "@/lib/apiErrors";
 
 const updateTripSchema = z.object({
   status: z
@@ -145,11 +145,7 @@ export async function GET(
 
     return NextResponse.json({ trip: responseTrip });
   } catch (error) {
-    console.error("Get trip error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch trip" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Get trip error");
   }
 }
 
@@ -369,16 +365,7 @@ export async function PATCH(
       loadSynced,
     });
   } catch (error) {
-    console.error("Update trip error:", error);
-
-    if (error instanceof z.ZodError) {
-      return zodErrorResponse(error);
-    }
-
-    return NextResponse.json(
-      { error: "Failed to update trip" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Update trip error");
   }
 }
 

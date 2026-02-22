@@ -12,10 +12,11 @@
  * New aggregation logic should use lib/aggregation.ts as the single source of truth.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { checkRpsLimit, RPS_CONFIGS } from '@/lib/rateLimit';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/carrier/dashboard
@@ -36,9 +37,9 @@ export async function GET(request: NextRequest) {
   try {
     // Rate limiting: Apply dashboard RPS limit
     const ip =
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      request.headers.get('x-real-ip') ||
-      'unknown';
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
     const rpsResult = await checkRpsLimit(
       RPS_CONFIGS.dashboard.endpoint,
       ip,
@@ -47,13 +48,13 @@ export async function GET(request: NextRequest) {
     );
     if (!rpsResult.allowed) {
       return NextResponse.json(
-        { error: 'Rate limit exceeded. Please slow down.', retryAfter: 1 },
+        { error: "Rate limit exceeded. Please slow down.", retryAfter: 1 },
         {
           status: 429,
           headers: {
-            'X-RateLimit-Limit': rpsResult.limit.toString(),
-            'X-RateLimit-Remaining': rpsResult.remaining.toString(),
-            'Retry-After': '1',
+            "X-RateLimit-Limit": rpsResult.limit.toString(),
+            "X-RateLimit-Remaining": rpsResult.remaining.toString(),
+            "Retry-After": "1",
           },
         }
       );
@@ -62,9 +63,9 @@ export async function GET(request: NextRequest) {
     const session = await requireAuth();
 
     // Check if user is a carrier or admin
-    if (session.role !== 'CARRIER' && session.role !== 'ADMIN') {
+    if (session.role !== "CARRIER" && session.role !== "ADMIN") {
       return NextResponse.json(
-        { error: 'Access denied. Carrier role required.' },
+        { error: "Access denied. Carrier role required." },
         { status: 403 }
       );
     }
@@ -72,7 +73,10 @@ export async function GET(request: NextRequest) {
     // Check if user has an organization
     if (!session.organizationId) {
       return NextResponse.json(
-        { error: 'You must belong to an organization to access carrier features.' },
+        {
+          error:
+            "You must belong to an organization to access carrier features.",
+        },
         { status: 400 }
       );
     }
@@ -107,7 +111,7 @@ export async function GET(request: NextRequest) {
       db.truckPosting.count({
         where: {
           carrierId: session.organizationId,
-          status: 'ACTIVE',
+          status: "ACTIVE",
         },
       }),
 
@@ -115,7 +119,7 @@ export async function GET(request: NextRequest) {
       db.trip.count({
         where: {
           carrierId: session.organizationId,
-          status: { in: ['DELIVERED', 'COMPLETED'] },
+          status: { in: ["DELIVERED", "COMPLETED"] },
         },
       }),
 
@@ -123,7 +127,7 @@ export async function GET(request: NextRequest) {
       db.trip.count({
         where: {
           carrierId: session.organizationId,
-          status: 'IN_TRANSIT',
+          status: "IN_TRANSIT",
         },
       }),
 
@@ -131,7 +135,7 @@ export async function GET(request: NextRequest) {
       db.trip.aggregate({
         where: {
           carrierId: session.organizationId,
-          status: { in: ['DELIVERED', 'COMPLETED'] },
+          status: { in: ["DELIVERED", "COMPLETED"] },
         },
         _sum: {
           estimatedDistanceKm: true,
@@ -143,8 +147,8 @@ export async function GET(request: NextRequest) {
       db.load.aggregate({
         where: {
           assignedTruck: { carrierId: session.organizationId },
-          status: { in: ['DELIVERED', 'COMPLETED'] },
-          carrierFeeStatus: 'DEDUCTED',
+          status: { in: ["DELIVERED", "COMPLETED"] },
+          carrierFeeStatus: "DEDUCTED",
         },
         _sum: { carrierServiceFee: true },
       }),
@@ -153,7 +157,7 @@ export async function GET(request: NextRequest) {
       db.financialAccount.findFirst({
         where: {
           organizationId: session.organizationId,
-          accountType: 'CARRIER_WALLET',
+          accountType: "CARRIER_WALLET",
         },
         select: {
           balance: true,
@@ -175,16 +179,22 @@ export async function GET(request: NextRequest) {
       db.truck.count({
         where: {
           carrierId: session.organizationId,
-          approvalStatus: 'PENDING',
+          approvalStatus: "PENDING",
         },
       }),
     ]);
 
     // Calculate total distance from trips
-    const totalDistance = Number(tripStats._sum?.actualDistanceKm || tripStats._sum?.estimatedDistanceKm || 0);
+    const totalDistance = Number(
+      tripStats._sum?.actualDistanceKm ||
+        tripStats._sum?.estimatedDistanceKm ||
+        0
+    );
     // Preserve 2 decimal precision for financial values
     const rawFees = revenueResult._sum?.carrierServiceFee;
-    const totalServiceFeesPaid = rawFees ? parseFloat(Number(rawFees).toFixed(2)) : 0;
+    const totalServiceFeesPaid = rawFees
+      ? parseFloat(Number(rawFees).toFixed(2))
+      : 0;
 
     return NextResponse.json({
       totalTrucks,
@@ -196,17 +206,12 @@ export async function GET(request: NextRequest) {
       totalDistance,
       wallet: {
         balance: Number(walletAccount?.balance || 0),
-        currency: walletAccount?.currency || 'ETB',
+        currency: walletAccount?.currency || "ETB",
       },
       recentPostings,
       pendingApprovals,
     });
   } catch (error) {
-    console.error('Carrier dashboard error:', error);
-
-    return NextResponse.json(
-      { error: 'Failed to load dashboard data' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Carrier dashboard error");
   }
 }

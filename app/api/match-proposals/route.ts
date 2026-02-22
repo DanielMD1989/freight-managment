@@ -20,6 +20,7 @@ import { canProposeMatch } from "@/lib/dispatcherPermissions";
 import { RULE_DISPATCHER_COORDINATION_ONLY } from "@/lib/foundation-rules";
 import { createNotification, NotificationType } from "@/lib/notifications";
 import { zodErrorResponse } from "@/lib/validation";
+import { handleApiError } from "@/lib/apiErrors";
 
 // Validation schema for match proposal
 const MatchProposalSchema = z.object({
@@ -222,12 +223,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Error creating match proposal:", error);
-
-    return NextResponse.json(
-      { error: "Failed to create match proposal" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Error creating match proposal");
   }
 }
 
@@ -351,11 +347,6 @@ export async function GET(request: NextRequest) {
       offset,
     });
   } catch (error) {
-    console.error("Error fetching match proposals:", error);
-
-    return NextResponse.json(
-      { error: "Failed to fetch match proposals" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Error fetching match proposals");
   }
 }

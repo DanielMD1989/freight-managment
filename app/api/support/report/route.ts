@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth";
+import { sanitizeText } from "@/lib/validation";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { db } from "@/lib/db";
 import { createNotificationForRole } from "@/lib/notifications";
@@ -56,8 +57,10 @@ export async function POST(request: NextRequest) {
       return zodErrorResponse(validation.error);
     }
 
-    const { type, subject, description, entityType, entityId } =
-      validation.data;
+    const { type, entityType, entityId } = validation.data;
+    // Sanitize user-provided text fields
+    const subject = sanitizeText(validation.data.subject, 200);
+    const description = sanitizeText(validation.data.description, 5000);
 
     // Get user details
     const user = await db.user.findUnique({

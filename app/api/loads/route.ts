@@ -11,19 +11,20 @@ import {
   RPS_CONFIGS,
   addRateLimitHeaders,
 } from "@/lib/rateLimit";
-import { zodErrorResponse } from "@/lib/validation";
 import { Prisma } from "@prisma/client";
+import { handleApiError } from "@/lib/apiErrors";
+import { sanitizeText } from "@/lib/validation";
 
 const createLoadSchema = z.object({
   // Location & Schedule
-  pickupCity: z.string().min(2),
-  pickupAddress: z.string().optional(),
-  pickupDockHours: z.string().optional(), // Changed to single field (string)
+  pickupCity: z.string().min(2).max(200),
+  pickupAddress: z.string().max(500).optional(),
+  pickupDockHours: z.string().max(100).optional(), // Changed to single field (string)
   pickupDate: z.string(),
   appointmentRequired: z.boolean().default(false),
-  deliveryCity: z.string().min(2),
-  deliveryAddress: z.string().optional(),
-  deliveryDockHours: z.string().optional(), // Changed to single field (string)
+  deliveryCity: z.string().min(2).max(200),
+  deliveryAddress: z.string().max(500).optional(),
+  deliveryDockHours: z.string().max(100).optional(), // Changed to single field (string)
   deliveryDate: z.string(),
 
   tripKm: z.number().positive().optional(), // Required for POSTED status
@@ -47,7 +48,7 @@ const createLoadSchema = z.object({
   ]),
   weight: z.number().positive(),
   volume: z.number().positive().optional(),
-  cargoDescription: z.string().min(5),
+  cargoDescription: z.string().min(5).max(2000),
   isFullLoad: z.boolean().default(true), // Keep for backward compatibility
   fullPartial: z.enum(["FULL", "PARTIAL"]).default("FULL"), // [NEW]
   isFragile: z.boolean().default(false),
@@ -55,8 +56,8 @@ const createLoadSchema = z.object({
 
   // Insurance
   isInsured: z.boolean().default(false),
-  insuranceProvider: z.string().optional(),
-  insurancePolicyNumber: z.string().optional(),
+  insuranceProvider: z.string().max(200).optional(),
+  insurancePolicyNumber: z.string().max(100).optional(),
   insuranceCoverageAmount: z.number().positive().optional(),
 
   lengthM: z.number().positive().optional(),
@@ -65,15 +66,15 @@ const createLoadSchema = z.object({
   // Pricing is negotiated off-platform
   bookMode: z.enum(["REQUEST", "INSTANT"]).default("REQUEST"), // [NEW]
 
-  dtpReference: z.string().optional(),
-  factorRating: z.string().optional(),
+  dtpReference: z.string().max(100).optional(),
+  factorRating: z.string().max(100).optional(),
 
   // Privacy & Safety
   isAnonymous: z.boolean().default(false),
-  shipperContactName: z.string().optional(), // [NEW]
-  shipperContactPhone: z.string().optional(), // [NEW]
-  safetyNotes: z.string().optional(),
-  specialInstructions: z.string().optional(),
+  shipperContactName: z.string().max(100).optional(), // [NEW]
+  shipperContactPhone: z.string().max(20).optional(), // [NEW]
+  safetyNotes: z.string().max(1000).optional(),
+  specialInstructions: z.string().max(2000).optional(),
 
   // Status
   status: z.enum(["DRAFT", "POSTED"]).default("DRAFT"),
@@ -131,13 +132,31 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createLoadSchema.parse(body);
 
+    // Sanitize user-provided text fields
+    const sanitized = {
+      ...validatedData,
+      cargoDescription: sanitizeText(validatedData.cargoDescription, 2000),
+      pickupAddress: validatedData.pickupAddress
+        ? sanitizeText(validatedData.pickupAddress, 500)
+        : undefined,
+      deliveryAddress: validatedData.deliveryAddress
+        ? sanitizeText(validatedData.deliveryAddress, 500)
+        : undefined,
+      safetyNotes: validatedData.safetyNotes
+        ? sanitizeText(validatedData.safetyNotes, 1000)
+        : undefined,
+      specialInstructions: validatedData.specialInstructions
+        ? sanitizeText(validatedData.specialInstructions, 2000)
+        : undefined,
+    };
+
     // Pricing is negotiated off-platform - platform only charges service fees
     const load = await db.load.create({
       data: {
-        ...validatedData,
-        pickupDate: new Date(validatedData.pickupDate),
-        deliveryDate: new Date(validatedData.deliveryDate),
-        postedAt: validatedData.status === "POSTED" ? new Date() : null,
+        ...sanitized,
+        pickupDate: new Date(sanitized.pickupDate),
+        deliveryDate: new Date(sanitized.deliveryDate),
+        postedAt: sanitized.status === "POSTED" ? new Date() : null,
         shipperId: user.organizationId,
         createdById: session.userId,
       },
@@ -195,20 +214,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ load }, { status: 201 });
   } catch (error) {
-    console.error("Create load error:", error);
-
-    if (error instanceof z.ZodError) {
-      return zodErrorResponse(error);
-    }
-
-    if (error instanceof Error && error.name === "ForbiddenError") {
-      return NextResponse.json({ error: error.message }, { status: 403 });
-    }
-
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Create load error");
   }
 }
 
@@ -530,28 +536,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error("List loads error:", error);
-
-    // Handle specific error types
-    if (error instanceof Error) {
-      if (
-        error.message === "Unauthorized" ||
-        error.name === "UnauthorizedError"
-      ) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-      if (error.name === "ForbiddenError") {
-        return NextResponse.json({ error: error.message }, { status: 403 });
-      }
-    }
-
-    return NextResponse.json(
-      {
-        error: "Internal server error",
-        details:
-          process.env.NODE_ENV !== "production" ? String(error) : undefined,
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, "List loads error");
   }
 }

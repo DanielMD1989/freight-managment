@@ -54,7 +54,7 @@ const MFA_TOKEN_SECRET = new TextEncoder().encode(
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
-  password: z.string().min(1, "Password is required"),
+  password: z.string().min(1, "Password is required").max(128),
 });
 
 // Handle CORS preflight requests (uses secure origin validation)

@@ -8,18 +8,18 @@
  * GET /api/organizations/invitations - List invitations
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { validateCSRFWithMobile } from '@/lib/csrf';
-import { z } from 'zod';
-import { sendEmail, createEmailHTML } from '@/lib/email';
-import { zodErrorResponse } from '@/lib/validation';
-import { UserRole, Prisma } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { z } from "zod";
+import { sendEmail, createEmailHTML } from "@/lib/email";
+import { handleApiError } from "@/lib/apiErrors";
+import { UserRole, Prisma } from "@prisma/client";
 
 const createInvitationSchema = z.object({
   email: z.string().email(),
-  role: z.enum(['CARRIER', 'SHIPPER', 'DISPATCHER']),
+  role: z.enum(["CARRIER", "SHIPPER", "DISPATCHER"]),
   organizationId: z.string(),
 });
 
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     if (!user?.organizationId || user.organizationId !== data.organizationId) {
       return NextResponse.json(
-        { error: 'You can only invite members to your own organization' },
+        { error: "You can only invite members to your own organization" },
         { status: 403 }
       );
     }
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
     if (existingMember) {
       return NextResponse.json(
-        { error: 'This email is already a member of your organization' },
+        { error: "This email is already a member of your organization" },
         { status: 400 }
       );
     }
@@ -71,14 +71,14 @@ export async function POST(request: NextRequest) {
       where: {
         email: data.email,
         organizationId: data.organizationId,
-        status: 'PENDING',
+        status: "PENDING",
         expiresAt: { gt: new Date() },
       },
     });
 
     if (existingInvitation) {
       return NextResponse.json(
-        { error: 'A pending invitation already exists for this email' },
+        { error: "A pending invitation already exists for this email" },
         { status: 400 }
       );
     }
@@ -112,15 +112,15 @@ export async function POST(request: NextRequest) {
       select: { name: true },
     });
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const inviteUrl = `${baseUrl}/register?invite=${invitation.id}&email=${encodeURIComponent(data.email)}`;
     const inviteContent = `
       <h1>You're Invited!</h1>
-      <p>You've been invited to join <strong>${org?.name || 'an organization'}</strong> on the FreightET platform as a <strong>${data.role}</strong>.</p>
+      <p>You've been invited to join <strong>${org?.name || "an organization"}</strong> on the FreightET platform as a <strong>${data.role}</strong>.</p>
       <div class="info-section">
-        <p><strong>Organization:</strong> ${org?.name || 'Unknown'}</p>
+        <p><strong>Organization:</strong> ${org?.name || "Unknown"}</p>
         <p><strong>Role:</strong> ${data.role}</p>
-        <p><strong>Expires:</strong> ${expiresAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        <p><strong>Expires:</strong> ${expiresAt.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</p>
       </div>
       <a href="${inviteUrl}" class="button">
         Accept Invitation
@@ -130,25 +130,17 @@ export async function POST(request: NextRequest) {
 
     sendEmail({
       to: data.email,
-      subject: `You're invited to join ${org?.name || 'FreightET'}`,
+      subject: `You're invited to join ${org?.name || "FreightET"}`,
       html: createEmailHTML(inviteContent),
-      text: `You've been invited to join ${org?.name || 'an organization'} on FreightET as a ${data.role}. Accept here: ${inviteUrl}`,
-    }).catch((err) => console.error('Failed to send invitation email:', err));
+      text: `You've been invited to join ${org?.name || "an organization"} on FreightET as a ${data.role}. Accept here: ${inviteUrl}`,
+    }).catch((err) => console.error("Failed to send invitation email:", err));
 
     return NextResponse.json({
-      message: 'Invitation sent successfully',
+      message: "Invitation sent successfully",
       invitation,
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return zodErrorResponse(error);
-    }
-
-    console.error('Create invitation error:', error);
-    return NextResponse.json(
-      { error: 'Failed to create invitation' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Create invitation error");
   }
 }
 
@@ -168,13 +160,13 @@ export async function GET(request: NextRequest) {
 
     if (!user?.organizationId) {
       return NextResponse.json(
-        { error: 'User not associated with an organization' },
+        { error: "User not associated with an organization" },
         { status: 400 }
       );
     }
 
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
+    const status = searchParams.get("status");
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: Record<string, any> = {
@@ -187,7 +179,7 @@ export async function GET(request: NextRequest) {
 
     const invitations = await db.invitation.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       select: {
         id: true,
         email: true,
@@ -201,10 +193,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ invitations });
   } catch (error) {
-    console.error('List invitations error:', error);
-    return NextResponse.json(
-      { error: 'Failed to list invitations' },
-      { status: 500 }
-    );
+    return handleApiError(error, "List invitations error");
   }
 }

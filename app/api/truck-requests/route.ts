@@ -10,15 +10,19 @@
  * GET: List requests (filtered by role)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { z } from 'zod';
-import { requireAuth } from '@/lib/auth';
-import { requireCSRF } from '@/lib/csrf';
-import { canRequestTruck } from '@/lib/dispatcherPermissions';
-import { RULE_CARRIER_FINAL_AUTHORITY, RULE_SHIPPER_DEMAND_FOCUS } from '@/lib/foundation-rules';
-import { UserRole, Prisma } from '@prisma/client';
-import { notifyTruckRequest } from '@/lib/notifications';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { z } from "zod";
+import { requireAuth } from "@/lib/auth";
+import { requireCSRF } from "@/lib/csrf";
+import { canRequestTruck } from "@/lib/dispatcherPermissions";
+import {
+  RULE_CARRIER_FINAL_AUTHORITY,
+  RULE_SHIPPER_DEMAND_FOCUS,
+} from "@/lib/foundation-rules";
+import { UserRole, Prisma } from "@prisma/client";
+import { notifyTruckRequest } from "@/lib/notifications";
+import { handleApiError } from "@/lib/apiErrors";
 
 // Validation schema for truck request
 // Note: No offeredRate field - price negotiation happens outside platform
@@ -50,8 +54,10 @@ export async function POST(request: NextRequest) {
     // CSRF protection for state-changing operation
     // Skip for mobile clients using Bearer token authentication (no cookies)
     // Bearer tokens are inherently CSRF-safe as attackers cannot add Authorization headers cross-origin
-    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
-    const hasBearerAuth = request.headers.get('authorization')?.startsWith('Bearer ');
+    const isMobileClient = request.headers.get("x-client-type") === "mobile";
+    const hasBearerAuth = request.headers
+      .get("authorization")
+      ?.startsWith("Bearer ");
 
     if (!isMobileClient && !hasBearerAuth) {
       const csrfError = await requireCSRF(request);
@@ -67,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     if (!validationResult.success) {
       // FIX: Use zodErrorResponse to avoid schema leak
-      const { zodErrorResponse } = await import('@/lib/validation');
+      const { zodErrorResponse } = await import("@/lib/validation");
       return zodErrorResponse(validationResult.error);
     }
 
@@ -90,10 +96,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!load) {
-      return NextResponse.json(
-        { error: 'Load not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // Check if user can request trucks for this load
@@ -106,7 +109,7 @@ export async function POST(request: NextRequest) {
     if (!canRequestTruck(user, load.shipperId)) {
       return NextResponse.json(
         {
-          error: 'You can only request trucks for your own loads',
+          error: "You can only request trucks for your own loads",
           rule: RULE_SHIPPER_DEMAND_FOCUS.id,
         },
         { status: 403 }
@@ -114,12 +117,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Only allow requests for loads that are not yet assigned
-    const requestableStatuses = ['POSTED', 'SEARCHING', 'OFFERED'];
+    const requestableStatuses = ["POSTED", "SEARCHING", "OFFERED"];
     if (!requestableStatuses.includes(load.status)) {
       return NextResponse.json(
         {
           error: `Cannot request truck for load with status ${load.status}`,
-          hint: 'Load must be in POSTED, SEARCHING, or OFFERED status',
+          hint: "Load must be in POSTED, SEARCHING, or OFFERED status",
         },
         { status: 400 }
       );
@@ -127,7 +130,7 @@ export async function POST(request: NextRequest) {
 
     if (load.assignedTruckId) {
       return NextResponse.json(
-        { error: 'Load is already assigned to a truck' },
+        { error: "Load is already assigned to a truck" },
         { status: 400 }
       );
     }
@@ -141,7 +144,7 @@ export async function POST(request: NextRequest) {
         isAvailable: true,
         licensePlate: true,
         postings: {
-          where: { status: 'ACTIVE' },
+          where: { status: "ACTIVE" },
           select: { id: true },
           take: 1,
         },
@@ -149,18 +152,15 @@ export async function POST(request: NextRequest) {
     });
 
     if (!truck) {
-      return NextResponse.json(
-        { error: 'Truck not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
     // Check if truck has an active posting (is available)
     if (truck.postings.length === 0) {
       return NextResponse.json(
         {
-          error: 'Truck is not currently posted as available',
-          hint: 'You can only request trucks that have active postings',
+          error: "Truck is not currently posted as available",
+          hint: "You can only request trucks that have active postings",
         },
         { status: 400 }
       );
@@ -171,14 +171,14 @@ export async function POST(request: NextRequest) {
       where: {
         loadId: data.loadId,
         truckId: data.truckId,
-        status: 'PENDING',
+        status: "PENDING",
       },
     });
 
     if (existingRequest) {
       return NextResponse.json(
         {
-          error: 'A pending request already exists for this load-truck pair',
+          error: "A pending request already exists for this load-truck pair",
           existingRequestId: existingRequest.id,
         },
         { status: 409 }
@@ -200,7 +200,7 @@ export async function POST(request: NextRequest) {
         notes: data.notes,
         // No offeredRate - price negotiation happens outside platform
         expiresAt,
-        status: 'PENDING',
+        status: "PENDING",
       },
       include: {
         load: {
@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
     await db.loadEvent.create({
       data: {
         loadId: data.loadId,
-        eventType: 'TRUCK_REQUESTED',
+        eventType: "TRUCK_REQUESTED",
         description: `Truck ${truck.licensePlate} requested for this load. Awaiting carrier approval.`,
         userId: session.userId,
         metadata: {
@@ -244,27 +244,22 @@ export async function POST(request: NextRequest) {
     // Send notification to carrier about the request
     notifyTruckRequest({
       carrierId: truck.carrierId,
-      shipperName: load.shipper?.name || 'Shipper',
+      shipperName: load.shipper?.name || "Shipper",
       loadReference: `LOAD-${data.loadId.slice(-8).toUpperCase()}`,
       truckPlate: truck.licensePlate,
       requestId: truckRequest.id,
-    }).catch((err) => console.error('Failed to send notification:', err));
+    }).catch((err) => console.error("Failed to send notification:", err));
 
     return NextResponse.json(
       {
         request: truckRequest,
-        message: 'Truck request created. Awaiting carrier approval.',
+        message: "Truck request created. Awaiting carrier approval.",
         rule: RULE_CARRIER_FINAL_AUTHORITY.id,
       },
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error creating truck request:', error);
-
-    return NextResponse.json(
-      { error: 'Failed to create truck request' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Error creating truck request");
   }
 }
 
@@ -287,25 +282,25 @@ export async function GET(request: NextRequest) {
     const session = await requireAuth();
     const { searchParams } = new URL(request.url);
 
-    const status = searchParams.get('status');
-    const loadId = searchParams.get('loadId');
-    const truckId = searchParams.get('truckId');
-    const limitParam = searchParams.get('limit');
-    const offsetParam = searchParams.get('offset');
+    const status = searchParams.get("status");
+    const loadId = searchParams.get("loadId");
+    const truckId = searchParams.get("truckId");
+    const limitParam = searchParams.get("limit");
+    const offsetParam = searchParams.get("offset");
 
     // Pagination
-    const limit = Math.min(parseInt(limitParam || '20', 10), 100);
-    const offset = Math.max(parseInt(offsetParam || '0', 10), 0);
+    const limit = Math.min(parseInt(limitParam || "20", 10), 100);
+    const offset = Math.max(parseInt(offsetParam || "0", 10), 0);
 
     // Build where clause based on role
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: Record<string, any> = {};
 
     // Role-based filtering
-    if (session.role === 'SHIPPER') {
+    if (session.role === "SHIPPER") {
       // Shippers see their own requests
       where.shipperId = session.organizationId;
-    } else if (session.role === 'CARRIER') {
+    } else if (session.role === "CARRIER") {
       // Carriers see requests for their trucks
       where.carrierId = session.organizationId;
     }
@@ -364,7 +359,7 @@ export async function GET(request: NextRequest) {
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          createdAt: "desc",
         },
         skip: offset,
         take: limit,
@@ -379,11 +374,6 @@ export async function GET(request: NextRequest) {
       offset,
     });
   } catch (error) {
-    console.error('Error fetching truck requests:', error);
-
-    return NextResponse.json(
-      { error: 'Failed to fetch truck requests' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Error fetching truck requests");
   }
 }

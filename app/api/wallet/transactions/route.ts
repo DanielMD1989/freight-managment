@@ -4,10 +4,11 @@
  * Get transaction history for organization's wallet
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { Prisma } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/wallet/transactions
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     if (!user?.organizationId) {
       return NextResponse.json(
-        { error: 'User must belong to an organization' },
+        { error: "User must belong to an organization" },
         { status: 400 }
       );
     }
@@ -42,24 +43,33 @@ export async function GET(request: NextRequest) {
     // Parse query parameters
     const { searchParams } = new URL(request.url);
     const limit = Math.min(
-      Math.max(parseInt(searchParams.get('limit') || '50') || 50, 1),
+      Math.max(parseInt(searchParams.get("limit") || "50") || 50, 1),
       100
     );
-    const offset = Math.max(parseInt(searchParams.get('offset') || '0') || 0, 0);
-    const typeParam = searchParams.get('type');
-    const validTypes = ['COMMISSION', 'PAYMENT', 'REFUND', 'ADJUSTMENT'] as const;
+    const offset = Math.max(
+      parseInt(searchParams.get("offset") || "0") || 0,
+      0
+    );
+    const typeParam = searchParams.get("type");
+    const validTypes = [
+      "COMMISSION",
+      "PAYMENT",
+      "REFUND",
+      "ADJUSTMENT",
+    ] as const;
     // FIX: Use proper type narrowing
-    type ValidType = typeof validTypes[number];
-    const type: ValidType | null = typeParam && (validTypes as readonly string[]).includes(typeParam)
-      ? (typeParam as ValidType)
-      : null;
+    type ValidType = (typeof validTypes)[number];
+    const type: ValidType | null =
+      typeParam && (validTypes as readonly string[]).includes(typeParam)
+        ? (typeParam as ValidType)
+        : null;
 
     // Get wallet accounts
     const walletAccounts = await db.financialAccount.findMany({
       where: {
         organizationId: user.organizationId,
         accountType: {
-          in: ['SHIPPER_WALLET', 'CARRIER_WALLET'],
+          in: ["SHIPPER_WALLET", "CARRIER_WALLET"],
         },
         isActive: true,
       },
@@ -70,7 +80,7 @@ export async function GET(request: NextRequest) {
 
     if (walletAccounts.length === 0) {
       return NextResponse.json(
-        { error: 'No wallet found for organization' },
+        { error: "No wallet found for organization" },
         { status: 404 }
       );
     }
@@ -121,7 +131,7 @@ export async function GET(request: NextRequest) {
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          createdAt: "desc",
         },
         take: limit,
         skip: offset,
@@ -134,11 +144,13 @@ export async function GET(request: NextRequest) {
       .filter((tx) => tx.lines && tx.lines.length > 0) // Skip transactions with no lines
       .map((tx) => {
         // Find the line that affects this organization's wallet (more robust than assuming lines[0])
-        const walletLine = tx.lines.find(line =>
-          line.accountId && walletAccountIds.includes(line.accountId)
+        const walletLine = tx.lines.find(
+          (line) => line.accountId && walletAccountIds.includes(line.accountId)
         );
         const line = walletLine || tx.lines[0]; // Fallback to first line if no wallet line found
-        const isDebit = line.accountId ? walletAccountIds.includes(line.accountId) : false;
+        const isDebit = line.accountId
+          ? walletAccountIds.includes(line.accountId)
+          : false;
         const amount = Number(line.amount || 0);
 
         return {
@@ -162,10 +174,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Get wallet transactions error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Get wallet transactions error");
   }
 }

@@ -17,6 +17,7 @@ import { requireAuth } from "@/lib/auth";
 // P0-001 FIX: Removed requireCSRF import - middleware handles CSRF and exempts Bearer tokens (mobile)
 import { createNotification } from "@/lib/notifications";
 import { UserRole, Prisma } from "@prisma/client";
+import { handleApiError } from "@/lib/apiErrors";
 
 // Validation schema for load request
 // Note: No proposedRate field - price negotiation happens outside platform
@@ -271,12 +272,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Error creating load request:", error);
-
-    return NextResponse.json(
-      { error: "Failed to create load request" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Error creating load request");
   }
 }
 
@@ -393,11 +389,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error fetching load requests:", error);
-
-    return NextResponse.json(
-      { error: "Failed to fetch load requests" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Error fetching load requests");
   }
 }

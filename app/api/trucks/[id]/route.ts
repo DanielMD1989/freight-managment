@@ -8,8 +8,9 @@ import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { TripStatus } from "@prisma/client";
 // P1-001-B FIX: Import CacheInvalidation for update/delete operations
 import { CacheInvalidation } from "@/lib/cache";
-import { zodErrorResponse } from "@/lib/validation";
 import { logger } from "@/lib/logger";
+import { handleApiError } from "@/lib/apiErrors";
+import { sanitizeText } from "@/lib/validation";
 
 /**
  * Helper function to apply RPS rate limiting for fleet endpoints
@@ -56,11 +57,11 @@ const updateTruckSchema = z.object({
       "BOX_TRUCK",
     ])
     .optional(),
-  licensePlate: z.string().min(3).optional(),
+  licensePlate: z.string().min(3).max(20).optional(),
   capacity: z.number().positive().optional(),
   volume: z.number().positive().optional().nullable(),
-  currentCity: z.string().optional().nullable(),
-  currentRegion: z.string().optional().nullable(),
+  currentCity: z.string().max(200).optional().nullable(),
+  currentRegion: z.string().max(200).optional().nullable(),
   isAvailable: z.boolean().optional(),
   status: z
     .enum(["ACTIVE", "IN_TRANSIT", "MAINTENANCE", "INACTIVE"])
@@ -127,11 +128,7 @@ export async function GET(
 
     return NextResponse.json(truck);
   } catch (error) {
-    console.error("GET /api/trucks/[id] error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch truck" },
-      { status: 500 }
-    );
+    return handleApiError(error, "GET /api/trucks/[id] error");
   }
 }
 
@@ -200,6 +197,17 @@ export async function PATCH(
     const body = await request.json();
     const validatedData = updateTruckSchema.parse(body);
 
+    // Sanitize user-provided text fields
+    if (validatedData.licensePlate)
+      validatedData.licensePlate = sanitizeText(validatedData.licensePlate, 20);
+    if (validatedData.currentCity)
+      validatedData.currentCity = sanitizeText(validatedData.currentCity, 200);
+    if (validatedData.currentRegion)
+      validatedData.currentRegion = sanitizeText(
+        validatedData.currentRegion,
+        200
+      );
+
     // If license plate is being updated, check for duplicates
     if (
       validatedData.licensePlate &&
@@ -241,14 +249,7 @@ export async function PATCH(
 
     return NextResponse.json(updatedTruck);
   } catch (error) {
-    console.error("PATCH /api/trucks/[id] error:", error);
-    if (error instanceof z.ZodError) {
-      return zodErrorResponse(error);
-    }
-    return NextResponse.json(
-      { error: "Failed to update truck" },
-      { status: 500 }
-    );
+    return handleApiError(error, "PATCH /api/trucks/[id] error");
   }
 }
 
@@ -397,10 +398,6 @@ export async function DELETE(
       message: "Truck deleted successfully",
     });
   } catch (error) {
-    console.error("DELETE /api/trucks/[id] error:", error);
-    return NextResponse.json(
-      { error: "Failed to delete truck" },
-      { status: 500 }
-    );
+    return handleApiError(error, "DELETE /api/trucks/[id] error");
   }
 }

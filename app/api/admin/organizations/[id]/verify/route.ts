@@ -6,12 +6,13 @@
  * Allows admins to verify/unverify organizations
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { writeAuditLog, AuditEventType, AuditSeverity } from '@/lib/auditLog';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { writeAuditLog, AuditEventType, AuditSeverity } from "@/lib/auditLog";
+import { handleApiError } from "@/lib/apiErrors";
 // M7 FIX: Add CSRF validation
-import { validateCSRFWithMobile } from '@/lib/csrf';
+import { validateCSRFWithMobile } from "@/lib/csrf";
 
 /**
  * POST /api/admin/organizations/[id]/verify
@@ -31,9 +32,9 @@ export async function POST(
     const session = await requireAuth();
 
     // Only admins can verify organizations
-    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
+    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: 'Unauthorized - Admin access required' },
+        { error: "Unauthorized - Admin access required" },
         { status: 403 }
       );
     }
@@ -50,7 +51,7 @@ export async function POST(
 
     if (!organization) {
       return NextResponse.json(
-        { error: 'Organization not found' },
+        { error: "Organization not found" },
         { status: 404 }
       );
     }
@@ -58,7 +59,7 @@ export async function POST(
     // Check if already verified
     if (organization.isVerified) {
       return NextResponse.json(
-        { error: 'Organization is already verified' },
+        { error: "Organization is already verified" },
         { status: 400 }
       );
     }
@@ -78,17 +79,17 @@ export async function POST(
       severity: AuditSeverity.INFO,
       userId: session.userId,
       organizationId: orgId,
-      resource: 'organization',
+      resource: "organization",
       resourceId: orgId,
-      action: 'VERIFY',
-      result: 'SUCCESS',
+      action: "VERIFY",
+      result: "SUCCESS",
       message: `Organization verified: ${organization.name}`,
       metadata: { organizationName: organization.name },
       timestamp: new Date(),
     });
 
     return NextResponse.json({
-      message: 'Organization verified successfully',
+      message: "Organization verified successfully",
       organization: {
         id: updatedOrg.id,
         name: updatedOrg.name,
@@ -97,11 +98,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('Verify organization error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Verify organization error");
   }
 }
 
@@ -123,9 +120,9 @@ export async function DELETE(
     const session = await requireAuth();
 
     // Only admins can unverify organizations
-    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
+    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: 'Unauthorized - Admin access required' },
+        { error: "Unauthorized - Admin access required" },
         { status: 403 }
       );
     }
@@ -142,7 +139,7 @@ export async function DELETE(
 
     if (!organization) {
       return NextResponse.json(
-        { error: 'Organization not found' },
+        { error: "Organization not found" },
         { status: 404 }
       );
     }
@@ -150,7 +147,7 @@ export async function DELETE(
     // Check if not verified
     if (!organization.isVerified) {
       return NextResponse.json(
-        { error: 'Organization is not verified' },
+        { error: "Organization is not verified" },
         { status: 400 }
       );
     }
@@ -170,17 +167,17 @@ export async function DELETE(
       severity: AuditSeverity.INFO,
       userId: session.userId,
       organizationId: orgId,
-      resource: 'organization',
+      resource: "organization",
       resourceId: orgId,
-      action: 'UNVERIFY',
-      result: 'SUCCESS',
+      action: "UNVERIFY",
+      result: "SUCCESS",
       message: `Organization verification removed: ${organization.name}`,
       metadata: { organizationName: organization.name },
       timestamp: new Date(),
     });
 
     return NextResponse.json({
-      message: 'Organization verification removed',
+      message: "Organization verification removed",
       organization: {
         id: updatedOrg.id,
         name: updatedOrg.name,
@@ -189,10 +186,6 @@ export async function DELETE(
       },
     });
   } catch (error) {
-    console.error('Unverify organization error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Unverify organization error");
   }
 }

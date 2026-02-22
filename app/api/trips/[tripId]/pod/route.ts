@@ -13,6 +13,7 @@ import { requireAuth } from "@/lib/auth";
 import { CacheInvalidation } from "@/lib/cache";
 import { createNotification, NotificationType } from "@/lib/notifications";
 import { uploadPOD } from "@/lib/storage";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * POST /api/trips/[tripId]/pod
@@ -205,11 +206,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error("Upload trip POD error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Upload trip POD error");
   }
 }
 
@@ -283,10 +280,6 @@ export async function GET(
       count: pods.length,
     });
   } catch (error) {
-    console.error("Get trip PODs error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Get trip PODs error");
   }
 }

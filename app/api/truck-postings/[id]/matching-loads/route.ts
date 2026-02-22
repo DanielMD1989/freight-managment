@@ -9,16 +9,19 @@
  * Sprint 8 - Story 8.4: Truck/Load Matching Algorithm
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { findMatchingLoads } from '@/lib/matchingEngine';
-import { db } from '@/lib/db';
-import { calculateDistanceKm } from '@/lib/geo';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import { findMatchingLoads } from "@/lib/matchingEngine";
+import { db } from "@/lib/db";
+import { calculateDistanceKm } from "@/lib/geo";
+import { handleApiError } from "@/lib/apiErrors";
 
 // Use centralized haversine from lib/geo.ts (rounds result for this use case)
 function haversineDistance(
-  lat1: number, lon1: number,
-  lat2: number, lon2: number
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
 ): number {
   return Math.round(calculateDistanceKm(lat1, lon1, lat2, lon2));
 }
@@ -83,20 +86,25 @@ export async function GET(
     });
 
     // Helper to find city coordinates by name
-    const getCityCoords = (cityName: string | null): { lat: number; lon: number } | null => {
+    const getCityCoords = (
+      cityName: string | null
+    ): { lat: number; lon: number } | null => {
       if (!cityName) return null;
       const searchName = cityName.toLowerCase().trim();
 
       // Try exact match first
-      let city = ethiopianCities.find(c => c.name.toLowerCase().trim() === searchName);
+      let city = ethiopianCities.find(
+        (c) => c.name.toLowerCase().trim() === searchName
+      );
 
       // Fuzzy match for spelling variations
       if (!city) {
-        city = ethiopianCities.find(c => {
+        city = ethiopianCities.find((c) => {
           const name = c.name.toLowerCase().trim();
-          if (name.includes(searchName) || searchName.includes(name)) return true;
+          if (name.includes(searchName) || searchName.includes(name))
+            return true;
           // Handle double letters (Mekelle/Mekele, Jimma/Jima)
-          const simplify = (s: string) => s.replace(/(.)\1+/g, '$1');
+          const simplify = (s: string) => s.replace(/(.)\1+/g, "$1");
           return simplify(name) === simplify(searchName);
         });
       }
@@ -109,7 +117,7 @@ export async function GET(
 
     if (!truckPosting) {
       return NextResponse.json(
-        { error: 'Truck posting not found' },
+        { error: "Truck posting not found" },
         { status: 404 }
       );
     }
@@ -119,22 +127,25 @@ export async function GET(
     // Dispatchers can also view matches to facilitate load matching
     const hasAccess =
       truckPosting.carrierId === session.organizationId ||
-      session.role === 'ADMIN' ||
-      session.role === 'SUPER_ADMIN' ||
-      session.role === 'DISPATCHER';
+      session.role === "ADMIN" ||
+      session.role === "SUPER_ADMIN" ||
+      session.role === "DISPATCHER";
 
     if (!hasAccess) {
       return NextResponse.json(
-        { error: 'Forbidden: You can only view matches for your own truck postings' },
+        {
+          error:
+            "Forbidden: You can only view matches for your own truck postings",
+        },
         { status: 403 }
       );
     }
 
     // Only search for active postings
-    if (truckPosting.status !== 'ACTIVE') {
+    if (truckPosting.status !== "ACTIVE") {
       return NextResponse.json(
         {
-          error: 'Cannot find matches for inactive truck posting',
+          error: "Cannot find matches for inactive truck posting",
           matches: [],
         },
         { status: 400 }
@@ -143,16 +154,16 @@ export async function GET(
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
-    const minScore = parseInt(searchParams.get('minScore') || '50', 10);
+    const minScore = parseInt(searchParams.get("minScore") || "50", 10);
     const limit = Math.min(
-      parseInt(searchParams.get('limit') || '50', 10),
+      parseInt(searchParams.get("limit") || "50", 10),
       100
     );
 
     // Fetch all posted loads
     const loads = await db.load.findMany({
       where: {
-        status: 'POSTED',
+        status: "POSTED",
       },
       include: {
         shipper: {
@@ -171,19 +182,23 @@ export async function GET(
     // Prepare truck criteria
     const truckCriteria = {
       id: truckPosting.id,
-      currentCity: truckPosting.originCity?.name || '',
+      currentCity: truckPosting.originCity?.name || "",
       destinationCity: truckPosting.destinationCity?.name || null,
       availableDate: truckPosting.availableFrom,
-      truckType: truckPosting.truck?.truckType || '',
-      maxWeight: truckPosting.availableWeight ? Number(truckPosting.availableWeight) : null,
-      lengthM: truckPosting.availableLength ? Number(truckPosting.availableLength) : null,
+      truckType: truckPosting.truck?.truckType || "",
+      maxWeight: truckPosting.availableWeight
+        ? Number(truckPosting.availableWeight)
+        : null,
+      lengthM: truckPosting.availableLength
+        ? Number(truckPosting.availableLength)
+        : null,
       fullPartial: truckPosting.fullPartial,
     };
 
     // Prepare loads criteria (filter out loads with missing required fields)
     const loadsCriteria = loads
-      .filter(load => load.pickupCity && load.deliveryCity && load.truckType)
-      .map(load => ({
+      .filter((load) => load.pickupCity && load.deliveryCity && load.truckType)
+      .map((load) => ({
         id: load.id,
         pickupCity: load.pickupCity!,
         deliveryCity: load.deliveryCity!,
@@ -202,23 +217,40 @@ export async function GET(
       }));
 
     // Get truck coordinates
-    const truckOriginCoords = truckPosting.originCity?.latitude && truckPosting.originCity?.longitude
-      ? { lat: Number(truckPosting.originCity.latitude), lon: Number(truckPosting.originCity.longitude) }
-      : null;
-    const truckDestCoords = truckPosting.destinationCity?.latitude && truckPosting.destinationCity?.longitude
-      ? { lat: Number(truckPosting.destinationCity.latitude), lon: Number(truckPosting.destinationCity.longitude) }
-      : null;
+    const truckOriginCoords =
+      truckPosting.originCity?.latitude && truckPosting.originCity?.longitude
+        ? {
+            lat: Number(truckPosting.originCity.latitude),
+            lon: Number(truckPosting.originCity.longitude),
+          }
+        : null;
+    const truckDestCoords =
+      truckPosting.destinationCity?.latitude &&
+      truckPosting.destinationCity?.longitude
+        ? {
+            lat: Number(truckPosting.destinationCity.latitude),
+            lon: Number(truckPosting.destinationCity.longitude),
+          }
+        : null;
 
     // Get declared DH limits
-    const declaredDhO = truckPosting.preferredDhToOriginKm ? Number(truckPosting.preferredDhToOriginKm) : null;
-    const declaredDhD = truckPosting.preferredDhAfterDeliveryKm ? Number(truckPosting.preferredDhAfterDeliveryKm) : null;
+    const declaredDhO = truckPosting.preferredDhToOriginKm
+      ? Number(truckPosting.preferredDhToOriginKm)
+      : null;
+    const declaredDhD = truckPosting.preferredDhAfterDeliveryKm
+      ? Number(truckPosting.preferredDhAfterDeliveryKm)
+      : null;
 
     // Find matching loads and calculate distances
     // FIX: Remove any - type inferred from findMatchingLoads return type
-    const matchedLoads = findMatchingLoads(truckCriteria, loadsCriteria, minScore)
+    const matchedLoads = findMatchingLoads(
+      truckCriteria,
+      loadsCriteria,
+      minScore
+    )
       .slice(0, limit)
       .map((load) => {
-        const fullLoad = loads.find(l => l.id === load.id);
+        const fullLoad = loads.find((l) => l.id === load.id);
 
         // Get load pickup/delivery coordinates
         const pickupCoords = getCityCoords(load.pickupCity);
@@ -228,8 +260,10 @@ export async function GET(
         let dhToOriginKm = 0;
         if (truckOriginCoords && pickupCoords) {
           dhToOriginKm = haversineDistance(
-            truckOriginCoords.lat, truckOriginCoords.lon,
-            pickupCoords.lat, pickupCoords.lon
+            truckOriginCoords.lat,
+            truckOriginCoords.lon,
+            pickupCoords.lat,
+            pickupCoords.lon
           );
         }
 
@@ -237,14 +271,18 @@ export async function GET(
         let dhAfterDeliveryKm = 0;
         if (truckDestCoords && deliveryCoords) {
           dhAfterDeliveryKm = haversineDistance(
-            deliveryCoords.lat, deliveryCoords.lon,
-            truckDestCoords.lat, truckDestCoords.lon
+            deliveryCoords.lat,
+            deliveryCoords.lon,
+            truckDestCoords.lat,
+            truckDestCoords.lon
           );
         }
 
         // Check if within declared limits
-        const withinDhOLimit = declaredDhO === null || dhToOriginKm <= declaredDhO;
-        const withinDhDLimit = declaredDhD === null || dhAfterDeliveryKm <= declaredDhD;
+        const withinDhOLimit =
+          declaredDhO === null || dhToOriginKm <= declaredDhO;
+        const withinDhDLimit =
+          declaredDhD === null || dhAfterDeliveryKm <= declaredDhD;
         const withinDhLimits = withinDhOLimit && withinDhDLimit;
 
         return {
@@ -296,7 +334,7 @@ export async function GET(
             shipperContactPhone: null,
             shipper: {
               id: load.shipper?.id,
-              name: 'Anonymous Shipper',
+              name: "Anonymous Shipper",
               isVerified: load.shipper?.isVerified,
             },
           },
@@ -311,13 +349,7 @@ export async function GET(
       totalMatches: maskedMatches.length,
       matches: maskedMatches,
     });
-  // FIX: Use unknown type
-  } catch (error: unknown) {
-    console.error('Error finding matching loads:', error);
-
-    return NextResponse.json(
-      { error: 'Failed to find matching loads' },
-      { status: 500 }
-    );
+  } catch (error) {
+    return handleApiError(error, "Error finding matching loads");
   }
 }

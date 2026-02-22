@@ -4,7 +4,7 @@ import { requireAuth } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { canManageOrganization } from "@/lib/rbac";
 import { z } from "zod";
-import { zodErrorResponse } from "@/lib/validation";
+import { handleApiError } from "@/lib/apiErrors";
 
 const updateOrganizationSchema = z.object({
   name: z.string().min(2).optional(),
@@ -35,12 +35,12 @@ export async function GET(
       select: { organizationId: true, role: true },
     });
 
-    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+    const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
     const isMember = user?.organizationId === id;
 
     if (!isAdmin && !isMember) {
       return NextResponse.json(
-        { error: 'You do not have permission to view this organization' },
+        { error: "You do not have permission to view this organization" },
         { status: 403 }
       );
     }
@@ -76,12 +76,7 @@ export async function GET(
 
     return NextResponse.json({ organization });
   } catch (error) {
-    console.error("Get organization error:", error);
-
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Get organization error");
   }
 }
 
@@ -131,15 +126,6 @@ export async function PATCH(
       organization,
     });
   } catch (error) {
-    console.error("Update organization error:", error);
-
-    if (error instanceof z.ZodError) {
-      return zodErrorResponse(error);
-    }
-
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Update organization error");
   }
 }

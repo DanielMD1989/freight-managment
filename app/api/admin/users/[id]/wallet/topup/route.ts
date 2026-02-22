@@ -4,22 +4,30 @@
  * Allows admins to manually credit a user's wallet
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { validateCSRFWithMobile } from '@/lib/csrf';
-import { checkRpsLimit, RPS_CONFIGS } from '@/lib/rateLimit';
-import { z } from 'zod';
-import { zodErrorResponse } from '@/lib/validation';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { z } from "zod";
+import { handleApiError } from "@/lib/apiErrors";
 // H15 FIX: Import max topup constant
-import { MAX_WALLET_TOPUP_AMOUNT, ADMIN_FINANCIAL_OPS_RPS, ADMIN_FINANCIAL_OPS_BURST } from '@/lib/types/admin';
+import {
+  MAX_WALLET_TOPUP_AMOUNT,
+  ADMIN_FINANCIAL_OPS_RPS,
+  ADMIN_FINANCIAL_OPS_BURST,
+} from "@/lib/types/admin";
 
 // H15 FIX: Add maximum amount validation to prevent abuse
 const topUpSchema = z.object({
-  amount: z.number()
-    .positive('Amount must be positive')
-    .max(MAX_WALLET_TOPUP_AMOUNT, `Maximum topup is ${MAX_WALLET_TOPUP_AMOUNT.toLocaleString()} ETB`),
-  paymentMethod: z.string().optional().default('MANUAL'),
+  amount: z
+    .number()
+    .positive("Amount must be positive")
+    .max(
+      MAX_WALLET_TOPUP_AMOUNT,
+      `Maximum topup is ${MAX_WALLET_TOPUP_AMOUNT.toLocaleString()} ETB`
+    ),
+  paymentMethod: z.string().optional().default("MANUAL"),
   reference: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -35,17 +43,19 @@ export async function POST(
 ) {
   try {
     // M9 FIX: Add rate limiting for financial operations
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      request.headers.get('x-real-ip') || 'unknown';
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
     const rpsResult = await checkRpsLimit(
-      'admin-wallet-topup',
+      "admin-wallet-topup",
       ip,
       ADMIN_FINANCIAL_OPS_RPS,
       ADMIN_FINANCIAL_OPS_BURST
     );
     if (!rpsResult.allowed) {
       return NextResponse.json(
-        { error: 'Rate limit exceeded. Please slow down.' },
+        { error: "Rate limit exceeded. Please slow down." },
         { status: 429 }
       );
     }
@@ -57,11 +67,8 @@ export async function POST(
     const session = await requireAuth();
 
     // Only admins can access this endpoint
-    if (!['ADMIN', 'SUPER_ADMIN'].includes(session.role)) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
+    if (!["ADMIN", "SUPER_ADMIN"].includes(session.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { id } = await params;
@@ -75,15 +82,12 @@ export async function POST(
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     if (!user.organizationId) {
       return NextResponse.json(
-        { error: 'User has no organization' },
+        { error: "User has no organization" },
         { status: 400 }
       );
     }
@@ -93,7 +97,7 @@ export async function POST(
       where: {
         organizationId: user.organizationId,
         accountType: {
-          in: ['SHIPPER_WALLET', 'CARRIER_WALLET'],
+          in: ["SHIPPER_WALLET", "CARRIER_WALLET"],
         },
         isActive: true,
       },
@@ -101,7 +105,7 @@ export async function POST(
 
     if (!wallet) {
       return NextResponse.json(
-        { error: 'No wallet found for this user' },
+        { error: "No wallet found for this user" },
         { status: 404 }
       );
     }
@@ -113,7 +117,7 @@ export async function POST(
       // Create journal entry for the deposit
       const journalEntry = await tx.journalEntry.create({
         data: {
-          transactionType: 'DEPOSIT',
+          transactionType: "DEPOSIT",
           description,
           reference: reference || null,
           metadata: {
@@ -157,15 +161,6 @@ export async function POST(
       message: `Successfully added ${amount} ETB to wallet`,
     });
   } catch (error) {
-    console.error('Wallet top-up error:', error);
-
-    if (error instanceof z.ZodError) {
-      return zodErrorResponse(error);
-    }
-
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Wallet top-up error");
   }
 }

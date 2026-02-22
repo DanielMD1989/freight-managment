@@ -22,6 +22,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { handleApiError } from "@/lib/apiErrors";
 import {
   saveFile,
   validateUploadedFile,
@@ -387,14 +388,8 @@ export async function POST(request: NextRequest) {
 
       return response;
     }
-    // FIX: Use unknown type with type guard
   } catch (error: unknown) {
-    console.error(
-      "Error uploading document:",
-      error instanceof Error ? error.message : error
-    );
-
-    // Handle specific errors
+    // Handle specific file size errors
     if (error instanceof Error && error.message?.includes("too large")) {
       return NextResponse.json(
         {
@@ -404,9 +399,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(
-      { error: "Failed to upload document" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Error uploading document");
   }
 }

@@ -20,31 +20,33 @@
  * - POSTING_IS_AVAILABILITY: Posting expresses availability, not ownership
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { z } from 'zod';
-import { requireAuth, requireActiveUser } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { z } from "zod";
+import { requireAuth, requireActiveUser } from "@/lib/auth";
 import {
   weightSchema,
   lengthSchema,
   distanceSchema,
   validateIdFormat,
   phoneSchema,
-} from '@/lib/validation';
+  sanitizeText,
+} from "@/lib/validation";
+import { checkRateLimit, RATE_LIMIT_TRUCK_POSTING } from "@/lib/rateLimit";
+import { requireCSRF } from "@/lib/csrf";
+import { findMatchingLoads } from "@/lib/matchingEngine";
 import {
-  checkRateLimit,
-  RATE_LIMIT_TRUCK_POSTING,
-} from '@/lib/rateLimit';
-import { requireCSRF } from '@/lib/csrf';
-import { findMatchingLoads } from '@/lib/matchingEngine';
-import { canViewAllTrucks, hasElevatedPermissions } from '@/lib/dispatcherPermissions';
-import { UserRole } from '@prisma/client';
+  canViewAllTrucks,
+  hasElevatedPermissions,
+} from "@/lib/dispatcherPermissions";
+import { UserRole } from "@prisma/client";
 import {
   RULE_ONE_ACTIVE_POST_PER_TRUCK,
   validateOneActivePostPerTruck,
-} from '@/lib/foundation-rules';
+} from "@/lib/foundation-rules";
 // P1-001 FIX: Import CacheInvalidation for post-creation cache clearing
-import { CacheInvalidation } from '@/lib/cache';
+import { CacheInvalidation } from "@/lib/cache";
+import { handleApiError } from "@/lib/apiErrors";
 
 // Validation schema for truck posting
 const TruckPostingSchema = z.object({
@@ -53,15 +55,20 @@ const TruckPostingSchema = z.object({
   destinationCityId: z.string().min(10).optional().nullable(),
   availableFrom: z.string().datetime(),
   availableTo: z.string().datetime().optional().nullable(),
-  fullPartial: z.enum(['FULL', 'PARTIAL']).default('FULL'),
+  fullPartial: z.enum(["FULL", "PARTIAL"]).default("FULL"),
   availableLength: lengthSchema.optional().nullable(),
   availableWeight: weightSchema.optional().nullable(),
   preferredDhToOriginKm: distanceSchema.optional().nullable(),
   preferredDhAfterDeliveryKm: distanceSchema.optional().nullable(),
-  contactName: z.string().min(2).max(100, 'Contact name too long'),
+  contactName: z.string().min(2).max(100, "Contact name too long"),
   contactPhone: phoneSchema,
-  ownerName: z.string().min(2).max(100, 'Owner name too long').optional().nullable(),
-  notes: z.string().max(500, 'Notes too long').optional().nullable(),
+  ownerName: z
+    .string()
+    .min(2)
+    .max(100, "Owner name too long")
+    .optional()
+    .nullable(),
+  notes: z.string().max(500, "Notes too long").optional().nullable(),
   expiresAt: z.string().datetime().optional().nullable(),
 });
 
@@ -84,12 +91,14 @@ export async function POST(request: NextRequest) {
     // CSRF protection for state-changing operation
     // Mobile clients MUST use Bearer token authentication (inherently CSRF-safe)
     // Web clients MUST provide CSRF token
-    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
-    const hasBearerAuth = request.headers.get('authorization')?.startsWith('Bearer ');
+    const isMobileClient = request.headers.get("x-client-type") === "mobile";
+    const hasBearerAuth = request.headers
+      .get("authorization")
+      ?.startsWith("Bearer ");
 
     if (isMobileClient && !hasBearerAuth) {
       return NextResponse.json(
-        { error: 'Mobile clients require Bearer authentication' },
+        { error: "Mobile clients require Bearer authentication" },
         { status: 401 }
       );
     }
@@ -104,7 +113,9 @@ export async function POST(request: NextRequest) {
     // Require organization
     if (!session.organizationId) {
       return NextResponse.json(
-        { error: 'You must belong to an organization to create truck postings' },
+        {
+          error: "You must belong to an organization to create truck postings",
+        },
         { status: 403 }
       );
     }
@@ -118,16 +129,19 @@ export async function POST(request: NextRequest) {
     if (!rateLimitResult.allowed) {
       return NextResponse.json(
         {
-          error: 'Truck posting limit exceeded. Maximum 100 postings per day per carrier.',
+          error:
+            "Truck posting limit exceeded. Maximum 100 postings per day per carrier.",
           retryAfter: rateLimitResult.retryAfter,
         },
         {
           status: 429,
           headers: {
-            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
-            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-            'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString(),
-            'Retry-After': rateLimitResult.retryAfter!.toString(),
+            "X-RateLimit-Limit": rateLimitResult.limit.toString(),
+            "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+            "X-RateLimit-Reset": new Date(
+              rateLimitResult.resetTime
+            ).toISOString(),
+            "Retry-After": rateLimitResult.retryAfter!.toString(),
           },
         }
       );
@@ -140,14 +154,18 @@ export async function POST(request: NextRequest) {
 
     if (!validationResult.success) {
       // FIX: Use zodErrorResponse to avoid schema leak
-      const { zodErrorResponse } = await import('@/lib/validation');
+      const { zodErrorResponse } = await import("@/lib/validation");
       return zodErrorResponse(validationResult.error);
     }
 
     const data = validationResult.data;
 
+    // Sanitize user-provided text fields
+    data.contactName = sanitizeText(data.contactName, 100);
+    if (data.notes) data.notes = sanitizeText(data.notes, 500);
+
     // Validate IDs format
-    const truckIdValidation = validateIdFormat(data.truckId, 'Truck ID');
+    const truckIdValidation = validateIdFormat(data.truckId, "Truck ID");
     if (!truckIdValidation.valid) {
       return NextResponse.json(
         { error: truckIdValidation.error },
@@ -155,7 +173,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const originIdValidation = validateIdFormat(data.originCityId, 'Origin city ID');
+    const originIdValidation = validateIdFormat(
+      data.originCityId,
+      "Origin city ID"
+    );
     if (!originIdValidation.valid) {
       return NextResponse.json(
         { error: originIdValidation.error },
@@ -164,7 +185,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (data.destinationCityId) {
-      const destIdValidation = validateIdFormat(data.destinationCityId, 'Destination city ID');
+      const destIdValidation = validateIdFormat(
+        data.destinationCityId,
+        "Destination city ID"
+      );
       if (!destIdValidation.valid) {
         return NextResponse.json(
           { error: destIdValidation.error },
@@ -180,70 +204,68 @@ export async function POST(request: NextRequest) {
 
       if (from >= to) {
         return NextResponse.json(
-          { error: 'availableTo must be after availableFrom' },
+          { error: "availableTo must be after availableFrom" },
           { status: 400 }
         );
       }
     }
 
     // PHASE 4: Run validation queries in parallel (N+1 fix)
-    const [originExists, destExists, truck, existingActivePost] = await Promise.all([
-      // Validate origin location exists
-      db.ethiopianLocation.findUnique({
-        where: { id: data.originCityId },
-        select: { isActive: true },
-      }),
-      // Validate destination location if provided
-      data.destinationCityId
-        ? db.ethiopianLocation.findUnique({
-            where: { id: data.destinationCityId },
-            select: { isActive: true },
-          })
-        : Promise.resolve(null),
-      // Validate truck exists and is approved
-      db.truck.findUnique({
-        where: { id: data.truckId },
-        select: { carrierId: true, isAvailable: true, approvalStatus: true },
-      }),
-      // PHASE 2: Check for existing active posting (ONE_ACTIVE_POST_PER_TRUCK rule)
-      db.truckPosting.findFirst({
-        where: {
-          truckId: data.truckId,
-          status: 'ACTIVE',
-        },
-        select: { id: true },
-      }),
-    ]);
+    const [originExists, destExists, truck, existingActivePost] =
+      await Promise.all([
+        // Validate origin location exists
+        db.ethiopianLocation.findUnique({
+          where: { id: data.originCityId },
+          select: { isActive: true },
+        }),
+        // Validate destination location if provided
+        data.destinationCityId
+          ? db.ethiopianLocation.findUnique({
+              where: { id: data.destinationCityId },
+              select: { isActive: true },
+            })
+          : Promise.resolve(null),
+        // Validate truck exists and is approved
+        db.truck.findUnique({
+          where: { id: data.truckId },
+          select: { carrierId: true, isAvailable: true, approvalStatus: true },
+        }),
+        // PHASE 2: Check for existing active posting (ONE_ACTIVE_POST_PER_TRUCK rule)
+        db.truckPosting.findFirst({
+          where: {
+            truckId: data.truckId,
+            status: "ACTIVE",
+          },
+          select: { id: true },
+        }),
+      ]);
 
     if (!originExists || !originExists.isActive) {
       return NextResponse.json(
-        { error: 'Origin location not found or inactive' },
+        { error: "Origin location not found or inactive" },
         { status: 400 }
       );
     }
 
     if (data.destinationCityId && (!destExists || !destExists.isActive)) {
       return NextResponse.json(
-        { error: 'Destination location not found or inactive' },
+        { error: "Destination location not found or inactive" },
         { status: 400 }
       );
     }
 
     if (!truck) {
-      return NextResponse.json(
-        { error: 'Truck not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
     // P0-002 FIX: Validate truck approval status before allowing posting
     // Only approved trucks can be posted to the loadboard
-    if (truck.approvalStatus !== 'APPROVED') {
+    if (truck.approvalStatus !== "APPROVED") {
       return NextResponse.json(
         {
-          error: 'Only approved trucks can be posted to the loadboard',
+          error: "Only approved trucks can be posted to the loadboard",
           currentStatus: truck.approvalStatus,
-          hint: 'Please wait for admin approval before posting this truck',
+          hint: "Please wait for admin approval before posting this truck",
         },
         { status: 403 }
       );
@@ -271,12 +293,12 @@ export async function POST(request: NextRequest) {
     const hasElevatedPerms = hasElevatedPermissions({
       role: session.role as UserRole,
       organizationId: session.organizationId,
-      userId: session.userId
+      userId: session.userId,
     });
 
     if (truck.carrierId !== session.organizationId && !hasElevatedPerms) {
       return NextResponse.json(
-        { error: 'You can only post trucks owned by your organization' },
+        { error: "You can only post trucks owned by your organization" },
         { status: 403 }
       );
     }
@@ -303,7 +325,7 @@ export async function POST(request: NextRequest) {
         ownerName: data.ownerName || null,
         notes: data.notes || null,
         expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
-        status: 'ACTIVE',
+        status: "ACTIVE",
       },
       include: {
         truck: {
@@ -339,18 +361,19 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json(posting, { status: 201 });
 
     // Add rate limit headers
-    response.headers.set('X-RateLimit-Limit', rateLimitResult.limit.toString());
-    response.headers.set('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
-    response.headers.set('X-RateLimit-Reset', new Date(rateLimitResult.resetTime).toISOString());
+    response.headers.set("X-RateLimit-Limit", rateLimitResult.limit.toString());
+    response.headers.set(
+      "X-RateLimit-Remaining",
+      rateLimitResult.remaining.toString()
+    );
+    response.headers.set(
+      "X-RateLimit-Reset",
+      new Date(rateLimitResult.resetTime).toISOString()
+    );
 
     return response;
   } catch (error) {
-    console.error('Error creating truck posting:', error);
-
-    return NextResponse.json(
-      { error: 'Failed to create truck posting' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Error creating truck posting");
   }
 }
 
@@ -375,35 +398,43 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
 
-    const organizationId = searchParams.get('organizationId');
-    const originCityId = searchParams.get('originCityId');
-    const destinationCityId = searchParams.get('destinationCityId');
-    const origin = searchParams.get('origin'); // City name search
-    const destination = searchParams.get('destination'); // City name search
-    const truckType = searchParams.get('truckType');
-    const fullPartial = searchParams.get('fullPartial');
-    const statusParam = searchParams.get('status');
-    const limitParam = searchParams.get('limit');
-    const offsetParam = searchParams.get('offset');
-    const includeMatchCount = searchParams.get('includeMatchCount') === 'true';
+    const organizationId = searchParams.get("organizationId");
+    const originCityId = searchParams.get("originCityId");
+    const destinationCityId = searchParams.get("destinationCityId");
+    const origin = searchParams.get("origin"); // City name search
+    const destination = searchParams.get("destination"); // City name search
+    const truckType = searchParams.get("truckType");
+    const fullPartial = searchParams.get("fullPartial");
+    const statusParam = searchParams.get("status");
+    const limitParam = searchParams.get("limit");
+    const offsetParam = searchParams.get("offset");
+    const includeMatchCount = searchParams.get("includeMatchCount") === "true";
 
     // Valid PostingStatus values from Prisma schema
-    const validStatuses = ['ACTIVE', 'EXPIRED', 'CANCELLED', 'MATCHED'] as const;
+    const validStatuses = [
+      "ACTIVE",
+      "EXPIRED",
+      "CANCELLED",
+      "MATCHED",
+    ] as const;
 
     // Validate status BEFORE using it - fail fast on invalid input
-    if (statusParam && !validStatuses.includes(statusParam as typeof validStatuses[number])) {
+    if (
+      statusParam &&
+      !validStatuses.includes(statusParam as (typeof validStatuses)[number])
+    ) {
       return NextResponse.json(
         {
-          error: `Invalid status '${statusParam}'. Valid values: ${validStatuses.join(', ')}`,
-          hint: 'For trucks without active postings, use /api/trucks?hasActivePosting=false'
+          error: `Invalid status '${statusParam}'. Valid values: ${validStatuses.join(", ")}`,
+          hint: "For trucks without active postings, use /api/trucks?hasActivePosting=false",
         },
         { status: 400 }
       );
     }
 
     // Default to ACTIVE only after validation passes
-    const status = statusParam || 'ACTIVE';
-    const validatedStatus = status || 'ACTIVE';
+    const status = statusParam || "ACTIVE";
+    const validatedStatus = status || "ACTIVE";
 
     // If filtering by specific organization (for "my postings"), verify user has access
     if (organizationId) {
@@ -413,21 +444,24 @@ export async function GET(request: NextRequest) {
       const hasElevatedPerms = hasElevatedPermissions({
         role: session.role as UserRole,
         organizationId: session.organizationId,
-        userId: session.userId
+        userId: session.userId,
       });
 
       // User can only filter by their own organization unless they have elevated permissions
       if (organizationId !== session.organizationId && !hasElevatedPerms) {
         return NextResponse.json(
-          { error: 'You can only view postings for your own organization' },
+          { error: "You can only view postings for your own organization" },
           { status: 403 }
         );
       }
     }
 
     // Pagination with NaN handling
-    const limit = Math.min(Math.max(parseInt(limitParam || '20', 10) || 20, 1), 100);
-    const offset = Math.max(parseInt(offsetParam || '0', 10) || 0, 0);
+    const limit = Math.min(
+      Math.max(parseInt(limitParam || "20", 10) || 20, 1),
+      100
+    );
+    const offset = Math.max(parseInt(offsetParam || "0", 10) || 0, 0);
 
     // PHASE 4: Convert city names to IDs in parallel (N+1 fix)
     let resolvedOriginCityId = originCityId;
@@ -435,31 +469,45 @@ export async function GET(request: NextRequest) {
 
     // Run city lookups in parallel if needed
     // Escape LIKE wildcards to prevent injection
-    const escapeLikeWildcards = (str: string) => str.replace(/[%_]/g, '\\$&');
+    const escapeLikeWildcards = (str: string) => str.replace(/[%_]/g, "\\$&");
     const cityLookups = [];
     if (origin && !originCityId) {
       cityLookups.push(
-        db.ethiopianLocation.findFirst({
-          where: { name: { contains: escapeLikeWildcards(origin), mode: 'insensitive' } },
-          select: { id: true },
-        }).then(city => ({ type: 'origin', city }))
+        db.ethiopianLocation
+          .findFirst({
+            where: {
+              name: {
+                contains: escapeLikeWildcards(origin),
+                mode: "insensitive",
+              },
+            },
+            select: { id: true },
+          })
+          .then((city) => ({ type: "origin", city }))
       );
     }
     if (destination && !destinationCityId) {
       cityLookups.push(
-        db.ethiopianLocation.findFirst({
-          where: { name: { contains: escapeLikeWildcards(destination), mode: 'insensitive' } },
-          select: { id: true },
-        }).then(city => ({ type: 'destination', city }))
+        db.ethiopianLocation
+          .findFirst({
+            where: {
+              name: {
+                contains: escapeLikeWildcards(destination),
+                mode: "insensitive",
+              },
+            },
+            select: { id: true },
+          })
+          .then((city) => ({ type: "destination", city }))
       );
     }
 
     if (cityLookups.length > 0) {
       const results = await Promise.all(cityLookups);
       for (const result of results) {
-        if (result.type === 'origin' && result.city) {
+        if (result.type === "origin" && result.city) {
           resolvedOriginCityId = result.city.id;
-        } else if (result.type === 'destination' && result.city) {
+        } else if (result.type === "destination" && result.city) {
           resolvedDestinationCityId = result.city.id;
         }
       }
@@ -477,7 +525,7 @@ export async function GET(request: NextRequest) {
       where.status = validatedStatus;
     } else {
       // Public view: only ACTIVE postings
-      where.status = 'ACTIVE';
+      where.status = "ACTIVE";
     }
 
     if (resolvedOriginCityId) {
@@ -488,7 +536,7 @@ export async function GET(request: NextRequest) {
       where.destinationCityId = resolvedDestinationCityId;
     }
 
-    if (fullPartial && ['FULL', 'PARTIAL'].includes(fullPartial)) {
+    if (fullPartial && ["FULL", "PARTIAL"].includes(fullPartial)) {
       where.fullPartial = fullPartial;
     }
 
@@ -516,10 +564,7 @@ export async function GET(request: NextRequest) {
               // Check if truck is assigned to any load
               assignedLoad: {
                 where: {
-                  OR: [
-                    { status: 'ASSIGNED' },
-                    { status: 'IN_TRANSIT' },
-                  ],
+                  OR: [{ status: "ASSIGNED" }, { status: "IN_TRANSIT" }],
                 },
                 select: {
                   id: true,
@@ -557,10 +602,7 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        orderBy: [
-          { postedAt: 'desc' },
-          { availableFrom: 'asc' },
-        ],
+        orderBy: [{ postedAt: "desc" }, { availableFrom: "asc" }],
         skip: offset,
         take: limit,
       }),
@@ -572,12 +614,12 @@ export async function GET(request: NextRequest) {
     const transformedPostings = postings.map((posting) => ({
       ...posting,
       // Flatten city names
-      currentCity: posting.originCity?.name || '',
+      currentCity: posting.originCity?.name || "",
       destinationCity: posting.destinationCity?.name || null,
       // Add availableDate for compatibility
       availableDate: posting.availableFrom,
       // Flatten truck info
-      truckType: posting.truck?.truckType || '',
+      truckType: posting.truck?.truckType || "",
       lengthM: posting.truck?.lengthM || posting.availableLength,
       maxWeight: posting.truck?.capacity || posting.availableWeight,
       // Carrier contact is intentionally public - carriers post contact info so shippers can reach them
@@ -585,7 +627,9 @@ export async function GET(request: NextRequest) {
     }));
 
     // Calculate match counts if requested
-    type TransformedPosting = typeof transformedPostings[number] & { matchCount?: number | null };
+    type TransformedPosting = (typeof transformedPostings)[number] & {
+      matchCount?: number | null;
+    };
     let postingsWithMatchCount: TransformedPosting[] = transformedPostings;
     if (includeMatchCount) {
       // Fetch all posted loads for matching
@@ -593,7 +637,7 @@ export async function GET(request: NextRequest) {
       // This is intentional to prevent slow queries on large datasets
       // For more matches, use dedicated /api/matches endpoint with pagination
       const loads = await db.load.findMany({
-        where: { status: 'POSTED' },
+        where: { status: "POSTED" },
         select: {
           id: true,
           pickupCity: true,
@@ -605,13 +649,15 @@ export async function GET(request: NextRequest) {
           fullPartial: true,
         },
         take: 1000,
-        orderBy: { createdAt: 'desc' }, // Most recent loads first
+        orderBy: { createdAt: "desc" }, // Most recent loads first
       });
 
       // Pre-filter and transform loads once for performance
       const loadsCriteria = loads
-        .filter(load => load.pickupCity && load.deliveryCity && load.truckType)
-        .map(load => ({
+        .filter(
+          (load) => load.pickupCity && load.deliveryCity && load.truckType
+        )
+        .map((load) => ({
           pickupCity: load.pickupCity!,
           deliveryCity: load.deliveryCity!,
           pickupDate: load.pickupDate,
@@ -660,11 +706,6 @@ export async function GET(request: NextRequest) {
       offset,
     });
   } catch (error) {
-    console.error('Error fetching truck postings:', error);
-
-    return NextResponse.json(
-      { error: 'Failed to fetch truck postings' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Error fetching truck postings");
   }
 }

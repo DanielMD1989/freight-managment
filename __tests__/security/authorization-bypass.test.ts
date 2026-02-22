@@ -196,7 +196,7 @@ describe("Authorization Bypass Tests", () => {
       });
 
       const res = await createTruck(req);
-      expect([403, 500]).toContain(res.status);
+      expect(res.status).toBe(403);
     });
 
     it("should reject shipper creating load requests (carrier action)", async () => {
@@ -252,7 +252,7 @@ describe("Authorization Bypass Tests", () => {
       });
 
       const res = await createLoad(req);
-      expect([401, 500]).toContain(res.status);
+      expect(res.status).toBe(401);
     });
 
     it("should reject unauthenticated truck creation", async () => {
@@ -265,14 +265,14 @@ describe("Authorization Bypass Tests", () => {
       });
 
       const res = await createTruck(req);
-      expect([401, 500]).toContain(res.status);
+      expect(res.status).toBe(401);
     });
 
     it("should reject unauthenticated trip listing", async () => {
       const req = createRequest("GET", "http://localhost:3000/api/trips");
 
       const res = await listTrips(req);
-      expect([401, 500]).toContain(res.status);
+      expect(res.status).toBe(401);
     });
 
     it("should reject unauthenticated trip update", async () => {
@@ -287,7 +287,7 @@ describe("Authorization Bypass Tests", () => {
       const res = await callHandler(updateTrip, req, {
         tripId: "auth-test-trip",
       });
-      expect([401, 500]).toContain(res.status);
+      expect(res.status).toBe(401);
     });
 
     it("should reject unauthenticated wallet access", async () => {
@@ -297,7 +297,7 @@ describe("Authorization Bypass Tests", () => {
       );
 
       const res = await getWalletBalance(req);
-      expect([401, 500]).toContain(res.status);
+      expect(res.status).toBe(401);
     });
 
     it("should reject unauthenticated load request creation", async () => {
@@ -310,7 +310,7 @@ describe("Authorization Bypass Tests", () => {
       );
 
       const res = await createLoadRequest(req);
-      expect([401, 500]).toContain(res.status);
+      expect(res.status).toBe(401);
     });
 
     it("should reject unauthenticated truck request creation", async () => {
@@ -323,7 +323,7 @@ describe("Authorization Bypass Tests", () => {
       );
 
       const res = await createTruckRequest(req);
-      expect([401, 500]).toContain(res.status);
+      expect(res.status).toBe(401);
     });
   });
 
@@ -383,7 +383,7 @@ describe("Authorization Bypass Tests", () => {
       );
 
       const res = await createPosting(req);
-      expect([403, 500]).toContain(res.status);
+      expect(res.status).toBe(403);
     });
 
     it("should reject REJECTED user accessing wallet", async () => {
@@ -404,7 +404,7 @@ describe("Authorization Bypass Tests", () => {
       );
       const res = await getWalletBalance(req);
       // May be 200 (if only requireAuth) or 403 (if requireActiveUser)
-      expect([200, 400, 401, 403, 500]).toContain(res.status);
+      expect([200, 400, 401, 403]).toContain(res.status);
     });
   });
 
@@ -449,7 +449,7 @@ describe("Authorization Bypass Tests", () => {
       });
 
       const res = await createTruck(req);
-      expect([403, 500]).toContain(res.status);
+      expect(res.status).toBe(403);
     });
 
     it("should reject dispatcher updating trip status", async () => {

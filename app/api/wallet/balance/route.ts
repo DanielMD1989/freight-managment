@@ -4,9 +4,10 @@
  * Get current wallet balance for organization
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/wallet/balance
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     if (!user?.organizationId) {
       return NextResponse.json(
-        { error: 'User must belong to an organization' },
+        { error: "User must belong to an organization" },
         { status: 400 }
       );
     }
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
       where: {
         organizationId: user.organizationId,
         accountType: {
-          in: ['SHIPPER_WALLET', 'CARRIER_WALLET'],
+          in: ["SHIPPER_WALLET", "CARRIER_WALLET"],
         },
         isActive: true,
       },
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
 
     if (walletAccounts.length === 0) {
       return NextResponse.json(
-        { error: 'No wallet found for organization' },
+        { error: "No wallet found for organization" },
         { status: 404 }
       );
     }
@@ -90,14 +91,10 @@ export async function GET(request: NextRequest) {
         updatedAt: account.updatedAt,
       })),
       totalBalance,
-      currency: walletAccounts[0]?.currency || 'ETB',
+      currency: walletAccounts[0]?.currency || "ETB",
       recentTransactionsCount: recentTransactions,
     });
   } catch (error) {
-    console.error('Get wallet balance error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Get wallet balance error");
   }
 }

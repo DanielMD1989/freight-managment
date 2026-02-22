@@ -8,6 +8,7 @@ import { getSessionAny } from "@/lib/auth";
 import { markAsRead } from "@/lib/notifications";
 import { db } from "@/lib/db";
 import { validateCSRFWithMobile } from "@/lib/csrf";
+import { handleApiError } from "@/lib/apiErrors";
 
 export async function PUT(
   request: NextRequest,
@@ -44,10 +45,6 @@ export async function PUT(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Failed to mark notification as read:", error);
-    return NextResponse.json(
-      { error: "Failed to update notification" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Failed to mark notification as read");
   }
 }

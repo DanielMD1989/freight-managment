@@ -10,14 +10,17 @@ import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { z } from "zod";
-import { zodErrorResponse } from "@/lib/validation";
+import { zodErrorResponse, sanitizeText } from "@/lib/validation";
 import { Prisma } from "@prisma/client";
 
 const createDisputeSchema = z.object({
-  loadId: z.string(),
+  loadId: z.string().max(50),
   type: z.enum(["PAYMENT_ISSUE", "DAMAGE", "LATE_DELIVERY", "OTHER"]),
-  description: z.string().min(10, "Description must be at least 10 characters"),
-  evidence: z.string().optional(),
+  description: z
+    .string()
+    .min(10, "Description must be at least 10 characters")
+    .max(5000),
+  evidence: z.string().max(5000).optional(),
 });
 
 /**
@@ -33,6 +36,11 @@ export async function POST(request: NextRequest) {
     const session = await requireAuth();
     const body = await request.json();
     const validatedData = createDisputeSchema.parse(body);
+
+    // Sanitize user-provided text fields
+    validatedData.description = sanitizeText(validatedData.description, 5000);
+    if (validatedData.evidence)
+      validatedData.evidence = sanitizeText(validatedData.evidence, 5000);
 
     // Verify load exists and user has access
     const load = await db.load.findUnique({

@@ -6,53 +6,65 @@
  * Allows admins to manage corridor pricing configurations
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { z } from 'zod';
-import { Decimal } from 'decimal.js';
-import { calculateFeePreview } from '@/lib/serviceFeeCalculation';
-import { zodErrorResponse } from '@/lib/validation';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { z } from "zod";
+import { Decimal } from "decimal.js";
+import { calculateFeePreview } from "@/lib/serviceFeeCalculation";
+import { handleApiError } from "@/lib/apiErrors";
 // M3 FIX: Add CSRF validation
-import { validateCSRFWithMobile } from '@/lib/csrf';
+import { validateCSRFWithMobile } from "@/lib/csrf";
 
 // Use centralized fee preview functions
 const calculatePartyFeePreview = calculateFeePreview;
 const calculateServiceFeePreview = calculateFeePreview;
 
 // Define the enum values directly to avoid Prisma import issues at module load time
-const CORRIDOR_DIRECTIONS = ['ONE_WAY', 'ROUND_TRIP', 'BIDIRECTIONAL'] as const;
-type CorridorDirectionType = typeof CORRIDOR_DIRECTIONS[number];
+const CORRIDOR_DIRECTIONS = ["ONE_WAY", "ROUND_TRIP", "BIDIRECTIONAL"] as const;
+type CorridorDirectionType = (typeof CORRIDOR_DIRECTIONS)[number];
 
 // Ethiopian regions for validation
 const ETHIOPIAN_REGIONS = [
-  'Addis Ababa',
-  'Afar',
-  'Amhara',
-  'Benishangul-Gumuz',
-  'Dire Dawa',
-  'Gambela',
-  'Harari',
-  'Oromia',
-  'Sidama',
-  'Somali',
-  'Southern Nations, Nationalities, and Peoples',
-  'Southwest Ethiopia',
-  'Tigray',
+  "Addis Ababa",
+  "Afar",
+  "Amhara",
+  "Benishangul-Gumuz",
+  "Dire Dawa",
+  "Gambela",
+  "Harari",
+  "Oromia",
+  "Sidama",
+  "Somali",
+  "Southern Nations, Nationalities, and Peoples",
+  "Southwest Ethiopia",
+  "Tigray",
   // Djibouti region for cross-border
-  'Djibouti',
+  "Djibouti",
 ] as const;
 
 const createCorridorSchema = z.object({
   name: z.string().min(3).max(100),
-  originRegion: z.string().refine((val) => ETHIOPIAN_REGIONS.includes(val as typeof ETHIOPIAN_REGIONS[number]), {
-    message: 'Invalid origin region',
-  }),
-  destinationRegion: z.string().refine((val) => ETHIOPIAN_REGIONS.includes(val as typeof ETHIOPIAN_REGIONS[number]), {
-    message: 'Invalid destination region',
-  }),
+  originRegion: z
+    .string()
+    .refine(
+      (val) =>
+        ETHIOPIAN_REGIONS.includes(val as (typeof ETHIOPIAN_REGIONS)[number]),
+      {
+        message: "Invalid origin region",
+      }
+    ),
+  destinationRegion: z
+    .string()
+    .refine(
+      (val) =>
+        ETHIOPIAN_REGIONS.includes(val as (typeof ETHIOPIAN_REGIONS)[number]),
+      {
+        message: "Invalid destination region",
+      }
+    ),
   distanceKm: z.number().positive().max(5000),
-  direction: z.enum(CORRIDOR_DIRECTIONS).default('ONE_WAY'),
+  direction: z.enum(CORRIDOR_DIRECTIONS).default("ONE_WAY"),
   isActive: z.boolean().default(true),
 
   // Shipper pricing
@@ -81,19 +93,19 @@ export async function GET(request: NextRequest) {
     const session = await requireAuth();
 
     // Only admins can view corridors
-    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
+    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: 'Unauthorized - Admin access required' },
+        { error: "Unauthorized - Admin access required" },
         { status: 403 }
       );
     }
 
     const { searchParams } = new URL(request.url);
-    const isActive = searchParams.get('isActive');
-    const originRegion = searchParams.get('originRegion');
-    const destinationRegion = searchParams.get('destinationRegion');
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const isActive = searchParams.get("isActive");
+    const originRegion = searchParams.get("originRegion");
+    const destinationRegion = searchParams.get("destinationRegion");
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "20");
 
     // Build where clause
     const where: {
@@ -102,8 +114,8 @@ export async function GET(request: NextRequest) {
       destinationRegion?: string;
     } = {};
 
-    if (isActive !== null && isActive !== '') {
-      where.isActive = isActive === 'true';
+    if (isActive !== null && isActive !== "") {
+      where.isActive = isActive === "true";
     }
     if (originRegion) {
       where.originRegion = originRegion;
@@ -133,88 +145,100 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: [
-        { originRegion: 'asc' },
-        { destinationRegion: 'asc' },
-      ],
+      orderBy: [{ originRegion: "asc" }, { destinationRegion: "asc" }],
       skip: (page - 1) * limit,
       take: limit,
     });
 
     return NextResponse.json({
-      corridors: corridors.map((corridor) => {
-        // Get shipper and carrier prices (with fallback to legacy fields)
-        const shipperPricePerKm = corridor.shipperPricePerKm
-          ? Number(corridor.shipperPricePerKm)
-          : Number(corridor.pricePerKm);
-        const carrierPricePerKm = corridor.carrierPricePerKm
-          ? Number(corridor.carrierPricePerKm)
-          : 0;
+      corridors: corridors
+        .map((corridor) => {
+          // Get shipper and carrier prices (with fallback to legacy fields)
+          const shipperPricePerKm = corridor.shipperPricePerKm
+            ? Number(corridor.shipperPricePerKm)
+            : Number(corridor.pricePerKm);
+          const carrierPricePerKm = corridor.carrierPricePerKm
+            ? Number(corridor.carrierPricePerKm)
+            : 0;
 
-        return {
-          id: corridor.id,
-          name: corridor.name,
-          originRegion: corridor.originRegion,
-          destinationRegion: corridor.destinationRegion,
-          distanceKm: Number(corridor.distanceKm),
-          direction: corridor.direction,
-          isActive: corridor.isActive,
-          createdAt: corridor.createdAt,
-          updatedAt: corridor.updatedAt,
-          createdBy: corridor.createdBy,
-          loadsCount: corridor._count.loads,
+          return {
+            id: corridor.id,
+            name: corridor.name,
+            originRegion: corridor.originRegion,
+            destinationRegion: corridor.destinationRegion,
+            distanceKm: Number(corridor.distanceKm),
+            direction: corridor.direction,
+            isActive: corridor.isActive,
+            createdAt: corridor.createdAt,
+            updatedAt: corridor.updatedAt,
+            createdBy: corridor.createdBy,
+            loadsCount: corridor._count.loads,
 
-          // Shipper pricing
-          shipperPricePerKm,
-          shipperPromoFlag: corridor.shipperPromoFlag || corridor.promoFlag,
-          shipperPromoPct: corridor.shipperPromoPct
-            ? Number(corridor.shipperPromoPct)
-            : corridor.promoDiscountPct
+            // Shipper pricing
+            shipperPricePerKm,
+            shipperPromoFlag: corridor.shipperPromoFlag || corridor.promoFlag,
+            shipperPromoPct: corridor.shipperPromoPct
+              ? Number(corridor.shipperPromoPct)
+              : corridor.promoDiscountPct
+                ? Number(corridor.promoDiscountPct)
+                : null,
+
+            // Carrier pricing
+            carrierPricePerKm,
+            carrierPromoFlag: corridor.carrierPromoFlag,
+            carrierPromoPct: corridor.carrierPromoPct
+              ? Number(corridor.carrierPromoPct)
+              : null,
+
+            // Legacy fields
+            pricePerKm: Number(corridor.pricePerKm),
+            promoFlag: corridor.promoFlag,
+            promoDiscountPct: corridor.promoDiscountPct
               ? Number(corridor.promoDiscountPct)
               : null,
 
-          // Carrier pricing
-          carrierPricePerKm,
-          carrierPromoFlag: corridor.carrierPromoFlag,
-          carrierPromoPct: corridor.carrierPromoPct ? Number(corridor.carrierPromoPct) : null,
+            // Fee previews for both parties
+            feePreview: {
+              shipper: calculatePartyFeePreview(
+                Number(corridor.distanceKm),
+                shipperPricePerKm,
+                corridor.shipperPromoFlag || corridor.promoFlag,
+                corridor.shipperPromoPct
+                  ? Number(corridor.shipperPromoPct)
+                  : corridor.promoDiscountPct
+                    ? Number(corridor.promoDiscountPct)
+                    : null
+              ),
+              carrier: calculatePartyFeePreview(
+                Number(corridor.distanceKm),
+                carrierPricePerKm,
+                corridor.carrierPromoFlag,
+                corridor.carrierPromoPct
+                  ? Number(corridor.carrierPromoPct)
+                  : null
+              ),
+              totalPlatformFee: 0, // Will be calculated below
+            },
 
-          // Legacy fields
-          pricePerKm: Number(corridor.pricePerKm),
-          promoFlag: corridor.promoFlag,
-          promoDiscountPct: corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null,
-
-          // Fee previews for both parties
+            // Legacy preview
+            serviceFeePreview: calculateServiceFeePreview(
+              Number(corridor.distanceKm),
+              Number(corridor.pricePerKm),
+              corridor.promoFlag,
+              corridor.promoDiscountPct
+                ? Number(corridor.promoDiscountPct)
+                : null
+            ),
+          };
+        })
+        .map((c) => ({
+          ...c,
           feePreview: {
-            shipper: calculatePartyFeePreview(
-              Number(corridor.distanceKm),
-              shipperPricePerKm,
-              corridor.shipperPromoFlag || corridor.promoFlag,
-              corridor.shipperPromoPct ? Number(corridor.shipperPromoPct) : corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null
-            ),
-            carrier: calculatePartyFeePreview(
-              Number(corridor.distanceKm),
-              carrierPricePerKm,
-              corridor.carrierPromoFlag,
-              corridor.carrierPromoPct ? Number(corridor.carrierPromoPct) : null
-            ),
-            totalPlatformFee: 0, // Will be calculated below
+            ...c.feePreview,
+            totalPlatformFee:
+              c.feePreview.shipper.finalFee + c.feePreview.carrier.finalFee,
           },
-
-          // Legacy preview
-          serviceFeePreview: calculateServiceFeePreview(
-            Number(corridor.distanceKm),
-            Number(corridor.pricePerKm),
-            corridor.promoFlag,
-            corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null
-          ),
-        };
-      }).map(c => ({
-        ...c,
-        feePreview: {
-          ...c.feePreview,
-          totalPlatformFee: c.feePreview.shipper.finalFee + c.feePreview.carrier.finalFee,
-        },
-      })),
+        })),
       pagination: {
         page,
         limit,
@@ -224,12 +248,7 @@ export async function GET(request: NextRequest) {
       regions: ETHIOPIAN_REGIONS,
     });
   } catch (error) {
-    // L4 FIX: Server-side logging intentional for debugging - errors not exposed to client
-    console.error('Get corridors error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Get corridors error");
   }
 }
 
@@ -247,9 +266,9 @@ export async function POST(request: NextRequest) {
     const session = await requireAuth();
 
     // Only admins can create corridors
-    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
+    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: 'Unauthorized - Admin access required' },
+        { error: "Unauthorized - Admin access required" },
         { status: 403 }
       );
     }
@@ -271,7 +290,7 @@ export async function POST(request: NextRequest) {
     if (existing) {
       return NextResponse.json(
         {
-          error: 'Corridor already exists',
+          error: "Corridor already exists",
           message: `A corridor from ${validatedData.originRegion} to ${validatedData.destinationRegion} (${validatedData.direction}) already exists`,
         },
         { status: 409 }
@@ -279,7 +298,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine shipper price (use new field or legacy)
-    const shipperPrice = validatedData.shipperPricePerKm ?? validatedData.pricePerKm ?? 0;
+    const shipperPrice =
+      validatedData.shipperPricePerKm ?? validatedData.pricePerKm ?? 0;
     const carrierPrice = validatedData.carrierPricePerKm ?? 0;
 
     // Create corridor
@@ -296,7 +316,8 @@ export async function POST(request: NextRequest) {
         // Shipper pricing
         pricePerKm: new Decimal(shipperPrice), // Legacy field
         shipperPricePerKm: new Decimal(shipperPrice),
-        shipperPromoFlag: validatedData.shipperPromoFlag || validatedData.promoFlag,
+        shipperPromoFlag:
+          validatedData.shipperPromoFlag || validatedData.promoFlag,
         shipperPromoPct: validatedData.shipperPromoPct
           ? new Decimal(validatedData.shipperPromoPct)
           : validatedData.promoDiscountPct
@@ -332,53 +353,50 @@ export async function POST(request: NextRequest) {
       validatedData.carrierPromoPct ?? null
     );
 
-    return NextResponse.json({
-      message: 'Corridor created successfully',
-      corridor: {
-        id: corridor.id,
-        name: corridor.name,
-        originRegion: corridor.originRegion,
-        destinationRegion: corridor.destinationRegion,
-        distanceKm: Number(corridor.distanceKm),
-        direction: corridor.direction,
-        isActive: corridor.isActive,
-
-        // Shipper pricing
-        shipperPricePerKm: shipperPrice,
-        shipperPromoFlag: validatedData.shipperPromoFlag || validatedData.promoFlag,
-        shipperPromoPct: validatedData.shipperPromoPct ?? validatedData.promoDiscountPct ?? null,
-
-        // Carrier pricing
-        carrierPricePerKm: carrierPrice,
-        carrierPromoFlag: validatedData.carrierPromoFlag,
-        carrierPromoPct: validatedData.carrierPromoPct ?? null,
-
-        // Fee preview
-        feePreview: {
-          shipper: shipperFee,
-          carrier: carrierFee,
-          totalPlatformFee: shipperFee.finalFee + carrierFee.finalFee,
-        },
-
-        // Legacy fields
-        pricePerKm: shipperPrice,
-        promoFlag: validatedData.promoFlag,
-        promoDiscountPct: validatedData.promoDiscountPct ?? null,
-        serviceFeePreview: shipperFee,
-      },
-    }, { status: 201 });
-  } catch (error) {
-    // L4 FIX: Server-side logging intentional for debugging - errors not exposed to client
-    console.error('Create corridor error:', error);
-
-    if (error instanceof z.ZodError) {
-      return zodErrorResponse(error);
-    }
-
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      {
+        message: "Corridor created successfully",
+        corridor: {
+          id: corridor.id,
+          name: corridor.name,
+          originRegion: corridor.originRegion,
+          destinationRegion: corridor.destinationRegion,
+          distanceKm: Number(corridor.distanceKm),
+          direction: corridor.direction,
+          isActive: corridor.isActive,
+
+          // Shipper pricing
+          shipperPricePerKm: shipperPrice,
+          shipperPromoFlag:
+            validatedData.shipperPromoFlag || validatedData.promoFlag,
+          shipperPromoPct:
+            validatedData.shipperPromoPct ??
+            validatedData.promoDiscountPct ??
+            null,
+
+          // Carrier pricing
+          carrierPricePerKm: carrierPrice,
+          carrierPromoFlag: validatedData.carrierPromoFlag,
+          carrierPromoPct: validatedData.carrierPromoPct ?? null,
+
+          // Fee preview
+          feePreview: {
+            shipper: shipperFee,
+            carrier: carrierFee,
+            totalPlatformFee: shipperFee.finalFee + carrierFee.finalFee,
+          },
+
+          // Legacy fields
+          pricePerKm: shipperPrice,
+          promoFlag: validatedData.promoFlag,
+          promoDiscountPct: validatedData.promoDiscountPct ?? null,
+          serviceFeePreview: shipperFee,
+        },
+      },
+      { status: 201 }
     );
+  } catch (error) {
+    return handleApiError(error, "Create corridor error");
   }
 }
 

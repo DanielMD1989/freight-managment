@@ -4,19 +4,30 @@ import { requireAuth } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
-import { zodErrorResponse } from "@/lib/validation";
+import { zodErrorResponse, sanitizeText } from "@/lib/validation";
 import { Prisma } from "@prisma/client";
 
 const createOrganizationSchema = z.object({
-  name: z.string().min(2, "Organization name must be at least 2 characters"),
-  type: z.enum(["SHIPPER", "CARRIER_COMPANY", "CARRIER_INDIVIDUAL", "LOGISTICS_AGENT"]),
-  description: z.string().optional(),
+  name: z
+    .string()
+    .min(2, "Organization name must be at least 2 characters")
+    .max(200),
+  type: z.enum([
+    "SHIPPER",
+    "CARRIER_COMPANY",
+    "CARRIER_INDIVIDUAL",
+    "LOGISTICS_AGENT",
+  ]),
+  description: z.string().max(2000).optional(),
   contactEmail: z.string().email("Invalid email address"),
-  contactPhone: z.string().min(10, "Phone number must be at least 10 digits"),
-  address: z.string().optional(),
-  city: z.string().optional(),
-  licenseNumber: z.string().optional(),
-  taxId: z.string().optional(),
+  contactPhone: z
+    .string()
+    .min(10, "Phone number must be at least 10 digits")
+    .max(20),
+  address: z.string().max(500).optional(),
+  city: z.string().max(200).optional(),
+  licenseNumber: z.string().max(100).optional(),
+  taxId: z.string().max(50).optional(),
 });
 
 // POST /api/organizations - Create organization
@@ -43,6 +54,13 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const validatedData = createOrganizationSchema.parse(body);
+
+    // Sanitize user-provided text fields
+    validatedData.name = sanitizeText(validatedData.name, 200);
+    if (validatedData.description)
+      validatedData.description = sanitizeText(validatedData.description, 2000);
+    if (validatedData.address)
+      validatedData.address = sanitizeText(validatedData.address, 500);
 
     // HIGH FIX #4: Wrap organization + financial account creation in transaction
     const accountType =

@@ -19,28 +19,36 @@
  * 3. Implement proper audit trail for compliance
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth, requireActiveUser } from '@/lib/auth';
-import { Permission } from '@/lib/rbac';
-import { hasPermission } from '@/lib/rbac/permissions';
-import { z } from 'zod';
-import { UserRole, UserStatus } from '@prisma/client';
-import { zodErrorResponse } from '@/lib/validation';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth, requireActiveUser } from "@/lib/auth";
+import { Permission } from "@/lib/rbac";
+import { hasPermission } from "@/lib/rbac/permissions";
+import { z } from "zod";
+import { UserRole, UserStatus } from "@prisma/client";
+import { handleApiError } from "@/lib/apiErrors";
 // CSRF FIX: Add CSRF validation
-import { validateCSRFWithMobile } from '@/lib/csrf';
+import { validateCSRFWithMobile } from "@/lib/csrf";
 // H2-H6, M12 FIX: Import types for proper typing
-import type { UserUpdateData } from '@/lib/types/admin';
+import type { UserUpdateData } from "@/lib/types/admin";
 
 // Roles that Admin cannot manage (only SuperAdmin can)
-const ADMIN_PROTECTED_ROLES: UserRole[] = ['ADMIN', 'SUPER_ADMIN'];
+const ADMIN_PROTECTED_ROLES: UserRole[] = ["ADMIN", "SUPER_ADMIN"];
 
 // Roles that Admin can manage
-const OPERATIONAL_ROLES: UserRole[] = ['CARRIER', 'SHIPPER', 'DISPATCHER'];
+const OPERATIONAL_ROLES: UserRole[] = ["CARRIER", "SHIPPER", "DISPATCHER"];
 
 const updateUserSchema = z.object({
   phone: z.string().min(10).max(20).optional(),
-  status: z.enum(['REGISTERED', 'PENDING_VERIFICATION', 'ACTIVE', 'SUSPENDED', 'REJECTED']).optional(),
+  status: z
+    .enum([
+      "REGISTERED",
+      "PENDING_VERIFICATION",
+      "ACTIVE",
+      "SUSPENDED",
+      "REJECTED",
+    ])
+    .optional(),
   isActive: z.boolean().optional(), // Legacy field
   reason: z.string().max(500).optional(), // Reason for status change
 });
@@ -53,16 +61,16 @@ function canManageUser(
   targetUserRole: UserRole
 ): { allowed: boolean; error?: string } {
   // SuperAdmin can manage anyone
-  if (currentUserRole === 'SUPER_ADMIN') {
+  if (currentUserRole === "SUPER_ADMIN") {
     return { allowed: true };
   }
 
   // Admin can only manage operational roles (Carrier, Shipper, Dispatcher)
-  if (currentUserRole === 'ADMIN') {
+  if (currentUserRole === "ADMIN") {
     if (ADMIN_PROTECTED_ROLES.includes(targetUserRole)) {
       return {
         allowed: false,
-        error: 'Admin cannot modify Admin or SuperAdmin users'
+        error: "Admin cannot modify Admin or SuperAdmin users",
       };
     }
     return { allowed: true };
@@ -71,7 +79,7 @@ function canManageUser(
   // Other roles cannot manage users
   return {
     allowed: false,
-    error: 'You do not have permission to manage users'
+    error: "You do not have permission to manage users",
   };
 }
 
@@ -90,12 +98,13 @@ export async function GET(
     // H2 FIX: Cast to UserRole instead of any
     // Check view permission
     const userRole = session.role as UserRole;
-    const canView = hasPermission(userRole, Permission.VIEW_USERS) ||
-                    hasPermission(userRole, Permission.VIEW_ALL_USERS);
+    const canView =
+      hasPermission(userRole, Permission.VIEW_USERS) ||
+      hasPermission(userRole, Permission.VIEW_ALL_USERS);
 
     if (!canView) {
       return NextResponse.json(
-        { error: 'You do not have permission to view users' },
+        { error: "You do not have permission to view users" },
         { status: 403 }
       );
     }
@@ -129,34 +138,23 @@ export async function GET(
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Admin cannot view SuperAdmin/Admin details (only SuperAdmin can)
-    if (session.role === 'ADMIN' && ADMIN_PROTECTED_ROLES.includes(user.role as UserRole)) {
+    if (
+      session.role === "ADMIN" &&
+      ADMIN_PROTECTED_ROLES.includes(user.role as UserRole)
+    ) {
       return NextResponse.json(
-        { error: 'You do not have permission to view this user' },
+        { error: "You do not have permission to view this user" },
         { status: 403 }
       );
     }
 
     return NextResponse.json({ user });
-  // H3 FIX: Use unknown type with type guard
-  } catch (error: unknown) {
-    console.error('Get user error:', error);
-
-    const errorMessage = error instanceof Error ? error.message : '';
-    if (errorMessage.includes('Forbidden') || errorMessage.includes('Unauthorized')) {
-      return NextResponse.json({ error: errorMessage }, { status: 403 });
-    }
-
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+  } catch (error) {
+    return handleApiError(error, "Get user error");
   }
 }
 
@@ -196,19 +194,16 @@ export async function PATCH(
     });
 
     if (!targetUser) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Check if current user can manage target user
-    const manageCheck = canManageUser(session.role, targetUser.role as UserRole);
+    const manageCheck = canManageUser(
+      session.role,
+      targetUser.role as UserRole
+    );
     if (!manageCheck.allowed) {
-      return NextResponse.json(
-        { error: manageCheck.error },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: manageCheck.error }, { status: 403 });
     }
 
     // Parse and validate request body
@@ -227,7 +222,7 @@ export async function PATCH(
       // Check CHANGE_USER_PHONE permission
       if (!hasPermission(sessionRole, Permission.CHANGE_USER_PHONE)) {
         return NextResponse.json(
-          { error: 'You do not have permission to change user phone numbers' },
+          { error: "You do not have permission to change user phone numbers" },
           { status: 403 }
         );
       }
@@ -235,14 +230,19 @@ export async function PATCH(
       // Prevent changing own phone
       if (userId === session.userId) {
         return NextResponse.json(
-          { error: 'You cannot change your own phone number. Contact a supervisor.' },
+          {
+            error:
+              "You cannot change your own phone number. Contact a supervisor.",
+          },
           { status: 403 }
         );
       }
 
       updateData.phone = validatedData.phone;
       updateData.isPhoneVerified = false; // Reset verification on phone change
-      changes.push(`phone: ${targetUser.phone || 'none'} → ${validatedData.phone}`);
+      changes.push(
+        `phone: ${targetUser.phone || "none"} → ${validatedData.phone}`
+      );
     }
 
     // Status change
@@ -250,7 +250,7 @@ export async function PATCH(
       // Check ACTIVATE_DEACTIVATE_USERS permission
       if (!hasPermission(sessionRole, Permission.ACTIVATE_DEACTIVATE_USERS)) {
         return NextResponse.json(
-          { error: 'You do not have permission to change user status' },
+          { error: "You do not have permission to change user status" },
           { status: 403 }
         );
       }
@@ -268,7 +268,7 @@ export async function PATCH(
     // Check if there's anything to update
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json(
-        { error: 'No valid fields to update' },
+        { error: "No valid fields to update" },
         { status: 400 }
       );
     }
@@ -293,28 +293,12 @@ export async function PATCH(
 
     // Log the action
     return NextResponse.json({
-      message: 'User updated successfully',
+      message: "User updated successfully",
       user: updatedUser,
       changes,
     });
-
-  // H5 FIX: Use unknown type with type guard
-  } catch (error: unknown) {
-    console.error('Update user error:', error);
-
-    if (error instanceof z.ZodError) {
-      return zodErrorResponse(error);
-    }
-
-    const errorMessage = error instanceof Error ? error.message : '';
-    if (errorMessage.includes('Forbidden') || errorMessage.includes('Unauthorized')) {
-      return NextResponse.json({ error: errorMessage }, { status: 403 });
-    }
-
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+  } catch (error) {
+    return handleApiError(error, "Update user error");
   }
 }
 
@@ -342,7 +326,7 @@ export async function DELETE(
     // Cannot delete yourself
     if (userId === session.userId) {
       return NextResponse.json(
-        { error: 'You cannot delete your own account' },
+        { error: "You cannot delete your own account" },
         { status: 403 }
       );
     }
@@ -360,10 +344,7 @@ export async function DELETE(
     });
 
     if (!targetUser) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Check delete permissions based on target role
@@ -373,15 +354,20 @@ export async function DELETE(
       // Deleting Admin/SuperAdmin requires DELETE_ADMIN permission
       if (!hasPermission(session.role as UserRole, Permission.DELETE_ADMIN)) {
         return NextResponse.json(
-          { error: 'Only SuperAdmin can delete Admin users' },
+          { error: "Only SuperAdmin can delete Admin users" },
           { status: 403 }
         );
       }
     } else {
       // Deleting operational roles requires DELETE_NON_ADMIN_USERS permission
-      if (!hasPermission(session.role as UserRole, Permission.DELETE_NON_ADMIN_USERS)) {
+      if (
+        !hasPermission(
+          session.role as UserRole,
+          Permission.DELETE_NON_ADMIN_USERS
+        )
+      ) {
         return NextResponse.json(
-          { error: 'You do not have permission to delete users' },
+          { error: "You do not have permission to delete users" },
           { status: 403 }
         );
       }
@@ -394,7 +380,7 @@ export async function DELETE(
       where: { id: userId },
       data: {
         isActive: false,
-        status: 'SUSPENDED',
+        status: "SUSPENDED",
         // Optionally anonymize: email: `deleted_${userId}@deleted.local`
       },
       select: {
@@ -409,22 +395,10 @@ export async function DELETE(
 
     // Log the deletion
     return NextResponse.json({
-      message: 'User deleted successfully',
+      message: "User deleted successfully",
       user: deletedUser,
     });
-
-  // H6 FIX: Use unknown type with type guard
-  } catch (error: unknown) {
-    console.error('Delete user error:', error);
-
-    const errorMessage = error instanceof Error ? error.message : '';
-    if (errorMessage.includes('Forbidden') || errorMessage.includes('Unauthorized')) {
-      return NextResponse.json({ error: errorMessage }, { status: 403 });
-    }
-
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+  } catch (error) {
+    return handleApiError(error, "Delete user error");
   }
 }

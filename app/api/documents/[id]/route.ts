@@ -17,17 +17,18 @@
  * Sprint 9 - Story 9.8: Email Notifications
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { VerificationStatus } from '@prisma/client';
-import { requireAuth } from '@/lib/auth';
-import { requirePermission, Permission } from '@/lib/rbac';
-import { requireCSRF } from '@/lib/csrf';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { VerificationStatus } from "@prisma/client";
+import { requireAuth } from "@/lib/auth";
+import { requirePermission, Permission } from "@/lib/rbac";
+import { requireCSRF } from "@/lib/csrf";
+import { handleApiError } from "@/lib/apiErrors";
 import {
   sendEmail,
   createDocumentApprovalEmail,
   createDocumentRejectionEmail,
-} from '@/lib/email';
+} from "@/lib/email";
 
 /**
  * GET /api/documents/[id]
@@ -57,18 +58,18 @@ export async function GET(
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
-    const entityType = searchParams.get('entityType');
+    const entityType = searchParams.get("entityType");
 
     // Validate ID format
-    if (!id || typeof id !== 'string' || id.length < 10) {
+    if (!id || typeof id !== "string" || id.length < 10) {
       return NextResponse.json(
-        { error: 'Invalid document ID format' },
+        { error: "Invalid document ID format" },
         { status: 400 }
       );
     }
 
     // Validate entity type
-    if (!entityType || !['company', 'truck'].includes(entityType)) {
+    if (!entityType || !["company", "truck"].includes(entityType)) {
       return NextResponse.json(
         { error: 'entityType must be "company" or "truck"' },
         { status: 400 }
@@ -79,7 +80,7 @@ export async function GET(
     const session = await requireAuth();
 
     // Fetch document based on entity type
-    if (entityType === 'company') {
+    if (entityType === "company") {
       const document = await db.companyDocument.findUnique({
         where: { id },
         include: {
@@ -94,15 +95,18 @@ export async function GET(
 
       if (!document) {
         return NextResponse.json(
-          { error: 'Document not found' },
+          { error: "Document not found" },
           { status: 404 }
         );
       }
 
       // Verify user has access (owner or admin)
-      if (document.organizationId !== session.organizationId && session.role !== 'ADMIN') {
+      if (
+        document.organizationId !== session.organizationId &&
+        session.role !== "ADMIN"
+      ) {
         return NextResponse.json(
-          { error: 'You can only view documents for your own organization' },
+          { error: "You can only view documents for your own organization" },
           { status: 403 }
         );
       }
@@ -127,15 +131,21 @@ export async function GET(
 
       if (!document) {
         return NextResponse.json(
-          { error: 'Document not found' },
+          { error: "Document not found" },
           { status: 404 }
         );
       }
 
       // Verify user has access (owner or admin)
-      if (document.truck.carrierId !== session.organizationId && session.role !== 'ADMIN') {
+      if (
+        document.truck.carrierId !== session.organizationId &&
+        session.role !== "ADMIN"
+      ) {
         return NextResponse.json(
-          { error: 'You can only view documents for trucks owned by your organization' },
+          {
+            error:
+              "You can only view documents for trucks owned by your organization",
+          },
           { status: 403 }
         );
       }
@@ -145,14 +155,8 @@ export async function GET(
         fileSize: Number(document.fileSize),
       });
     }
-  // FIX: Use unknown type
-  } catch (error: unknown) {
-    console.error('Error fetching document:', error);
-
-    return NextResponse.json(
-      { error: 'Failed to fetch document' },
-      { status: 500 }
-    );
+  } catch (error) {
+    return handleApiError(error, "Error fetching document");
   }
 }
 
@@ -178,9 +182,9 @@ export async function PATCH(
     const { id } = await params;
 
     // Validate ID format
-    if (!id || typeof id !== 'string' || id.length < 10) {
+    if (!id || typeof id !== "string" || id.length < 10) {
       return NextResponse.json(
-        { error: 'Invalid document ID format' },
+        { error: "Invalid document ID format" },
         { status: 400 }
       );
     }
@@ -199,36 +203,40 @@ export async function PATCH(
     const { entityType, verificationStatus, rejectionReason } = body;
 
     // Validate required fields
-    if (!entityType || !['company', 'truck'].includes(entityType)) {
+    if (!entityType || !["company", "truck"].includes(entityType)) {
       return NextResponse.json(
         { error: 'entityType must be "company" or "truck"' },
         { status: 400 }
       );
     }
 
-    if (!verificationStatus || !['APPROVED', 'REJECTED'].includes(verificationStatus)) {
+    if (
+      !verificationStatus ||
+      !["APPROVED", "REJECTED"].includes(verificationStatus)
+    ) {
       return NextResponse.json(
         { error: 'verificationStatus must be "APPROVED" or "REJECTED"' },
         { status: 400 }
       );
     }
 
-    if (verificationStatus === 'REJECTED' && !rejectionReason) {
+    if (verificationStatus === "REJECTED" && !rejectionReason) {
       return NextResponse.json(
-        { error: 'rejectionReason is required when rejecting a document' },
+        { error: "rejectionReason is required when rejecting a document" },
         { status: 400 }
       );
     }
 
     // Update document based on entity type
-    if (entityType === 'company') {
+    if (entityType === "company") {
       const updated = await db.companyDocument.update({
         where: { id },
         data: {
           verificationStatus: verificationStatus as VerificationStatus,
           verifiedById: session.userId,
           verifiedAt: new Date(),
-          rejectionReason: verificationStatus === 'REJECTED' ? rejectionReason : null,
+          rejectionReason:
+            verificationStatus === "REJECTED" ? rejectionReason : null,
         },
         include: {
           organization: {
@@ -253,36 +261,39 @@ export async function PATCH(
       // Send email notification
       try {
         if (!uploader) {
-          console.error('Uploader not found for document:', id);
+          console.error("Uploader not found for document:", id);
         } else {
           const emailParams = {
             recipientEmail: uploader.email,
-            recipientName: `${uploader.firstName || ''} ${uploader.lastName || ''}`.trim() || 'User',
+            recipientName:
+              `${uploader.firstName || ""} ${uploader.lastName || ""}`.trim() ||
+              "User",
             documentType: updated.type,
             documentName: updated.fileName,
             organizationName: updated.organization.name,
           };
 
-        if (verificationStatus === 'APPROVED') {
-          await sendEmail(
-            createDocumentApprovalEmail({
-              ...emailParams,
-              verifiedAt: updated.verifiedAt!,
-            })
-          );
-        } else {
-          await sendEmail(
-            createDocumentRejectionEmail({
-              ...emailParams,
-              rejectionReason: updated.rejectionReason || 'No reason provided',
-              rejectedAt: updated.verifiedAt!,
-            })
-          );
+          if (verificationStatus === "APPROVED") {
+            await sendEmail(
+              createDocumentApprovalEmail({
+                ...emailParams,
+                verifiedAt: updated.verifiedAt!,
+              })
+            );
+          } else {
+            await sendEmail(
+              createDocumentRejectionEmail({
+                ...emailParams,
+                rejectionReason:
+                  updated.rejectionReason || "No reason provided",
+                rejectedAt: updated.verifiedAt!,
+              })
+            );
+          }
         }
-      }
       } catch (emailError) {
         // Log email error but don't fail the verification
-        console.error('Failed to send verification email:', emailError);
+        console.error("Failed to send verification email:", emailError);
       }
 
       return NextResponse.json({
@@ -296,7 +307,8 @@ export async function PATCH(
           verificationStatus: verificationStatus as VerificationStatus,
           verifiedById: session.userId,
           verifiedAt: new Date(),
-          rejectionReason: verificationStatus === 'REJECTED' ? rejectionReason : null,
+          rejectionReason:
+            verificationStatus === "REJECTED" ? rejectionReason : null,
         },
         include: {
           truck: {
@@ -327,17 +339,19 @@ export async function PATCH(
       // Send email notification
       try {
         if (!uploader) {
-          console.error('Uploader not found for document:', id);
+          console.error("Uploader not found for document:", id);
         } else {
           const emailParams = {
             recipientEmail: uploader.email,
-            recipientName: `${uploader.firstName || ''} ${uploader.lastName || ''}`.trim() || 'User',
+            recipientName:
+              `${uploader.firstName || ""} ${uploader.lastName || ""}`.trim() ||
+              "User",
             documentType: updated.type,
             documentName: updated.fileName,
             organizationName: updated.truck.carrier.name,
           };
 
-          if (verificationStatus === 'APPROVED') {
+          if (verificationStatus === "APPROVED") {
             await sendEmail(
               createDocumentApprovalEmail({
                 ...emailParams,
@@ -348,7 +362,8 @@ export async function PATCH(
             await sendEmail(
               createDocumentRejectionEmail({
                 ...emailParams,
-                rejectionReason: updated.rejectionReason || 'No reason provided',
+                rejectionReason:
+                  updated.rejectionReason || "No reason provided",
                 rejectedAt: updated.verifiedAt!,
               })
             );
@@ -356,7 +371,7 @@ export async function PATCH(
         }
       } catch (emailError) {
         // Log email error but don't fail the verification
-        console.error('Failed to send verification email:', emailError);
+        console.error("Failed to send verification email:", emailError);
       }
 
       return NextResponse.json({
@@ -364,23 +379,17 @@ export async function PATCH(
         document: updated,
       });
     }
-  // FIX: Use unknown type with type guard
   } catch (error: unknown) {
-    console.error('Error updating document:', error);
-
     // Handle Prisma error
     const prismaError = error as { code?: string };
-    if (prismaError?.code === 'P2025') {
+    if (prismaError?.code === "P2025") {
       return NextResponse.json(
-        { error: 'Document not found' },
+        { error: "Document not found" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(
-      { error: 'Failed to update document' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Error updating document");
   }
 }
 
@@ -401,18 +410,18 @@ export async function DELETE(
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
-    const entityType = searchParams.get('entityType');
+    const entityType = searchParams.get("entityType");
 
     // Validate ID format
-    if (!id || typeof id !== 'string' || id.length < 10) {
+    if (!id || typeof id !== "string" || id.length < 10) {
       return NextResponse.json(
-        { error: 'Invalid document ID format' },
+        { error: "Invalid document ID format" },
         { status: 400 }
       );
     }
 
     // Validate entity type
-    if (!entityType || !['company', 'truck'].includes(entityType)) {
+    if (!entityType || !["company", "truck"].includes(entityType)) {
       return NextResponse.json(
         { error: 'entityType must be "company" or "truck"' },
         { status: 400 }
@@ -429,7 +438,7 @@ export async function DELETE(
     }
 
     // Check document exists and is PENDING
-    if (entityType === 'company') {
+    if (entityType === "company") {
       const document = await db.companyDocument.findUnique({
         where: { id },
         select: {
@@ -441,7 +450,7 @@ export async function DELETE(
 
       if (!document) {
         return NextResponse.json(
-          { error: 'Document not found' },
+          { error: "Document not found" },
           { status: 404 }
         );
       }
@@ -449,14 +458,16 @@ export async function DELETE(
       // Verify user is the uploader
       if (document.uploadedById !== session.userId) {
         return NextResponse.json(
-          { error: 'You can only delete documents you uploaded' },
+          { error: "You can only delete documents you uploaded" },
           { status: 403 }
         );
       }
 
-      if (document.verificationStatus !== 'PENDING') {
+      if (document.verificationStatus !== "PENDING") {
         return NextResponse.json(
-          { error: 'Cannot delete document that has been verified or rejected' },
+          {
+            error: "Cannot delete document that has been verified or rejected",
+          },
           { status: 400 }
         );
       }
@@ -467,7 +478,7 @@ export async function DELETE(
       });
 
       return NextResponse.json({
-        message: 'Company document deleted successfully',
+        message: "Company document deleted successfully",
       });
     } else {
       const document = await db.truckDocument.findUnique({
@@ -481,7 +492,7 @@ export async function DELETE(
 
       if (!document) {
         return NextResponse.json(
-          { error: 'Document not found' },
+          { error: "Document not found" },
           { status: 404 }
         );
       }
@@ -489,14 +500,16 @@ export async function DELETE(
       // Verify user is the uploader
       if (document.uploadedById !== session.userId) {
         return NextResponse.json(
-          { error: 'You can only delete documents you uploaded' },
+          { error: "You can only delete documents you uploaded" },
           { status: 403 }
         );
       }
 
-      if (document.verificationStatus !== 'PENDING') {
+      if (document.verificationStatus !== "PENDING") {
         return NextResponse.json(
-          { error: 'Cannot delete document that has been verified or rejected' },
+          {
+            error: "Cannot delete document that has been verified or rejected",
+          },
           { status: 400 }
         );
       }
@@ -507,16 +520,10 @@ export async function DELETE(
       });
 
       return NextResponse.json({
-        message: 'Truck document deleted successfully',
+        message: "Truck document deleted successfully",
       });
     }
-  // FIX: Use unknown type
-  } catch (error: unknown) {
-    console.error('Error deleting document:', error);
-
-    return NextResponse.json(
-      { error: 'Failed to delete document' },
-      { status: 500 }
-    );
+  } catch (error) {
+    return handleApiError(error, "Error deleting document");
   }
 }

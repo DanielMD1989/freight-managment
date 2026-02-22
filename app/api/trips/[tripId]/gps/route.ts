@@ -9,13 +9,18 @@
  * - GPS STOPS when: Trip status = COMPLETED
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { z } from 'zod';
-import { Prisma } from '@prisma/client';
-import { checkRateLimit, withRpsLimit, RATE_LIMIT_GPS_UPDATE, RPS_CONFIGS } from '@/lib/rateLimit';
-import { zodErrorResponse } from '@/lib/validation';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { z } from "zod";
+import { Prisma } from "@prisma/client";
+import {
+  checkRateLimit,
+  withRpsLimit,
+  RATE_LIMIT_GPS_UPDATE,
+  RPS_CONFIGS,
+} from "@/lib/rateLimit";
+import { handleApiError } from "@/lib/apiErrors";
 
 const gpsUpdateSchema = z.object({
   latitude: z.number().min(-90).max(90),
@@ -50,16 +55,19 @@ async function postHandler(
     if (!rateLimitResult.allowed) {
       return NextResponse.json(
         {
-          error: 'GPS update rate limit exceeded. Maximum 12 updates per hour per trip.',
+          error:
+            "GPS update rate limit exceeded. Maximum 12 updates per hour per trip.",
           retryAfter: rateLimitResult.retryAfter,
         },
         {
           status: 429,
           headers: {
-            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
-            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-            'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString(),
-            'Retry-After': rateLimitResult.retryAfter?.toString() || '60',
+            "X-RateLimit-Limit": rateLimitResult.limit.toString(),
+            "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+            "X-RateLimit-Reset": new Date(
+              rateLimitResult.resetTime
+            ).toISOString(),
+            "Retry-After": rateLimitResult.retryAfter?.toString() || "60",
           },
         }
       );
@@ -83,17 +91,15 @@ async function postHandler(
     });
 
     if (!trip) {
-      return NextResponse.json(
-        { error: 'Trip not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
     // GPS writes are restricted to carrier only (from spec)
-    const isCarrier = session.role === 'CARRIER' && trip.carrierId === session.organizationId;
+    const isCarrier =
+      session.role === "CARRIER" && trip.carrierId === session.organizationId;
     if (!isCarrier) {
       return NextResponse.json(
-        { error: 'Only the carrier can update GPS position' },
+        { error: "Only the carrier can update GPS position" },
         { status: 403 }
       );
     }
@@ -101,13 +107,13 @@ async function postHandler(
     // Check if GPS tracking is enabled for this trip
     if (!trip.trackingEnabled) {
       return NextResponse.json(
-        { error: 'GPS tracking is not enabled for this trip' },
+        { error: "GPS tracking is not enabled for this trip" },
         { status: 400 }
       );
     }
 
     // GPS is only active when trip is IN_TRANSIT (per spec)
-    if (trip.status !== 'IN_TRANSIT' && trip.status !== 'PICKUP_PENDING') {
+    if (trip.status !== "IN_TRANSIT" && trip.status !== "PICKUP_PENDING") {
       return NextResponse.json(
         {
           error: `GPS updates are only accepted when trip is IN_TRANSIT or PICKUP_PENDING. Current status: ${trip.status}`,
@@ -116,7 +122,9 @@ async function postHandler(
       );
     }
 
-    const now = validatedData.timestamp ? new Date(validatedData.timestamp) : new Date();
+    const now = validatedData.timestamp
+      ? new Date(validatedData.timestamp)
+      : new Date();
 
     // TD-002 FIX: Wrap all GPS updates in a transaction for atomicity
     const gpsPosition = await db.$transaction(async (tx) => {
@@ -127,7 +135,7 @@ async function postHandler(
         const device = await tx.gpsDevice.create({
           data: {
             imei: `TRUCK-${trip.truck.id}`,
-            status: 'ACTIVE',
+            status: "ACTIVE",
             lastSeenAt: now,
           },
         });
@@ -149,10 +157,18 @@ async function postHandler(
           deviceId: deviceId,
           latitude: new Prisma.Decimal(validatedData.latitude),
           longitude: new Prisma.Decimal(validatedData.longitude),
-          speed: validatedData.speed ? new Prisma.Decimal(validatedData.speed) : null,
-          heading: validatedData.heading ? new Prisma.Decimal(validatedData.heading) : null,
-          altitude: validatedData.altitude ? new Prisma.Decimal(validatedData.altitude) : null,
-          accuracy: validatedData.accuracy ? new Prisma.Decimal(validatedData.accuracy) : null,
+          speed: validatedData.speed
+            ? new Prisma.Decimal(validatedData.speed)
+            : null,
+          heading: validatedData.heading
+            ? new Prisma.Decimal(validatedData.heading)
+            : null,
+          altitude: validatedData.altitude
+            ? new Prisma.Decimal(validatedData.altitude)
+            : null,
+          accuracy: validatedData.accuracy
+            ? new Prisma.Decimal(validatedData.accuracy)
+            : null,
           timestamp: now,
         },
       });
@@ -175,7 +191,7 @@ async function postHandler(
           currentLocationLon: new Prisma.Decimal(validatedData.longitude),
           locationUpdatedAt: now,
           gpsLastSeenAt: now,
-          gpsStatus: 'ACTIVE',
+          gpsStatus: "ACTIVE",
         },
       });
 
@@ -184,7 +200,7 @@ async function postHandler(
         where: { id: deviceId },
         data: {
           lastSeenAt: now,
-          status: 'ACTIVE',
+          status: "ACTIVE",
         },
       });
 
@@ -192,7 +208,7 @@ async function postHandler(
     });
 
     return NextResponse.json({
-      message: 'GPS position updated',
+      message: "GPS position updated",
       position: {
         id: gpsPosition.id,
         latitude: validatedData.latitude,
@@ -203,16 +219,7 @@ async function postHandler(
       },
     });
   } catch (error) {
-    console.error('GPS update error:', error);
-
-    if (error instanceof z.ZodError) {
-      return zodErrorResponse(error);
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to update GPS position' },
-      { status: 500 }
-    );
+    return handleApiError(error, "GPS update error");
   }
 }
 
@@ -233,8 +240,8 @@ async function getHandler(
     const { tripId } = await params;
     const { searchParams } = new URL(request.url);
 
-    const limit = parseInt(searchParams.get('limit') || '1000');
-    const since = searchParams.get('since'); // ISO timestamp
+    const limit = parseInt(searchParams.get("limit") || "1000");
+    const since = searchParams.get("since"); // ISO timestamp
 
     // Get trip
     const trip = await db.trip.findUnique({
@@ -242,29 +249,28 @@ async function getHandler(
     });
 
     if (!trip) {
-      return NextResponse.json(
-        { error: 'Trip not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
     // Check permissions
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
-    const isDispatcher = session.role === 'DISPATCHER';
-    const isCarrier = session.role === 'CARRIER' && trip.carrierId === session.organizationId;
-    const isShipper = session.role === 'SHIPPER' && trip.shipperId === session.organizationId;
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
+    const isDispatcher = session.role === "DISPATCHER";
+    const isCarrier =
+      session.role === "CARRIER" && trip.carrierId === session.organizationId;
+    const isShipper =
+      session.role === "SHIPPER" && trip.shipperId === session.organizationId;
 
     if (!isAdmin && !isDispatcher && !isCarrier && !isShipper) {
       return NextResponse.json(
-        { error: 'You do not have permission to view this trip' },
+        { error: "You do not have permission to view this trip" },
         { status: 403 }
       );
     }
 
     // For shippers, only allow access when trip is IN_TRANSIT or later
-    if (isShipper && trip.status === 'ASSIGNED') {
+    if (isShipper && trip.status === "ASSIGNED") {
       return NextResponse.json(
-        { error: 'GPS data is not available until trip is in transit' },
+        { error: "GPS data is not available until trip is in transit" },
         { status: 403 }
       );
     }
@@ -288,19 +294,22 @@ async function getHandler(
         accuracy: true,
         timestamp: true,
       },
-      orderBy: { timestamp: 'asc' },
+      orderBy: { timestamp: "asc" },
       take: limit,
     });
 
     return NextResponse.json({
       tripId,
       tripStatus: trip.status,
-      currentLocation: trip.currentLat && trip.currentLng ? {
-        latitude: Number(trip.currentLat),
-        longitude: Number(trip.currentLng),
-        updatedAt: trip.currentLocationUpdatedAt,
-      } : null,
-      positions: positions.map(p => ({
+      currentLocation:
+        trip.currentLat && trip.currentLng
+          ? {
+              latitude: Number(trip.currentLat),
+              longitude: Number(trip.currentLng),
+              updatedAt: trip.currentLocationUpdatedAt,
+            }
+          : null,
+      positions: positions.map((p) => ({
         id: p.id,
         latitude: Number(p.latitude),
         longitude: Number(p.longitude),
@@ -313,11 +322,7 @@ async function getHandler(
       count: positions.length,
     });
   } catch (error) {
-    console.error('Get GPS positions error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch GPS positions' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Get GPS positions error");
   }
 }
 

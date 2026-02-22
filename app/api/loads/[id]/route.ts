@@ -11,9 +11,10 @@ import {
 import { checkSuspiciousCancellation } from "@/lib/bypassDetection";
 import { validateStateTransition, LoadStatus } from "@/lib/loadStateMachine";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
-import { zodErrorResponse } from "@/lib/validation";
 // CRITICAL FIX: Import CacheInvalidation for load mutations
 import { CacheInvalidation } from "@/lib/cache";
+import { handleApiError } from "@/lib/apiErrors";
+import { sanitizeText } from "@/lib/validation";
 // CRITICAL FIX: Import notification helper for status change notifications
 import { createNotification } from "@/lib/notifications";
 import { logger } from "@/lib/logger";
@@ -65,12 +66,12 @@ const updateLoadSchema = z.object({
       "EXPIRED",
     ])
     .optional(),
-  pickupCity: z.string().min(2).optional(),
-  pickupAddress: z.string().optional().nullable(),
-  deliveryCity: z.string().min(2).optional(),
-  deliveryAddress: z.string().optional().nullable(),
-  pickupDockHours: z.string().optional().nullable(),
-  deliveryDockHours: z.string().optional().nullable(),
+  pickupCity: z.string().min(2).max(200).optional(),
+  pickupAddress: z.string().max(500).optional().nullable(),
+  deliveryCity: z.string().min(2).max(200).optional(),
+  deliveryAddress: z.string().max(500).optional().nullable(),
+  pickupDockHours: z.string().max(100).optional().nullable(),
+  deliveryDockHours: z.string().max(100).optional().nullable(),
   pickupDate: z.string().optional(),
   deliveryDate: z.string().optional().nullable(),
   truckType: z
@@ -90,16 +91,16 @@ const updateLoadSchema = z.object({
   fullPartial: z.enum(["FULL", "PARTIAL"]).optional(),
   tripKm: z.number().positive().optional(),
   estimatedTripKm: z.number().positive().optional(),
-  currency: z.string().optional(),
-  cargoDescription: z.string().optional().nullable(),
-  specialInstructions: z.string().optional().nullable(),
-  safetyNotes: z.string().optional().nullable(),
+  currency: z.string().max(10).optional(),
+  cargoDescription: z.string().max(2000).optional().nullable(),
+  specialInstructions: z.string().max(2000).optional().nullable(),
+  safetyNotes: z.string().max(1000).optional().nullable(),
   bookMode: z.enum(["REQUEST", "INSTANT"]).optional(),
-  shipperContactPhone: z.string().optional().nullable(),
-  shipperContactName: z.string().optional().nullable(),
+  shipperContactPhone: z.string().max(20).optional().nullable(),
+  shipperContactName: z.string().max(100).optional().nullable(),
   isKept: z.boolean().optional(),
   hasAlerts: z.boolean().optional(),
-  groupId: z.string().optional().nullable(),
+  groupId: z.string().max(50).optional().nullable(),
 });
 
 // GET /api/loads/[id]
@@ -229,11 +230,7 @@ export async function GET(
 
     return NextResponse.json({ load: responseLoad });
   } catch (error) {
-    console.error("Get load error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "GET /api/loads/[id] error");
   }
 }
 
@@ -319,6 +316,30 @@ export async function PATCH(
 
     const body = await request.json();
     const validatedData = updateLoadSchema.parse(body);
+
+    // Sanitize user-provided text fields
+    if (validatedData.cargoDescription)
+      validatedData.cargoDescription = sanitizeText(
+        validatedData.cargoDescription,
+        2000
+      );
+    if (validatedData.pickupAddress)
+      validatedData.pickupAddress = sanitizeText(
+        validatedData.pickupAddress,
+        500
+      );
+    if (validatedData.deliveryAddress)
+      validatedData.deliveryAddress = sanitizeText(
+        validatedData.deliveryAddress,
+        500
+      );
+    if (validatedData.safetyNotes)
+      validatedData.safetyNotes = sanitizeText(validatedData.safetyNotes, 1000);
+    if (validatedData.specialInstructions)
+      validatedData.specialInstructions = sanitizeText(
+        validatedData.specialInstructions,
+        2000
+      );
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const additionalData: Record<string, any> = {};
@@ -528,16 +549,7 @@ export async function PATCH(
 
     return NextResponse.json({ load });
   } catch (error) {
-    console.error("Update load error:", error);
-
-    if (error instanceof z.ZodError) {
-      return zodErrorResponse(error);
-    }
-
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Update load error");
   }
 }
 
@@ -740,10 +752,6 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Load deleted successfully" });
   } catch (error) {
-    console.error("Delete load error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Delete load error");
   }
 }

@@ -159,7 +159,7 @@ describe("Wallet Security Tests", () => {
         "http://localhost:3000/api/wallet/balance"
       );
       const res = await getWalletBalance(req);
-      expect([401, 500]).toContain(res.status);
+      expect(res.status).toBe(401);
     });
 
     it("should require organization membership", async () => {

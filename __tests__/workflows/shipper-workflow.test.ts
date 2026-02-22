@@ -407,7 +407,7 @@ describe("Shipper Workflow", () => {
       });
 
       const res = await createLoad(req);
-      expect([401, 500]).toContain(res.status);
+      expect(res.status).toBe(401);
     });
   });
 
@@ -577,7 +577,7 @@ describe("Shipper Workflow", () => {
       );
 
       const res = await createTruckRequest(req);
-      expect([401, 500]).toContain(res.status);
+      expect(res.status).toBe(401);
     });
   });
 
@@ -845,7 +845,7 @@ describe("Shipper Workflow", () => {
         "http://localhost:3000/api/wallet/balance"
       );
       const res = await getWalletBalance(req);
-      expect([401, 500]).toContain(res.status);
+      expect(res.status).toBe(401);
     });
   });
 

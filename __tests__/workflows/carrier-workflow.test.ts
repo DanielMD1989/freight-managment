@@ -308,7 +308,7 @@ describe("Carrier Workflow", () => {
       });
 
       const res = await createTruck(req);
-      expect([401, 500]).toContain(res.status);
+      expect(res.status).toBe(401);
     });
 
     it("should create truck with GPS fields", async () => {
@@ -486,7 +486,7 @@ describe("Carrier Workflow", () => {
       );
 
       const res = await createPosting(req);
-      expect([401, 500]).toContain(res.status);
+      expect(res.status).toBe(401);
     });
   });
 
@@ -547,7 +547,7 @@ describe("Carrier Workflow", () => {
         const data = await parseResponse(res);
         expect(data.loadRequest || data).toBeDefined();
       }
-      // Accept 201 or 400 (if validation chain requires truck posting or approval checks)
+      // Accept 201, 400 (validation), or 500 (test env missing full mock data for load requests)
       expect([201, 400, 500]).toContain(res.status);
     });
 
@@ -645,7 +645,7 @@ describe("Carrier Workflow", () => {
       );
 
       const res = await createLoadRequest(req);
-      expect([401, 500]).toContain(res.status);
+      expect(res.status).toBe(401);
     });
   });
 
@@ -892,7 +892,7 @@ describe("Carrier Workflow", () => {
         "http://localhost:3000/api/wallet/balance"
       );
       const res = await getWalletBalance(req);
-      expect([401, 500]).toContain(res.status);
+      expect(res.status).toBe(401);
     });
   });
 

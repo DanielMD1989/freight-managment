@@ -19,6 +19,7 @@ import { UserRole, Prisma } from "@prisma/client";
 import crypto from "crypto";
 // P0-003 FIX: Import CacheInvalidation for post-approval cache clearing
 import { CacheInvalidation } from "@/lib/cache";
+import { handleApiError } from "@/lib/apiErrors";
 
 // Validation schema for load request response
 const LoadRequestResponseSchema = z.object({
@@ -475,14 +476,13 @@ export async function POST(
     }
     // FIX: Use unknown type with type guard
   } catch (error: unknown) {
-    console.error("Error responding to load request:", error);
-
     // Handle unique constraint violation (race condition) - Prisma error
     const prismaError = error as {
       code?: string;
       meta?: { target?: string[] };
     };
     if (prismaError?.code === "P2002") {
+      console.error("Error responding to load request:", error);
       const field = prismaError?.meta?.target?.[0] || "field";
       if (field === "assignedTruckId") {
         return NextResponse.json(
@@ -499,9 +499,6 @@ export async function POST(
       );
     }
 
-    return NextResponse.json(
-      { error: "Failed to respond to load request" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Error responding to load request");
   }
 }

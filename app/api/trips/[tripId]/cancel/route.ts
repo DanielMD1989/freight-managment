@@ -6,16 +6,16 @@
  * Trips can be cancelled by carrier or shipper before COMPLETED status
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { createNotification, NotificationType } from '@/lib/notifications';
-import { z } from 'zod';
-import { CacheInvalidation } from '@/lib/cache';
-import { zodErrorResponse } from '@/lib/validation';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { createNotification, NotificationType } from "@/lib/notifications";
+import { z } from "zod";
+import { CacheInvalidation } from "@/lib/cache";
+import { handleApiError } from "@/lib/apiErrors";
 
 const cancelTripSchema = z.object({
-  reason: z.string().min(1, 'Cancellation reason is required').max(500),
+  reason: z.string().min(1, "Cancellation reason is required").max(500),
 });
 
 /**
@@ -70,20 +70,20 @@ export async function POST(
     });
 
     if (!trip) {
-      return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
     // Cannot cancel COMPLETED or already CANCELLED trips
-    if (trip.status === 'COMPLETED') {
+    if (trip.status === "COMPLETED") {
       return NextResponse.json(
-        { error: 'Cannot cancel a completed trip' },
+        { error: "Cannot cancel a completed trip" },
         { status: 400 }
       );
     }
 
-    if (trip.status === 'CANCELLED') {
+    if (trip.status === "CANCELLED") {
       return NextResponse.json(
-        { error: 'Trip is already cancelled' },
+        { error: "Trip is already cancelled" },
         { status: 400 }
       );
     }
@@ -96,18 +96,22 @@ export async function POST(
 
     const isCarrier = user?.organizationId === trip.carrierId;
     const isShipper = user?.organizationId === trip.shipperId;
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
-    const isDispatcher = session.role === 'DISPATCHER';
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
+    const isDispatcher = session.role === "DISPATCHER";
 
     if (!isCarrier && !isShipper && !isAdmin && !isDispatcher) {
       return NextResponse.json(
-        { error: 'You do not have permission to cancel this trip' },
+        { error: "You do not have permission to cancel this trip" },
         { status: 403 }
       );
     }
 
     // Determine who is cancelling for notification purposes
-    const cancelledByRole = isCarrier ? 'Carrier' : isShipper ? 'Shipper' : 'Admin';
+    const cancelledByRole = isCarrier
+      ? "Carrier"
+      : isShipper
+        ? "Shipper"
+        : "Admin";
 
     // CRITICAL FIX: Wrap all state changes in a transaction for atomicity
     const updatedTrip = await db.$transaction(async (tx) => {
@@ -115,7 +119,7 @@ export async function POST(
       const updatedTrip = await tx.trip.update({
         where: { id: tripId },
         data: {
-          status: 'CANCELLED',
+          status: "CANCELLED",
           cancelledAt: new Date(),
           cancelledBy: session.userId,
           cancelReason: validatedData.reason,
@@ -127,7 +131,7 @@ export async function POST(
       await tx.load.update({
         where: { id: trip.loadId },
         data: {
-          status: 'CANCELLED',
+          status: "CANCELLED",
           assignedTruckId: null,
           assignedAt: null,
         },
@@ -137,7 +141,7 @@ export async function POST(
       await tx.loadEvent.create({
         data: {
           loadId: trip.loadId,
-          eventType: 'TRIP_CANCELLED',
+          eventType: "TRIP_CANCELLED",
           description: `Trip cancelled by ${cancelledByRole}. Reason: ${validatedData.reason}`,
           userId: session.userId,
           metadata: {
@@ -164,8 +168,8 @@ export async function POST(
         await createNotification({
           userId: shipperUserId,
           type: NotificationType.TRIP_CANCELLED,
-          title: 'Trip Cancelled',
-          message: `${trip.carrier?.name || 'Carrier'} has cancelled the trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Reason: ${validatedData.reason}`,
+          title: "Trip Cancelled",
+          message: `${trip.carrier?.name || "Carrier"} has cancelled the trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Reason: ${validatedData.reason}`,
           metadata: { tripId, loadId: trip.loadId },
         });
       }
@@ -178,15 +182,15 @@ export async function POST(
         await createNotification({
           userId: carrierUserId,
           type: NotificationType.TRIP_CANCELLED,
-          title: 'Trip Cancelled',
-          message: `${trip.shipper?.name || 'Shipper'} has cancelled the trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Reason: ${validatedData.reason}`,
+          title: "Trip Cancelled",
+          message: `${trip.shipper?.name || "Shipper"} has cancelled the trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Reason: ${validatedData.reason}`,
           metadata: { tripId, loadId: trip.loadId },
         });
       }
     }
 
     return NextResponse.json({
-      message: 'Trip cancelled successfully',
+      message: "Trip cancelled successfully",
       trip: {
         id: updatedTrip.id,
         status: updatedTrip.status,
@@ -195,15 +199,6 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('Cancel trip error:', error);
-
-    if (error instanceof z.ZodError) {
-      return zodErrorResponse(error);
-    }
-
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Cancel trip error");
   }
 }

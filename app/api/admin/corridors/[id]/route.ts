@@ -6,46 +6,60 @@
  * Allows admins to view, update, or delete a specific corridor
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { z } from 'zod';
-import { Decimal } from 'decimal.js';
-import { CorridorDirection } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { z } from "zod";
+import { Decimal } from "decimal.js";
+import { CorridorDirection } from "@prisma/client";
 import {
   calculateFeePreview,
   calculateDualPartyFeePreview,
-} from '@/lib/serviceFeeCalculation';
-import { zodErrorResponse } from '@/lib/validation';
+} from "@/lib/serviceFeeCalculation";
+import { handleApiError } from "@/lib/apiErrors";
 // CSRF FIX: Add CSRF validation
-import { validateCSRFWithMobile } from '@/lib/csrf';
+import { validateCSRFWithMobile } from "@/lib/csrf";
 
 // Ethiopian regions for validation
 const ETHIOPIAN_REGIONS = [
-  'Addis Ababa',
-  'Afar',
-  'Amhara',
-  'Benishangul-Gumuz',
-  'Dire Dawa',
-  'Gambela',
-  'Harari',
-  'Oromia',
-  'Sidama',
-  'Somali',
-  'Southern Nations, Nationalities, and Peoples',
-  'Southwest Ethiopia',
-  'Tigray',
-  'Djibouti',
+  "Addis Ababa",
+  "Afar",
+  "Amhara",
+  "Benishangul-Gumuz",
+  "Dire Dawa",
+  "Gambela",
+  "Harari",
+  "Oromia",
+  "Sidama",
+  "Somali",
+  "Southern Nations, Nationalities, and Peoples",
+  "Southwest Ethiopia",
+  "Tigray",
+  "Djibouti",
 ] as const;
 
 const updateCorridorSchema = z.object({
   name: z.string().min(3).max(100).optional(),
-  originRegion: z.string().refine((val) => ETHIOPIAN_REGIONS.includes(val as typeof ETHIOPIAN_REGIONS[number]), {
-    message: 'Invalid origin region',
-  }).optional(),
-  destinationRegion: z.string().refine((val) => ETHIOPIAN_REGIONS.includes(val as typeof ETHIOPIAN_REGIONS[number]), {
-    message: 'Invalid destination region',
-  }).optional(),
+  originRegion: z
+    .string()
+    .refine(
+      (val) =>
+        ETHIOPIAN_REGIONS.includes(val as (typeof ETHIOPIAN_REGIONS)[number]),
+      {
+        message: "Invalid origin region",
+      }
+    )
+    .optional(),
+  destinationRegion: z
+    .string()
+    .refine(
+      (val) =>
+        ETHIOPIAN_REGIONS.includes(val as (typeof ETHIOPIAN_REGIONS)[number]),
+      {
+        message: "Invalid destination region",
+      }
+    )
+    .optional(),
   distanceKm: z.number().positive().max(5000).optional(),
   // Legacy pricing (kept for backward compatibility)
   pricePerKm: z.number().positive().max(100).optional(),
@@ -76,9 +90,9 @@ export async function GET(
     const session = await requireAuth();
 
     // Only admins can view corridors
-    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
+    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: 'Unauthorized - Admin access required' },
+        { error: "Unauthorized - Admin access required" },
         { status: 403 }
       );
     }
@@ -105,7 +119,7 @@ export async function GET(
             createdAt: true,
           },
           orderBy: {
-            createdAt: 'desc',
+            createdAt: "desc",
           },
           take: 10,
         },
@@ -119,7 +133,7 @@ export async function GET(
 
     if (!corridor) {
       return NextResponse.json(
-        { error: 'Corridor not found' },
+        { error: "Corridor not found" },
         { status: 404 }
       );
     }
@@ -128,7 +142,7 @@ export async function GET(
     const serviceFeeStats = await db.load.aggregate({
       where: {
         corridorId: id,
-        serviceFeeStatus: 'DEDUCTED',
+        serviceFeeStatus: "DEDUCTED",
       },
       _sum: {
         serviceFeeEtb: true,
@@ -146,16 +160,26 @@ export async function GET(
         pricePerKm: Number(corridor.pricePerKm),
         direction: corridor.direction,
         promoFlag: corridor.promoFlag,
-        promoDiscountPct: corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null,
+        promoDiscountPct: corridor.promoDiscountPct
+          ? Number(corridor.promoDiscountPct)
+          : null,
         isActive: corridor.isActive,
         // Dual-party pricing - shipper
-        shipperPricePerKm: corridor.shipperPricePerKm ? Number(corridor.shipperPricePerKm) : null,
+        shipperPricePerKm: corridor.shipperPricePerKm
+          ? Number(corridor.shipperPricePerKm)
+          : null,
         shipperPromoFlag: corridor.shipperPromoFlag,
-        shipperPromoPct: corridor.shipperPromoPct ? Number(corridor.shipperPromoPct) : null,
+        shipperPromoPct: corridor.shipperPromoPct
+          ? Number(corridor.shipperPromoPct)
+          : null,
         // Dual-party pricing - carrier
-        carrierPricePerKm: corridor.carrierPricePerKm ? Number(corridor.carrierPricePerKm) : null,
+        carrierPricePerKm: corridor.carrierPricePerKm
+          ? Number(corridor.carrierPricePerKm)
+          : null,
         carrierPromoFlag: corridor.carrierPromoFlag,
-        carrierPromoPct: corridor.carrierPromoPct ? Number(corridor.carrierPromoPct) : null,
+        carrierPromoPct: corridor.carrierPromoPct
+          ? Number(corridor.carrierPromoPct)
+          : null,
         createdAt: corridor.createdAt,
         updatedAt: corridor.updatedAt,
         createdBy: corridor.createdBy,
@@ -176,9 +200,15 @@ export async function GET(
         },
         serviceFeePreview: calculateDualPartyFeePreview(
           Number(corridor.distanceKm),
-          corridor.shipperPricePerKm ? Number(corridor.shipperPricePerKm) : Number(corridor.pricePerKm),
+          corridor.shipperPricePerKm
+            ? Number(corridor.shipperPricePerKm)
+            : Number(corridor.pricePerKm),
           corridor.shipperPromoFlag || corridor.promoFlag,
-          corridor.shipperPromoPct ? Number(corridor.shipperPromoPct) : (corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null),
+          corridor.shipperPromoPct
+            ? Number(corridor.shipperPromoPct)
+            : corridor.promoDiscountPct
+              ? Number(corridor.promoDiscountPct)
+              : null,
           corridor.carrierPricePerKm ? Number(corridor.carrierPricePerKm) : 0,
           corridor.carrierPromoFlag || false,
           corridor.carrierPromoPct ? Number(corridor.carrierPromoPct) : null
@@ -186,11 +216,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Get corridor error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Get corridor error");
   }
 }
 
@@ -211,9 +237,9 @@ export async function PATCH(
     const session = await requireAuth();
 
     // Only admins can update corridors
-    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
+    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: 'Unauthorized - Admin access required' },
+        { error: "Unauthorized - Admin access required" },
         { status: 403 }
       );
     }
@@ -226,7 +252,7 @@ export async function PATCH(
 
     if (!existing) {
       return NextResponse.json(
-        { error: 'Corridor not found' },
+        { error: "Corridor not found" },
         { status: 404 }
       );
     }
@@ -241,7 +267,8 @@ export async function PATCH(
       validatedData.direction
     ) {
       const newOrigin = validatedData.originRegion || existing.originRegion;
-      const newDest = validatedData.destinationRegion || existing.destinationRegion;
+      const newDest =
+        validatedData.destinationRegion || existing.destinationRegion;
       const newDir = validatedData.direction || existing.direction;
 
       const duplicate = await db.corridor.findFirst({
@@ -256,7 +283,7 @@ export async function PATCH(
       if (duplicate) {
         return NextResponse.json(
           {
-            error: 'Corridor already exists',
+            error: "Corridor already exists",
             message: `A corridor from ${newOrigin} to ${newDest} (${newDir}) already exists`,
           },
           { status: 409 }
@@ -268,43 +295,57 @@ export async function PATCH(
     const updateData: Record<string, unknown> = {};
 
     if (validatedData.name !== undefined) updateData.name = validatedData.name;
-    if (validatedData.originRegion !== undefined) updateData.originRegion = validatedData.originRegion;
-    if (validatedData.destinationRegion !== undefined) updateData.destinationRegion = validatedData.destinationRegion;
-    if (validatedData.distanceKm !== undefined) updateData.distanceKm = new Decimal(validatedData.distanceKm);
-    if (validatedData.pricePerKm !== undefined) updateData.pricePerKm = new Decimal(validatedData.pricePerKm);
-    if (validatedData.direction !== undefined) updateData.direction = validatedData.direction;
-    if (validatedData.promoFlag !== undefined) updateData.promoFlag = validatedData.promoFlag;
+    if (validatedData.originRegion !== undefined)
+      updateData.originRegion = validatedData.originRegion;
+    if (validatedData.destinationRegion !== undefined)
+      updateData.destinationRegion = validatedData.destinationRegion;
+    if (validatedData.distanceKm !== undefined)
+      updateData.distanceKm = new Decimal(validatedData.distanceKm);
+    if (validatedData.pricePerKm !== undefined)
+      updateData.pricePerKm = new Decimal(validatedData.pricePerKm);
+    if (validatedData.direction !== undefined)
+      updateData.direction = validatedData.direction;
+    if (validatedData.promoFlag !== undefined)
+      updateData.promoFlag = validatedData.promoFlag;
     if (validatedData.promoDiscountPct !== undefined) {
-      updateData.promoDiscountPct = validatedData.promoDiscountPct !== null
-        ? new Decimal(validatedData.promoDiscountPct)
-        : null;
+      updateData.promoDiscountPct =
+        validatedData.promoDiscountPct !== null
+          ? new Decimal(validatedData.promoDiscountPct)
+          : null;
     }
-    if (validatedData.isActive !== undefined) updateData.isActive = validatedData.isActive;
+    if (validatedData.isActive !== undefined)
+      updateData.isActive = validatedData.isActive;
 
     // Dual-party pricing - shipper
     if (validatedData.shipperPricePerKm !== undefined) {
-      updateData.shipperPricePerKm = new Decimal(validatedData.shipperPricePerKm);
+      updateData.shipperPricePerKm = new Decimal(
+        validatedData.shipperPricePerKm
+      );
     }
     if (validatedData.shipperPromoFlag !== undefined) {
       updateData.shipperPromoFlag = validatedData.shipperPromoFlag;
     }
     if (validatedData.shipperPromoPct !== undefined) {
-      updateData.shipperPromoPct = validatedData.shipperPromoPct !== null
-        ? new Decimal(validatedData.shipperPromoPct)
-        : null;
+      updateData.shipperPromoPct =
+        validatedData.shipperPromoPct !== null
+          ? new Decimal(validatedData.shipperPromoPct)
+          : null;
     }
 
     // Dual-party pricing - carrier
     if (validatedData.carrierPricePerKm !== undefined) {
-      updateData.carrierPricePerKm = new Decimal(validatedData.carrierPricePerKm);
+      updateData.carrierPricePerKm = new Decimal(
+        validatedData.carrierPricePerKm
+      );
     }
     if (validatedData.carrierPromoFlag !== undefined) {
       updateData.carrierPromoFlag = validatedData.carrierPromoFlag;
     }
     if (validatedData.carrierPromoPct !== undefined) {
-      updateData.carrierPromoPct = validatedData.carrierPromoPct !== null
-        ? new Decimal(validatedData.carrierPromoPct)
-        : null;
+      updateData.carrierPromoPct =
+        validatedData.carrierPromoPct !== null
+          ? new Decimal(validatedData.carrierPromoPct)
+          : null;
     }
 
     const corridor = await db.corridor.update({
@@ -313,7 +354,7 @@ export async function PATCH(
     });
 
     return NextResponse.json({
-      message: 'Corridor updated successfully',
+      message: "Corridor updated successfully",
       corridor: {
         id: corridor.id,
         name: corridor.name,
@@ -323,22 +364,38 @@ export async function PATCH(
         pricePerKm: Number(corridor.pricePerKm),
         direction: corridor.direction,
         promoFlag: corridor.promoFlag,
-        promoDiscountPct: corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null,
+        promoDiscountPct: corridor.promoDiscountPct
+          ? Number(corridor.promoDiscountPct)
+          : null,
         isActive: corridor.isActive,
         // Dual-party pricing - shipper
-        shipperPricePerKm: corridor.shipperPricePerKm ? Number(corridor.shipperPricePerKm) : null,
+        shipperPricePerKm: corridor.shipperPricePerKm
+          ? Number(corridor.shipperPricePerKm)
+          : null,
         shipperPromoFlag: corridor.shipperPromoFlag,
-        shipperPromoPct: corridor.shipperPromoPct ? Number(corridor.shipperPromoPct) : null,
+        shipperPromoPct: corridor.shipperPromoPct
+          ? Number(corridor.shipperPromoPct)
+          : null,
         // Dual-party pricing - carrier
-        carrierPricePerKm: corridor.carrierPricePerKm ? Number(corridor.carrierPricePerKm) : null,
+        carrierPricePerKm: corridor.carrierPricePerKm
+          ? Number(corridor.carrierPricePerKm)
+          : null,
         carrierPromoFlag: corridor.carrierPromoFlag,
-        carrierPromoPct: corridor.carrierPromoPct ? Number(corridor.carrierPromoPct) : null,
+        carrierPromoPct: corridor.carrierPromoPct
+          ? Number(corridor.carrierPromoPct)
+          : null,
         // Fee previews for both parties
         serviceFeePreview: calculateDualPartyFeePreview(
           Number(corridor.distanceKm),
-          corridor.shipperPricePerKm ? Number(corridor.shipperPricePerKm) : Number(corridor.pricePerKm),
+          corridor.shipperPricePerKm
+            ? Number(corridor.shipperPricePerKm)
+            : Number(corridor.pricePerKm),
           corridor.shipperPromoFlag || corridor.promoFlag,
-          corridor.shipperPromoPct ? Number(corridor.shipperPromoPct) : (corridor.promoDiscountPct ? Number(corridor.promoDiscountPct) : null),
+          corridor.shipperPromoPct
+            ? Number(corridor.shipperPromoPct)
+            : corridor.promoDiscountPct
+              ? Number(corridor.promoDiscountPct)
+              : null,
           corridor.carrierPricePerKm ? Number(corridor.carrierPricePerKm) : 0,
           corridor.carrierPromoFlag || false,
           corridor.carrierPromoPct ? Number(corridor.carrierPromoPct) : null
@@ -346,16 +403,7 @@ export async function PATCH(
       },
     });
   } catch (error) {
-    console.error('Update corridor error:', error);
-
-    if (error instanceof z.ZodError) {
-      return zodErrorResponse(error);
-    }
-
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Update corridor error");
   }
 }
 
@@ -376,9 +424,9 @@ export async function DELETE(
     const session = await requireAuth();
 
     // Only super admins can delete corridors
-    if (session.role !== 'SUPER_ADMIN') {
+    if (session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: 'Unauthorized - Super Admin access required' },
+        { error: "Unauthorized - Super Admin access required" },
         { status: 403 }
       );
     }
@@ -398,7 +446,7 @@ export async function DELETE(
 
     if (!existing) {
       return NextResponse.json(
-        { error: 'Corridor not found' },
+        { error: "Corridor not found" },
         { status: 404 }
       );
     }
@@ -407,7 +455,7 @@ export async function DELETE(
     if (existing._count.loads > 0) {
       return NextResponse.json(
         {
-          error: 'Cannot delete corridor',
+          error: "Cannot delete corridor",
           message: `This corridor has ${existing._count.loads} associated loads. Deactivate it instead.`,
         },
         { status: 400 }
@@ -419,14 +467,10 @@ export async function DELETE(
     });
 
     return NextResponse.json({
-      message: 'Corridor deleted successfully',
+      message: "Corridor deleted successfully",
     });
   } catch (error) {
-    console.error('Delete corridor error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Delete corridor error");
   }
 }
 

@@ -10,23 +10,37 @@ import {
   detectGpsProvider,
   determineGpsStatus,
 } from "@/lib/gpsVerification";
-import { getVisibilityRules, RULE_SHIPPER_DEMAND_FOCUS } from "@/lib/foundation-rules";
+import {
+  getVisibilityRules,
+  RULE_SHIPPER_DEMAND_FOCUS,
+} from "@/lib/foundation-rules";
 import { TruckCache, CacheInvalidation } from "@/lib/cache";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { Prisma } from "@prisma/client";
+import { handleApiError } from "@/lib/apiErrors";
+import { sanitizeText } from "@/lib/validation";
 
 const createTruckSchema = z.object({
-  truckType: z.enum(["FLATBED", "REFRIGERATED", "TANKER", "CONTAINER", "DRY_VAN", "LOWBOY", "DUMP_TRUCK", "BOX_TRUCK"]),
-  licensePlate: z.string().min(3),
+  truckType: z.enum([
+    "FLATBED",
+    "REFRIGERATED",
+    "TANKER",
+    "CONTAINER",
+    "DRY_VAN",
+    "LOWBOY",
+    "DUMP_TRUCK",
+    "BOX_TRUCK",
+  ]),
+  licensePlate: z.string().min(3).max(20),
   capacity: z.number().positive(),
   volume: z.number().positive().optional(),
-  currentCity: z.string().optional(),
-  currentRegion: z.string().optional(),
+  currentCity: z.string().max(200).optional(),
+  currentRegion: z.string().max(200).optional(),
   isAvailable: z.boolean().default(true),
-  gpsDeviceId: z.string().optional(),
+  gpsDeviceId: z.string().max(50).optional(),
   // Sprint 16: GPS fields
-  imei: z.string().optional(),
-  gpsProvider: z.string().optional(),
+  imei: z.string().max(15).optional(),
+  gpsProvider: z.string().max(100).optional(),
 });
 
 // POST /api/trucks - Create truck
@@ -34,9 +48,9 @@ export async function POST(request: NextRequest) {
   try {
     // Rate limiting: Apply RPS_CONFIGS.fleet
     const ip =
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      request.headers.get('x-real-ip') ||
-      'unknown';
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
     const rpsResult = await checkRpsLimit(
       RPS_CONFIGS.fleet.endpoint,
       ip,
@@ -45,13 +59,13 @@ export async function POST(request: NextRequest) {
     );
     if (!rpsResult.allowed) {
       return NextResponse.json(
-        { error: 'Rate limit exceeded. Please slow down.', retryAfter: 1 },
+        { error: "Rate limit exceeded. Please slow down.", retryAfter: 1 },
         {
           status: 429,
           headers: {
-            'X-RateLimit-Limit': rpsResult.limit.toString(),
-            'X-RateLimit-Remaining': rpsResult.remaining.toString(),
-            'Retry-After': '1',
+            "X-RateLimit-Limit": rpsResult.limit.toString(),
+            "X-RateLimit-Remaining": rpsResult.remaining.toString(),
+            "Retry-After": "1",
           },
         }
       );
@@ -78,6 +92,11 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const validatedData = createTruckSchema.parse(body);
+
+    // Sanitize user-provided text fields
+    validatedData.licensePlate = sanitizeText(validatedData.licensePlate, 20);
+    if (validatedData.currentCity)
+      validatedData.currentCity = sanitizeText(validatedData.currentCity, 200);
 
     // Check if license plate already exists
     const existing = await db.truck.findUnique({
@@ -118,7 +137,8 @@ export async function POST(request: NextRequest) {
       const now = new Date();
       gpsData = {
         imei: validatedData.imei,
-        gpsProvider: validatedData.gpsProvider || detectGpsProvider(validatedData.imei),
+        gpsProvider:
+          validatedData.gpsProvider || detectGpsProvider(validatedData.imei),
         gpsVerifiedAt: now,
         gpsLastSeenAt: verification.lastSeen || now,
         gpsStatus: determineGpsStatus(verification.lastSeen || now),
@@ -143,22 +163,15 @@ export async function POST(request: NextRequest) {
     });
 
     // PHASE 4: Invalidate truck list caches when new truck is created
-    await CacheInvalidation.truck(truck.id, user.organizationId, user.organizationId);
+    await CacheInvalidation.truck(
+      truck.id,
+      user.organizationId,
+      user.organizationId
+    );
 
     return NextResponse.json({ truck }, { status: 201 });
   } catch (error) {
-    console.error("Create truck error:", error);
-
-    if (error instanceof z.ZodError) {
-      // FIX: Use zodErrorResponse for consistent sanitization
-      const { zodErrorResponse } = await import('@/lib/validation');
-      return zodErrorResponse(error);
-    }
-
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Create truck error");
   }
 }
 
@@ -172,9 +185,9 @@ export async function GET(request: NextRequest) {
   try {
     // Rate limiting: Apply RPS_CONFIGS.fleet
     const ip =
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      request.headers.get('x-real-ip') ||
-      'unknown';
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
     const rpsResult = await checkRpsLimit(
       RPS_CONFIGS.fleet.endpoint,
       ip,
@@ -183,13 +196,13 @@ export async function GET(request: NextRequest) {
     );
     if (!rpsResult.allowed) {
       return NextResponse.json(
-        { error: 'Rate limit exceeded. Please slow down.', retryAfter: 1 },
+        { error: "Rate limit exceeded. Please slow down.", retryAfter: 1 },
         {
           status: 429,
           headers: {
-            'X-RateLimit-Limit': rpsResult.limit.toString(),
-            'X-RateLimit-Remaining': rpsResult.remaining.toString(),
-            'Retry-After': '1',
+            "X-RateLimit-Limit": rpsResult.limit.toString(),
+            "X-RateLimit-Remaining": rpsResult.remaining.toString(),
+            "Retry-After": "1",
           },
         }
       );
@@ -199,7 +212,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl;
 
     const page = Math.max(parseInt(searchParams.get("page") || "1") || 1, 1);
-    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "20") || 20, 1), 100);
+    const limit = Math.min(
+      Math.max(parseInt(searchParams.get("limit") || "20") || 20, 1),
+      100
+    );
     const truckType = searchParams.get("truckType");
     const isAvailable = searchParams.get("isAvailable");
     const myTrucks = searchParams.get("myTrucks") === "true";
@@ -209,13 +225,24 @@ export async function GET(request: NextRequest) {
 
     // PHASE 4: Build cache key from filter parameters
     const cacheFilters = {
-      page, limit, truckType, isAvailable, myTrucks, carrierId,
-      approvalStatus, hasActivePosting, role: session.role, orgId: session.organizationId,
+      page,
+      limit,
+      truckType,
+      isAvailable,
+      myTrucks,
+      carrierId,
+      approvalStatus,
+      hasActivePosting,
+      role: session.role,
+      orgId: session.organizationId,
     };
 
     // Try cache first for non-personalized queries
     // Cache dispatcher/admin queries that see all trucks
-    const isCacheableQuery = session.role === 'DISPATCHER' || session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+    const isCacheableQuery =
+      session.role === "DISPATCHER" ||
+      session.role === "ADMIN" ||
+      session.role === "SUPER_ADMIN";
     if (isCacheableQuery && !myTrucks) {
       const cachedResult = await TruckCache.getList(cacheFilters);
       if (cachedResult) {
@@ -239,7 +266,7 @@ export async function GET(request: NextRequest) {
     // PHASE 2: SHIPPER cannot browse fleet inventory
     // Foundation Rule: SHIPPER_DEMAND_FOCUS
     // Shippers should use /api/truck-postings to search for available trucks
-    if (user.role === 'SHIPPER') {
+    if (user.role === "SHIPPER") {
       return NextResponse.json(
         {
           error: "Shippers cannot browse truck fleet inventory",
@@ -254,7 +281,7 @@ export async function GET(request: NextRequest) {
     const where: Record<string, any> = {};
 
     // Role-based filtering
-    if (user.role === 'CARRIER') {
+    if (user.role === "CARRIER") {
       // Carriers can only see their own fleet
       if (!user.organizationId) {
         return NextResponse.json(
@@ -263,7 +290,7 @@ export async function GET(request: NextRequest) {
         );
       }
       where.carrierId = user.organizationId;
-    } else if (user.role === 'DISPATCHER') {
+    } else if (user.role === "DISPATCHER") {
       // Dispatchers can see all trucks (for coordination)
       // But they cannot modify - enforced by other endpoints
     }
@@ -275,7 +302,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Admin can filter by specific carrier
-    if (carrierId && (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN')) {
+    if (carrierId && (user.role === "ADMIN" || user.role === "SUPER_ADMIN")) {
       where.carrierId = carrierId;
     }
 
@@ -296,13 +323,13 @@ export async function GET(request: NextRequest) {
     // hasActivePosting=true: trucks with at least one ACTIVE posting
     // hasActivePosting=false: trucks with NO active postings (unposted trucks)
     if (hasActivePosting !== null && hasActivePosting !== undefined) {
-      if (hasActivePosting === 'true') {
+      if (hasActivePosting === "true") {
         where.postings = {
-          some: { status: 'ACTIVE' },
+          some: { status: "ACTIVE" },
         };
-      } else if (hasActivePosting === 'false') {
+      } else if (hasActivePosting === "false") {
         where.postings = {
-          none: { status: 'ACTIVE' },
+          none: { status: "ACTIVE" },
         };
       }
     }
@@ -328,7 +355,7 @@ export async function GET(request: NextRequest) {
           },
           // Include active posting info
           postings: {
-            where: { status: 'ACTIVE' },
+            where: { status: "ACTIVE" },
             select: {
               id: true,
               status: true,
@@ -348,7 +375,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Add hasActivePosting flag
-    const trucksWithPostingStatus = trucks.map(truck => ({
+    const trucksWithPostingStatus = trucks.map((truck) => ({
       ...truck,
       hasActivePosting: truck.postings.length > 0,
       activePostingId: truck.postings[0]?.id || null,
@@ -371,21 +398,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error("List trucks error:", error);
-
-    // Handle specific error types
-    if (error instanceof Error) {
-      if (error.message === 'Unauthorized' || error.name === 'UnauthorizedError') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-      if (error.name === 'ForbiddenError') {
-        return NextResponse.json({ error: error.message }, { status: 403 });
-      }
-    }
-
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "List trucks error");
   }
 }

@@ -16,15 +16,16 @@
  * Sprint 9 - Story 9.6: CSRF Protection
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { z } from 'zod';
-import { requireAuth } from '@/lib/auth';
-import { requireCSRF } from '@/lib/csrf';
-import { hasElevatedPermissions } from '@/lib/dispatcherPermissions';
-import { UserRole } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { z } from "zod";
+import { requireAuth } from "@/lib/auth";
+import { requireCSRF } from "@/lib/csrf";
+import { hasElevatedPermissions } from "@/lib/dispatcherPermissions";
+import { UserRole } from "@prisma/client";
 // P1-001-B FIX: Import CacheInvalidation for update/delete operations
-import { CacheInvalidation } from '@/lib/cache';
+import { CacheInvalidation } from "@/lib/cache";
+import { handleApiError } from "@/lib/apiErrors";
 
 // Update schema (partial)
 const UpdateTruckPostingSchema = z.object({
@@ -37,11 +38,11 @@ const UpdateTruckPostingSchema = z.object({
   contactName: z.string().min(2).optional(),
   contactPhone: z.string().min(10).optional(),
   notes: z.string().optional().nullable(),
-  status: z.enum(['ACTIVE', 'EXPIRED', 'CANCELLED', 'MATCHED']).optional(),
+  status: z.enum(["ACTIVE", "EXPIRED", "CANCELLED", "MATCHED"]).optional(),
   // Additional fields from frontend
   originCityId: z.string().optional(),
   destinationCityId: z.string().optional().nullable(),
-  fullPartial: z.enum(['FULL', 'PARTIAL']).optional(),
+  fullPartial: z.enum(["FULL", "PARTIAL"]).optional(),
   ownerName: z.string().optional().nullable(),
 });
 
@@ -60,9 +61,9 @@ export async function GET(
     const { id } = await params;
 
     // Validate ID format
-    if (!id || typeof id !== 'string' || id.length < 10) {
+    if (!id || typeof id !== "string" || id.length < 10) {
       return NextResponse.json(
-        { error: 'Invalid posting ID format' },
+        { error: "Invalid posting ID format" },
         { status: 400 }
       );
     }
@@ -113,27 +114,27 @@ export async function GET(
 
     if (!posting) {
       return NextResponse.json(
-        { error: 'Truck posting not found' },
+        { error: "Truck posting not found" },
         { status: 404 }
       );
     }
 
     // Show ACTIVE postings to everyone
     // Show non-ACTIVE postings only to owner or elevated roles
-    if (posting.status !== 'ACTIVE') {
+    if (posting.status !== "ACTIVE") {
       const session = await requireAuth();
 
       // Sprint 16: Allow dispatcher, platform ops, and admin to view all postings
       const hasElevatedPerms = hasElevatedPermissions({
         role: session.role as UserRole,
         organizationId: session.organizationId,
-        userId: session.userId
+        userId: session.userId,
       });
 
       // Verify ownership (user's organization owns this posting)
       if (posting.carrierId !== session.organizationId && !hasElevatedPerms) {
         return NextResponse.json(
-          { error: 'Truck posting not found' },
+          { error: "Truck posting not found" },
           { status: 404 }
         );
       }
@@ -177,12 +178,7 @@ export async function GET(
 
     return NextResponse.json(formattedPosting);
   } catch (error) {
-    console.error('Error fetching truck posting:', error);
-
-    return NextResponse.json(
-      { error: 'Failed to fetch truck posting' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Error fetching truck posting");
   }
 }
 
@@ -202,9 +198,9 @@ export async function PATCH(
     const { id } = await params;
 
     // Validate ID format
-    if (!id || typeof id !== 'string' || id.length < 10) {
+    if (!id || typeof id !== "string" || id.length < 10) {
       return NextResponse.json(
-        { error: 'Invalid posting ID format' },
+        { error: "Invalid posting ID format" },
         { status: 400 }
       );
     }
@@ -212,12 +208,14 @@ export async function PATCH(
     // CSRF protection for state-changing operation
     // Mobile clients MUST use Bearer token authentication (inherently CSRF-safe)
     // Web clients MUST provide CSRF token
-    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
-    const hasBearerAuth = request.headers.get('authorization')?.startsWith('Bearer ');
+    const isMobileClient = request.headers.get("x-client-type") === "mobile";
+    const hasBearerAuth = request.headers
+      .get("authorization")
+      ?.startsWith("Bearer ");
 
     if (isMobileClient && !hasBearerAuth) {
       return NextResponse.json(
-        { error: 'Mobile clients require Bearer authentication' },
+        { error: "Mobile clients require Bearer authentication" },
         { status: 401 }
       );
     }
@@ -243,7 +241,7 @@ export async function PATCH(
 
     if (!existing) {
       return NextResponse.json(
-        { error: 'Truck posting not found' },
+        { error: "Truck posting not found" },
         { status: 404 }
       );
     }
@@ -252,19 +250,19 @@ export async function PATCH(
     const hasElevatedPerms = hasElevatedPermissions({
       role: session.role as UserRole,
       organizationId: session.organizationId,
-      userId: session.userId
+      userId: session.userId,
     });
 
     // Verify ownership (user's organization owns this posting)
     if (existing.carrierId !== session.organizationId && !hasElevatedPerms) {
       return NextResponse.json(
-        { error: 'You can only update postings for your own organization' },
+        { error: "You can only update postings for your own organization" },
         { status: 403 }
       );
     }
 
     // Prevent editing MATCHED or CANCELLED postings
-    if (existing.status === 'MATCHED' || existing.status === 'CANCELLED') {
+    if (existing.status === "MATCHED" || existing.status === "CANCELLED") {
       return NextResponse.json(
         {
           error: `Cannot update ${existing.status.toLowerCase()} posting`,
@@ -279,16 +277,16 @@ export async function PATCH(
 
     if (!validationResult.success) {
       // FIX: Use zodErrorResponse to avoid schema leak
-      const { zodErrorResponse } = await import('@/lib/validation');
+      const { zodErrorResponse } = await import("@/lib/validation");
       return zodErrorResponse(validationResult.error);
     }
 
     const data = validationResult.data;
 
     // Block manual status change to MATCHED - only system can set this
-    if (data.status === 'MATCHED') {
+    if (data.status === "MATCHED") {
       return NextResponse.json(
-        { error: 'MATCHED status can only be set by system' },
+        { error: "MATCHED status can only be set by system" },
         { status: 400 }
       );
     }
@@ -301,7 +299,7 @@ export async function PATCH(
       });
       if (!originCity) {
         return NextResponse.json(
-          { error: 'Invalid origin city ID' },
+          { error: "Invalid origin city ID" },
           { status: 400 }
         );
       }
@@ -313,14 +311,15 @@ export async function PATCH(
       });
       if (!destCity) {
         return NextResponse.json(
-          { error: 'Invalid destination city ID' },
+          { error: "Invalid destination city ID" },
           { status: 400 }
         );
       }
     }
 
     // Update postedAt when status changes to ACTIVE (posted)
-    const shouldUpdatePostedAt = data.status === 'ACTIVE' && existing.status !== 'ACTIVE';
+    const shouldUpdatePostedAt =
+      data.status === "ACTIVE" && existing.status !== "ACTIVE";
 
     // Update posting
     const updated = await db.truckPosting.update({
@@ -366,16 +365,15 @@ export async function PATCH(
     });
 
     // P1-001-B FIX: Invalidate cache after posting update to ensure fresh data
-    await CacheInvalidation.truck(updated.truckId, updated.carrierId, updated.carrierId);
+    await CacheInvalidation.truck(
+      updated.truckId,
+      updated.carrierId,
+      updated.carrierId
+    );
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('Error updating truck posting:', error);
-
-    return NextResponse.json(
-      { error: 'Failed to update truck posting' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Error updating truck posting");
   }
 }
 
@@ -395,9 +393,9 @@ export async function DELETE(
     const { id } = await params;
 
     // Validate ID format
-    if (!id || typeof id !== 'string' || id.length < 10) {
+    if (!id || typeof id !== "string" || id.length < 10) {
       return NextResponse.json(
-        { error: 'Invalid posting ID format' },
+        { error: "Invalid posting ID format" },
         { status: 400 }
       );
     }
@@ -405,12 +403,14 @@ export async function DELETE(
     // CSRF protection for state-changing operation
     // Mobile clients MUST use Bearer token authentication (inherently CSRF-safe)
     // Web clients MUST provide CSRF token
-    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
-    const hasBearerAuth = request.headers.get('authorization')?.startsWith('Bearer ');
+    const isMobileClient = request.headers.get("x-client-type") === "mobile";
+    const hasBearerAuth = request.headers
+      .get("authorization")
+      ?.startsWith("Bearer ");
 
     if (isMobileClient && !hasBearerAuth) {
       return NextResponse.json(
-        { error: 'Mobile clients require Bearer authentication' },
+        { error: "Mobile clients require Bearer authentication" },
         { status: 401 }
       );
     }
@@ -436,7 +436,7 @@ export async function DELETE(
 
     if (!existing) {
       return NextResponse.json(
-        { error: 'Truck posting not found' },
+        { error: "Truck posting not found" },
         { status: 404 }
       );
     }
@@ -445,13 +445,13 @@ export async function DELETE(
     const hasElevatedPerms = hasElevatedPermissions({
       role: session.role as UserRole,
       organizationId: session.organizationId,
-      userId: session.userId
+      userId: session.userId,
     });
 
     // Verify ownership (user's organization owns this posting)
     if (existing.carrierId !== session.organizationId && !hasElevatedPerms) {
       return NextResponse.json(
-        { error: 'You can only cancel postings for your own organization' },
+        { error: "You can only cancel postings for your own organization" },
         { status: 403 }
       );
     }
@@ -459,7 +459,7 @@ export async function DELETE(
     // Soft delete: set status to CANCELLED
     const cancelled = await db.truckPosting.update({
       where: { id },
-      data: { status: 'CANCELLED' },
+      data: { status: "CANCELLED" },
       select: {
         id: true,
         status: true,
@@ -469,18 +469,17 @@ export async function DELETE(
     });
 
     // P1-001-B FIX: Invalidate cache after posting cancellation to remove stale data
-    await CacheInvalidation.truck(cancelled.truckId, cancelled.carrierId, cancelled.carrierId);
+    await CacheInvalidation.truck(
+      cancelled.truckId,
+      cancelled.carrierId,
+      cancelled.carrierId
+    );
 
     return NextResponse.json({
-      message: 'Truck posting cancelled successfully',
+      message: "Truck posting cancelled successfully",
       posting: cancelled,
     });
   } catch (error) {
-    console.error('Error cancelling truck posting:', error);
-
-    return NextResponse.json(
-      { error: 'Failed to cancel truck posting' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Error cancelling truck posting");
   }
 }

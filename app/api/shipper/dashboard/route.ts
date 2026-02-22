@@ -12,9 +12,10 @@
  * New aggregation logic should use lib/aggregation.ts as the single source of truth.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/shipper/dashboard
@@ -33,9 +34,9 @@ export async function GET(request: NextRequest) {
     const session = await requireAuth();
 
     // Check if user is a shipper or admin
-    if (session.role !== 'SHIPPER' && session.role !== 'ADMIN') {
+    if (session.role !== "SHIPPER" && session.role !== "ADMIN") {
       return NextResponse.json(
-        { error: 'Access denied. Shipper role required.' },
+        { error: "Access denied. Shipper role required." },
         { status: 403 }
       );
     }
@@ -43,7 +44,10 @@ export async function GET(request: NextRequest) {
     // Check if user has an organization
     if (!session.organizationId) {
       return NextResponse.json(
-        { error: 'You must belong to an organization to access shipper features.' },
+        {
+          error:
+            "You must belong to an organization to access shipper features.",
+        },
         { status: 400 }
       );
     }
@@ -56,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     if (!user || user.organizationId !== session.organizationId) {
       return NextResponse.json(
-        { error: 'Session organization mismatch' },
+        { error: "Session organization mismatch" },
         { status: 403 }
       );
     }
@@ -86,7 +90,7 @@ export async function GET(request: NextRequest) {
       db.load.count({
         where: {
           shipperId: session.organizationId,
-          status: { in: ['POSTED', 'ASSIGNED'] },
+          status: { in: ["POSTED", "ASSIGNED"] },
         },
       }),
 
@@ -94,7 +98,7 @@ export async function GET(request: NextRequest) {
       db.load.count({
         where: {
           shipperId: session.organizationId,
-          status: 'IN_TRANSIT',
+          status: "IN_TRANSIT",
         },
       }),
 
@@ -102,7 +106,7 @@ export async function GET(request: NextRequest) {
       db.load.count({
         where: {
           shipperId: session.organizationId,
-          status: { in: ['DELIVERED', 'COMPLETED'] },
+          status: { in: ["DELIVERED", "COMPLETED"] },
           updatedAt: { gte: startOfMonth },
         },
       }),
@@ -111,7 +115,7 @@ export async function GET(request: NextRequest) {
       db.load.aggregate({
         where: {
           shipperId: session.organizationId,
-          shipperFeeStatus: 'DEDUCTED',
+          shipperFeeStatus: "DEDUCTED",
         },
         _sum: { shipperServiceFee: true },
       }),
@@ -120,14 +124,14 @@ export async function GET(request: NextRequest) {
       db.load.aggregate({
         where: {
           shipperId: session.organizationId,
-          shipperFeeStatus: 'RESERVED',
+          shipperFeeStatus: "RESERVED",
         },
         _sum: { shipperServiceFee: true },
       }),
 
       // Loads by status
       db.load.groupBy({
-        by: ['status'],
+        by: ["status"],
         where: { shipperId: session.organizationId },
         _count: true,
       }),
@@ -136,7 +140,7 @@ export async function GET(request: NextRequest) {
       db.financialAccount.findFirst({
         where: {
           organizationId: session.organizationId,
-          accountType: 'SHIPPER_WALLET',
+          accountType: "SHIPPER_WALLET",
         },
         select: {
           balance: true,
@@ -146,7 +150,9 @@ export async function GET(request: NextRequest) {
     ]);
 
     const totalSpent = Number(totalSpentResult._sum?.shipperServiceFee || 0);
-    const pendingPayments = Number(pendingPaymentsResult._sum?.shipperServiceFee || 0);
+    const pendingPayments = Number(
+      pendingPaymentsResult._sum?.shipperServiceFee || 0
+    );
 
     return NextResponse.json({
       stats: {
@@ -163,15 +169,10 @@ export async function GET(request: NextRequest) {
       })),
       wallet: {
         balance: Number(walletAccount?.balance || 0),
-        currency: walletAccount?.currency || 'ETB',
+        currency: walletAccount?.currency || "ETB",
       },
     });
   } catch (error) {
-    console.error('Shipper dashboard error:', error);
-
-    return NextResponse.json(
-      { error: 'Failed to load dashboard data' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Shipper dashboard error");
   }
 }

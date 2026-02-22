@@ -7,11 +7,12 @@
  * Sprint 20 - Dashboard optimization: move stats calculation server-side
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import { db } from "@/lib/db";
 // M1 FIX: Add rate limiting
-import { checkRpsLimit, RPS_CONFIGS } from '@/lib/rateLimit';
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/dispatcher/dashboard
@@ -29,8 +30,10 @@ import { checkRpsLimit, RPS_CONFIGS } from '@/lib/rateLimit';
 export async function GET(request: NextRequest) {
   try {
     // M1 FIX: Apply rate limiting
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      request.headers.get('x-real-ip') || 'unknown';
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
     const rpsResult = await checkRpsLimit(
       RPS_CONFIGS.dashboard.endpoint,
       ip,
@@ -39,7 +42,7 @@ export async function GET(request: NextRequest) {
     );
     if (!rpsResult.allowed) {
       return NextResponse.json(
-        { error: 'Rate limit exceeded. Please slow down.' },
+        { error: "Rate limit exceeded. Please slow down." },
         { status: 429 }
       );
     }
@@ -48,12 +51,12 @@ export async function GET(request: NextRequest) {
 
     // Check if user is a dispatcher, admin, or super admin
     if (
-      session.role !== 'DISPATCHER' &&
-      session.role !== 'ADMIN' &&
-      session.role !== 'SUPER_ADMIN'
+      session.role !== "DISPATCHER" &&
+      session.role !== "ADMIN" &&
+      session.role !== "SUPER_ADMIN"
     ) {
       return NextResponse.json(
-        { error: 'Access denied. Dispatcher role required.' },
+        { error: "Access denied. Dispatcher role required." },
         { status: 403 }
       );
     }
@@ -77,22 +80,22 @@ export async function GET(request: NextRequest) {
     ] = await Promise.all([
       // Posted (unassigned) loads
       db.load.count({
-        where: { status: 'POSTED' },
+        where: { status: "POSTED" },
       }),
 
       // Assigned loads
       db.load.count({
-        where: { status: 'ASSIGNED' },
+        where: { status: "ASSIGNED" },
       }),
 
       // In-transit loads
       db.load.count({
-        where: { status: 'IN_TRANSIT' },
+        where: { status: "IN_TRANSIT" },
       }),
 
       // Available trucks (active postings)
       db.truckPosting.count({
-        where: { status: 'ACTIVE' },
+        where: { status: "ACTIVE" },
       }),
 
       // Deliveries scheduled today
@@ -103,7 +106,7 @@ export async function GET(request: NextRequest) {
             lte: todayEnd,
           },
           status: {
-            in: ['ASSIGNED', 'IN_TRANSIT', 'DELIVERED'],
+            in: ["ASSIGNED", "IN_TRANSIT", "DELIVERED"],
           },
         },
       }),
@@ -112,7 +115,7 @@ export async function GET(request: NextRequest) {
       // Use Trip.deliveredAt which is the actual delivery timestamp
       db.trip.findMany({
         where: {
-          status: { in: ['DELIVERED', 'COMPLETED'] },
+          status: { in: ["DELIVERED", "COMPLETED"] },
           deliveredAt: {
             gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
           },
@@ -132,7 +135,7 @@ export async function GET(request: NextRequest) {
       db.load.count({
         where: {
           status: {
-            notIn: ['DELIVERED', 'COMPLETED', 'CANCELLED'],
+            notIn: ["DELIVERED", "COMPLETED", "CANCELLED"],
           },
           deliveryDate: {
             lt: new Date(),
@@ -148,7 +151,7 @@ export async function GET(request: NextRequest) {
             lte: todayEnd,
           },
           status: {
-            in: ['POSTED', 'ASSIGNED'],
+            in: ["POSTED", "ASSIGNED"],
           },
         },
         select: {
@@ -160,7 +163,7 @@ export async function GET(request: NextRequest) {
           truckType: true,
         },
         orderBy: {
-          pickupDate: 'asc',
+          pickupDate: "asc",
         },
         take: 10,
       }),
@@ -196,11 +199,6 @@ export async function GET(request: NextRequest) {
       pickupsToday,
     });
   } catch (error) {
-    console.error('Dispatcher dashboard error:', error);
-
-    return NextResponse.json(
-      { error: 'Failed to load dashboard data' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Dispatcher dashboard error");
   }
 }

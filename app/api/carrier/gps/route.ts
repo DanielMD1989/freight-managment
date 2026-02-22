@@ -5,9 +5,10 @@
  * Used for auto-refresh functionality on GPS tracking page.
  */
 
-import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/carrier/gps
@@ -19,16 +20,16 @@ export async function GET() {
     const session = await requireAuth();
 
     // Only carriers and admins can access GPS data
-    if (session.role !== 'CARRIER' && session.role !== 'ADMIN') {
+    if (session.role !== "CARRIER" && session.role !== "ADMIN") {
       return NextResponse.json(
-        { error: 'Unauthorized - Carrier access required' },
+        { error: "Unauthorized - Carrier access required" },
         { status: 403 }
       );
     }
 
     if (!session.organizationId) {
       return NextResponse.json(
-        { error: 'No organization found' },
+        { error: "No organization found" },
         { status: 400 }
       );
     }
@@ -54,7 +55,7 @@ export async function GET() {
         },
       },
       orderBy: {
-        licensePlate: 'asc',
+        licensePlate: "asc",
       },
     });
 
@@ -63,10 +64,6 @@ export async function GET() {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Get carrier GPS error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error, "Get carrier GPS error");
   }
 }
