@@ -26,7 +26,16 @@ export default defineConfig({
         storageState: "e2e/.auth/shipper.json",
       },
       dependencies: ["shipper-setup"],
-      testIgnore: [/\.setup\.ts/, /workflow\.spec\.ts/],
+      testIgnore: [/\.setup\.ts/, /workflow\.spec\.ts/, /deep-.*\.spec\.ts/],
+    },
+    {
+      name: "deep",
+      use: {
+        browserName: "chromium",
+        storageState: "e2e/.auth/shipper.json",
+      },
+      dependencies: ["shipper-setup"],
+      testMatch: /deep-.*\.spec\.ts/,
     },
     {
       name: "workflow",
