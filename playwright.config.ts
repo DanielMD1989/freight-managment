@@ -26,7 +26,13 @@ export default defineConfig({
         storageState: "e2e/.auth/shipper.json",
       },
       dependencies: ["shipper-setup"],
-      testIgnore: [/\.setup\.ts/, /workflow\.spec\.ts/, /deep-.*\.spec\.ts/],
+      testIgnore: [
+        /\.setup\.ts/,
+        /workflow\.spec\.ts/,
+        /deep-.*\.spec\.ts/,
+        /carrier\//,
+        /admin\//,
+      ],
     },
     {
       name: "deep",
@@ -35,7 +41,7 @@ export default defineConfig({
         storageState: "e2e/.auth/shipper.json",
       },
       dependencies: ["shipper-setup"],
-      testMatch: /deep-.*\.spec\.ts/,
+      testMatch: /shipper\/deep-.*\.spec\.ts/,
     },
     {
       name: "workflow",
@@ -43,6 +49,40 @@ export default defineConfig({
         browserName: "chromium",
       },
       testMatch: /workflow\.spec\.ts/,
+    },
+    {
+      name: "carrier-setup",
+      testMatch: /carrier\/auth\.setup\.ts/,
+    },
+    {
+      name: "carrier-deep",
+      use: {
+        browserName: "chromium",
+        storageState: "e2e/.auth/carrier.json",
+      },
+      dependencies: ["carrier-setup"],
+      testMatch: /carrier\/deep-.*\.spec\.ts/,
+    },
+    {
+      name: "carrier-workflow",
+      use: {
+        browserName: "chromium",
+      },
+      testMatch: /carrier\/workflow\.spec\.ts/,
+    },
+    {
+      name: "admin-setup",
+      testMatch: /admin\/auth\.setup\.ts/,
+      dependencies: ["carrier-workflow"],
+    },
+    {
+      name: "admin-deep",
+      use: {
+        browserName: "chromium",
+        storageState: "e2e/.auth/admin.json",
+      },
+      dependencies: ["admin-setup"],
+      testMatch: /admin\/deep-.*\.spec\.ts/,
     },
   ],
 });
