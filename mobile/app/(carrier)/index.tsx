@@ -108,6 +108,16 @@ export default function CarrierDashboard() {
       route: "/(carrier)/trip-history",
     },
     {
+      label: "Disputes",
+      icon: "alert-circle-outline" as const,
+      route: "/(carrier)/disputes",
+    },
+    {
+      label: "GPS Tracking",
+      icon: "navigate-circle-outline" as const,
+      route: "/(carrier)/gps",
+    },
+    {
       label: "Team",
       icon: "people-outline" as const,
       route: "/(shared)/team",

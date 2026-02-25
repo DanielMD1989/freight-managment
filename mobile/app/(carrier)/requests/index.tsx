@@ -21,6 +21,11 @@ import {
   useMyLoadRequests,
   useCancelLoadRequest,
 } from "../../../src/hooks/useLoads";
+import {
+  useMatchProposals,
+  useRespondToProposal,
+} from "../../../src/hooks/useMatches";
+import type { MatchProposal } from "../../../src/services/match";
 import { Card } from "../../../src/components/Card";
 import { StatusBadge } from "../../../src/components/StatusBadge";
 import { LoadingSpinner } from "../../../src/components/LoadingSpinner";
@@ -33,6 +38,13 @@ import { typography } from "../../../src/theme/typography";
 
 type Tab = "shipper" | "myload" | "matches";
 const STATUS_FILTERS = ["ALL", "PENDING", "APPROVED", "REJECTED"] as const;
+const PROPOSAL_STATUS_FILTERS = [
+  "ALL",
+  "PENDING",
+  "ACCEPTED",
+  "REJECTED",
+  "EXPIRED",
+] as const;
 
 export default function CarrierRequestsScreen() {
   const { t } = useTranslation();
@@ -57,27 +69,40 @@ export default function CarrierRequestsScreen() {
     isRefetching: loadReqRefetching,
   } = useMyLoadRequests({ status: filterParam, limit: 50 });
 
+  // Tab 3: Match Proposals (dispatcher-proposed matches)
+  const proposalStatusParam = statusFilter === "ALL" ? undefined : statusFilter;
+  const {
+    data: proposalData,
+    isLoading: proposalLoading,
+    refetch: refetchProposals,
+    isRefetching: proposalRefetching,
+  } = useMatchProposals({
+    status: tab === "matches" ? proposalStatusParam : undefined,
+    limit: 50,
+  });
+
   const respondMutation = useRespondToTruckRequest();
   const cancelLoadReqMutation = useCancelLoadRequest();
+  const proposalRespondMutation = useRespondToProposal();
 
   const isLoading =
     tab === "shipper"
       ? truckReqLoading
       : tab === "myload"
         ? loadReqLoading
-        : false;
+        : proposalLoading;
   const isRefetching =
     tab === "shipper"
       ? truckReqRefetching
       : tab === "myload"
         ? loadReqRefetching
-        : false;
+        : proposalRefetching;
   const refetch =
     tab === "shipper"
       ? refetchTruckReqs
       : tab === "myload"
         ? refetchLoadReqs
-        : () => {};
+        : refetchProposals;
 
   const truckRequests = (truckReqData?.requests ?? []) as Array<{
     id: string;
@@ -135,6 +160,50 @@ export default function CarrierRequestsScreen() {
     ]);
   };
 
+  const handleAcceptProposal = (proposalId: string) => {
+    Alert.alert(
+      "Accept Proposal",
+      "Accept this match proposal and assign the load to your truck?",
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: "Accept",
+          onPress: () =>
+            proposalRespondMutation.mutate(
+              { proposalId, action: "ACCEPT" },
+              {
+                onSuccess: () =>
+                  Alert.alert(
+                    "Success",
+                    "Proposal accepted. Load assigned to your truck."
+                  ),
+                onError: (err) => Alert.alert("Error", err.message),
+              }
+            ),
+        },
+      ]
+    );
+  };
+
+  const handleRejectProposal = (proposalId: string) => {
+    Alert.alert("Reject Proposal", "Reject this match proposal?", [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: "Reject",
+        style: "destructive",
+        onPress: () =>
+          proposalRespondMutation.mutate(
+            { proposalId, action: "REJECT" },
+            {
+              onError: (err) => Alert.alert("Error", err.message),
+            }
+          ),
+      },
+    ]);
+  };
+
+  const proposals = (proposalData?.proposals ?? []) as MatchProposal[];
+
   return (
     <ScrollView
       style={styles.container}
@@ -186,14 +255,14 @@ export default function CarrierRequestsScreen() {
       </View>
 
       {/* Status Filter Chips */}
-      {tab !== "matches" && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterRow}
-          contentContainerStyle={styles.filterContent}
-        >
-          {STATUS_FILTERS.map((s) => (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterRow}
+        contentContainerStyle={styles.filterContent}
+      >
+        {(tab === "matches" ? PROPOSAL_STATUS_FILTERS : STATUS_FILTERS).map(
+          (s) => (
             <TouchableOpacity
               key={s}
               style={[styles.chip, statusFilter === s && styles.chipActive]}
@@ -208,9 +277,9 @@ export default function CarrierRequestsScreen() {
                 {s === "ALL" ? "All" : s.charAt(0) + s.slice(1).toLowerCase()}
               </Text>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
+          )
+        )}
+      </ScrollView>
 
       {/* Tab Content */}
       {tab === "shipper" ? (
@@ -318,13 +387,69 @@ export default function CarrierRequestsScreen() {
             </View>
           ))
         )
-      ) : (
-        /* Match Proposals - placeholder */
+      ) : /* Match Proposals tab */ isLoading ? (
+        <LoadingSpinner />
+      ) : proposals.length === 0 ? (
         <EmptyState
           icon="flash-outline"
-          title="Match Proposals"
-          message="Smart load-truck match proposals will appear here soon"
+          title="No Match Proposals"
+          message="Dispatcher match proposals for your trucks will appear here"
         />
+      ) : (
+        proposals.map((p) => (
+          <View key={p.id} style={styles.cardWrapper}>
+            <Card>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardRoute} numberOfLines={1}>
+                  {p.load?.pickupCity ?? "—"} {"\u2192"}{" "}
+                  {p.load?.deliveryCity ?? "—"}
+                </Text>
+                <StatusBadge status={p.status} type="generic" />
+              </View>
+              <Text style={styles.cardSub}>
+                Truck: {p.truck?.licensePlate ?? "—"} {" | "}{" "}
+                {p.truck?.truckType ?? ""}
+              </Text>
+              {p.proposedBy && (
+                <Text style={styles.cardSub}>
+                  Proposed by: {p.proposedBy.firstName ?? ""}{" "}
+                  {p.proposedBy.lastName ?? ""}
+                </Text>
+              )}
+              {p.proposedRate != null && (
+                <Text style={styles.cardRate}>
+                  Rate: {formatCurrency(p.proposedRate)}
+                </Text>
+              )}
+              {p.notes ? (
+                <Text style={styles.cardNotes} numberOfLines={2}>
+                  {p.notes}
+                </Text>
+              ) : null}
+              <Text style={styles.cardDate}>{formatDate(p.createdAt)}</Text>
+              {p.status === "PENDING" && (
+                <View style={styles.actionRow}>
+                  <Button
+                    title="Accept"
+                    variant="primary"
+                    size="sm"
+                    onPress={() => handleAcceptProposal(p.id)}
+                    loading={proposalRespondMutation.isPending}
+                    style={{ flex: 1, marginRight: spacing.sm }}
+                  />
+                  <Button
+                    title="Reject"
+                    variant="destructive"
+                    size="sm"
+                    onPress={() => handleRejectProposal(p.id)}
+                    loading={proposalRespondMutation.isPending}
+                    style={{ flex: 1 }}
+                  />
+                </View>
+              )}
+            </Card>
+          </View>
+        ))
       )}
 
       <View style={{ height: spacing["3xl"] }} />

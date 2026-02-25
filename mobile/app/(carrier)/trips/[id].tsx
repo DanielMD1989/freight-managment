@@ -16,7 +16,12 @@ import {
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
+// expo-image-picker only works on iOS/Android — lazy-load to avoid web crashes
+let ImagePicker: typeof import("expo-image-picker") | null = null;
+if (Platform.OS !== "web") {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  ImagePicker = require("expo-image-picker");
+}
 import {
   useTrip,
   useUpdateTripStatus,
@@ -133,6 +138,13 @@ export default function CarrierTripDetailsScreen() {
   };
 
   const handleUploadPod = async () => {
+    if (!ImagePicker) {
+      Alert.alert(
+        "Not Available",
+        "Image picker is only available on mobile devices"
+      );
+      return;
+    }
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
@@ -163,6 +175,13 @@ export default function CarrierTripDetailsScreen() {
   };
 
   const handleTakePhoto = async () => {
+    if (!ImagePicker) {
+      Alert.alert(
+        "Not Available",
+        "Camera is only available on mobile devices"
+      );
+      return;
+    }
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {

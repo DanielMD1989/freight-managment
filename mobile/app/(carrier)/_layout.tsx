@@ -147,6 +147,21 @@ export default function CarrierLayout() {
           tabBarItemStyle: { display: "none" },
         }}
       />
+      <Tabs.Screen
+        name="disputes"
+        options={{
+          title: "Disputes",
+          headerShown: false,
+          tabBarItemStyle: { display: "none" },
+        }}
+      />
+      <Tabs.Screen
+        name="gps"
+        options={{
+          title: "GPS Tracking",
+          tabBarItemStyle: { display: "none" },
+        }}
+      />
     </Tabs>
   );
 }

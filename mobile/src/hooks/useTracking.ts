@@ -13,3 +13,12 @@ export function useLoadProgress(loadId: string | undefined) {
     refetchInterval: 30000,
   });
 }
+
+/** Fetch carrier GPS truck data with 30s polling */
+export function useCarrierGPS() {
+  return useQuery({
+    queryKey: ["carrier-gps"],
+    queryFn: () => trackingService.getCarrierGPS(),
+    refetchInterval: 30000,
+  });
+}
