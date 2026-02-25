@@ -84,5 +84,18 @@ export default defineConfig({
       dependencies: ["admin-setup"],
       testMatch: /admin\/deep-.*\.spec\.ts/,
     },
+    {
+      name: "dispatcher-setup",
+      testMatch: /dispatcher\/auth\.setup\.ts/,
+    },
+    {
+      name: "dispatcher-deep",
+      use: {
+        browserName: "chromium",
+        storageState: "e2e/.auth/dispatcher.json",
+      },
+      dependencies: ["dispatcher-setup"],
+      testMatch: /dispatcher\/deep-.*\.spec\.ts/,
+    },
   ],
 });
