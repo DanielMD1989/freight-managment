@@ -29,6 +29,7 @@ import {
   formatWeight,
   formatDistance,
   formatDate,
+  formatCurrency,
 } from "../../../src/utils/format";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
@@ -175,6 +176,33 @@ export default function ShipperLoadDetailsScreen() {
           <DetailRow label="Instructions" value={load.specialInstructions} />
         )}
       </Card>
+
+      {/* Service Fee */}
+      {load.serviceFeeEtb != null && (
+        <Card style={styles.card}>
+          <Text style={styles.sectionTitle}>Service Fee</Text>
+          <DetailRow
+            label="Status"
+            value={load.shipperFeeStatus?.replace(/_/g, " ") ?? "N/A"}
+          />
+          <DetailRow
+            label="Fee Amount"
+            value={formatCurrency(load.serviceFeeEtb)}
+          />
+          {load.shipperServiceFee != null && (
+            <DetailRow
+              label="Shipper Fee"
+              value={formatCurrency(load.shipperServiceFee)}
+            />
+          )}
+          {load.carrierServiceFee != null && (
+            <DetailRow
+              label="Carrier Fee"
+              value={formatCurrency(load.carrierServiceFee)}
+            />
+          )}
+        </Card>
+      )}
 
       {/* Action buttons */}
       <View style={styles.actionsRow}>

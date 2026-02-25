@@ -63,7 +63,10 @@ test.describe("Deep: Dashboard", () => {
   });
 
   test("quick action Post New Load navigates correctly", async ({ page }) => {
-    await page.getByRole("link", { name: /Post New Load/ }).click();
+    await page
+      .getByRole("link", { name: /Post New Load/ })
+      .first()
+      .click();
     await page.waitForURL("**/shipper/loads/create**", { timeout: 10000 });
     await expectHeading(page, /Post New Load/);
   });

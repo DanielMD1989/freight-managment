@@ -28,6 +28,7 @@ import { StatusBadge } from "../../../src/components/StatusBadge";
 import { LoadingSpinner } from "../../../src/components/LoadingSpinner";
 import {
   formatDate,
+  formatDateTime,
   formatDistance,
   formatTruckType,
   formatWeight,
@@ -253,6 +254,58 @@ export default function ShipperTripDetailsScreen() {
         )}
       </Card>
 
+      {/* Activity Timeline */}
+      <Card style={styles.card}>
+        <Text style={styles.sectionTitle}>Activity Timeline</Text>
+        {buildTimelineEvents(trip).map((event, index, arr) => (
+          <View key={event.label} style={styles.timelineItem}>
+            <View style={styles.timelineLeft}>
+              <View
+                style={[
+                  styles.timelineDot,
+                  event.active
+                    ? styles.timelineDotActive
+                    : styles.timelineDotInactive,
+                ]}
+              >
+                <Ionicons
+                  name={event.icon as keyof typeof Ionicons.glyphMap}
+                  size={14}
+                  color={event.active ? colors.white : colors.slate400}
+                />
+              </View>
+              {index < arr.length - 1 && (
+                <View
+                  style={[
+                    styles.timelineLine,
+                    event.active
+                      ? styles.timelineLineActive
+                      : styles.timelineLineInactive,
+                  ]}
+                />
+              )}
+            </View>
+            <View style={styles.timelineContent}>
+              <Text
+                style={[
+                  styles.timelineLabel,
+                  !event.active && styles.timelineLabelInactive,
+                ]}
+              >
+                {event.label}
+              </Text>
+              {event.date ? (
+                <Text style={styles.timelineDate}>
+                  {formatDateTime(event.date)}
+                </Text>
+              ) : (
+                <Text style={styles.timelinePending}>Pending</Text>
+              )}
+            </View>
+          </View>
+        ))}
+      </Card>
+
       {/* Receiver Info */}
       {isTerminal && (trip.receiverName || trip.receiverPhone) && (
         <Card style={styles.card}>
@@ -369,6 +422,60 @@ export default function ShipperTripDetailsScreen() {
   );
 }
 
+function buildTimelineEvents(trip: {
+  status: string;
+  createdAt: Date;
+  startedAt?: Date | null;
+  pickedUpAt?: Date | null;
+  deliveredAt?: Date | null;
+  completedAt?: Date | null;
+  cancelledAt?: Date | null;
+}) {
+  const events = [
+    {
+      label: "Trip Created",
+      icon: "create-outline",
+      date: trip.createdAt,
+      active: true,
+    },
+    {
+      label: "Pickup Started",
+      icon: "location-outline",
+      date: trip.startedAt,
+      active: !!trip.startedAt,
+    },
+    {
+      label: "In Transit",
+      icon: "car-outline",
+      date: trip.pickedUpAt,
+      active: !!trip.pickedUpAt,
+    },
+    {
+      label: "Delivered",
+      icon: "checkmark-circle-outline",
+      date: trip.deliveredAt,
+      active: !!trip.deliveredAt,
+    },
+    {
+      label: "Completed",
+      icon: "trophy-outline",
+      date: trip.completedAt,
+      active: !!trip.completedAt,
+    },
+  ];
+
+  if (trip.cancelledAt) {
+    events.push({
+      label: "Cancelled",
+      icon: "close-circle-outline",
+      date: trip.cancelledAt,
+      active: true,
+    });
+  }
+
+  return events;
+}
+
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.detailRow}>
@@ -465,6 +572,64 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.primary700,
     marginTop: spacing.sm,
+  },
+
+  // Timeline
+  timelineItem: {
+    flexDirection: "row",
+    minHeight: 48,
+  },
+  timelineLeft: {
+    width: 32,
+    alignItems: "center",
+  },
+  timelineDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  timelineDotActive: {
+    backgroundColor: colors.primary500,
+  },
+  timelineDotInactive: {
+    backgroundColor: colors.slate100,
+  },
+  timelineLine: {
+    width: 2,
+    flex: 1,
+    minHeight: 20,
+  },
+  timelineLineActive: {
+    backgroundColor: colors.primary500,
+  },
+  timelineLineInactive: {
+    backgroundColor: colors.slate200,
+  },
+  timelineContent: {
+    flex: 1,
+    paddingLeft: spacing.md,
+    paddingBottom: spacing.md,
+  },
+  timelineLabel: {
+    ...typography.bodyMedium,
+    color: colors.textPrimary,
+    fontWeight: "500",
+  },
+  timelineLabelInactive: {
+    color: colors.textTertiary,
+  },
+  timelineDate: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  timelinePending: {
+    ...typography.bodySmall,
+    color: colors.textTertiary,
+    fontStyle: "italic",
+    marginTop: 2,
   },
 
   // POD documents

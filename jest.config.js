@@ -29,6 +29,7 @@ const customJestConfig = {
   ],
   testPathIgnorePatterns: [
     '/node_modules/',
+    '/mobile/',
     '/__tests__/api-loads.test.ts',
     '/__tests__/loadUtils.test.ts',
   ],

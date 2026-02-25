@@ -14,86 +14,123 @@
 // ENUMS - Must match Prisma schema exactly
 // =============================================================================
 
-export type UserRole = 'SHIPPER' | 'CARRIER' | 'DISPATCHER' | 'ADMIN' | 'SUPER_ADMIN';
+export type UserRole =
+  | "SHIPPER"
+  | "CARRIER"
+  | "DISPATCHER"
+  | "ADMIN"
+  | "SUPER_ADMIN";
 
-export type UserStatus = 'REGISTERED' | 'PENDING_VERIFICATION' | 'ACTIVE' | 'SUSPENDED' | 'REJECTED';
+export type UserStatus =
+  | "REGISTERED"
+  | "PENDING_VERIFICATION"
+  | "ACTIVE"
+  | "SUSPENDED"
+  | "REJECTED";
 
 export type LoadStatus =
-  | 'DRAFT'
-  | 'POSTED'
-  | 'SEARCHING'
-  | 'OFFERED'
-  | 'ASSIGNED'
-  | 'PICKUP_PENDING'
-  | 'IN_TRANSIT'
-  | 'DELIVERED'
-  | 'COMPLETED'
-  | 'EXCEPTION'
-  | 'CANCELLED'
-  | 'EXPIRED'
-  | 'UNPOSTED';
+  | "DRAFT"
+  | "POSTED"
+  | "SEARCHING"
+  | "OFFERED"
+  | "ASSIGNED"
+  | "PICKUP_PENDING"
+  | "IN_TRANSIT"
+  | "DELIVERED"
+  | "COMPLETED"
+  | "EXCEPTION"
+  | "CANCELLED"
+  | "EXPIRED"
+  | "UNPOSTED";
 
 export type TripStatus =
-  | 'ASSIGNED'
-  | 'PICKUP_PENDING'
-  | 'IN_TRANSIT'
-  | 'DELIVERED'
-  | 'COMPLETED'
-  | 'CANCELLED';
+  | "ASSIGNED"
+  | "PICKUP_PENDING"
+  | "IN_TRANSIT"
+  | "DELIVERED"
+  | "COMPLETED"
+  | "CANCELLED";
 
 export type TruckType =
-  | 'FLATBED'
-  | 'REFRIGERATED'
-  | 'TANKER'
-  | 'CONTAINER'
-  | 'DRY_VAN'
-  | 'LOWBOY'
-  | 'DUMP_TRUCK'
-  | 'BOX_TRUCK';
+  | "FLATBED"
+  | "REFRIGERATED"
+  | "TANKER"
+  | "CONTAINER"
+  | "DRY_VAN"
+  | "LOWBOY"
+  | "DUMP_TRUCK"
+  | "BOX_TRUCK";
 
-export type LoadType = 'FULL' | 'PARTIAL';
+export type LoadType = "FULL" | "PARTIAL";
 
-export type BookMode = 'REQUEST' | 'INSTANT';
+export type BookMode = "REQUEST" | "INSTANT";
 
-export type PostingStatus = 'ACTIVE' | 'EXPIRED' | 'CANCELLED' | 'MATCHED';
+export type PostingStatus = "ACTIVE" | "EXPIRED" | "CANCELLED" | "MATCHED";
 
-export type RequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED' | 'CANCELLED';
+export type RequestStatus =
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "EXPIRED"
+  | "CANCELLED";
 
-export type ServiceFeeStatus = 'PENDING' | 'RESERVED' | 'DEDUCTED' | 'REFUNDED' | 'WAIVED';
+export type ServiceFeeStatus =
+  | "PENDING"
+  | "RESERVED"
+  | "DEDUCTED"
+  | "REFUNDED"
+  | "WAIVED";
 
-export type VerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
+export type VerificationStatus =
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "EXPIRED";
 
-export type GpsDeviceStatus = 'ACTIVE' | 'INACTIVE' | 'SIGNAL_LOST' | 'MAINTENANCE';
+export type GpsDeviceStatus =
+  | "ACTIVE"
+  | "INACTIVE"
+  | "SIGNAL_LOST"
+  | "MAINTENANCE";
 
 export type OrganizationType =
-  | 'SHIPPER'
-  | 'CARRIER_COMPANY'
-  | 'CARRIER_INDIVIDUAL'
-  | 'CARRIER_ASSOCIATION'
-  | 'FLEET_OWNER'
-  | 'LOGISTICS_AGENT';
+  | "SHIPPER"
+  | "CARRIER_COMPANY"
+  | "CARRIER_INDIVIDUAL"
+  | "CARRIER_ASSOCIATION"
+  | "FLEET_OWNER"
+  | "LOGISTICS_AGENT";
+
+export type DisputeType =
+  | "PAYMENT_ISSUE"
+  | "DAMAGE"
+  | "LATE_DELIVERY"
+  | "QUALITY_ISSUE"
+  | "OTHER";
+
+export type DisputeStatus = "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "CLOSED";
 
 export type NotificationType =
-  | 'LOAD_ASSIGNED'
-  | 'LOAD_STATUS_CHANGE'
-  | 'TRUCK_REQUEST'
-  | 'TRUCK_REQUEST_APPROVED'
-  | 'TRUCK_REQUEST_REJECTED'
-  | 'LOAD_REQUEST'
-  | 'LOAD_REQUEST_APPROVED'
-  | 'LOAD_REQUEST_REJECTED'
-  | 'GPS_OFFLINE'
-  | 'GPS_ONLINE'
-  | 'POD_SUBMITTED'
-  | 'PAYMENT_RECEIVED'
-  | 'PAYMENT_PENDING'
-  | 'USER_SUSPENDED'
-  | 'RATING_RECEIVED'
-  | 'EXCEPTION_REPORTED'
-  | 'GEOFENCE_ALERT'
-  | 'NEW_LOAD_MATCHING'
-  | 'MARKETING'
-  | 'SYSTEM';
+  | "LOAD_ASSIGNED"
+  | "LOAD_STATUS_CHANGE"
+  | "TRUCK_REQUEST"
+  | "TRUCK_REQUEST_APPROVED"
+  | "TRUCK_REQUEST_REJECTED"
+  | "LOAD_REQUEST"
+  | "LOAD_REQUEST_APPROVED"
+  | "LOAD_REQUEST_REJECTED"
+  | "GPS_OFFLINE"
+  | "GPS_ONLINE"
+  | "POD_SUBMITTED"
+  | "PAYMENT_RECEIVED"
+  | "PAYMENT_PENDING"
+  | "USER_SUSPENDED"
+  | "RATING_RECEIVED"
+  | "EXCEPTION_REPORTED"
+  | "GEOFENCE_ALERT"
+  | "NEW_LOAD_MATCHING"
+  | "MARKETING"
+  | "SYSTEM";
 
 // =============================================================================
 // CORE DOMAIN MODELS
@@ -523,6 +560,27 @@ export interface TripPod {
   uploadedBy: string;
 }
 
+/**
+ * Dispute - Load dispute between shipper and carrier
+ */
+export interface Dispute {
+  id: string;
+  type: DisputeType;
+  status: DisputeStatus;
+  description: string;
+  evidenceUrls?: string[] | null;
+  resolution?: string | null;
+  resolvedAt?: Date | null;
+  loadId: string;
+  load?: Load | null;
+  createdById: string;
+  createdBy?: User | null;
+  disputedOrgId: string;
+  disputedOrg?: Organization | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // =============================================================================
 // API RESPONSE TYPES
 // =============================================================================
@@ -551,6 +609,11 @@ export interface TripsResponse {
 
 export interface TruckPostingsResponse {
   postings: TruckPosting[];
+  pagination: PaginationInfo;
+}
+
+export interface DisputesResponse {
+  disputes: Dispute[];
   pagination: PaginationInfo;
 }
 

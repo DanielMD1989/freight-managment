@@ -118,6 +118,14 @@ export default function ShipperLayout() {
           tabBarItemStyle: { display: "none" },
         }}
       />
+      <Tabs.Screen
+        name="disputes"
+        options={{
+          title: "Disputes",
+          headerShown: false,
+          tabBarItemStyle: { display: "none" },
+        }}
+      />
     </Tabs>
   );
 }
