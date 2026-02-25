@@ -45,17 +45,32 @@ const TRUCK_TYPES = [
 ];
 
 export default function ShipperTruckboard() {
-  const { t } = useTranslation();
+  useTranslation();
   const [search, setSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [truckType, setTruckType] = useState("");
+  const [fullPartial, setFullPartial] = useState("");
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [availableFrom, setAvailableFrom] = useState("");
+  const [minCapacity, setMinCapacity] = useState("");
   const [bookingPosting, setBookingPosting] = useState<TruckPosting | null>(
     null
   );
 
+  const hasActiveFilters =
+    truckType !== "" ||
+    fullPartial !== "" ||
+    verifiedOnly ||
+    availableFrom !== "" ||
+    minCapacity !== "";
+
   const { data, isLoading, refetch, isRefetching } = useTruckPostings({
     truckType: truckType || undefined,
     origin: search || undefined,
+    fullPartial: fullPartial || undefined,
+    companyVerified: verifiedOnly || undefined,
+    availableFrom: availableFrom || undefined,
+    minWeight: minCapacity ? Number(minCapacity) : undefined,
   });
 
   const postings = data?.postings ?? [];
@@ -162,28 +177,66 @@ export default function ShipperTruckboard() {
           <TouchableOpacity
             style={[
               styles.filterBtn,
-              truckType !== "" && styles.filterBtnActive,
+              hasActiveFilters && styles.filterBtnActive,
             ]}
             onPress={() => setShowFilters(true)}
           >
             <Ionicons
               name="options-outline"
               size={20}
-              color={truckType !== "" ? colors.white : colors.primary600}
+              color={hasActiveFilters ? colors.white : colors.primary600}
             />
           </TouchableOpacity>
         </View>
-        {truckType !== "" && (
+        {hasActiveFilters && (
           <View style={styles.activeFilters}>
-            <TouchableOpacity
-              style={styles.filterChip}
-              onPress={() => setTruckType("")}
-            >
-              <Text style={styles.filterChipText}>
-                {truckType.replace(/_/g, " ")}
-              </Text>
-              <Ionicons name="close" size={14} color={colors.primary600} />
-            </TouchableOpacity>
+            {truckType !== "" && (
+              <TouchableOpacity
+                style={styles.filterChip}
+                onPress={() => setTruckType("")}
+              >
+                <Text style={styles.filterChipText}>
+                  {truckType.replace(/_/g, " ")}
+                </Text>
+                <Ionicons name="close" size={14} color={colors.primary600} />
+              </TouchableOpacity>
+            )}
+            {fullPartial !== "" && (
+              <TouchableOpacity
+                style={styles.filterChip}
+                onPress={() => setFullPartial("")}
+              >
+                <Text style={styles.filterChipText}>{fullPartial}</Text>
+                <Ionicons name="close" size={14} color={colors.primary600} />
+              </TouchableOpacity>
+            )}
+            {verifiedOnly && (
+              <TouchableOpacity
+                style={styles.filterChip}
+                onPress={() => setVerifiedOnly(false)}
+              >
+                <Text style={styles.filterChipText}>Verified Only</Text>
+                <Ionicons name="close" size={14} color={colors.primary600} />
+              </TouchableOpacity>
+            )}
+            {availableFrom !== "" && (
+              <TouchableOpacity
+                style={styles.filterChip}
+                onPress={() => setAvailableFrom("")}
+              >
+                <Text style={styles.filterChipText}>From: {availableFrom}</Text>
+                <Ionicons name="close" size={14} color={colors.primary600} />
+              </TouchableOpacity>
+            )}
+            {minCapacity !== "" && (
+              <TouchableOpacity
+                style={styles.filterChip}
+                onPress={() => setMinCapacity("")}
+              >
+                <Text style={styles.filterChipText}>Min: {minCapacity} kg</Text>
+                <Ionicons name="close" size={14} color={colors.primary600} />
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
@@ -213,9 +266,19 @@ export default function ShipperTruckboard() {
       <FilterModal
         visible={showFilters}
         onClose={() => setShowFilters(false)}
-        truckType={truckType}
-        onApply={(type) => {
-          setTruckType(type);
+        values={{
+          truckType,
+          fullPartial,
+          verifiedOnly,
+          availableFrom,
+          minCapacity,
+        }}
+        onApply={(vals) => {
+          setTruckType(vals.truckType);
+          setFullPartial(vals.fullPartial);
+          setVerifiedOnly(vals.verifiedOnly);
+          setAvailableFrom(vals.availableFrom);
+          setMinCapacity(vals.minCapacity);
           setShowFilters(false);
         }}
       />
@@ -231,18 +294,72 @@ export default function ShipperTruckboard() {
   );
 }
 
+interface FilterValues {
+  truckType: string;
+  fullPartial: string;
+  verifiedOnly: boolean;
+  availableFrom: string;
+  minCapacity: string;
+}
+
+const FULL_PARTIAL_OPTIONS = ["", "FULL", "PARTIAL"];
+
 function FilterModal({
   visible,
   onClose,
-  truckType,
+  values,
   onApply,
 }: {
   visible: boolean;
   onClose: () => void;
-  truckType: string;
-  onApply: (type: string) => void;
+  values: FilterValues;
+  onApply: (vals: FilterValues) => void;
 }) {
-  const [localType, setLocalType] = useState(truckType);
+  const [localType, setLocalType] = useState(values.truckType);
+  const [localFullPartial, setLocalFullPartial] = useState(values.fullPartial);
+  const [localVerified, setLocalVerified] = useState(values.verifiedOnly);
+  const [localAvailableFrom, setLocalAvailableFrom] = useState(
+    values.availableFrom
+  );
+  const [localMinCapacity, setLocalMinCapacity] = useState(values.minCapacity);
+
+  // Sync local state when modal opens with new values
+  React.useEffect(() => {
+    if (visible) {
+      setLocalType(values.truckType);
+      setLocalFullPartial(values.fullPartial);
+      setLocalVerified(values.verifiedOnly);
+      setLocalAvailableFrom(values.availableFrom);
+      setLocalMinCapacity(values.minCapacity);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  const handleReset = () => {
+    const defaults: FilterValues = {
+      truckType: "",
+      fullPartial: "",
+      verifiedOnly: false,
+      availableFrom: "",
+      minCapacity: "",
+    };
+    setLocalType("");
+    setLocalFullPartial("");
+    setLocalVerified(false);
+    setLocalAvailableFrom("");
+    setLocalMinCapacity("");
+    onApply(defaults);
+  };
+
+  const handleApply = () => {
+    onApply({
+      truckType: localType,
+      fullPartial: localFullPartial,
+      verifiedOnly: localVerified,
+      availableFrom: localAvailableFrom,
+      minCapacity: localMinCapacity,
+    });
+  };
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
@@ -256,6 +373,7 @@ function FilterModal({
           </View>
 
           <ScrollView style={styles.modalBody}>
+            {/* Truck Type */}
             <Text style={styles.filterLabel}>Truck Type</Text>
             <View style={styles.chipGrid}>
               {TRUCK_TYPES.map((type) => (
@@ -275,21 +393,84 @@ function FilterModal({
                 </TouchableOpacity>
               ))}
             </View>
+
+            {/* Full / Partial */}
+            <Text style={styles.filterLabel}>Load Type</Text>
+            <View style={styles.chipGrid}>
+              {FULL_PARTIAL_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt || "ALL"}
+                  style={[
+                    styles.chip,
+                    localFullPartial === opt && styles.chipActive,
+                  ]}
+                  onPress={() => setLocalFullPartial(opt)}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      localFullPartial === opt && styles.chipTextActive,
+                    ]}
+                  >
+                    {opt === "" ? "All" : opt === "FULL" ? "Full" : "Partial"}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Verified Carriers Only */}
+            <Text style={styles.filterLabel}>Carrier Verification</Text>
+            <TouchableOpacity
+              style={styles.verifiedToggle}
+              onPress={() => setLocalVerified(!localVerified)}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={localVerified ? "checkbox" : "square-outline"}
+                size={22}
+                color={localVerified ? colors.primary500 : colors.slate400}
+              />
+              <Text style={styles.verifiedToggleText}>
+                Verified Carriers Only
+              </Text>
+            </TouchableOpacity>
+
+            {/* Available From */}
+            <Input
+              label="Available From"
+              value={localAvailableFrom}
+              onChangeText={setLocalAvailableFrom}
+              placeholder="YYYY-MM-DD"
+              keyboardType="numbers-and-punctuation"
+              containerStyle={{ marginTop: spacing.md, marginBottom: 0 }}
+              hint="Filter trucks available from this date"
+            />
+
+            {/* Min Capacity */}
+            <Input
+              label="Min Capacity (kg)"
+              value={localMinCapacity}
+              onChangeText={setLocalMinCapacity}
+              placeholder="e.g. 5000"
+              keyboardType="numeric"
+              containerStyle={{
+                marginTop: spacing.md,
+                marginBottom: spacing.md,
+              }}
+              hint="Minimum truck capacity in kilograms"
+            />
           </ScrollView>
 
           <View style={styles.modalFooter}>
             <Button
               title="Reset"
-              onPress={() => {
-                setLocalType("");
-                onApply("");
-              }}
+              onPress={handleReset}
               variant="outline"
               style={{ flex: 1 }}
             />
             <Button
               title="Apply"
-              onPress={() => onApply(localType)}
+              onPress={handleApply}
               variant="primary"
               style={{ flex: 1 }}
             />
@@ -573,6 +754,16 @@ const styles = StyleSheet.create({
   },
   chipText: { ...typography.bodySmall, color: colors.textSecondary },
   chipTextActive: { color: colors.white, fontWeight: "600" },
+  verifiedToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  verifiedToggleText: {
+    ...typography.bodyMedium,
+    color: colors.textPrimary,
+  },
   // Booking modal
   bookingInfoCard: { marginBottom: spacing.md },
   bookingRoute: {

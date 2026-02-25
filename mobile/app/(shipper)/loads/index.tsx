@@ -10,10 +10,15 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useLoads } from "../../../src/hooks/useLoads";
+import {
+  useLoads,
+  useUpdateLoad,
+  useDeleteLoad,
+} from "../../../src/hooks/useLoads";
 import { Card } from "../../../src/components/Card";
 import { StatusBadge } from "../../../src/components/StatusBadge";
 import { Button } from "../../../src/components/Button";
@@ -49,12 +54,53 @@ export default function ShipperLoadsScreen() {
 
   const loads = data?.loads ?? [];
 
+  const updateLoadMutation = useUpdateLoad();
+  const deleteLoadMutation = useDeleteLoad();
+
+  const handlePostLoad = (loadId: string) => {
+    updateLoadMutation.mutate(
+      { id: loadId, data: { status: "POSTED" } },
+      {
+        onSuccess: () => Alert.alert("Success", "Load posted successfully"),
+        onError: (err) => Alert.alert("Error", err.message),
+      }
+    );
+  };
+
+  const handleUnpostLoad = (loadId: string) => {
+    updateLoadMutation.mutate(
+      { id: loadId, data: { status: "UNPOSTED" } },
+      {
+        onSuccess: () => Alert.alert("Success", "Load unposted"),
+        onError: (err) => Alert.alert("Error", err.message),
+      }
+    );
+  };
+
+  const handleDeleteLoad = (loadId: string) => {
+    Alert.alert("Delete Load", "Are you sure you want to delete this load?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () =>
+          deleteLoadMutation.mutate(loadId, {
+            onSuccess: () => Alert.alert("Deleted", "Load has been deleted"),
+            onError: (err) => Alert.alert("Error", err.message),
+          }),
+      },
+    ]);
+  };
+
+  const hasActions = (status: string) =>
+    status === "DRAFT" || status === "UNPOSTED" || status === "POSTED";
+
   const renderLoad = ({ item }: { item: Load }) => (
-    <TouchableOpacity
-      onPress={() => router.push(`/(shipper)/loads/${item.id}`)}
-      activeOpacity={0.7}
-    >
-      <Card style={styles.card}>
+    <Card style={styles.card}>
+      <TouchableOpacity
+        onPress={() => router.push(`/(shipper)/loads/${item.id}`)}
+        activeOpacity={0.7}
+      >
         <View style={styles.header}>
           <Text style={styles.route}>
             {item.pickupCity} → {item.deliveryCity}
@@ -78,8 +124,49 @@ export default function ShipperLoadsScreen() {
             </View>
           </View>
         )}
-      </Card>
-    </TouchableOpacity>
+      </TouchableOpacity>
+      {hasActions(item.status) && (
+        <View style={styles.loadActions}>
+          {(item.status === "DRAFT" || item.status === "UNPOSTED") && (
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => handlePostLoad(item.id)}
+            >
+              <Ionicons
+                name="cloud-upload-outline"
+                size={16}
+                color={colors.primary600}
+              />
+              <Text style={styles.actionBtnText}>Post</Text>
+            </TouchableOpacity>
+          )}
+          {item.status === "POSTED" && (
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => handleUnpostLoad(item.id)}
+            >
+              <Ionicons
+                name="cloud-download-outline"
+                size={16}
+                color={colors.warning}
+              />
+              <Text style={[styles.actionBtnText, { color: colors.warning }]}>
+                Unpost
+              </Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => handleDeleteLoad(item.id)}
+          >
+            <Ionicons name="trash-outline" size={16} color={colors.error} />
+            <Text style={[styles.actionBtnText, { color: colors.error }]}>
+              Delete
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </Card>
   );
 
   return (
@@ -197,4 +284,23 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   tagText: { ...typography.labelSmall, color: colors.warning },
+  loadActions: {
+    flexDirection: "row",
+    gap: spacing.md,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.slate100,
+  },
+  actionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  actionBtnText: {
+    ...typography.labelSmall,
+    color: colors.primary600,
+  },
 });

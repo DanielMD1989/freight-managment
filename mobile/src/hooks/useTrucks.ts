@@ -71,6 +71,10 @@ export function useTruckPostings(params?: {
   truckType?: string;
   origin?: string;
   destination?: string;
+  fullPartial?: string;
+  companyVerified?: boolean;
+  availableFrom?: string;
+  minWeight?: number;
 }) {
   return useQuery({
     queryKey: [...TRUCK_POSTINGS_KEY, params],
@@ -120,6 +124,15 @@ export function useMyTruckRequests(params?: {
   return useQuery({
     queryKey: ["truck-requests", "mine", params],
     queryFn: () => truckService.getMyTruckRequests(params),
+  });
+}
+
+/** Fetch single truck request by ID */
+export function useTruckRequest(id: string | undefined) {
+  return useQuery({
+    queryKey: ["truck-requests", id],
+    queryFn: () => truckService.getTruckRequest(id!),
+    enabled: !!id,
   });
 }
 

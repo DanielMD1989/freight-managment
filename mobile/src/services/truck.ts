@@ -86,6 +86,10 @@ class TruckService {
     truckType?: string;
     origin?: string;
     destination?: string;
+    fullPartial?: string;
+    companyVerified?: boolean;
+    availableFrom?: string;
+    minWeight?: number;
   }): Promise<{ postings: TruckPosting[]; pagination: PaginationInfo }> {
     try {
       const { page, limit = 20, ...rest } = params || {};
@@ -203,6 +207,43 @@ class TruckService {
   async cancelTruckRequest(id: string): Promise<void> {
     try {
       await apiClient.delete(`/api/truck-requests/${id}`);
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  }
+
+  /** Get a single truck request by ID */
+  async getTruckRequest(id: string): Promise<{
+    request: {
+      id: string;
+      status: string;
+      notes: string | null;
+      offeredRate: number | null;
+      expiresAt: string;
+      createdAt: string;
+      respondedAt: string | null;
+      responseNotes: string | null;
+      load: {
+        id: string;
+        pickupCity: string;
+        deliveryCity: string;
+        pickupDate: string;
+        truckType: string;
+        status: string;
+      };
+      truck: {
+        id: string;
+        licensePlate: string;
+        truckType: string;
+        carrierId: string;
+      };
+      shipper: { id: string; name: string };
+      carrier: { id: string; name: string };
+    };
+  }> {
+    try {
+      const response = await apiClient.get(`/api/truck-requests/${id}`);
+      return response.data;
     } catch (error) {
       throw new Error(getErrorMessage(error));
     }

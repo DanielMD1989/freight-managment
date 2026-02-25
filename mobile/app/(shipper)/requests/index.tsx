@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import {
   useReceivedLoadRequests,
@@ -35,6 +36,7 @@ const STATUS_FILTERS = ["ALL", "PENDING", "APPROVED", "REJECTED"] as const;
 
 export default function RequestsScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("carrier");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
@@ -175,7 +177,32 @@ export default function RequestsScreen() {
           />
         ) : (
           loadRequests.map((req) => (
-            <View key={req.id} style={styles.cardWrapper}>
+            <TouchableOpacity
+              key={req.id}
+              style={styles.cardWrapper}
+              activeOpacity={0.7}
+              onPress={() =>
+                router.push({
+                  pathname: "/(shipper)/requests/[id]",
+                  params: {
+                    id: req.id,
+                    type: "load",
+                    loadPickupCity: req.load?.pickupCity ?? "",
+                    loadDeliveryCity: req.load?.deliveryCity ?? "",
+                    loadTruckType: req.load?.truckType ?? "",
+                    loadStatus: req.load?.status ?? "",
+                    carrierName: req.carrier?.name ?? "",
+                    truckPlate: req.truck?.licensePlate ?? "",
+                    truckType: req.truck?.truckType ?? "",
+                    status: req.status,
+                    proposedRate:
+                      req.proposedRate != null ? String(req.proposedRate) : "",
+                    notes: req.notes ?? "",
+                    createdAt: req.createdAt ? String(req.createdAt) : "",
+                  },
+                })
+              }
+            >
               <Card>
                 <View style={styles.cardHeader}>
                   <Text style={styles.cardRoute} numberOfLines={1}>
@@ -215,7 +242,7 @@ export default function RequestsScreen() {
                   </View>
                 )}
               </Card>
-            </View>
+            </TouchableOpacity>
           ))
         )
       ) : truckRequests.length === 0 ? (
@@ -226,7 +253,17 @@ export default function RequestsScreen() {
         />
       ) : (
         truckRequests.map((req) => (
-          <View key={req.id} style={styles.cardWrapper}>
+          <TouchableOpacity
+            key={req.id}
+            style={styles.cardWrapper}
+            activeOpacity={0.7}
+            onPress={() =>
+              router.push({
+                pathname: "/(shipper)/requests/[id]",
+                params: { id: req.id, type: "truck" },
+              })
+            }
+          >
             <Card>
               <View style={styles.cardHeader}>
                 <Text style={styles.cardRoute} numberOfLines={1}>
@@ -258,7 +295,7 @@ export default function RequestsScreen() {
                 </View>
               )}
             </Card>
-          </View>
+          </TouchableOpacity>
         ))
       )}
 
