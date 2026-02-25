@@ -5,25 +5,34 @@
  * Uses expo-notifications for FCM token registration and local notifications.
  */
 import { Platform } from "react-native";
-import * as Notifications from "expo-notifications";
-import Constants from "expo-constants";
 import apiClient, { getErrorMessage } from "../api/client";
 
-// Configure notification handler (foreground display)
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// expo-notifications only works on iOS/Android — lazy-load to avoid web crashes
+let Notifications: typeof import("expo-notifications") | null = null;
+let Constants: typeof import("expo-constants").default | null = null;
+
+if (Platform.OS !== "web") {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  Notifications = require("expo-notifications");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  Constants = require("expo-constants").default;
+
+  // Configure notification handler (foreground display)
+  Notifications!.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 
 class PushService {
   /** Register for push notifications and send FCM token to server */
   async registerForPush(): Promise<string | null> {
-    if (Platform.OS === "web") return null;
+    if (!Notifications || !Constants) return null;
 
     // Check permissions
     const { status: existingStatus } =
@@ -77,26 +86,26 @@ class PushService {
   }
 
   /** Add notification received listener */
-  onNotificationReceived(
-    callback: (notification: Notifications.Notification) => void
-  ) {
+  onNotificationReceived(callback: (notification: unknown) => void) {
+    if (!Notifications) return { remove: () => {} };
     return Notifications.addNotificationReceivedListener(callback);
   }
 
   /** Add notification response (tap) listener */
-  onNotificationResponse(
-    callback: (response: Notifications.NotificationResponse) => void
-  ) {
+  onNotificationResponse(callback: (response: unknown) => void) {
+    if (!Notifications) return { remove: () => {} };
     return Notifications.addNotificationResponseReceivedListener(callback);
   }
 
   /** Get badge count */
   async getBadgeCount(): Promise<number> {
+    if (!Notifications) return 0;
     return Notifications.getBadgeCountAsync();
   }
 
   /** Set badge count */
   async setBadgeCount(count: number): Promise<void> {
+    if (!Notifications) return;
     await Notifications.setBadgeCountAsync(count);
   }
 }

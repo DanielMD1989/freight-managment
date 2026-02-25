@@ -1,8 +1,8 @@
 /**
  * Shipper Map Screen - Shipment Tracking
- * Shows active shipments with progress tracking and expandable trip details
+ * Shows active shipments on a real map with GPS markers and progress tracking
  */
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -11,10 +11,25 @@ import {
   Dimensions,
   RefreshControl,
   TouchableOpacity,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+
+// react-native-maps only works on iOS/Android — use a placeholder on web
+
+let MapView: React.ComponentType<Record<string, unknown>> | null = null;
+let Marker: React.ComponentType<Record<string, unknown>> | null = null;
+let PROVIDER_GOOGLE: string | undefined = undefined;
+if (Platform.OS !== "web") {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const Maps = require("react-native-maps");
+  MapView = Maps.default;
+  Marker = Maps.Marker;
+  PROVIDER_GOOGLE = Maps.PROVIDER_GOOGLE;
+}
 import { useRouter } from "expo-router";
 import { useTrips } from "../../src/hooks/useTrips";
+import { useLoadProgress } from "../../src/hooks/useTracking";
 import { Card } from "../../src/components/Card";
 import { Button } from "../../src/components/Button";
 import { LoadingSpinner } from "../../src/components/LoadingSpinner";
@@ -28,8 +43,17 @@ import type { Trip } from "../../src/types";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
+// Ethiopia center
+const INITIAL_REGION = {
+  latitude: 9.0,
+  longitude: 38.7,
+  latitudeDelta: 6,
+  longitudeDelta: 6,
+};
+
 export default function ShipperMapScreen() {
   const router = useRouter();
+  const mapRef = useRef(null);
   const {
     data: tripsData,
     isLoading,
@@ -41,6 +65,7 @@ export default function ShipperMapScreen() {
   const [expandedTripId, setExpandedTripId] = useState<string | null>(null);
 
   const trips = tripsData?.trips ?? [];
+  const selectedTrip = trips.find((t) => t.id === expandedTripId);
 
   if (isLoading) return <LoadingSpinner fullScreen />;
 
@@ -65,19 +90,65 @@ export default function ShipperMapScreen() {
         <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
       }
     >
-      {/* Map placeholder */}
+      {/* Map */}
       <View style={styles.mapContainer}>
-        <View style={styles.mapPlaceholder}>
-          <Ionicons
-            name="navigate-outline"
-            size={48}
-            color={colors.primary300}
-          />
-          <Text style={styles.mapPlaceholderText}>Shipment Tracking Map</Text>
-          <Text style={styles.mapSubtext}>
-            Google Maps API key required for live tracking
-          </Text>
-        </View>
+        {Platform.OS !== "web" && MapView && Marker ? (
+          <MapView
+            ref={mapRef}
+            style={styles.map}
+            provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
+            initialRegion={INITIAL_REGION}
+            showsUserLocation={false}
+            showsCompass
+            showsScale
+          >
+            {trips.map((trip: Trip) => (
+              <React.Fragment key={trip.id}>
+                {/* Pickup marker (green) */}
+                {trip.pickupLat != null && trip.pickupLng != null && (
+                  <Marker
+                    coordinate={{
+                      latitude: trip.pickupLat,
+                      longitude: trip.pickupLng,
+                    }}
+                    title={`Pickup: ${trip.pickupCity ?? "N/A"}`}
+                    pinColor="green"
+                  />
+                )}
+                {/* Delivery marker (red) */}
+                {trip.deliveryLat != null && trip.deliveryLng != null && (
+                  <Marker
+                    coordinate={{
+                      latitude: trip.deliveryLat,
+                      longitude: trip.deliveryLng,
+                    }}
+                    title={`Delivery: ${trip.deliveryCity ?? "N/A"}`}
+                    pinColor="red"
+                  />
+                )}
+                {/* Truck marker (blue) - last known position */}
+                {trip.currentLat != null && trip.currentLng != null && (
+                  <Marker
+                    coordinate={{
+                      latitude: trip.currentLat,
+                      longitude: trip.currentLng,
+                    }}
+                    title={`Truck: ${trip.truck?.licensePlate ?? "In Transit"}`}
+                    pinColor="blue"
+                  />
+                )}
+              </React.Fragment>
+            ))}
+          </MapView>
+        ) : (
+          <View style={styles.mapPlaceholder}>
+            <Ionicons name="map-outline" size={48} color={colors.slate300} />
+            <Text style={styles.mapPlaceholderText}>Shipment Map</Text>
+            <Text style={styles.mapSubtext}>
+              Map available on iOS and Android
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Summary bar */}
@@ -91,6 +162,9 @@ export default function ShipperMapScreen() {
           </Text>
         </View>
       </View>
+
+      {/* Progress card for selected trip */}
+      {selectedTrip?.load?.id && <ProgressCard loadId={selectedTrip.load.id} />}
 
       {/* Active shipment cards */}
       <View style={styles.tripsSection}>
@@ -270,6 +344,47 @@ export default function ShipperMapScreen() {
   );
 }
 
+/** Progress card component that polls for live tracking data */
+function ProgressCard({ loadId }: { loadId: string }) {
+  const { data: progress } = useLoadProgress(loadId);
+
+  if (!progress?.progress) return null;
+
+  const p = progress.progress;
+  return (
+    <Card style={styles.progressCard}>
+      <View style={styles.progressCardHeader}>
+        <Ionicons
+          name="analytics-outline"
+          size={18}
+          color={colors.primary500}
+        />
+        <Text style={styles.progressCardTitle}>Live Progress</Text>
+      </View>
+      <View style={styles.progressBarBg}>
+        <View style={[styles.progressBarFill, { width: `${p.percent}%` }]} />
+      </View>
+      <View style={styles.progressStats}>
+        <Text style={styles.progressStat}>{p.percent}% complete</Text>
+        {p.remainingKm != null && (
+          <Text style={styles.progressStat}>
+            {formatDistance(p.remainingKm)} remaining
+          </Text>
+        )}
+        {p.estimatedArrival && (
+          <Text style={styles.progressStat}>
+            ETA:{" "}
+            {new Date(p.estimatedArrival).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </Text>
+        )}
+      </View>
+    </Card>
+  );
+}
+
 function getProgressPercent(status: string): number {
   switch (status) {
     case "ASSIGNED":
@@ -289,21 +404,22 @@ function getProgressPercent(status: string): number {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  mapContainer: { height: SCREEN_HEIGHT * 0.25 },
+  mapContainer: { height: SCREEN_HEIGHT * 0.35 },
+  map: { flex: 1 },
   mapPlaceholder: {
     flex: 1,
-    backgroundColor: colors.primary50,
+    backgroundColor: colors.slate100,
     justifyContent: "center",
     alignItems: "center",
   },
   mapPlaceholderText: {
     ...typography.titleMedium,
-    color: colors.primary500,
+    color: colors.slate400,
     marginTop: spacing.sm,
   },
   mapSubtext: {
     ...typography.bodySmall,
-    color: colors.primary300,
+    color: colors.slate300,
     marginTop: spacing.xs,
   },
   summaryBar: {
@@ -328,6 +444,30 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.textSecondary,
     fontWeight: "500",
+  },
+  progressCard: {
+    margin: spacing.lg,
+    marginBottom: 0,
+  },
+  progressCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  progressCardTitle: {
+    ...typography.titleSmall,
+    color: colors.textPrimary,
+  },
+  progressStats: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.lg,
+    marginTop: spacing.sm,
+  },
+  progressStat: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
   },
   tripsSection: {
     padding: spacing.lg,
