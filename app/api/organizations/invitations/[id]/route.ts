@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import { handleApiError } from "@/lib/apiErrors";
 
 /**
@@ -82,6 +83,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireAuth();
     const { id } = await params;
 

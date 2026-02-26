@@ -6,9 +6,10 @@
  * Manages user notification preferences
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { db } from "@/lib/db";
 
 /**
  * GET /api/user/notification-preferences
@@ -30,9 +31,9 @@ export async function GET(request: NextRequest) {
       preferences: user?.notificationPreferences || {},
     });
   } catch (error) {
-    console.error('Failed to get notification preferences:', error);
+    console.error("Failed to get notification preferences:", error);
     return NextResponse.json(
-      { error: 'Failed to retrieve preferences' },
+      { error: "Failed to retrieve preferences" },
       { status: 500 }
     );
   }
@@ -48,6 +49,9 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireAuth();
 
     const body = await request.json();
@@ -55,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     if (!preferences) {
       return NextResponse.json(
-        { error: 'Preferences are required' },
+        { error: "Preferences are required" },
         { status: 400 }
       );
     }
@@ -64,17 +68,23 @@ export async function POST(request: NextRequest) {
 
     // Handle array format (legacy)
     if (Array.isArray(preferences)) {
-      preferencesObj = preferences.reduce((acc: Record<string, boolean>, pref: { type: string; enabled: boolean }) => {
-        acc[pref.type] = pref.enabled;
-        return acc;
-      }, {} as Record<string, boolean>);
+      preferencesObj = preferences.reduce(
+        (
+          acc: Record<string, boolean>,
+          pref: { type: string; enabled: boolean }
+        ) => {
+          acc[pref.type] = pref.enabled;
+          return acc;
+        },
+        {} as Record<string, boolean>
+      );
     }
     // Handle object format (new settings page)
-    else if (typeof preferences === 'object') {
+    else if (typeof preferences === "object") {
       preferencesObj = preferences;
     } else {
       return NextResponse.json(
-        { error: 'Invalid preferences format' },
+        { error: "Invalid preferences format" },
         { status: 400 }
       );
     }
@@ -89,12 +99,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Preferences updated successfully',
+      message: "Preferences updated successfully",
     });
   } catch (error) {
-    console.error('Failed to update notification preferences:', error);
+    console.error("Failed to update notification preferences:", error);
     return NextResponse.json(
-      { error: 'Failed to update preferences' },
+      { error: "Failed to update preferences" },
       { status: 500 }
     );
   }

@@ -40,35 +40,40 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = withdrawSchema.parse(body);
 
-    // Get wallet and check balance
-    const wallet = await db.financialAccount.findFirst({
-      where: {
-        organizationId: user.organizationId,
-        accountType: {
-          in: ["SHIPPER_WALLET", "CARRIER_WALLET"],
-        },
+    // Wrap balance check + withdrawal creation in transaction to prevent race condition
+    const withdrawalRequest = await db.$transaction(
+      async (tx) => {
+        // Get wallet and check balance atomically
+        const wallet = await tx.financialAccount.findFirst({
+          where: {
+            organizationId: user.organizationId,
+            accountType: {
+              in: ["SHIPPER_WALLET", "CARRIER_WALLET"],
+            },
+          },
+        });
+
+        if (!wallet) {
+          throw new Error("WALLET_NOT_FOUND");
+        }
+
+        if (parseFloat(wallet.balance.toString()) < validatedData.amount) {
+          throw new Error("INSUFFICIENT_BALANCE");
+        }
+
+        // Create withdrawal request atomically with balance check
+        const withdrawal = await tx.withdrawalRequest.create({
+          data: {
+            ...validatedData,
+            requestedById: session.userId,
+            status: "PENDING",
+          },
+        });
+
+        return withdrawal;
       },
-    });
-
-    if (!wallet) {
-      return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
-    }
-
-    if (parseFloat(wallet.balance.toString()) < validatedData.amount) {
-      return NextResponse.json(
-        { error: "Insufficient balance" },
-        { status: 400 }
-      );
-    }
-
-    // Create withdrawal request
-    const withdrawalRequest = await db.withdrawalRequest.create({
-      data: {
-        ...validatedData,
-        requestedById: session.userId,
-        status: "PENDING",
-      },
-    });
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
 
     return NextResponse.json({
       message: "Withdrawal request submitted successfully",
@@ -79,6 +84,21 @@ export async function POST(request: NextRequest) {
 
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
+    }
+
+    if (error instanceof Error) {
+      if (error.message === "WALLET_NOT_FOUND") {
+        return NextResponse.json(
+          { error: "Wallet not found" },
+          { status: 404 }
+        );
+      }
+      if (error.message === "INSUFFICIENT_BALANCE") {
+        return NextResponse.json(
+          { error: "Insufficient balance" },
+          { status: 400 }
+        );
+      }
     }
 
     return NextResponse.json(

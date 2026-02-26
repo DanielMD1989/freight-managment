@@ -223,12 +223,8 @@ export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth();
 
-    // Only dispatchers, admins, or the load assignment system should create trips
-    if (
-      !["ADMIN", "SUPER_ADMIN", "DISPATCHER", "SHIPPER", "CARRIER"].includes(
-        session.role
-      )
-    ) {
+    // Only dispatchers and admins should create trips directly
+    if (!["ADMIN", "SUPER_ADMIN", "DISPATCHER"].includes(session.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 

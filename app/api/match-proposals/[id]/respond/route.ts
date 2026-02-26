@@ -9,23 +9,23 @@
  * POST: Accept or reject a proposal (CARRIER only)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { z } from 'zod';
-import { requireActiveUser } from '@/lib/auth';
-import { validateCSRFWithMobile } from '@/lib/csrf';
-import { canApproveRequests } from '@/lib/dispatcherPermissions';
-import { RULE_CARRIER_FINAL_AUTHORITY } from '@/lib/foundation-rules';
-import { UserRole } from '@prisma/client';
-import { enableTrackingForLoad } from '@/lib/gpsTracking';
-import { validateWalletBalancesForTrip } from '@/lib/serviceFeeManagement'; // Service Fee Implementation
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { z } from "zod";
+import { requireActiveUser } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { canApproveRequests } from "@/lib/dispatcherPermissions";
+import { RULE_CARRIER_FINAL_AUTHORITY } from "@/lib/foundation-rules";
+import { UserRole } from "@prisma/client";
+import { enableTrackingForLoad } from "@/lib/gpsTracking";
+import { validateWalletBalancesForTrip } from "@/lib/serviceFeeManagement"; // Service Fee Implementation
 // P0-007 FIX: Import CacheInvalidation for post-acceptance cache clearing
-import { CacheInvalidation } from '@/lib/cache';
-import crypto from 'crypto';
+import { CacheInvalidation } from "@/lib/cache";
+import crypto from "crypto";
 
 // Validation schema for proposal response
 const ProposalResponseSchema = z.object({
-  action: z.enum(['ACCEPT', 'REJECT']),
+  action: z.enum(["ACCEPT", "REJECT"]),
   responseNotes: z.string().max(500).optional(),
 });
 
@@ -82,13 +82,13 @@ export async function POST(
 
     if (!proposal) {
       return NextResponse.json(
-        { error: 'Proposal not found' },
+        { error: "Proposal not found" },
         { status: 404 }
       );
     }
 
     // Check if proposal is still pending
-    if (proposal.status !== 'PENDING') {
+    if (proposal.status !== "PENDING") {
       return NextResponse.json(
         {
           error: `Proposal has already been ${proposal.status.toLowerCase()}`,
@@ -103,11 +103,11 @@ export async function POST(
       // Mark as expired
       await db.matchProposal.update({
         where: { id: proposalId },
-        data: { status: 'EXPIRED' },
+        data: { status: "EXPIRED" },
       });
 
       return NextResponse.json(
-        { error: 'Proposal has expired' },
+        { error: "Proposal has expired" },
         { status: 400 }
       );
     }
@@ -122,9 +122,9 @@ export async function POST(
     if (!canApproveRequests(user, proposal.truck.carrierId)) {
       return NextResponse.json(
         {
-          error: 'You do not have permission to respond to this proposal',
+          error: "You do not have permission to respond to this proposal",
           rule: RULE_CARRIER_FINAL_AUTHORITY.id,
-          hint: 'Only the carrier who owns the truck can respond',
+          hint: "Only the carrier who owns the truck can respond",
         },
         { status: 403 }
       );
@@ -136,13 +136,13 @@ export async function POST(
 
     if (!validationResult.success) {
       // FIX: Use zodErrorResponse to avoid schema leak
-      const { zodErrorResponse } = await import('@/lib/validation');
+      const { zodErrorResponse } = await import("@/lib/validation");
       return zodErrorResponse(validationResult.error);
     }
 
     const data = validationResult.data;
 
-    if (data.action === 'ACCEPT') {
+    if (data.action === "ACCEPT") {
       // SERVICE FEE: Validate wallet balances before acceptance
       // This is validation only - fees are deducted on trip completion
       const walletValidation = await validateWalletBalancesForTrip(
@@ -152,7 +152,7 @@ export async function POST(
       if (!walletValidation.valid) {
         return NextResponse.json(
           {
-            error: 'Insufficient wallet balance for trip service fees',
+            error: "Insufficient wallet balance for trip service fees",
             details: walletValidation.errors,
             fees: {
               shipperFee: walletValidation.shipperFee,
@@ -171,7 +171,7 @@ export async function POST(
       let result: {
         proposal: Record<string, unknown>;
         load: Record<string, unknown>;
-        trip: Record<string, unknown> & { trackingUrl?: string | null }
+        trip: Record<string, unknown> & { trackingUrl?: string | null };
       };
 
       try {
@@ -198,15 +198,15 @@ export async function POST(
           });
 
           if (!freshLoad) {
-            throw new Error('LOAD_NOT_FOUND');
+            throw new Error("LOAD_NOT_FOUND");
           }
 
           // Check load is still available (race condition protection)
           if (freshLoad.assignedTruckId) {
-            throw new Error('LOAD_ALREADY_ASSIGNED');
+            throw new Error("LOAD_ALREADY_ASSIGNED");
           }
 
-          const proposableStatuses = ['POSTED', 'SEARCHING', 'OFFERED'];
+          const proposableStatuses = ["POSTED", "SEARCHING", "OFFERED"];
           if (!proposableStatuses.includes(freshLoad.status)) {
             throw new Error(`LOAD_NOT_AVAILABLE:${freshLoad.status}`);
           }
@@ -215,20 +215,31 @@ export async function POST(
           const existingAssignment = await tx.load.findFirst({
             where: {
               assignedTruckId: proposal.truckId,
-              status: { notIn: ['DELIVERED', 'COMPLETED', 'CANCELLED', 'EXPIRED'] },
+              status: {
+                notIn: ["DELIVERED", "COMPLETED", "CANCELLED", "EXPIRED"],
+              },
             },
-            select: { id: true, pickupCity: true, deliveryCity: true, status: true },
+            select: {
+              id: true,
+              pickupCity: true,
+              deliveryCity: true,
+              status: true,
+            },
           });
 
           if (existingAssignment) {
-            throw new Error(`TRUCK_BUSY:${existingAssignment.pickupCity}:${existingAssignment.deliveryCity}`);
+            throw new Error(
+              `TRUCK_BUSY:${existingAssignment.pickupCity}:${existingAssignment.deliveryCity}`
+            );
           }
 
           // Unassign truck from any completed loads (cleanup)
           await tx.load.updateMany({
             where: {
               assignedTruckId: proposal.truckId,
-              status: { in: ['DELIVERED', 'COMPLETED', 'CANCELLED', 'EXPIRED'] },
+              status: {
+                in: ["DELIVERED", "COMPLETED", "CANCELLED", "EXPIRED"],
+              },
             },
             data: { assignedTruckId: null },
           });
@@ -237,7 +248,7 @@ export async function POST(
           const updatedProposal = await tx.matchProposal.update({
             where: { id: proposalId },
             data: {
-              status: 'ACCEPTED',
+              status: "ACCEPTED",
               respondedAt: new Date(),
               responseNotes: data.responseNotes,
               respondedById: session.userId,
@@ -250,12 +261,12 @@ export async function POST(
             data: {
               assignedTruckId: proposal.truckId,
               assignedAt: new Date(),
-              status: 'ASSIGNED',
+              status: "ASSIGNED",
             },
           });
 
           // Create Trip record inside transaction (atomic with assignment)
-          const trackingUrl = `trip-${proposal.loadId.slice(-6)}-${crypto.randomBytes(12).toString('hex')}`;
+          const trackingUrl = `trip-${proposal.loadId.slice(-6)}-${crypto.randomBytes(12).toString("hex")}`;
 
           const trip = await tx.trip.create({
             data: {
@@ -263,7 +274,7 @@ export async function POST(
               truckId: proposal.truckId,
               carrierId: proposal.truck.carrierId,
               shipperId: freshLoad.shipperId,
-              status: 'ASSIGNED',
+              status: "ASSIGNED",
               pickupLat: freshLoad.originLat,
               pickupLng: freshLoad.originLon,
               pickupAddress: freshLoad.pickupAddress,
@@ -272,7 +283,8 @@ export async function POST(
               deliveryLng: freshLoad.destinationLon,
               deliveryAddress: freshLoad.deliveryAddress,
               deliveryCity: freshLoad.deliveryCity,
-              estimatedDistanceKm: freshLoad.tripKm || freshLoad.estimatedTripKm,
+              estimatedDistanceKm:
+                freshLoad.tripKm || freshLoad.estimatedTripKm,
               trackingUrl,
               trackingEnabled: true,
             },
@@ -282,7 +294,7 @@ export async function POST(
           await tx.loadEvent.create({
             data: {
               loadId: proposal.loadId,
-              eventType: 'ASSIGNED',
+              eventType: "ASSIGNED",
               description: `Load assigned via match proposal (accepted by carrier). Truck: ${proposal.truck.licensePlate}`,
               userId: session.userId,
               metadata: {
@@ -298,48 +310,67 @@ export async function POST(
             where: {
               loadId: proposal.loadId,
               id: { not: proposalId },
-              status: 'PENDING',
+              status: "PENDING",
             },
-            data: { status: 'CANCELLED' },
+            data: { status: "CANCELLED" },
           });
 
           // Cancel pending load/truck requests
           await tx.loadRequest.updateMany({
-            where: { loadId: proposal.loadId, status: 'PENDING' },
-            data: { status: 'CANCELLED' },
+            where: { loadId: proposal.loadId, status: "PENDING" },
+            data: { status: "CANCELLED" },
           });
 
           await tx.truckRequest.updateMany({
-            where: { loadId: proposal.loadId, status: 'PENDING' },
-            data: { status: 'CANCELLED' },
+            where: { loadId: proposal.loadId, status: "PENDING" },
+            data: { status: "CANCELLED" },
+          });
+
+          // Mark truck posting as MATCHED so it disappears from loadboard
+          await tx.truckPosting.updateMany({
+            where: { truckId: proposal.truckId, status: "ACTIVE" },
+            data: { status: "MATCHED", updatedAt: new Date() },
+          });
+          // Mark truck as unavailable
+          await tx.truck.update({
+            where: { id: proposal.truckId },
+            data: { isAvailable: false },
           });
 
           return { proposal: updatedProposal, load: updatedLoad, trip };
         });
-      // H8 FIX: Use unknown type with type guard
+        // H8 FIX: Use unknown type with type guard
       } catch (error: unknown) {
         // Handle specific transaction errors
-        const errorMessage = error instanceof Error ? error.message : '';
-        if (errorMessage === 'LOAD_NOT_FOUND') {
-          return NextResponse.json({ error: 'Load not found' }, { status: 404 });
-        }
-        if (errorMessage === 'LOAD_ALREADY_ASSIGNED') {
+        const errorMessage = error instanceof Error ? error.message : "";
+        if (errorMessage === "LOAD_NOT_FOUND") {
           return NextResponse.json(
-            { error: 'Load has already been assigned to another truck. Please refresh and try again.' },
+            { error: "Load not found" },
+            { status: 404 }
+          );
+        }
+        if (errorMessage === "LOAD_ALREADY_ASSIGNED") {
+          return NextResponse.json(
+            {
+              error:
+                "Load has already been assigned to another truck. Please refresh and try again.",
+            },
             { status: 409 }
           );
         }
-        if (errorMessage.startsWith('LOAD_NOT_AVAILABLE:')) {
-          const status = errorMessage.split(':')[1];
+        if (errorMessage.startsWith("LOAD_NOT_AVAILABLE:")) {
+          const status = errorMessage.split(":")[1];
           return NextResponse.json(
             { error: `Load is no longer available (status: ${status})` },
             { status: 400 }
           );
         }
-        if (errorMessage.startsWith('TRUCK_BUSY:')) {
-          const [, pickup, delivery] = errorMessage.split(':');
+        if (errorMessage.startsWith("TRUCK_BUSY:")) {
+          const [, pickup, delivery] = errorMessage.split(":");
           return NextResponse.json(
-            { error: `This truck is already assigned to an active load (${pickup} → ${delivery})` },
+            {
+              error: `This truck is already assigned to an active load (${pickup} → ${delivery})`,
+            },
             { status: 409 }
           );
         }
@@ -358,10 +389,13 @@ export async function POST(
       let trackingUrl: string | null = result.trip?.trackingUrl || null;
       if (proposal.truck.imei && proposal.truck.gpsVerifiedAt) {
         try {
-          const gpsUrl = await enableTrackingForLoad(proposal.loadId, proposal.truckId);
+          const gpsUrl = await enableTrackingForLoad(
+            proposal.loadId,
+            proposal.truckId
+          );
           if (gpsUrl) trackingUrl = gpsUrl;
         } catch (error) {
-          console.error('Failed to enable GPS tracking:', error);
+          console.error("Failed to enable GPS tracking:", error);
         }
       }
 
@@ -375,9 +409,9 @@ export async function POST(
           validated: true,
           shipperFee: walletValidation.shipperFee.toFixed(2),
           carrierFee: walletValidation.carrierFee.toFixed(2),
-          note: 'Fees will be deducted on trip completion',
+          note: "Fees will be deducted on trip completion",
         },
-        message: 'Proposal accepted. Load has been assigned to your truck.',
+        message: "Proposal accepted. Load has been assigned to your truck.",
         rule: RULE_CARRIER_FINAL_AUTHORITY.id,
       });
     } else {
@@ -385,7 +419,7 @@ export async function POST(
       const updatedProposal = await db.matchProposal.update({
         where: { id: proposalId },
         data: {
-          status: 'REJECTED',
+          status: "REJECTED",
           respondedAt: new Date(),
           responseNotes: data.responseNotes,
           respondedById: session.userId,
@@ -396,7 +430,7 @@ export async function POST(
       await db.loadEvent.create({
         data: {
           loadId: proposal.loadId,
-          eventType: 'PROPOSAL_REJECTED',
+          eventType: "PROPOSAL_REJECTED",
           description: `Match proposal rejected by carrier. Truck: ${proposal.truck.licensePlate}`,
           userId: session.userId,
           metadata: {
@@ -408,31 +442,37 @@ export async function POST(
 
       return NextResponse.json({
         proposal: updatedProposal,
-        message: 'Proposal rejected.',
+        message: "Proposal rejected.",
       });
     }
-  // H8 FIX: Use unknown type with type guard for Prisma errors
+    // H8 FIX: Use unknown type with type guard for Prisma errors
   } catch (error: unknown) {
-    console.error('Error responding to match proposal:', error);
+    console.error("Error responding to match proposal:", error);
 
     // Handle unique constraint violation (race condition)
-    const prismaError = error as { code?: string; meta?: { target?: string[] } };
-    if (prismaError?.code === 'P2002') {
-      const field = prismaError?.meta?.target?.[0] || 'field';
-      if (field === 'assignedTruckId') {
+    const prismaError = error as {
+      code?: string;
+      meta?: { target?: string[] };
+    };
+    if (prismaError?.code === "P2002") {
+      const field = prismaError?.meta?.target?.[0] || "field";
+      if (field === "assignedTruckId") {
         return NextResponse.json(
-          { error: 'This truck is already assigned to another load. Please refresh and try again.' },
+          {
+            error:
+              "This truck is already assigned to another load. Please refresh and try again.",
+          },
           { status: 409 }
         );
       }
       return NextResponse.json(
-        { error: 'A conflict occurred. Please refresh and try again.' },
+        { error: "A conflict occurred. Please refresh and try again." },
         { status: 409 }
       );
     }
 
     return NextResponse.json(
-      { error: 'Failed to respond to match proposal' },
+      { error: "Failed to respond to match proposal" },
       { status: 500 }
     );
   }

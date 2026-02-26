@@ -135,6 +135,12 @@ export async function GET(request: NextRequest) {
 
     const status = searchParams.get("status");
     const loadId = searchParams.get("loadId");
+    const page = Math.max(parseInt(searchParams.get("page") || "1"), 1);
+    const limit = Math.min(
+      Math.max(parseInt(searchParams.get("limit") || "20"), 1),
+      100
+    );
+    const skip = (page - 1) * limit;
 
     // Build where clause
     const where: Prisma.DisputeWhereInput = {
@@ -163,36 +169,49 @@ export async function GET(request: NextRequest) {
       where.loadId = loadId;
     }
 
-    const disputes = await db.dispute.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      include: {
-        load: {
-          select: {
-            id: true,
-            pickupCity: true,
-            deliveryCity: true,
-            status: true,
+    const [disputes, total] = await Promise.all([
+      db.dispute.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+        include: {
+          load: {
+            select: {
+              id: true,
+              pickupCity: true,
+              deliveryCity: true,
+              status: true,
+            },
+          },
+          createdBy: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          disputedOrg: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
         },
-        createdBy: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        disputedOrg: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
+      }),
+      db.dispute.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      disputes,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
       },
     });
-
-    return NextResponse.json({ disputes });
     // FIX: Use unknown type with type guard
   } catch (error: unknown) {
     console.error("Error fetching disputes:", error);

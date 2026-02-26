@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import { createNotification, NotificationType } from "@/lib/notifications";
 import { z } from "zod";
 import { CacheInvalidation } from "@/lib/cache";
@@ -28,6 +29,9 @@ export async function POST(
   { params }: { params: Promise<{ tripId: string }> }
 ) {
   try {
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const { tripId } = await params;
     const session = await requireAuth();
 

@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { requireActiveUser } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import { canApproveRequests } from "@/lib/dispatcherPermissions";
 import { RULE_CARRIER_FINAL_AUTHORITY } from "@/lib/foundation-rules";
 import { UserRole, Prisma } from "@prisma/client";
@@ -48,6 +49,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const { id: requestId } = await params;
     const session = await requireActiveUser();
 

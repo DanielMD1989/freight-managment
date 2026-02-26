@@ -7,10 +7,11 @@
  * Mobile app uses POST for cancel action.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { z } from 'zod';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { z } from "zod";
 
 // Validation schema for cancel request
 const CancelRequestSchema = z.object({
@@ -34,6 +35,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const { id: requestId } = await params;
     const session = await requireAuth();
 
@@ -52,7 +56,7 @@ export async function POST(
 
     if (!truckRequest) {
       return NextResponse.json(
-        { error: 'Truck request not found' },
+        { error: "Truck request not found" },
         { status: 404 }
       );
     }
@@ -72,17 +76,17 @@ export async function POST(
     // Only the shipper who created the request can cancel it
     const isShipper = truckRequest.shipperId === session.organizationId;
     const isRequester = truckRequest.requestedById === session.userId;
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isShipper && !isRequester && !isAdmin) {
       return NextResponse.json(
-        { error: 'Only the shipper who created this request can cancel it' },
+        { error: "Only the shipper who created this request can cancel it" },
         { status: 403 }
       );
     }
 
     // Check if request is still pending - handle idempotency
-    if (truckRequest.status === 'CANCELLED') {
+    if (truckRequest.status === "CANCELLED") {
       // Idempotent: Already cancelled, return success
       const existingRequest = await db.truckRequest.findUnique({
         where: { id: requestId },
@@ -105,13 +109,13 @@ export async function POST(
 
       return NextResponse.json({
         request: existingRequest,
-        message: 'Request was already cancelled',
+        message: "Request was already cancelled",
         idempotent: true,
       });
     }
 
     // Can only cancel PENDING requests
-    if (truckRequest.status !== 'PENDING') {
+    if (truckRequest.status !== "PENDING") {
       return NextResponse.json(
         {
           error: `Cannot cancel a ${truckRequest.status.toLowerCase()} request`,
@@ -125,7 +129,7 @@ export async function POST(
     const updatedRequest = await db.truckRequest.update({
       where: { id: requestId },
       data: {
-        status: 'CANCELLED',
+        status: "CANCELLED",
       },
       include: {
         load: {
@@ -148,8 +152,8 @@ export async function POST(
     await db.loadEvent.create({
       data: {
         loadId: truckRequest.loadId,
-        eventType: 'REQUEST_CANCELLED',
-        description: `Truck request cancelled by shipper${cancellationReason ? `: ${cancellationReason}` : ''}`,
+        eventType: "REQUEST_CANCELLED",
+        description: `Truck request cancelled by shipper${cancellationReason ? `: ${cancellationReason}` : ""}`,
         userId: session.userId,
         metadata: {
           requestId: requestId,
@@ -160,12 +164,12 @@ export async function POST(
 
     return NextResponse.json({
       request: updatedRequest,
-      message: 'Truck request cancelled successfully',
+      message: "Truck request cancelled successfully",
     });
   } catch (error) {
-    console.error('Error cancelling truck request:', error);
+    console.error("Error cancelling truck request:", error);
     return NextResponse.json(
-      { error: 'Failed to cancel truck request' },
+      { error: "Failed to cancel truck request" },
       { status: 500 }
     );
   }
