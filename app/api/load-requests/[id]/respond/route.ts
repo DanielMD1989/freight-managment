@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { createNotification } from "@/lib/notifications";
 import { enableTrackingForLoad } from "@/lib/gpsTracking";
 import { UserRole, Prisma } from "@prisma/client";
@@ -47,7 +47,7 @@ export async function POST(
 ) {
   try {
     const { id: requestId } = await params;
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Get the load request
     const loadRequest = await db.loadRequest.findUnique({
