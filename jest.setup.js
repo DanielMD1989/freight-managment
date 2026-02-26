@@ -247,6 +247,44 @@ jest.mock('@/lib/db', () => {
           const org = stores.organizations.get(record.organizationId);
           result.organization = org ? { id: org.id, name: org.name, type: org.type, isVerified: org.isVerified } : null;
         }
+        if (select.corridor && record.corridorId && stores.corridors) {
+          result.corridor = stores.corridors.get(record.corridorId) || null;
+        } else if (select.corridor && !record.corridorId) {
+          result.corridor = null;
+        }
+        if (select.assignedTruck && record.assignedTruckId && stores.trucks) {
+          const truck = stores.trucks.get(record.assignedTruckId);
+          if (truck) {
+            result.assignedTruck = { ...truck };
+            if (select.assignedTruck.select?.carrierId !== undefined) {
+              result.assignedTruck.carrierId = truck.carrierId;
+            }
+            if (select.assignedTruck.select?.carrier && truck.carrierId && stores.organizations) {
+              const carrier = stores.organizations.get(truck.carrierId);
+              result.assignedTruck.carrier = carrier ? { id: carrier.id, name: carrier.name } : null;
+            }
+          } else {
+            result.assignedTruck = null;
+          }
+        } else if (select.assignedTruck && !record.assignedTruckId) {
+          result.assignedTruck = null;
+        }
+        if (select.shipper && record.shipperId && stores.organizations) {
+          const shipper = stores.organizations.get(record.shipperId);
+          result.shipper = shipper ? { id: shipper.id, name: shipper.name } : null;
+        } else if (select.shipper && !record.shipperId) {
+          result.shipper = null;
+        }
+        if (select.pickupLocation && record.pickupLocationId && stores.ethiopianLocations) {
+          result.pickupLocation = stores.ethiopianLocations.get(record.pickupLocationId) || null;
+        } else if (select.pickupLocation) {
+          result.pickupLocation = null;
+        }
+        if (select.deliveryLocation && record.deliveryLocationId && stores.ethiopianLocations) {
+          result.deliveryLocation = stores.ethiopianLocations.get(record.deliveryLocationId) || null;
+        } else if (select.deliveryLocation) {
+          result.deliveryLocation = null;
+        }
         return Promise.resolve(result);
       }
       return Promise.resolve(record);
@@ -286,6 +324,13 @@ jest.mock('@/lib/db', () => {
         // Handle includes for relationships
         if (include.corridor && stores.corridors && record.corridorId) {
           record.corridor = stores.corridors.get(record.corridorId);
+        }
+        if (include.assignedTruck && record.assignedTruckId && stores.trucks) {
+          const truck = stores.trucks.get(record.assignedTruckId);
+          record.assignedTruck = truck ? { ...truck } : null;
+        }
+        if (include.shipper && record.shipperId && stores.organizations) {
+          record.shipper = stores.organizations.get(record.shipperId) || null;
         }
       }
       return Promise.resolve(record);

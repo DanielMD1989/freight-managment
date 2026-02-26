@@ -180,8 +180,9 @@ export async function GET(
       load.assignedTruck?.carrier?.id === user.organizationId;
     const isDispatcher = user.role === "DISPATCHER";
     const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
-    // POSTED loads are on the public loadboard — any authenticated user can view them
-    const isPublicLoad = load.status === "POSTED";
+    // POSTED loads are on the public loadboard — carriers can view them
+    // Shippers can only see their OWN loads (not other shippers' loads, even if POSTED)
+    const isPublicLoad = load.status === "POSTED" && user.role !== "SHIPPER";
 
     if (
       !isShipper &&
@@ -190,10 +191,7 @@ export async function GET(
       !isAdmin &&
       !isPublicLoad
     ) {
-      return NextResponse.json(
-        { error: "You do not have permission to view this load" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // Compute age

@@ -317,17 +317,17 @@ export async function GET(request: NextRequest) {
     if (isDispatcher) {
       // Dispatcher/Admin: See all loads (no organization filter)
       // Optional status filter will be applied below if provided
+    } else if (user?.role === "SHIPPER") {
+      // Shippers ALWAYS see only their own loads — privacy rule
+      if (user?.organizationId) {
+        where.shipperId = user.organizationId;
+      }
     } else if (myTrips) {
       // Carrier: Filter loads where assigned truck belongs to their organization
       if (user?.organizationId) {
         where.assignedTruck = {
           carrierId: user.organizationId,
         };
-      }
-    } else if (myLoads) {
-      // Shipper: Filter by current user's organization
-      if (user?.organizationId) {
-        where.shipperId = user.organizationId;
       }
     } else {
       // Only show posted loads in marketplace - force POSTED status
@@ -337,7 +337,7 @@ export async function GET(request: NextRequest) {
 
     // Allow status filter only for authenticated views (myLoads, myTrips, dispatcher)
     // Marketplace mode always forces POSTED
-    if (status && (myLoads || myTrips || isDispatcher)) {
+    if (status && (user?.role === "SHIPPER" || myTrips || isDispatcher)) {
       // Handle comma-separated statuses (e.g., "PICKUP_PENDING,IN_TRANSIT")
       if (status.includes(",")) {
         where.status = { in: status.split(",") };

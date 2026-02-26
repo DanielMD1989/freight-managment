@@ -815,7 +815,8 @@ describe("Shipper Workflow", () => {
       );
 
       const res = await callHandler(getTrip, req, { tripId: otherTrip.id });
-      expect(res.status).toBe(403);
+      // Cross-org trip access returns 404 (invisible) — prevents resource enumeration
+      expect(res.status).toBe(404);
     });
   });
 

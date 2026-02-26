@@ -256,8 +256,8 @@ export async function PATCH(
     // Verify ownership (user's organization owns this posting)
     if (existing.carrierId !== session.organizationId && !hasElevatedPerms) {
       return NextResponse.json(
-        { error: "You can only update postings for your own organization" },
-        { status: 403 }
+        { error: "Truck posting not found" },
+        { status: 404 }
       );
     }
 
@@ -451,8 +451,8 @@ export async function DELETE(
     // Verify ownership (user's organization owns this posting)
     if (existing.carrierId !== session.organizationId && !hasElevatedPerms) {
       return NextResponse.json(
-        { error: "You can only cancel postings for your own organization" },
-        { status: 403 }
+        { error: "Truck posting not found" },
+        { status: 404 }
       );
     }
 

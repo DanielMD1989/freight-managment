@@ -125,10 +125,7 @@ export async function GET(
       });
 
     if (!hasAccess) {
-      return NextResponse.json(
-        { error: "You do not have permission to view this trip" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
     // For shippers, only show carrier contact info and route when trip is IN_TRANSIT or later
@@ -198,6 +195,14 @@ export async function PATCH(
     });
 
     if (!trip) {
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
+    }
+
+    // Check carrier ownership first — return 404 for non-owned trips
+    if (
+      session.role === "CARRIER" &&
+      trip.carrierId !== session.organizationId
+    ) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 

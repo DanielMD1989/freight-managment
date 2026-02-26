@@ -110,20 +110,17 @@ export async function GET(
       select: { organizationId: true, role: true },
     });
 
-    // Any authenticated user can view truck details (trucks are shown on public truckboard)
-    // Write operations (PATCH/DELETE) still require ownership
+    // Truck visibility: owner, admin, shipper (via postings link), dispatcher
+    // Carriers can only see their OWN trucks — not other carriers' fleet
     const canView =
       user?.role === "SUPER_ADMIN" ||
       user?.role === "ADMIN" ||
       truck.carrierId === user?.organizationId ||
       user?.role === "SHIPPER" ||
-      user?.role === "CARRIER";
+      user?.role === "DISPATCHER";
 
     if (!canView) {
-      return NextResponse.json(
-        { error: "You don't have permission to view this truck" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
     return NextResponse.json(truck);
@@ -188,10 +185,7 @@ export async function PATCH(
       user?.role === "SUPER_ADMIN" || truck.carrierId === user?.organizationId;
 
     if (!canUpdate) {
-      return NextResponse.json(
-        { error: "You don't have permission to update this truck" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
     const body = await request.json();

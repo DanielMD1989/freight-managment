@@ -256,7 +256,7 @@ describe("Cross-Organization Access Tests", () => {
       expect(res.status).toBe(200);
     });
 
-    it("should reject Org2 viewing Org1 trip", async () => {
+    it("should reject Org2 viewing Org1 trip (404 invisible)", async () => {
       setAuthSession(
         createMockSession({
           userId: "org2-user",
@@ -271,10 +271,11 @@ describe("Cross-Organization Access Tests", () => {
         "http://localhost:3000/api/trips/org1-trip"
       );
       const res = await callHandler(getTrip, req, { tripId: "org1-trip" });
-      expect(res.status).toBe(403);
+      // Cross-org access returns 404 (invisible) not 403 — prevents resource enumeration
+      expect(res.status).toBe(404);
     });
 
-    it("should reject Org2 updating Org1 trip status", async () => {
+    it("should reject Org2 updating Org1 trip status (404 invisible)", async () => {
       setAuthSession(
         createMockSession({
           userId: "org2-user",
@@ -293,10 +294,11 @@ describe("Cross-Organization Access Tests", () => {
       );
 
       const res = await callHandler(updateTrip, req, { tripId: "org1-trip" });
-      expect(res.status).toBe(403);
+      // Cross-org access returns 404 (invisible) not 403 — prevents resource enumeration
+      expect(res.status).toBe(404);
     });
 
-    it("should reject Org1 updating Org2 trip status", async () => {
+    it("should reject Org1 updating Org2 trip status (404 invisible)", async () => {
       setAuthSession(
         createMockSession({
           userId: "org1-user",
@@ -315,7 +317,8 @@ describe("Cross-Organization Access Tests", () => {
       );
 
       const res = await callHandler(updateTrip, req, { tripId: "org2-trip" });
-      expect(res.status).toBe(403);
+      // Cross-org access returns 404 (invisible) not 403 — prevents resource enumeration
+      expect(res.status).toBe(404);
     });
   });
 
