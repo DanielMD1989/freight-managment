@@ -39,6 +39,11 @@ jest.mock('@/lib/db', () => {
     gpsDevices: new Map(),
     tripPods: new Map(),
     disputes: new Map(),
+    withdrawalRequests: new Map(),
+    systemSettings: new Map(),
+    companyDocuments: new Map(),
+    truckDocuments: new Map(),
+    auditLogs: new Map(),
   };
 
   let userIdCounter = 1;
@@ -62,6 +67,11 @@ jest.mock('@/lib/db', () => {
   let gpsDeviceIdCounter = 1;
   let tripPodIdCounter = 1;
   let disputeIdCounter = 1;
+  let withdrawalRequestIdCounter = 1;
+  let systemSettingsIdCounter = 1;
+  let companyDocumentIdCounter = 1;
+  let truckDocumentIdCounter = 1;
+  let auditLogIdCounter = 1;
 
   // Default values for different model types
   const modelDefaults = {
@@ -70,6 +80,8 @@ jest.mock('@/lib/db', () => {
       totalCommissionPaidEtb: 0,
       isActive: true,
       verificationStatus: 'PENDING',
+      isFlagged: false,
+      flagReason: null,
     },
     user: {
       isActive: true,
@@ -121,12 +133,33 @@ jest.mock('@/lib/db', () => {
     dispute: {
       status: 'OPEN',
     },
+    withdrawalRequest: {
+      status: 'PENDING',
+    },
+    systemSettings: {},
+    companyDocument: {
+      verificationStatus: 'PENDING',
+    },
+    truckDocument: {
+      verificationStatus: 'PENDING',
+    },
+    auditLog: {
+      severity: 'INFO',
+    },
   };
 
   // Helper to create model methods with in-memory storage
   const createModelMethods = (store, idPrefix, idCounter) => ({
     create: jest.fn(({ data }) => {
       const id = data.id || `${idPrefix}-${idCounter.value++}`;
+      // When an explicit id is provided, advance counter past it to avoid future collisions
+      if (data.id) {
+        const match = data.id.match(new RegExp(`^${idPrefix}-(\\d+)$`));
+        if (match) {
+          const num = parseInt(match[1], 10) + 1;
+          if (num > idCounter.value) idCounter.value = num;
+        }
+      }
       const defaults = modelDefaults[idPrefix] || {};
       const record = {
         id,
@@ -146,7 +179,13 @@ jest.mock('@/lib/db', () => {
         const entries = Object.entries(where).filter(([k]) => k !== 'id');
         if (entries.length > 0) {
           record = Array.from(store.values()).find(r =>
-            entries.every(([key, value]) => r[key] === value)
+            entries.every(([key, value]) => {
+              // Handle composite keys (e.g., originRegion_destinationRegion_direction: { ... })
+              if (value && typeof value === 'object' && !Array.isArray(value)) {
+                return Object.entries(value).every(([subKey, subValue]) => r[subKey] === subValue);
+              }
+              return r[key] === value;
+            })
           );
         }
       }
@@ -162,11 +201,51 @@ jest.mock('@/lib/db', () => {
         }
         if (include.loads && stores.loads) {
           result.loads = Array.from(stores.loads.values()).filter(
-            l => l.shipperId === record.id
+            l => l.shipperId === record.id || l.corridorId === record.id
           );
         }
         if (include.corridor && stores.corridors && record.corridorId) {
           result.corridor = stores.corridors.get(record.corridorId);
+        }
+        if (include.createdBy && record.createdById && stores.users) {
+          const user = stores.users.get(record.createdById);
+          result.createdBy = user ? { id: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email } : null;
+        }
+        if (include.organization && record.organizationId && stores.organizations) {
+          result.organization = stores.organizations.get(record.organizationId);
+        }
+        if (include.truck && record.truckId && stores.trucks) {
+          result.truck = stores.trucks.get(record.truckId) || null;
+        }
+        // Handle _count
+        if (include._count) {
+          result._count = {};
+          const countFields = include._count.select ? Object.keys(include._count.select) : [];
+          for (const field of countFields) {
+            result._count[field] = 0;
+            if (field === 'loads' && stores.loads) {
+              result._count[field] = Array.from(stores.loads.values()).filter(
+                l => l.corridorId === record.id || l.shipperId === record.id
+              ).length;
+            } else if (field === 'users' && stores.users) {
+              result._count[field] = Array.from(stores.users.values()).filter(
+                u => u.organizationId === record.id
+              ).length;
+            } else if (field === 'trucks' && stores.trucks) {
+              result._count[field] = Array.from(stores.trucks.values()).filter(
+                t => t.carrierId === record.id
+              ).length;
+            }
+          }
+        }
+        return Promise.resolve(result);
+      }
+      // Handle select with nested relations (e.g., select: { organization: { select: {...} } })
+      if (select && !include && record) {
+        const result = { ...record };
+        if (select.organization && record.organizationId && stores.organizations) {
+          const org = stores.organizations.get(record.organizationId);
+          result.organization = org ? { id: org.id, name: org.name, type: org.type, isVerified: org.isVerified } : null;
         }
         return Promise.resolve(result);
       }
@@ -211,7 +290,7 @@ jest.mock('@/lib/db', () => {
       }
       return Promise.resolve(record);
     }),
-    findMany: jest.fn(({ where, include, skip, take, orderBy } = {}) => {
+    findMany: jest.fn(({ where, include, select, skip, take, orderBy } = {}) => {
       let records = Array.from(store.values());
       if (where) {
         records = records.filter(r => {
@@ -220,7 +299,13 @@ jest.mock('@/lib/db', () => {
             // Handle OR operator
             if (key === 'OR' && Array.isArray(value)) {
               return value.some(condition =>
-                Object.entries(condition).every(([k, v]) => r[k] === v)
+                Object.entries(condition).every(([k, v]) => {
+                  if (v && typeof v === 'object' && v.contains !== undefined) {
+                    return String(r[k] || '').toLowerCase().includes(String(v.contains).toLowerCase());
+                  }
+                  if (v && typeof v === 'object' && v.gte !== undefined) return (r[k] || 0) >= v.gte;
+                  return r[k] === v;
+                })
               );
             }
             // Handle { in: [...] } operator
@@ -241,7 +326,11 @@ jest.mock('@/lib/db', () => {
             }
             // Handle { gte: ... }, { lte: ... } operators
             if (value && typeof value === 'object' && (value.gte !== undefined || value.lte !== undefined)) {
-              return true;
+              let pass = true;
+              if (value.gte !== undefined) pass = pass && (r[key] || 0) >= value.gte;
+              if (value.lte !== undefined) pass = pass && (r[key] || 0) <= value.lte;
+              if (value.lt !== undefined) pass = pass && (r[key] || 0) < value.lt;
+              return pass;
             }
             // Handle { contains: ... } for string search
             if (value && typeof value === 'object' && value.contains !== undefined) {
@@ -258,12 +347,101 @@ jest.mock('@/lib/db', () => {
       // Handle pagination
       if (skip) records = records.slice(skip);
       if (take) records = records.slice(0, take);
+
+      // Handle include relationships and _count
+      const incl = include || {};
+      const countSpec = incl._count || (select && select._count);
+      if (include || (select && select._count)) {
+        records = records.map(record => {
+          const result = { ...record };
+          // Handle _count
+          if (countSpec) {
+            result._count = {};
+            const countFields = countSpec.select ? Object.keys(countSpec.select) : [];
+            for (const field of countFields) {
+              result._count[field] = 0;
+              if (field === 'loads' && stores.loads) {
+                result._count[field] = Array.from(stores.loads.values()).filter(
+                  l => l.corridorId === record.id || l.shipperId === record.id
+                ).length;
+              } else if (field === 'users' && stores.users) {
+                result._count[field] = Array.from(stores.users.values()).filter(
+                  u => u.organizationId === record.id
+                ).length;
+              } else if (field === 'trucks' && stores.trucks) {
+                result._count[field] = Array.from(stores.trucks.values()).filter(
+                  t => t.carrierId === record.id
+                ).length;
+              } else if (field === 'disputesAgainst' && stores.disputes) {
+                result._count[field] = Array.from(stores.disputes.values()).filter(
+                  d => d.disputedOrgId === record.id
+                ).length;
+              }
+            }
+          }
+          // Handle include.createdBy
+          if (incl.createdBy && record.createdById && stores.users) {
+            const user = stores.users.get(record.createdById);
+            result.createdBy = user ? { id: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email } : null;
+          }
+          // Handle include.organization
+          if (incl.organization && record.organizationId && stores.organizations) {
+            const org = stores.organizations.get(record.organizationId);
+            result.organization = org ? { id: org.id, name: org.name, type: org.type } : null;
+          }
+          // Handle include.truck (with nested carrier)
+          if (incl.truck && record.truckId && stores.trucks) {
+            const truck = stores.trucks.get(record.truckId);
+            if (truck) {
+              result.truck = { ...truck, id: truck.id, licensePlate: truck.licensePlate };
+              if (truck.carrierId && stores.organizations) {
+                const carrier = stores.organizations.get(truck.carrierId);
+                result.truck.carrier = carrier ? { id: carrier.id, name: carrier.name, type: carrier.type } : null;
+              }
+            } else {
+              result.truck = null;
+            }
+          }
+          // Handle include.shipper
+          if (incl.shipper && record.shipperId && stores.organizations) {
+            const shipper = stores.organizations.get(record.shipperId);
+            result.shipper = shipper ? { id: shipper.id, name: shipper.name, type: shipper.type } : null;
+          }
+          return result;
+        });
+      }
+      // Handle select with nested relations (e.g., select: { organization: { select: {...} } })
+      if (select && !include) {
+        records = records.map(record => {
+          const result = { ...record };
+          if (select.organization && record.organizationId && stores.organizations) {
+            const org = stores.organizations.get(record.organizationId);
+            result.organization = org ? { id: org.id, name: org.name, type: org.type, isVerified: org.isVerified } : null;
+          }
+          return result;
+        });
+      }
       return Promise.resolve(records);
     }),
     update: jest.fn(({ where, data }) => {
       const record = store.get(where.id);
       if (!record) return Promise.resolve(null);
-      const updated = { ...record, ...data, updatedAt: new Date() };
+      // Handle Prisma operators in data (e.g., { balance: { increment: 500 } })
+      const resolvedData = {};
+      for (const [key, value] of Object.entries(data)) {
+        if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+          if (value.increment !== undefined) {
+            resolvedData[key] = (Number(record[key]) || 0) + Number(value.increment);
+          } else if (value.decrement !== undefined) {
+            resolvedData[key] = (Number(record[key]) || 0) - Number(value.decrement);
+          } else {
+            resolvedData[key] = value;
+          }
+        } else {
+          resolvedData[key] = value;
+        }
+      }
+      const updated = { ...record, ...resolvedData, updatedAt: new Date() };
       store.set(where.id, updated);
       return Promise.resolve(updated);
     }),
@@ -311,7 +489,26 @@ jest.mock('@/lib/db', () => {
       if (!where) return Promise.resolve(store.size);
       let count = 0;
       store.forEach(record => {
-        const matches = Object.entries(where).every(([key, value]) => record[key] === value);
+        const matches = Object.entries(where).every(([key, value]) => {
+          if (value === undefined) return true;
+          if (value && typeof value === 'object') {
+            if (value.gte !== undefined && value.lt !== undefined) {
+              return (record[key] || 0) >= value.gte && (record[key] || 0) < value.lt;
+            }
+            if (value.gte !== undefined && value.lte !== undefined) {
+              return (record[key] || 0) >= value.gte && (record[key] || 0) <= value.lte;
+            }
+            if (value.gte !== undefined) return (record[key] || 0) >= value.gte;
+            if (value.lte !== undefined) return (record[key] || 0) <= value.lte;
+            if (value.in) return value.in.includes(record[key]);
+            if (value.not !== undefined) return record[key] !== value.not;
+            if (value.contains !== undefined) {
+              return String(record[key] || '').toLowerCase().includes(String(value.contains).toLowerCase());
+            }
+            return true;
+          }
+          return record[key] === value;
+        });
         if (matches) count++;
       });
       return Promise.resolve(count);
@@ -328,6 +525,27 @@ jest.mock('@/lib/db', () => {
     }),
     groupBy: jest.fn(({ by, where, _count } = {}) => {
       return Promise.resolve([]);
+    }),
+    upsert: jest.fn(({ where, create, update }) => {
+      let record = store.get(where.id);
+      if (!record && where) {
+        const entries = Object.entries(where).filter(([k]) => k !== 'id');
+        if (entries.length > 0) {
+          record = Array.from(store.values()).find(r =>
+            entries.every(([key, value]) => r[key] === value)
+          );
+        }
+      }
+      if (record) {
+        const updated = { ...record, ...update, updatedAt: new Date() };
+        store.set(record.id, updated);
+        return Promise.resolve(updated);
+      }
+      const id = create.id || `${idPrefix}-${idCounter.value++}`;
+      const defaults = modelDefaults[idPrefix] || {};
+      const newRecord = { id, ...defaults, ...create, createdAt: new Date(), updatedAt: new Date() };
+      store.set(id, newRecord);
+      return Promise.resolve(newRecord);
     }),
   });
 
@@ -354,6 +572,11 @@ jest.mock('@/lib/db', () => {
     gpsDevice: { value: gpsDeviceIdCounter },
     tripPod: { value: tripPodIdCounter },
     dispute: { value: disputeIdCounter },
+    withdrawalRequest: { value: withdrawalRequestIdCounter },
+    systemSettings: { value: systemSettingsIdCounter },
+    companyDocument: { value: companyDocumentIdCounter },
+    truckDocument: { value: truckDocumentIdCounter },
+    auditLog: { value: auditLogIdCounter },
   };
 
   const result = {
@@ -522,7 +745,14 @@ jest.mock('@/lib/db', () => {
       gpsDevice: createModelMethods(stores.gpsDevices, 'gpsDevice', counters.gpsDevice),
       tripPod: createModelMethods(stores.tripPods, 'tripPod', counters.tripPod),
       dispute: createModelMethods(stores.disputes, 'dispute', counters.dispute),
+      withdrawalRequest: createModelMethods(stores.withdrawalRequests, 'withdrawalRequest', counters.withdrawalRequest),
+      systemSettings: createModelMethods(stores.systemSettings, 'systemSettings', counters.systemSettings),
+      companyDocument: createModelMethods(stores.companyDocuments, 'companyDocument', counters.companyDocument),
+      truckDocument: createModelMethods(stores.truckDocuments, 'truckDocument', counters.truckDocument),
+      auditLog: createModelMethods(stores.auditLogs, 'auditLog', counters.auditLog),
       $transaction: jest.fn(),
+      // Expose stores for test access
+      __stores: stores,
       // Helper to clear all stores between tests if needed
       _clearStores: () => {
         Object.values(stores).forEach(store => store.clear());
