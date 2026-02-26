@@ -13,18 +13,34 @@
  * - Rate limited to prevent brute force
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { verifyPassword, setSession, createSessionRecord, verifyRecoveryCode } from '@/lib/auth';
-import { jwtVerify } from 'jose';
-import { logAuthSuccess, logAuthFailure } from '@/lib/auditLog';
-import { logSecurityEvent, SecurityEventType } from '@/lib/security-events';
-import { getClientIP } from '@/lib/security';
-import { checkRateLimit, RATE_LIMIT_AUTH } from '@/lib/rateLimit';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import {
+  verifyPassword,
+  setSession,
+  createSessionRecord,
+  verifyRecoveryCode,
+} from "@/lib/auth";
+import { jwtVerify } from "jose";
+import { logAuthSuccess, logAuthFailure } from "@/lib/auditLog";
+import { logSecurityEvent, SecurityEventType } from "@/lib/security-events";
+import { getClientIP } from "@/lib/security";
+import { checkRateLimit, RATE_LIMIT_AUTH } from "@/lib/rateLimit";
+
+// Production guard: fail fast if no MFA/JWT secret configured
+if (
+  !process.env.MFA_TOKEN_SECRET &&
+  !process.env.JWT_SECRET &&
+  process.env.NODE_ENV === "production"
+) {
+  throw new Error("MFA_TOKEN_SECRET or JWT_SECRET must be set in production");
+}
 
 // MFA token secret (must match login route)
 const MFA_TOKEN_SECRET = new TextEncoder().encode(
-  process.env.MFA_TOKEN_SECRET || process.env.JWT_SECRET || 'mfa-temp-token-secret-32chars!'
+  process.env.MFA_TOKEN_SECRET ||
+    process.env.JWT_SECRET ||
+    "mfa-temp-token-secret-32chars!"
 );
 
 interface MFATokenPayload {
@@ -37,7 +53,7 @@ interface MFATokenPayload {
 export async function POST(request: NextRequest) {
   try {
     const clientIp = getClientIP(request.headers);
-    const userAgent = request.headers.get('user-agent');
+    const userAgent = request.headers.get("user-agent");
 
     // HIGH FIX #12: IP-based rate limiting to prevent MFA brute force attacks
     // 5 attempts per 15 minutes per IP
@@ -45,15 +61,15 @@ export async function POST(request: NextRequest) {
     if (!rateLimitResult.allowed) {
       return NextResponse.json(
         {
-          error: 'Too many MFA verification attempts. Please try again later.',
+          error: "Too many MFA verification attempts. Please try again later.",
           retryAfter: rateLimitResult.retryAfter,
         },
         {
           status: 429,
           headers: {
-            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
-            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-            'Retry-After': rateLimitResult.retryAfter?.toString() || '900',
+            "X-RateLimit-Limit": rateLimitResult.limit.toString(),
+            "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+            "Retry-After": rateLimitResult.retryAfter?.toString() || "900",
           },
         }
       );
@@ -65,14 +81,14 @@ export async function POST(request: NextRequest) {
     // Validate input
     if (!mfaToken) {
       return NextResponse.json(
-        { error: 'MFA token is required' },
+        { error: "MFA token is required" },
         { status: 400 }
       );
     }
 
     if (!otp && !recoveryCode) {
       return NextResponse.json(
-        { error: 'OTP or recovery code is required' },
+        { error: "OTP or recovery code is required" },
         { status: 400 }
       );
     }
@@ -83,13 +99,13 @@ export async function POST(request: NextRequest) {
       const { payload } = await jwtVerify(mfaToken, MFA_TOKEN_SECRET);
       tokenPayload = payload as unknown as MFATokenPayload;
 
-      if (tokenPayload.purpose !== 'mfa_verification') {
-        throw new Error('Invalid token purpose');
+      if (tokenPayload.purpose !== "mfa_verification") {
+        throw new Error("Invalid token purpose");
       }
     } catch (error) {
-      console.error('MFA token verification failed:', error);
+      console.error("MFA token verification failed:", error);
       return NextResponse.json(
-        { error: 'Invalid or expired MFA token. Please login again.' },
+        { error: "Invalid or expired MFA token. Please login again." },
         { status: 401 }
       );
     }
@@ -110,10 +126,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Get MFA config
@@ -128,7 +141,7 @@ export async function POST(request: NextRequest) {
 
     if (!mfa?.enabled) {
       return NextResponse.json(
-        { error: 'MFA is not enabled for this account' },
+        { error: "MFA is not enabled for this account" },
         { status: 400 }
       );
     }
@@ -146,7 +159,10 @@ export async function POST(request: NextRequest) {
 
     // Try recovery code if OTP failed or not provided
     if (!verificationSuccess && recoveryCode && mfa.recoveryCodes.length > 0) {
-      const codeIndex = await verifyRecoveryCode(recoveryCode, mfa.recoveryCodes);
+      const codeIndex = await verifyRecoveryCode(
+        recoveryCode,
+        mfa.recoveryCodes
+      );
       if (codeIndex >= 0) {
         verificationSuccess = true;
         usedRecoveryCode = true;
@@ -166,7 +182,10 @@ export async function POST(request: NextRequest) {
           ipAddress: clientIp,
           userAgent,
           success: true,
-          metadata: { remainingCodes: mfa.recoveryCodes.length - (mfa.recoveryCodesUsedCount || 0) - 1 },
+          metadata: {
+            remainingCodes:
+              mfa.recoveryCodes.length - (mfa.recoveryCodesUsedCount || 0) - 1,
+          },
         });
       }
     }
@@ -181,10 +200,10 @@ export async function POST(request: NextRequest) {
         success: false,
       });
 
-      await logAuthFailure(user.email, 'Invalid MFA code', request);
+      await logAuthFailure(user.email, "Invalid MFA code", request);
 
       return NextResponse.json(
-        { error: 'Invalid verification code' },
+        { error: "Invalid verification code" },
         { status: 400 }
       );
     }
@@ -217,7 +236,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Create session token for mobile clients
-    const { createSessionToken } = await import('@/lib/auth');
+    const { createSessionToken } = await import("@/lib/auth");
     const sessionToken = await createSessionToken({
       userId: user.id,
       email: user.email,
@@ -252,16 +271,17 @@ export async function POST(request: NextRequest) {
     await logAuthSuccess(user.id, user.email, request);
 
     // Generate CSRF token
-    const { generateCSRFToken } = await import('@/lib/csrf');
+    const { generateCSRFToken } = await import("@/lib/csrf");
     const csrfToken = generateCSRFToken();
 
     // Check if request is from mobile app
-    const isMobileClient = request.headers.get('x-client-type') === 'mobile' ||
-      userAgent?.includes('Dart') ||
-      userAgent?.includes('Flutter');
+    const isMobileClient =
+      request.headers.get("x-client-type") === "mobile" ||
+      userAgent?.includes("Dart") ||
+      userAgent?.includes("Flutter");
 
     const response = NextResponse.json({
-      message: 'Login successful',
+      message: "Login successful",
       user: {
         id: user.id,
         email: user.email,
@@ -272,8 +292,10 @@ export async function POST(request: NextRequest) {
         organizationId: user.organizationId,
       },
       ...(usedRecoveryCode && {
-        warning: 'You used a recovery code. Consider regenerating your recovery codes.',
-        remainingRecoveryCodes: mfa.recoveryCodes.length - (mfa.recoveryCodesUsedCount || 0) - 1,
+        warning:
+          "You used a recovery code. Consider regenerating your recovery codes.",
+        remainingRecoveryCodes:
+          mfa.recoveryCodes.length - (mfa.recoveryCodesUsedCount || 0) - 1,
       }),
       csrfToken,
       // Include session token for mobile clients
@@ -281,20 +303,20 @@ export async function POST(request: NextRequest) {
     });
 
     // Set CSRF cookie
-    response.cookies.set('csrf_token', csrfToken, {
+    response.cookies.set("csrf_token", csrfToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
       maxAge: 60 * 60 * 24, // 24 hours
     });
 
     return response;
   } catch (error) {
-    console.error('MFA verification error:', error);
+    console.error("MFA verification error:", error);
 
     return NextResponse.json(
-      { error: 'Failed to verify MFA' },
+      { error: "Failed to verify MFA" },
       { status: 500 }
     );
   }
