@@ -5,12 +5,7 @@
  * Created to fix H1-H14 type safety issues
  */
 
-import {
-  Prisma,
-  UserRole,
-  UserStatus,
-  VerificationStatus,
-} from "@prisma/client";
+import { UserRole, UserStatus, VerificationStatus } from "@prisma/client";
 
 // ============================================
 // User Management Types

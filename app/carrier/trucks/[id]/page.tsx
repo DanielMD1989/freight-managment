@@ -12,9 +12,8 @@
 
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useCallback, useState, useEffect, use } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { TruckDocumentType } from "@prisma/client";
 import DocumentUpload from "@/components/DocumentUpload";
 
@@ -95,7 +94,6 @@ export default function TruckDetailsPage({
   params: Promise<{ id: string }>;
 }) {
   const resolvedParams = use(params);
-  const router = useRouter();
   const [truck, setTruck] = useState<Truck | null>(null);
   const [documents, setDocuments] = useState<TruckDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,12 +107,7 @@ export default function TruckDetailsPage({
   const [coverageAmount, setCoverageAmount] = useState("");
   const [coverageType, setCoverageType] = useState("");
 
-  useEffect(() => {
-    fetchTruck();
-    fetchDocuments();
-  }, [resolvedParams.id]);
-
-  const fetchTruck = async () => {
+  const fetchTruck = useCallback(async () => {
     try {
       const response = await fetch(`/api/trucks/${resolvedParams.id}`);
       if (!response.ok) {
@@ -130,9 +123,9 @@ export default function TruckDetailsPage({
     } finally {
       setLoading(false);
     }
-  };
+  }, [resolvedParams.id]);
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     try {
       const response = await fetch(
         `/api/documents?entityType=truck&entityId=${resolvedParams.id}`
@@ -144,7 +137,12 @@ export default function TruckDetailsPage({
     } catch (err) {
       console.error("Failed to fetch documents:", err);
     }
-  };
+  }, [resolvedParams.id]);
+
+  useEffect(() => {
+    fetchTruck();
+    fetchDocuments();
+  }, [fetchTruck, fetchDocuments]);
 
   const handleDocumentUpload = (document: TruckDocument) => {
     setDocuments((prev) => [...prev, document]);

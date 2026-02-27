@@ -5,12 +5,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { evaluateScheduledRules } from "@/lib/automationRules";
 import { executeAndRecordRuleActions } from "@/lib/automationActions";
 
 // POST /api/automation/monitor - Run scheduled automation rules
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function POST(request: NextRequest) {
   try {
     await requirePermission(Permission.MANAGE_RULES);
@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
 }
 
 // GET /api/automation/monitor - Get monitoring status
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: NextRequest) {
   try {
     await requirePermission(Permission.VIEW_RULES);

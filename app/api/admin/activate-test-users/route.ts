@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Also support GET for convenience (admin only)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: NextRequest) {
   try {
     // Require admin authentication

@@ -15,7 +15,6 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { clearCSRFToken, getCSRFToken } from "@/lib/csrfFetch";
 
 interface ProfileMenuProps {
@@ -168,14 +167,10 @@ const ChevronDownIcon = () => (
   </svg>
 );
 
-export default function ProfileMenu({
-  user,
-  portalPrefix = "",
-}: ProfileMenuProps) {
+export default function ProfileMenu({ user }: ProfileMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
 
   // Close menu when clicking outside
   useEffect(() => {

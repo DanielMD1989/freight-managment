@@ -15,8 +15,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
-import { getVisibilityRules } from "@/lib/foundation-rules";
-import { UserRole, Prisma } from "@prisma/client";
 
 interface MapMarker {
   id: string;
@@ -103,12 +101,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const visibility = getVisibilityRules(user.role);
     const markers: MapMarker[] = [];
     const routes: MapData["routes"] = [];
 
     // Build filters based on role
-    const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
     const isDispatcher = user.role === "DISPATCHER";
     const isCarrier = user.role === "CARRIER";
     const isShipper = user.role === "SHIPPER";
@@ -379,13 +375,6 @@ export async function GET(request: NextRequest) {
     // SUMMARY
     // =========================================================================
     const orgId = user.organizationId;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let summaryWhere: Record<string, any> = {};
-    if (isCarrier && orgId) {
-      summaryWhere = { carrierId: orgId };
-    } else if (isShipper && orgId) {
-      summaryWhere = { shipperId: orgId };
-    }
 
     const [totalTrucks, totalLoads, activeTrips] = await Promise.all([
       isCarrier && orgId

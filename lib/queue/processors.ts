@@ -123,7 +123,7 @@ async function processSmsSend(
   job: { id: string; name: string; data: JobData },
   updateProgress: (progress: number) => Promise<void>
 ): Promise<void> {
-  const { to, message, type } = job.data as {
+  const { to, message } = job.data as {
     to: string;
     message: string;
     type?: string;
@@ -290,7 +290,7 @@ async function processDistanceMatrix(
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ jobId: job.id, results }),
         });
-      } catch (callbackError) {
+      } catch {
         logger.warn("Distance matrix callback failed", { jobId: job.id });
       }
     }
@@ -318,7 +318,7 @@ async function processPdfGenerate(
   job: { id: string; name: string; data: JobData },
   updateProgress: (progress: number) => Promise<void>
 ): Promise<void> {
-  const { template, data, filename, callback } = job.data as {
+  const { template, filename } = job.data as {
     template: string;
     data: Record<string, unknown>;
     filename: string;
@@ -340,7 +340,7 @@ async function processPdfGenerate(
 
     // Simulate PDF generation
     // In production, this would render HTML template and convert to PDF
-    const pdfBuffer = Buffer.from("PDF placeholder content");
+    // PDF placeholder - actual implementation would generate real content
 
     await updateProgress(80);
 
@@ -484,7 +484,7 @@ async function processBulkStatusUpdate(
   job: { id: string; name: string; data: JobData },
   updateProgress: (progress: number) => Promise<void>
 ): Promise<void> {
-  const { model, ids, status, isAvailable, updatedBy } = job.data as {
+  const { model, ids, status, isAvailable } = job.data as {
     model: "load" | "truck" | "user" | "truckPosting";
     ids: string[];
     status?: string;
@@ -648,6 +648,8 @@ export function registerAllProcessors(): void {
   logger.info("All queue processors registered");
 }
 
-export default {
+const processors = {
   registerAllProcessors,
 };
+
+export default processors;

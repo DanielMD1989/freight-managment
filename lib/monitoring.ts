@@ -205,8 +205,6 @@ export function getSystemMetrics(): SystemMetrics {
 }
 
 // Track event loop latency
-// eslint-disable-next-line prefer-const
-let lastEventLoopCheck = Date.now();
 let eventLoopLatency = 0;
 
 function measureEventLoopLatency(): number {
@@ -393,7 +391,6 @@ export function resolveAlert(alertId: string): boolean {
 export function calculateHealthScore(): HealthScore {
   const metrics = getSystemMetrics();
   const logMetrics = logger.getMetrics();
-  const config = getConfig();
 
   // Calculate individual factor scores (0-100, higher is better)
   const cpuScore = Math.max(0, 100 - metrics.cpu.usage);
@@ -543,8 +540,6 @@ export function getMonitoringData(): {
   };
   config: MonitoringConfig;
 } {
-  const logMetrics = logger.getMetrics();
-
   return {
     system: getSystemMetrics(),
     health: calculateHealthScore(),
@@ -639,7 +634,7 @@ if (process.env.NODE_ENV === "production") {
   }, 5000);
 }
 
-export default {
+const monitoringService = {
   getSystemMetrics,
   getMonitoringData,
   getMonitoringSummary,
@@ -652,3 +647,5 @@ export default {
   startMonitoring,
   stopMonitoring,
 };
+
+export default monitoringService;

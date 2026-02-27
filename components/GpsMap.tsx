@@ -13,7 +13,7 @@
  * - Auto-centering on truck
  */
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -129,7 +129,7 @@ export default function GpsMap({
   /**
    * Fetch current truck position
    */
-  const fetchPosition = async () => {
+  const fetchPosition = useCallback(async () => {
     try {
       const response = await fetch(`/api/loads/${loadId}/live-position`);
 
@@ -159,7 +159,7 @@ export default function GpsMap({
       setError("Failed to fetch GPS position");
       setLoading(false);
     }
-  };
+  }, [loadId]);
 
   /**
    * Initial fetch and auto-update setup
@@ -179,7 +179,7 @@ export default function GpsMap({
         clearInterval(intervalRef.current);
       }
     };
-  }, [loadId, autoUpdate, updateInterval]);
+  }, [loadId, autoUpdate, updateInterval, fetchPosition]);
 
   /**
    * Calculate center point for map

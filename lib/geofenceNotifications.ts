@@ -12,15 +12,6 @@ import { createNotification } from "./notifications";
 import { checkGeofenceEvents, GeofenceAlert } from "./gpsTracking";
 import { sendEmailToUser, EmailTemplate } from "./emailService";
 
-/**
- * Geofence event tracking to prevent duplicate notifications
- */
-interface GeofenceEventRecord {
-  loadId: string;
-  event: string;
-  timestamp: Date;
-}
-
 // In-memory cache to track recent geofence events (prevent duplicates)
 const recentGeofenceEvents = new Map<string, Date>();
 const GEOFENCE_EVENT_COOLDOWN_MS = 30 * 60 * 1000; // 30 minutes

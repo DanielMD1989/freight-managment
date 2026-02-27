@@ -10,13 +10,9 @@ import {
   detectGpsProvider,
   determineGpsStatus,
 } from "@/lib/gpsVerification";
-import {
-  getVisibilityRules,
-  RULE_SHIPPER_DEMAND_FOCUS,
-} from "@/lib/foundation-rules";
+import { RULE_SHIPPER_DEMAND_FOCUS } from "@/lib/foundation-rules";
 import { TruckCache, CacheInvalidation } from "@/lib/cache";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
-import { Prisma } from "@prisma/client";
 import { handleApiError } from "@/lib/apiErrors";
 import { sanitizeText } from "@/lib/validation";
 
@@ -261,7 +257,6 @@ export async function GET(request: NextRequest) {
     }
 
     // PHASE 2: Get visibility rules based on role
-    const visibility = getVisibilityRules(user.role);
 
     // PHASE 2: SHIPPER cannot browse fleet inventory
     // Foundation Rule: SHIPPER_DEMAND_FOCUS

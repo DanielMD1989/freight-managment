@@ -127,7 +127,7 @@ export default function CorridorManagementClient() {
     } finally {
       setLoading(false);
     }
-  }, [filterActive, toast]);
+  }, [filterActive]);
 
   useEffect(() => {
     fetchCorridors();

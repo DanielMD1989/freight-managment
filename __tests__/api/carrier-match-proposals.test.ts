@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * Carrier Match Proposal Management Tests
  *
@@ -59,7 +58,6 @@ const {
   POST: respondToProposal,
 } = require("@/app/api/match-proposals/[id]/respond/route");
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const dbAny = db as any;
 
 // Save original findUnique so we can delegate to it

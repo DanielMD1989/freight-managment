@@ -17,10 +17,7 @@ interface SupportSettingsClientProps {
   userRole: string;
 }
 
-export default function SupportSettingsClient({
-  userId,
-  userRole,
-}: SupportSettingsClientProps) {
+export default function SupportSettingsClient({}: SupportSettingsClientProps) {
   const [showReportForm, setShowReportForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reportForm, setReportForm] = useState({
@@ -63,7 +60,7 @@ export default function SupportSettingsClient({
         entityType: "",
         entityId: "",
       });
-    } catch (error) {
+    } catch {
       toast.error("Failed to submit report");
     } finally {
       setIsSubmitting(false);

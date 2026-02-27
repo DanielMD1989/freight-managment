@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Admin Analytics API Tests
  *
@@ -35,7 +33,6 @@ import {
   useCarrierSession,
   useDispatcherSession,
   seedAdminTestData,
-  AdminSeedData,
 } from "./helpers";
 
 // ─── Setup Mocks ──────────────────────────────────────────────────────────────
@@ -217,10 +214,8 @@ function setupDefaultMetricMocks() {
 }
 
 describe("Admin Analytics API", () => {
-  let seed: AdminSeedData;
-
   beforeAll(async () => {
-    seed = await seedAdminTestData();
+    await seedAdminTestData();
   });
 
   afterAll(() => {

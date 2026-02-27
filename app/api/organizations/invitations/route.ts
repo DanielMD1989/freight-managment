@@ -15,7 +15,7 @@ import { validateCSRFWithMobile } from "@/lib/csrf";
 import { z } from "zod";
 import { sendEmail, createEmailHTML } from "@/lib/email";
 import { handleApiError } from "@/lib/apiErrors";
-import { UserRole, Prisma } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 
 const createInvitationSchema = z.object({
   email: z.string().email(),

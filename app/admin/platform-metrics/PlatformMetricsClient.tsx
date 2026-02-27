@@ -303,7 +303,7 @@ export default function PlatformMetricsClient() {
           <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
             <p className="mb-3 text-sm text-gray-600">Top Events</p>
             <div className="space-y-2">
-              {m.activity.topEvents.map((event, index) => (
+              {m.activity.topEvents.map((event) => (
                 <div
                   key={event.eventType}
                   className="flex items-center justify-between text-sm"

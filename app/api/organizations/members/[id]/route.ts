@@ -132,7 +132,7 @@ export async function PATCH(
       );
     }
 
-    const body = await request.json();
+    await request.json();
 
     // For now, we don't allow role changes within an organization
     // This could be extended to support team roles (admin, member, viewer)

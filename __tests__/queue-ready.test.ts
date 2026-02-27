@@ -111,17 +111,6 @@ describe("Queue Ready Check", () => {
 });
 
 describe("Queue Health Status - Mocked Redis", () => {
-  // Mock Redis connection
-  const mockRedisConnection = {
-    ping: jest.fn(),
-  };
-
-  // Mock queue
-  const mockQueue = {
-    isPaused: jest.fn(),
-    getWaitingCount: jest.fn(),
-  };
-
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
@@ -234,7 +223,7 @@ describe("Queue Ready - Edge Cases", () => {
     delete process.env.QUEUE_ENABLED;
     process.env.REDIS_ENABLED = "true";
 
-    const { isQueueReady, isQueueReadySync, getQueueHealthStatus } =
+    const { isQueueReadySync, getQueueHealthStatus } =
       await import("../lib/queue");
 
     // Redis enabled means queue should be enabled

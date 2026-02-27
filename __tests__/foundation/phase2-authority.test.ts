@@ -14,7 +14,6 @@ import { hasPermission, Permission } from "@/lib/rbac/permissions";
 import {
   canAssignLoads,
   canPropose,
-  canProposeMatch,
   canApproveProposals,
   canRequestTruck,
   canApproveRequests,

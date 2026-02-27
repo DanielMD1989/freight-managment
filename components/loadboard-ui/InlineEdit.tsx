@@ -67,7 +67,6 @@ export default function InlineEdit({
    */
   const renderField = (field: (typeof fields)[number]) => {
     const value = formData[field.key] || "";
-    const error = errors[field.key];
 
     switch (field.type) {
       case "text":

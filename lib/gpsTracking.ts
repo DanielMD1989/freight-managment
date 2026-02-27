@@ -62,6 +62,7 @@ export interface GeofenceAlert {
  * @param loadId - Load ID
  * @returns Unique tracking token
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function generateTrackingUrl(loadId: string): string {
   // Generate cryptographically secure random token
   const token = crypto.randomBytes(16).toString("hex");

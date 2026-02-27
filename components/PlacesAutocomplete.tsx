@@ -56,6 +56,7 @@ export default function PlacesAutocomplete({
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
     if (!apiKey || apiKey === "YOUR_GOOGLE_MAPS_API_KEY_HERE") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError(
         "Google Maps API key not configured. Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your .env.local file."
       );

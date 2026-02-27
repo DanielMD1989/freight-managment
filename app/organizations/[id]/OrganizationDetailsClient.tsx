@@ -7,8 +7,6 @@
 
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -20,7 +18,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Building2,
   Mail,
   Phone,
   MapPin,
@@ -84,7 +81,6 @@ export default function OrganizationDetailsClient({
   user,
 }: OrganizationDetailsClientProps) {
   const router = useRouter();
-  const [isEditing, setIsEditing] = useState(false);
 
   const canEdit =
     user.role === "ADMIN" ||

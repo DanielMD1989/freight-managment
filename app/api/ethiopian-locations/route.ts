@@ -31,6 +31,7 @@ interface Location {
  *
  * Returns: Array of locations with id, name, nameEthiopic, region
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: NextRequest) {
   try {
     // PHASE 4: Use cache-aside pattern for locations

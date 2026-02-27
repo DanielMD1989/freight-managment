@@ -12,7 +12,6 @@ import { z } from "zod";
 import { validateStateTransition, LoadStatus } from "@/lib/loadStateMachine";
 import { zodErrorResponse } from "@/lib/validation";
 import {
-  createNotification,
   notifyExceptionAssigned,
   createNotificationForRole,
 } from "@/lib/notifications";

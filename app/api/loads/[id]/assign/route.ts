@@ -7,9 +7,7 @@ import { enableTrackingForLoad } from "@/lib/gpsTracking";
 import { canAssignLoads } from "@/lib/dispatcherPermissions";
 import { validateStateTransition, LoadStatus } from "@/lib/loadStateMachine";
 import { checkAssignmentConflicts } from "@/lib/assignmentConflictDetection"; // Sprint 4
-import { RULE_CARRIER_FINAL_AUTHORITY } from "@/lib/foundation-rules"; // Phase 2
 import { validateWalletBalancesForTrip } from "@/lib/serviceFeeManagement"; // Service Fee Implementation
-import { createTripForLoad } from "@/lib/tripManagement"; // Trip Management
 // P0-005 FIX: Import CacheInvalidation for post-assignment cache clearing
 import { CacheInvalidation } from "@/lib/cache";
 import crypto from "crypto";

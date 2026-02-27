@@ -16,7 +16,7 @@ import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { canApproveRequests } from "@/lib/dispatcherPermissions";
 import { RULE_CARRIER_FINAL_AUTHORITY } from "@/lib/foundation-rules";
-import { UserRole, Prisma } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 import { enableTrackingForLoad } from "@/lib/gpsTracking";
 import { notifyTruckRequestResponse } from "@/lib/notifications";
 import crypto from "crypto";

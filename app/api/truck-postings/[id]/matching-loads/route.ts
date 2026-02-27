@@ -322,7 +322,7 @@ export async function GET(
 
     // Mask anonymous shipper information
     const maskedMatches = matches.map((match) => {
-      const { load, matchScore } = match;
+      const { load } = match;
 
       // If load is anonymous, hide shipper details
       if (load.isAnonymous) {

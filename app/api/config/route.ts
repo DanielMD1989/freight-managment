@@ -12,12 +12,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
-import {
-  config,
-  validateConfig,
-  getConfigSummary,
-  CONFIG_VERSION,
-} from "@/lib/config";
+import { validateConfig, getConfigSummary, CONFIG_VERSION } from "@/lib/config";
 
 /**
  * GET /api/config

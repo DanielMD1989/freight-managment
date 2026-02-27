@@ -8,7 +8,6 @@
  */
 
 import { db } from "./db";
-import { ingestGpsData } from "./gpsIngestion";
 import { updateAllTruckGpsStatuses } from "./gpsIngestion";
 
 export interface GpsDeviceData {
@@ -113,6 +112,7 @@ export async function getActiveGpsDevices(): Promise<GpsDeviceData[]> {
  *
  * @param device - GPS device data
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function pollGpsDevice(device: GpsDeviceData): Promise<void> {
   // In production, call GPS provider API based on device.provider
   // For now, we'll simulate or skip actual polling

@@ -387,7 +387,7 @@ jest.mock("@/lib/db", () => {
       return Promise.resolve(record);
     }),
     findMany: jest.fn(
-      ({ where, include, select, skip, take, orderBy } = {}) => {
+      ({ where, include, select, skip, take } = {}) => {
         let records = Array.from(store.values());
         if (where) {
           records = records.filter((r) => {
@@ -693,7 +693,7 @@ jest.mock("@/lib/db", () => {
       });
       return Promise.resolve(count);
     }),
-    aggregate: jest.fn(({ where, _sum } = {}) => {
+    aggregate: jest.fn(({ _sum } = {}) => {
       const result = {};
       if (_sum) {
         result._sum = {};
@@ -703,7 +703,7 @@ jest.mock("@/lib/db", () => {
       }
       return Promise.resolve(result);
     }),
-    groupBy: jest.fn(({ by, where, _count } = {}) => {
+    groupBy: jest.fn(() => {
       return Promise.resolve([]);
     }),
     upsert: jest.fn(({ where, create, update }) => {

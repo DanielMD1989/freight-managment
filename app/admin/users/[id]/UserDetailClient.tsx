@@ -7,7 +7,7 @@
  * Sprint 10 - Story 10.2: User Management
  */
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getCSRFToken } from "@/lib/csrfFetch";
@@ -135,15 +135,8 @@ export default function UserDetailClient({
   /**
    * Fetch wallet data
    */
-  useEffect(() => {
-    if (hasWallet && user.organizationId) {
-      fetchWalletData();
-    } else {
-      setWalletLoading(false);
-    }
-  }, [user.organizationId, hasWallet]);
 
-  const fetchWalletData = async () => {
+  const fetchWalletData = useCallback(async () => {
     try {
       setWalletError(null);
       // Fetch wallet and transactions for the user
@@ -165,7 +158,15 @@ export default function UserDetailClient({
     } finally {
       setWalletLoading(false);
     }
-  };
+  }, [user.id]);
+
+  useEffect(() => {
+    if (hasWallet && user.organizationId) {
+      fetchWalletData();
+    } else {
+      setWalletLoading(false);
+    }
+  }, [user.organizationId, hasWallet, fetchWalletData]);
 
   /**
    * Handle wallet top-up
@@ -213,7 +214,7 @@ export default function UserDetailClient({
         const data = await response.json();
         setError(data.error || "Failed to top up wallet");
       }
-    } catch (err) {
+    } catch {
       setError("An error occurred while processing top-up");
     } finally {
       setTopUpLoading(false);
@@ -272,7 +273,7 @@ export default function UserDetailClient({
       } else {
         setError(data.error || "Failed to update user");
       }
-    } catch (err) {
+    } catch {
       setError("An error occurred while saving");
     } finally {
       setSaving(false);
@@ -323,7 +324,7 @@ export default function UserDetailClient({
         const data = await response.json();
         setError(data.error || "Failed to delete user");
       }
-    } catch (err) {
+    } catch {
       setError("An error occurred while deleting");
     } finally {
       setIsDeleting(false);

@@ -125,7 +125,6 @@ export default function CarrierDashboardClient({
   recentLoads,
   trucks,
   recommendedLoads,
-  activeLoad,
 }: CarrierDashboardClientProps) {
   const data = dashboardData || {
     totalTrucks: 0,

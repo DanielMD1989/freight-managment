@@ -34,7 +34,7 @@ export async function POST(
     }
 
     // Check all exception rules
-    const triggeredRules = await checkAllRules(loadId);
+    await checkAllRules(loadId);
 
     // Auto-create escalations for triggered rules
     const result = await autoCreateEscalations(loadId, session.userId);

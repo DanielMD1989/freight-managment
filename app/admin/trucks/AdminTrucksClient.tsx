@@ -6,7 +6,7 @@
  * Interactive table with filtering for all platform trucks
  */
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
 import { getCSRFToken } from "@/lib/csrfFetch";
@@ -59,7 +59,7 @@ export default function AdminTrucksClient() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchTrucks = async () => {
+  const fetchTrucks = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -83,11 +83,11 @@ export default function AdminTrucksClient() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeStatus, page]);
 
   useEffect(() => {
     fetchTrucks();
-  }, [activeStatus, page]);
+  }, [fetchTrucks]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {

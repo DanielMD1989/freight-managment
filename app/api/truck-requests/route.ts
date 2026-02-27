@@ -20,7 +20,7 @@ import {
   RULE_CARRIER_FINAL_AUTHORITY,
   RULE_SHIPPER_DEMAND_FOCUS,
 } from "@/lib/foundation-rules";
-import { UserRole, Prisma } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 import { notifyTruckRequest } from "@/lib/notifications";
 import { handleApiError } from "@/lib/apiErrors";
 

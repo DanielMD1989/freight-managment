@@ -9,7 +9,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getCSRFToken } from "@/lib/csrfFetch";
 
 // Simple time-ago utility function
@@ -87,11 +87,7 @@ export default function SettlementReviewClient() {
   // L41 FIX: Add fetch error state to surface API failures
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchSettlements();
-  }, [activeTab]);
-
-  const fetchSettlements = async () => {
+  const fetchSettlements = useCallback(async () => {
     try {
       setLoading(true);
       setFetchError(null);
@@ -115,7 +111,11 @@ export default function SettlementReviewClient() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab]);
+
+  useEffect(() => {
+    fetchSettlements();
+  }, [fetchSettlements]);
 
   const getSettlementAmount = (load: Load) => {
     if (load.settlementRecord) {

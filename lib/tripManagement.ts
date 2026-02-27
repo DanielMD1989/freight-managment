@@ -22,6 +22,7 @@ import crypto from "crypto";
 export async function createTripForLoad(
   loadId: string,
   truckId: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   userId: string
 ): Promise<Trip | null> {
   try {
@@ -111,6 +112,7 @@ export async function createTripForLoad(
 export async function updateTripStatus(
   tripId: string,
   newStatus: TripStatus,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   userId: string
 ): Promise<Trip | null> {
   try {

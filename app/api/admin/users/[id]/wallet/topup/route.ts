@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
-import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { checkRpsLimit } from "@/lib/rateLimit";
 import { z } from "zod";
 import { handleApiError } from "@/lib/apiErrors";
 // H15 FIX: Import max topup constant

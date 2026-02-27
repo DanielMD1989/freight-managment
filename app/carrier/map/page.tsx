@@ -396,7 +396,7 @@ export default function CarrierMapPage() {
     return new Date().toISOString().split("T")[0];
   });
 
-  const { isConnected, positions } = useGpsRealtime({
+  const { isConnected } = useGpsRealtime({
     autoConnect: true,
     onPositionUpdate: (position: GpsPosition) => {
       setVehicles((prev) =>

@@ -5,7 +5,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 

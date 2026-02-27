@@ -91,6 +91,7 @@ export async function POST(
     }
 
     // Create duplicate truck posting
+    /* eslint-disable @typescript-eslint/no-unused-vars */
     const {
       id: _,
       createdAt,
@@ -99,6 +100,7 @@ export async function POST(
       expiresAt,
       ...postingData
     } = originalPosting;
+    /* eslint-enable @typescript-eslint/no-unused-vars */
 
     const duplicatePosting = await db.truckPosting.create({
       data: {

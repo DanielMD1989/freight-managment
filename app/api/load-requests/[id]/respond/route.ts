@@ -16,7 +16,6 @@ import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { createNotification } from "@/lib/notifications";
 import { enableTrackingForLoad } from "@/lib/gpsTracking";
-import { UserRole, Prisma } from "@prisma/client";
 import crypto from "crypto";
 // P0-003 FIX: Import CacheInvalidation for post-approval cache clearing
 import { CacheInvalidation } from "@/lib/cache";

@@ -9,6 +9,7 @@ import { requireAuth } from "@/lib/auth";
 import { autoCreateEscalations } from "@/lib/exceptionDetection";
 
 // POST /api/exceptions/monitor - Run exception detection on all active loads
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth();
@@ -114,6 +115,7 @@ export async function POST(request: NextRequest) {
 }
 
 // GET /api/exceptions/monitor - Get monitoring status and configuration
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth();

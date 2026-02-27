@@ -193,7 +193,7 @@ export default function LoadManagementClient({
         return;
       }
 
-      const newLoad = await response.json();
+      await response.json();
       toast.success("Load copied successfully");
 
       // Refresh to show the new load

@@ -33,6 +33,7 @@ export default class ErrorBoundary extends Component<
     };
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
     return { hasError: true };
   }

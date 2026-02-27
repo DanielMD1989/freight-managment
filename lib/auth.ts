@@ -8,12 +8,7 @@ import {
 } from "jose";
 import { cookies, headers } from "next/headers";
 import { createHash, randomBytes } from "crypto";
-import {
-  SessionCache,
-  UserCache,
-  CacheInvalidation,
-  cache as globalCache,
-} from "@/lib/cache";
+import { SessionCache, UserCache, CacheInvalidation } from "@/lib/cache";
 
 /**
  * Production-Ready JWT Authentication

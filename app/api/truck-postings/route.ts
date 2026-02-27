@@ -35,10 +35,7 @@ import {
 import { checkRateLimit, RATE_LIMIT_TRUCK_POSTING } from "@/lib/rateLimit";
 import { requireCSRF } from "@/lib/csrf";
 import { findMatchingLoads } from "@/lib/matchingEngine";
-import {
-  canViewAllTrucks,
-  hasElevatedPermissions,
-} from "@/lib/dispatcherPermissions";
+import { hasElevatedPermissions } from "@/lib/dispatcherPermissions";
 import { UserRole } from "@prisma/client";
 import {
   RULE_ONE_ACTIVE_POST_PER_TRUCK,

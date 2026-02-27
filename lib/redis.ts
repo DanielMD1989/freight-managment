@@ -43,7 +43,7 @@ if (!isEdgeRuntime) {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const ioredis = require("ioredis");
     Redis = ioredis.default || ioredis;
-  } catch (error) {
+  } catch {
     console.warn("[Redis] ioredis not available, using in-memory fallback");
   }
 }

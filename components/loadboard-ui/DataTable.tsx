@@ -123,10 +123,10 @@ export default function DataTable<T extends object = Record<string, unknown>>({
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [viewMode, setViewMode] = useState<"table" | "card">("table");
-  const [isMobile, setIsMobile] = useState(false);
 
   // Clear expanded rows when data changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setExpandedRows(new Set());
   }, [data]);
 
@@ -137,7 +137,6 @@ export default function DataTable<T extends object = Record<string, unknown>>({
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
         const mobile = window.innerWidth < 768;
-        setIsMobile(mobile);
         if (responsiveCardView && mobile) {
           setViewMode("card");
         } else if (!mobile && viewMode === "card") {
@@ -189,9 +188,9 @@ export default function DataTable<T extends object = Record<string, unknown>>({
    * Toggle select all (memoized)
    */
   // Helper to safely access object properties by string key
-  const getProperty = (obj: T, key: string): unknown => {
+  const getProperty = useCallback((obj: T, key: string): unknown => {
     return (obj as Record<string, unknown>)[key];
-  };
+  }, []);
 
   const toggleSelectAll = useCallback(() => {
     if (!onSelectionChange) return;
@@ -201,7 +200,7 @@ export default function DataTable<T extends object = Record<string, unknown>>({
     } else {
       onSelectionChange(data.map((row: T) => String(getProperty(row, rowKey))));
     }
-  }, [selectedRows, data, onSelectionChange, rowKey]);
+  }, [selectedRows, data, onSelectionChange, rowKey, getProperty]);
 
   /**
    * Handle column sort
@@ -242,7 +241,7 @@ export default function DataTable<T extends object = Record<string, unknown>>({
 
       return sortDirection === "asc" ? comparison : -comparison;
     });
-  }, [data, sortColumn, sortDirection]);
+  }, [data, sortColumn, sortDirection, getProperty]);
 
   /**
    * Render cell value
@@ -321,7 +320,8 @@ export default function DataTable<T extends object = Record<string, unknown>>({
   /**
    * Render default card view for a row
    */
-  const renderDefaultCard = (row: T, index: number) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const renderDefaultCard = (row: T, _index?: number) => {
     const rowId = getRowId(row);
     const isSelected = selectedRows.includes(rowId);
     const cardColumns = getCardColumns();

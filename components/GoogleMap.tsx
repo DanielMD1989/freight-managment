@@ -259,11 +259,15 @@ export default function GoogleMap({
 
     initMap();
 
+    const currentMarkers = markersRef.current;
+    const currentPolylines = polylinesRef.current;
+
     return () => {
       // Cleanup
-      markersRef.current.forEach((marker) => marker.setMap(null));
-      polylinesRef.current.forEach((polyline) => polyline.setMap(null));
+      currentMarkers.forEach((marker) => marker.setMap(null));
+      currentPolylines.forEach((polyline) => polyline.setMap(null));
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update traffic layer
@@ -403,6 +407,7 @@ export default function GoogleMap({
     setLastUpdate(new Date());
   }, [
     markers,
+    routes,
     selectedMarkerId,
     isLoading,
     autoFitBounds,

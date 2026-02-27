@@ -268,7 +268,7 @@ async function initializeBullMQ(): Promise<boolean> {
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- BullMQ is optionally loaded
-    const { Queue, Worker, QueueEvents } = dynamicRequire("bullmq") as any;
+    const { Queue } = dynamicRequire("bullmq") as any;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ioredis is optionally loaded
     const IORedis = dynamicRequire("ioredis") as any;
 
@@ -289,7 +289,7 @@ async function initializeBullMQ(): Promise<boolean> {
     bullmqWorkers = new Map();
 
     // Initialize queues
-    for (const [queueName, queueConfig] of Object.entries(QUEUE_CONFIGS)) {
+    for (const [queueName] of Object.entries(QUEUE_CONFIGS)) {
       const queue = new Queue(queueName, {
         connection,
         defaultJobOptions: config.defaultJobOptions,
@@ -1105,7 +1105,7 @@ export function getQueueInfo(): {
 // DEFAULT EXPORT
 // =============================================================================
 
-export default {
+const queueService = {
   addJob,
   addBulkJobs,
   getJob,
@@ -1129,3 +1129,5 @@ export default {
   getQueueHealthStatus,
   getQueueInfo,
 };
+
+export default queueService;

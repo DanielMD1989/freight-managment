@@ -33,7 +33,7 @@
  * - Active trips: 1min (real-time updates)
  */
 
-import { redis, isRedisEnabled, RedisKeys } from "./redis";
+import { redis, isRedisEnabled } from "./redis";
 
 // =============================================================================
 // CACHE METRICS & MONITORING
@@ -78,10 +78,6 @@ function recordSet(namespace: string): void {
 
 function recordDelete(namespace: string): void {
   getOrCreateMetrics(namespace).deletes++;
-}
-
-function recordError(namespace: string): void {
-  getOrCreateMetrics(namespace).errors++;
 }
 
 /**

@@ -94,16 +94,6 @@ export default function LoadCreationForm() {
     status: "DRAFT",
   });
 
-  // Service fee preview (fetched from corridor pricing)
-  const [serviceFee, setServiceFee] = useState<{
-    corridorName: string;
-    distanceKm: number;
-    pricePerKm: number;
-    totalFee: number;
-    loading: boolean;
-    error: string | null;
-  } | null>(null);
-
   // L44 FIX: Properly typed field value
   const updateField = (
     field: string,

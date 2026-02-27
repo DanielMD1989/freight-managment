@@ -16,7 +16,6 @@ export default function SavedSearches({
   onSelect,
   onDelete,
   onEdit,
-  type,
 }: SavedSearchesProps) {
   /**
    * Format criteria for display

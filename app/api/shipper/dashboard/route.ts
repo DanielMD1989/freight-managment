@@ -29,6 +29,7 @@ import { handleApiError } from "@/lib/apiErrors";
  * - Pending matches
  * - Recent activity
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth();

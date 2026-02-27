@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Admin Settlements API Tests
  *
@@ -32,7 +30,6 @@ import {
 } from "../../utils/routeTestUtils";
 import {
   useAdminSession,
-  useSuperAdminSession,
   useShipperSession,
   useCarrierSession,
   useDispatcherSession,

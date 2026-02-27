@@ -19,7 +19,7 @@ export default function AgeIndicator({
   showIcon = true,
 }: AgeIndicatorProps) {
   // State to trigger re-render on age update
-  const [currentTime, setCurrentTime] = useState(() => Date.now());
+  const [, setCurrentTime] = useState(() => Date.now());
 
   // Real-time updates every minute
   useEffect(() => {

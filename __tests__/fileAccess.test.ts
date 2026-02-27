@@ -13,7 +13,6 @@
 import {
   createTestUser,
   createTestOrganization,
-  createAuthenticatedRequest,
   cleanupTestData,
 } from "./utils/testUtils";
 import { db } from "@/lib/db";

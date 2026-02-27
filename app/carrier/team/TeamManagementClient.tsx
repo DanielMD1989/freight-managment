@@ -8,7 +8,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { getCSRFToken } from "@/lib/csrfFetch";
 
 interface Member {
@@ -49,7 +48,6 @@ export default function TeamManagementClient({
   initialInvitations,
   currentUserId,
 }: Props) {
-  const router = useRouter();
   const [members, setMembers] = useState<Member[]>(initialMembers);
   const [invitations, setInvitations] =
     useState<Invitation[]>(initialInvitations);

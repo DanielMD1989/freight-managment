@@ -185,7 +185,7 @@ export default function SecuritySettingsClient({
 
       toast.success("Session revoked successfully");
       router.refresh();
-    } catch (error) {
+    } catch {
       toast.error("Failed to revoke session");
     } finally {
       setRevokingSession(null);
@@ -329,7 +329,7 @@ export default function SecuritySettingsClient({
       const data = await response.json();
       toast.success(`${data.revokedCount} session(s) revoked`);
       router.refresh();
-    } catch (error) {
+    } catch {
       toast.error("Failed to revoke sessions");
     } finally {
       setIsRevokingAll(false);

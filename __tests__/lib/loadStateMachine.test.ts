@@ -6,8 +6,6 @@
 
 import {
   LoadStatus,
-  VALID_TRANSITIONS,
-  ROLE_PERMISSIONS,
   isValidTransition,
   canRoleSetStatus,
   getValidNextStates,

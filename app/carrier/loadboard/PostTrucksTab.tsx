@@ -8,27 +8,18 @@
  * Updated to match DAT Power UI design
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import {
-  StatusTabs,
-  DataTable,
-  ActionButton,
-  AgeIndicator,
-} from "@/components/loadboard-ui";
-import { TableColumn, StatusTab, RowAction } from "@/types/loadboard-ui";
-import PlacesAutocomplete, {
-  PlaceResult,
-} from "@/components/PlacesAutocomplete";
+import { StatusTabs, DataTable, AgeIndicator } from "@/components/loadboard-ui";
+import { TableColumn, StatusTab } from "@/types/loadboard-ui";
+import PlacesAutocomplete from "@/components/PlacesAutocomplete";
 import toast from "react-hot-toast";
 import { getCSRFToken } from "@/lib/csrfFetch";
-import { calculateDistanceKm } from "@/lib/geo";
 import {
   CarrierUser,
   EthiopianCity,
   Load,
   Truck,
-  TruckPosting,
   TruckWithPosting,
   LoadRequest,
   TruckPostingUpdatePayload,
@@ -50,7 +41,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   const [activeMainTab, setActiveMainTab] = useState<MainTab>("postings");
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const [selectedTruckId, setSelectedTruckId] = useState<string | null>(null);
-  const [expandedTruckId, setExpandedTruckId] = useState<string | null>(null);
+  const [, setExpandedTruckId] = useState<string | null>(null);
   const [matchingLoads, setMatchingLoads] = useState<Load[]>([]);
   const [editingTruckId, setEditingTruckId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<TruckPostingUpdatePayload>({});
@@ -86,7 +77,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
   // Ethiopian cities
   const [ethiopianCities, setEthiopianCities] = useState<EthiopianCity[]>([]);
-  const [loadingCities, setLoadingCities] = useState(false);
+  const [, setLoadingCities] = useState(false);
 
   // Note: DH-O, DH-D, F/P filters removed - these are already specified when posting the truck
   // The system auto-calculates distances based on truck location
@@ -200,7 +191,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   /**
    * Fetch trucks
    */
-  const fetchTrucks = async () => {
+  const fetchTrucks = useCallback(async () => {
     setLoading(true);
     try {
       let trucksData: TruckWithPosting[] = [];
@@ -307,31 +298,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     } finally {
       setLoading(false);
     }
-  };
-
-  /**
-   * Fetch matching loads for a truck
-   */
-  const fetchMatchingLoads = async (truckId: string) => {
-    setLoadingMatches(true);
-    try {
-      const response = await fetch(
-        `/api/truck-postings/${truckId}/matching-loads?limit=50`
-      );
-      // L41 FIX: Check response.ok before parsing
-      if (!response.ok) {
-        console.error("Failed to fetch matching loads:", response.status);
-        return [];
-      }
-      const data = await response.json();
-      return data.matches || [];
-    } catch (error) {
-      console.error("Failed to fetch matching loads:", error);
-      return [];
-    } finally {
-      setLoadingMatches(false);
-    }
-  };
+  }, [activeStatus, user.organizationId]);
 
   /**
    * COLLAPSED TO SINGLE SOURCE OF TRUTH (2026-02-06)
@@ -341,65 +308,12 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
    * Calculate distance between two coordinates using Haversine formula
    * Returns distance in kilometers (rounded to integer)
    */
-  const haversineDistance = (
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
-  ): number => {
-    // Delegates to single source of truth, preserves integer rounding behavior
-    return Math.round(calculateDistanceKm(lat1, lon1, lat2, lon2));
-  };
-
-  /**
-   * Calculate actual distance between two cities using coordinates
-   * Looks up city coordinates from ethiopianCities array
-   */
-  const calculateDeadhead = (
-    city1: string | null | undefined,
-    city2: string | null | undefined
-  ): number => {
-    if (!city1 || !city2) return 0;
-
-    const c1 = city1.toLowerCase().trim();
-    const c2 = city2.toLowerCase().trim();
-
-    // Same city = 0 distance
-    if (c1 === c2) return 0;
-
-    // Look up coordinates for both cities
-    const city1Data = ethiopianCities.find(
-      (city: EthiopianCity) => city.name?.toLowerCase().trim() === c1
-    );
-    const city2Data = ethiopianCities.find(
-      (city: EthiopianCity) => city.name?.toLowerCase().trim() === c2
-    );
-
-    // If both cities have coordinates, calculate actual distance
-    if (
-      city1Data?.latitude &&
-      city1Data?.longitude &&
-      city2Data?.latitude &&
-      city2Data?.longitude
-    ) {
-      return haversineDistance(
-        Number(city1Data.latitude),
-        Number(city1Data.longitude),
-        Number(city2Data.latitude),
-        Number(city2Data.longitude)
-      );
-    }
-
-    // Fallback: if coordinates not available, estimate based on name matching
-    if (c1.includes(c2) || c2.includes(c1)) return 50; // Nearby/similar names
-    return 0; // Return 0 if we can't calculate (no coordinates)
-  };
 
   /**
    * Fetch all matching loads for all posted trucks
    * Shows recent loads with DH-O and DH-D set to 0 (will be calculated when truck is selected)
    */
-  const fetchAllMatchingLoads = async () => {
+  const fetchAllMatchingLoads = useCallback(async () => {
     setLoadingMatches(true);
     try {
       // Get all posted trucks
@@ -465,7 +379,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     } finally {
       setLoadingMatches(false);
     }
-  };
+  }, [trucks]);
 
   /**
    * Fetch matching loads for a specific truck
@@ -489,177 +403,14 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
 
   useEffect(() => {
     fetchTrucks();
-  }, [activeStatus]);
+  }, [fetchTrucks]);
 
   useEffect(() => {
     // Fetch matching loads when trucks are loaded
     if (trucks.length > 0) {
       fetchAllMatchingLoads();
     }
-  }, [trucks]);
-
-  /**
-   * Calculate distance using coordinates directly (more reliable than name lookup)
-   */
-  const calculateDistanceWithCoords = (
-    originLat: number | null | undefined,
-    originLon: number | null | undefined,
-    destLat: number | null | undefined,
-    destLon: number | null | undefined
-  ): number => {
-    if (!originLat || !originLon || !destLat || !destLon) return 0;
-    return haversineDistance(
-      Number(originLat),
-      Number(originLon),
-      Number(destLat),
-      Number(destLon)
-    );
-  };
-
-  /**
-   * Get coordinates for a city name from ethiopianCities
-   * Uses fuzzy matching to handle name variations (e.g., "Mekele" vs "Mekelle", "Jima" vs "Jimma")
-   */
-  const getCityCoords = (
-    cityName: string | null | undefined
-  ): { lat: number; lon: number } | null => {
-    if (!cityName || ethiopianCities.length === 0) return null;
-
-    const searchName = cityName.toLowerCase().trim();
-
-    // Try exact match first
-    let city = ethiopianCities.find(
-      (c: EthiopianCity) => c.name?.toLowerCase().trim() === searchName
-    );
-
-    // If no exact match, try fuzzy match (contains or similar spelling)
-    if (!city) {
-      city = ethiopianCities.find((c: EthiopianCity) => {
-        const cityNameLower = c.name?.toLowerCase().trim() || "";
-        // Check if one contains the other
-        if (
-          cityNameLower.includes(searchName) ||
-          searchName.includes(cityNameLower)
-        ) {
-          return true;
-        }
-        // Check for common spelling variations (remove double letters)
-        const simplify = (s: string) => s.replace(/(.)\1+/g, "$1"); // e.g., "Mekelle" -> "Mekele"
-        if (simplify(cityNameLower) === simplify(searchName)) {
-          return true;
-        }
-        return false;
-      });
-    }
-
-    if (city?.latitude && city?.longitude) {
-      return { lat: Number(city.latitude), lon: Number(city.longitude) };
-    }
-    return null;
-  };
-
-  /**
-   * Handle truck row click - show matching loads for this specific truck
-   * The API now calculates DH-O and DH-D distances and returns them sorted
-   */
-  const handleTruckClick = async (truck: TruckWithPosting) => {
-    if (selectedTruckId === truck.id) {
-      // Deselect - show all loads again
-      setSelectedTruckId(null);
-      fetchAllMatchingLoads();
-    } else {
-      // Select this truck - show only its matching loads
-      setSelectedTruckId(truck.id);
-      setLoadingMatches(true);
-      try {
-        // API returns loads with calculated dhToOriginKm, dhAfterDeliveryKm, and withinDhLimits
-        const loads = await fetchMatchingLoads(truck.id);
-        setMatchingLoads(loads);
-      } finally {
-        setLoadingMatches(false);
-      }
-    }
-  };
-
-  /**
-   * Handle POST action - Change unposted truck to posted/active
-   */
-  const handlePostTruckPosting = async (truck: TruckWithPosting) => {
-    try {
-      // Get CSRF token for secure submission
-      const csrfToken = await getCSRFToken();
-      if (!csrfToken) {
-        toast.error(
-          "Failed to get security token. Please refresh and try again."
-        );
-        return;
-      }
-
-      const response = await fetch(`/api/truck-postings/${truck.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-        },
-        body: JSON.stringify({
-          status: "ACTIVE",
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to post truck");
-      }
-
-      toast.success("Truck posted successfully!");
-      // L41 FIX: Always refresh and switch to POSTED tab
-      // If already on POSTED, setActiveStatus won't trigger useEffect, so call fetchTrucks directly
-      if (activeStatus === "POSTED") {
-        await fetchTrucks();
-      } else {
-        setActiveStatus("POSTED");
-      }
-    } catch (error: unknown) {
-      console.error("Post truck error:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to post truck"
-      );
-    }
-  };
-
-  /**
-   * Handle COPY action
-   */
-  const handleCopy = async (truck: TruckWithPosting) => {
-    try {
-      const csrfToken = await getCSRFToken();
-      if (!csrfToken) {
-        toast.error(
-          "Failed to get security token. Please refresh and try again."
-        );
-        return;
-      }
-
-      const response = await fetch(
-        `/api/truck-postings/${truck.id}/duplicate`,
-        {
-          method: "POST",
-          headers: {
-            ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-          },
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to duplicate truck");
-
-      const newTruck = await response.json();
-      toast.success("Truck posting copied successfully!");
-      fetchTrucks();
-    } catch (error) {
-      console.error("Copy failed:", error);
-      toast.error("Failed to copy truck posting");
-    }
-  };
+  }, [trucks, fetchAllMatchingLoads]);
 
   /**
    * Handle DELETE action
@@ -879,14 +630,6 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
     { key: "UNPOSTED", label: "Unposted", count: statusCounts.UNPOSTED },
     { key: "EXPIRED", label: "Expired", count: statusCounts.EXPIRED },
   ];
-
-  /**
-   * Handle toggle keep/star
-   */
-  const handleToggleKeep = async (truck: TruckWithPosting) => {
-    // TODO: Implement keep/star toggle
-    toast("Keep/Star functionality coming soon");
-  };
 
   /**
    * Sprint 18: Handle opening the load request modal
@@ -1175,7 +918,7 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
       label: "Matches",
       width: "110px",
       align: "center" as const,
-      render: (value, row) => {
+      render: (value) => {
         const count = value || 0;
         if (count === 0) {
           return (
@@ -1508,10 +1251,6 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
   /**
    * Get selected truck's origin for filtering
    */
-  const selectedTruck = selectedTruckId
-    ? trucks.find((t) => t.id === selectedTruckId)
-    : null;
-
   /**
    * Filter matching loads based on active tab only
    * API already returns correctly matched loads - no need for city name filtering
@@ -2144,9 +1883,6 @@ export default function PostTrucksTab({ user }: PostTrucksTabProps) {
                 fetchMatchingLoadsForTruck(truck.id);
               }}
               renderExpandedRow={(truck) => {
-                const notesLines = truck.notes?.split("\n") || [];
-                const comments1 = notesLines[0] || "";
-                const comments2 = notesLines[1] || "";
                 const isEditing = editingTruckId === truck.id;
 
                 // Only show expanded content when editing - action buttons are now in the row itself

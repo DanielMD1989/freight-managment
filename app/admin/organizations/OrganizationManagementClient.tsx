@@ -160,7 +160,7 @@ export default function OrganizationManagementClient({
         const errorData = await response.json();
         alert(errorData.error || "Failed to verify organization");
       }
-    } catch (error) {
+    } catch {
       alert("An error occurred while verifying the organization");
     } finally {
       setSubmittingOrgId(null);
@@ -197,7 +197,7 @@ export default function OrganizationManagementClient({
         const errorData = await response.json();
         alert(errorData.error || "Failed to remove verification");
       }
-    } catch (error) {
+    } catch {
       alert("An error occurred while removing verification");
     } finally {
       setSubmittingOrgId(null);

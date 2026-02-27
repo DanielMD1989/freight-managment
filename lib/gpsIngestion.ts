@@ -137,14 +137,6 @@ export async function storePositionData(
 export async function updateTruckLastSeen(truckId: string): Promise<void> {
   const now = new Date();
 
-  // Get current GPS status for truck
-  const truck = await db.truck.findUnique({
-    where: { id: truckId },
-    select: {
-      gpsLastSeenAt: true,
-    },
-  });
-
   // Determine new GPS status based on freshness
   const gpsStatus = determineGpsStatus(now);
 
@@ -169,6 +161,7 @@ export async function updateTruckLastSeen(truckId: string): Promise<void> {
  * @param timestamp - Timestamp of last GPS position
  * @returns GPS status
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function determineGpsStatus(timestamp: Date): GpsDeviceStatus {
   // When we just received data, truck is ACTIVE
   return GpsDeviceStatus.ACTIVE;

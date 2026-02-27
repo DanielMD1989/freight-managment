@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import GpsStatusBadge from "@/components/GpsStatusBadge";
 import { getCSRFToken } from "@/lib/csrfFetch";
 
@@ -27,11 +27,7 @@ export default function GpsManagementClient() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-    fetchDevices();
-  }, [filterStatus]);
-
-  const fetchDevices = async () => {
+  const fetchDevices = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -54,7 +50,11 @@ export default function GpsManagementClient() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterStatus]);
+
+  useEffect(() => {
+    fetchDevices();
+  }, [fetchDevices]);
 
   const handleVerifyGps = async (deviceId: string) => {
     try {

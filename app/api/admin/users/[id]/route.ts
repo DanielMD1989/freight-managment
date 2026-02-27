@@ -21,7 +21,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth, requireActiveUser } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { Permission } from "@/lib/rbac";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { z } from "zod";
@@ -36,7 +36,6 @@ import type { UserUpdateData } from "@/lib/types/admin";
 const ADMIN_PROTECTED_ROLES: UserRole[] = ["ADMIN", "SUPER_ADMIN"];
 
 // Roles that Admin can manage
-const OPERATIONAL_ROLES: UserRole[] = ["CARRIER", "SHIPPER", "DISPATCHER"];
 
 const updateUserSchema = z.object({
   phone: z.string().min(10).max(20).optional(),

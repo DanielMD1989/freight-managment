@@ -10,7 +10,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import TripHistoryPlayback from "@/components/TripHistoryPlayback";
 
 interface CompletedTrip {
@@ -42,7 +41,6 @@ interface CompletedTrip {
 }
 
 export default function TripHistoryPage() {
-  const router = useRouter();
   const [trips, setTrips] = useState<CompletedTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,17 +79,6 @@ export default function TripHistoryPage() {
       year: "numeric",
       month: "short",
       day: "numeric",
-    });
-  };
-
-  const formatDateTime = (dateString?: string) => {
-    if (!dateString) return "-";
-    return new Date(dateString).toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     });
   };
 

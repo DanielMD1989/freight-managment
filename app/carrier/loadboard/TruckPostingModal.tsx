@@ -7,9 +7,7 @@
  */
 
 import React, { useState } from "react";
-import PlacesAutocomplete, {
-  PlaceResult,
-} from "@/components/PlacesAutocomplete";
+import PlacesAutocomplete from "@/components/PlacesAutocomplete";
 import { getCSRFToken } from "@/lib/csrfFetch";
 
 interface CarrierUser {

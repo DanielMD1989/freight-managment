@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Admin Bypass Warnings API Tests
  *
@@ -10,7 +8,6 @@ import { db } from "@/lib/db";
 import {
   setAuthSession,
   createRequest,
-  callHandler,
   parseResponse,
   clearAllStores,
   mockAuth,
@@ -36,7 +33,6 @@ import {
   useCarrierSession,
   useDispatcherSession,
   seedAdminTestData,
-  AdminSeedData,
 } from "./helpers";
 
 // ─── Setup Mocks ──────────────────────────────────────────────────────────────
@@ -166,10 +162,8 @@ const {
 } = require("@/app/api/admin/bypass-warnings/organizations/route");
 
 describe("Admin Bypass Warnings API", () => {
-  let seed: AdminSeedData;
-
   beforeAll(async () => {
-    seed = await seedAdminTestData();
+    await seedAdminTestData();
 
     // Set up some organizations with suspicious activity for testing
     const stores = (db as any).__stores;
@@ -612,7 +606,6 @@ describe("Admin Bypass Warnings API", () => {
     it("returns 500 for non-existent organization", async () => {
       useSuperAdminSession();
       // Simulate Prisma throwing on update with non-existent id
-      const originalUpdate = db.organization.update;
       (db.organization.update as jest.Mock).mockRejectedValueOnce(
         new Error("Record to update not found.")
       );

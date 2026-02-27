@@ -14,7 +14,6 @@
 
 import {
   createMockRequest,
-  testCSRFProtection,
   testRateLimit,
   SQL_INJECTION_PAYLOADS,
   XSS_PAYLOADS,
@@ -27,7 +26,7 @@ import {
   CSRF_COOKIE_NAME,
   CSRF_HEADER_NAME,
 } from "@/lib/csrf";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 describe("Security Features", () => {
   afterAll(async () => {
@@ -36,11 +35,6 @@ describe("Security Features", () => {
 
   describe("CSRF Protection", () => {
     it("should generate valid CSRF tokens", async () => {
-      const request = createMockRequest({
-        method: "GET",
-        url: "http://localhost:3000/api/csrf-token",
-      });
-
       // Test CSRF token generation endpoint
       const { generateCSRFToken } = await import("@/lib/csrf");
       const token = generateCSRFToken();
@@ -145,10 +139,8 @@ describe("Security Features", () => {
 
   describe("Rate Limiting", () => {
     it("should enforce rate limits on login attempts", async () => {
-      const mockHandler = async (req: NextRequest) => {
+      const mockHandler = async () => {
         // Simplified rate limit check
-        const ip = req.headers.get("X-Forwarded-For") || "unknown";
-
         // In real implementation, this would check Redis/memory store
         // For testing, we simulate the rate limit logic
         return NextResponse.json({ success: true });

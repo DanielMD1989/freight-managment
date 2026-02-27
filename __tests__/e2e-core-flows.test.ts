@@ -16,15 +16,6 @@
 
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
-import {
-  calculateServiceFee,
-  findMatchingCorridor,
-} from "@/lib/serviceFeeCalculation";
-import {
-  reserveServiceFee,
-  deductServiceFee,
-  refundServiceFee,
-} from "@/lib/serviceFeeManagement";
 
 describe("E2E Core Business Flows", () => {
   let shipperOrg: any;
@@ -451,7 +442,7 @@ describe("E2E Core Business Flows", () => {
               exists = true;
               break;
           }
-        } catch (error) {
+        } catch {
           exists = false;
         }
 
@@ -500,10 +491,6 @@ describe("E2E Core Business Flows", () => {
     });
 
     it("should verify pricing calculations are consistent", async () => {
-      const testLoad = await db.load.findUnique({
-        where: { id: load.id },
-      });
-
       // Note: Pricing fields removed - pricing is negotiated off-platform
       // Platform only tracks service fees based on corridors
     });

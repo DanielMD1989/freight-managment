@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Audit Fixes Tests
  *
@@ -84,10 +82,7 @@ const {
   POST: createWithdrawal,
 } = require("@/app/api/financial/withdraw/route");
 
-const {
-  POST: createDispute,
-  GET: listDisputes,
-} = require("@/app/api/disputes/route");
+const { GET: listDisputes } = require("@/app/api/disputes/route");
 
 const dbAny = db as any;
 

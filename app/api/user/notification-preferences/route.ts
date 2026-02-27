@@ -15,6 +15,7 @@ import { db } from "@/lib/db";
  * GET /api/user/notification-preferences
  * Retrieve user's notification preferences
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth();

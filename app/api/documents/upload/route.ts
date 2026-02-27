@@ -35,11 +35,7 @@ import {
 } from "@prisma/client";
 import { requireRegistrationAccess } from "@/lib/auth";
 import { validateFileName, validateIdFormat } from "@/lib/validation";
-import {
-  checkRateLimit,
-  addRateLimitHeaders,
-  RATE_LIMIT_DOCUMENT_UPLOAD,
-} from "@/lib/rateLimit";
+import { checkRateLimit, RATE_LIMIT_DOCUMENT_UPLOAD } from "@/lib/rateLimit";
 import { requireCSRF } from "@/lib/csrf";
 
 // Form data schema for document upload
@@ -262,7 +258,7 @@ export async function POST(request: NextRequest) {
       organizationId = truck!.carrierId;
     }
 
-    const { fileName, fileUrl } = await saveFile(
+    const { fileUrl } = await saveFile(
       buffer,
       organizationId,
       originalName,

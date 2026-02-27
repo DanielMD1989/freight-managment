@@ -404,7 +404,7 @@ export async function enforceRateLimit(
 /**
  * Rate limit middleware wrapper
  */
-export function withRateLimit<T>(
+export function withRateLimit(
   config: RateLimitConfig,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper accepts any route arguments
   handler: (request: NextRequest, ...args: any[]) => Promise<NextResponse>,

@@ -35,7 +35,7 @@ describe("Authorization", () => {
         type: "CARRIER_COMPANY",
       });
 
-      const adminUser = await createTestUser({
+      await createTestUser({
         email: "admin@example.com",
         password: "Password123!",
         name: "Admin User",
@@ -65,7 +65,7 @@ describe("Authorization", () => {
         type: "CARRIER_COMPANY",
       });
 
-      const carrierUser = await createTestUser({
+      await createTestUser({
         email: "carrier@example.com",
         password: "Password123!",
         name: "Carrier User",
@@ -96,7 +96,7 @@ describe("Authorization", () => {
         type: "SHIPPER",
       });
 
-      const shipperUser = await createTestUser({
+      await createTestUser({
         email: "shipper@example.com",
         password: "Password123!",
         name: "Shipper User",
@@ -180,7 +180,7 @@ describe("Authorization", () => {
     });
 
     it.skip("should deny access to unauthenticated requests", async () => {
-      const request = createAuthenticatedRequest({
+      createAuthenticatedRequest({
         userId: "",
         email: "",
         role: "",
@@ -225,7 +225,7 @@ describe("Authorization", () => {
         type: "CARRIER_COMPANY",
       });
 
-      const carrier = await createTestUser({
+      await createTestUser({
         email: "carrier@example.com",
         password: "Password123!",
         name: "Carrier User",
@@ -251,7 +251,7 @@ describe("Authorization", () => {
         type: "SHIPPER",
       });
 
-      const shipper = await createTestUser({
+      await createTestUser({
         email: "shipper@example.com",
         password: "Password123!",
         name: "Shipper User",

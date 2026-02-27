@@ -5,7 +5,6 @@ import { validateCSRFWithMobile } from "@/lib/csrf";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
 import { zodErrorResponse, sanitizeText } from "@/lib/validation";
-import { Prisma } from "@prisma/client";
 
 const createOrganizationSchema = z.object({
   name: z

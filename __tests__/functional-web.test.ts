@@ -14,13 +14,8 @@
  * 10. Haversine fallback removal verification
  */
 
-import { NextRequest, NextResponse } from "next/server";
-import {
-  createMockRequest,
-  generateTestJWT,
-  createAuthenticatedRequest,
-  cleanupTestData,
-} from "./utils/testUtils";
+import { NextResponse } from "next/server";
+import { createMockRequest } from "./utils/testUtils";
 import {
   hashPassword,
   verifyPassword,
@@ -87,7 +82,7 @@ describe("Functional Web Tests", () => {
         await db.organization
           .delete({ where: { id: testOrg.id } })
           .catch(() => {});
-    } catch (e) {
+    } catch {
       // Ignore cleanup errors
     }
   });
@@ -644,10 +639,7 @@ describe("Functional Web Tests", () => {
     });
 
     it("should not leak sensitive information in error responses", () => {
-      const {
-        sanitizeErrorMessage,
-        createSafeErrorResponse,
-      } = require("@/lib/errorHandler");
+      const { createSafeErrorResponse } = require("@/lib/errorHandler");
 
       const sensitiveError = new Error(
         "Error at /Users/admin/app/lib/auth.ts:123 - SELECT * FROM users"

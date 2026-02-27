@@ -1025,6 +1025,7 @@ export function findMatchingLoads<T extends LoadMatchCriteria>(
     .filter((load) => !load._excluded && load.matchScore >= minScore)
     .sort((a, b) => b.matchScore - a.matchScore)
     .map(
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       ({ _excluded, _excludeReason, ...rest }) =>
         rest as T & {
           matchScore: number;
@@ -1072,6 +1073,7 @@ export function findMatchingTrucks<T extends TruckMatchCriteria>(
     .filter((truck) => !truck._excluded && truck.matchScore >= minScore)
     .sort((a, b) => b.matchScore - a.matchScore)
     .map(
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       ({ _excluded, _excludeReason, ...rest }) =>
         rest as T & {
           matchScore: number;

@@ -62,7 +62,7 @@ export default function EscalationsClient() {
   const [total, setTotal] = useState(0);
   const limit = 20;
 
-  const fetchEscalations = async () => {
+  const fetchEscalations = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -97,11 +97,11 @@ export default function EscalationsClient() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [offset, statusFilter, priorityFilter]);
 
   useEffect(() => {
     fetchEscalations();
-  }, [offset, statusFilter, priorityFilter]);
+  }, [fetchEscalations]);
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -167,7 +167,7 @@ export default function EscalationsClient() {
         setError(message);
       }
     },
-    []
+    [fetchEscalations]
   );
 
   const page = Math.floor(offset / limit) + 1;

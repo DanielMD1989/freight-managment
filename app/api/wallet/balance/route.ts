@@ -14,6 +14,7 @@ import { handleApiError } from "@/lib/apiErrors";
  *
  * Get wallet balance for current user's organization
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth();

@@ -7,7 +7,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { formatCurrency } from "@/lib/formatters";
 
 interface SpendingData {
@@ -29,11 +29,7 @@ export default function SpendingChart({ organizationId }: SpendingChartProps) {
   const [spending, setSpending] = useState<SpendingData[]>([]);
   const [totalSpending, setTotalSpending] = useState(0);
 
-  useEffect(() => {
-    fetchSpending();
-  }, [viewMode, organizationId]);
-
-  const fetchSpending = async () => {
+  const fetchSpending = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -61,7 +57,11 @@ export default function SpendingChart({ organizationId }: SpendingChartProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [viewMode]);
+
+  useEffect(() => {
+    fetchSpending();
+  }, [fetchSpending, organizationId]);
 
   const aggregateByPeriod = (
     transactions: Array<{ amount: number; createdAt: string }>,

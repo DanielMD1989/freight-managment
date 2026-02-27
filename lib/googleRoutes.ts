@@ -309,10 +309,12 @@ async function cacheRouteResult(
   }
 }
 
-export default {
+const googleRoutesService = {
   calculateRoadDistance,
   calculateETA,
   calculateDeadheadOrigin,
   calculateDeadheadDestination,
   batchCalculateDistances,
 };
+
+export default googleRoutesService;

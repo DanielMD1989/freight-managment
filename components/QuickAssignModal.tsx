@@ -8,7 +8,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getCSRFToken } from "@/lib/csrfFetch";
 
 interface QuickAssignModalProps {
@@ -55,14 +55,7 @@ export default function QuickAssignModal({
   const [assigning, setAssigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch matching trucks when modal opens
-  useEffect(() => {
-    if (isOpen && loadId) {
-      fetchMatchingTrucks();
-    }
-  }, [isOpen, loadId]);
-
-  const fetchMatchingTrucks = async () => {
+  const fetchMatchingTrucks = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -107,7 +100,14 @@ export default function QuickAssignModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [loadId]);
+
+  // Fetch matching trucks when modal opens
+  useEffect(() => {
+    if (isOpen && loadId) {
+      fetchMatchingTrucks();
+    }
+  }, [isOpen, loadId, fetchMatchingTrucks]);
 
   const handleAssign = async () => {
     if (!selectedTruckId) {

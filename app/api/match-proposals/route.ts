@@ -18,7 +18,7 @@ import { requireAuth, requireActiveUser } from "@/lib/auth";
 import { requireCSRF } from "@/lib/csrf";
 import { canProposeMatch } from "@/lib/dispatcherPermissions";
 import { RULE_DISPATCHER_COORDINATION_ONLY } from "@/lib/foundation-rules";
-import { createNotification, NotificationType } from "@/lib/notifications";
+import { createNotification } from "@/lib/notifications";
 import { zodErrorResponse } from "@/lib/validation";
 import { handleApiError } from "@/lib/apiErrors";
 

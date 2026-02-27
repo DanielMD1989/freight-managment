@@ -31,7 +31,6 @@ import QuickAssignModal from "@/components/QuickAssignModal";
 import StatusUpdateModal from "@/components/StatusUpdateModal";
 // H1 FIX: Import proper types from centralized types file
 import type {
-  DashboardStats,
   DashboardData,
   DashboardUser,
   PickupToday,
@@ -151,8 +150,6 @@ export default function DispatcherDashboardClient({
   const stats = dashboardData?.stats;
   const postedLoads =
     stats?.postedLoads ?? loads.filter((l) => l.status === "POSTED").length;
-  const assignedLoads =
-    stats?.assignedLoads ?? loads.filter((l) => l.status === "ASSIGNED").length;
   const inTransitLoads =
     stats?.inTransitLoads ??
     loads.filter((l) => l.status === "IN_TRANSIT").length;
@@ -448,7 +445,7 @@ export default function DispatcherDashboardClient({
               userRole={user.role}
             />
           ) : (
-            <TrucksTable trucks={trucks} onRefresh={fetchTrucks} />
+            <TrucksTable trucks={trucks} />
           )}
         </div>
 
@@ -935,13 +932,7 @@ function LoadsTable({
 
 // Trucks Table Component
 // H1 FIX: Use proper types for TrucksTable component
-function TrucksTable({
-  trucks,
-  onRefresh,
-}: {
-  trucks: DispatcherTruckPosting[];
-  onRefresh: () => void;
-}) {
+function TrucksTable({ trucks }: { trucks: DispatcherTruckPosting[] }) {
   if (trucks.length === 0) {
     return (
       <div className="py-16 text-center">

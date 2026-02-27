@@ -11,7 +11,6 @@
  * - Pricing model
  */
 
-import { db } from "@/lib/db";
 import { calculateDistanceKm } from "@/lib/geo";
 
 describe("Foundation: Marketplace Core", () => {

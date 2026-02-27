@@ -23,7 +23,6 @@ import {
   AlertIcon,
   UsersIcon,
   BuildingIcon,
-  LockIcon,
   CheckIcon,
 } from "@/components/dashboard";
 import { formatCurrency } from "@/lib/formatters";

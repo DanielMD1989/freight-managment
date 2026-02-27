@@ -20,6 +20,7 @@ import { validateCSRFWithMobile } from "@/lib/csrf";
  *
  * Get current settlement statistics
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: NextRequest) {
   try {
     await requirePermission(Permission.MANAGE_SETTLEMENTS);

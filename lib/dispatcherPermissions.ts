@@ -14,10 +14,6 @@
  */
 
 import { UserRole } from "@prisma/client";
-import {
-  RULE_DISPATCHER_COORDINATION_ONLY,
-  assertDispatcherCannotAssign,
-} from "./foundation-rules";
 
 export interface DispatcherUser {
   role: UserRole;

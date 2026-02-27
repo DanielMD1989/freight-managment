@@ -6,7 +6,7 @@
  * Interactive table with filtering for all platform loads
  */
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import Link from "next/link";
 
 // All valid LoadStatus values from Prisma schema + 'ALL' for filter
@@ -97,7 +97,7 @@ export default function AdminLoadsClient() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
-  const fetchLoads = async () => {
+  const fetchLoads = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -123,11 +123,11 @@ export default function AdminLoadsClient() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeStatus, page]);
 
   useEffect(() => {
     fetchLoads();
-  }, [activeStatus, page]);
+  }, [fetchLoads]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {

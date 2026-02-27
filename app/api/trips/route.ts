@@ -12,14 +12,7 @@ import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { TripStatus, Prisma } from "@prisma/client";
 import { z } from "zod";
-import {
-  TripCache,
-  CacheInvalidation,
-  CacheTTL,
-  cacheAside,
-  CacheKeys,
-  cache,
-} from "@/lib/cache";
+import { CacheInvalidation, CacheTTL, cache } from "@/lib/cache";
 import { zodErrorResponse } from "@/lib/validation";
 
 const createTripSchema = z.object({

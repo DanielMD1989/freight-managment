@@ -12,7 +12,6 @@ import { requireAuth } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { zodErrorResponse } from "@/lib/validation";
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
 
 const createSavedSearchSchema = z.object({
   name: z.string().min(1, "Name is required"),

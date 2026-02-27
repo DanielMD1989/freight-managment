@@ -34,7 +34,6 @@ import {
 import {
   getQueueInfo,
   getAllQueueStats,
-  isQueueReady,
   getWorkerStatus,
   getQueueHealthStatus,
 } from "@/lib/queue";

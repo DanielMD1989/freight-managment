@@ -6,10 +6,7 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { ETHIOPIAN_LOCATIONS } from "@/lib/constants/ethiopian-locations";
-import PlacesAutocomplete, {
-  PlaceResult,
-} from "@/components/PlacesAutocomplete";
+import PlacesAutocomplete from "@/components/PlacesAutocomplete";
 import { getCSRFToken } from "@/lib/csrfFetch";
 import type { Load, User } from "@/lib/types/shipper";
 
@@ -26,7 +23,6 @@ export default function LoadPostingModal({
   isOpen,
   onClose,
   onSuccess,
-  user,
   load,
 }: LoadPostingModalProps) {
   const isEditMode = !!load;

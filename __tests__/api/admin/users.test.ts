@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Admin Users API Tests
  *
@@ -20,7 +18,6 @@ import {
   mockRateLimit,
   mockSecurity,
   mockCache,
-  mockNotifications,
   mockCors,
   mockAuditLog,
   mockGps,

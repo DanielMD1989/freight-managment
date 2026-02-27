@@ -13,7 +13,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { csrfFetch } from "@/lib/csrfFetch";
@@ -87,17 +87,13 @@ export default function CarrierTripsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchTrips();
-  }, [activeTab]);
-
-  useEffect(() => {
     const tab = searchParams.get("tab") as TabType;
     if (tab && TAB_CONFIG[tab]) {
       setActiveTab(tab);
     }
   }, [searchParams]);
 
-  const fetchTrips = async () => {
+  const fetchTrips = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -127,7 +123,11 @@ export default function CarrierTripsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab]);
+
+  useEffect(() => {
+    fetchTrips();
+  }, [fetchTrips]);
 
   const handleStatusChange = async (tripId: string, newStatus: string) => {
     setActionLoading(tripId);

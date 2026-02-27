@@ -113,7 +113,7 @@ export async function PATCH(
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requirePermission(Permission.MANAGE_DISPUTES);
+    await requirePermission(Permission.MANAGE_DISPUTES);
 
     const { id: disputeId } = await params;
     const body = await request.json();

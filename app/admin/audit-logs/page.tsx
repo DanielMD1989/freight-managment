@@ -7,92 +7,8 @@
  */
 
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import { getCurrentUser } from "@/lib/auth";
 import AuditLogViewerClient from "./AuditLogViewerClient";
-
-interface AuditLog {
-  id: string;
-  eventType: string;
-  severity: string;
-  userId: string | null;
-  userEmail: string | null;
-  organizationId: string | null;
-  organizationName: string | null;
-  ipAddress: string | null;
-  userAgent: string | null;
-  resource: string | null;
-  resourceId: string | null;
-  action: string | null;
-  result: "SUCCESS" | "FAILURE";
-  details: Record<string, unknown> | null;
-  timestamp: string;
-}
-
-interface AuditLogsResponse {
-  logs: AuditLog[];
-  total: number;
-  limit: number;
-  offset: number;
-}
-
-/**
- * Fetch audit logs from API
- */
-async function getAuditLogs(
-  offset: number = 0,
-  limit: number = 100,
-  filters?: {
-    severity?: string;
-    eventType?: string;
-    userId?: string;
-    organizationId?: string;
-    startDate?: string;
-    endDate?: string;
-  }
-): Promise<AuditLogsResponse | null> {
-  try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("session");
-
-    if (!sessionCookie) {
-      return null;
-    }
-
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-    const params = new URLSearchParams({
-      offset: offset.toString(),
-      limit: limit.toString(),
-    });
-
-    if (filters) {
-      if (filters.severity) params.append("severity", filters.severity);
-      if (filters.eventType) params.append("eventType", filters.eventType);
-      if (filters.userId) params.append("userId", filters.userId);
-      if (filters.organizationId)
-        params.append("organizationId", filters.organizationId);
-      if (filters.startDate) params.append("startDate", filters.startDate);
-      if (filters.endDate) params.append("endDate", filters.endDate);
-    }
-
-    const response = await fetch(`${baseUrl}/api/admin/audit-logs?${params}`, {
-      headers: {
-        Cookie: `session=${sessionCookie.value}`,
-      },
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      console.error("Failed to fetch audit logs:", response.status);
-      return null;
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching audit logs:", error);
-    return null;
-  }
-}
 
 /**
  * Global Audit Log Viewer Page - SuperAdmin Access
@@ -127,28 +43,28 @@ export default async function AdminAuditLogsPage() {
           <h3 className="mb-3 font-semibold text-blue-900">About Audit Logs</h3>
           <ul className="space-y-2 text-sm text-blue-800">
             <li className="flex items-start gap-2">
-              <span className="font-bold">•</span>
+              <span className="font-bold">&bull;</span>
               <span>
                 <strong>Security Events:</strong> Authentication attempts,
                 permission changes, and access violations
               </span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="font-bold">•</span>
+              <span className="font-bold">&bull;</span>
               <span>
                 <strong>Data Operations:</strong> Create, update, and delete
                 operations on critical resources
               </span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="font-bold">•</span>
+              <span className="font-bold">&bull;</span>
               <span>
                 <strong>System Events:</strong> Configuration changes,
                 automation runs, and system alerts
               </span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="font-bold">•</span>
+              <span className="font-bold">&bull;</span>
               <span>
                 <strong>Compliance:</strong> All events are immutable and
                 retained for audit and compliance purposes

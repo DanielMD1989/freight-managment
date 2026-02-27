@@ -48,12 +48,6 @@ function assertNull(actual: any, message?: string) {
   }
 }
 
-function assertNotNull(actual: any, message?: string) {
-  if (actual === null) {
-    throw new Error(message || `Expected non-null value, got null`);
-  }
-}
-
 console.log("🧪 Running Load Utility Tests\n");
 console.log("=" + "=".repeat(60) + "\n");
 

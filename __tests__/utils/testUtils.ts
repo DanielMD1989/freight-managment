@@ -221,7 +221,8 @@ export const PATH_TRAVERSAL_PAYLOADS = [
 export async function testRateLimit(
   handler: (req: NextRequest) => Promise<Response>,
   limit: number,
-  windowMs: number
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  windowMs?: number
 ): Promise<{
   successCount: number;
   rateLimitedCount: number;

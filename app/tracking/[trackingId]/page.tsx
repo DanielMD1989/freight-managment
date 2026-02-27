@@ -60,7 +60,6 @@ export default function TrackingPage({
   params: Promise<{ trackingId: string }>;
 }) {
   const resolvedParams = use(params);
-  const trackingUrl = `/tracking/${resolvedParams.trackingId}`;
 
   const [load, setLoad] = useState<LoadData | null>(null);
   const [tracking, setTracking] = useState<TrackingData | null>(null);

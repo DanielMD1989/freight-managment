@@ -8,8 +8,6 @@
 
 "use client";
 
-import { getPlatformBenefits } from "@/lib/bypassDetection";
-
 interface PlatformBenefitsDisplayProps {
   variant?: "full" | "compact";
   className?: string;

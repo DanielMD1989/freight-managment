@@ -22,7 +22,7 @@ import { VerificationStatus, Prisma } from "@prisma/client";
 export async function GET(request: NextRequest) {
   try {
     // Require admin or ops permission
-    const session = await requirePermission(Permission.VERIFY_DOCUMENTS);
+    await requirePermission(Permission.VERIFY_DOCUMENTS);
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);

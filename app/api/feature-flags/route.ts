@@ -19,7 +19,6 @@ import {
   createFeatureFlag,
   getFeatureFlagsForClient,
   getFeatureFlagStats,
-  type FeatureFlag,
   type FlagCategory,
 } from "@/lib/featureFlags";
 import { logger } from "@/lib/logger";

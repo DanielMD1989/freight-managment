@@ -7,7 +7,6 @@
  */
 
 import { db } from "./db";
-import { Decimal } from "decimal.js";
 import { calculateDistanceKm } from "./geo";
 
 export interface GpsPosition {

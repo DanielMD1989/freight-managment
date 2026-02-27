@@ -11,7 +11,6 @@ import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { calculateDistanceKm } from "@/lib/geo";
 import { roundToDecimals, roundDistance1 } from "@/lib/rounding";
-import { Prisma } from "@prisma/client";
 
 /**
  * GET /api/trips/[tripId]/history

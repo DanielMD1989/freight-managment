@@ -8,7 +8,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { getCSRFToken } from "@/lib/csrfFetch";
 
@@ -33,11 +33,7 @@ export default function BypassReviewClient() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "flagged">("flagged");
 
-  useEffect(() => {
-    fetchFlaggedOrganizations();
-  }, [filter]);
-
-  const fetchFlaggedOrganizations = async () => {
+  const fetchFlaggedOrganizations = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -59,7 +55,11 @@ export default function BypassReviewClient() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    fetchFlaggedOrganizations();
+  }, [fetchFlaggedOrganizations]);
 
   const unflagOrganization = async (orgId: string) => {
     if (!confirm("Are you sure you want to unflag this organization?")) {
@@ -93,12 +93,6 @@ export default function BypassReviewClient() {
           (err instanceof Error ? err.message : "Unknown error")
       );
     }
-  };
-
-  const getSeverityColor = (count: number) => {
-    if (count >= 5) return "text-red-600 bg-red-50 border-red-200";
-    if (count >= 3) return "text-orange-600 bg-orange-50 border-orange-200";
-    return "text-yellow-600 bg-yellow-50 border-yellow-200";
   };
 
   if (loading) {

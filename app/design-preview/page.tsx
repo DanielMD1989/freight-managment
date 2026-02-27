@@ -5,7 +5,7 @@ import { useState } from "react";
 type ColorScheme = "dark-neutral";
 
 export default function DesignPreviewPage() {
-  const [scheme, setScheme] = useState<ColorScheme>("dark-neutral");
+  const [scheme] = useState<ColorScheme>("dark-neutral");
 
   const schemes = {
     "dark-neutral": {
@@ -161,7 +161,7 @@ export default function DesignPreviewPage() {
                 { label: "Active Trucks", value: "56", change: "+5%" },
                 { label: "Revenue", value: "ETB 2.5M", change: "+18%" },
                 { label: "Pending", value: "23", change: "-3%" },
-              ].map((stat, i) => (
+              ].map((stat) => (
                 <div
                   key={stat.label}
                   className="rounded-xl p-5 transition-all hover:shadow-lg"
@@ -263,7 +263,7 @@ export default function DesignPreviewPage() {
                       status: "Pending",
                       price: "ETB 28,000",
                     },
-                  ].map((load, i) => (
+                  ].map((load) => (
                     <tr
                       key={load.id}
                       className="border-t transition-colors"

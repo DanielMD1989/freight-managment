@@ -22,7 +22,6 @@ const calculateServiceFeePreview = calculateFeePreview;
 
 // Define the enum values directly to avoid Prisma import issues at module load time
 const CORRIDOR_DIRECTIONS = ["ONE_WAY", "ROUND_TRIP", "BIDIRECTIONAL"] as const;
-type CorridorDirectionType = (typeof CORRIDOR_DIRECTIONS)[number];
 
 // Ethiopian regions for validation
 const ETHIOPIAN_REGIONS = [

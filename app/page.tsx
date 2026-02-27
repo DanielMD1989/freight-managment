@@ -100,6 +100,7 @@ export default async function Home() {
       <section className="relative overflow-hidden pt-32 pb-20 lg:pt-40 lg:pb-32">
         {/* Background with realistic Ethiopian imagery */}
         <div className="absolute inset-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/images/hero/ethiopia-caravan.jpg"
             alt="Ethiopian salt caravan in Danakil Depression"
@@ -702,6 +703,7 @@ export default async function Home() {
             {/* Ethiopia Map - Realistic Route Map */}
             <div className="relative">
               <div className="overflow-hidden rounded-2xl border border-white/20 shadow-2xl">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/images/hero/ethiopia-routes-map.jpg"
                   alt="Ethiopian National Transportation Route Map showing Addis Ababa to Djibouti corridor"

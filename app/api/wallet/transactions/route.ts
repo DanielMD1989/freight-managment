@@ -7,7 +7,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
-import { Prisma } from "@prisma/client";
 import { handleApiError } from "@/lib/apiErrors";
 
 /**

@@ -118,11 +118,10 @@ export async function GET(
     }
 
     // Check permissions using centralized access helper
-    const { isAdmin, isDispatcher, isCarrier, isShipper, hasAccess } =
-      getAccessRoles(session, {
-        shipperOrgId: trip.shipperId,
-        carrierOrgId: trip.carrierId,
-      });
+    const { isShipper, hasAccess } = getAccessRoles(session, {
+      shipperOrgId: trip.shipperId,
+      carrierOrgId: trip.carrierId,
+    });
 
     if (!hasAccess) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });

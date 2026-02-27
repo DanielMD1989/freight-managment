@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getTrackingStatus } from "@/lib/gpsTracking";
-import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { checkRpsLimit } from "@/lib/rateLimit";
 
 /**
  * GET /api/tracking/[trackingId]

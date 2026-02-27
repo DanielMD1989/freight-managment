@@ -12,10 +12,10 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import GoogleMap, { MapMarker, MapRoute } from "@/components/GoogleMap";
+import GoogleMap, { MapMarker } from "@/components/GoogleMap";
 import TripHistoryPlayback from "@/components/TripHistoryPlayback";
 import { useGpsRealtime } from "@/hooks/useGpsRealtime";
 import { csrfFetch } from "@/lib/csrfFetch";
@@ -163,9 +163,9 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
     initialTrip.podDocuments || []
   );
   // L41 FIX: Add loading and error states
-  const [loadingPod, setLoadingPod] = useState(false);
-  const [podError, setPodError] = useState<string | null>(null);
-  const [loadingProgress, setLoadingProgress] = useState(false);
+  const [, setLoadingPod] = useState(false);
+  const [, setPodError] = useState<string | null>(null);
+  const [, setLoadingProgress] = useState(false);
 
   const statusConfig = STATUS_CONFIG[trip.status] || STATUS_CONFIG.ASSIGNED;
   const isActiveTrip = trip.status === "IN_TRANSIT";
@@ -177,13 +177,7 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
     trip.status === "DELIVERED" && hasPod && !trip.shipperConfirmed;
 
   // Fetch POD documents on mount
-  useEffect(() => {
-    if (trip.status === "DELIVERED" || trip.status === "COMPLETED") {
-      fetchPodDocuments();
-    }
-  }, [trip.id, trip.status]);
-
-  const fetchPodDocuments = async () => {
+  const fetchPodDocuments = useCallback(async () => {
     setLoadingPod(true);
     setPodError(null);
     try {
@@ -202,7 +196,13 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
     } finally {
       setLoadingPod(false);
     }
-  };
+  }, [trip.id]);
+
+  useEffect(() => {
+    if (trip.status === "DELIVERED" || trip.status === "COMPLETED") {
+      fetchPodDocuments();
+    }
+  }, [trip.status, fetchPodDocuments]);
 
   const handleConfirmDelivery = async () => {
     setConfirmingDelivery(true);
@@ -239,7 +239,7 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
   };
 
   // Real-time GPS tracking for active trips
-  const { isConnected, positions } = useGpsRealtime({
+  const { isConnected } = useGpsRealtime({
     autoConnect: isActiveTrip,
     onPositionUpdate: (position) => {
       if (trip.truck && position.truckId === trip.truck.id) {
@@ -249,15 +249,7 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
   });
 
   // Fetch initial location and progress for active trips
-  useEffect(() => {
-    if (isActiveTrip) {
-      fetchTripProgress();
-      const interval = setInterval(fetchTripProgress, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [isActiveTrip, trip.id]);
-
-  const fetchTripProgress = async () => {
+  const fetchTripProgress = useCallback(async () => {
     setLoadingProgress(true);
     try {
       const response = await fetch(`/api/loads/${trip.id}/progress`);
@@ -276,7 +268,15 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
     } finally {
       setLoadingProgress(false);
     }
-  };
+  }, [trip.id]);
+
+  useEffect(() => {
+    if (isActiveTrip) {
+      fetchTripProgress();
+      const interval = setInterval(fetchTripProgress, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isActiveTrip, fetchTripProgress]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -292,15 +292,6 @@ export default function ShipperTripDetailClient({ trip: initialTrip }: Props) {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  const formatCurrency = (amount: number | null) => {
-    if (!amount) return "-";
-    return new Intl.NumberFormat("en-ET", {
-      style: "currency",
-      currency: "ETB",
-      minimumFractionDigits: 0,
-    }).format(amount);
   };
 
   // Build map markers

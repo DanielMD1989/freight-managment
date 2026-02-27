@@ -416,6 +416,7 @@ class DatabaseManager {
    * Setup graceful shutdown handlers
    */
   private setupShutdownHandlers(): void {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const shutdown = async (signal: string) => {
       if (this.isShuttingDown) return;
       this.isShuttingDown = true;

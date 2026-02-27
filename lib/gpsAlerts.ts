@@ -272,7 +272,9 @@ export async function handleGpsStatusChange(
  * @returns GPS alert statistics
  */
 export async function getGpsAlertStats(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   startDate?: Date,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   endDate?: Date
 ): Promise<{
   totalOfflineEvents: number;

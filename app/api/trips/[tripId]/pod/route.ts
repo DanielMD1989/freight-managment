@@ -152,7 +152,6 @@ export async function POST(
 
     // Update Load model for backward compatibility
     // Always update to the most recent POD URL
-    const podCount = await db.tripPod.count({ where: { tripId } });
     await db.load.update({
       where: { id: trip.loadId },
       data: {

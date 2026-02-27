@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * E2E Business Workflow Test Suite
  *
@@ -256,29 +254,27 @@ describe("E2E Business Workflow (User Stories)", () => {
     });
 
     // Override truck.findUnique to resolve include.carrier
-    db.truck.findUnique.mockImplementation(
-      ({ where, include, select }: any) => {
-        let record: any = null;
-        if (where?.id) record = stores.trucks.get(where.id);
-        if (!record && where?.licensePlate) {
-          for (const r of stores.trucks.values()) {
-            if ((r as any).licensePlate === where.licensePlate) {
-              record = r;
-              break;
-            }
+    db.truck.findUnique.mockImplementation(({ where, include }: any) => {
+      let record: any = null;
+      if (where?.id) record = stores.trucks.get(where.id);
+      if (!record && where?.licensePlate) {
+        for (const r of stores.trucks.values()) {
+          if ((r as any).licensePlate === where.licensePlate) {
+            record = r;
+            break;
           }
         }
-        if (!record) return Promise.resolve(null);
-        if (include) {
-          const result = { ...record };
-          if (include.carrier && record.carrierId) {
-            result.carrier = stores.organizations.get(record.carrierId) || null;
-          }
-          return Promise.resolve(result);
-        }
-        return Promise.resolve(record);
       }
-    );
+      if (!record) return Promise.resolve(null);
+      if (include) {
+        const result = { ...record };
+        if (include.carrier && record.carrierId) {
+          result.carrier = stores.organizations.get(record.carrierId) || null;
+        }
+        return Promise.resolve(result);
+      }
+      return Promise.resolve(record);
+    });
 
     // Override truckRequest.findUnique to resolve include.shipper + include.truck.carrier
     db.truckRequest.findUnique.mockImplementation(({ where, include }: any) => {
@@ -331,7 +327,7 @@ describe("E2E Business Workflow (User Stories)", () => {
     );
 
     // Override trip.findUnique to resolve include.load/truck/carrier/shipper/routeHistory
-    db.trip.findUnique.mockImplementation(({ where, include, select }: any) => {
+    db.trip.findUnique.mockImplementation(({ where, include }: any) => {
       const record = stores.trips.get(where?.id);
       if (!record) return Promise.resolve(null);
       if (include) {
@@ -1214,7 +1210,6 @@ describe("E2E Business Workflow (User Stories)", () => {
   describe("Phase 4C: Dispatcher Match Proposal", () => {
     let matchProposalId: string;
     let phase4cTruck: any;
-    let phase4cPosting: any;
     let phase4cLoad: any;
 
     beforeAll(async () => {
@@ -1231,7 +1226,7 @@ describe("E2E Business Workflow (User Stories)", () => {
         },
       });
 
-      phase4cPosting = await db.truckPosting.create({
+      await db.truckPosting.create({
         data: {
           id: "posting-4c",
           truckId: phase4cTruck.id,

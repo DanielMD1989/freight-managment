@@ -155,6 +155,7 @@ export default function RequestsTabs({
         tabParam === "my-requests" ||
         tabParam === "match-proposals")
     ) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveTab(tabParam);
     }
   }, [tabParam]);

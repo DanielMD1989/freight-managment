@@ -78,49 +78,44 @@ export default function ShipperMapPage() {
   const [showHistoryPlayback, setShowHistoryPlayback] = useState(showHistory);
 
   // Real-time GPS updates
-  const { isConnected, positions, subscribeToTrip, unsubscribeFromTrip } =
-    useGpsRealtime({
-      autoConnect: true,
-      onPositionUpdate: useCallback(
-        (position: GpsPosition) => {
-          // Update the selected trip's current location if it matches
-          if (selectedTrip && position.truckId === selectedTrip.truck.id) {
-            setSelectedTrip((prev) => {
-              if (!prev) return prev;
-              return {
-                ...prev,
-                currentLocation: {
-                  lat: position.lat,
-                  lng: position.lng,
-                  updatedAt: position.timestamp,
-                },
-              };
-            });
-            // Also update in the activeTrips list
-            setActiveTrips((prev) =>
-              prev.map((trip) => {
-                if (trip.truck.id === position.truckId) {
-                  return {
-                    ...trip,
-                    currentLocation: {
-                      lat: position.lat,
-                      lng: position.lng,
-                      updatedAt: position.timestamp,
-                    },
-                  };
-                }
-                return trip;
-              })
-            );
-          }
-        },
-        [selectedTrip]
-      ),
-    });
-
-  useEffect(() => {
-    fetchMyTrips();
-  }, [loadIdParam, showHistory]);
+  const { isConnected, subscribeToTrip, unsubscribeFromTrip } = useGpsRealtime({
+    autoConnect: true,
+    onPositionUpdate: useCallback(
+      (position: GpsPosition) => {
+        // Update the selected trip's current location if it matches
+        if (selectedTrip && position.truckId === selectedTrip.truck.id) {
+          setSelectedTrip((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              currentLocation: {
+                lat: position.lat,
+                lng: position.lng,
+                updatedAt: position.timestamp,
+              },
+            };
+          });
+          // Also update in the activeTrips list
+          setActiveTrips((prev) =>
+            prev.map((trip) => {
+              if (trip.truck.id === position.truckId) {
+                return {
+                  ...trip,
+                  currentLocation: {
+                    lat: position.lat,
+                    lng: position.lng,
+                    updatedAt: position.timestamp,
+                  },
+                };
+              }
+              return trip;
+            })
+          );
+        }
+      },
+      [selectedTrip]
+    ),
+  });
 
   // Subscribe to selected trip's GPS updates
   useEffect(() => {
@@ -146,7 +141,7 @@ export default function ShipperMapPage() {
     }
   }, [selectedTrip]);
 
-  const fetchMyTrips = async () => {
+  const fetchMyTrips = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -200,7 +195,11 @@ export default function ShipperMapPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [loadIdParam, showHistory, selectedTrip]);
+
+  useEffect(() => {
+    fetchMyTrips();
+  }, [fetchMyTrips]);
 
   const fetchTripProgress = async (loadId: string) => {
     try {

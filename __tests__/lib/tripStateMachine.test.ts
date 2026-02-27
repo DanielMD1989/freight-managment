@@ -6,8 +6,6 @@
 
 import {
   TripStatus,
-  VALID_TRIP_TRANSITIONS,
-  TRIP_ROLE_PERMISSIONS,
   isValidTripStatus,
   isValidTripTransition,
   canRoleSetTripStatus,

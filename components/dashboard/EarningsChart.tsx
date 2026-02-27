@@ -7,7 +7,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { formatCurrency } from "@/lib/formatters";
 
 interface EarningsData {
@@ -29,11 +29,7 @@ export default function EarningsChart({ organizationId }: EarningsChartProps) {
   const [earnings, setEarnings] = useState<EarningsData[]>([]);
   const [totalEarnings, setTotalEarnings] = useState(0);
 
-  useEffect(() => {
-    fetchEarnings();
-  }, [viewMode, organizationId]);
-
-  const fetchEarnings = async () => {
+  const fetchEarnings = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -61,7 +57,11 @@ export default function EarningsChart({ organizationId }: EarningsChartProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [viewMode]);
+
+  useEffect(() => {
+    fetchEarnings();
+  }, [fetchEarnings, organizationId]);
 
   const aggregateByPeriod = (
     transactions: Array<{ amount: number; createdAt: string }>,
@@ -249,7 +249,7 @@ export default function EarningsChart({ organizationId }: EarningsChartProps) {
         <div className="space-y-2">
           {/* Bar Chart */}
           <div className="flex h-28 items-end gap-1.5">
-            {earnings.map((item, index) => {
+            {earnings.map((item) => {
               const heightPercent =
                 maxAmount > 0 ? (item.amount / maxAmount) * 100 : 0;
               return (

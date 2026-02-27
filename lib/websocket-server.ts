@@ -10,13 +10,13 @@
  */
 
 import { Server as HTTPServer } from "http";
-import { Server as SocketIOServer, Socket } from "socket.io";
+import { Server as SocketIOServer } from "socket.io";
 import { createAdapter } from "@socket.io/redis-adapter";
 import { createClient } from "redis";
 import { db } from "./db";
 import { UserRole, LoadStatus } from "@prisma/client";
 import { isRedisEnabled } from "./redis";
-import { getAllowedOrigins, isOriginAllowed } from "./cors";
+import { isOriginAllowed } from "./cors";
 import { validateSessionByToken } from "./auth";
 import { logger } from "./logger";
 
@@ -121,29 +121,6 @@ function checkTripSubscriptionPermission(
   return {
     allowed: false,
     reason: "Your role does not have permission to access trip data",
-  };
-}
-
-/**
- * Log security events for audit trail
- */
-function logSecurityEvent(
-  eventType: "SUBSCRIBE_DENIED" | "SUBSCRIBE_ALLOWED",
-  userId: string,
-  role: string,
-  resource: string,
-  resourceId: string,
-  reason?: string
-): void {
-  const timestamp = new Date().toISOString();
-  const logEntry = {
-    timestamp,
-    eventType,
-    userId,
-    role,
-    resource,
-    resourceId,
-    reason,
   };
 }
 
@@ -267,12 +244,6 @@ export async function initializeWebSocketServer(
   // Log allowed origins on startup
   io.on("connection", (socket) => {
     // Log connection with origin info for security audit
-    const origin = socket.handshake.headers.origin || "unknown";
-    const clientIP =
-      socket.handshake.headers["x-forwarded-for"] ||
-      socket.handshake.headers["x-real-ip"] ||
-      socket.handshake.address ||
-      "unknown";
     // Authenticate user and store session data for permission checks
     // Accepts either: { userId: string, token?: string } or just userId string (legacy)
     socket.on(
@@ -513,7 +484,6 @@ export async function initializeWebSocketServer(
 
     // Unsubscribe from trip updates
     socket.on("unsubscribe-trip", (loadId: string) => {
-      const session = socket.data.session as SocketSessionData | undefined;
       socket.leave(`trip:${loadId}`);
     });
 
@@ -606,7 +576,6 @@ export async function initializeWebSocketServer(
 
     // Unsubscribe from fleet updates
     socket.on("unsubscribe-fleet", (organizationId: string) => {
-      const session = socket.data.session as SocketSessionData | undefined;
       socket.leave(`fleet:${organizationId}`);
     });
 
@@ -644,7 +613,6 @@ export async function initializeWebSocketServer(
 
     // Unsubscribe from all GPS updates
     socket.on("unsubscribe-all-gps", () => {
-      const session = socket.data.session as SocketSessionData | undefined;
       socket.leave("all-gps");
     });
   });

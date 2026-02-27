@@ -198,7 +198,7 @@ async function ensureUploadsDir(subdir: string): Promise<void> {
   const dir = path.join(UPLOADS_DIR, path.dirname(subdir));
   try {
     await fs.mkdir(dir, { recursive: true });
-  } catch (error) {
+  } catch {
     // Directory might already exist
   }
 }

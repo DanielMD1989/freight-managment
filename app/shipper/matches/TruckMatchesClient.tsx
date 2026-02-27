@@ -8,7 +8,7 @@
  * Updated: Task 6 - Manual Load ↔ Truck Matching
  */
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { VerifiedBadgeWithLabel } from "@/components/VerifiedBadge";
 import { toast } from "react-hot-toast";
@@ -111,31 +111,34 @@ export default function TruckMatchesClient({
   /**
    * Fetch truck matches for selected load
    */
-  const fetchMatches = async (loadId: string) => {
-    setIsLoading(true);
-    setError("");
+  const fetchMatches = useCallback(
+    async (loadId: string) => {
+      setIsLoading(true);
+      setError("");
 
-    try {
-      const response = await fetch(
-        `/api/loads/${loadId}/matching-trucks?minScore=${minScore}&limit=50`
-      );
+      try {
+        const response = await fetch(
+          `/api/loads/${loadId}/matching-trucks?minScore=${minScore}&limit=50`
+        );
 
-      if (response.ok) {
-        const data = await response.json();
-        setMatches(data.matches || []);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || "Failed to fetch matches");
+        if (response.ok) {
+          const data = await response.json();
+          setMatches(data.matches || []);
+        } else {
+          const errorData = await response.json();
+          setError(errorData.error || "Failed to fetch matches");
+          setMatches([]);
+        }
+      } catch (error) {
+        console.error("Error fetching matches:", error);
+        setError("Failed to fetch truck matches");
         setMatches([]);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching matches:", error);
-      setError("Failed to fetch truck matches");
-      setMatches([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    [minScore]
+  );
 
   /**
    * Handle load selection change
@@ -202,7 +205,7 @@ export default function TruckMatchesClient({
     if (currentLoadId) {
       fetchMatches(currentLoadId);
     }
-  }, [currentLoadId, minScore]);
+  }, [currentLoadId, fetchMatches]);
 
   const currentLoad = postedLoads.find((l) => l.id === currentLoadId);
 

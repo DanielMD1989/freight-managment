@@ -312,6 +312,7 @@ function getEmailTemplate(
 /**
  * Send email via console (development/testing)
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function sendViaConsole(message: EmailMessage): Promise<void> {}
 
 /**

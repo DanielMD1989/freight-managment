@@ -68,7 +68,7 @@ export default function DocumentManagementClient({
 }) {
   const router = useRouter();
 
-  const [documents, setDocuments] = useState<Document[]>(initialDocuments);
+  const [documents] = useState<Document[]>(initialDocuments);
   const [isUploading, setIsUploading] = useState(false);
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [uploadError, setUploadError] = useState("");

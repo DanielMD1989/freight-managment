@@ -10,7 +10,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getCSRFToken } from "@/lib/csrfFetch";
 
 // H6 FIX: Define interfaces locally with discriminated union
@@ -103,13 +103,7 @@ export default function FindMatchesModal({
   const [proposing, setProposing] = useState<string | null>(null);
   const [proposedIds, setProposedIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchMatches();
-    }
-  }, [isOpen, loadId, truckPostingId]);
-
-  const fetchMatches = async () => {
+  const fetchMatches = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -150,7 +144,13 @@ export default function FindMatchesModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [type, loadId, truckPostingId]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchMatches();
+    }
+  }, [isOpen, loadId, truckPostingId, fetchMatches]);
 
   // H6 FIX: Use type guards for proper typing
   const handleProposeMatch = async (match: MatchResult) => {

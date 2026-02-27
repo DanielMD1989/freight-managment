@@ -7,7 +7,7 @@
  * Includes financial summary at top
  */
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import Link from "next/link";
 
 type TripStatus =
@@ -86,7 +86,7 @@ export default function AdminTripsClient() {
     activeTrips: 0,
   });
 
-  const fetchTrips = async () => {
+  const fetchTrips = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -115,7 +115,11 @@ export default function AdminTripsClient() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeStatus, page]);
+
+  useEffect(() => {
+    fetchTrips();
+  }, [fetchTrips]);
 
   const fetchSummary = async () => {
     try {
@@ -132,10 +136,6 @@ export default function AdminTripsClient() {
       console.error("Failed to fetch trip summary:", error);
     }
   };
-
-  useEffect(() => {
-    fetchTrips();
-  }, [activeStatus, page]);
 
   useEffect(() => {
     fetchSummary();

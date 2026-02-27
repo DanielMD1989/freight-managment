@@ -10,7 +10,6 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import {
-  StatusTabs,
   AgeIndicator,
   SavedSearches,
   EditSearchModal,
@@ -58,22 +57,20 @@ function haversineDistance(
   return Math.round(calculateDistanceKm(lat1, lon1, lat2, lon2));
 }
 
-export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
+export default function SearchLoadsTab({}: SearchLoadsTabProps) {
   const [loads, setLoads] = useState<Load[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState<ResultsFilter>("all");
   const [ethiopianCities, setEthiopianCities] = useState<EthiopianCity[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
   const [showSearchForm, setShowSearchForm] = useState(false);
-  const [sortField, setSortField] = useState<string>("createdAt");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   // Saved searches state
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
   const [activeSavedSearchId, setActiveSavedSearchId] = useState<string | null>(
     null
   );
-  const [loadingSavedSearches, setLoadingSavedSearches] = useState(false);
+  const [, setLoadingSavedSearches] = useState(false);
   const [editingSearch, setEditingSearch] = useState<SavedSearch | null>(null);
 
   // Load request modal state
@@ -541,82 +538,60 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
   };
 
   /**
-   * Handle header column click for sorting
-   */
-  const handleHeaderClick = (field: string) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortOrder("asc");
-    }
-
-    const sorted = [...loads].sort((a, b) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const aVal = (a as Record<string, any>)[field];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const bVal = (b as Record<string, any>)[field];
-
-      if (aVal === null || aVal === undefined) return 1;
-      if (bVal === null || bVal === undefined) return -1;
-
-      if (sortOrder === "asc") {
-        return aVal > bVal ? 1 : -1;
-      } else {
-        return aVal < bVal ? 1 : -1;
-      }
-    });
-
-    setLoads(sorted);
-  };
-
-  /**
    * Truck types list with enum values and display labels
    */
-  const truckTypes = [
-    { value: "AUTO_CARRIER", label: "Auto Carrier", code: "AC" },
-    { value: "B_TRAIN", label: "B-Train", code: "BT" },
-    { value: "CONESTOGA", label: "Conestoga", code: "CN" },
-    { value: "CONTAINER", label: "Container", code: "C" },
-    { value: "CONTAINER_INSULATED", label: "Container Insulated", code: "CI" },
-    {
-      value: "CONTAINER_REFRIGERATED",
-      label: "Container Refrigerated",
-      code: "CR",
-    },
-    { value: "CONVEYOR", label: "Conveyor", code: "CV" },
-    { value: "DOUBLE_DROP", label: "Double Drop", code: "DD" },
-    { value: "DROP_DECK_LANDOLL", label: "Drop Deck Landoll", code: "LA" },
-    { value: "DUMP_TRAILER", label: "Dump Trailer", code: "DT" },
-    { value: "DUMP_TRUCK", label: "Dump Truck", code: "DK" },
-    { value: "FLATBED", label: "Flatbed", code: "F" },
-    { value: "FLATBED_AIR_RIDE", label: "Flatbed Air-Ride", code: "FA" },
-    { value: "FLATBED_CONESTOGA", label: "Flatbed Conestoga", code: "FN" },
-    { value: "FLATBED_DOUBLE", label: "Flatbed Double", code: "F2" },
-    { value: "FLATBED_HAZMAT", label: "Flatbed HazMat", code: "FZ" },
-    { value: "FLATBED_HOTSHOT", label: "Flatbed Hotshot", code: "FH" },
-    { value: "FLATBED_MAXI", label: "Flatbed Maxi", code: "MX" },
-    { value: "DRY_VAN", label: "Van", code: "V" },
-    { value: "BOX_TRUCK", label: "Box Truck", code: "BX" },
-    { value: "REFRIGERATED", label: "Reefer", code: "R" },
-    { value: "TANKER", label: "Tanker", code: "T" },
-    { value: "LOWBOY", label: "Lowboy", code: "LB" },
-  ];
+  const truckTypes = useMemo(
+    () => [
+      { value: "AUTO_CARRIER", label: "Auto Carrier", code: "AC" },
+      { value: "B_TRAIN", label: "B-Train", code: "BT" },
+      { value: "CONESTOGA", label: "Conestoga", code: "CN" },
+      { value: "CONTAINER", label: "Container", code: "C" },
+      {
+        value: "CONTAINER_INSULATED",
+        label: "Container Insulated",
+        code: "CI",
+      },
+      {
+        value: "CONTAINER_REFRIGERATED",
+        label: "Container Refrigerated",
+        code: "CR",
+      },
+      { value: "CONVEYOR", label: "Conveyor", code: "CV" },
+      { value: "DOUBLE_DROP", label: "Double Drop", code: "DD" },
+      { value: "DROP_DECK_LANDOLL", label: "Drop Deck Landoll", code: "LA" },
+      { value: "DUMP_TRAILER", label: "Dump Trailer", code: "DT" },
+      { value: "DUMP_TRUCK", label: "Dump Truck", code: "DK" },
+      { value: "FLATBED", label: "Flatbed", code: "F" },
+      { value: "FLATBED_AIR_RIDE", label: "Flatbed Air-Ride", code: "FA" },
+      { value: "FLATBED_CONESTOGA", label: "Flatbed Conestoga", code: "FN" },
+      { value: "FLATBED_DOUBLE", label: "Flatbed Double", code: "F2" },
+      { value: "FLATBED_HAZMAT", label: "Flatbed HazMat", code: "FZ" },
+      { value: "FLATBED_HOTSHOT", label: "Flatbed Hotshot", code: "FH" },
+      { value: "FLATBED_MAXI", label: "Flatbed Maxi", code: "MX" },
+      { value: "DRY_VAN", label: "Van", code: "V" },
+      { value: "BOX_TRUCK", label: "Box Truck", code: "BX" },
+      { value: "REFRIGERATED", label: "Reefer", code: "R" },
+      { value: "TANKER", label: "Tanker", code: "T" },
+      { value: "LOWBOY", label: "Lowboy", code: "LB" },
+    ],
+    []
+  );
 
   /**
    * Get display label for truck type enum value
    */
-  const getTruckTypeLabel = (enumValue: string | null | undefined): string => {
-    if (!enumValue) return "N/A";
-    const found = truckTypes.find((t) => t.value === enumValue);
-    return found ? found.label : enumValue.replace("_", " ");
-  };
-
   /**
    * Table columns configuration (memoized)
    */
-  const columns: TableColumn[] = useMemo(
-    () => [
+  const columns: TableColumn[] = useMemo(() => {
+    const getTruckTypeLabel = (
+      enumValue: string | null | undefined
+    ): string => {
+      if (!enumValue) return "N/A";
+      const found = truckTypes.find((t) => t.value === enumValue);
+      return found ? found.label : enumValue.replace("_", " ");
+    };
+    return [
       {
         key: "age",
         label: "Age",
@@ -727,9 +702,8 @@ export default function SearchLoadsTab({ user }: SearchLoadsTabProps) {
           </span>
         ),
       },
-    ],
-    []
-  );
+    ];
+  }, [truckTypes]);
 
   /**
    * Table actions configuration (memoized)

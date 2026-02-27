@@ -87,23 +87,20 @@ interface SearchTrucksTabProps {
 type ResultsFilter = "all" | "PREFERRED" | "BLOCKED";
 
 export default function SearchTrucksTab({
-  user,
   initialFilters,
 }: SearchTrucksTabProps) {
   // L24 FIX: Properly typed state variables
   const [trucks, setTrucks] = useState<TruckPostingWithCarrier[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState<ResultsFilter>("all");
-  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
-  const [activeSearchId, setActiveSearchId] = useState<string | null>(null);
+  const [, setSavedSearches] = useState<SavedSearch[]>([]);
+  const [, setActiveSearchId] = useState<string | null>(null);
   const [filterValues, setFilterValues] = useState<FilterValues>(
     initialFilters || {}
   );
   const [selectedCompany, setSelectedCompany] = useState<CompanyInfo | null>(
     null
   );
-  const [sortField, setSortField] = useState<string>("createdAt");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [showSearchForm, setShowSearchForm] = useState(true); // Show search form by default
   const [ethiopianCities, setEthiopianCities] = useState<
     Array<{ name: string; id?: string; region?: string }>
@@ -260,63 +257,6 @@ export default function SearchTrucksTab({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
-   * Handle saved search selection
-   * L31 FIX: Transform SavedSearchCriteria to FilterValues
-   */
-  const handleSelectSearch = (searchId: string) => {
-    const search = savedSearches.find((s) => s.id === searchId);
-    if (search) {
-      setActiveSearchId(searchId);
-      // Transform criteria - truckType may be array in criteria but string in filters
-      const criteria = search.criteria || {};
-      const transformed: FilterValues = {
-        ...criteria,
-        truckType: Array.isArray(criteria.truckType)
-          ? criteria.truckType[0]
-          : criteria.truckType,
-      };
-      setFilterValues(transformed);
-    }
-  };
-
-  /**
-   * Handle saved search deletion
-   */
-  const handleDeleteSearch = async (searchId: string) => {
-    if (!confirm("Delete this saved search?")) return;
-
-    try {
-      const csrfToken = await getCSRFToken();
-      const response = await fetch(`/api/saved-searches/${searchId}`, {
-        method: "DELETE",
-        headers: {
-          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-        },
-      });
-
-      if (!response.ok) throw new Error("Failed to delete search");
-
-      fetchSavedSearches();
-      if (activeSearchId === searchId) {
-        setActiveSearchId(null);
-        setFilterValues({});
-      }
-    } catch (error) {
-      console.error("Delete search error:", error);
-      alert("Failed to delete saved search");
-    }
-  };
-
-  /**
-   * Handle saved search edit - open modal
-   */
-  const handleEditSearch = (searchId: string) => {
-    const search = savedSearches.find((s) => s.id === searchId);
-    if (!search) return;
-    setEditingSearch(search);
-  };
-
-  /**
    * Handle saving edited search from modal
    */
   const handleSaveEditedSearch = async (
@@ -384,38 +324,6 @@ export default function SearchTrucksTab({
   };
 
   /**
-   * Handle header column click for sorting
-   */
-  const handleHeaderClick = (field: string) => {
-    if (sortField === field) {
-      // Toggle sort order if same field
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      // Set new field and default to ascending
-      setSortField(field);
-      setSortOrder("asc");
-    }
-
-    // L32 FIX: Sort the trucks array with proper type handling
-    const sorted = [...trucks].sort((a, b) => {
-      // Use type assertion for dynamic property access (via unknown to satisfy TS)
-      const aVal = (a as unknown as Record<string, unknown>)[field];
-      const bVal = (b as unknown as Record<string, unknown>)[field];
-
-      if (aVal === null || aVal === undefined) return 1;
-      if (bVal === null || bVal === undefined) return -1;
-
-      if (sortOrder === "asc") {
-        return aVal > bVal ? 1 : -1;
-      } else {
-        return aVal < bVal ? 1 : -1;
-      }
-    });
-
-    setTrucks(sorted);
-  };
-
-  /**
    * Handle company link click
    * L30 FIX: Transform to CompanyInfo type
    */
@@ -439,27 +347,24 @@ export default function SearchTrucksTab({
   /**
    * Truck types list with enum values and display labels
    */
-  const truckTypes = [
-    { value: "AUTO_CARRIER", label: "Auto Carrier", code: "AC" },
-    { value: "CONTAINER", label: "Container", code: "C" },
-    { value: "DUMP_TRUCK", label: "Dump Truck", code: "DK" },
-    { value: "FLATBED", label: "Flatbed", code: "F" },
-    { value: "DRY_VAN", label: "Van", code: "V" },
-    { value: "BOX_TRUCK", label: "Box Truck", code: "BX" },
-    { value: "REFRIGERATED", label: "Reefer", code: "R" },
-    { value: "TANKER", label: "Tanker", code: "T" },
-    { value: "LOWBOY", label: "Lowboy", code: "LB" },
-  ];
+  const truckTypes = useMemo(
+    () => [
+      { value: "AUTO_CARRIER", label: "Auto Carrier", code: "AC" },
+      { value: "CONTAINER", label: "Container", code: "C" },
+      { value: "DUMP_TRUCK", label: "Dump Truck", code: "DK" },
+      { value: "FLATBED", label: "Flatbed", code: "F" },
+      { value: "DRY_VAN", label: "Van", code: "V" },
+      { value: "BOX_TRUCK", label: "Box Truck", code: "BX" },
+      { value: "REFRIGERATED", label: "Reefer", code: "R" },
+      { value: "TANKER", label: "Tanker", code: "T" },
+      { value: "LOWBOY", label: "Lowboy", code: "LB" },
+    ],
+    []
+  );
 
   /**
    * Get display label for truck type enum value
    */
-  const getTruckTypeLabel = (enumValue: string | null | undefined): string => {
-    if (!enumValue) return "V";
-    const found = truckTypes.find((t) => t.value === enumValue);
-    return found ? found.label : enumValue.replace("_", " ");
-  };
-
   /**
    * Results tabs configuration
    */
@@ -472,8 +377,15 @@ export default function SearchTrucksTab({
   /**
    * Table columns configuration (memoized)
    */
-  const columns: TableColumn[] = useMemo(
-    () => [
+  const columns: TableColumn[] = useMemo(() => {
+    const getTruckTypeLabel = (
+      enumValue: string | null | undefined
+    ): string => {
+      if (!enumValue) return "V";
+      const found = truckTypes.find((t) => t.value === enumValue);
+      return found ? found.label : enumValue.replace("_", " ");
+    };
+    return [
       // L27 FIX: Properly typed column render functions
       {
         key: "age",
@@ -568,9 +480,8 @@ export default function SearchTrucksTab({
           </span>
         ),
       },
-    ],
-    []
-  );
+    ];
+  }, [truckTypes]);
 
   /**
    * Table actions configuration (memoized)

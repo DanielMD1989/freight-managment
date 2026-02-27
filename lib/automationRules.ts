@@ -523,6 +523,7 @@ async function evaluateCustom(
  */
 function evaluateCustomLogic(
   logic: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   context: RuleEvaluationContext
 ): boolean {
   // This is a simplified placeholder

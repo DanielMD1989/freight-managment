@@ -81,18 +81,6 @@ function getStatusColor(status: string): string {
   );
 }
 
-function getApprovalStatusColor(status: string): string {
-  const colors: Record<string, string> = {
-    APPROVED: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-    PENDING: "bg-amber-50 text-amber-700 border border-amber-200",
-    REJECTED: "bg-rose-50 text-rose-700 border border-rose-200",
-    EXPIRED: "bg-slate-100 text-slate-600 border border-slate-200",
-  };
-  return (
-    colors[status] || "bg-slate-100 text-slate-600 border border-slate-200"
-  );
-}
-
 interface Pagination {
   page: number;
   pageSize: number;
@@ -125,14 +113,9 @@ export default function TruckManagementClient({
   const searchParams = useSearchParams();
 
   const [activeTab, setActiveTab] = useState(initialTab);
-  const [approvedTrucks, setApprovedTrucks] = useState<Truck[]>(
-    initialApprovedTrucks
-  );
-  const [pendingTrucks, setPendingTrucks] =
-    useState<Truck[]>(initialPendingTrucks);
-  const [rejectedTrucks, setRejectedTrucks] = useState<Truck[]>(
-    initialRejectedTrucks
-  );
+  const [approvedTrucks] = useState<Truck[]>(initialApprovedTrucks);
+  const [pendingTrucks] = useState<Truck[]>(initialPendingTrucks);
+  const [rejectedTrucks] = useState<Truck[]>(initialRejectedTrucks);
   const [truckTypeFilter, setTruckTypeFilter] = useState(
     searchParams.get("truckType") || "all"
   );

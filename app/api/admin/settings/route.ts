@@ -49,6 +49,7 @@ const settingsSchema = z.object({
  *
  * Get current platform settings
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: NextRequest) {
   try {
     // Require admin access

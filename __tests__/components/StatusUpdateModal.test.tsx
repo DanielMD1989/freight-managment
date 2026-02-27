@@ -329,7 +329,6 @@ describe("StatusUpdateModal", () => {
   // ============================================================================
   describe("Error Handling", () => {
     it("shows error when selecting same status and clicking update", async () => {
-      const user = userEvent.setup();
       render(<StatusUpdateModal {...defaultProps} currentStatus="POSTED" />);
 
       // The update button is disabled when same status, so no error can occur

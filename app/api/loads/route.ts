@@ -5,13 +5,8 @@ import { validateCSRFWithMobile } from "@/lib/csrf";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
 import { calculateAge, maskCompany } from "@/lib/loadUtils";
-import { LoadCache, CacheInvalidation, CacheTTL } from "@/lib/cache";
-import {
-  checkRpsLimit,
-  RPS_CONFIGS,
-  addRateLimitHeaders,
-} from "@/lib/rateLimit";
-import { Prisma } from "@prisma/client";
+import { LoadCache, CacheInvalidation } from "@/lib/cache";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { handleApiError } from "@/lib/apiErrors";
 import { sanitizeText } from "@/lib/validation";
 

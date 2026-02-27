@@ -12,10 +12,7 @@ import { requireAuth } from "@/lib/auth";
 import { z } from "zod";
 import { Decimal } from "decimal.js";
 import { CorridorDirection } from "@prisma/client";
-import {
-  calculateFeePreview,
-  calculateDualPartyFeePreview,
-} from "@/lib/serviceFeeCalculation";
+import { calculateDualPartyFeePreview } from "@/lib/serviceFeeCalculation";
 import { handleApiError } from "@/lib/apiErrors";
 // CSRF FIX: Add CSRF validation
 import { validateCSRFWithMobile } from "@/lib/csrf";

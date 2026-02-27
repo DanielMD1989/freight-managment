@@ -126,8 +126,6 @@ const marketplacePaths = [
   "/api/trucks",
   "/api/truck-postings",
 ];
-// Paths that don't require ACTIVE status (for pending users)
-const pendingAllowedPaths = ["/profile", "/verification", "/api/user"];
 
 // Routes exempt from CSRF protection
 const CSRF_EXEMPT_ROUTES = [
@@ -155,7 +153,6 @@ export async function proxy(request: NextRequest) {
 
   // Extract client IP for logging
   const clientIP = getClientIP(request.headers);
-  const userAgent = request.headers.get("user-agent") || "unknown";
 
   // PHASE 3: Log incoming request (debug level - only in development or when enabled)
   if (LOG_REQUESTS && process.env.NODE_ENV === "development") {

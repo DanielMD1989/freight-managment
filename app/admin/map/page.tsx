@@ -123,7 +123,7 @@ export default function AdminMapPage() {
   const [playbackTripId, setPlaybackTripId] = useState<string | null>(null);
 
   // Real-time GPS updates (subscribe to all for admin)
-  const { isConnected, positions } = useGpsRealtime({
+  const { isConnected } = useGpsRealtime({
     autoConnect: true,
     subscribeAll: true,
     onPositionUpdate: useCallback((position: GpsPosition) => {
@@ -163,11 +163,6 @@ export default function AdminMapPage() {
       );
     }, []),
   });
-
-  useEffect(() => {
-    fetchMapData();
-    fetchFiltersData();
-  }, []);
 
   // Apply filters to historical trips
   useEffect(() => {
@@ -257,6 +252,11 @@ export default function AdminMapPage() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    fetchMapData();
+    fetchFiltersData();
+  }, [fetchMapData]);
 
   const fetchFiltersData = async () => {
     try {

@@ -39,7 +39,7 @@ Sentry.init({
   ],
 
   // Filter out known non-critical errors
-  beforeSend(event, hint) {
+  beforeSend(event) {
     // Filter out ResizeObserver errors (browser noise)
     if (event.exception?.values?.[0]?.value?.includes("ResizeObserver")) {
       return null;

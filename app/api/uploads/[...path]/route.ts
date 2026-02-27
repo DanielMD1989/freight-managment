@@ -86,7 +86,6 @@ export async function GET(
       );
     }
 
-    const category = path[0]; // e.g., "documents"
     const organizationId = path[1]; // organization ID
 
     // Verify user has access to this organization's files

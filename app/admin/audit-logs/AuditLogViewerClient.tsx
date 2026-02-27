@@ -9,7 +9,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface AuditLogMetadata {
   [key: string]:
@@ -67,15 +67,10 @@ export default function AuditLogViewerClient() {
   const [severityFilter, setSeverityFilter] = useState<string>("");
   const [eventTypeFilter, setEventTypeFilter] = useState<string>("");
   const [resultFilter, setResultFilter] = useState<string>("");
-  const [searchQuery, setSearchQuery] = useState<string>("");
   const [limit, setLimit] = useState(50);
   const [offset, setOffset] = useState(0);
 
-  useEffect(() => {
-    fetchAuditLogs();
-  }, [severityFilter, eventTypeFilter, resultFilter, limit, offset]);
-
-  const fetchAuditLogs = async () => {
+  const fetchAuditLogs = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -100,7 +95,11 @@ export default function AuditLogViewerClient() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [severityFilter, eventTypeFilter, resultFilter, limit, offset]);
+
+  useEffect(() => {
+    fetchAuditLogs();
+  }, [fetchAuditLogs]);
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -118,11 +117,6 @@ export default function AuditLogViewerClient() {
 
   const getResultColor = (result: string) => {
     return result === "SUCCESS" ? "text-green-600" : "text-red-600";
-  };
-
-  const handleSearch = () => {
-    setOffset(0);
-    fetchAuditLogs();
   };
 
   const handleNextPage = () => {

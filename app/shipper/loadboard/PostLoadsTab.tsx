@@ -14,8 +14,8 @@
  * - Edit/Duplicate inline
  */
 
-import React, { useState, useEffect, useMemo } from "react";
-import { StatusTabs, AgeIndicator } from "@/components/loadboard-ui";
+import React, { useState, useEffect, useCallback } from "react";
+import { StatusTabs } from "@/components/loadboard-ui";
 import { StatusTab } from "@/types/loadboard-ui";
 import PlacesAutocomplete from "@/components/PlacesAutocomplete";
 import toast from "react-hot-toast";
@@ -77,7 +77,6 @@ const getTruckTypeLabel = (enumValue: string | null | undefined): string => {
 };
 
 export default function PostLoadsTab({
-  user,
   onSwitchToSearchTrucks,
 }: PostLoadsTabProps) {
   // L4-L8: Using interface types where safe, Record for flexible objects
@@ -191,7 +190,7 @@ export default function PostLoadsTab({
   /**
    * Fetch loads
    */
-  const fetchLoads = async () => {
+  const fetchLoads = useCallback(async () => {
     setLoading(true);
     setFetchError(null);
     try {
@@ -258,7 +257,7 @@ export default function PostLoadsTab({
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeStatus]);
 
   /**
    * Fetch matching trucks for a load
@@ -286,7 +285,7 @@ export default function PostLoadsTab({
 
   useEffect(() => {
     fetchLoads();
-  }, [activeStatus]);
+  }, [fetchLoads]);
 
   /**
    * Handle load row expand - show matching trucks
@@ -300,35 +299,6 @@ export default function PostLoadsTab({
       setExpandedLoadId(load.id);
       const trucks = await fetchMatchingTrucks(load.id);
       setMatchingTrucks(trucks);
-    }
-  };
-
-  /**
-   * Handle POST action - Change unposted load to posted
-   * L12 FIX: Properly typed load parameter
-   */
-  const handlePostLoad = async (load: Load) => {
-    try {
-      const csrfToken = await getCSRFToken();
-      const response = await fetch(`/api/loads/${load.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-        },
-        body: JSON.stringify({ status: "POSTED" }),
-      });
-
-      if (!response.ok) throw new Error("Failed to post load");
-
-      toast.success("Load posted successfully!");
-      setActiveStatus("POSTED");
-      // L41 FIX: Refresh load list after mutation
-      fetchLoads();
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to post load";
-      toast.error(message);
     }
   };
 

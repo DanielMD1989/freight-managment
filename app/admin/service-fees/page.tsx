@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
 interface ServiceFeeMetrics {
@@ -40,11 +40,7 @@ export default function ServiceFeeDashboard() {
     "30d"
   );
 
-  useEffect(() => {
-    fetchMetrics();
-  }, [dateRange]);
-
-  const fetchMetrics = async () => {
+  const fetchMetrics = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(
@@ -59,7 +55,11 @@ export default function ServiceFeeDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange]);
+
+  useEffect(() => {
+    fetchMetrics();
+  }, [fetchMetrics]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-ET", {

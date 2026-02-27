@@ -16,7 +16,7 @@ import { db } from "@/lib/db";
 // POST /api/deadhead/analyze - Analyze deadhead for a specific scenario
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    await requireAuth();
     const body = await request.json();
 
     const { truckId, loadId, nextLoadId } = body;

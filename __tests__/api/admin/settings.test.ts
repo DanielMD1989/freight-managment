@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Admin Settings & Audit Logs API Tests
  *
@@ -11,7 +9,6 @@ import { db } from "@/lib/db";
 import {
   setAuthSession,
   createRequest,
-  callHandler,
   parseResponse,
   clearAllStores,
   mockAuth,
@@ -21,7 +18,6 @@ import {
   mockCache,
   mockNotifications,
   mockCors,
-  mockAuditLog,
   mockGps,
   mockFoundationRules,
   mockSms,
@@ -37,7 +33,6 @@ import {
   useCarrierSession,
   useDispatcherSession,
   seedAdminTestData,
-  AdminSeedData,
 } from "./helpers";
 
 // ─── Setup Mocks ──────────────────────────────────────────────────────────────
@@ -170,10 +165,8 @@ const {
 } = require("@/app/api/admin/audit-logs/stats/route");
 
 describe("Admin Settings API", () => {
-  let seed: AdminSeedData;
-
   beforeAll(async () => {
-    seed = await seedAdminTestData();
+    await seedAdminTestData();
   });
 
   afterAll(() => {
@@ -541,14 +534,6 @@ describe("Admin Settings API", () => {
 
     it("allows partial updates (only changed fields)", async () => {
       useAdminSession();
-      // First get current settings
-      const getReq = createRequest(
-        "GET",
-        "http://localhost:3000/api/admin/settings"
-      );
-      const getRes = await getSettings(getReq);
-      const before = await parseResponse(getRes);
-
       // Update only one field
       const req = createRequest(
         "PATCH",
@@ -602,10 +587,8 @@ describe("Admin Settings API", () => {
 // ─── Audit Logs API ──────────────────────────────────────────────────────────
 
 describe("Admin Audit Logs API", () => {
-  let seed: AdminSeedData;
-
   beforeAll(async () => {
-    seed = await seedAdminTestData();
+    await seedAdminTestData();
   });
 
   afterAll(() => {

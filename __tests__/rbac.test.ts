@@ -82,7 +82,7 @@ describe("RBAC System", () => {
         type: "CARRIER_COMPANY",
       });
 
-      const admin = await createTestUser({
+      await createTestUser({
         email: "admin@platform.com",
         password: "AdminPass123!",
         name: "Platform Admin",
@@ -123,12 +123,12 @@ describe("RBAC System", () => {
     });
 
     it("should allow admin cross-organization access", async () => {
-      const org1 = await createTestOrganization({
+      await createTestOrganization({
         name: "Org 1",
         type: "CARRIER_COMPANY",
       });
 
-      const org2 = await createTestOrganization({
+      await createTestOrganization({
         name: "Org 2",
         type: "CARRIER_COMPANY",
       });
@@ -146,7 +146,7 @@ describe("RBAC System", () => {
         type: "CARRIER_COMPANY",
       });
 
-      const carrier = await createTestUser({
+      await createTestUser({
         email: "carrier@example.com",
         password: "CarrierPass123!",
         name: "Carrier User",
@@ -169,7 +169,7 @@ describe("RBAC System", () => {
         type: "CARRIER_COMPANY",
       });
 
-      const carrier = await createTestUser({
+      await createTestUser({
         email: "carrier@example.com",
         password: "CarrierPass123!",
         name: "Carrier User",
@@ -187,7 +187,7 @@ describe("RBAC System", () => {
         type: "CARRIER_COMPANY",
       });
 
-      const carrier = await createTestUser({
+      await createTestUser({
         email: "carrier@example.com",
         password: "CarrierPass123!",
         name: "Carrier User",
@@ -205,7 +205,7 @@ describe("RBAC System", () => {
         type: "CARRIER_COMPANY",
       });
 
-      const carrier = await createTestUser({
+      await createTestUser({
         email: "carrier@example.com",
         password: "CarrierPass123!",
         name: "Carrier User",
@@ -227,7 +227,7 @@ describe("RBAC System", () => {
         type: "SHIPPER",
       });
 
-      const shipper = await createTestUser({
+      await createTestUser({
         email: "shipper@example.com",
         password: "ShipperPass123!",
         name: "Shipper User",
@@ -250,7 +250,7 @@ describe("RBAC System", () => {
         type: "SHIPPER",
       });
 
-      const shipper = await createTestUser({
+      await createTestUser({
         email: "shipper@example.com",
         password: "ShipperPass123!",
         name: "Shipper User",
@@ -268,7 +268,7 @@ describe("RBAC System", () => {
         type: "SHIPPER",
       });
 
-      const shipper = await createTestUser({
+      await createTestUser({
         email: "shipper@example.com",
         password: "ShipperPass123!",
         name: "Shipper User",
@@ -334,7 +334,7 @@ describe("RBAC System", () => {
         type: "CARRIER_COMPANY",
       });
 
-      const carrier = await createTestUser({
+      await createTestUser({
         email: "carrier@example.com",
         password: "Password123!",
         name: "Carrier User",
@@ -348,7 +348,7 @@ describe("RBAC System", () => {
     });
 
     it("should only allow admins to verify documents", async () => {
-      const org = await createTestOrganization({
+      await createTestOrganization({
         name: "Test Org",
         type: "CARRIER_COMPANY",
       });
@@ -372,7 +372,7 @@ describe("RBAC System", () => {
 
   describe("Wallet Permissions", () => {
     it("should allow users to view their own wallet", async () => {
-      const org = await createTestOrganization({
+      await createTestOrganization({
         name: "Test Org",
         type: "CARRIER_COMPANY",
       });
@@ -382,7 +382,7 @@ describe("RBAC System", () => {
     });
 
     it("should allow admins to manage all wallets", async () => {
-      const org = await createTestOrganization({
+      await createTestOrganization({
         name: "Test Org",
         type: "CARRIER_COMPANY",
       });
@@ -391,7 +391,7 @@ describe("RBAC System", () => {
     });
 
     it("should prevent regular users from managing wallets", async () => {
-      const org = await createTestOrganization({
+      await createTestOrganization({
         name: "Test Org",
         type: "CARRIER_COMPANY",
       });
@@ -407,7 +407,7 @@ describe("RBAC System", () => {
 
   describe("System Admin Permissions", () => {
     it("should only allow admins to view audit logs", async () => {
-      const org = await createTestOrganization({
+      await createTestOrganization({
         name: "Test Org",
         type: "CARRIER_COMPANY",
       });
@@ -424,7 +424,7 @@ describe("RBAC System", () => {
     });
 
     it("should only allow admins to manage system config", async () => {
-      const org = await createTestOrganization({
+      await createTestOrganization({
         name: "Test Org",
         type: "CARRIER_COMPANY",
       });
@@ -443,7 +443,6 @@ describe("RBAC System", () => {
 
   describe("Edge Cases", () => {
     it("should handle invalid roles gracefully", async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const invalidRole = "INVALID_ROLE" as any;
 
       expect(await hasPermission(invalidRole, Permission.VIEW_LOADS)).toBe(
@@ -452,7 +451,6 @@ describe("RBAC System", () => {
     });
 
     it("should handle undefined permissions gracefully", async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const invalidPermission = "INVALID_PERMISSION" as any;
 
       expect(await hasPermission("CARRIER", invalidPermission)).toBe(false);

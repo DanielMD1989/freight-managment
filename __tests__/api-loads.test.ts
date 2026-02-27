@@ -8,10 +8,6 @@ dotenv.config();
 
 // Test configuration
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-const authToken: string = "";
-const testLoadId: string = "";
-const testOrganizationId: string = "";
-const testUserId: string = "";
 
 // Test utilities
 const testResults: { name: string; passed: boolean; error?: string }[] = [];
@@ -45,18 +41,6 @@ function assertEqual<T>(actual: T, expected: T, message?: string) {
   }
 }
 
-function assertNotNull(actual: any, message?: string) {
-  if (actual === null || actual === undefined) {
-    throw new Error(message || `Expected non-null value, got null/undefined`);
-  }
-}
-
-function assertNull(actual: any, message?: string) {
-  if (actual !== null && actual !== undefined) {
-    throw new Error(message || `Expected null, got ${JSON.stringify(actual)}`);
-  }
-}
-
 async function runTests() {
   console.log("🧪 Running Load API Integration Tests\n");
   console.log("=" + "=".repeat(60) + "\n");
@@ -71,57 +55,27 @@ async function runTests() {
   await test("Load posting validation requires tripKm when status = POSTED", async () => {
     // This would be validated in the API endpoint via Zod schema
     // For now, we'll verify the schema logic exists
-    const testLoad = {
-      status: "POSTED",
-      pickupCity: "Addis Ababa",
-      deliveryCity: "Dire Dawa",
-      pickupDate: new Date(),
-      truckType: "FLATBED",
-      rate: 25000,
-      // Missing tripKm - should fail validation
-    };
-
-    // In actual implementation, POST /api/loads with above data should return 400
+    // In actual implementation, POST /api/loads with data missing tripKm should return 400
     // Verified by checking the createLoadSchema in app/api/loads/route.ts
     assertEqual(true, true, "Schema validation logic verified");
   })();
 
   // Test 2: Validate rate > 0 for POSTED loads
   await test("Load posting validation requires rate > 0 for POSTED loads", async () => {
-    const testLoad = {
-      status: "POSTED",
-      tripKm: 515,
-      rate: 0, // Invalid - should fail
-    };
-
-    // In actual implementation, this should be rejected
+    // In actual implementation, rate: 0 should be rejected
     // Verified by checking validation logic in API
     assertEqual(true, true, "Rate validation logic verified");
   })();
 
   // Test 3: Validate tripKm > 0 for POSTED loads
   await test("Load posting validation requires tripKm > 0 for POSTED loads", async () => {
-    const testLoad = {
-      status: "POSTED",
-      tripKm: 0, // Invalid - should fail
-      rate: 25000,
-    };
-
-    // In actual implementation, this should be rejected
+    // In actual implementation, tripKm: 0 should be rejected
     assertEqual(true, true, "TripKm validation logic verified");
   })();
 
   // Test 4: Draft loads can be saved without tripKm
   await test("Draft loads can be saved without tripKm", async () => {
-    const testLoad = {
-      status: "DRAFT",
-      pickupCity: "Addis Ababa",
-      deliveryCity: "Dire Dawa",
-      rate: 25000,
-      // No tripKm - should be OK for DRAFT
-    };
-
-    // In actual implementation, POST /api/loads with DRAFT status should succeed
+    // In actual implementation, POST /api/loads with DRAFT status should succeed without tripKm
     assertEqual(true, true, "Draft validation logic verified");
   })();
 

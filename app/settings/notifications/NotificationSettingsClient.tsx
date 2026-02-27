@@ -118,7 +118,6 @@ const notificationCategories: NotificationCategory[] = [
 ];
 
 export default function NotificationSettingsClient({
-  userId,
   email,
   phone,
   preferences,
@@ -157,7 +156,7 @@ export default function NotificationSettingsClient({
       toast.success("Notification preferences saved");
       setHasChanges(false);
       router.refresh();
-    } catch (error) {
+    } catch {
       toast.error("Failed to save preferences");
     } finally {
       setIsSaving(false);

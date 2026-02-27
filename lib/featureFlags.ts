@@ -764,7 +764,7 @@ export function getFeatureFlagStats(): {
 // DEFAULT EXPORT
 // =============================================================================
 
-export default {
+const featureFlagService = {
   isFeatureEnabled,
   getFeatureFlag,
   getAllFeatureFlags,
@@ -777,3 +777,5 @@ export default {
   getFeatureFlagsForClient,
   getFeatureFlagStats,
 };
+
+export default featureFlagService;

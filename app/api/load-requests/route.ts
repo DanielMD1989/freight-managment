@@ -16,7 +16,7 @@ import { z } from "zod";
 import { requireAuth } from "@/lib/auth";
 // P0-001 FIX: Removed requireCSRF import - middleware handles CSRF and exempts Bearer tokens (mobile)
 import { createNotification } from "@/lib/notifications";
-import { UserRole, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { handleApiError } from "@/lib/apiErrors";
 
 // Validation schema for load request

@@ -74,8 +74,6 @@ export function createSafeErrorResponse(
   status: number;
   statusCode: number;
 } {
-  const isProduction = process.env.NODE_ENV === "production";
-
   // Determine the error type and get a generic message
   let genericMessage = GENERIC_ERROR_MESSAGES.default;
   let status = 500;

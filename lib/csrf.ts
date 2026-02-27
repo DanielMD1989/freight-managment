@@ -18,7 +18,6 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import crypto from "crypto";
 
 /**
@@ -104,7 +103,7 @@ export function validateCSRFToken(request: NextRequest): boolean {
       Buffer.from(cookieToken),
       Buffer.from(headerToken)
     );
-  } catch (error) {
+  } catch {
     // Tokens have different lengths, definitely not equal
     return false;
   }
@@ -148,7 +147,7 @@ export function requireCSRF(request: NextRequest): NextResponse | null {
  * @param handler API route handler
  * @returns Wrapped handler with CSRF protection
  */
-export function withCSRFProtection<T>(
+export function withCSRFProtection(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper accepts any route arguments
   handler: (request: NextRequest, ...args: any[]) => Promise<NextResponse>
 ) {

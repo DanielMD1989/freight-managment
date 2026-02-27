@@ -7,14 +7,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth, requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
-import { getAccessRoles } from "@/lib/rbac";
 import { z } from "zod";
 import {
   validateStateTransition,
   LoadStatus,
   getStatusDescription,
 } from "@/lib/loadStateMachine";
-import { TripStatus, Prisma } from "@prisma/client"; // P0-001 FIX: Import TripStatus enum
+import { TripStatus } from "@prisma/client"; // P0-001 FIX: Import TripStatus enum
 import { deductServiceFee } from "@/lib/serviceFeeManagement"; // Service Fee Implementation
 // CRITICAL FIX: Import CacheInvalidation for status changes
 import { CacheInvalidation } from "@/lib/cache";
@@ -522,7 +521,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await requireAuth();
+    await requireAuth();
     const { id: loadId } = await params;
 
     const load = await db.load.findUnique({

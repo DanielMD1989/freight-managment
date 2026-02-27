@@ -133,7 +133,7 @@ export default function DispatcherMapPage() {
   const [calculatingDistances, setCalculatingDistances] = useState(false);
 
   // Real-time GPS updates
-  const { isConnected, positions } = useGpsRealtime({
+  const { isConnected } = useGpsRealtime({
     autoConnect: true,
     subscribeAll: true,
     onPositionUpdate: useCallback((position: GpsPosition) => {
@@ -172,10 +172,6 @@ export default function DispatcherMapPage() {
       );
     }, []),
   });
-
-  useEffect(() => {
-    fetchMapData();
-  }, []);
 
   // M4 FIX: Use Promise.allSettled for combined error handling
   const fetchMapData = useCallback(async () => {
@@ -223,12 +219,16 @@ export default function DispatcherMapPage() {
       } else if (errors.length === 3) {
         setError("Failed to load map data");
       }
-    } catch (err) {
+    } catch {
       setError("Failed to load map data");
     } finally {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    fetchMapData();
+  }, [fetchMapData]);
 
   // Filter trucks based on selected filters
   const filteredTrucks = trucks.filter((truck) => {

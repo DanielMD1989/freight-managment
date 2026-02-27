@@ -633,7 +633,7 @@ export function validateConfigOrThrow(): void {
  * Log current configuration (without secrets)
  */
 export function logConfig(): void {
-  const _c = config;
+  // Configuration logging placeholder
 }
 
 // =============================================================================

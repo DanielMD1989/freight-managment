@@ -36,9 +36,7 @@
 
 import { db } from "./db";
 import { Decimal } from "decimal.js";
-import { ServiceFeeStatus } from "@prisma/client";
 import {
-  calculateServiceFee,
   findMatchingCorridor,
   calculateFeesFromCorridor,
   calculatePartyFee,
