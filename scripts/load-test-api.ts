@@ -128,7 +128,9 @@ function printMetrics(metrics: Metrics, config: TestConfig): void {
   console.log("=".repeat(60));
 
   console.log("\n📊 Configuration:");
-  console.log(`   Endpoint: ${config.method} ${config.baseUrl}${config.endpoint}`);
+  console.log(
+    `   Endpoint: ${config.method} ${config.baseUrl}${config.endpoint}`
+  );
   console.log(`   Concurrent requests: ${config.concurrent}`);
   console.log(`   Test duration: ${durationSec.toFixed(2)}s`);
 
@@ -148,10 +150,18 @@ function printMetrics(metrics: Metrics, config: TestConfig): void {
   console.log(`   Min: ${metrics.minLatencyMs.toFixed(2)}ms`);
   console.log(`   Max: ${metrics.maxLatencyMs.toFixed(2)}ms`);
   console.log(`   Avg: ${avgLatency.toFixed(2)}ms`);
-  console.log(`   P50: ${calculatePercentile(metrics.latencies, 50).toFixed(2)}ms`);
-  console.log(`   P90: ${calculatePercentile(metrics.latencies, 90).toFixed(2)}ms`);
-  console.log(`   P95: ${calculatePercentile(metrics.latencies, 95).toFixed(2)}ms`);
-  console.log(`   P99: ${calculatePercentile(metrics.latencies, 99).toFixed(2)}ms`);
+  console.log(
+    `   P50: ${calculatePercentile(metrics.latencies, 50).toFixed(2)}ms`
+  );
+  console.log(
+    `   P90: ${calculatePercentile(metrics.latencies, 90).toFixed(2)}ms`
+  );
+  console.log(
+    `   P95: ${calculatePercentile(metrics.latencies, 95).toFixed(2)}ms`
+  );
+  console.log(
+    `   P99: ${calculatePercentile(metrics.latencies, 99).toFixed(2)}ms`
+  );
 
   if (metrics.errors.size > 0) {
     console.log("\n❌ Errors:");
@@ -162,7 +172,8 @@ function printMetrics(metrics: Metrics, config: TestConfig): void {
 
   // Assessment
   console.log("\n🎯 Assessment:");
-  const successRate = (metrics.successfulRequests / metrics.totalRequests) * 100;
+  const successRate =
+    (metrics.successfulRequests / metrics.totalRequests) * 100;
   const p99 = calculatePercentile(metrics.latencies, 99);
 
   if (successRate >= 99 && p99 < 500 && rps >= 50) {
@@ -173,7 +184,9 @@ function printMetrics(metrics: Metrics, config: TestConfig): void {
   } else {
     console.log("   ⚠️  WARNING - May need optimization");
     if (successRate < 99) {
-      console.log(`   - Success rate: ${successRate.toFixed(2)}% (target: >= 99%)`);
+      console.log(
+        `   - Success rate: ${successRate.toFixed(2)}% (target: >= 99%)`
+      );
     }
     if (p99 >= 500) {
       console.log(`   - P99 latency: ${p99.toFixed(2)}ms (target: < 500ms)`);
@@ -245,7 +258,9 @@ async function makeRequest(
 
 async function runLoadTest(config: TestConfig): Promise<void> {
   console.log("\n🚀 Starting API Load Test\n");
-  console.log(`   Endpoint: ${config.method} ${config.baseUrl}${config.endpoint}`);
+  console.log(
+    `   Endpoint: ${config.method} ${config.baseUrl}${config.endpoint}`
+  );
   console.log(`   Concurrent: ${config.concurrent}`);
   console.log(`   Total Requests: ${config.totalRequests}`);
   console.log(`   Duration: ${config.durationSeconds}s`);
@@ -282,7 +297,11 @@ async function runLoadTest(config: TestConfig): Promise<void> {
 
   // Worker function
   async function worker(): Promise<void> {
-    while (running && requestsSent < config.totalRequests && Date.now() < endTime) {
+    while (
+      running &&
+      requestsSent < config.totalRequests &&
+      Date.now() < endTime
+    ) {
       requestsSent++;
       await makeRequest(config, metrics);
     }

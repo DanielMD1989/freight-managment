@@ -22,11 +22,11 @@
  * - AFROMESSAGE_SENDER_NAME: Registered sender ID (e.g., "FreightMgt")
  */
 
-import { addJob, registerProcessor, isQueueReadySync } from '../queue';
-import { logger } from '../logger';
+import { addJob, registerProcessor, isQueueReadySync } from "../queue";
+import { logger } from "../logger";
 
 // AfroMessage API configuration
-const AFROMESSAGE_API_URL = 'https://api.afromessage.com/api/send';
+const AFROMESSAGE_API_URL = "https://api.afromessage.com/api/send";
 
 interface AfroMessageConfig {
   apiKey: string;
@@ -34,7 +34,7 @@ interface AfroMessageConfig {
 }
 
 interface AfroMessageResponse {
-  acknowledge: 'success' | 'error';
+  acknowledge: "success" | "error";
   response?: string;
   error?: string;
   message_id?: string;
@@ -51,10 +51,10 @@ interface SendSMSResult {
  */
 function getConfig(): AfroMessageConfig {
   const apiKey = process.env.AFROMESSAGE_API_KEY;
-  const senderName = process.env.AFROMESSAGE_SENDER_NAME || 'FreightMgt';
+  const senderName = process.env.AFROMESSAGE_SENDER_NAME || "FreightMgt";
 
   if (!apiKey) {
-    throw new Error('AFROMESSAGE_API_KEY environment variable is not set');
+    throw new Error("AFROMESSAGE_API_KEY environment variable is not set");
   }
 
   return { apiKey, senderName };
@@ -67,25 +67,28 @@ function getConfig(): AfroMessageConfig {
  */
 export function formatEthiopianPhone(phone: string): string {
   // Remove all non-digit characters except leading +
-  let cleaned = phone.replace(/[^\d+]/g, '');
+  let cleaned = phone.replace(/[^\d+]/g, "");
 
   // Remove leading +
-  if (cleaned.startsWith('+')) {
+  if (cleaned.startsWith("+")) {
     cleaned = cleaned.substring(1);
   }
 
   // If starts with 0, replace with 251
-  if (cleaned.startsWith('0')) {
-    cleaned = '251' + cleaned.substring(1);
+  if (cleaned.startsWith("0")) {
+    cleaned = "251" + cleaned.substring(1);
   }
 
   // If only 9 digits (no country code), add 251
-  if (cleaned.length === 9 && (cleaned.startsWith('9') || cleaned.startsWith('7'))) {
-    cleaned = '251' + cleaned;
+  if (
+    cleaned.length === 9 &&
+    (cleaned.startsWith("9") || cleaned.startsWith("7"))
+  ) {
+    cleaned = "251" + cleaned;
   }
 
   // Validate Ethiopian phone number format
-  if (!cleaned.startsWith('251') || cleaned.length !== 12) {
+  if (!cleaned.startsWith("251") || cleaned.length !== 12) {
     throw new Error(`Invalid Ethiopian phone number: ${phone}`);
   }
 
@@ -108,7 +111,10 @@ export interface SMSJobData {
  * @param message - SMS message content (max 160 chars for single SMS)
  * @returns SendSMSResult with success status and optional message ID
  */
-export async function sendSMSDirect(to: string, message: string): Promise<SendSMSResult> {
+export async function sendSMSDirect(
+  to: string,
+  message: string
+): Promise<SendSMSResult> {
   try {
     const config = getConfig();
     const formattedPhone = formatEthiopianPhone(to);
@@ -122,15 +128,21 @@ export async function sendSMSDirect(to: string, message: string): Promise<SendSM
     });
 
     // Make API request
-    const response = await fetch(`${AFROMESSAGE_API_URL}?${params.toString()}`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
+    const response = await fetch(
+      `${AFROMESSAGE_API_URL}?${params.toString()}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+      }
+    );
 
     if (!response.ok) {
-      logger.error('[AfroMessage] HTTP error', { status: response.status, statusText: response.statusText });
+      logger.error("[AfroMessage] HTTP error", {
+        status: response.status,
+        statusText: response.statusText,
+      });
       return {
         success: false,
         error: `HTTP error: ${response.status}`,
@@ -139,24 +151,28 @@ export async function sendSMSDirect(to: string, message: string): Promise<SendSM
 
     const data: AfroMessageResponse = await response.json();
 
-    if (data.acknowledge === 'success') {
-      logger.info('[AfroMessage] SMS sent successfully', { to: formattedPhone });
+    if (data.acknowledge === "success") {
+      logger.info("[AfroMessage] SMS sent successfully", {
+        to: formattedPhone,
+      });
       return {
         success: true,
         messageId: data.message_id,
       };
     } else {
-      logger.error('[AfroMessage] API error', { error: data.error || data.response });
+      logger.error("[AfroMessage] API error", {
+        error: data.error || data.response,
+      });
       return {
         success: false,
-        error: data.error || data.response || 'Unknown error',
+        error: data.error || data.response || "Unknown error",
       };
     }
   } catch (error) {
-    logger.error('[AfroMessage] Send SMS error', error);
+    logger.error("[AfroMessage] Send SMS error", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to send SMS',
+      error: error instanceof Error ? error.message : "Failed to send SMS",
     };
   }
 }
@@ -171,24 +187,32 @@ export async function sendSMSDirect(to: string, message: string): Promise<SendSM
  * @param message - SMS message content (max 160 chars for single SMS)
  * @returns SendSMSResult with success status and optional message ID
  */
-export async function sendSMS(to: string, message: string): Promise<SendSMSResult> {
+export async function sendSMS(
+  to: string,
+  message: string
+): Promise<SendSMSResult> {
   // Try to use queue if available
   if (isQueueReadySync()) {
     try {
-      const jobId = await addJob('sms', 'send-sms', {
-        to,
-        message,
-      } as SMSJobData, {
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 3000, // Start with 3s, then 6s, then 12s (SMS APIs often have stricter rate limits)
-        },
-        removeOnComplete: 100,
-        removeOnFail: 500,
-      });
+      const jobId = await addJob(
+        "sms",
+        "send-sms",
+        {
+          to,
+          message,
+        } as SMSJobData,
+        {
+          attempts: 3,
+          backoff: {
+            type: "exponential",
+            delay: 3000, // Start with 3s, then 6s, then 12s (SMS APIs often have stricter rate limits)
+          },
+          removeOnComplete: 100,
+          removeOnFail: 500,
+        }
+      );
 
-      logger.debug('[SMS] Queued', {
+      logger.debug("[SMS] Queued", {
         jobId,
         to,
       });
@@ -198,7 +222,9 @@ export async function sendSMS(to: string, message: string): Promise<SendSMSResul
         messageId: `queued:${jobId}`,
       };
     } catch (queueError) {
-      logger.warn('[SMS] Queue failed, falling back to direct send', { error: queueError });
+      logger.warn("[SMS] Queue failed, falling back to direct send", {
+        error: queueError,
+      });
       // Fall through to direct send
     }
   }
@@ -214,7 +240,10 @@ export async function sendSMS(to: string, message: string): Promise<SendSMSResul
  * @param otp - 6-digit OTP code
  * @returns SendSMSResult
  */
-export async function sendMFAOTP(to: string, otp: string): Promise<SendSMSResult> {
+export async function sendMFAOTP(
+  to: string,
+  otp: string
+): Promise<SendSMSResult> {
   const message = `Your verification code is: ${otp}. Valid for 5 minutes. Do not share this code.`;
   return sendSMS(to, message);
 }
@@ -226,7 +255,10 @@ export async function sendMFAOTP(to: string, otp: string): Promise<SendSMSResult
  * @param otp - 6-digit OTP code
  * @returns SendSMSResult
  */
-export async function sendPasswordResetOTP(to: string, otp: string): Promise<SendSMSResult> {
+export async function sendPasswordResetOTP(
+  to: string,
+  otp: string
+): Promise<SendSMSResult> {
   const message = `Your password reset code is: ${otp}. Valid for 10 minutes. If you didn't request this, ignore this message.`;
   return sendSMS(to, message);
 }
@@ -238,7 +270,10 @@ export async function sendPasswordResetOTP(to: string, otp: string): Promise<Sen
  * @param deviceInfo - Device/browser information
  * @returns SendSMSResult
  */
-export async function sendLoginAlert(to: string, deviceInfo: string): Promise<SendSMSResult> {
+export async function sendLoginAlert(
+  to: string,
+  deviceInfo: string
+): Promise<SendSMSResult> {
   const message = `New login detected on ${deviceInfo}. If this wasn't you, change your password immediately.`;
   return sendSMS(to, message);
 }
@@ -278,7 +313,7 @@ export async function processSmsJob(
 ): Promise<void> {
   const { to, message } = job.data;
 
-  logger.info('[SMS WORKER] Processing job', {
+  logger.info("[SMS WORKER] Processing job", {
     jobId: job.id,
     to,
   });
@@ -291,12 +326,12 @@ export async function processSmsJob(
 
   if (!result.success) {
     // Throw error to trigger retry
-    throw new Error(result.error || 'Failed to send SMS');
+    throw new Error(result.error || "Failed to send SMS");
   }
 
   await updateProgress(100);
 
-  logger.info('[SMS WORKER] Job completed', {
+  logger.info("[SMS WORKER] Job completed", {
     jobId: job.id,
     messageId: result.messageId,
   });
@@ -308,6 +343,6 @@ export async function processSmsJob(
  * Call this during application startup to enable SMS queue processing.
  */
 export function registerSmsProcessor(): void {
-  registerProcessor('sms', 'send-sms', processSmsJob);
-  logger.info('[SMS] Processor registered for queue: sms');
+  registerProcessor("sms", "send-sms", processSmsJob);
+  logger.info("[SMS] Processor registered for queue: sms");
 }

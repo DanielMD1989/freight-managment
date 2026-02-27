@@ -5,11 +5,11 @@
  * Sprint 12 - Story 12.5: GPS Tracking
  */
 
-import { cookies } from 'next/headers';
-import { verifyToken } from '@/lib/auth';
-import { redirect } from 'next/navigation';
-import { db } from '@/lib/db';
-import GPSTrackingClient from './GPSTrackingClient';
+import { cookies } from "next/headers";
+import { verifyToken } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
+import GPSTrackingClient from "./GPSTrackingClient";
 
 interface TruckWithGPS {
   id: string;
@@ -52,13 +52,13 @@ async function getTrucksWithGPS(
         },
       },
       orderBy: {
-        licensePlate: 'asc',
+        licensePlate: "asc",
       },
     });
 
     return trucks as TruckWithGPS[];
   } catch (error) {
-    console.error('Error fetching trucks:', error);
+    console.error("Error fetching trucks:", error);
     return [];
   }
 }
@@ -69,20 +69,20 @@ async function getTrucksWithGPS(
 export default async function GPSTrackingPage() {
   // Verify authentication
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get('session');
+  const sessionCookie = cookieStore.get("session");
 
   if (!sessionCookie) {
-    redirect('/login?redirect=/carrier/gps');
+    redirect("/login?redirect=/carrier/gps");
   }
 
   const session = await verifyToken(sessionCookie.value);
 
-  if (!session || (session.role !== 'CARRIER' && session.role !== 'ADMIN')) {
-    redirect('/unauthorized');
+  if (!session || (session.role !== "CARRIER" && session.role !== "ADMIN")) {
+    redirect("/unauthorized");
   }
 
   if (!session.organizationId) {
-    redirect('/carrier?error=no-organization');
+    redirect("/carrier?error=no-organization");
   }
 
   // Fetch initial trucks data (will be refreshed by client)

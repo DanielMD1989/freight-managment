@@ -6,11 +6,11 @@
  * Layout for all user settings pages with sidebar navigation
  */
 
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
-import { verifyToken } from '@/lib/auth';
-import { db } from '@/lib/db';
-import SettingsSidebar from './SettingsSidebar';
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { verifyToken } from "@/lib/auth";
+import { db } from "@/lib/db";
+import SettingsSidebar from "./SettingsSidebar";
 
 export default async function SettingsLayout({
   children,
@@ -19,16 +19,16 @@ export default async function SettingsLayout({
 }) {
   // Check authentication
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get('session');
+  const sessionCookie = cookieStore.get("session");
 
   if (!sessionCookie) {
-    redirect('/login?redirect=/settings');
+    redirect("/login?redirect=/settings");
   }
 
   const session = await verifyToken(sessionCookie.value);
 
   if (!session) {
-    redirect('/login?redirect=/settings');
+    redirect("/login?redirect=/settings");
   }
 
   // Fetch user data
@@ -53,12 +53,12 @@ export default async function SettingsLayout({
   });
 
   if (!user) {
-    redirect('/login');
+    redirect("/login");
   }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -70,15 +70,15 @@ export default async function SettingsLayout({
         </div>
 
         {/* Content */}
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="flex flex-col gap-8 lg:flex-row">
           {/* Sidebar */}
-          <div className="lg:w-64 flex-shrink-0">
+          <div className="flex-shrink-0 lg:w-64">
             <SettingsSidebar />
           </div>
 
           {/* Main Content */}
-          <div className="flex-1 min-w-0">
-            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800">
+          <div className="min-w-0 flex-1">
+            <div className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
               {children}
             </div>
           </div>

@@ -11,10 +11,10 @@
  * - Timestamp display at each position
  */
 
-'use client';
+"use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Loader } from "@googlemaps/js-api-loader";
 
 interface GpsPosition {
   lat: number;
@@ -49,7 +49,7 @@ type PlaybackSpeed = 1 | 2 | 5 | 10;
 
 export default function TripHistoryPlayback({
   tripId,
-  height = '500px',
+  height = "500px",
   onClose,
 }: TripHistoryPlaybackProps) {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -70,7 +70,9 @@ export default function TripHistoryPlayback({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [playbackSpeed, setPlaybackSpeed] = useState<PlaybackSpeed>(1);
-  const [currentPosition, setCurrentPosition] = useState<GpsPosition | null>(null);
+  const [currentPosition, setCurrentPosition] = useState<GpsPosition | null>(
+    null
+  );
 
   // Fetch trip history data
   useEffect(() => {
@@ -79,29 +81,41 @@ export default function TripHistoryPlayback({
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`/api/gps/history?loadId=${tripId}&includeRoute=true`);
+        const response = await fetch(
+          `/api/gps/history?loadId=${tripId}&includeRoute=true`
+        );
 
         if (!response.ok) {
-          throw new Error('Failed to fetch trip history');
+          throw new Error("Failed to fetch trip history");
         }
 
         const data = await response.json();
 
         if (!data.positions || data.positions.length === 0) {
-          setError('No GPS history available for this trip');
+          setError("No GPS history available for this trip");
           return;
         }
 
         setTripData({
           id: tripId,
           loadId: data.loadId,
-          truckPlate: data.truckPlate || 'Unknown',
-          carrierName: data.carrierName || 'Unknown Carrier',
+          truckPlate: data.truckPlate || "Unknown",
+          carrierName: data.carrierName || "Unknown Carrier",
           shipperName: data.shipperName,
-          pickupLocation: data.pickupLocation || { lat: data.positions[0].lat, lng: data.positions[0].lng, address: 'Pickup' },
-          deliveryLocation: data.deliveryLocation || { lat: data.positions[data.positions.length - 1].lat, lng: data.positions[data.positions.length - 1].lng, address: 'Delivery' },
+          pickupLocation: data.pickupLocation || {
+            lat: data.positions[0].lat,
+            lng: data.positions[0].lng,
+            address: "Pickup",
+          },
+          deliveryLocation: data.deliveryLocation || {
+            lat: data.positions[data.positions.length - 1].lat,
+            lng: data.positions[data.positions.length - 1].lng,
+            address: "Delivery",
+          },
           startedAt: data.startedAt || data.positions[0].timestamp,
-          completedAt: data.completedAt || data.positions[data.positions.length - 1].timestamp,
+          completedAt:
+            data.completedAt ||
+            data.positions[data.positions.length - 1].timestamp,
           positions: data.positions,
           totalDistanceKm: data.totalDistanceKm || 0,
           totalDurationMinutes: data.totalDurationMinutes || 0,
@@ -109,8 +123,8 @@ export default function TripHistoryPlayback({
 
         setCurrentPosition(data.positions[0]);
       } catch (err) {
-        console.error('Error fetching trip history:', err);
-        setError('Failed to load trip history');
+        console.error("Error fetching trip history:", err);
+        setError("Failed to load trip history");
       } finally {
         setLoading(false);
       }
@@ -126,14 +140,14 @@ export default function TripHistoryPlayback({
         const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
         if (!apiKey) {
-          setError('Google Maps API key not configured');
+          setError("Google Maps API key not configured");
           return;
         }
 
         const loader = new Loader({
           apiKey,
-          version: 'weekly',
-          libraries: ['geometry'],
+          version: "weekly",
+          libraries: ["geometry"],
         });
 
         await loader.load();
@@ -150,8 +164,8 @@ export default function TripHistoryPlayback({
 
         setMapReady(true);
       } catch (err) {
-        console.error('Failed to load Google Maps:', err);
-        setError('Failed to load map');
+        console.error("Failed to load Google Maps:", err);
+        setError("Failed to load map");
       }
     };
 
@@ -180,7 +194,7 @@ export default function TripHistoryPlayback({
     routePolylineRef.current = new google.maps.Polyline({
       path: routePath,
       map,
-      strokeColor: '#9CA3AF',
+      strokeColor: "#9CA3AF",
       strokeOpacity: 0.6,
       strokeWeight: 4,
     });
@@ -192,7 +206,7 @@ export default function TripHistoryPlayback({
     progressPolylineRef.current = new google.maps.Polyline({
       path: [],
       map,
-      strokeColor: '#2563EB',
+      strokeColor: "#2563EB",
       strokeOpacity: 1,
       strokeWeight: 5,
     });
@@ -204,9 +218,11 @@ export default function TripHistoryPlayback({
     pickupMarkerRef.current = new google.maps.Marker({
       position: tripData.pickupLocation,
       map,
-      title: 'Pickup: ' + tripData.pickupLocation.address,
+      title: "Pickup: " + tripData.pickupLocation.address,
       icon: {
-        url: 'data:image/svg+xml;base64,' + btoa(`
+        url:
+          "data:image/svg+xml;base64," +
+          btoa(`
           <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="#10B981">
             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
           </svg>
@@ -222,9 +238,11 @@ export default function TripHistoryPlayback({
     deliveryMarkerRef.current = new google.maps.Marker({
       position: tripData.deliveryLocation,
       map,
-      title: 'Delivery: ' + tripData.deliveryLocation.address,
+      title: "Delivery: " + tripData.deliveryLocation.address,
       icon: {
-        url: 'data:image/svg+xml;base64,' + btoa(`
+        url:
+          "data:image/svg+xml;base64," +
+          btoa(`
           <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="#EF4444">
             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
           </svg>
@@ -242,7 +260,9 @@ export default function TripHistoryPlayback({
       map,
       title: tripData.truckPlate,
       icon: {
-        url: 'data:image/svg+xml;base64,' + btoa(`
+        url:
+          "data:image/svg+xml;base64," +
+          btoa(`
           <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2">
             <rect x="1" y="3" width="15" height="13" fill="#2563EB" opacity="0.3"></rect>
             <rect x="1" y="3" width="15" height="13"></rect>
@@ -263,22 +283,27 @@ export default function TripHistoryPlayback({
     bounds.extend(tripData.pickupLocation);
     bounds.extend(tripData.deliveryLocation);
     map.fitBounds(bounds);
-
   }, [mapReady, tripData]);
 
   // Update map position during playback
   useEffect(() => {
-    if (!tripData || !truckMarkerRef.current || !progressPolylineRef.current) return;
+    if (!tripData || !truckMarkerRef.current || !progressPolylineRef.current)
+      return;
 
     const positions = tripData.positions;
     const currentPos = positions[currentIndex];
 
     if (currentPos) {
       // Update truck marker position
-      truckMarkerRef.current.setPosition({ lat: currentPos.lat, lng: currentPos.lng });
+      truckMarkerRef.current.setPosition({
+        lat: currentPos.lat,
+        lng: currentPos.lng,
+      });
 
       // Update progress polyline
-      const progressPath = positions.slice(0, currentIndex + 1).map((p) => ({ lat: p.lat, lng: p.lng }));
+      const progressPath = positions
+        .slice(0, currentIndex + 1)
+        .map((p) => ({ lat: p.lat, lng: p.lng }));
       progressPolylineRef.current.setPath(progressPath);
 
       setCurrentPosition(currentPos);
@@ -363,10 +388,15 @@ export default function TripHistoryPlayback({
   // Loading state
   if (loading) {
     return (
-      <div className="flex items-center justify-center bg-[#f0fdfa] dark:bg-slate-800 rounded-lg" style={{ height }}>
+      <div
+        className="flex items-center justify-center rounded-lg bg-[#f0fdfa] dark:bg-slate-800"
+        style={{ height }}
+      >
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1e9c99] mx-auto mb-4"></div>
-          <p className="text-[#064d51]/70 dark:text-gray-300">Loading trip history...</p>
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-[#1e9c99]"></div>
+          <p className="text-[#064d51]/70 dark:text-gray-300">
+            Loading trip history...
+          </p>
         </div>
       </div>
     );
@@ -375,13 +405,16 @@ export default function TripHistoryPlayback({
   // Error state
   if (error) {
     return (
-      <div className="flex items-center justify-center bg-[#f0fdfa] dark:bg-slate-800 rounded-lg" style={{ height }}>
+      <div
+        className="flex items-center justify-center rounded-lg bg-[#f0fdfa] dark:bg-slate-800"
+        style={{ height }}
+      >
         <div className="text-center">
-          <p className="text-red-500 mb-4">{error}</p>
+          <p className="mb-4 text-red-500">{error}</p>
           {onClose && (
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-[#064d51]/80 bg-[#064d51]/10 rounded-lg hover:bg-[#064d51]/20"
+              className="rounded-lg bg-[#064d51]/10 px-4 py-2 text-sm font-medium text-[#064d51]/80 hover:bg-[#064d51]/20"
             >
               Close
             </button>
@@ -393,21 +426,24 @@ export default function TripHistoryPlayback({
 
   if (!tripData) return null;
 
-  const progress = tripData.positions.length > 1
-    ? (currentIndex / (tripData.positions.length - 1)) * 100
-    : 0;
+  const progress =
+    tripData.positions.length > 1
+      ? (currentIndex / (tripData.positions.length - 1)) * 100
+      : 0;
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-lg border border-[#064d51]/15 dark:border-slate-700 overflow-hidden">
+    <div className="overflow-hidden rounded-lg border border-[#064d51]/15 bg-white dark:border-slate-700 dark:bg-slate-800">
       {/* Header */}
-      <div className="p-4 border-b border-[#064d51]/15 dark:border-slate-700">
+      <div className="border-b border-[#064d51]/15 p-4 dark:border-slate-700">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-[#064d51] dark:text-white">
               Trip Playback: {tripData.truckPlate}
             </h3>
             <p className="text-sm text-[#064d51]/60 dark:text-gray-400">
-              {tripData.carrierName} • {formatDuration(tripData.totalDurationMinutes)} • {tripData.totalDistanceKm.toFixed(1)} km
+              {tripData.carrierName} •{" "}
+              {formatDuration(tripData.totalDurationMinutes)} •{" "}
+              {tripData.totalDistanceKm.toFixed(1)} km
             </p>
           </div>
           {onClose && (
@@ -415,8 +451,18 @@ export default function TripHistoryPlayback({
               onClick={onClose}
               className="text-[#064d51]/50 hover:text-[#064d51] dark:hover:text-gray-200"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           )}
@@ -427,7 +473,7 @@ export default function TripHistoryPlayback({
       <div ref={mapRef} style={{ height: `calc(${height} - 180px)` }} />
 
       {/* Playback Controls */}
-      <div className="p-4 space-y-4">
+      <div className="space-y-4 p-4">
         {/* Timeline Slider */}
         <div className="space-y-2">
           <input
@@ -436,7 +482,7 @@ export default function TripHistoryPlayback({
             max={tripData.positions.length - 1}
             value={currentIndex}
             onChange={handleSliderChange}
-            className="w-full h-2 bg-[#064d51]/10 rounded-lg appearance-none cursor-pointer accent-[#1e9c99]"
+            className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-[#064d51]/10 accent-[#1e9c99]"
           />
           <div className="flex justify-between text-xs text-[#064d51]/60 dark:text-gray-400">
             <span>{formatTime(tripData.startedAt)}</span>
@@ -450,41 +496,59 @@ export default function TripHistoryPlayback({
             {/* Reset */}
             <button
               onClick={handleReset}
-              className="p-2 text-[#064d51]/70 dark:text-gray-300 hover:bg-[#f0fdfa] dark:hover:bg-slate-700 rounded-lg"
+              className="rounded-lg p-2 text-[#064d51]/70 hover:bg-[#f0fdfa] dark:text-gray-300 dark:hover:bg-slate-700"
               title="Reset"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
               </svg>
             </button>
 
             {/* Play/Pause */}
             <button
               onClick={isPlaying ? handlePause : handlePlay}
-              className="p-3 bg-[#1e9c99] text-white rounded-full hover:bg-[#064d51]"
-              title={isPlaying ? 'Pause' : 'Play'}
+              className="rounded-full bg-[#1e9c99] p-3 text-white hover:bg-[#064d51]"
+              title={isPlaying ? "Pause" : "Play"}
             >
               {isPlaying ? (
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="h-5 w-5"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
                 </svg>
               ) : (
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="h-5 w-5"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path d="M8 5v14l11-7z" />
                 </svg>
               )}
             </button>
 
             {/* Speed selector */}
-            <div className="flex items-center gap-1 ml-2">
+            <div className="ml-2 flex items-center gap-1">
               {([1, 2, 5, 10] as PlaybackSpeed[]).map((speed) => (
                 <button
                   key={speed}
                   onClick={() => setPlaybackSpeed(speed)}
-                  className={`px-2 py-1 text-xs font-medium rounded ${
+                  className={`rounded px-2 py-1 text-xs font-medium ${
                     playbackSpeed === speed
-                      ? 'bg-[#1e9c99] text-white'
-                      : 'bg-[#064d51]/10 dark:bg-slate-700 text-[#064d51]/80 dark:text-gray-300 hover:bg-[#064d51]/20 dark:hover:bg-slate-600'
+                      ? "bg-[#1e9c99] text-white"
+                      : "bg-[#064d51]/10 text-[#064d51]/80 hover:bg-[#064d51]/20 dark:bg-slate-700 dark:text-gray-300 dark:hover:bg-slate-600"
                   }`}
                 >
                   {speed}x
@@ -501,7 +565,8 @@ export default function TripHistoryPlayback({
                   {formatTime(currentPosition.timestamp)}
                 </div>
                 <div className="text-xs text-[#064d51]/60 dark:text-gray-400">
-                  {currentPosition.speed !== undefined && `${Math.round(currentPosition.speed)} km/h • `}
+                  {currentPosition.speed !== undefined &&
+                    `${Math.round(currentPosition.speed)} km/h • `}
                   {Math.round(progress)}% complete
                 </div>
               </>

@@ -7,7 +7,7 @@
  * Single Source of Truth: lib/rbac/accessHelpers.ts
  */
 
-import { Role } from './permissions';
+import { Role } from "./permissions";
 
 export interface SessionInfo {
   userId: string;
@@ -68,11 +68,13 @@ export function getAccessRoles(
   const { role, organizationId } = session;
   const { shipperOrgId, carrierOrgId } = entityOwners || {};
 
-  const isShipper = role === 'SHIPPER' && !!shipperOrgId && shipperOrgId === organizationId;
-  const isCarrier = role === 'CARRIER' && !!carrierOrgId && carrierOrgId === organizationId;
-  const isDispatcher = role === 'DISPATCHER';
-  const isSuperAdmin = role === 'SUPER_ADMIN';
-  const isAdmin = role === 'ADMIN' || isSuperAdmin;
+  const isShipper =
+    role === "SHIPPER" && !!shipperOrgId && shipperOrgId === organizationId;
+  const isCarrier =
+    role === "CARRIER" && !!carrierOrgId && carrierOrgId === organizationId;
+  const isDispatcher = role === "DISPATCHER";
+  const isSuperAdmin = role === "SUPER_ADMIN";
+  const isAdmin = role === "ADMIN" || isSuperAdmin;
 
   // User has access if they own the entity or are admin/dispatcher
   const hasAccess = isShipper || isCarrier || isDispatcher || isAdmin;
@@ -119,7 +121,10 @@ export function canModify(
     carrierOrgId?: string | null;
   }
 ): boolean {
-  const { isShipper, isCarrier, isAdmin } = getAccessRoles(session, entityOwners);
+  const { isShipper, isCarrier, isAdmin } = getAccessRoles(
+    session,
+    entityOwners
+  );
   return isShipper || isCarrier || isAdmin;
 }
 
@@ -127,12 +132,12 @@ export function canModify(
  * Check if user is admin (ADMIN or SUPER_ADMIN)
  */
 export function isAdminRole(role: string): boolean {
-  return role === 'ADMIN' || role === 'SUPER_ADMIN';
+  return role === "ADMIN" || role === "SUPER_ADMIN";
 }
 
 /**
  * Check if user is super admin
  */
 export function isSuperAdminRole(role: string): boolean {
-  return role === 'SUPER_ADMIN';
+  return role === "SUPER_ADMIN";
 }

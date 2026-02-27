@@ -5,14 +5,20 @@
  * Client-side component for displaying and managing organization details
  */
 
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Building2,
   Mail,
@@ -25,7 +31,7 @@ import {
   Edit,
   Check,
   X,
-} from 'lucide-react';
+} from "lucide-react";
 
 // Type definitions for organization details
 interface OrganizationLoad {
@@ -81,40 +87,49 @@ export default function OrganizationDetailsClient({
   const [isEditing, setIsEditing] = useState(false);
 
   const canEdit =
-    user.role === 'ADMIN' ||
-    user.role === 'SUPER_ADMIN' ||
+    user.role === "ADMIN" ||
+    user.role === "SUPER_ADMIN" ||
     user.organizationId === organization.id;
 
   const getOrganizationTypeLabel = (type: string) => {
     const types: Record<string, string> = {
-      SHIPPER: 'Shipper',
-      CARRIER_COMPANY: 'Carrier (Company)',
-      CARRIER_INDIVIDUAL: 'Carrier (Individual)',
-      LOGISTICS_AGENT: 'Logistics Agent',
+      SHIPPER: "Shipper",
+      CARRIER_COMPANY: "Carrier (Company)",
+      CARRIER_INDIVIDUAL: "Carrier (Individual)",
+      LOGISTICS_AGENT: "Logistics Agent",
     };
     return types[type] || type;
   };
 
-  const activeLoads = organization.loads?.filter(
-    (load: OrganizationLoad) => load.status !== 'COMPLETED' && load.status !== 'CANCELLED'
-  ).length || 0;
+  const activeLoads =
+    organization.loads?.filter(
+      (load: OrganizationLoad) =>
+        load.status !== "COMPLETED" && load.status !== "CANCELLED"
+    ).length || 0;
 
-  const completedLoads = organization.loads?.filter(
-    (load: OrganizationLoad) => load.status === 'COMPLETED'
-  ).length || 0;
+  const completedLoads =
+    organization.loads?.filter(
+      (load: OrganizationLoad) => load.status === "COMPLETED"
+    ).length || 0;
 
   return (
     <div className="container mx-auto max-w-6xl space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">{organization.name}</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {organization.name}
+          </h1>
           <p className="text-muted-foreground">
             {getOrganizationTypeLabel(organization.type)}
           </p>
         </div>
         {canEdit && (
-          <Button onClick={() => router.push(`/organizations/${organization.id}/edit`)}>
+          <Button
+            onClick={() =>
+              router.push(`/organizations/${organization.id}/edit`)
+            }
+          >
             <Edit className="mr-2 h-4 w-4" />
             Edit Organization
           </Button>
@@ -139,31 +154,37 @@ export default function OrganizationDetailsClient({
         <Card>
           <CardHeader>
             <CardTitle>Contact Information</CardTitle>
-            <CardDescription>Primary contact details for this organization</CardDescription>
+            <CardDescription>
+              Primary contact details for this organization
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3">
-              <Mail className="h-4 w-4 text-muted-foreground" />
+              <Mail className="text-muted-foreground h-4 w-4" />
               <div>
                 <p className="text-sm font-medium">Email</p>
-                <p className="text-sm text-muted-foreground">{organization.contactEmail}</p>
+                <p className="text-muted-foreground text-sm">
+                  {organization.contactEmail}
+                </p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <Phone className="h-4 w-4 text-muted-foreground" />
+              <Phone className="text-muted-foreground h-4 w-4" />
               <div>
                 <p className="text-sm font-medium">Phone</p>
-                <p className="text-sm text-muted-foreground">{organization.contactPhone}</p>
+                <p className="text-muted-foreground text-sm">
+                  {organization.contactPhone}
+                </p>
               </div>
             </div>
 
             {organization.address && (
               <div className="flex items-center gap-3">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <MapPin className="text-muted-foreground h-4 w-4" />
                 <div>
                   <p className="text-sm font-medium">Address</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     {organization.address}
                     {organization.city && `, ${organization.city}`}
                   </p>
@@ -177,31 +198,39 @@ export default function OrganizationDetailsClient({
         <Card>
           <CardHeader>
             <CardTitle>Legal Information</CardTitle>
-            <CardDescription>Registration and licensing details</CardDescription>
+            <CardDescription>
+              Registration and licensing details
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {organization.licenseNumber && (
               <div className="flex items-center gap-3">
-                <FileText className="h-4 w-4 text-muted-foreground" />
+                <FileText className="text-muted-foreground h-4 w-4" />
                 <div>
                   <p className="text-sm font-medium">License Number</p>
-                  <p className="text-sm text-muted-foreground">{organization.licenseNumber}</p>
+                  <p className="text-muted-foreground text-sm">
+                    {organization.licenseNumber}
+                  </p>
                 </div>
               </div>
             )}
 
             {organization.taxId && (
               <div className="flex items-center gap-3">
-                <FileText className="h-4 w-4 text-muted-foreground" />
+                <FileText className="text-muted-foreground h-4 w-4" />
                 <div>
                   <p className="text-sm font-medium">Tax ID</p>
-                  <p className="text-sm text-muted-foreground">{organization.taxId}</p>
+                  <p className="text-muted-foreground text-sm">
+                    {organization.taxId}
+                  </p>
                 </div>
               </div>
             )}
 
             {!organization.licenseNumber && !organization.taxId && (
-              <p className="text-sm text-muted-foreground">No legal information provided</p>
+              <p className="text-muted-foreground text-sm">
+                No legal information provided
+              </p>
             )}
           </CardContent>
         </Card>
@@ -214,28 +243,34 @@ export default function OrganizationDetailsClient({
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3">
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <Users className="text-muted-foreground h-4 w-4" />
               <div>
                 <p className="text-sm font-medium">Team Members</p>
-                <p className="text-2xl font-bold">{organization.users?.length || 0}</p>
+                <p className="text-2xl font-bold">
+                  {organization.users?.length || 0}
+                </p>
               </div>
             </div>
 
-            {organization.type.startsWith('CARRIER') && (
+            {organization.type.startsWith("CARRIER") && (
               <div className="flex items-center gap-3">
-                <Truck className="h-4 w-4 text-muted-foreground" />
+                <Truck className="text-muted-foreground h-4 w-4" />
                 <div>
                   <p className="text-sm font-medium">Trucks</p>
-                  <p className="text-2xl font-bold">{organization.trucks?.length || 0}</p>
+                  <p className="text-2xl font-bold">
+                    {organization.trucks?.length || 0}
+                  </p>
                 </div>
               </div>
             )}
 
             <div className="flex items-center gap-3">
-              <Package className="h-4 w-4 text-muted-foreground" />
+              <Package className="text-muted-foreground h-4 w-4" />
               <div>
                 <p className="text-sm font-medium">
-                  {organization.type === 'SHIPPER' ? 'Posted Loads' : 'Completed Loads'}
+                  {organization.type === "SHIPPER"
+                    ? "Posted Loads"
+                    : "Completed Loads"}
                 </p>
                 <p className="text-2xl font-bold">{completedLoads}</p>
               </div>
@@ -243,7 +278,7 @@ export default function OrganizationDetailsClient({
 
             {activeLoads > 0 && (
               <div className="flex items-center gap-3">
-                <Package className="h-4 w-4 text-muted-foreground" />
+                <Package className="text-muted-foreground h-4 w-4" />
                 <div>
                   <p className="text-sm font-medium">Active Loads</p>
                   <p className="text-2xl font-bold">{activeLoads}</p>
@@ -260,7 +295,9 @@ export default function OrganizationDetailsClient({
               <CardTitle>About</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">{organization.description}</p>
+              <p className="text-muted-foreground text-sm">
+                {organization.description}
+              </p>
             </CardContent>
           </Card>
         )}
@@ -271,7 +308,9 @@ export default function OrganizationDetailsClient({
         <Card>
           <CardHeader>
             <CardTitle>Team Members</CardTitle>
-            <CardDescription>Users belonging to this organization</CardDescription>
+            <CardDescription>
+              Users belonging to this organization
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
@@ -284,7 +323,9 @@ export default function OrganizationDetailsClient({
                     <p className="font-medium">
                       {member.firstName} {member.lastName}
                     </p>
-                    <p className="text-sm text-muted-foreground">{member.email}</p>
+                    <p className="text-muted-foreground text-sm">
+                      {member.email}
+                    </p>
                   </div>
                   <Badge variant="secondary">{member.role}</Badge>
                 </div>

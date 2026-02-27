@@ -7,15 +7,15 @@
  */
 
 // Set test environment variables
-process.env.NODE_ENV = 'test';
-process.env.JWT_SECRET = 'test-jwt-secret-key-for-testing-only';
-process.env.JWT_ENABLE_ENCRYPTION = 'false'; // Disable encryption in tests (mock doesn't support EncryptJWT)
-process.env.DATABASE_URL = 'postgresql://test@localhost:5432/freight_test';
-process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
-process.env.EMAIL_PROVIDER = 'console';
+process.env.NODE_ENV = "test";
+process.env.JWT_SECRET = "test-jwt-secret-key-for-testing-only";
+process.env.JWT_ENABLE_ENCRYPTION = "false"; // Disable encryption in tests (mock doesn't support EncryptJWT)
+process.env.DATABASE_URL = "postgresql://test@localhost:5432/freight_test";
+process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
+process.env.EMAIL_PROVIDER = "console";
 
 // Mock Prisma client for tests with in-memory storage
-jest.mock('@/lib/db', () => {
+jest.mock("@/lib/db", () => {
   // In-memory stores for test data
   const stores = {
     users: new Map(),
@@ -79,7 +79,7 @@ jest.mock('@/lib/db', () => {
       currentCommissionRatePercent: 2, // Default 2% commission
       totalCommissionPaidEtb: 0,
       isActive: true,
-      verificationStatus: 'PENDING',
+      verificationStatus: "PENDING",
       isFlagged: false,
       flagReason: null,
     },
@@ -88,7 +88,7 @@ jest.mock('@/lib/db', () => {
       emailVerified: false,
     },
     load: {
-      serviceFeeStatus: 'PENDING',
+      serviceFeeStatus: "PENDING",
     },
     truck: { postings: [], gpsDevice: null },
     notification: {
@@ -98,27 +98,27 @@ jest.mock('@/lib/db', () => {
     corridor: {
       isActive: true,
       promoFlag: false,
-      direction: 'ONE_WAY',
+      direction: "ONE_WAY",
     },
     financialAccount: {
       isActive: true,
-      currency: 'ETB',
+      currency: "ETB",
     },
     journalEntry: {},
     userMFA: {
       enabled: false,
     },
     trip: {
-      status: 'ASSIGNED',
+      status: "ASSIGNED",
     },
     loadRequest: {
-      status: 'PENDING',
+      status: "PENDING",
     },
     truckRequest: {
-      status: 'PENDING',
+      status: "PENDING",
     },
     matchProposal: {
-      status: 'PENDING',
+      status: "PENDING",
     },
     loadEvent: {},
     ethiopianLocation: {
@@ -127,24 +127,24 @@ jest.mock('@/lib/db', () => {
     session: {},
     gpsPosition: {},
     gpsDevice: {
-      status: 'ACTIVE',
+      status: "ACTIVE",
     },
     tripPod: {},
     dispute: {
-      status: 'OPEN',
+      status: "OPEN",
     },
     withdrawalRequest: {
-      status: 'PENDING',
+      status: "PENDING",
     },
     systemSettings: {},
     companyDocument: {
-      verificationStatus: 'PENDING',
+      verificationStatus: "PENDING",
     },
     truckDocument: {
-      verificationStatus: 'PENDING',
+      verificationStatus: "PENDING",
     },
     auditLog: {
-      severity: 'INFO',
+      severity: "INFO",
     },
   };
 
@@ -176,13 +176,15 @@ jest.mock('@/lib/db', () => {
       let record = store.get(where.id);
       if (!record && where) {
         // Search by other fields (e.g., where: { email: '...' })
-        const entries = Object.entries(where).filter(([k]) => k !== 'id');
+        const entries = Object.entries(where).filter(([k]) => k !== "id");
         if (entries.length > 0) {
-          record = Array.from(store.values()).find(r =>
+          record = Array.from(store.values()).find((r) =>
             entries.every(([key, value]) => {
               // Handle composite keys (e.g., originRegion_destinationRegion_direction: { ... })
-              if (value && typeof value === 'object' && !Array.isArray(value)) {
-                return Object.entries(value).every(([subKey, subValue]) => r[subKey] === subValue);
+              if (value && typeof value === "object" && !Array.isArray(value)) {
+                return Object.entries(value).every(
+                  ([subKey, subValue]) => r[subKey] === subValue
+                );
               }
               return r[key] === value;
             })
@@ -196,12 +198,12 @@ jest.mock('@/lib/db', () => {
         const result = { ...record };
         if (include.users && stores.users) {
           result.users = Array.from(stores.users.values()).filter(
-            u => u.organizationId === record.id
+            (u) => u.organizationId === record.id
           );
         }
         if (include.loads && stores.loads) {
           result.loads = Array.from(stores.loads.values()).filter(
-            l => l.shipperId === record.id || l.corridorId === record.id
+            (l) => l.shipperId === record.id || l.corridorId === record.id
           );
         }
         if (include.corridor && stores.corridors && record.corridorId) {
@@ -209,9 +211,20 @@ jest.mock('@/lib/db', () => {
         }
         if (include.createdBy && record.createdById && stores.users) {
           const user = stores.users.get(record.createdById);
-          result.createdBy = user ? { id: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email } : null;
+          result.createdBy = user
+            ? {
+                id: user.id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+              }
+            : null;
         }
-        if (include.organization && record.organizationId && stores.organizations) {
+        if (
+          include.organization &&
+          record.organizationId &&
+          stores.organizations
+        ) {
           result.organization = stores.organizations.get(record.organizationId);
         }
         if (include.truck && record.truckId && stores.trucks) {
@@ -220,20 +233,22 @@ jest.mock('@/lib/db', () => {
         // Handle _count
         if (include._count) {
           result._count = {};
-          const countFields = include._count.select ? Object.keys(include._count.select) : [];
+          const countFields = include._count.select
+            ? Object.keys(include._count.select)
+            : [];
           for (const field of countFields) {
             result._count[field] = 0;
-            if (field === 'loads' && stores.loads) {
+            if (field === "loads" && stores.loads) {
               result._count[field] = Array.from(stores.loads.values()).filter(
-                l => l.corridorId === record.id || l.shipperId === record.id
+                (l) => l.corridorId === record.id || l.shipperId === record.id
               ).length;
-            } else if (field === 'users' && stores.users) {
+            } else if (field === "users" && stores.users) {
               result._count[field] = Array.from(stores.users.values()).filter(
-                u => u.organizationId === record.id
+                (u) => u.organizationId === record.id
               ).length;
-            } else if (field === 'trucks' && stores.trucks) {
+            } else if (field === "trucks" && stores.trucks) {
               result._count[field] = Array.from(stores.trucks.values()).filter(
-                t => t.carrierId === record.id
+                (t) => t.carrierId === record.id
               ).length;
             }
           }
@@ -243,9 +258,20 @@ jest.mock('@/lib/db', () => {
       // Handle select with nested relations (e.g., select: { organization: { select: {...} } })
       if (select && !include && record) {
         const result = { ...record };
-        if (select.organization && record.organizationId && stores.organizations) {
+        if (
+          select.organization &&
+          record.organizationId &&
+          stores.organizations
+        ) {
           const org = stores.organizations.get(record.organizationId);
-          result.organization = org ? { id: org.id, name: org.name, type: org.type, isVerified: org.isVerified } : null;
+          result.organization = org
+            ? {
+                id: org.id,
+                name: org.name,
+                type: org.type,
+                isVerified: org.isVerified,
+              }
+            : null;
         }
         if (select.corridor && record.corridorId && stores.corridors) {
           result.corridor = stores.corridors.get(record.corridorId) || null;
@@ -259,9 +285,15 @@ jest.mock('@/lib/db', () => {
             if (select.assignedTruck.select?.carrierId !== undefined) {
               result.assignedTruck.carrierId = truck.carrierId;
             }
-            if (select.assignedTruck.select?.carrier && truck.carrierId && stores.organizations) {
+            if (
+              select.assignedTruck.select?.carrier &&
+              truck.carrierId &&
+              stores.organizations
+            ) {
               const carrier = stores.organizations.get(truck.carrierId);
-              result.assignedTruck.carrier = carrier ? { id: carrier.id, name: carrier.name } : null;
+              result.assignedTruck.carrier = carrier
+                ? { id: carrier.id, name: carrier.name }
+                : null;
             }
           } else {
             result.assignedTruck = null;
@@ -271,17 +303,29 @@ jest.mock('@/lib/db', () => {
         }
         if (select.shipper && record.shipperId && stores.organizations) {
           const shipper = stores.organizations.get(record.shipperId);
-          result.shipper = shipper ? { id: shipper.id, name: shipper.name } : null;
+          result.shipper = shipper
+            ? { id: shipper.id, name: shipper.name }
+            : null;
         } else if (select.shipper && !record.shipperId) {
           result.shipper = null;
         }
-        if (select.pickupLocation && record.pickupLocationId && stores.ethiopianLocations) {
-          result.pickupLocation = stores.ethiopianLocations.get(record.pickupLocationId) || null;
+        if (
+          select.pickupLocation &&
+          record.pickupLocationId &&
+          stores.ethiopianLocations
+        ) {
+          result.pickupLocation =
+            stores.ethiopianLocations.get(record.pickupLocationId) || null;
         } else if (select.pickupLocation) {
           result.pickupLocation = null;
         }
-        if (select.deliveryLocation && record.deliveryLocationId && stores.ethiopianLocations) {
-          result.deliveryLocation = stores.ethiopianLocations.get(record.deliveryLocationId) || null;
+        if (
+          select.deliveryLocation &&
+          record.deliveryLocationId &&
+          stores.ethiopianLocations
+        ) {
+          result.deliveryLocation =
+            stores.ethiopianLocations.get(record.deliveryLocationId) || null;
         } else if (select.deliveryLocation) {
           result.deliveryLocation = null;
         }
@@ -292,27 +336,34 @@ jest.mock('@/lib/db', () => {
     findFirst: jest.fn(({ where, include } = {}) => {
       let records = Array.from(store.values());
       if (where) {
-        records = records.filter(r => {
+        records = records.filter((r) => {
           return Object.entries(where).every(([key, value]) => {
             if (value === undefined) return true;
             // Handle OR operator
-            if (key === 'OR' && Array.isArray(value)) {
-              return value.some(condition =>
+            if (key === "OR" && Array.isArray(value)) {
+              return value.some((condition) =>
                 Object.entries(condition).every(([k, v]) => r[k] === v)
               );
             }
             // Handle nested objects (e.g., { in: [...] })
-            if (value && typeof value === 'object' && value.in) {
+            if (value && typeof value === "object" && value.in) {
               return value.in.includes(r[key]);
             }
-            if (value && typeof value === 'object' && value.notIn) {
+            if (value && typeof value === "object" && value.notIn) {
               return !value.notIn.includes(r[key]);
             }
-            if (value && typeof value === 'object' && value.not !== undefined) {
+            if (value && typeof value === "object" && value.not !== undefined) {
               return r[key] !== value.not;
             }
             // Handle nested relation filters (e.g., { assignedTruck: { carrierId: ... } })
-            if (value && typeof value === 'object' && !Array.isArray(value) && !value.in && !value.not && !value.notIn) {
+            if (
+              value &&
+              typeof value === "object" &&
+              !Array.isArray(value) &&
+              !value.in &&
+              !value.not &&
+              !value.notIn
+            ) {
               return true; // Skip complex relation filters in mock
             }
             return r[key] === value;
@@ -335,150 +386,224 @@ jest.mock('@/lib/db', () => {
       }
       return Promise.resolve(record);
     }),
-    findMany: jest.fn(({ where, include, select, skip, take, orderBy } = {}) => {
-      let records = Array.from(store.values());
-      if (where) {
-        records = records.filter(r => {
-          return Object.entries(where).every(([key, value]) => {
-            if (value === undefined) return true;
-            // Handle OR operator
-            if (key === 'OR' && Array.isArray(value)) {
-              return value.some(condition =>
-                Object.entries(condition).every(([k, v]) => {
-                  if (v && typeof v === 'object' && v.contains !== undefined) {
-                    return String(r[k] || '').toLowerCase().includes(String(v.contains).toLowerCase());
-                  }
-                  if (v && typeof v === 'object' && v.gte !== undefined) return (r[k] || 0) >= v.gte;
-                  return r[k] === v;
-                })
-              );
-            }
-            // Handle { in: [...] } operator
-            if (value && typeof value === 'object' && value.in) {
-              return value.in.includes(r[key]);
-            }
-            // Handle { notIn: [...] } operator
-            if (value && typeof value === 'object' && value.notIn) {
-              return !value.notIn.includes(r[key]);
-            }
-            // Handle { not: ... } operator
-            if (value && typeof value === 'object' && value.not !== undefined) {
-              return r[key] !== value.not;
-            }
-            // Handle { some: ... }, { none: ... } for array relations - skip
-            if (value && typeof value === 'object' && (value.some !== undefined || value.none !== undefined)) {
-              return true;
-            }
-            // Handle { gte: ... }, { lte: ... } operators
-            if (value && typeof value === 'object' && (value.gte !== undefined || value.lte !== undefined)) {
-              let pass = true;
-              if (value.gte !== undefined) pass = pass && (r[key] || 0) >= value.gte;
-              if (value.lte !== undefined) pass = pass && (r[key] || 0) <= value.lte;
-              if (value.lt !== undefined) pass = pass && (r[key] || 0) < value.lt;
-              return pass;
-            }
-            // Handle { contains: ... } for string search
-            if (value && typeof value === 'object' && value.contains !== undefined) {
-              return String(r[key] || '').toLowerCase().includes(String(value.contains).toLowerCase());
-            }
-            // Handle nested relation filters (skip in mock)
-            if (value && typeof value === 'object' && !Array.isArray(value)) {
-              return true;
-            }
-            return r[key] === value;
+    findMany: jest.fn(
+      ({ where, include, select, skip, take, orderBy } = {}) => {
+        let records = Array.from(store.values());
+        if (where) {
+          records = records.filter((r) => {
+            return Object.entries(where).every(([key, value]) => {
+              if (value === undefined) return true;
+              // Handle OR operator
+              if (key === "OR" && Array.isArray(value)) {
+                return value.some((condition) =>
+                  Object.entries(condition).every(([k, v]) => {
+                    if (
+                      v &&
+                      typeof v === "object" &&
+                      v.contains !== undefined
+                    ) {
+                      return String(r[k] || "")
+                        .toLowerCase()
+                        .includes(String(v.contains).toLowerCase());
+                    }
+                    if (v && typeof v === "object" && v.gte !== undefined)
+                      return (r[k] || 0) >= v.gte;
+                    return r[k] === v;
+                  })
+                );
+              }
+              // Handle { in: [...] } operator
+              if (value && typeof value === "object" && value.in) {
+                return value.in.includes(r[key]);
+              }
+              // Handle { notIn: [...] } operator
+              if (value && typeof value === "object" && value.notIn) {
+                return !value.notIn.includes(r[key]);
+              }
+              // Handle { not: ... } operator
+              if (
+                value &&
+                typeof value === "object" &&
+                value.not !== undefined
+              ) {
+                return r[key] !== value.not;
+              }
+              // Handle { some: ... }, { none: ... } for array relations - skip
+              if (
+                value &&
+                typeof value === "object" &&
+                (value.some !== undefined || value.none !== undefined)
+              ) {
+                return true;
+              }
+              // Handle { gte: ... }, { lte: ... } operators
+              if (
+                value &&
+                typeof value === "object" &&
+                (value.gte !== undefined || value.lte !== undefined)
+              ) {
+                let pass = true;
+                if (value.gte !== undefined)
+                  pass = pass && (r[key] || 0) >= value.gte;
+                if (value.lte !== undefined)
+                  pass = pass && (r[key] || 0) <= value.lte;
+                if (value.lt !== undefined)
+                  pass = pass && (r[key] || 0) < value.lt;
+                return pass;
+              }
+              // Handle { contains: ... } for string search
+              if (
+                value &&
+                typeof value === "object" &&
+                value.contains !== undefined
+              ) {
+                return String(r[key] || "")
+                  .toLowerCase()
+                  .includes(String(value.contains).toLowerCase());
+              }
+              // Handle nested relation filters (skip in mock)
+              if (value && typeof value === "object" && !Array.isArray(value)) {
+                return true;
+              }
+              return r[key] === value;
+            });
           });
-        });
-      }
-      // Handle pagination
-      if (skip) records = records.slice(skip);
-      if (take) records = records.slice(0, take);
+        }
+        // Handle pagination
+        if (skip) records = records.slice(skip);
+        if (take) records = records.slice(0, take);
 
-      // Handle include relationships and _count
-      const incl = include || {};
-      const countSpec = incl._count || (select && select._count);
-      if (include || (select && select._count)) {
-        records = records.map(record => {
-          const result = { ...record };
-          // Handle _count
-          if (countSpec) {
-            result._count = {};
-            const countFields = countSpec.select ? Object.keys(countSpec.select) : [];
-            for (const field of countFields) {
-              result._count[field] = 0;
-              if (field === 'loads' && stores.loads) {
-                result._count[field] = Array.from(stores.loads.values()).filter(
-                  l => l.corridorId === record.id || l.shipperId === record.id
-                ).length;
-              } else if (field === 'users' && stores.users) {
-                result._count[field] = Array.from(stores.users.values()).filter(
-                  u => u.organizationId === record.id
-                ).length;
-              } else if (field === 'trucks' && stores.trucks) {
-                result._count[field] = Array.from(stores.trucks.values()).filter(
-                  t => t.carrierId === record.id
-                ).length;
-              } else if (field === 'disputesAgainst' && stores.disputes) {
-                result._count[field] = Array.from(stores.disputes.values()).filter(
-                  d => d.disputedOrgId === record.id
-                ).length;
+        // Handle include relationships and _count
+        const incl = include || {};
+        const countSpec = incl._count || (select && select._count);
+        if (include || (select && select._count)) {
+          records = records.map((record) => {
+            const result = { ...record };
+            // Handle _count
+            if (countSpec) {
+              result._count = {};
+              const countFields = countSpec.select
+                ? Object.keys(countSpec.select)
+                : [];
+              for (const field of countFields) {
+                result._count[field] = 0;
+                if (field === "loads" && stores.loads) {
+                  result._count[field] = Array.from(
+                    stores.loads.values()
+                  ).filter(
+                    (l) =>
+                      l.corridorId === record.id || l.shipperId === record.id
+                  ).length;
+                } else if (field === "users" && stores.users) {
+                  result._count[field] = Array.from(
+                    stores.users.values()
+                  ).filter((u) => u.organizationId === record.id).length;
+                } else if (field === "trucks" && stores.trucks) {
+                  result._count[field] = Array.from(
+                    stores.trucks.values()
+                  ).filter((t) => t.carrierId === record.id).length;
+                } else if (field === "disputesAgainst" && stores.disputes) {
+                  result._count[field] = Array.from(
+                    stores.disputes.values()
+                  ).filter((d) => d.disputedOrgId === record.id).length;
+                }
               }
             }
-          }
-          // Handle include.createdBy
-          if (incl.createdBy && record.createdById && stores.users) {
-            const user = stores.users.get(record.createdById);
-            result.createdBy = user ? { id: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email } : null;
-          }
-          // Handle include.organization
-          if (incl.organization && record.organizationId && stores.organizations) {
-            const org = stores.organizations.get(record.organizationId);
-            result.organization = org ? { id: org.id, name: org.name, type: org.type } : null;
-          }
-          // Handle include.truck (with nested carrier)
-          if (incl.truck && record.truckId && stores.trucks) {
-            const truck = stores.trucks.get(record.truckId);
-            if (truck) {
-              result.truck = { ...truck, id: truck.id, licensePlate: truck.licensePlate };
-              if (truck.carrierId && stores.organizations) {
-                const carrier = stores.organizations.get(truck.carrierId);
-                result.truck.carrier = carrier ? { id: carrier.id, name: carrier.name, type: carrier.type } : null;
-              }
-            } else {
-              result.truck = null;
+            // Handle include.createdBy
+            if (incl.createdBy && record.createdById && stores.users) {
+              const user = stores.users.get(record.createdById);
+              result.createdBy = user
+                ? {
+                    id: user.id,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    email: user.email,
+                  }
+                : null;
             }
-          }
-          // Handle include.shipper
-          if (incl.shipper && record.shipperId && stores.organizations) {
-            const shipper = stores.organizations.get(record.shipperId);
-            result.shipper = shipper ? { id: shipper.id, name: shipper.name, type: shipper.type } : null;
-          }
-          return result;
-        });
+            // Handle include.organization
+            if (
+              incl.organization &&
+              record.organizationId &&
+              stores.organizations
+            ) {
+              const org = stores.organizations.get(record.organizationId);
+              result.organization = org
+                ? { id: org.id, name: org.name, type: org.type }
+                : null;
+            }
+            // Handle include.truck (with nested carrier)
+            if (incl.truck && record.truckId && stores.trucks) {
+              const truck = stores.trucks.get(record.truckId);
+              if (truck) {
+                result.truck = {
+                  ...truck,
+                  id: truck.id,
+                  licensePlate: truck.licensePlate,
+                };
+                if (truck.carrierId && stores.organizations) {
+                  const carrier = stores.organizations.get(truck.carrierId);
+                  result.truck.carrier = carrier
+                    ? { id: carrier.id, name: carrier.name, type: carrier.type }
+                    : null;
+                }
+              } else {
+                result.truck = null;
+              }
+            }
+            // Handle include.shipper
+            if (incl.shipper && record.shipperId && stores.organizations) {
+              const shipper = stores.organizations.get(record.shipperId);
+              result.shipper = shipper
+                ? { id: shipper.id, name: shipper.name, type: shipper.type }
+                : null;
+            }
+            return result;
+          });
+        }
+        // Handle select with nested relations (e.g., select: { organization: { select: {...} } })
+        if (select && !include) {
+          records = records.map((record) => {
+            const result = { ...record };
+            if (
+              select.organization &&
+              record.organizationId &&
+              stores.organizations
+            ) {
+              const org = stores.organizations.get(record.organizationId);
+              result.organization = org
+                ? {
+                    id: org.id,
+                    name: org.name,
+                    type: org.type,
+                    isVerified: org.isVerified,
+                  }
+                : null;
+            }
+            return result;
+          });
+        }
+        return Promise.resolve(records);
       }
-      // Handle select with nested relations (e.g., select: { organization: { select: {...} } })
-      if (select && !include) {
-        records = records.map(record => {
-          const result = { ...record };
-          if (select.organization && record.organizationId && stores.organizations) {
-            const org = stores.organizations.get(record.organizationId);
-            result.organization = org ? { id: org.id, name: org.name, type: org.type, isVerified: org.isVerified } : null;
-          }
-          return result;
-        });
-      }
-      return Promise.resolve(records);
-    }),
+    ),
     update: jest.fn(({ where, data }) => {
       const record = store.get(where.id);
       if (!record) return Promise.resolve(null);
       // Handle Prisma operators in data (e.g., { balance: { increment: 500 } })
       const resolvedData = {};
       for (const [key, value] of Object.entries(data)) {
-        if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+        if (
+          value &&
+          typeof value === "object" &&
+          !Array.isArray(value) &&
+          !(value instanceof Date)
+        ) {
           if (value.increment !== undefined) {
-            resolvedData[key] = (Number(record[key]) || 0) + Number(value.increment);
+            resolvedData[key] =
+              (Number(record[key]) || 0) + Number(value.increment);
           } else if (value.decrement !== undefined) {
-            resolvedData[key] = (Number(record[key]) || 0) - Number(value.decrement);
+            resolvedData[key] =
+              (Number(record[key]) || 0) - Number(value.decrement);
           } else {
             resolvedData[key] = value;
           }
@@ -500,9 +625,12 @@ jest.mock('@/lib/db', () => {
         }
         const matches = Object.entries(where).every(([key, value]) => {
           if (value === undefined) return true;
-          if (value && typeof value === 'object' && value.in) return value.in.includes(record[key]);
-          if (value && typeof value === 'object' && value.notIn) return !value.notIn.includes(record[key]);
-          if (value && typeof value === 'object' && value.not !== undefined) return record[key] !== value.not;
+          if (value && typeof value === "object" && value.in)
+            return value.in.includes(record[key]);
+          if (value && typeof value === "object" && value.notIn)
+            return !value.notIn.includes(record[key]);
+          if (value && typeof value === "object" && value.not !== undefined)
+            return record[key] !== value.not;
           return record[key] === value;
         });
         if (matches) {
@@ -533,22 +661,29 @@ jest.mock('@/lib/db', () => {
     count: jest.fn(({ where } = {}) => {
       if (!where) return Promise.resolve(store.size);
       let count = 0;
-      store.forEach(record => {
+      store.forEach((record) => {
         const matches = Object.entries(where).every(([key, value]) => {
           if (value === undefined) return true;
-          if (value && typeof value === 'object') {
+          if (value && typeof value === "object") {
             if (value.gte !== undefined && value.lt !== undefined) {
-              return (record[key] || 0) >= value.gte && (record[key] || 0) < value.lt;
+              return (
+                (record[key] || 0) >= value.gte && (record[key] || 0) < value.lt
+              );
             }
             if (value.gte !== undefined && value.lte !== undefined) {
-              return (record[key] || 0) >= value.gte && (record[key] || 0) <= value.lte;
+              return (
+                (record[key] || 0) >= value.gte &&
+                (record[key] || 0) <= value.lte
+              );
             }
             if (value.gte !== undefined) return (record[key] || 0) >= value.gte;
             if (value.lte !== undefined) return (record[key] || 0) <= value.lte;
             if (value.in) return value.in.includes(record[key]);
             if (value.not !== undefined) return record[key] !== value.not;
             if (value.contains !== undefined) {
-              return String(record[key] || '').toLowerCase().includes(String(value.contains).toLowerCase());
+              return String(record[key] || "")
+                .toLowerCase()
+                .includes(String(value.contains).toLowerCase());
             }
             return true;
           }
@@ -574,9 +709,9 @@ jest.mock('@/lib/db', () => {
     upsert: jest.fn(({ where, create, update }) => {
       let record = store.get(where.id);
       if (!record && where) {
-        const entries = Object.entries(where).filter(([k]) => k !== 'id');
+        const entries = Object.entries(where).filter(([k]) => k !== "id");
         if (entries.length > 0) {
-          record = Array.from(store.values()).find(r =>
+          record = Array.from(store.values()).find((r) =>
             entries.every(([key, value]) => r[key] === value)
           );
         }
@@ -588,7 +723,13 @@ jest.mock('@/lib/db', () => {
       }
       const id = create.id || `${idPrefix}-${idCounter.value++}`;
       const defaults = modelDefaults[idPrefix] || {};
-      const newRecord = { id, ...defaults, ...create, createdAt: new Date(), updatedAt: new Date() };
+      const newRecord = {
+        id,
+        ...defaults,
+        ...create,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
       store.set(id, newRecord);
       return Promise.resolve(newRecord);
     }),
@@ -626,24 +767,49 @@ jest.mock('@/lib/db', () => {
 
   const result = {
     db: {
-      user: createModelMethods(stores.users, 'user', counters.user),
-      organization: createModelMethods(stores.organizations, 'org', counters.org),
-      load: createModelMethods(stores.loads, 'load', counters.load),
-      truck: createModelMethods(stores.trucks, 'truck', counters.truck),
-      notification: createModelMethods(stores.notifications, 'notification', counters.notification),
-      truckPosting: createModelMethods(stores.truckPostings, 'truckPosting', counters.truckPosting),
-      corridor: createModelMethods(stores.corridors, 'corridor', counters.corridor),
-      financialAccount: createModelMethods(stores.financialAccounts, 'financialAccount', counters.financialAccount),
-      journalEntry: createModelMethods(stores.journalEntries, 'journalEntry', counters.journalEntry),
+      user: createModelMethods(stores.users, "user", counters.user),
+      organization: createModelMethods(
+        stores.organizations,
+        "org",
+        counters.org
+      ),
+      load: createModelMethods(stores.loads, "load", counters.load),
+      truck: createModelMethods(stores.trucks, "truck", counters.truck),
+      notification: createModelMethods(
+        stores.notifications,
+        "notification",
+        counters.notification
+      ),
+      truckPosting: createModelMethods(
+        stores.truckPostings,
+        "truckPosting",
+        counters.truckPosting
+      ),
+      corridor: createModelMethods(
+        stores.corridors,
+        "corridor",
+        counters.corridor
+      ),
+      financialAccount: createModelMethods(
+        stores.financialAccounts,
+        "financialAccount",
+        counters.financialAccount
+      ),
+      journalEntry: createModelMethods(
+        stores.journalEntries,
+        "journalEntry",
+        counters.journalEntry
+      ),
       userMFA: {
-        ...createModelMethods(stores.userMFAs, 'userMFA', counters.userMFA),
+        ...createModelMethods(stores.userMFAs, "userMFA", counters.userMFA),
         // UserMFA has unique constraint on userId, so findUnique/update use userId
         findUnique: jest.fn(({ where }) => {
           const id = where.id || where.userId;
           // Search by userId if not found by id
           if (where.userId) {
             for (const record of stores.userMFAs.values()) {
-              if (record.userId === where.userId) return Promise.resolve(record);
+              if (record.userId === where.userId)
+                return Promise.resolve(record);
             }
           }
           return Promise.resolve(stores.userMFAs.get(id) || null);
@@ -663,7 +829,12 @@ jest.mock('@/lib/db', () => {
             return Promise.resolve(updated);
           } else {
             const id = `userMFA-${counters.userMFA.value++}`;
-            const record = { id, ...create, createdAt: new Date(), updatedAt: new Date() };
+            const record = {
+              id,
+              ...create,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            };
             stores.userMFAs.set(id, record);
             return Promise.resolve(record);
           }
@@ -677,11 +848,11 @@ jest.mock('@/lib/db', () => {
               return Promise.resolve(updated);
             }
           }
-          return Promise.reject(new Error('Record not found'));
+          return Promise.reject(new Error("Record not found"));
         }),
       },
       auditLog: {
-        create: jest.fn(() => Promise.resolve({ id: 'audit-1' })),
+        create: jest.fn(() => Promise.resolve({ id: "audit-1" })),
         createMany: jest.fn(() => Promise.resolve({ count: 0 })),
         deleteMany: jest.fn(() => Promise.resolve({ count: 0 })),
         count: jest.fn(() => Promise.resolve(0)),
@@ -695,9 +866,13 @@ jest.mock('@/lib/db', () => {
       document: {
         deleteMany: jest.fn(() => Promise.resolve({ count: 0 })),
       },
-      trip: createModelMethods(stores.trips, 'trip', counters.trip),
+      trip: createModelMethods(stores.trips, "trip", counters.trip),
       loadRequest: {
-        ...createModelMethods(stores.loadRequests, 'loadRequest', counters.loadRequest),
+        ...createModelMethods(
+          stores.loadRequests,
+          "loadRequest",
+          counters.loadRequest
+        ),
         findUnique: jest.fn(({ where, include }) => {
           const record = stores.loadRequests.get(where.id);
           if (!record) return Promise.resolve(null);
@@ -710,7 +885,8 @@ jest.mock('@/lib/db', () => {
               result.truck = stores.trucks.get(record.truckId) || null;
             }
             if (include.carrier && record.carrierId) {
-              result.carrier = stores.organizations.get(record.carrierId) || null;
+              result.carrier =
+                stores.organizations.get(record.carrierId) || null;
             }
             return Promise.resolve(result);
           }
@@ -720,12 +896,18 @@ jest.mock('@/lib/db', () => {
           let count = 0;
           stores.loadRequests.forEach((record, id) => {
             const matches = Object.entries(where).every(([key, value]) => {
-              if (value && typeof value === 'object' && value.not !== undefined) return record[key] !== value.not;
-              if (value && typeof value === 'object' && value.in) return value.in.includes(record[key]);
+              if (value && typeof value === "object" && value.not !== undefined)
+                return record[key] !== value.not;
+              if (value && typeof value === "object" && value.in)
+                return value.in.includes(record[key]);
               return record[key] === value;
             });
             if (matches) {
-              stores.loadRequests.set(id, { ...record, ...data, updatedAt: new Date() });
+              stores.loadRequests.set(id, {
+                ...record,
+                ...data,
+                updatedAt: new Date(),
+              });
               count++;
             }
           });
@@ -733,7 +915,11 @@ jest.mock('@/lib/db', () => {
         }),
       },
       truckRequest: {
-        ...createModelMethods(stores.truckRequests, 'truckRequest', counters.truckRequest),
+        ...createModelMethods(
+          stores.truckRequests,
+          "truckRequest",
+          counters.truckRequest
+        ),
         findUnique: jest.fn(({ where, include }) => {
           const record = stores.truckRequests.get(where.id);
           if (!record) return Promise.resolve(null);
@@ -744,7 +930,9 @@ jest.mock('@/lib/db', () => {
             }
             if (include.truck && record.truckId) {
               const truck = stores.trucks.get(record.truckId);
-              result.truck = truck ? { ...truck, carrierId: truck.carrierId } : null;
+              result.truck = truck
+                ? { ...truck, carrierId: truck.carrierId }
+                : null;
             }
             return Promise.resolve(result);
           }
@@ -754,12 +942,18 @@ jest.mock('@/lib/db', () => {
           let count = 0;
           stores.truckRequests.forEach((record, id) => {
             const matches = Object.entries(where).every(([key, value]) => {
-              if (value && typeof value === 'object' && value.not !== undefined) return record[key] !== value.not;
-              if (value && typeof value === 'object' && value.in) return value.in.includes(record[key]);
+              if (value && typeof value === "object" && value.not !== undefined)
+                return record[key] !== value.not;
+              if (value && typeof value === "object" && value.in)
+                return value.in.includes(record[key]);
               return record[key] === value;
             });
             if (matches) {
-              stores.truckRequests.set(id, { ...record, ...data, updatedAt: new Date() });
+              stores.truckRequests.set(id, {
+                ...record,
+                ...data,
+                updatedAt: new Date(),
+              });
               count++;
             }
           });
@@ -767,40 +961,85 @@ jest.mock('@/lib/db', () => {
         }),
       },
       matchProposal: {
-        ...createModelMethods(stores.matchProposals, 'matchProposal', counters.matchProposal),
+        ...createModelMethods(
+          stores.matchProposals,
+          "matchProposal",
+          counters.matchProposal
+        ),
         updateMany: jest.fn(({ where, data }) => {
           let count = 0;
           stores.matchProposals.forEach((record, id) => {
             const matches = Object.entries(where).every(([key, value]) => {
-              if (value && typeof value === 'object' && value.not !== undefined) return record[key] !== value.not;
+              if (value && typeof value === "object" && value.not !== undefined)
+                return record[key] !== value.not;
               return record[key] === value;
             });
             if (matches) {
-              stores.matchProposals.set(id, { ...record, ...data, updatedAt: new Date() });
+              stores.matchProposals.set(id, {
+                ...record,
+                ...data,
+                updatedAt: new Date(),
+              });
               count++;
             }
           });
           return Promise.resolve({ count });
         }),
       },
-      loadEvent: createModelMethods(stores.loadEvents, 'loadEvent', counters.loadEvent),
-      ethiopianLocation: createModelMethods(stores.ethiopianLocations, 'ethiopianLocation', counters.ethiopianLocation),
-      session: createModelMethods(stores.sessions, 'session', counters.session),
-      gpsPosition: createModelMethods(stores.gpsPositions, 'gpsPosition', counters.gpsPosition),
-      gpsDevice: createModelMethods(stores.gpsDevices, 'gpsDevice', counters.gpsDevice),
-      tripPod: createModelMethods(stores.tripPods, 'tripPod', counters.tripPod),
-      dispute: createModelMethods(stores.disputes, 'dispute', counters.dispute),
-      withdrawalRequest: createModelMethods(stores.withdrawalRequests, 'withdrawalRequest', counters.withdrawalRequest),
-      systemSettings: createModelMethods(stores.systemSettings, 'systemSettings', counters.systemSettings),
-      companyDocument: createModelMethods(stores.companyDocuments, 'companyDocument', counters.companyDocument),
-      truckDocument: createModelMethods(stores.truckDocuments, 'truckDocument', counters.truckDocument),
-      auditLog: createModelMethods(stores.auditLogs, 'auditLog', counters.auditLog),
+      loadEvent: createModelMethods(
+        stores.loadEvents,
+        "loadEvent",
+        counters.loadEvent
+      ),
+      ethiopianLocation: createModelMethods(
+        stores.ethiopianLocations,
+        "ethiopianLocation",
+        counters.ethiopianLocation
+      ),
+      session: createModelMethods(stores.sessions, "session", counters.session),
+      gpsPosition: createModelMethods(
+        stores.gpsPositions,
+        "gpsPosition",
+        counters.gpsPosition
+      ),
+      gpsDevice: createModelMethods(
+        stores.gpsDevices,
+        "gpsDevice",
+        counters.gpsDevice
+      ),
+      tripPod: createModelMethods(stores.tripPods, "tripPod", counters.tripPod),
+      dispute: createModelMethods(stores.disputes, "dispute", counters.dispute),
+      withdrawalRequest: createModelMethods(
+        stores.withdrawalRequests,
+        "withdrawalRequest",
+        counters.withdrawalRequest
+      ),
+      systemSettings: createModelMethods(
+        stores.systemSettings,
+        "systemSettings",
+        counters.systemSettings
+      ),
+      companyDocument: createModelMethods(
+        stores.companyDocuments,
+        "companyDocument",
+        counters.companyDocument
+      ),
+      truckDocument: createModelMethods(
+        stores.truckDocuments,
+        "truckDocument",
+        counters.truckDocument
+      ),
+      auditLog: createModelMethods(
+        stores.auditLogs,
+        "auditLog",
+        counters.auditLog
+      ),
       $transaction: jest.fn(),
       // Expose stores for test access
       __stores: stores,
       // Helper to clear all stores between tests if needed
       _clearStores: () => {
-        Object.values(stores).forEach(store => store.clear());
+        Object.values(stores).forEach((store) => store.clear());
       },
     },
   };
@@ -808,7 +1047,7 @@ jest.mock('@/lib/db', () => {
   // Fix $transaction: pass db (self-reference) so transactional code can access model methods
   const dbRef = result.db;
   dbRef.$transaction.mockImplementation((callback) => {
-    if (typeof callback === 'function') {
+    if (typeof callback === "function") {
       return callback(dbRef);
     }
     // Array of promises
@@ -822,8 +1061,8 @@ jest.mock('@/lib/db', () => {
 });
 
 // Mock jose library to handle ESM imports in Jest
-jest.mock('jose', () => {
-  const crypto = require('crypto');
+jest.mock("jose", () => {
+  const crypto = require("crypto");
 
   return {
     SignJWT: class SignJWT {
@@ -842,7 +1081,7 @@ jest.mock('jose', () => {
 
       setExpirationTime(duration) {
         const now = Math.floor(Date.now() / 1000);
-        if (typeof duration === 'string') {
+        if (typeof duration === "string") {
           // Parse durations like '24h', '5m', '1d'
           const match = duration.match(/^(\d+)([smhd])$/);
           if (match) {
@@ -853,7 +1092,7 @@ jest.mock('jose', () => {
           } else {
             this.payload.exp = now + 3600; // Default 1h
           }
-        } else if (typeof duration === 'number') {
+        } else if (typeof duration === "number") {
           this.payload.exp = duration;
         } else {
           this.payload.exp = now + 3600;
@@ -870,39 +1109,43 @@ jest.mock('jose', () => {
         if (!this.payload.exp) {
           this.payload.exp = Math.floor(Date.now() / 1000) + 3600;
         }
-        const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
-        const payload = Buffer.from(JSON.stringify(this.payload)).toString('base64url');
+        const header = Buffer.from(
+          JSON.stringify({ alg: "HS256", typ: "JWT" })
+        ).toString("base64url");
+        const payload = Buffer.from(JSON.stringify(this.payload)).toString(
+          "base64url"
+        );
         const signature = crypto
-          .createHmac('sha256', secret)
+          .createHmac("sha256", secret)
           .update(`${header}.${payload}`)
-          .digest('base64url');
+          .digest("base64url");
 
         return `${header}.${payload}.${signature}`;
       }
     },
 
     jwtVerify: async (token, secret) => {
-      const parts = token.split('.');
+      const parts = token.split(".");
       if (parts.length !== 3) {
-        throw new Error('Invalid JWT format');
+        throw new Error("Invalid JWT format");
       }
 
-      const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+      const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString());
 
       // Verify signature
       const header = parts[0];
       const expectedSignature = crypto
-        .createHmac('sha256', secret)
+        .createHmac("sha256", secret)
         .update(`${header}.${parts[1]}`)
-        .digest('base64url');
+        .digest("base64url");
 
       if (parts[2] !== expectedSignature) {
-        throw new Error('Invalid signature');
+        throw new Error("Invalid signature");
       }
 
       // Check expiration
       if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
-        throw new Error('Token expired');
+        throw new Error("Token expired");
       }
 
       return { payload };

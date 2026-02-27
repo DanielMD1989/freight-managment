@@ -6,11 +6,11 @@
  * Calculate service fee for a load based on corridor pricing
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { calculateServiceFee } from '@/lib/serviceFeeCalculation';
-import { z } from 'zod';
-import { zodErrorResponse } from '@/lib/validation';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import { calculateServiceFee } from "@/lib/serviceFeeCalculation";
+import { z } from "zod";
+import { zodErrorResponse } from "@/lib/validation";
 
 const calculateFeeSchema = z.object({
   loadId: z.string().cuid(),
@@ -33,7 +33,8 @@ export async function POST(request: NextRequest) {
     if (!feeCalc) {
       return NextResponse.json({
         calculated: false,
-        message: 'Could not calculate service fee - no matching corridor or missing route info',
+        message:
+          "Could not calculate service fee - no matching corridor or missing route info",
         serviceFee: null,
       });
     }
@@ -58,14 +59,14 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Calculate fee error:', error);
+    console.error("Calculate fee error:", error);
 
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

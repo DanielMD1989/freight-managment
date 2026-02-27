@@ -5,10 +5,10 @@
  * Displays detailed information about an organization
  */
 
-import { notFound } from 'next/navigation';
-import { getSession } from '@/lib/auth';
-import { db } from '@/lib/db';
-import OrganizationDetailsClient from './OrganizationDetailsClient';
+import { notFound } from "next/navigation";
+import { getSession } from "@/lib/auth";
+import { db } from "@/lib/db";
+import OrganizationDetailsClient from "./OrganizationDetailsClient";
 
 interface OrganizationPageProps {
   params: Promise<{
@@ -47,19 +47,23 @@ async function getOrganization(id: string) {
 
     return organization;
   } catch (error) {
-    console.error('Error fetching organization:', error);
+    console.error("Error fetching organization:", error);
     return null;
   }
 }
 
-export default async function OrganizationPage({ params }: OrganizationPageProps) {
+export default async function OrganizationPage({
+  params,
+}: OrganizationPageProps) {
   const session = await getSession();
   const { id } = await params;
 
   if (!session) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-gray-500 dark:text-gray-400">Please log in to view this page.</p>
+        <p className="text-gray-500 dark:text-gray-400">
+          Please log in to view this page.
+        </p>
       </div>
     );
   }
@@ -72,8 +76,8 @@ export default async function OrganizationPage({ params }: OrganizationPageProps
 
   // Check if user has permission to view this organization
   const canView =
-    session.role === 'ADMIN' ||
-    session.role === 'SUPER_ADMIN' ||
+    session.role === "ADMIN" ||
+    session.role === "SUPER_ADMIN" ||
     session.organizationId === organization.id;
 
   if (!canView) {
@@ -86,5 +90,7 @@ export default async function OrganizationPage({ params }: OrganizationPageProps
     );
   }
 
-  return <OrganizationDetailsClient organization={organization} user={session} />;
+  return (
+    <OrganizationDetailsClient organization={organization} user={session} />
+  );
 }

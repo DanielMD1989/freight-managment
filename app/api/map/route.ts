@@ -12,15 +12,15 @@
  * All interactions are read-only - no write actions through map.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { getVisibilityRules } from '@/lib/foundation-rules';
-import { UserRole, Prisma } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { getVisibilityRules } from "@/lib/foundation-rules";
+import { UserRole, Prisma } from "@prisma/client";
 
 interface MapMarker {
   id: string;
-  type: 'truck' | 'load' | 'pickup' | 'delivery' | 'trip';
+  type: "truck" | "load" | "pickup" | "delivery" | "trip";
   lat: number;
   lon: number;
   title: string;
@@ -28,10 +28,10 @@ interface MapMarker {
   // For trucks: loadStatus is the actual LoadStatus enum (null if no assigned load)
   // truckAvailability is a display field for map styling ('available' | 'busy')
   loadStatus?: string | null;
-  truckAvailability?: 'available' | 'busy';
+  truckAvailability?: "available" | "busy";
   // For loads/trips: status is the actual LoadStatus
   status?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 interface MapData {
@@ -68,15 +68,27 @@ export async function GET(request: NextRequest) {
     const session = await requireAuth();
     const { searchParams } = new URL(request.url);
 
-    const typeFilter = searchParams.get('type');
-    const statusFilter = searchParams.get('status');
-    const boundsParam = searchParams.get('bounds');
+    const typeFilter = searchParams.get("type");
+    const statusFilter = searchParams.get("status");
+    const boundsParam = searchParams.get("bounds");
 
     // Parse viewport bounds if provided
-    let bounds: { minLat: number; minLon: number; maxLat: number; maxLon: number } | null = null;
+    let bounds: {
+      minLat: number;
+      minLon: number;
+      maxLat: number;
+      maxLon: number;
+    } | null = null;
     if (boundsParam) {
-      const [minLat, minLon, maxLat, maxLon] = boundsParam.split(',').map(Number);
-      if (!isNaN(minLat) && !isNaN(minLon) && !isNaN(maxLat) && !isNaN(maxLon)) {
+      const [minLat, minLon, maxLat, maxLon] = boundsParam
+        .split(",")
+        .map(Number);
+      if (
+        !isNaN(minLat) &&
+        !isNaN(minLon) &&
+        !isNaN(maxLat) &&
+        !isNaN(maxLon)
+      ) {
         bounds = { minLat, minLon, maxLat, maxLon };
       }
     }
@@ -88,37 +100,36 @@ export async function GET(request: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const visibility = getVisibilityRules(user.role);
     const markers: MapMarker[] = [];
-    const routes: MapData['routes'] = [];
+    const routes: MapData["routes"] = [];
 
     // Build filters based on role
-    const isAdmin = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
-    const isDispatcher = user.role === 'DISPATCHER';
-    const isCarrier = user.role === 'CARRIER';
-    const isShipper = user.role === 'SHIPPER';
+    const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
+    const isDispatcher = user.role === "DISPATCHER";
+    const isCarrier = user.role === "CARRIER";
+    const isShipper = user.role === "SHIPPER";
 
     // =========================================================================
     // TRUCK MARKERS
     // =========================================================================
-    if (!typeFilter || typeFilter === 'truck') {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let truckWhere: Record<string, any> = {};
+    if (!typeFilter || typeFilter === "truck") {
+      const truckWhere: Record<string, unknown> = {};
 
       if (isCarrier) {
         // Carrier: Own fleet only
         truckWhere.carrierId = user.organizationId;
       } else if (isDispatcher) {
         // Dispatcher: Only posted trucks (with active postings)
-        truckWhere.postings = { some: { status: 'ACTIVE' } };
+        truckWhere.postings = { some: { status: "ACTIVE" } };
       } else if (isShipper) {
         // Shipper: Only trucks assigned to their loads (in transit)
         truckWhere.assignedLoad = {
           shipperId: user.organizationId,
-          status: { in: ['ASSIGNED', 'IN_TRANSIT'] },
+          status: { in: ["ASSIGNED", "IN_TRANSIT"] },
         };
       }
       // Admin: No filter
@@ -130,7 +141,7 @@ export async function GET(request: NextRequest) {
           // Must have location data
           OR: [
             { currentLocationLat: { not: null } },
-            { postings: { some: { status: 'ACTIVE' } } },
+            { postings: { some: { status: "ACTIVE" } } },
           ],
         },
         select: {
@@ -144,9 +155,11 @@ export async function GET(request: NextRequest) {
           gpsStatus: true,
           carrier: { select: { name: true } },
           postings: {
-            where: { status: 'ACTIVE' },
+            where: { status: "ACTIVE" },
             select: {
-              originCity: { select: { name: true, latitude: true, longitude: true } },
+              originCity: {
+                select: { name: true, latitude: true, longitude: true },
+              },
             },
             take: 1,
           },
@@ -164,8 +177,12 @@ export async function GET(request: NextRequest) {
 
       for (const truck of trucks) {
         // Get location from GPS or posting origin
-        let lat = truck.currentLocationLat ? Number(truck.currentLocationLat) : null;
-        let lon = truck.currentLocationLon ? Number(truck.currentLocationLon) : null;
+        let lat = truck.currentLocationLat
+          ? Number(truck.currentLocationLat)
+          : null;
+        let lon = truck.currentLocationLon
+          ? Number(truck.currentLocationLon)
+          : null;
 
         // Fall back to posting origin if no GPS location
         if (!lat && truck.postings[0]?.originCity) {
@@ -175,13 +192,19 @@ export async function GET(request: NextRequest) {
 
         if (lat && lon) {
           // Apply viewport bounds filter
-          if (bounds && (lat < bounds.minLat || lat > bounds.maxLat || lon < bounds.minLon || lon > bounds.maxLon)) {
+          if (
+            bounds &&
+            (lat < bounds.minLat ||
+              lat > bounds.maxLat ||
+              lon < bounds.minLon ||
+              lon > bounds.maxLon)
+          ) {
             continue;
           }
 
           markers.push({
             id: truck.id,
-            type: 'truck',
+            type: "truck",
             lat,
             lon,
             title: truck.licensePlate,
@@ -189,7 +212,7 @@ export async function GET(request: NextRequest) {
             // loadStatus is the actual LoadStatus enum (null if no assigned load)
             // truckAvailability is a display-only field for map rendering
             loadStatus: truck.assignedLoad?.status || null,
-            truckAvailability: truck.isAvailable ? 'available' : 'busy',
+            truckAvailability: truck.isAvailable ? "available" : "busy",
             metadata: {
               truckType: truck.truckType,
               carrier: truck.carrier?.name,
@@ -205,9 +228,13 @@ export async function GET(request: NextRequest) {
     // =========================================================================
     // LOAD MARKERS (Pickup & Delivery points)
     // =========================================================================
-    if (!typeFilter || typeFilter === 'load' || typeFilter === 'pickup' || typeFilter === 'delivery') {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let loadWhere: Record<string, any> = {};
+    if (
+      !typeFilter ||
+      typeFilter === "load" ||
+      typeFilter === "pickup" ||
+      typeFilter === "delivery"
+    ) {
+      const loadWhere: Record<string, unknown> = {};
 
       if (isShipper) {
         // Shipper: Own loads only
@@ -217,7 +244,9 @@ export async function GET(request: NextRequest) {
         loadWhere.assignedTruck = { carrierId: user.organizationId };
       } else if (isDispatcher) {
         // Dispatcher: Posted/active loads for coordination
-        loadWhere.status = { in: ['POSTED', 'SEARCHING', 'OFFERED', 'ASSIGNED', 'IN_TRANSIT'] };
+        loadWhere.status = {
+          in: ["POSTED", "SEARCHING", "OFFERED", "ASSIGNED", "IN_TRANSIT"],
+        };
       }
       // Admin: No filter
 
@@ -230,10 +259,7 @@ export async function GET(request: NextRequest) {
         where: {
           ...loadWhere,
           // Must have location data
-          OR: [
-            { originLat: { not: null } },
-            { destinationLat: { not: null } },
-          ],
+          OR: [{ originLat: { not: null } }, { destinationLat: { not: null } }],
         },
         select: {
           id: true,
@@ -256,14 +282,24 @@ export async function GET(request: NextRequest) {
 
       for (const load of loads) {
         // Pickup marker
-        if (load.originLat && load.originLon && (!typeFilter || typeFilter === 'load' || typeFilter === 'pickup')) {
+        if (
+          load.originLat &&
+          load.originLon &&
+          (!typeFilter || typeFilter === "load" || typeFilter === "pickup")
+        ) {
           const lat = Number(load.originLat);
           const lon = Number(load.originLon);
 
-          if (!bounds || (lat >= bounds.minLat && lat <= bounds.maxLat && lon >= bounds.minLon && lon <= bounds.maxLon)) {
+          if (
+            !bounds ||
+            (lat >= bounds.minLat &&
+              lat <= bounds.maxLat &&
+              lon >= bounds.minLon &&
+              lon <= bounds.maxLon)
+          ) {
             markers.push({
               id: `${load.id}-pickup`,
-              type: 'pickup',
+              type: "pickup",
               lat,
               lon,
               title: `Pickup: ${load.pickupCity}`,
@@ -280,14 +316,24 @@ export async function GET(request: NextRequest) {
         }
 
         // Delivery marker
-        if (load.destinationLat && load.destinationLon && (!typeFilter || typeFilter === 'load' || typeFilter === 'delivery')) {
+        if (
+          load.destinationLat &&
+          load.destinationLon &&
+          (!typeFilter || typeFilter === "load" || typeFilter === "delivery")
+        ) {
           const lat = Number(load.destinationLat);
           const lon = Number(load.destinationLon);
 
-          if (!bounds || (lat >= bounds.minLat && lat <= bounds.maxLat && lon >= bounds.minLon && lon <= bounds.maxLon)) {
+          if (
+            !bounds ||
+            (lat >= bounds.minLat &&
+              lat <= bounds.maxLat &&
+              lon >= bounds.minLon &&
+              lon <= bounds.maxLon)
+          ) {
             markers.push({
               id: `${load.id}-delivery`,
-              type: 'delivery',
+              type: "delivery",
               lat,
               lon,
               title: `Delivery: ${load.deliveryCity}`,
@@ -303,12 +349,23 @@ export async function GET(request: NextRequest) {
         }
 
         // Add route for assigned/in-transit loads
-        if (load.originLat && load.originLon && load.destinationLat && load.destinationLon) {
-          if (load.status === 'ASSIGNED' || load.status === 'IN_TRANSIT') {
+        if (
+          load.originLat &&
+          load.originLon &&
+          load.destinationLat &&
+          load.destinationLon
+        ) {
+          if (load.status === "ASSIGNED" || load.status === "IN_TRANSIT") {
             routes.push({
               id: load.id,
-              origin: { lat: Number(load.originLat), lon: Number(load.originLon) },
-              destination: { lat: Number(load.destinationLat), lon: Number(load.destinationLon) },
+              origin: {
+                lat: Number(load.originLat),
+                lon: Number(load.originLon),
+              },
+              destination: {
+                lat: Number(load.destinationLat),
+                lon: Number(load.destinationLon),
+              },
               status: load.status,
               loadId: load.id,
               truckId: load.assignedTruckId || undefined,
@@ -340,12 +397,19 @@ export async function GET(request: NextRequest) {
         ? db.load.count({ where: { shipperId: orgId } })
         : isCarrier && orgId
           ? db.load.count({ where: { assignedTruck: { carrierId: orgId } } })
-          : db.load.count({ where: { status: { in: ['POSTED', 'ASSIGNED', 'IN_TRANSIT'] } } }),
+          : db.load.count({
+              where: { status: { in: ["POSTED", "ASSIGNED", "IN_TRANSIT"] } },
+            }),
       isShipper && orgId
-        ? db.load.count({ where: { shipperId: orgId, status: 'IN_TRANSIT' } })
+        ? db.load.count({ where: { shipperId: orgId, status: "IN_TRANSIT" } })
         : isCarrier && orgId
-          ? db.load.count({ where: { assignedTruck: { carrierId: orgId }, status: 'IN_TRANSIT' } })
-          : db.load.count({ where: { status: 'IN_TRANSIT' } }),
+          ? db.load.count({
+              where: {
+                assignedTruck: { carrierId: orgId },
+                status: "IN_TRANSIT",
+              },
+            })
+          : db.load.count({ where: { status: "IN_TRANSIT" } }),
     ]);
 
     const mapData: MapData = {
@@ -360,9 +424,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(mapData);
   } catch (error) {
-    console.error('Map data error:', error);
+    console.error("Map data error:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch map data' },
+      { error: "Failed to fetch map data" },
       { status: 500 }
     );
   }

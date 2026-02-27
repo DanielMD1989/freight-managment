@@ -5,10 +5,10 @@
  * Simple bar chart showing earnings over time
  */
 
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { formatCurrency } from '@/lib/formatters';
+import React, { useState, useEffect } from "react";
+import { formatCurrency } from "@/lib/formatters";
 
 interface EarningsData {
   period: string;
@@ -20,10 +20,10 @@ interface EarningsChartProps {
   organizationId?: string;
 }
 
-type ViewMode = 'weekly' | 'monthly';
+type ViewMode = "weekly" | "monthly";
 
 export default function EarningsChart({ organizationId }: EarningsChartProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>('weekly');
+  const [viewMode, setViewMode] = useState<ViewMode>("weekly");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [earnings, setEarnings] = useState<EarningsData[]>([]);
@@ -56,8 +56,8 @@ export default function EarningsChart({ organizationId }: EarningsChartProps) {
       setEarnings(aggregated.data);
       setTotalEarnings(aggregated.total);
     } catch (err) {
-      console.error('Error fetching earnings:', err);
-      setError('Failed to load earnings data');
+      console.error("Error fetching earnings:", err);
+      setError("Failed to load earnings data");
     } finally {
       setLoading(false);
     }
@@ -71,21 +71,21 @@ export default function EarningsChart({ organizationId }: EarningsChartProps) {
     const periods: Map<string, { amount: number; label: string }> = new Map();
     let total = 0;
 
-    if (mode === 'weekly') {
+    if (mode === "weekly") {
       // Last 7 days
       for (let i = 6; i >= 0; i--) {
         const date = new Date(now);
         date.setDate(date.getDate() - i);
-        const key = date.toISOString().split('T')[0];
-        const label = date.toLocaleDateString('en-US', { weekday: 'short' });
+        const key = date.toISOString().split("T")[0];
+        const label = date.toLocaleDateString("en-US", { weekday: "short" });
         periods.set(key, { amount: 0, label });
       }
     } else {
       // Last 6 months
       for (let i = 5; i >= 0; i--) {
         const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        const label = date.toLocaleDateString('en-US', { month: 'short' });
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+        const label = date.toLocaleDateString("en-US", { month: "short" });
         periods.set(key, { amount: 0, label });
       }
     }
@@ -96,10 +96,10 @@ export default function EarningsChart({ organizationId }: EarningsChartProps) {
         const date = new Date(tx.createdAt);
         let key: string;
 
-        if (mode === 'weekly') {
-          key = date.toISOString().split('T')[0];
+        if (mode === "weekly") {
+          key = date.toISOString().split("T")[0];
         } else {
-          key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
         }
 
         if (periods.has(key)) {
@@ -130,16 +130,18 @@ export default function EarningsChart({ organizationId }: EarningsChartProps) {
   if (loading) {
     return (
       <div className="animate-pulse">
-        <div className="flex items-center justify-between mb-4">
-          <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-          <div className="h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+        <div className="mb-4 flex items-center justify-between">
+          <div className="h-4 w-24 rounded bg-gray-200 dark:bg-gray-700" />
+          <div className="h-8 w-32 rounded bg-gray-200 dark:bg-gray-700" />
         </div>
-        <div className="flex items-end gap-2 h-32">
-          {[...Array(viewMode === 'weekly' ? 7 : 6)].map((_, i) => (
+        <div className="flex h-32 items-end gap-2">
+          {[...Array(viewMode === "weekly" ? 7 : 6)].map((_, i) => (
             <div
               key={i}
-              className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-t"
-              style={{ height: `${skeletonHeights[i % skeletonHeights.length]}%` }}
+              className="flex-1 rounded-t bg-gray-200 dark:bg-gray-700"
+              style={{
+                height: `${skeletonHeights[i % skeletonHeights.length]}%`,
+              }}
             />
           ))}
         </div>
@@ -150,49 +152,50 @@ export default function EarningsChart({ organizationId }: EarningsChartProps) {
   return (
     <div>
       {/* Header with toggle */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <div>
           <p
             className="text-2xl font-bold"
-            style={{ color: 'var(--foreground)' }}
+            style={{ color: "var(--foreground)" }}
           >
             {formatCurrency(totalEarnings)}
           </p>
-          <p
-            className="text-xs"
-            style={{ color: 'var(--foreground-muted)' }}
-          >
-            {viewMode === 'weekly' ? 'Last 7 days' : 'Last 6 months'}
+          <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
+            {viewMode === "weekly" ? "Last 7 days" : "Last 6 months"}
           </p>
         </div>
 
         {/* Toggle */}
         <div
           className="flex rounded-lg p-0.5"
-          style={{ background: 'var(--bg-tinted)' }}
+          style={{ background: "var(--bg-tinted)" }}
         >
           <button
-            onClick={() => setViewMode('weekly')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              viewMode === 'weekly'
-                ? 'bg-white dark:bg-gray-800 shadow-sm'
-                : ''
+            onClick={() => setViewMode("weekly")}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              viewMode === "weekly" ? "bg-white shadow-sm dark:bg-gray-800" : ""
             }`}
             style={{
-              color: viewMode === 'weekly' ? 'var(--foreground)' : 'var(--foreground-muted)',
+              color:
+                viewMode === "weekly"
+                  ? "var(--foreground)"
+                  : "var(--foreground-muted)",
             }}
           >
             Weekly
           </button>
           <button
-            onClick={() => setViewMode('monthly')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              viewMode === 'monthly'
-                ? 'bg-white dark:bg-gray-800 shadow-sm'
-                : ''
+            onClick={() => setViewMode("monthly")}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              viewMode === "monthly"
+                ? "bg-white shadow-sm dark:bg-gray-800"
+                : ""
             }`}
             style={{
-              color: viewMode === 'monthly' ? 'var(--foreground)' : 'var(--foreground-muted)',
+              color:
+                viewMode === "monthly"
+                  ? "var(--foreground)"
+                  : "var(--foreground-muted)",
             }}
           >
             Monthly
@@ -203,20 +206,20 @@ export default function EarningsChart({ organizationId }: EarningsChartProps) {
       {/* Chart */}
       {error ? (
         <div
-          className="text-center py-8 text-sm"
-          style={{ color: 'var(--foreground-muted)' }}
+          className="py-8 text-center text-sm"
+          style={{ color: "var(--foreground-muted)" }}
         >
           {error}
         </div>
       ) : earnings.length === 0 || totalEarnings === 0 ? (
-        <div className="text-center py-8">
+        <div className="py-8 text-center">
           <div
-            className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center"
-            style={{ background: 'var(--bg-tinted)' }}
+            className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full"
+            style={{ background: "var(--bg-tinted)" }}
           >
             <svg
-              className="w-6 h-6"
-              style={{ color: 'var(--foreground-muted)' }}
+              className="h-6 w-6"
+              style={{ color: "var(--foreground-muted)" }}
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -231,13 +234,13 @@ export default function EarningsChart({ organizationId }: EarningsChartProps) {
           </div>
           <p
             className="text-sm font-medium"
-            style={{ color: 'var(--foreground)' }}
+            style={{ color: "var(--foreground)" }}
           >
             No earnings yet
           </p>
           <p
-            className="text-xs mt-1"
-            style={{ color: 'var(--foreground-muted)' }}
+            className="mt-1 text-xs"
+            style={{ color: "var(--foreground-muted)" }}
           >
             Complete trips to start earning
           </p>
@@ -245,29 +248,29 @@ export default function EarningsChart({ organizationId }: EarningsChartProps) {
       ) : (
         <div className="space-y-2">
           {/* Bar Chart */}
-          <div className="flex items-end gap-1.5 h-28">
+          <div className="flex h-28 items-end gap-1.5">
             {earnings.map((item, index) => {
-              const heightPercent = maxAmount > 0 ? (item.amount / maxAmount) * 100 : 0;
+              const heightPercent =
+                maxAmount > 0 ? (item.amount / maxAmount) * 100 : 0;
               return (
                 <div
                   key={item.period}
-                  className="flex-1 flex flex-col items-center group"
+                  className="group flex flex-1 flex-col items-center"
                 >
                   {/* Tooltip on hover */}
                   <div className="relative w-full">
-                    <div
-                      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10"
-                    >
+                    <div className="absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs font-medium whitespace-nowrap text-white opacity-0 transition-opacity group-hover:opacity-100">
                       {formatCurrency(item.amount)}
                     </div>
                     <div
                       className="w-full rounded-t transition-all duration-300 ease-out hover:opacity-80"
                       style={{
                         height: `${Math.max(heightPercent, 4)}%`,
-                        minHeight: '4px',
-                        background: item.amount > 0
-                          ? 'linear-gradient(to top, var(--primary-500), var(--primary-400))'
-                          : 'var(--bg-tinted)',
+                        minHeight: "4px",
+                        background:
+                          item.amount > 0
+                            ? "linear-gradient(to top, var(--primary-500), var(--primary-400))"
+                            : "var(--bg-tinted)",
                       }}
                     />
                   </div>
@@ -282,7 +285,7 @@ export default function EarningsChart({ organizationId }: EarningsChartProps) {
               <div
                 key={item.period}
                 className="flex-1 text-center text-xs"
-                style={{ color: 'var(--foreground-muted)' }}
+                style={{ color: "var(--foreground-muted)" }}
               >
                 {item.label}
               </div>

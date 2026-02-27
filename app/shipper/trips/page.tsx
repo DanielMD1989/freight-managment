@@ -5,10 +5,10 @@
  * Active trips (ASSIGNED, PICKUP_PENDING, IN_TRANSIT) are shown in My Loads.
  */
 
-import { cookies } from 'next/headers';
-import { verifyToken } from '@/lib/auth';
-import { redirect } from 'next/navigation';
-import ShipperTripsClient from './ShipperTripsClient';
+import { cookies } from "next/headers";
+import { verifyToken } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import ShipperTripsClient from "./ShipperTripsClient";
 
 interface Trip {
   id: string;
@@ -75,7 +75,7 @@ interface TripsResponse {
 }
 
 // Only completed trip statuses - active trips are in My Loads
-const TRIP_STATUSES = ['DELIVERED', 'COMPLETED'];
+const TRIP_STATUSES = ["DELIVERED", "COMPLETED"];
 
 /**
  * Fetch trips from API
@@ -86,42 +86,42 @@ async function getTrips(
 ): Promise<TripsResponse | null> {
   try {
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('session');
+    const sessionCookie = cookieStore.get("session");
 
     if (!sessionCookie) {
       return null;
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
     const params = new URLSearchParams({
       page: page.toString(),
-      limit: '20',
-      myLoads: 'true',
+      limit: "20",
+      myLoads: "true",
     });
 
     // Filter by trip-related statuses
-    if (status && status !== 'all') {
-      params.append('status', status);
+    if (status && status !== "all") {
+      params.append("status", status);
     } else {
       // Default: show all trip statuses
-      params.append('status', TRIP_STATUSES.join(','));
+      params.append("status", TRIP_STATUSES.join(","));
     }
 
     const response = await fetch(`${baseUrl}/api/loads?${params}`, {
       headers: {
         Cookie: `session=${sessionCookie.value}`,
       },
-      cache: 'no-store',
+      cache: "no-store",
     });
 
     if (!response.ok) {
-      console.error('Failed to fetch trips:', response.status);
+      console.error("Failed to fetch trips:", response.status);
       return null;
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Error fetching trips:', error);
+    console.error("Error fetching trips:", error);
     return null;
   }
 }
@@ -136,22 +136,22 @@ export default async function ShipperTripsPage({
 }) {
   // Verify authentication
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get('session');
+  const sessionCookie = cookieStore.get("session");
 
   if (!sessionCookie) {
-    redirect('/login?redirect=/shipper/trips');
+    redirect("/login?redirect=/shipper/trips");
   }
 
   const session = await verifyToken(sessionCookie.value);
 
-  if (!session || (session.role !== 'SHIPPER' && session.role !== 'ADMIN')) {
-    redirect('/unauthorized');
+  if (!session || (session.role !== "SHIPPER" && session.role !== "ADMIN")) {
+    redirect("/unauthorized");
   }
 
   // Get query parameters
   const params = await searchParams;
-  const page = parseInt(params.page || '1');
-  const status = params.status || 'all';
+  const page = parseInt(params.page || "1");
+  const status = params.status || "all";
 
   // Fetch trips
   const data = await getTrips(page, status);
@@ -162,36 +162,44 @@ export default async function ShipperTripsPage({
     loadId: load.id,
     referenceNumber: `LOAD-${load.id.slice(-8).toUpperCase()}`,
     status: load.status,
-    pickupCity: load.pickupCity || 'Unknown',
-    deliveryCity: load.deliveryCity || 'Unknown',
+    pickupCity: load.pickupCity || "Unknown",
+    deliveryCity: load.deliveryCity || "Unknown",
     pickupDate: load.pickupDate,
     deliveryDate: load.deliveryDate || load.pickupDate,
     truckType: load.truckType,
     weight: load.weight ?? 0,
     rate: load.rate ?? null,
     assignedAt: load.assignedAt || load.updatedAt,
-    truck: load.assignedTruck ? {
-      id: load.assignedTruck.id,
-      licensePlate: load.assignedTruck.licensePlate,
-      truckType: load.assignedTruck.truckType,
-    } : null,
-    carrier: load.assignedTruck?.carrier ? {
-      id: load.assignedTruck.carrier.id,
-      name: load.assignedTruck.carrier.name,
-      isVerified: load.assignedTruck.carrier.isVerified || false,
-    } : null,
+    truck: load.assignedTruck
+      ? {
+          id: load.assignedTruck.id,
+          licensePlate: load.assignedTruck.licensePlate,
+          truckType: load.assignedTruck.truckType,
+        }
+      : null,
+    carrier: load.assignedTruck?.carrier
+      ? {
+          id: load.assignedTruck.carrier.id,
+          name: load.assignedTruck.carrier.name,
+          isVerified: load.assignedTruck.carrier.isVerified || false,
+        }
+      : null,
     podSubmitted: load.podSubmitted ?? false,
     podVerified: load.podVerified ?? false,
   }));
 
   if (!data) {
     return (
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="mx-auto max-w-7xl p-6">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-800 dark:text-white">Trip History</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-2">View delivered and completed trips</p>
+          <h1 className="text-3xl font-bold text-slate-800 dark:text-white">
+            Trip History
+          </h1>
+          <p className="mt-2 text-slate-600 dark:text-slate-400">
+            View delivered and completed trips
+          </p>
         </div>
-        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4">
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4">
           <p className="text-rose-800">
             Failed to load trips. Please try refreshing the page.
           </p>
@@ -201,11 +209,13 @@ export default async function ShipperTripsPage({
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div className="mx-auto max-w-7xl p-6">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-800 dark:text-white">Trip History</h1>
-        <p className="text-slate-600 dark:text-slate-400 mt-2">
+        <h1 className="text-3xl font-bold text-slate-800 dark:text-white">
+          Trip History
+        </h1>
+        <p className="mt-2 text-slate-600 dark:text-slate-400">
           View delivered and completed trips ({data.pagination.total} total)
         </p>
       </div>

@@ -4,13 +4,13 @@
  * Main entry point for carrier load board interface
  */
 
-import { redirect } from 'next/navigation';
-import { getSession } from '@/lib/auth';
-import CarrierLoadboardClient from './CarrierLoadboardClient';
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth";
+import CarrierLoadboardClient from "./CarrierLoadboardClient";
 
 export const metadata = {
-  title: 'Load Board - Carrier',
-  description: 'Professional load board for carriers',
+  title: "Load Board - Carrier",
+  description: "Professional load board for carriers",
 };
 
 export default async function CarrierLoadboardPage() {
@@ -19,12 +19,16 @@ export default async function CarrierLoadboardPage() {
 
   // Redirect if not authenticated
   if (!session) {
-    redirect('/login');
+    redirect("/login");
   }
 
   // Verify carrier role
-  if (session.role !== 'CARRIER' && session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
-    redirect('/unauthorized');
+  if (
+    session.role !== "CARRIER" &&
+    session.role !== "ADMIN" &&
+    session.role !== "SUPER_ADMIN"
+  ) {
+    redirect("/unauthorized");
   }
 
   // Pass user data to client component

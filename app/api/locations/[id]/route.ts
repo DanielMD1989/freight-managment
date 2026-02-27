@@ -11,8 +11,8 @@
  * Sprint 8 - Story 8.2: Ethiopian Location Management
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
 
 /**
  * GET /api/locations/[id]
@@ -41,9 +41,9 @@ export async function GET(
     const { id } = await params;
 
     // Validate ID format (cuid)
-    if (!id || typeof id !== 'string' || id.length < 10) {
+    if (!id || typeof id !== "string" || id.length < 10) {
       return NextResponse.json(
-        { error: 'Invalid location ID format' },
+        { error: "Invalid location ID format" },
         { status: 400 }
       );
     }
@@ -69,7 +69,7 @@ export async function GET(
     // Check if location exists and is active
     if (!location || !location.isActive) {
       return NextResponse.json(
-        { error: 'Location not found' },
+        { error: "Location not found" },
         { status: 404 }
       );
     }
@@ -84,10 +84,10 @@ export async function GET(
 
     return NextResponse.json(locationFormatted);
   } catch (error) {
-    console.error('Error fetching location:', error);
+    console.error("Error fetching location:", error);
 
     return NextResponse.json(
-      { error: 'Failed to fetch location' },
+      { error: "Failed to fetch location" },
       { status: 500 }
     );
   }

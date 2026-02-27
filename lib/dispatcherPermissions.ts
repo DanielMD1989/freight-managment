@@ -13,11 +13,11 @@
  * - Carrier is FINAL authority on execution
  */
 
-import { UserRole } from '@prisma/client';
+import { UserRole } from "@prisma/client";
 import {
   RULE_DISPATCHER_COORDINATION_ONLY,
   assertDispatcherCannotAssign,
-} from './foundation-rules';
+} from "./foundation-rules";
 
 export interface DispatcherUser {
   role: UserRole;
@@ -36,9 +36,9 @@ export interface DispatcherUser {
  */
 export function canViewAllLoads(user: DispatcherUser): boolean {
   return (
-    user.role === 'DISPATCHER' ||
-    user.role === 'ADMIN' ||
-    user.role === 'SUPER_ADMIN'
+    user.role === "DISPATCHER" ||
+    user.role === "ADMIN" ||
+    user.role === "SUPER_ADMIN"
   );
 }
 
@@ -53,9 +53,9 @@ export function canViewAllLoads(user: DispatcherUser): boolean {
  */
 export function canViewAllTrucks(user: DispatcherUser): boolean {
   return (
-    user.role === 'DISPATCHER' ||
-    user.role === 'SUPER_ADMIN' ||
-    user.role === 'ADMIN'
+    user.role === "DISPATCHER" ||
+    user.role === "SUPER_ADMIN" ||
+    user.role === "ADMIN"
   );
 }
 
@@ -78,23 +78,23 @@ export function canAssignLoads(
 ): boolean {
   // FOUNDATION RULE: Dispatcher CANNOT directly assign loads
   // They can only PROPOSE matches that require carrier approval
-  if (user.role === 'DISPATCHER') {
+  if (user.role === "DISPATCHER") {
     return false; // Use canProposeMatch() instead
   }
 
   // Platform ops and admin can directly assign (override for support)
-  if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
+  if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") {
     return true;
   }
 
   // Carriers can assign loads to their own trucks (they are final authority)
-  if (user.role === 'CARRIER') {
+  if (user.role === "CARRIER") {
     return true; // Will be validated against their own trucks
   }
 
   // Shippers can only REQUEST assignment of their own loads (requires carrier approval)
   // This returns false because shippers don't directly assign - they request
-  if (user.role === 'SHIPPER' && loadShipperId) {
+  if (user.role === "SHIPPER" && loadShipperId) {
     // Shippers use request flow, not direct assignment
     return false;
   }
@@ -125,9 +125,9 @@ export function canAssignLoads(
  */
 export function canProposeMatch(user: DispatcherUser): boolean {
   return (
-    user.role === 'DISPATCHER' ||
-    user.role === 'ADMIN' ||
-    user.role === 'SUPER_ADMIN'
+    user.role === "DISPATCHER" ||
+    user.role === "ADMIN" ||
+    user.role === "SUPER_ADMIN"
   );
 }
 
@@ -149,12 +149,12 @@ export function canApproveProposals(
   truckCarrierId?: string
 ): boolean {
   // Carriers can approve proposals for their own trucks
-  if (user.role === 'CARRIER' && truckCarrierId) {
+  if (user.role === "CARRIER" && truckCarrierId) {
     return user.organizationId === truckCarrierId;
   }
 
   // Admin/SuperAdmin can approve (override for support)
-  if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
+  if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") {
     return true;
   }
 
@@ -175,12 +175,12 @@ export function canRequestTruck(
   loadShipperId?: string
 ): boolean {
   // Shippers can request trucks for their own loads
-  if (user.role === 'SHIPPER' && loadShipperId) {
+  if (user.role === "SHIPPER" && loadShipperId) {
     return user.organizationId === loadShipperId;
   }
 
   // Admin/SuperAdmin can request on behalf of shippers
-  if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
+  if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") {
     return true;
   }
 
@@ -202,12 +202,12 @@ export function canApproveRequests(
   truckCarrierId?: string
 ): boolean {
   // Carriers can approve requests for their own trucks
-  if (user.role === 'CARRIER' && truckCarrierId) {
+  if (user.role === "CARRIER" && truckCarrierId) {
     return user.organizationId === truckCarrierId;
   }
 
   // Admin/SuperAdmin can approve (override for support)
-  if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
+  if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") {
     return true;
   }
 
@@ -233,20 +233,20 @@ export function canUpdateLoadStatus(
 ): boolean {
   // Dispatcher, platform ops, and admin can update any load
   if (
-    user.role === 'DISPATCHER' ||
-    user.role === 'SUPER_ADMIN' ||
-    user.role === 'ADMIN'
+    user.role === "DISPATCHER" ||
+    user.role === "SUPER_ADMIN" ||
+    user.role === "ADMIN"
   ) {
     return true;
   }
 
   // Shippers can update their own loads
-  if (user.role === 'SHIPPER' && loadShipperId) {
+  if (user.role === "SHIPPER" && loadShipperId) {
     return user.organizationId === loadShipperId;
   }
 
   // Carriers can update loads assigned to their trucks
-  if (user.role === 'CARRIER' && loadCarrierId) {
+  if (user.role === "CARRIER" && loadCarrierId) {
     return user.organizationId === loadCarrierId;
   }
 
@@ -272,20 +272,20 @@ export function canAccessGpsTracking(
 ): boolean {
   // Dispatcher, platform ops, and admin can access all GPS tracking
   if (
-    user.role === 'DISPATCHER' ||
-    user.role === 'SUPER_ADMIN' ||
-    user.role === 'ADMIN'
+    user.role === "DISPATCHER" ||
+    user.role === "SUPER_ADMIN" ||
+    user.role === "ADMIN"
   ) {
     return true;
   }
 
   // Shippers can access tracking for their own loads
-  if (user.role === 'SHIPPER' && loadShipperId) {
+  if (user.role === "SHIPPER" && loadShipperId) {
     return user.organizationId === loadShipperId;
   }
 
   // Carriers can access tracking for loads assigned to their trucks
-  if (user.role === 'CARRIER' && loadCarrierId) {
+  if (user.role === "CARRIER" && loadCarrierId) {
     return user.organizationId === loadCarrierId;
   }
 
@@ -308,12 +308,12 @@ export function canManageTrucks(
   truckCarrierId?: string
 ): boolean {
   // Platform ops and admin can manage any truck
-  if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
+  if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") {
     return true;
   }
 
   // Carriers can manage their own trucks
-  if (user.role === 'CARRIER' && truckCarrierId) {
+  if (user.role === "CARRIER" && truckCarrierId) {
     return user.organizationId === truckCarrierId;
   }
 
@@ -332,9 +332,9 @@ export function canManageTrucks(
  */
 export function canViewSystemDashboard(user: DispatcherUser): boolean {
   return (
-    user.role === 'DISPATCHER' ||
-    user.role === 'SUPER_ADMIN' ||
-    user.role === 'ADMIN'
+    user.role === "DISPATCHER" ||
+    user.role === "SUPER_ADMIN" ||
+    user.role === "ADMIN"
   );
 }
 
@@ -345,7 +345,7 @@ export function canViewSystemDashboard(user: DispatcherUser): boolean {
  * @returns True if user has DISPATCHER role
  */
 export function isDispatcher(user: DispatcherUser): boolean {
-  return user.role === 'DISPATCHER';
+  return user.role === "DISPATCHER";
 }
 
 /**
@@ -356,9 +356,9 @@ export function isDispatcher(user: DispatcherUser): boolean {
  */
 export function hasElevatedPermissions(user: DispatcherUser): boolean {
   return (
-    user.role === 'DISPATCHER' ||
-    user.role === 'SUPER_ADMIN' ||
-    user.role === 'ADMIN'
+    user.role === "DISPATCHER" ||
+    user.role === "SUPER_ADMIN" ||
+    user.role === "ADMIN"
   );
 }
 
@@ -378,9 +378,9 @@ export function getDispatcherPermissions(user: DispatcherUser) {
     canViewSystemDashboard: canViewSystemDashboard(user),
 
     // Assignment permissions (Phase 2: Dispatcher cannot directly assign)
-    canAssignLoads: canAssignLoads(user),      // FALSE for DISPATCHER
-    canProposeMatch: canProposeMatch(user),    // TRUE for DISPATCHER - propose only
-    canRequestTruck: canRequestTruck(user),    // Shipper-led matching
+    canAssignLoads: canAssignLoads(user), // FALSE for DISPATCHER
+    canProposeMatch: canProposeMatch(user), // TRUE for DISPATCHER - propose only
+    canRequestTruck: canRequestTruck(user), // Shipper-led matching
     canApproveRequests: canApproveRequests(user), // Carrier authority
 
     // Other permissions

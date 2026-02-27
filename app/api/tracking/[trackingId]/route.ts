@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { getTrackingStatus } from '@/lib/gpsTracking';
-import { checkRpsLimit, RPS_CONFIGS } from '@/lib/rateLimit';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { getTrackingStatus } from "@/lib/gpsTracking";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 
 /**
  * GET /api/tracking/[trackingId]
@@ -25,26 +25,26 @@ export async function GET(
   try {
     // HIGH FIX #11: Apply rate limiting to public endpoint
     const ip =
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      request.headers.get('x-real-ip') ||
-      'unknown';
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
 
     const rateLimitResult = await checkRpsLimit(
-      'tracking',
+      "tracking",
       ip,
       30, // 30 requests per second
-      10  // 10 burst
+      10 // 10 burst
     );
 
     if (!rateLimitResult.allowed) {
       return NextResponse.json(
-        { error: 'Rate limit exceeded. Please slow down.', retryAfter: 1 },
+        { error: "Rate limit exceeded. Please slow down.", retryAfter: 1 },
         {
           status: 429,
           headers: {
-            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
-            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-            'Retry-After': '1',
+            "X-RateLimit-Limit": rateLimitResult.limit.toString(),
+            "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+            "Retry-After": "1",
           },
         }
       );
@@ -88,7 +88,7 @@ export async function GET(
 
     if (!load) {
       return NextResponse.json(
-        { error: 'Tracking link not found or expired' },
+        { error: "Tracking link not found or expired" },
         { status: 404 }
       );
     }
@@ -96,7 +96,7 @@ export async function GET(
     // Check if tracking is enabled
     if (!load.trackingEnabled) {
       return NextResponse.json(
-        { error: 'GPS tracking has been disabled for this load' },
+        { error: "GPS tracking has been disabled for this load" },
         { status: 403 }
       );
     }
@@ -109,9 +109,9 @@ export async function GET(
       tracking: trackingStatus,
     });
   } catch (error) {
-    console.error('Get public tracking error:', error);
+    console.error("Get public tracking error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

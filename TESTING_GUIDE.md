@@ -11,12 +11,14 @@
 ## 📍 Where to Access
 
 ### Shipper View
+
 - **My Loads**: `/dashboard/loads`
   - Shows YOUR loads with DAT grid
   - Actions: View, Edit, Delete
   - Status filters: All, DRAFT, POSTED, etc.
 
 ### Carrier View
+
 - **Find Loads**: `/dashboard/loads/search`
   - Shows ALL posted loads (marketplace)
   - Full DAT-style grid with 20 columns
@@ -27,6 +29,7 @@
 ### Step 1: Register Users
 
 1. **Register as Shipper:**
+
    ```
    Email: shipper@test.com
    Password: Test123!
@@ -47,6 +50,7 @@
 Login as `shipper@test.com` and create loads with these varied scenarios:
 
 #### Load 1: Short Haul - Full Load
+
 ```
 Pickup: Addis Ababa → Delivery: Dire Dawa
 Pickup Date: 2 days from now
@@ -72,6 +76,7 @@ Status: POSTED (must post to appear in marketplace!)
 ```
 
 #### Load 2: Long Haul - Refrigerated
+
 ```
 Pickup: Hawassa → Delivery: Mekelle
 Trip Distance: 780 km
@@ -87,6 +92,7 @@ Status: POSTED
 ```
 
 #### Load 3: Partial Load
+
 ```
 Pickup: Bahir Dar → Delivery: Gondar
 Trip Distance: 180 km
@@ -100,6 +106,7 @@ Status: POSTED
 ```
 
 #### Load 4: Tanker - Hazmat
+
 ```
 Pickup: Adama → Delivery: Jimma
 Trip Distance: 335 km
@@ -112,6 +119,7 @@ Status: POSTED
 ```
 
 #### Load 5: Container
+
 ```
 Pickup: Modjo → Delivery: Addis Ababa
 Trip Distance: 75 km
@@ -131,6 +139,7 @@ Status: POSTED
 ## 🧪 Features to Test
 
 ### ✅ All 20 DAT Columns Visible
+
 - [ ] Age (formatted: 5m, 2h 30m, 3d)
 - [ ] Pickup (short date)
 - [ ] Truck (type)
@@ -153,6 +162,7 @@ Status: POSTED
 - [ ] Actions (View link)
 
 ### ✅ Sorting (Click Headers)
+
 - [ ] Click "Age" → sorts by posted time
 - [ ] Click "Pickup" → sorts by pickup date
 - [ ] Click "Trip" → sorts by distance
@@ -162,6 +172,7 @@ Status: POSTED
 - [ ] Click again → toggles asc/desc (↑/↓)
 
 ### ✅ Filtering
+
 - [ ] Filter by Origin City (e.g., "Addis Ababa")
 - [ ] Filter by Destination City (e.g., "Dire Dawa")
 - [ ] Filter by Truck Type (e.g., "Flatbed")
@@ -173,16 +184,19 @@ Status: POSTED
 - [ ] Click "Clear" to reset
 
 ### ✅ Pagination
+
 - [ ] Shows "Showing X of Y loads"
 - [ ] Next/Previous buttons work
 - [ ] Page counter displays correctly
 
 ### ✅ Privacy Features
+
 - [ ] Anonymous loads show "Anonymous Shipper" (not company name)
 - [ ] Contact info hidden in grid (only visible after assignment)
 - [ ] Verification badges (✓) show for verified companies
 
 ### ✅ Visual Features
+
 - [ ] Hover over rows → gray background
 - [ ] Book Mode badges → Green for INSTANT, Gray for REQUEST
 - [ ] Sortable headers → Show ↑/↓ indicators
@@ -191,6 +205,7 @@ Status: POSTED
 - [ ] Empty state → Shows "No loads found"
 
 ### ✅ Data Accuracy
+
 - [ ] RPM calculated correctly (Rate ÷ Trip Distance)
 - [ ] tRPM calculated correctly (Rate ÷ Total Distance including deadhead)
 - [ ] Age updates in real-time (minutes → hours → days)
@@ -199,6 +214,7 @@ Status: POSTED
 ## 🔧 Advanced Testing
 
 ### Test Sorting Combinations
+
 ```
 1. Sort by Rate (desc) → highest paying loads first
 2. Sort by Trip (asc) → shortest trips first
@@ -207,6 +223,7 @@ Status: POSTED
 ```
 
 ### Test Filter Combinations
+
 ```
 1. Origin: "Addis Ababa" + Truck Type: "Flatbed"
 2. Trip Distance: 200-600 km + Book Mode: "Instant"
@@ -214,6 +231,7 @@ Status: POSTED
 ```
 
 ### Test Edge Cases
+
 - [ ] Create load without trip distance → should fail to post
 - [ ] Create load with 0 trip distance → should fail
 - [ ] Post then unpost → should disappear from marketplace
@@ -230,6 +248,7 @@ Status: POSTED
 ## 🎯 User Flows to Test
 
 ### Flow 1: Shipper Posts Load
+
 1. Login as shipper
 2. Click "My Loads" → "+ Create New Load"
 3. Fill all fields (use template above)
@@ -239,6 +258,7 @@ Status: POSTED
 7. Verify appears in carrier's "Find Loads"
 
 ### Flow 2: Carrier Browses & Accepts
+
 1. Login as carrier
 2. Click "Find Loads"
 3. Use filters to find suitable load
@@ -248,6 +268,7 @@ Status: POSTED
 7. (Future: Accept the load)
 
 ### Flow 3: Anonymous Posting
+
 1. Login as shipper
 2. Create load with "Anonymous" checked
 3. Post the load
@@ -266,6 +287,7 @@ Status: POSTED
 ## ✅ Success Criteria
 
 You should be able to:
+
 1. ✓ See all 20 DAT-style columns
 2. ✓ Sort by any sortable column
 3. ✓ Filter by multiple criteria

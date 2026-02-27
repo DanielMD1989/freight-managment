@@ -7,40 +7,40 @@
  * - Transaction history with filtering
  */
 
-import { cookies } from 'next/headers';
-import { verifyToken } from '@/lib/auth';
-import { redirect } from 'next/navigation';
-import { db } from '@/lib/db';
-import CarrierWalletClient from './CarrierWalletClient';
+import { cookies } from "next/headers";
+import { verifyToken } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
+import CarrierWalletClient from "./CarrierWalletClient";
 
 export const metadata = {
-  title: 'Wallet | Carrier',
-  description: 'Manage your earnings and view transactions',
+  title: "Wallet | Carrier",
+  description: "Manage your earnings and view transactions",
 };
 
 export default async function CarrierWalletPage() {
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get('session');
+  const sessionCookie = cookieStore.get("session");
 
   if (!sessionCookie) {
-    redirect('/login?redirect=/carrier/wallet');
+    redirect("/login?redirect=/carrier/wallet");
   }
 
   const session = await verifyToken(sessionCookie.value);
 
-  if (!session || (session.role !== 'CARRIER' && session.role !== 'ADMIN')) {
-    redirect('/unauthorized');
+  if (!session || (session.role !== "CARRIER" && session.role !== "ADMIN")) {
+    redirect("/unauthorized");
   }
 
   if (!session.organizationId) {
-    redirect('/carrier?error=no-organization');
+    redirect("/carrier?error=no-organization");
   }
 
   // Fetch wallet account
   const walletAccount = await db.financialAccount.findFirst({
     where: {
       organizationId: session.organizationId,
-      accountType: 'CARRIER_WALLET',
+      accountType: "CARRIER_WALLET",
     },
     select: {
       id: true,
@@ -56,58 +56,59 @@ export default async function CarrierWalletPage() {
       assignedTruck: {
         is: { carrierId: session.organizationId },
       },
-      status: { in: ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT'] },
+      status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
     },
     _count: true,
   });
 
   // Financial summary from journal entries
-  const [totalEarnings, totalWithdrawals, completedTripsCount] = await Promise.all([
-    // Total credits to carrier wallet (settlements/earnings)
-    db.journalLine.aggregate({
-      where: {
-        account: {
-          organizationId: session.organizationId,
-          accountType: 'CARRIER_WALLET',
+  const [totalEarnings, totalWithdrawals, completedTripsCount] =
+    await Promise.all([
+      // Total credits to carrier wallet (settlements/earnings)
+      db.journalLine.aggregate({
+        where: {
+          account: {
+            organizationId: session.organizationId,
+            accountType: "CARRIER_WALLET",
+          },
+          isDebit: false, // Credits = earnings
         },
-        isDebit: false, // Credits = earnings
-      },
-      _sum: {
-        amount: true,
-      },
-    }),
+        _sum: {
+          amount: true,
+        },
+      }),
 
-    // Total debits from carrier wallet (withdrawals)
-    db.journalLine.aggregate({
-      where: {
-        account: {
-          organizationId: session.organizationId,
-          accountType: 'CARRIER_WALLET',
+      // Total debits from carrier wallet (withdrawals)
+      db.journalLine.aggregate({
+        where: {
+          account: {
+            organizationId: session.organizationId,
+            accountType: "CARRIER_WALLET",
+          },
+          isDebit: true, // Debits = withdrawals
         },
-        isDebit: true, // Debits = withdrawals
-      },
-      _sum: {
-        amount: true,
-      },
-    }),
+        _sum: {
+          amount: true,
+        },
+      }),
 
-    // Completed deliveries
-    db.load.count({
-      where: {
-        status: 'DELIVERED',
-        assignedTruck: {
-          is: { carrierId: session.organizationId },
+      // Completed deliveries
+      db.load.count({
+        where: {
+          status: "DELIVERED",
+          assignedTruck: {
+            is: { carrierId: session.organizationId },
+          },
         },
-      },
-    }),
-  ]);
+      }),
+    ]);
 
   // Recent transactions
   const recentTransactions = await db.journalLine.findMany({
     where: {
       account: {
         organizationId: session.organizationId,
-        accountType: 'CARRIER_WALLET',
+        accountType: "CARRIER_WALLET",
       },
     },
     include: {
@@ -129,7 +130,7 @@ export default async function CarrierWalletPage() {
       },
     },
     orderBy: {
-      createdAt: 'desc',
+      createdAt: "desc",
     },
     take: 50,
   });
@@ -150,7 +151,7 @@ export default async function CarrierWalletPage() {
 
   const walletData = {
     balance: Number(walletAccount?.balance || 0),
-    currency: walletAccount?.currency || 'ETB',
+    currency: walletAccount?.currency || "ETB",
     totalEarnings: Number(totalEarnings._sum.amount || 0),
     totalWithdrawals: Number(totalWithdrawals._sum.amount || 0),
     pendingTripsCount: pendingTrips._count,

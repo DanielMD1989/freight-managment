@@ -57,7 +57,8 @@ services:
       - freight-network
 
     healthcheck:
-      test: ["CMD", "pg_isready", "-h", "localhost", "-p", "6432", "-U", "postgres"]
+      test:
+        ["CMD", "pg_isready", "-h", "localhost", "-p", "6432", "-U", "postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -114,7 +115,11 @@ services:
       - freight-network
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-freight_db}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-freight_db}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -27,7 +27,9 @@ function test(name: string, fn: () => void) {
       error: error instanceof Error ? error.message : String(error),
     });
     console.log(`✗ ${name}`);
-    console.log(`  Error: ${error instanceof Error ? error.message : String(error)}`);
+    console.log(
+      `  Error: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 }
 

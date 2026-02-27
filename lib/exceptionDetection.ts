@@ -5,13 +5,13 @@
  * based on load status, GPS data, and business rules
  */
 
-import { db } from '@/lib/db';
-import { calculateDistanceKm } from '@/lib/geo';
+import { db } from "@/lib/db";
+import { calculateDistanceKm } from "@/lib/geo";
 
 export interface ExceptionRule {
   type: string;
   shouldTrigger: boolean;
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  priority: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
   title: string;
   description: string;
 }
@@ -20,7 +20,9 @@ export interface ExceptionRule {
  * Check for late pickup exception
  * Triggers when: Current time > pickup time + grace period and status is ASSIGNED or PICKUP_PENDING
  */
-export async function checkLatePickup(loadId: string): Promise<ExceptionRule | null> {
+export async function checkLatePickup(
+  loadId: string
+): Promise<ExceptionRule | null> {
   const load = await db.load.findUnique({
     where: { id: loadId },
     select: {
@@ -35,7 +37,7 @@ export async function checkLatePickup(loadId: string): Promise<ExceptionRule | n
   if (!load) return null;
 
   // Only check if load is in pre-pickup status
-  if (load.status !== 'ASSIGNED' && load.status !== 'PICKUP_PENDING') {
+  if (load.status !== "ASSIGNED" && load.status !== "PICKUP_PENDING") {
     return null;
   }
 
@@ -46,12 +48,14 @@ export async function checkLatePickup(loadId: string): Promise<ExceptionRule | n
 
   // Check if current time is past pickup time + grace period
   if (now.getTime() > pickupTime.getTime() + gracePeriodMs) {
-    const hoursLate = Math.floor((now.getTime() - pickupTime.getTime()) / (60 * 60 * 1000));
+    const hoursLate = Math.floor(
+      (now.getTime() - pickupTime.getTime()) / (60 * 60 * 1000)
+    );
 
     return {
-      type: 'LATE_PICKUP',
+      type: "LATE_PICKUP",
       shouldTrigger: true,
-      priority: hoursLate > 4 ? 'HIGH' : 'MEDIUM',
+      priority: hoursLate > 4 ? "HIGH" : "MEDIUM",
       title: `Pickup is ${hoursLate} hours late`,
       description: `Scheduled pickup at ${pickupTime.toLocaleString()} has not occurred. Current status: ${load.status}`,
     };
@@ -64,7 +68,9 @@ export async function checkLatePickup(loadId: string): Promise<ExceptionRule | n
  * Check for late delivery exception
  * Triggers when: Current time > delivery time + grace period and status is IN_TRANSIT
  */
-export async function checkLateDelivery(loadId: string): Promise<ExceptionRule | null> {
+export async function checkLateDelivery(
+  loadId: string
+): Promise<ExceptionRule | null> {
   const load = await db.load.findUnique({
     where: { id: loadId },
     select: {
@@ -79,7 +85,7 @@ export async function checkLateDelivery(loadId: string): Promise<ExceptionRule |
   if (!load) return null;
 
   // Only check if load is in transit
-  if (load.status !== 'IN_TRANSIT') {
+  if (load.status !== "IN_TRANSIT") {
     return null;
   }
 
@@ -90,12 +96,14 @@ export async function checkLateDelivery(loadId: string): Promise<ExceptionRule |
 
   // Check if current time is past delivery time + grace period
   if (now.getTime() > deliveryTime.getTime() + gracePeriodMs) {
-    const hoursLate = Math.floor((now.getTime() - deliveryTime.getTime()) / (60 * 60 * 1000));
+    const hoursLate = Math.floor(
+      (now.getTime() - deliveryTime.getTime()) / (60 * 60 * 1000)
+    );
 
     return {
-      type: 'LATE_DELIVERY',
+      type: "LATE_DELIVERY",
       shouldTrigger: true,
-      priority: hoursLate > 4 ? 'CRITICAL' : 'HIGH',
+      priority: hoursLate > 4 ? "CRITICAL" : "HIGH",
       title: `Delivery is ${hoursLate} hours late`,
       description: `Scheduled delivery at ${deliveryTime.toLocaleString()} has not occurred. Load still in transit.`,
     };
@@ -108,7 +116,9 @@ export async function checkLateDelivery(loadId: string): Promise<ExceptionRule |
  * Check for GPS offline exception
  * Triggers when: No GPS data received for X hours and load is active
  */
-export async function checkGpsOffline(loadId: string): Promise<ExceptionRule | null> {
+export async function checkGpsOffline(
+  loadId: string
+): Promise<ExceptionRule | null> {
   const load = await db.load.findUnique({
     where: { id: loadId },
     select: {
@@ -133,7 +143,7 @@ export async function checkGpsOffline(loadId: string): Promise<ExceptionRule | n
   }
 
   // Only check for active loads
-  if (!['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT'].includes(load.status)) {
+  if (!["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"].includes(load.status)) {
     return null;
   }
 
@@ -143,7 +153,7 @@ export async function checkGpsOffline(loadId: string): Promise<ExceptionRule | n
       truckId: load.assignedTruck.id,
     },
     orderBy: {
-      timestamp: 'desc',
+      timestamp: "desc",
     },
     select: {
       timestamp: true,
@@ -153,10 +163,10 @@ export async function checkGpsOffline(loadId: string): Promise<ExceptionRule | n
   if (!lastPosition) {
     // No GPS data at all
     return {
-      type: 'GPS_OFFLINE',
+      type: "GPS_OFFLINE",
       shouldTrigger: true,
-      priority: 'HIGH',
-      title: 'GPS device has no data',
+      priority: "HIGH",
+      title: "GPS device has no data",
       description: `Truck ${load.assignedTruck.licensePlate} has not sent any GPS data since tracking was enabled.`,
     };
   }
@@ -167,12 +177,14 @@ export async function checkGpsOffline(loadId: string): Promise<ExceptionRule | n
   const offlineThresholdMs = offlineThresholdHours * 60 * 60 * 1000;
 
   if (now.getTime() - lastUpdate.getTime() > offlineThresholdMs) {
-    const hoursOffline = Math.floor((now.getTime() - lastUpdate.getTime()) / (60 * 60 * 1000));
+    const hoursOffline = Math.floor(
+      (now.getTime() - lastUpdate.getTime()) / (60 * 60 * 1000)
+    );
 
     return {
-      type: 'GPS_OFFLINE',
+      type: "GPS_OFFLINE",
       shouldTrigger: true,
-      priority: hoursOffline > 8 ? 'CRITICAL' : 'HIGH',
+      priority: hoursOffline > 8 ? "CRITICAL" : "HIGH",
       title: `GPS offline for ${hoursOffline} hours`,
       description: `Last GPS update from truck ${load.assignedTruck.licensePlate} was ${hoursOffline} hours ago at ${lastUpdate.toLocaleString()}.`,
     };
@@ -185,7 +197,9 @@ export async function checkGpsOffline(loadId: string): Promise<ExceptionRule | n
  * Check for stalled load exception
  * Triggers when: Truck hasn't moved significantly for X hours during IN_TRANSIT
  */
-export async function checkStalledLoad(loadId: string): Promise<ExceptionRule | null> {
+export async function checkStalledLoad(
+  loadId: string
+): Promise<ExceptionRule | null> {
   const load = await db.load.findUnique({
     where: { id: loadId },
     select: {
@@ -205,7 +219,11 @@ export async function checkStalledLoad(loadId: string): Promise<ExceptionRule | 
   if (!load) return null;
 
   // Only check if load is in transit with tracking
-  if (load.status !== 'IN_TRANSIT' || !load.trackingEnabled || !load.assignedTruck?.imei) {
+  if (
+    load.status !== "IN_TRANSIT" ||
+    !load.trackingEnabled ||
+    !load.assignedTruck?.imei
+  ) {
     return null;
   }
 
@@ -219,7 +237,7 @@ export async function checkStalledLoad(loadId: string): Promise<ExceptionRule | 
       },
     },
     orderBy: {
-      timestamp: 'desc',
+      timestamp: "desc",
     },
     select: {
       latitude: true,
@@ -248,10 +266,10 @@ export async function checkStalledLoad(loadId: string): Promise<ExceptionRule | 
 
   if (maxDistance < stalledThresholdKm) {
     return {
-      type: 'TRUCK_BREAKDOWN',
+      type: "TRUCK_BREAKDOWN",
       shouldTrigger: true,
-      priority: 'CRITICAL',
-      title: 'Truck appears stalled for 4+ hours',
+      priority: "CRITICAL",
+      title: "Truck appears stalled for 4+ hours",
       description: `Truck ${load.assignedTruck.licensePlate} has moved less than ${stalledThresholdKm}km in the last 4 hours. Possible breakdown or issue.`,
     };
   }
@@ -278,7 +296,10 @@ export async function checkAllRules(loadId: string): Promise<ExceptionRule[]> {
  * Auto-create escalations for triggered rules
  * Prevents duplicate escalations for the same issue
  */
-export async function autoCreateEscalations(loadId: string, createdBy: string = 'SYSTEM') {
+export async function autoCreateEscalations(
+  loadId: string,
+  createdBy: string = "SYSTEM"
+) {
   const triggeredRules = await checkAllRules(loadId);
 
   if (triggeredRules.length === 0) {
@@ -292,9 +313,10 @@ export async function autoCreateEscalations(loadId: string, createdBy: string = 
     const existingEscalation = await db.loadEscalation.findFirst({
       where: {
         loadId,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic escalation type
         escalationType: rule.type as any,
         status: {
-          in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'],
+          in: ["OPEN", "ASSIGNED", "IN_PROGRESS"],
         },
       },
     });
@@ -308,12 +330,13 @@ export async function autoCreateEscalations(loadId: string, createdBy: string = 
     const escalation = await db.loadEscalation.create({
       data: {
         loadId,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic escalation type
         escalationType: rule.type as any,
         priority: rule.priority,
         title: rule.title,
         description: rule.description,
         createdBy,
-        status: 'OPEN',
+        status: "OPEN",
       },
     });
 
@@ -321,7 +344,7 @@ export async function autoCreateEscalations(loadId: string, createdBy: string = 
     await db.loadEvent.create({
       data: {
         loadId,
-        eventType: 'ESCALATION_AUTO_CREATED',
+        eventType: "ESCALATION_AUTO_CREATED",
         description: `Auto-created escalation: ${rule.title}`,
         metadata: {
           escalationId: escalation.id,
@@ -341,4 +364,3 @@ export async function autoCreateEscalations(loadId: string, createdBy: string = 
     escalations: createdEscalations,
   };
 }
-

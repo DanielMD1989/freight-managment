@@ -169,24 +169,29 @@
   /* ========================================
      TYPOGRAPHY
      ======================================== */
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-size-xs: 0.75rem;    /* 12px */
-  --font-size-sm: 0.875rem;   /* 14px */
-  --font-size-base: 1rem;     /* 16px */
-  --font-size-lg: 1.125rem;   /* 18px */
-  --font-size-xl: 1.25rem;    /* 20px */
-  --font-size-2xl: 1.5rem;    /* 24px */
-  --font-size-3xl: 1.875rem;  /* 30px */
-  --font-size-4xl: 2.25rem;   /* 36px */
+  --font-family:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-size-xs: 0.75rem; /* 12px */
+  --font-size-sm: 0.875rem; /* 14px */
+  --font-size-base: 1rem; /* 16px */
+  --font-size-lg: 1.125rem; /* 18px */
+  --font-size-xl: 1.25rem; /* 20px */
+  --font-size-2xl: 1.5rem; /* 24px */
+  --font-size-3xl: 1.875rem; /* 30px */
+  --font-size-4xl: 2.25rem; /* 36px */
 
   /* ========================================
      SHADOWS (Subtle for dark theme)
      ======================================== */
   --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  --shadow-sm:
+    0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
+  --shadow-md:
+    0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg:
+    0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+  --shadow-xl:
+    0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-glow: 0 0 20px rgba(20, 184, 166, 0.15);
@@ -194,26 +199,26 @@
   /* ========================================
      BORDER RADIUS (Slightly larger for modern look)
      ======================================== */
-  --radius-sm: 0.375rem;   /* 6px */
-  --radius-md: 0.5rem;     /* 8px */
-  --radius-lg: 0.75rem;    /* 12px */
-  --radius-xl: 1rem;       /* 16px */
-  --radius-2xl: 1.25rem;   /* 20px */
+  --radius-sm: 0.375rem; /* 6px */
+  --radius-md: 0.5rem; /* 8px */
+  --radius-lg: 0.75rem; /* 12px */
+  --radius-xl: 1rem; /* 16px */
+  --radius-2xl: 1.25rem; /* 20px */
   --radius-full: 9999px;
 
   /* ========================================
      SPACING (8px grid system)
      ======================================== */
-  --space-1: 0.25rem;   /* 4px */
-  --space-2: 0.5rem;    /* 8px */
-  --space-3: 0.75rem;   /* 12px */
-  --space-4: 1rem;      /* 16px */
-  --space-5: 1.25rem;   /* 20px */
-  --space-6: 1.5rem;    /* 24px */
-  --space-8: 2rem;      /* 32px */
-  --space-10: 2.5rem;   /* 40px */
-  --space-12: 3rem;     /* 48px */
-  --space-16: 4rem;     /* 64px */
+  --space-1: 0.25rem; /* 4px */
+  --space-2: 0.5rem; /* 8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem; /* 16px */
+  --space-5: 1.25rem; /* 20px */
+  --space-6: 1.5rem; /* 24px */
+  --space-8: 2rem; /* 32px */
+  --space-10: 2.5rem; /* 40px */
+  --space-12: 3rem; /* 48px */
+  --space-16: 4rem; /* 64px */
 
   /* ========================================
      LAYOUT
@@ -290,9 +295,12 @@
 
   /* Light mode shadows (subtle) */
   --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --shadow-sm:
+    0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+  --shadow-md:
+    0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --shadow-lg:
+    0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.06);
   --shadow-glow: 0 0 20px rgba(47, 129, 247, 0.1);
@@ -345,7 +353,9 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-family);
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 /* ========================================
@@ -363,8 +373,8 @@ input[type="datetime-local"],
 input[type="time"],
 textarea,
 select {
-  @apply bg-white font-medium rounded-lg transition-all duration-200;
-  @apply dark:bg-slate-800 dark:border-slate-600;
+  @apply rounded-lg bg-white font-medium transition-all duration-200;
+  @apply dark:border-slate-600 dark:bg-slate-800;
   color: var(--neutral-900);
   border: 1px solid var(--neutral-300);
   padding: 0.625rem 0.875rem;
@@ -453,14 +463,14 @@ select.error:focus {
    FOCUS INDICATORS
    ======================================== */
 *:focus-visible {
-  @apply outline-none ring-offset-2;
+  @apply ring-offset-2 outline-none;
   @apply dark:ring-offset-slate-900;
   box-shadow: 0 0 0 2px var(--primary-500);
 }
 
 button:focus-visible,
 a:focus-visible {
-  @apply outline-none ring-offset-2;
+  @apply ring-offset-2 outline-none;
   @apply dark:ring-offset-slate-900;
   box-shadow: 0 0 0 2px var(--primary-500);
 }
@@ -470,9 +480,9 @@ a:focus-visible {
    ======================================== */
 .btn {
   @apply inline-flex items-center justify-center gap-2;
-  @apply px-5 py-3 text-sm font-semibold rounded-lg;
-  @apply transition-all duration-200 cursor-pointer;
-  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply rounded-lg px-5 py-3 text-sm font-semibold;
+  @apply cursor-pointer transition-all duration-200;
+  @apply disabled:cursor-not-allowed disabled:opacity-50;
 }
 
 .btn:hover:not(:disabled) {
@@ -510,7 +520,7 @@ a:focus-visible {
 }
 
 .btn-outline {
-  @apply bg-transparent border-2;
+  @apply border-2 bg-transparent;
   border-color: var(--primary-600);
   color: var(--primary-700);
 }
@@ -532,7 +542,7 @@ a:focus-visible {
    CARD STYLES
    ======================================== */
 .card {
-  @apply bg-white rounded-xl border border-neutral-200;
+  @apply rounded-xl border border-neutral-200 bg-white;
   @apply transition-shadow duration-200;
 }
 
@@ -541,8 +551,8 @@ a:focus-visible {
 }
 
 .card-header {
-  @apply px-5 py-4 border-b border-neutral-100;
-  @apply flex justify-between items-center;
+  @apply border-b border-neutral-100 px-5 py-4;
+  @apply flex items-center justify-between;
 }
 
 .card-title {
@@ -554,7 +564,7 @@ a:focus-visible {
 }
 
 .card-footer {
-  @apply px-5 py-4 border-t border-neutral-100 bg-neutral-50;
+  @apply border-t border-neutral-100 bg-neutral-50 px-5 py-4;
 }
 
 /* ========================================
@@ -572,13 +582,17 @@ a:focus-visible {
 }
 
 .stat-card::before {
-  content: '';
+  content: "";
   position: absolute;
   top: -50%;
   right: -30%;
   width: 100%;
   height: 200%;
-  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 60%
+  );
   pointer-events: none;
 }
 
@@ -650,23 +664,43 @@ a:focus-visible {
 }
 
 .dark .stat-card-tinted.tinted-primary {
-  background: linear-gradient(135deg, rgba(20, 184, 166, 0.1) 0%, var(--card) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(20, 184, 166, 0.1) 0%,
+    var(--card) 100%
+  );
 }
 
 .dark .stat-card-tinted.tinted-secondary {
-  background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, var(--card) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(6, 182, 212, 0.1) 0%,
+    var(--card) 100%
+  );
 }
 
 .dark .stat-card-tinted.tinted-success {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, var(--card) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(16, 185, 129, 0.1) 0%,
+    var(--card) 100%
+  );
 }
 
 .dark .stat-card-tinted.tinted-warning {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, var(--card) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(245, 158, 11, 0.1) 0%,
+    var(--card) 100%
+  );
 }
 
 .dark .stat-card-tinted.tinted-error {
-  background: linear-gradient(135deg, rgba(244, 63, 94, 0.1) 0%, var(--card) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(244, 63, 94, 0.1) 0%,
+    var(--card) 100%
+  );
 }
 
 .stat-label {
@@ -707,54 +741,68 @@ a:focus-visible {
    BADGE STYLES
    ======================================== */
 .badge {
-  @apply inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-full;
+  @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold;
 }
 
 .badge-dot {
-  @apply w-1.5 h-1.5 rounded-full;
+  @apply h-1.5 w-1.5 rounded-full;
 }
 
 .badge-pending {
   background-color: var(--warning-100);
   color: var(--warning-700);
 }
-.badge-pending .badge-dot { background-color: var(--warning-500); }
+.badge-pending .badge-dot {
+  background-color: var(--warning-500);
+}
 
 .badge-approved {
   background-color: var(--success-100);
   color: var(--success-700);
 }
-.badge-approved .badge-dot { background-color: var(--success-500); }
+.badge-approved .badge-dot {
+  background-color: var(--success-500);
+}
 
 .badge-rejected {
   background-color: var(--error-100);
   color: var(--error-700);
 }
-.badge-rejected .badge-dot { background-color: var(--error-500); }
+.badge-rejected .badge-dot {
+  background-color: var(--error-500);
+}
 
 .badge-in-transit {
   background-color: var(--primary-100);
   color: var(--primary-800);
 }
-.badge-in-transit .badge-dot { background-color: var(--primary-500); }
+.badge-in-transit .badge-dot {
+  background-color: var(--primary-500);
+}
 
 .badge-delivered {
   background-color: var(--success-100);
   color: var(--success-700);
 }
-.badge-delivered .badge-dot { background-color: var(--success-500); }
+.badge-delivered .badge-dot {
+  background-color: var(--success-500);
+}
 
 .badge-at-pickup {
   background-color: var(--accent-100);
   color: var(--accent-700);
 }
-.badge-at-pickup .badge-dot { background-color: var(--accent-500); }
+.badge-at-pickup .badge-dot {
+  background-color: var(--accent-500);
+}
 
 .badge-cancelled {
   background-color: var(--neutral-200);
   color: var(--neutral-600);
 }
-.badge-cancelled .badge-dot { background-color: var(--neutral-500); }
+.badge-cancelled .badge-dot {
+  background-color: var(--neutral-500);
+}
 
 /* ========================================
    SIDEBAR STYLES - BOLD TEAL GRADIENT
@@ -859,7 +907,7 @@ a:focus-visible {
 /* Main content offset */
 .main-content {
   margin-left: 260px;
-  @apply p-6 min-h-screen;
+  @apply min-h-screen p-6;
 }
 
 /* ========================================
@@ -907,16 +955,16 @@ a:focus-visible {
    MODAL STYLES
    ======================================== */
 .modal-backdrop {
-  @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-50;
+  @apply fixed inset-0 z-50 bg-black/50 backdrop-blur-sm;
   @apply flex items-center justify-center p-4;
 }
 
 .modal {
-  @apply bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-hidden shadow-xl;
+  @apply max-h-[90vh] w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl;
 }
 
 .modal-header {
-  @apply px-6 py-5 border-b border-neutral-100 flex justify-between items-center;
+  @apply flex items-center justify-between border-b border-neutral-100 px-6 py-5;
 }
 
 .modal-title {
@@ -924,25 +972,25 @@ a:focus-visible {
 }
 
 .modal-close {
-  @apply w-8 h-8 rounded-md bg-transparent border-none cursor-pointer;
+  @apply h-8 w-8 cursor-pointer rounded-md border-none bg-transparent;
   @apply flex items-center justify-center text-neutral-500;
-  @apply hover:bg-neutral-100 hover:text-neutral-700 transition-colors;
+  @apply transition-colors hover:bg-neutral-100 hover:text-neutral-700;
 }
 
 .modal-body {
-  @apply p-6 overflow-y-auto;
+  @apply overflow-y-auto p-6;
 }
 
 .modal-footer {
-  @apply px-6 py-4 bg-neutral-50 flex justify-end gap-3 border-t border-neutral-100;
+  @apply flex justify-end gap-3 border-t border-neutral-100 bg-neutral-50 px-6 py-4;
 }
 
 /* ========================================
    UPLOAD ZONE
    ======================================== */
 .upload-zone {
-  @apply border-2 border-dashed border-neutral-300 rounded-xl p-8;
-  @apply text-center cursor-pointer transition-all duration-200;
+  @apply rounded-xl border-2 border-dashed border-neutral-300 p-8;
+  @apply cursor-pointer text-center transition-all duration-200;
 }
 
 .upload-zone:hover {
@@ -956,7 +1004,7 @@ a:focus-visible {
 }
 
 .upload-icon {
-  @apply w-12 h-12 mx-auto mb-4;
+  @apply mx-auto mb-4 h-12 w-12;
   color: var(--neutral-400);
 }
 
@@ -965,7 +1013,7 @@ a:focus-visible {
 }
 
 .upload-title {
-  @apply text-base font-semibold text-neutral-700 mb-1;
+  @apply mb-1 text-base font-semibold text-neutral-700;
 }
 
 .upload-subtitle {
@@ -976,7 +1024,7 @@ a:focus-visible {
    PAGE HEADER
    ======================================== */
 .page-header {
-  @apply flex justify-between items-center mb-6;
+  @apply mb-6 flex items-center justify-between;
 }
 
 .page-title {
@@ -984,7 +1032,7 @@ a:focus-visible {
 }
 
 .page-subtitle {
-  @apply text-sm text-neutral-500 mt-1;
+  @apply mt-1 text-sm text-neutral-500;
 }
 
 /* ========================================
@@ -992,7 +1040,7 @@ a:focus-visible {
    ======================================== */
 .skip-to-main {
   @apply sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4;
-  @apply text-white px-4 py-2 rounded-lg z-50;
+  @apply z-50 rounded-lg px-4 py-2 text-white;
   background-color: var(--primary-600);
 }
 
@@ -1379,7 +1427,7 @@ a:focus-visible {
 }
 
 .select-wrapper::after {
-  content: '';
+  content: "";
   position: absolute;
   right: 0.875rem;
   top: 50%;
@@ -2119,7 +2167,7 @@ a:focus-visible {
 }
 
 .tooltip-content::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 100%;
   left: 50%;
@@ -2250,7 +2298,7 @@ a:focus-visible {
 }
 
 .status-dot-pulse::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   border-radius: 50%;
@@ -2259,7 +2307,8 @@ a:focus-visible {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
@@ -2381,7 +2430,7 @@ a:focus-visible {
 }
 
 .notification-dot::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   right: 0;
@@ -2465,7 +2514,8 @@ a:focus-visible {
 
 /* Floating animation for elements */
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -2511,7 +2561,8 @@ a:focus-visible {
     transform: scale(1);
     opacity: 1;
   }
-  75%, 100% {
+  75%,
+  100% {
     transform: scale(2);
     opacity: 0;
   }
@@ -2523,7 +2574,8 @@ a:focus-visible {
 
 /* Gradient text animation */
 @keyframes gradient-shift {
-  0%, 100% {
+  0%,
+  100% {
     background-position: 0% 50%;
   }
   50% {
@@ -2538,7 +2590,9 @@ a:focus-visible {
 
 /* Scale up animation on hover */
 .hover-scale {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .hover-scale:hover {
@@ -2591,20 +2645,15 @@ a:focus-visible {
 
 /* Hero section truck background */
 .hero-truck-bg {
-  background: linear-gradient(
-    135deg,
-    #0f766e 0%,
-    #0d9488 50%,
-    #115e59 100%
-  );
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #115e59 100%);
   position: relative;
 }
 
 .hero-truck-bg::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
-  background-image: url('/images/trucks/hero-truck.svg');
+  background-image: url("/images/trucks/hero-truck.svg");
   background-size: cover;
   background-position: center;
   opacity: 0.4;

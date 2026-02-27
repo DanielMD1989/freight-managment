@@ -3,18 +3,27 @@
  * API endpoints for individual escalation management
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { validateCSRFWithMobile } from '@/lib/csrf';
-import { z } from 'zod';
-import { createNotification } from '@/lib/notifications';
-import { zodErrorResponse } from '@/lib/validation';
-import { Prisma } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { z } from "zod";
+import { createNotification } from "@/lib/notifications";
+import { zodErrorResponse } from "@/lib/validation";
+import { Prisma } from "@prisma/client";
 
 const updateEscalationSchema = z.object({
-  status: z.enum(['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'ESCALATED']).optional(),
-  priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
+  status: z
+    .enum([
+      "OPEN",
+      "ASSIGNED",
+      "IN_PROGRESS",
+      "RESOLVED",
+      "CLOSED",
+      "ESCALATED",
+    ])
+    .optional(),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).optional(),
   notes: z.string().optional(),
   resolution: z.string().optional(),
   assignedTo: z.string().optional(),
@@ -57,7 +66,7 @@ export async function GET(
 
     if (!escalation) {
       return NextResponse.json(
-        { error: 'Escalation not found' },
+        { error: "Escalation not found" },
         { status: 404 }
       );
     }
@@ -69,24 +78,27 @@ export async function GET(
     });
 
     // Permission check - compare organizationId (not userId) with shipperId/carrierId
-    const isShipper = session.role === 'SHIPPER' && escalation.load.shipperId === user?.organizationId;
-    const isCarrier = session.role === 'CARRIER' && escalation.load.assignedTruck?.carrierId === user?.organizationId;
-    const isDispatcher = session.role === 'DISPATCHER';
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+    const isShipper =
+      session.role === "SHIPPER" &&
+      escalation.load.shipperId === user?.organizationId;
+    const isCarrier =
+      session.role === "CARRIER" &&
+      escalation.load.assignedTruck?.carrierId === user?.organizationId;
+    const isDispatcher = session.role === "DISPATCHER";
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isShipper && !isCarrier && !isDispatcher && !isAdmin) {
       return NextResponse.json(
-        { error: 'You do not have permission to view this escalation' },
+        { error: "You do not have permission to view this escalation" },
         { status: 403 }
       );
     }
 
     return NextResponse.json({ escalation });
-
   } catch (error) {
-    console.error('Escalation fetch error:', error);
+    console.error("Escalation fetch error:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch escalation' },
+      { error: "Failed to fetch escalation" },
       { status: 500 }
     );
   }
@@ -130,18 +142,18 @@ export async function PATCH(
 
     if (!escalation) {
       return NextResponse.json(
-        { error: 'Escalation not found' },
+        { error: "Escalation not found" },
         { status: 404 }
       );
     }
 
     // Permission check: Only dispatchers and admins can update escalations
-    const isDispatcher = session.role === 'DISPATCHER';
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+    const isDispatcher = session.role === "DISPATCHER";
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isDispatcher && !isAdmin) {
       return NextResponse.json(
-        { error: 'Only dispatchers and admins can update escalations' },
+        { error: "Only dispatchers and admins can update escalations" },
         { status: 403 }
       );
     }
@@ -153,7 +165,10 @@ export async function PATCH(
       updateData.status = validatedData.status;
 
       // Auto-set resolvedBy and resolvedAt when status is RESOLVED
-      if (validatedData.status === 'RESOLVED' || validatedData.status === 'CLOSED') {
+      if (
+        validatedData.status === "RESOLVED" ||
+        validatedData.status === "CLOSED"
+      ) {
         updateData.resolvedBy = session.userId;
         updateData.resolvedAt = new Date();
       }
@@ -176,8 +191,8 @@ export async function PATCH(
       updateData.assignedAt = new Date();
 
       // Change status to ASSIGNED if it was OPEN
-      if (escalation.status === 'OPEN') {
-        updateData.status = 'ASSIGNED';
+      if (escalation.status === "OPEN") {
+        updateData.status = "ASSIGNED";
       }
     }
 
@@ -201,7 +216,7 @@ export async function PATCH(
     await db.loadEvent.create({
       data: {
         loadId: escalation.load.id,
-        eventType: 'ESCALATION_UPDATED',
+        eventType: "ESCALATION_UPDATED",
         description: `Escalation updated: ${escalation.title}`,
         userId: session.userId,
         metadata: {
@@ -215,7 +230,7 @@ export async function PATCH(
     if (validatedData.assignedTo) {
       await createNotification({
         userId: validatedData.assignedTo,
-        type: 'ESCALATION_ASSIGNED',
+        type: "ESCALATION_ASSIGNED",
         title: `Escalation Assigned: ${escalation.title}`,
         message: `You have been assigned an escalation for load ${escalation.load.pickupCity} → ${escalation.load.deliveryCity}`,
         metadata: {
@@ -227,7 +242,10 @@ export async function PATCH(
     }
 
     // Send notification to involved parties if resolved
-    if (validatedData.status === 'RESOLVED' || validatedData.status === 'CLOSED') {
+    if (
+      validatedData.status === "RESOLVED" ||
+      validatedData.status === "CLOSED"
+    ) {
       const notifyUsers: string[] = [];
 
       // Notify shipper
@@ -242,7 +260,10 @@ export async function PATCH(
       // Notify carrier if truck was assigned
       if (escalation.load.assignedTruck?.carrierId) {
         const carrierUsers = await db.user.findMany({
-          where: { organizationId: escalation.load.assignedTruck.carrierId, isActive: true },
+          where: {
+            organizationId: escalation.load.assignedTruck.carrierId,
+            isActive: true,
+          },
           select: { id: true },
         });
         notifyUsers.push(...carrierUsers.map((u) => u.id));
@@ -252,9 +273,10 @@ export async function PATCH(
         notifyUsers.map((userId) =>
           createNotification({
             userId,
-            type: 'ESCALATION_RESOLVED',
+            type: "ESCALATION_RESOLVED",
             title: `Escalation Resolved: ${escalation.title}`,
-            message: validatedData.resolution || 'The escalation has been resolved.',
+            message:
+              validatedData.resolution || "The escalation has been resolved.",
             metadata: {
               escalationId,
               loadId: escalation.load.id,
@@ -265,18 +287,17 @@ export async function PATCH(
     }
 
     return NextResponse.json({
-      message: 'Escalation updated successfully',
+      message: "Escalation updated successfully",
       escalation: updatedEscalation,
     });
-
   } catch (error) {
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
 
-    console.error('Escalation update error:', error);
+    console.error("Escalation update error:", error);
     return NextResponse.json(
-      { error: 'Failed to update escalation' },
+      { error: "Failed to update escalation" },
       { status: 500 }
     );
   }
@@ -296,9 +317,9 @@ export async function DELETE(
     const { id: escalationId } = await params;
 
     // Only admins can delete escalations
-    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
+    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: 'Only admins can delete escalations' },
+        { error: "Only admins can delete escalations" },
         { status: 403 }
       );
     }
@@ -310,7 +331,7 @@ export async function DELETE(
 
     if (!escalation) {
       return NextResponse.json(
-        { error: 'Escalation not found' },
+        { error: "Escalation not found" },
         { status: 404 }
       );
     }
@@ -323,20 +344,19 @@ export async function DELETE(
     await db.loadEvent.create({
       data: {
         loadId: escalation.loadId,
-        eventType: 'ESCALATION_DELETED',
+        eventType: "ESCALATION_DELETED",
         description: `Escalation deleted: ${escalation.title}`,
         userId: session.userId,
       },
     });
 
     return NextResponse.json({
-      message: 'Escalation deleted successfully',
+      message: "Escalation deleted successfully",
     });
-
   } catch (error) {
-    console.error('Escalation delete error:', error);
+    console.error("Escalation delete error:", error);
     return NextResponse.json(
-      { error: 'Failed to delete escalation' },
+      { error: "Failed to delete escalation" },
       { status: 500 }
     );
   }

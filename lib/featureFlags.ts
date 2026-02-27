@@ -29,13 +29,18 @@
  * ```
  */
 
-import { logger } from './logger';
+import { logger } from "./logger";
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-export type FlagCategory = 'core' | 'beta' | 'experimental' | 'deprecated' | 'ops';
+export type FlagCategory =
+  | "core"
+  | "beta"
+  | "experimental"
+  | "deprecated"
+  | "ops";
 
 export interface FeatureFlag {
   key: string;
@@ -54,7 +59,7 @@ export interface FeatureFlag {
 export interface TargetRule {
   id: string;
   attribute: string; // e.g., 'userId', 'role', 'organizationId'
-  operator: 'eq' | 'neq' | 'in' | 'nin' | 'contains' | 'startsWith';
+  operator: "eq" | "neq" | "in" | "nin" | "contains" | "startsWith";
   value: string | string[];
   enabled: boolean;
 }
@@ -70,11 +75,11 @@ export interface EvaluationContext {
 export interface FlagEvaluation {
   key: string;
   enabled: boolean;
-  reason: 'flag_disabled' | 'rule_match' | 'percentage_rollout' | 'default';
+  reason: "flag_disabled" | "rule_match" | "percentage_rollout" | "default";
   ruleId?: string;
 }
 
-export type FlagProvider = 'local' | 'database' | 'launchdarkly' | 'unleash';
+export type FlagProvider = "local" | "database" | "launchdarkly" | "unleash";
 
 export interface FeatureFlagConfig {
   provider: FlagProvider;
@@ -95,16 +100,20 @@ export interface FeatureFlagConfig {
 
 function getConfig(): FeatureFlagConfig {
   return {
-    provider: (process.env.FEATURE_FLAG_PROVIDER as FlagProvider) || 'local',
-    cacheTimeMs: parseInt(process.env.FEATURE_FLAG_CACHE_MS || '60000'), // 1 minute
-    launchDarkly: process.env.LAUNCHDARKLY_SDK_KEY ? {
-      sdkKey: process.env.LAUNCHDARKLY_SDK_KEY,
-    } : undefined,
-    unleash: process.env.UNLEASH_URL ? {
-      url: process.env.UNLEASH_URL,
-      apiKey: process.env.UNLEASH_API_KEY || '',
-      appName: process.env.UNLEASH_APP_NAME || 'freight-platform',
-    } : undefined,
+    provider: (process.env.FEATURE_FLAG_PROVIDER as FlagProvider) || "local",
+    cacheTimeMs: parseInt(process.env.FEATURE_FLAG_CACHE_MS || "60000"), // 1 minute
+    launchDarkly: process.env.LAUNCHDARKLY_SDK_KEY
+      ? {
+          sdkKey: process.env.LAUNCHDARKLY_SDK_KEY,
+        }
+      : undefined,
+    unleash: process.env.UNLEASH_URL
+      ? {
+          url: process.env.UNLEASH_URL,
+          apiKey: process.env.UNLEASH_API_KEY || "",
+          appName: process.env.UNLEASH_APP_NAME || "freight-platform",
+        }
+      : undefined,
   };
 }
 
@@ -115,164 +124,164 @@ function getConfig(): FeatureFlagConfig {
 const DEFAULT_FLAGS: FeatureFlag[] = [
   // Core features (enabled by default)
   {
-    key: 'gps_tracking',
-    name: 'GPS Tracking',
-    description: 'Enable real-time GPS tracking for trucks',
+    key: "gps_tracking",
+    name: "GPS Tracking",
+    description: "Enable real-time GPS tracking for trucks",
     enabled: true,
-    category: 'core',
+    category: "core",
     rolloutPercentage: 100,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    updatedBy: 'system',
+    updatedBy: "system",
   },
   {
-    key: 'real_time_notifications',
-    name: 'Real-time Notifications',
-    description: 'WebSocket-based real-time notifications',
+    key: "real_time_notifications",
+    name: "Real-time Notifications",
+    description: "WebSocket-based real-time notifications",
     enabled: true,
-    category: 'core',
+    category: "core",
     rolloutPercentage: 100,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    updatedBy: 'system',
+    updatedBy: "system",
   },
   {
-    key: 'auto_settlement',
-    name: 'Auto Settlement',
-    description: 'Automatically settle loads after delivery confirmation',
+    key: "auto_settlement",
+    name: "Auto Settlement",
+    description: "Automatically settle loads after delivery confirmation",
     enabled: true,
-    category: 'core',
+    category: "core",
     rolloutPercentage: 100,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    updatedBy: 'system',
+    updatedBy: "system",
   },
   {
-    key: 'sms_notifications',
-    name: 'SMS Notifications',
-    description: 'Send SMS notifications via AfroMessage',
+    key: "sms_notifications",
+    name: "SMS Notifications",
+    description: "Send SMS notifications via AfroMessage",
     enabled: true,
-    category: 'core',
+    category: "core",
     rolloutPercentage: 100,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    updatedBy: 'system',
+    updatedBy: "system",
   },
   {
-    key: 'bypass_detection',
-    name: 'GPS Bypass Detection',
-    description: 'Detect when GPS devices are tampered with',
+    key: "bypass_detection",
+    name: "GPS Bypass Detection",
+    description: "Detect when GPS devices are tampered with",
     enabled: true,
-    category: 'core',
+    category: "core",
     rolloutPercentage: 100,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    updatedBy: 'system',
+    updatedBy: "system",
   },
 
   // Beta features (controlled rollout)
   {
-    key: 'new_dashboard',
-    name: 'New Dashboard UI',
-    description: 'Redesigned dashboard with improved metrics',
+    key: "new_dashboard",
+    name: "New Dashboard UI",
+    description: "Redesigned dashboard with improved metrics",
     enabled: false,
-    category: 'beta',
+    category: "beta",
     rolloutPercentage: 0,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    updatedBy: 'system',
+    updatedBy: "system",
   },
   {
-    key: 'route_optimization',
-    name: 'Route Optimization',
-    description: 'Suggest optimal routes for multi-stop loads',
+    key: "route_optimization",
+    name: "Route Optimization",
+    description: "Suggest optimal routes for multi-stop loads",
     enabled: false,
-    category: 'beta',
+    category: "beta",
     rolloutPercentage: 0,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    updatedBy: 'system',
+    updatedBy: "system",
   },
   {
-    key: 'dark_mode',
-    name: 'Dark Mode',
-    description: 'Enable dark mode UI theme',
+    key: "dark_mode",
+    name: "Dark Mode",
+    description: "Enable dark mode UI theme",
     enabled: false,
-    category: 'beta',
+    category: "beta",
     rolloutPercentage: 0,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    updatedBy: 'system',
+    updatedBy: "system",
   },
 
   // Experimental features (internal testing)
   {
-    key: 'advanced_matching',
-    name: 'Advanced Matching Algorithm',
-    description: 'ML-based load-truck matching recommendations',
+    key: "advanced_matching",
+    name: "Advanced Matching Algorithm",
+    description: "ML-based load-truck matching recommendations",
     enabled: false,
-    category: 'experimental',
+    category: "experimental",
     rolloutPercentage: 0,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    updatedBy: 'system',
+    updatedBy: "system",
   },
   {
-    key: 'document_ocr',
-    name: 'Document OCR',
-    description: 'Automatic extraction of document data using OCR',
+    key: "document_ocr",
+    name: "Document OCR",
+    description: "Automatic extraction of document data using OCR",
     enabled: false,
-    category: 'experimental',
+    category: "experimental",
     rolloutPercentage: 0,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    updatedBy: 'system',
+    updatedBy: "system",
   },
   {
-    key: 'predictive_pricing',
-    name: 'Predictive Pricing',
-    description: 'AI-powered price suggestions based on market data',
+    key: "predictive_pricing",
+    name: "Predictive Pricing",
+    description: "AI-powered price suggestions based on market data",
     enabled: false,
-    category: 'experimental',
+    category: "experimental",
     rolloutPercentage: 0,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    updatedBy: 'system',
+    updatedBy: "system",
   },
 
   // Ops features (operational toggles)
   {
-    key: 'maintenance_mode',
-    name: 'Maintenance Mode',
-    description: 'Show maintenance page to all users',
+    key: "maintenance_mode",
+    name: "Maintenance Mode",
+    description: "Show maintenance page to all users",
     enabled: false,
-    category: 'ops',
+    category: "ops",
     rolloutPercentage: 0,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    updatedBy: 'system',
+    updatedBy: "system",
   },
   {
-    key: 'read_only_mode',
-    name: 'Read-Only Mode',
-    description: 'Disable all write operations temporarily',
+    key: "read_only_mode",
+    name: "Read-Only Mode",
+    description: "Disable all write operations temporarily",
     enabled: false,
-    category: 'ops',
+    category: "ops",
     rolloutPercentage: 0,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    updatedBy: 'system',
+    updatedBy: "system",
   },
   {
-    key: 'debug_logging',
-    name: 'Debug Logging',
-    description: 'Enable verbose debug logging',
+    key: "debug_logging",
+    name: "Debug Logging",
+    description: "Enable verbose debug logging",
     enabled: false,
-    category: 'ops',
+    category: "ops",
     rolloutPercentage: 0,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    updatedBy: 'system',
+    updatedBy: "system",
   },
 ];
 
@@ -325,30 +334,32 @@ async function initLaunchDarkly(): Promise<void> {
   if (!config.launchDarkly?.sdkKey) return;
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-eval -- Dynamic require for optional SDK dependency
     const dynamicRequire = (moduleName: string): unknown => {
-      return eval('require')(moduleName);
+      return eval("require")(moduleName);
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- LaunchDarkly SDK is optionally loaded
-    const LaunchDarkly = dynamicRequire('@launchdarkly/node-server-sdk') as any;
+    const LaunchDarkly = dynamicRequire("@launchdarkly/node-server-sdk") as any;
     ldClient = LaunchDarkly.init(config.launchDarkly.sdkKey);
     await ldClient.waitForInitialization();
-    logger.info('LaunchDarkly client initialized');
+    logger.info("LaunchDarkly client initialized");
   } catch (error) {
-    logger.error('Failed to initialize LaunchDarkly', error);
+    logger.error("Failed to initialize LaunchDarkly", error);
   }
 }
 
-async function getLaunchDarklyFlag(key: string, context: EvaluationContext): Promise<boolean> {
+async function getLaunchDarklyFlag(
+  key: string,
+  context: EvaluationContext
+): Promise<boolean> {
   if (!ldClient) {
     return store.flags.get(key)?.enabled ?? false;
   }
 
   try {
     const ldContext = {
-      kind: 'user',
-      key: context.userId || 'anonymous',
+      kind: "user",
+      key: context.userId || "anonymous",
       email: context.email,
       custom: {
         organizationId: context.organizationId,
@@ -359,7 +370,7 @@ async function getLaunchDarklyFlag(key: string, context: EvaluationContext): Pro
 
     return await ldClient.variation(key, ldContext, false);
   } catch (error) {
-    logger.error('LaunchDarkly evaluation error', error, { flagKey: key });
+    logger.error("LaunchDarkly evaluation error", error, { flagKey: key });
     return store.flags.get(key)?.enabled ?? false;
   }
 }
@@ -375,13 +386,12 @@ async function initUnleash(): Promise<void> {
   if (!config.unleash?.url) return;
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-eval -- Dynamic require for optional SDK dependency
     const dynamicRequire = (moduleName: string): unknown => {
-      return eval('require')(moduleName);
+      return eval("require")(moduleName);
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Unleash SDK is optionally loaded
-    const { Unleash } = dynamicRequire('unleash-client') as any;
+    const { Unleash } = dynamicRequire("unleash-client") as any;
     unleashClient = new Unleash({
       url: config.unleash.url,
       appName: config.unleash.appName,
@@ -390,19 +400,22 @@ async function initUnleash(): Promise<void> {
       },
     });
 
-    unleashClient.on('ready', () => {
-      logger.info('Unleash client ready');
+    unleashClient.on("ready", () => {
+      logger.info("Unleash client ready");
     });
 
-    unleashClient.on('error', (error: Error) => {
-      logger.error('Unleash error', error);
+    unleashClient.on("error", (error: Error) => {
+      logger.error("Unleash error", error);
     });
   } catch (error) {
-    logger.error('Failed to initialize Unleash', error);
+    logger.error("Failed to initialize Unleash", error);
   }
 }
 
-async function getUnleashFlag(key: string, context: EvaluationContext): Promise<boolean> {
+async function getUnleashFlag(
+  key: string,
+  context: EvaluationContext
+): Promise<boolean> {
   if (!unleashClient) {
     return store.flags.get(key)?.enabled ?? false;
   }
@@ -418,7 +431,7 @@ async function getUnleashFlag(key: string, context: EvaluationContext): Promise<
       },
     });
   } catch (error) {
-    logger.error('Unleash evaluation error', error, { flagKey: key });
+    logger.error("Unleash evaluation error", error, { flagKey: key });
     return store.flags.get(key)?.enabled ?? false;
   }
 }
@@ -434,7 +447,7 @@ function hashToPercentage(input: string): number {
   let hash = 0;
   for (let i = 0; i < input.length; i++) {
     const char = input.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32bit integer
   }
   return Math.abs(hash) % 100;
@@ -449,16 +462,16 @@ function evaluateRule(rule: TargetRule, context: EvaluationContext): boolean {
   let contextValue: string | undefined;
 
   switch (rule.attribute) {
-    case 'userId':
+    case "userId":
       contextValue = context.userId;
       break;
-    case 'organizationId':
+    case "organizationId":
       contextValue = context.organizationId;
       break;
-    case 'role':
+    case "role":
       contextValue = context.role;
       break;
-    case 'email':
+    case "email":
       contextValue = context.email;
       break;
     default:
@@ -468,17 +481,17 @@ function evaluateRule(rule: TargetRule, context: EvaluationContext): boolean {
   if (!contextValue) return false;
 
   switch (rule.operator) {
-    case 'eq':
+    case "eq":
       return contextValue === rule.value;
-    case 'neq':
+    case "neq":
       return contextValue !== rule.value;
-    case 'in':
+    case "in":
       return Array.isArray(rule.value) && rule.value.includes(contextValue);
-    case 'nin':
+    case "nin":
       return Array.isArray(rule.value) && !rule.value.includes(contextValue);
-    case 'contains':
+    case "contains":
       return contextValue.includes(rule.value as string);
-    case 'startsWith':
+    case "startsWith":
       return contextValue.startsWith(rule.value as string);
     default:
       return false;
@@ -497,7 +510,7 @@ async function evaluateFlag(
     return {
       key: flag.key,
       enabled: false,
-      reason: 'flag_disabled',
+      reason: "flag_disabled",
     };
   }
 
@@ -508,7 +521,7 @@ async function evaluateFlag(
         return {
           key: flag.key,
           enabled: true,
-          reason: 'rule_match',
+          reason: "rule_match",
           ruleId: rule.id,
         };
       }
@@ -517,14 +530,14 @@ async function evaluateFlag(
 
   // Percentage rollout
   if (flag.rolloutPercentage < 100) {
-    const hashInput = `${flag.key}:${context.userId || context.organizationId || 'anonymous'}`;
+    const hashInput = `${flag.key}:${context.userId || context.organizationId || "anonymous"}`;
     const percentage = hashToPercentage(hashInput);
 
     if (percentage >= flag.rolloutPercentage) {
       return {
         key: flag.key,
         enabled: false,
-        reason: 'percentage_rollout',
+        reason: "percentage_rollout",
       };
     }
   }
@@ -532,7 +545,7 @@ async function evaluateFlag(
   return {
     key: flag.key,
     enabled: true,
-    reason: 'default',
+    reason: "default",
   };
 }
 
@@ -550,18 +563,18 @@ export async function isFeatureEnabled(
   const config = getConfig();
 
   // Use external provider if configured
-  if (config.provider === 'launchdarkly' && ldClient) {
+  if (config.provider === "launchdarkly" && ldClient) {
     return getLaunchDarklyFlag(key, context);
   }
 
-  if (config.provider === 'unleash' && unleashClient) {
+  if (config.provider === "unleash" && unleashClient) {
     return getUnleashFlag(key, context);
   }
 
   // Use local evaluation
   const flag = await getLocalFlag(key);
   if (!flag) {
-    logger.warn('Unknown feature flag', { flagKey: key });
+    logger.warn("Unknown feature flag", { flagKey: key });
     return false;
   }
 
@@ -604,7 +617,7 @@ export async function updateFeatureFlag(
 
   await setLocalFlag(updated);
 
-  logger.info('Feature flag updated', {
+  logger.info("Feature flag updated", {
     flagKey: key,
     updatedBy,
     changes: updates,
@@ -617,7 +630,7 @@ export async function updateFeatureFlag(
  * Create a new feature flag
  */
 export async function createFeatureFlag(
-  flag: Omit<FeatureFlag, 'createdAt' | 'updatedAt'>,
+  flag: Omit<FeatureFlag, "createdAt" | "updatedAt">,
   createdBy: string
 ): Promise<FeatureFlag> {
   const newFlag: FeatureFlag = {
@@ -629,7 +642,7 @@ export async function createFeatureFlag(
 
   await setLocalFlag(newFlag);
 
-  logger.info('Feature flag created', {
+  logger.info("Feature flag created", {
     flagKey: flag.key,
     createdBy,
   });
@@ -640,13 +653,16 @@ export async function createFeatureFlag(
 /**
  * Delete a feature flag
  */
-export async function deleteFeatureFlag(key: string, deletedBy: string): Promise<boolean> {
+export async function deleteFeatureFlag(
+  key: string,
+  deletedBy: string
+): Promise<boolean> {
   const exists = store.flags.has(key);
   if (!exists) return false;
 
   store.flags.delete(key);
 
-  logger.info('Feature flag deleted', {
+  logger.info("Feature flag deleted", {
     flagKey: key,
     deletedBy,
   });
@@ -657,9 +673,11 @@ export async function deleteFeatureFlag(key: string, deletedBy: string): Promise
 /**
  * Get feature flags by category
  */
-export async function getFeatureFlagsByCategory(category: FlagCategory): Promise<FeatureFlag[]> {
+export async function getFeatureFlagsByCategory(
+  category: FlagCategory
+): Promise<FeatureFlag[]> {
   const all = await getAllLocalFlags();
-  return all.filter(f => f.category === category);
+  return all.filter((f) => f.category === category);
 }
 
 /**
@@ -668,13 +686,13 @@ export async function getFeatureFlagsByCategory(category: FlagCategory): Promise
 export async function initializeFeatureFlags(): Promise<void> {
   const config = getConfig();
 
-  if (config.provider === 'launchdarkly') {
+  if (config.provider === "launchdarkly") {
     await initLaunchDarkly();
-  } else if (config.provider === 'unleash') {
+  } else if (config.provider === "unleash") {
     await initUnleash();
   }
 
-  logger.info('Feature flags initialized', { provider: config.provider });
+  logger.info("Feature flags initialized", { provider: config.provider });
 }
 
 // =============================================================================
@@ -730,14 +748,14 @@ export function getFeatureFlagStats(): {
 
   return {
     total: flags.length,
-    enabled: flags.filter(f => f.enabled).length,
-    disabled: flags.filter(f => !f.enabled).length,
+    enabled: flags.filter((f) => f.enabled).length,
+    disabled: flags.filter((f) => !f.enabled).length,
     byCategory: {
-      core: flags.filter(f => f.category === 'core').length,
-      beta: flags.filter(f => f.category === 'beta').length,
-      experimental: flags.filter(f => f.category === 'experimental').length,
-      deprecated: flags.filter(f => f.category === 'deprecated').length,
-      ops: flags.filter(f => f.category === 'ops').length,
+      core: flags.filter((f) => f.category === "core").length,
+      beta: flags.filter((f) => f.category === "beta").length,
+      experimental: flags.filter((f) => f.category === "experimental").length,
+      deprecated: flags.filter((f) => f.category === "deprecated").length,
+      ops: flags.filter((f) => f.category === "ops").length,
     },
   };
 }

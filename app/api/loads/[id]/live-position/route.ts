@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
 import {
   getLoadLivePosition,
   canAccessTracking,
   isTrackingActive,
-} from '@/lib/gpsTracking';
+} from "@/lib/gpsTracking";
 
 /**
  * GET /api/loads/[id]/live-position
@@ -26,7 +26,9 @@ export async function GET(
 
     if (!hasAccess) {
       return NextResponse.json(
-        { error: 'You do not have permission to access tracking for this load' },
+        {
+          error: "You do not have permission to access tracking for this load",
+        },
         { status: 403 }
       );
     }
@@ -36,7 +38,7 @@ export async function GET(
 
     if (!trackingActive) {
       return NextResponse.json(
-        { error: 'GPS tracking is not enabled for this load' },
+        { error: "GPS tracking is not enabled for this load" },
         { status: 400 }
       );
     }
@@ -46,7 +48,7 @@ export async function GET(
 
     if (!position) {
       return NextResponse.json(
-        { error: 'No GPS position available' },
+        { error: "No GPS position available" },
         { status: 404 }
       );
     }
@@ -55,9 +57,9 @@ export async function GET(
       position,
     });
   } catch (error) {
-    console.error('Get live position error:', error);
+    console.error("Get live position error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

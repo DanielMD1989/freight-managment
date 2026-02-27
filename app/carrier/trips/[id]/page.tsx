@@ -11,12 +11,12 @@
  * Updated to use proper Trip model
  */
 
-import { Suspense } from 'react';
-import { requireAuth } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { redirect, notFound } from 'next/navigation';
-import TripDetailClient from './TripDetailClient';
-import { createTripForLoad } from '@/lib/tripManagement';
+import { Suspense } from "react";
+import { requireAuth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { redirect, notFound } from "next/navigation";
+import TripDetailClient from "./TripDetailClient";
+import { createTripForLoad } from "@/lib/tripManagement";
 
 async function getTripDetails(id: string, userId: string) {
   const user = await db.user.findUnique({
@@ -46,13 +46,13 @@ async function getTripDetails(id: string, userId: string) {
           documents: {
             where: {
               type: {
-                in: ['POD', 'BOL', 'RECEIPT'],
+                in: ["POD", "BOL", "RECEIPT"],
               },
             },
-            orderBy: { uploadedAt: 'desc' },
+            orderBy: { uploadedAt: "desc" },
           },
           events: {
-            orderBy: { createdAt: 'desc' },
+            orderBy: { createdAt: "desc" },
             take: 20,
           },
         },
@@ -102,13 +102,13 @@ async function getTripDetails(id: string, userId: string) {
             documents: {
               where: {
                 type: {
-                  in: ['POD', 'BOL', 'RECEIPT'],
+                  in: ["POD", "BOL", "RECEIPT"],
                 },
               },
-              orderBy: { uploadedAt: 'desc' },
+              orderBy: { uploadedAt: "desc" },
             },
             events: {
-              orderBy: { createdAt: 'desc' },
+              orderBy: { createdAt: "desc" },
               take: 20,
             },
           },
@@ -158,7 +158,7 @@ async function getTripDetails(id: string, userId: string) {
       const approvedRequest = await db.loadRequest.findFirst({
         where: {
           loadId: load.id,
-          status: 'APPROVED',
+          status: "APPROVED",
         },
         select: { truckId: true },
       });
@@ -180,7 +180,11 @@ async function getTripDetails(id: string, userId: string) {
         select: { carrierId: true },
       });
 
-      if (truck?.carrierId === user.organizationId || user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
+      if (
+        truck?.carrierId === user.organizationId ||
+        user.role === "ADMIN" ||
+        user.role === "SUPER_ADMIN"
+      ) {
         // Create the missing trip
         const newTrip = await createTripForLoad(load.id, truckId, userId);
         if (newTrip) {
@@ -196,11 +200,11 @@ async function getTripDetails(id: string, userId: string) {
                   pickupLocation: true,
                   deliveryLocation: true,
                   documents: {
-                    where: { type: { in: ['POD', 'BOL', 'RECEIPT'] } },
-                    orderBy: { uploadedAt: 'desc' },
+                    where: { type: { in: ["POD", "BOL", "RECEIPT"] } },
+                    orderBy: { uploadedAt: "desc" },
                   },
                   events: {
-                    orderBy: { createdAt: 'desc' },
+                    orderBy: { createdAt: "desc" },
                     take: 20,
                   },
                 },
@@ -230,7 +234,7 @@ async function getTripDetails(id: string, userId: string) {
   }
 
   // Verify carrier owns the assigned truck (or is admin)
-  if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
     if (trip.carrierId !== user.organizationId) {
       return null;
     }
@@ -247,8 +251,12 @@ export default async function TripDetailPage({
   const { id } = await params;
   const session = await requireAuth();
 
-  if (session.role !== 'CARRIER' && session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
-    redirect('/carrier');
+  if (
+    session.role !== "CARRIER" &&
+    session.role !== "ADMIN" &&
+    session.role !== "SUPER_ADMIN"
+  ) {
+    redirect("/carrier");
   }
 
   const tripData = await getTripDetails(id, session.userId);
@@ -266,10 +274,19 @@ export default async function TripDetailPage({
     referenceNumber: `TRIP-${tripData.id.slice(-8).toUpperCase()}`,
     status: tripData.status,
     weight: load?.weight ? Number(load.weight) : 0,
-    truckType: load?.truckType || tripData.truck?.truckType || 'Unknown',
-    pickupCity: tripData.pickupCity || load?.pickupLocation?.name || load?.pickupCity || 'Unknown',
-    deliveryCity: tripData.deliveryCity || load?.deliveryLocation?.name || load?.deliveryCity || 'Unknown',
-    pickupDate: load?.pickupDate?.toISOString() || tripData.createdAt.toISOString(),
+    truckType: load?.truckType || tripData.truck?.truckType || "Unknown",
+    pickupCity:
+      tripData.pickupCity ||
+      load?.pickupLocation?.name ||
+      load?.pickupCity ||
+      "Unknown",
+    deliveryCity:
+      tripData.deliveryCity ||
+      load?.deliveryLocation?.name ||
+      load?.deliveryCity ||
+      "Unknown",
+    pickupDate:
+      load?.pickupDate?.toISOString() || tripData.createdAt.toISOString(),
     deliveryDate: load?.deliveryDate?.toISOString() || null,
     pickupAddress: tripData.pickupAddress || load?.pickupAddress,
     deliveryAddress: tripData.deliveryAddress || load?.deliveryAddress,
@@ -283,15 +300,19 @@ export default async function TripDetailPage({
     trackingUrl: tripData.trackingUrl,
     tripProgressPercent: null, // Calculate from GPS positions if needed
     remainingDistanceKm: null,
-    estimatedTripKm: tripData.estimatedDistanceKm ? Number(tripData.estimatedDistanceKm) : null,
+    estimatedTripKm: tripData.estimatedDistanceKm
+      ? Number(tripData.estimatedDistanceKm)
+      : null,
     shipper: tripData.shipper || load?.shipper || null,
-    truck: tripData.truck ? {
-      id: tripData.truck.id,
-      licensePlate: tripData.truck.licensePlate,
-      truckType: tripData.truck.truckType,
-      capacity: Number(tripData.truck.capacity),
-      carrier: tripData.truck.carrier,
-    } : null,
+    truck: tripData.truck
+      ? {
+          id: tripData.truck.id,
+          licensePlate: tripData.truck.licensePlate,
+          truckType: tripData.truck.truckType,
+          capacity: Number(tripData.truck.capacity),
+          carrier: tripData.truck.carrier,
+        }
+      : null,
     documents: (load?.documents || []).map((doc) => ({
       id: doc.id,
       documentType: doc.type,
@@ -302,7 +323,7 @@ export default async function TripDetailPage({
     events: (load?.events || []).map((event) => ({
       id: event.id,
       eventType: event.eventType,
-      description: event.description || '',
+      description: event.description || "",
       createdAt: event.createdAt.toISOString(),
     })),
     // Add trip-specific timestamps
@@ -326,10 +347,10 @@ export default async function TripDetailPage({
 function TripDetailSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="h-10 w-64 bg-gray-200 dark:bg-slate-700 rounded animate-pulse" />
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 h-96 bg-gray-200 dark:bg-slate-700 rounded-lg animate-pulse" />
-        <div className="h-96 bg-gray-200 dark:bg-slate-700 rounded-lg animate-pulse" />
+      <div className="h-10 w-64 animate-pulse rounded bg-gray-200 dark:bg-slate-700" />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="h-96 animate-pulse rounded-lg bg-gray-200 lg:col-span-2 dark:bg-slate-700" />
+        <div className="h-96 animate-pulse rounded-lg bg-gray-200 dark:bg-slate-700" />
       </div>
     </div>
   );

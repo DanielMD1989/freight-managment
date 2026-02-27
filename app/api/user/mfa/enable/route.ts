@@ -19,12 +19,16 @@
  * - OTP expires in 5 minutes
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth, generateOTP, hashPassword } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { requireCSRF } from '@/lib/csrf';
-import { sendMFAOTP, isValidEthiopianPhone, isAfroMessageConfigured } from '@/lib/sms/afromessage';
-import { logSecurityEvent, SecurityEventType } from '@/lib/security-events';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth, generateOTP, hashPassword } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { requireCSRF } from "@/lib/csrf";
+import {
+  sendMFAOTP,
+  isValidEthiopianPhone,
+  isAfroMessageConfigured,
+} from "@/lib/sms/afromessage";
+import { logSecurityEvent, SecurityEventType } from "@/lib/security-events";
 
 // OTP expires in 5 minutes
 const OTP_EXPIRY_MINUTES = 5;
@@ -40,8 +44,10 @@ export async function POST(request: NextRequest) {
     if (csrfError) return csrfError;
 
     const session = await requireAuth();
-    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip');
-    const userAgent = request.headers.get('user-agent');
+    const ipAddress =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip");
+    const userAgent = request.headers.get("user-agent");
 
     const body = await request.json();
     const { phone } = body;
@@ -49,14 +55,14 @@ export async function POST(request: NextRequest) {
     // Validate phone number
     if (!phone) {
       return NextResponse.json(
-        { error: 'Phone number is required' },
+        { error: "Phone number is required" },
         { status: 400 }
       );
     }
 
     if (!isValidEthiopianPhone(phone)) {
       return NextResponse.json(
-        { error: 'Invalid Ethiopian phone number format' },
+        { error: "Invalid Ethiopian phone number format" },
         { status: 400 }
       );
     }
@@ -68,14 +74,19 @@ export async function POST(request: NextRequest) {
 
     if (existingMFA?.enabled) {
       return NextResponse.json(
-        { error: 'MFA is already enabled. Disable it first to change phone number.' },
+        {
+          error:
+            "MFA is already enabled. Disable it first to change phone number.",
+        },
         { status: 400 }
       );
     }
 
     // Rate limiting: Check recent MFA setup attempts
     const rateLimitWindowStart = new Date();
-    rateLimitWindowStart.setHours(rateLimitWindowStart.getHours() - RATE_LIMIT_WINDOW_HOURS);
+    rateLimitWindowStart.setHours(
+      rateLimitWindowStart.getHours() - RATE_LIMIT_WINDOW_HOURS
+    );
 
     const recentAttempts = await db.securityEvent.count({
       where: {
@@ -87,7 +98,7 @@ export async function POST(request: NextRequest) {
 
     if (recentAttempts >= RATE_LIMIT_MAX_ATTEMPTS) {
       return NextResponse.json(
-        { error: 'Too many MFA setup attempts. Please try again later.' },
+        { error: "Too many MFA setup attempts. Please try again later." },
         { status: 429 }
       );
     }
@@ -129,7 +140,7 @@ export async function POST(request: NextRequest) {
         phone: phone.slice(-4), // Last 4 digits for logging
         otpHash: hashedOTP,
         expiresAt: expiresAt.toISOString(),
-        stage: 'pending_verification',
+        stage: "pending_verification",
       },
     });
 
@@ -137,9 +148,9 @@ export async function POST(request: NextRequest) {
     if (isAfroMessageConfigured()) {
       const result = await sendMFAOTP(phone, otp);
       if (!result.success) {
-        console.error('[MFA] Failed to send OTP:', result.error);
+        console.error("[MFA] Failed to send OTP:", result.error);
         return NextResponse.json(
-          { error: 'Failed to send verification code. Please try again.' },
+          { error: "Failed to send verification code. Please try again." },
           { status: 500 }
         );
       }
@@ -148,19 +159,19 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Verification code sent to your phone',
+      message: "Verification code sent to your phone",
       expiresIn: OTP_EXPIRY_MINUTES * 60, // seconds
       phoneLastFour: phone.slice(-4),
     });
   } catch (error) {
-    console.error('MFA enable error:', error);
+    console.error("MFA enable error:", error);
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     return NextResponse.json(
-      { error: 'Failed to initiate MFA setup' },
+      { error: "Failed to initiate MFA setup" },
       { status: 500 }
     );
   }

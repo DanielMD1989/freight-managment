@@ -13,11 +13,16 @@
  * - Max 5 verification attempts
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth, verifyPassword, generateRecoveryCodes, hashRecoveryCodes } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { requireCSRF } from '@/lib/csrf';
-import { logSecurityEvent, SecurityEventType } from '@/lib/security-events';
+import { NextRequest, NextResponse } from "next/server";
+import {
+  requireAuth,
+  verifyPassword,
+  generateRecoveryCodes,
+  hashRecoveryCodes,
+} from "@/lib/auth";
+import { db } from "@/lib/db";
+import { requireCSRF } from "@/lib/csrf";
+import { logSecurityEvent, SecurityEventType } from "@/lib/security-events";
 
 const MAX_VERIFY_ATTEMPTS = 5;
 
@@ -28,15 +33,17 @@ export async function POST(request: NextRequest) {
     if (csrfError) return csrfError;
 
     const session = await requireAuth();
-    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip');
-    const userAgent = request.headers.get('user-agent');
+    const ipAddress =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip");
+    const userAgent = request.headers.get("user-agent");
 
     const body = await request.json();
     const { otp } = body;
 
-    if (!otp || typeof otp !== 'string' || otp.length !== 6) {
+    if (!otp || typeof otp !== "string" || otp.length !== 6) {
       return NextResponse.json(
-        { error: 'Invalid OTP format. Must be 6 digits.' },
+        { error: "Invalid OTP format. Must be 6 digits." },
         { status: 400 }
       );
     }
@@ -48,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     if (existingMFA?.enabled) {
       return NextResponse.json(
-        { error: 'MFA is already enabled' },
+        { error: "MFA is already enabled" },
         { status: 400 }
       );
     }
@@ -60,12 +67,15 @@ export async function POST(request: NextRequest) {
         eventType: SecurityEventType.MFA_ENABLE,
         success: true,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     if (!pendingEvent) {
       return NextResponse.json(
-        { error: 'No pending MFA setup found. Please start the setup process again.' },
+        {
+          error:
+            "No pending MFA setup found. Please start the setup process again.",
+        },
         { status: 400 }
       );
     }
@@ -77,9 +87,12 @@ export async function POST(request: NextRequest) {
       attempts?: number;
     } | null;
 
-    if (!metadata?.otpHash || metadata.stage !== 'pending_verification') {
+    if (!metadata?.otpHash || metadata.stage !== "pending_verification") {
       return NextResponse.json(
-        { error: 'Invalid MFA setup state. Please start the setup process again.' },
+        {
+          error:
+            "Invalid MFA setup state. Please start the setup process again.",
+        },
         { status: 400 }
       );
     }
@@ -87,7 +100,7 @@ export async function POST(request: NextRequest) {
     // Check if OTP is expired
     if (metadata.expiresAt && new Date() > new Date(metadata.expiresAt)) {
       return NextResponse.json(
-        { error: 'Verification code has expired. Please request a new one.' },
+        { error: "Verification code has expired. Please request a new one." },
         { status: 400 }
       );
     }
@@ -96,7 +109,10 @@ export async function POST(request: NextRequest) {
     const attempts = metadata.attempts || 0;
     if (attempts >= MAX_VERIFY_ATTEMPTS) {
       return NextResponse.json(
-        { error: 'Too many failed attempts. Please request a new verification code.' },
+        {
+          error:
+            "Too many failed attempts. Please request a new verification code.",
+        },
         { status: 429 }
       );
     }
@@ -128,7 +144,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(
         {
-          error: 'Invalid verification code',
+          error: "Invalid verification code",
           remainingAttempts: MAX_VERIFY_ATTEMPTS - attempts - 1,
         },
         { status: 400 }
@@ -157,7 +173,7 @@ export async function POST(request: NextRequest) {
       data: {
         metadata: {
           ...metadata,
-          stage: 'completed',
+          stage: "completed",
           completedAt: new Date().toISOString(),
         },
       },
@@ -174,19 +190,20 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Two-factor authentication enabled successfully',
+      message: "Two-factor authentication enabled successfully",
       recoveryCodes: recoveryCodes, // Only returned once, user must save them!
-      warning: 'Save these recovery codes in a safe place. They will not be shown again.',
+      warning:
+        "Save these recovery codes in a safe place. They will not be shown again.",
     });
   } catch (error) {
-    console.error('MFA verify error:', error);
+    console.error("MFA verify error:", error);
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     return NextResponse.json(
-      { error: 'Failed to verify MFA' },
+      { error: "Failed to verify MFA" },
       { status: 500 }
     );
   }

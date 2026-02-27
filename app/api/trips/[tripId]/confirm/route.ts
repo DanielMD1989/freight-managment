@@ -7,14 +7,14 @@
  * to complete the trip and trigger settlement
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { validateCSRFWithMobile } from '@/lib/csrf';
-import { createNotification, NotificationType } from '@/lib/notifications';
-import { CacheInvalidation } from '@/lib/cache';
-import { z } from 'zod';
-import { zodErrorResponse } from '@/lib/validation';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { createNotification, NotificationType } from "@/lib/notifications";
+import { CacheInvalidation } from "@/lib/cache";
+import { z } from "zod";
+import { zodErrorResponse } from "@/lib/validation";
 
 const confirmSchema = z.object({
   notes: z.string().max(1000).optional(),
@@ -82,13 +82,13 @@ export async function POST(
     });
 
     if (!trip) {
-      return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
     // Only DELIVERED trips can be confirmed
-    if (trip.status !== 'DELIVERED') {
+    if (trip.status !== "DELIVERED") {
       return NextResponse.json(
-        { error: 'Trip must be in DELIVERED status to confirm' },
+        { error: "Trip must be in DELIVERED status to confirm" },
         { status: 400 }
       );
     }
@@ -96,7 +96,7 @@ export async function POST(
     // Check if already confirmed
     if (trip.shipperConfirmed) {
       return NextResponse.json(
-        { error: 'Delivery has already been confirmed' },
+        { error: "Delivery has already been confirmed" },
         { status: 400 }
       );
     }
@@ -105,7 +105,7 @@ export async function POST(
     const hasPod = trip.podDocuments.length > 0 || trip.load?.podSubmitted;
     if (!hasPod) {
       return NextResponse.json(
-        { error: 'Cannot confirm delivery - no POD has been submitted' },
+        { error: "Cannot confirm delivery - no POD has been submitted" },
         { status: 400 }
       );
     }
@@ -117,11 +117,11 @@ export async function POST(
     });
 
     const isShipper = user?.organizationId === trip.shipperId;
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isShipper && !isAdmin) {
       return NextResponse.json(
-        { error: 'Only the shipper can confirm delivery' },
+        { error: "Only the shipper can confirm delivery" },
         { status: 403 }
       );
     }
@@ -135,7 +135,7 @@ export async function POST(
           shipperConfirmed: true,
           shipperConfirmedAt: new Date(),
           shipperConfirmedBy: session.userId,
-          status: 'COMPLETED',
+          status: "COMPLETED",
           completedAt: new Date(),
           trackingEnabled: false, // GPS stops on completion
         },
@@ -145,7 +145,7 @@ export async function POST(
       await tx.load.update({
         where: { id: trip.loadId },
         data: {
-          status: 'COMPLETED',
+          status: "COMPLETED",
           podVerified: true,
           podVerifiedAt: new Date(),
         },
@@ -155,10 +155,10 @@ export async function POST(
       await tx.loadEvent.create({
         data: {
           loadId: trip.loadId,
-          eventType: 'DELIVERY_CONFIRMED',
+          eventType: "DELIVERY_CONFIRMED",
           description: confirmationNotes
             ? `Delivery confirmed by shipper. Notes: ${confirmationNotes}`
-            : 'Delivery confirmed by shipper',
+            : "Delivery confirmed by shipper",
           userId: session.userId,
           metadata: {
             tripId,
@@ -171,8 +171,12 @@ export async function POST(
     });
 
     // Cache invalidation after transaction commits
-    await CacheInvalidation.trip(tripId, trip.carrier?.id || '', trip.shipperId || '');
-    await CacheInvalidation.load(trip.loadId, trip.shipperId || '');
+    await CacheInvalidation.trip(
+      tripId,
+      trip.carrier?.id || "",
+      trip.shipperId || ""
+    );
+    await CacheInvalidation.load(trip.loadId, trip.shipperId || "");
 
     // Notify carrier that delivery has been confirmed
     const carrierUserId = trip.carrier?.users?.[0]?.id;
@@ -180,14 +184,14 @@ export async function POST(
       await createNotification({
         userId: carrierUserId,
         type: NotificationType.POD_VERIFIED,
-        title: 'Delivery Confirmed',
+        title: "Delivery Confirmed",
         message: `Shipper has confirmed delivery for trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Settlement can now proceed.`,
         metadata: { tripId, loadId: trip.loadId },
       });
     }
 
     return NextResponse.json({
-      message: 'Delivery confirmed successfully. Trip completed.',
+      message: "Delivery confirmed successfully. Trip completed.",
       trip: {
         id: updatedTrip.id,
         status: updatedTrip.status,
@@ -197,9 +201,9 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('Confirm delivery error:', error);
+    console.error("Confirm delivery error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

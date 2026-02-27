@@ -7,13 +7,13 @@
  * Provides detailed list of organizations with bypass warnings
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requirePermission, Permission } from '@/lib/rbac';
-import { db } from '@/lib/db';
-import { z } from 'zod';
+import { NextRequest, NextResponse } from "next/server";
+import { requirePermission, Permission } from "@/lib/rbac";
+import { db } from "@/lib/db";
+import { z } from "zod";
 // CSRF FIX: Add CSRF validation
-import { validateCSRFWithMobile } from '@/lib/csrf';
-import { Prisma } from '@prisma/client';
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { Prisma } from "@prisma/client";
 
 const updateFlagSchema = z.object({
   organizationId: z.string().min(1),
@@ -36,28 +36,28 @@ export async function GET(request: NextRequest) {
     await requirePermission(Permission.VIEW_USERS);
 
     const { searchParams } = request.nextUrl;
-    const status = searchParams.get('status') || 'all';
-    const limit = parseInt(searchParams.get('limit') || '100');
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const status = searchParams.get("status") || "all";
+    const limit = parseInt(searchParams.get("limit") || "100");
+    const offset = parseInt(searchParams.get("offset") || "0");
 
     // Build where clause
     let where: Prisma.OrganizationWhereInput = {};
 
     switch (status) {
-      case 'flagged':
+      case "flagged":
         where = {
           isFlagged: true,
         };
         break;
 
-      case 'suspicious':
+      case "suspicious":
         where = {
           suspiciousCancellationCount: { gte: 1 },
           isFlagged: false,
         };
         break;
 
-      case 'all':
+      case "all":
       default:
         where = {
           OR: [
@@ -83,9 +83,9 @@ export async function GET(request: NextRequest) {
           },
         },
         orderBy: [
-          { isFlagged: 'desc' },
-          { suspiciousCancellationCount: 'desc' },
-          { bypassAttemptCount: 'desc' },
+          { isFlagged: "desc" },
+          { suspiciousCancellationCount: "desc" },
+          { bypassAttemptCount: "desc" },
         ],
         take: limit,
         skip: offset,
@@ -101,14 +101,14 @@ export async function GET(request: NextRequest) {
       hasMore: offset + organizations.length < totalCount,
     });
   } catch (error) {
-    console.error('Get flagged organizations error:', error);
+    console.error("Get flagged organizations error:", error);
 
-    if (error instanceof Error && error.name === 'ForbiddenError') {
+    if (error instanceof Error && error.name === "ForbiddenError") {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
@@ -131,7 +131,7 @@ export async function PATCH(request: NextRequest) {
     const result = updateFlagSchema.safeParse(body);
     if (!result.success) {
       // FIX: Use zodErrorResponse to avoid leaking validation details
-      const { zodErrorResponse } = await import('@/lib/validation');
+      const { zodErrorResponse } = await import("@/lib/validation");
       return zodErrorResponse(result.error);
     }
 
@@ -148,20 +148,20 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({
       message: isFlagged
-        ? 'Organization flagged successfully'
-        : 'Flag removed successfully',
+        ? "Organization flagged successfully"
+        : "Flag removed successfully",
       organization: updated,
     });
-  // FIX: Use unknown type with type guard
+    // FIX: Use unknown type with type guard
   } catch (error: unknown) {
-    console.error('Update organization flag error:', error);
+    console.error("Update organization flag error:", error);
 
-    if (error instanceof Error && error.name === 'ForbiddenError') {
+    if (error instanceof Error && error.name === "ForbiddenError") {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
 
     return NextResponse.json(
-      { error: 'Failed to update organization' },
+      { error: "Failed to update organization" },
       { status: 500 }
     );
   }

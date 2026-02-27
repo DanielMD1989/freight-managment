@@ -80,7 +80,10 @@ export async function GET(request: NextRequest) {
     let totalWithFees = 0;
 
     const statusCounts: Record<string, { count: number; total: number }> = {};
-    const corridorStats: Record<string, { name: string; count: number; total: number }> = {};
+    const corridorStats: Record<
+      string,
+      { name: string; count: number; total: number }
+    > = {};
 
     for (const load of loadsWithFees) {
       const fee = Number(load.serviceFeeEtb || 0);
@@ -172,6 +175,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Service fee metrics error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

@@ -11,10 +11,10 @@
  * - Security event logging
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth, revokeAllSessions } from '@/lib/auth';
-import { logSecurityEvent, SecurityEventType } from '@/lib/security-events';
-import { requireCSRF } from '@/lib/csrf';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth, revokeAllSessions } from "@/lib/auth";
+import { logSecurityEvent, SecurityEventType } from "@/lib/security-events";
+import { requireCSRF } from "@/lib/csrf";
 
 /**
  * POST /api/user/sessions/revoke-all
@@ -29,8 +29,10 @@ export async function POST(request: NextRequest) {
     }
 
     const session = await requireAuth();
-    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip');
-    const userAgent = request.headers.get('user-agent');
+    const ipAddress =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip");
+    const userAgent = request.headers.get("user-agent");
 
     // Revoke all sessions
     const revokedCount = await revokeAllSessions(session.userId);
@@ -49,21 +51,18 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'All sessions revoked successfully',
+      message: "All sessions revoked successfully",
       revokedCount,
     });
   } catch (error) {
-    console.error('Failed to revoke all sessions:', error);
+    console.error("Failed to revoke all sessions:", error);
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     return NextResponse.json(
-      { error: 'Failed to revoke sessions' },
+      { error: "Failed to revoke sessions" },
       { status: 500 }
     );
   }

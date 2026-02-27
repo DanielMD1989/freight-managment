@@ -4,13 +4,13 @@
  * Main entry point for shipper load board interface
  */
 
-import { redirect } from 'next/navigation';
-import { getSession } from '@/lib/auth';
-import ShipperLoadboardClient from './ShipperLoadboardClient';
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth";
+import ShipperLoadboardClient from "./ShipperLoadboardClient";
 
 export const metadata = {
-  title: 'Load Board - Shipper',
-  description: 'Professional load board for shippers',
+  title: "Load Board - Shipper",
+  description: "Professional load board for shippers",
 };
 
 export default async function ShipperLoadboardPage() {
@@ -19,12 +19,16 @@ export default async function ShipperLoadboardPage() {
 
   // Redirect if not authenticated
   if (!session) {
-    redirect('/login');
+    redirect("/login");
   }
 
   // Verify shipper role
-  if (session.role !== 'SHIPPER' && session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
-    redirect('/unauthorized');
+  if (
+    session.role !== "SHIPPER" &&
+    session.role !== "ADMIN" &&
+    session.role !== "SUPER_ADMIN"
+  ) {
+    redirect("/unauthorized");
   }
 
   // Pass user data to client component

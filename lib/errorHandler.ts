@@ -5,7 +5,7 @@
  * in production environments.
  */
 
-import { randomUUID } from 'crypto';
+import { randomUUID } from "crypto";
 
 /**
  * Patterns to remove from error messages
@@ -33,13 +33,13 @@ const SENSITIVE_PATTERNS = [
  * Generic error messages for production
  */
 const GENERIC_ERROR_MESSAGES: Record<string, string> = {
-  ValidationError: 'Invalid request data',
-  AuthenticationError: 'Authentication failed',
-  AuthorizationError: 'Access denied',
-  NotFoundError: 'Resource not found',
-  RateLimitError: 'Too many requests',
-  DatabaseError: 'Service temporarily unavailable',
-  default: 'An unexpected error occurred',
+  ValidationError: "Invalid request data",
+  AuthenticationError: "Authentication failed",
+  AuthorizationError: "Access denied",
+  NotFoundError: "Resource not found",
+  RateLimitError: "Too many requests",
+  DatabaseError: "Service temporarily unavailable",
+  default: "An unexpected error occurred",
 };
 
 /**
@@ -51,11 +51,11 @@ export function sanitizeErrorMessage(message: string): string {
   let sanitized = message;
 
   for (const pattern of SENSITIVE_PATTERNS) {
-    sanitized = sanitized.replace(pattern, '[REDACTED]');
+    sanitized = sanitized.replace(pattern, "[REDACTED]");
   }
 
   // Clean up multiple consecutive [REDACTED] markers
-  sanitized = sanitized.replace(/(\[REDACTED\]\s*)+/g, '[REDACTED] ');
+  sanitized = sanitized.replace(/(\[REDACTED\]\s*)+/g, "[REDACTED] ");
 
   return sanitized.trim();
 }
@@ -69,8 +69,12 @@ export function sanitizeErrorMessage(message: string): string {
 export function createSafeErrorResponse(
   error: Error,
   requestId?: string
-): { response: { error: string; requestId?: string }; status: number; statusCode: number } {
-  const isProduction = process.env.NODE_ENV === 'production';
+): {
+  response: { error: string; requestId?: string };
+  status: number;
+  statusCode: number;
+} {
+  const isProduction = process.env.NODE_ENV === "production";
 
   // Determine the error type and get a generic message
   let genericMessage = GENERIC_ERROR_MESSAGES.default;
@@ -81,11 +85,11 @@ export function createSafeErrorResponse(
   }
 
   // Set appropriate status codes
-  if (error.name === 'ValidationError') status = 400;
-  if (error.name === 'AuthenticationError') status = 401;
-  if (error.name === 'AuthorizationError') status = 403;
-  if (error.name === 'NotFoundError') status = 404;
-  if (error.name === 'RateLimitError') status = 429;
+  if (error.name === "ValidationError") status = 400;
+  if (error.name === "AuthenticationError") status = 401;
+  if (error.name === "AuthorizationError") status = 403;
+  if (error.name === "NotFoundError") status = 404;
+  if (error.name === "RateLimitError") status = 429;
 
   // Always use generic messages for API responses to prevent info leakage
   // Even in development, API responses should be safe
@@ -119,7 +123,7 @@ export function logError(
   error: Error,
   context?: Record<string, unknown>
 ): void {
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = process.env.NODE_ENV === "production";
 
   const logEntry = {
     timestamp: new Date().toISOString(),
@@ -128,5 +132,5 @@ export function logError(
     ...context,
   };
 
-  console.error('[ERROR]', JSON.stringify(logEntry));
+  console.error("[ERROR]", JSON.stringify(logEntry));
 }

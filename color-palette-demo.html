@@ -1,712 +1,712 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Color Palette Options - Freight Management</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: 'Inter', sans-serif;
-      background: #f8fafc;
-      padding: 40px;
-    }
-
-    h1 {
-      text-align: center;
-      margin-bottom: 40px;
-      color: #1e293b;
-    }
-
-    .options-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 30px;
-      max-width: 1600px;
-      margin: 0 auto;
-    }
-
-    .option {
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    }
-
-    .option-header {
-      padding: 20px;
-      text-align: center;
-      color: white;
-    }
-
-    .option-header h2 {
-      font-size: 24px;
-      margin-bottom: 4px;
-    }
-
-    .option-header p {
-      font-size: 14px;
-      opacity: 0.9;
-    }
-
-    /* Option A - Bold & Professional */
-    .option-a .option-header {
-      background: linear-gradient(135deg, #1E3A8A, #3B82F6);
-    }
-
-    .option-a .mock-app {
-      background: #F1F5F9;
-    }
-
-    .option-a .sidebar {
-      background: #0F172A;
-    }
-
-    .option-a .sidebar-item {
-      color: #94A3B8;
-    }
-
-    .option-a .sidebar-item.active {
-      background: #1E3A8A;
-      color: white;
-    }
-
-    .option-a .stat-card.primary {
-      background: linear-gradient(135deg, #1E3A8A, #3B82F6);
-    }
-
-    .option-a .stat-card.secondary {
-      background: linear-gradient(135deg, #F97316, #FB923C);
-    }
-
-    .option-a .stat-card.success {
-      background: linear-gradient(135deg, #059669, #10B981);
-    }
-
-    .option-a .btn-primary {
-      background: #1E3A8A;
-    }
-
-    .option-a .btn-secondary {
-      background: #F97316;
-    }
-
-    .option-a .badge-pending {
-      background: #FEF3C7;
-      color: #D97706;
-    }
-
-    .option-a .badge-approved {
-      background: #D1FAE5;
-      color: #059669;
-    }
-
-    .option-a .badge-transit {
-      background: #DBEAFE;
-      color: #1E3A8A;
-    }
-
-    /* Option B - Clean & Minimal */
-    .option-b .option-header {
-      background: linear-gradient(135deg, #6366F1, #818CF8);
-    }
-
-    .option-b .mock-app {
-      background: #FAFAFA;
-    }
-
-    .option-b .sidebar {
-      background: #FFFFFF;
-      border-right: 1px solid #E4E4E7;
-    }
-
-    .option-b .sidebar-item {
-      color: #71717A;
-    }
-
-    .option-b .sidebar-item.active {
-      background: #EEF2FF;
-      color: #6366F1;
-    }
-
-    .option-b .stat-card.primary {
-      background: linear-gradient(135deg, #6366F1, #818CF8);
-    }
-
-    .option-b .stat-card.secondary {
-      background: linear-gradient(135deg, #14B8A6, #2DD4BF);
-    }
-
-    .option-b .stat-card.success {
-      background: linear-gradient(135deg, #10B981, #34D399);
-    }
-
-    .option-b .btn-primary {
-      background: #6366F1;
-    }
-
-    .option-b .btn-secondary {
-      background: #14B8A6;
-    }
-
-    .option-b .badge-pending {
-      background: #FEF3C7;
-      color: #F59E0B;
-    }
-
-    .option-b .badge-approved {
-      background: #D1FAE5;
-      color: #10B981;
-    }
-
-    .option-b .badge-transit {
-      background: #EEF2FF;
-      color: #6366F1;
-    }
-
-    /* Option C - Dark Mode / Premium */
-    .option-c .option-header {
-      background: linear-gradient(135deg, #09090B, #18181B);
-      border-bottom: 1px solid #27272A;
-    }
-
-    .option-c .mock-app {
-      background: #09090B;
-    }
-
-    .option-c .sidebar {
-      background: #18181B;
-      border-right: 1px solid #27272A;
-    }
-
-    .option-c .sidebar-item {
-      color: #A1A1AA;
-    }
-
-    .option-c .sidebar-item.active {
-      background: #27272A;
-      color: #0EA5E9;
-    }
-
-    .option-c .main-content {
-      background: #09090B;
-    }
-
-    .option-c .card {
-      background: #18181B;
-      border: 1px solid #27272A;
-    }
-
-    .option-c .card h4, .option-c .card span {
-      color: #FAFAFA;
-    }
-
-    .option-c .table-header {
-      background: #18181B;
-      color: #A1A1AA;
-    }
-
-    .option-c .table-row {
-      background: #18181B;
-      border-color: #27272A;
-      color: #FAFAFA;
-    }
-
-    .option-c .stat-card.primary {
-      background: linear-gradient(135deg, #0EA5E9, #38BDF8);
-    }
-
-    .option-c .stat-card.secondary {
-      background: linear-gradient(135deg, #34D399, #6EE7B7);
-    }
-
-    .option-c .stat-card.success {
-      background: linear-gradient(135deg, #22C55E, #4ADE80);
-    }
-
-    .option-c .btn-primary {
-      background: #0EA5E9;
-    }
-
-    .option-c .btn-secondary {
-      background: #34D399;
-    }
-
-    .option-c .badge-pending {
-      background: #422006;
-      color: #FBBF24;
-    }
-
-    .option-c .badge-approved {
-      background: #052E16;
-      color: #22C55E;
-    }
-
-    .option-c .badge-transit {
-      background: #082F49;
-      color: #0EA5E9;
-    }
-
-    /* Mock App Styles */
-    .mock-app {
-      height: 500px;
-      display: flex;
-    }
-
-    .sidebar {
-      width: 70px;
-      padding: 16px 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .sidebar-item {
-      padding: 12px;
-      border-radius: 8px;
-      text-align: center;
-      font-size: 10px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .sidebar-icon {
-      font-size: 18px;
-      margin-bottom: 4px;
-    }
-
-    .main-content {
-      flex: 1;
-      padding: 20px;
-      overflow: hidden;
-    }
-
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-
-    .stat-card {
-      padding: 16px;
-      border-radius: 12px;
-      color: white;
-    }
-
-    .stat-card h4 {
-      font-size: 11px;
-      opacity: 0.9;
-      margin-bottom: 4px;
-    }
-
-    .stat-card .value {
-      font-size: 24px;
-      font-weight: 700;
-    }
-
-    .card {
-      background: white;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 16px;
-    }
-
-    .card h4 {
-      font-size: 14px;
-      color: #1e293b;
-      margin-bottom: 12px;
-    }
-
-    .btn-row {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-
-    .btn {
-      padding: 8px 16px;
-      border-radius: 8px;
-      color: white;
-      font-size: 12px;
-      font-weight: 500;
-      border: none;
-      cursor: pointer;
-    }
-
-    .badge {
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 500;
-    }
-
-    .table-header {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr;
-      padding: 10px;
-      background: #f8fafc;
-      border-radius: 8px 8px 0 0;
-      font-size: 11px;
-      color: #64748b;
-      font-weight: 600;
-    }
-
-    .table-row {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr;
-      padding: 12px 10px;
-      border-bottom: 1px solid #e2e8f0;
-      font-size: 12px;
-      align-items: center;
-    }
-
-    .color-swatches {
-      display: flex;
-      gap: 6px;
-      padding: 16px;
-      background: white;
-      justify-content: center;
-    }
-
-    .option-c .color-swatches {
-      background: #18181B;
-    }
-
-    .swatch {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      border: 2px solid white;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-
-    .vibes {
-      padding: 12px 16px;
-      background: white;
-      text-align: center;
-      font-size: 12px;
-      color: #64748b;
-      border-top: 1px solid #e2e8f0;
-    }
-
-    .option-c .vibes {
-      background: #18181B;
-      border-color: #27272A;
-      color: #A1A1AA;
-    }
-
-    .choose-label {
-      text-align: center;
-      padding: 16px;
-      font-size: 18px;
-      font-weight: 600;
-      background: linear-gradient(135deg, #1E3A8A, #3B82F6);
-      color: white;
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-
-    .choose-label:hover {
-      transform: scale(1.02);
-    }
-
-    .option-b .choose-label {
-      background: linear-gradient(135deg, #6366F1, #818CF8);
-    }
-
-    .option-c .choose-label {
-      background: linear-gradient(135deg, #0EA5E9, #38BDF8);
-    }
-  </style>
-</head>
-<body>
-  <h1>Choose Your Color Palette</h1>
-
-  <div class="options-grid">
-    <!-- Option A - Bold & Professional -->
-    <div class="option option-a">
-      <div class="option-header">
-        <h2>Option A</h2>
-        <p>Bold & Professional</p>
-      </div>
-
-      <div class="mock-app">
-        <div class="sidebar">
-          <div class="sidebar-item active">
-            <div class="sidebar-icon">📊</div>
-            <div>Dashboard</div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Color Palette Options - Freight Management</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Inter", sans-serif;
+        background: #f8fafc;
+        padding: 40px;
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 40px;
+        color: #1e293b;
+      }
+
+      .options-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 30px;
+        max-width: 1600px;
+        margin: 0 auto;
+      }
+
+      .option {
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      }
+
+      .option-header {
+        padding: 20px;
+        text-align: center;
+        color: white;
+      }
+
+      .option-header h2 {
+        font-size: 24px;
+        margin-bottom: 4px;
+      }
+
+      .option-header p {
+        font-size: 14px;
+        opacity: 0.9;
+      }
+
+      /* Option A - Bold & Professional */
+      .option-a .option-header {
+        background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+      }
+
+      .option-a .mock-app {
+        background: #f1f5f9;
+      }
+
+      .option-a .sidebar {
+        background: #0f172a;
+      }
+
+      .option-a .sidebar-item {
+        color: #94a3b8;
+      }
+
+      .option-a .sidebar-item.active {
+        background: #1e3a8a;
+        color: white;
+      }
+
+      .option-a .stat-card.primary {
+        background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+      }
+
+      .option-a .stat-card.secondary {
+        background: linear-gradient(135deg, #f97316, #fb923c);
+      }
+
+      .option-a .stat-card.success {
+        background: linear-gradient(135deg, #059669, #10b981);
+      }
+
+      .option-a .btn-primary {
+        background: #1e3a8a;
+      }
+
+      .option-a .btn-secondary {
+        background: #f97316;
+      }
+
+      .option-a .badge-pending {
+        background: #fef3c7;
+        color: #d97706;
+      }
+
+      .option-a .badge-approved {
+        background: #d1fae5;
+        color: #059669;
+      }
+
+      .option-a .badge-transit {
+        background: #dbeafe;
+        color: #1e3a8a;
+      }
+
+      /* Option B - Clean & Minimal */
+      .option-b .option-header {
+        background: linear-gradient(135deg, #6366f1, #818cf8);
+      }
+
+      .option-b .mock-app {
+        background: #fafafa;
+      }
+
+      .option-b .sidebar {
+        background: #ffffff;
+        border-right: 1px solid #e4e4e7;
+      }
+
+      .option-b .sidebar-item {
+        color: #71717a;
+      }
+
+      .option-b .sidebar-item.active {
+        background: #eef2ff;
+        color: #6366f1;
+      }
+
+      .option-b .stat-card.primary {
+        background: linear-gradient(135deg, #6366f1, #818cf8);
+      }
+
+      .option-b .stat-card.secondary {
+        background: linear-gradient(135deg, #14b8a6, #2dd4bf);
+      }
+
+      .option-b .stat-card.success {
+        background: linear-gradient(135deg, #10b981, #34d399);
+      }
+
+      .option-b .btn-primary {
+        background: #6366f1;
+      }
+
+      .option-b .btn-secondary {
+        background: #14b8a6;
+      }
+
+      .option-b .badge-pending {
+        background: #fef3c7;
+        color: #f59e0b;
+      }
+
+      .option-b .badge-approved {
+        background: #d1fae5;
+        color: #10b981;
+      }
+
+      .option-b .badge-transit {
+        background: #eef2ff;
+        color: #6366f1;
+      }
+
+      /* Option C - Dark Mode / Premium */
+      .option-c .option-header {
+        background: linear-gradient(135deg, #09090b, #18181b);
+        border-bottom: 1px solid #27272a;
+      }
+
+      .option-c .mock-app {
+        background: #09090b;
+      }
+
+      .option-c .sidebar {
+        background: #18181b;
+        border-right: 1px solid #27272a;
+      }
+
+      .option-c .sidebar-item {
+        color: #a1a1aa;
+      }
+
+      .option-c .sidebar-item.active {
+        background: #27272a;
+        color: #0ea5e9;
+      }
+
+      .option-c .main-content {
+        background: #09090b;
+      }
+
+      .option-c .card {
+        background: #18181b;
+        border: 1px solid #27272a;
+      }
+
+      .option-c .card h4,
+      .option-c .card span {
+        color: #fafafa;
+      }
+
+      .option-c .table-header {
+        background: #18181b;
+        color: #a1a1aa;
+      }
+
+      .option-c .table-row {
+        background: #18181b;
+        border-color: #27272a;
+        color: #fafafa;
+      }
+
+      .option-c .stat-card.primary {
+        background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+      }
+
+      .option-c .stat-card.secondary {
+        background: linear-gradient(135deg, #34d399, #6ee7b7);
+      }
+
+      .option-c .stat-card.success {
+        background: linear-gradient(135deg, #22c55e, #4ade80);
+      }
+
+      .option-c .btn-primary {
+        background: #0ea5e9;
+      }
+
+      .option-c .btn-secondary {
+        background: #34d399;
+      }
+
+      .option-c .badge-pending {
+        background: #422006;
+        color: #fbbf24;
+      }
+
+      .option-c .badge-approved {
+        background: #052e16;
+        color: #22c55e;
+      }
+
+      .option-c .badge-transit {
+        background: #082f49;
+        color: #0ea5e9;
+      }
+
+      /* Mock App Styles */
+      .mock-app {
+        height: 500px;
+        display: flex;
+      }
+
+      .sidebar {
+        width: 70px;
+        padding: 16px 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .sidebar-item {
+        padding: 12px;
+        border-radius: 8px;
+        text-align: center;
+        font-size: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .sidebar-icon {
+        font-size: 18px;
+        margin-bottom: 4px;
+      }
+
+      .main-content {
+        flex: 1;
+        padding: 20px;
+        overflow: hidden;
+      }
+
+      .stats-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .stat-card {
+        padding: 16px;
+        border-radius: 12px;
+        color: white;
+      }
+
+      .stat-card h4 {
+        font-size: 11px;
+        opacity: 0.9;
+        margin-bottom: 4px;
+      }
+
+      .stat-card .value {
+        font-size: 24px;
+        font-weight: 700;
+      }
+
+      .card {
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+
+      .card h4 {
+        font-size: 14px;
+        color: #1e293b;
+        margin-bottom: 12px;
+      }
+
+      .btn-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .btn {
+        padding: 8px 16px;
+        border-radius: 8px;
+        color: white;
+        font-size: 12px;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+      }
+
+      .badge {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 500;
+      }
+
+      .table-header {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+        padding: 10px;
+        background: #f8fafc;
+        border-radius: 8px 8px 0 0;
+        font-size: 11px;
+        color: #64748b;
+        font-weight: 600;
+      }
+
+      .table-row {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+        padding: 12px 10px;
+        border-bottom: 1px solid #e2e8f0;
+        font-size: 12px;
+        align-items: center;
+      }
+
+      .color-swatches {
+        display: flex;
+        gap: 6px;
+        padding: 16px;
+        background: white;
+        justify-content: center;
+      }
+
+      .option-c .color-swatches {
+        background: #18181b;
+      }
+
+      .swatch {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      .vibes {
+        padding: 12px 16px;
+        background: white;
+        text-align: center;
+        font-size: 12px;
+        color: #64748b;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .option-c .vibes {
+        background: #18181b;
+        border-color: #27272a;
+        color: #a1a1aa;
+      }
+
+      .choose-label {
+        text-align: center;
+        padding: 16px;
+        font-size: 18px;
+        font-weight: 600;
+        background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+        color: white;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+
+      .choose-label:hover {
+        transform: scale(1.02);
+      }
+
+      .option-b .choose-label {
+        background: linear-gradient(135deg, #6366f1, #818cf8);
+      }
+
+      .option-c .choose-label {
+        background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Choose Your Color Palette</h1>
+
+    <div class="options-grid">
+      <!-- Option A - Bold & Professional -->
+      <div class="option option-a">
+        <div class="option-header">
+          <h2>Option A</h2>
+          <p>Bold & Professional</p>
+        </div>
+
+        <div class="mock-app">
+          <div class="sidebar">
+            <div class="sidebar-item active">
+              <div class="sidebar-icon">📊</div>
+              <div>Dashboard</div>
+            </div>
+            <div class="sidebar-item">
+              <div class="sidebar-icon">📦</div>
+              <div>Loads</div>
+            </div>
+            <div class="sidebar-item">
+              <div class="sidebar-icon">🚛</div>
+              <div>Trucks</div>
+            </div>
+            <div class="sidebar-item">
+              <div class="sidebar-icon">🗺️</div>
+              <div>Map</div>
+            </div>
           </div>
-          <div class="sidebar-item">
-            <div class="sidebar-icon">📦</div>
-            <div>Loads</div>
-          </div>
-          <div class="sidebar-item">
-            <div class="sidebar-icon">🚛</div>
-            <div>Trucks</div>
-          </div>
-          <div class="sidebar-item">
-            <div class="sidebar-icon">🗺️</div>
-            <div>Map</div>
+
+          <div class="main-content">
+            <div class="stats-row">
+              <div class="stat-card primary">
+                <h4>Active Loads</h4>
+                <div class="value">24</div>
+              </div>
+              <div class="stat-card secondary">
+                <h4>Available Trucks</h4>
+                <div class="value">18</div>
+              </div>
+              <div class="stat-card success">
+                <h4>Completed</h4>
+                <div class="value">156</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h4>Recent Loads</h4>
+              <div class="btn-row">
+                <button class="btn btn-primary">+ New Load</button>
+                <button class="btn btn-secondary">Find Trucks</button>
+              </div>
+              <div class="table-header">
+                <span>Route</span>
+                <span>Status</span>
+                <span>Price</span>
+                <span>Date</span>
+              </div>
+              <div class="table-row">
+                <span>Addis → Mekelle</span>
+                <span class="badge badge-transit">In Transit</span>
+                <span>45,000 ETB</span>
+                <span>Today</span>
+              </div>
+              <div class="table-row">
+                <span>Bahir Dar → Gondar</span>
+                <span class="badge badge-pending">Pending</span>
+                <span>28,000 ETB</span>
+                <span>Tomorrow</span>
+              </div>
+              <div class="table-row">
+                <span>Hawassa → Addis</span>
+                <span class="badge badge-approved">Delivered</span>
+                <span>32,000 ETB</span>
+                <span>Jan 8</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="main-content">
-          <div class="stats-row">
-            <div class="stat-card primary">
-              <h4>Active Loads</h4>
-              <div class="value">24</div>
+        <div class="color-swatches">
+          <div class="swatch" style="background: #1e3a8a"></div>
+          <div class="swatch" style="background: #3b82f6"></div>
+          <div class="swatch" style="background: #f97316"></div>
+          <div class="swatch" style="background: #059669"></div>
+          <div class="swatch" style="background: #eab308"></div>
+          <div class="swatch" style="background: #dc2626"></div>
+        </div>
+
+        <div class="vibes">
+          Corporate • Trustworthy • Established • Authoritative
+        </div>
+
+        <div class="choose-label">Choose Option A</div>
+      </div>
+
+      <!-- Option B - Clean & Minimal -->
+      <div class="option option-b">
+        <div class="option-header">
+          <h2>Option B</h2>
+          <p>Clean & Minimal</p>
+        </div>
+
+        <div class="mock-app">
+          <div class="sidebar">
+            <div class="sidebar-item active">
+              <div class="sidebar-icon">📊</div>
+              <div>Dashboard</div>
             </div>
-            <div class="stat-card secondary">
-              <h4>Available Trucks</h4>
-              <div class="value">18</div>
+            <div class="sidebar-item">
+              <div class="sidebar-icon">📦</div>
+              <div>Loads</div>
             </div>
-            <div class="stat-card success">
-              <h4>Completed</h4>
-              <div class="value">156</div>
+            <div class="sidebar-item">
+              <div class="sidebar-icon">🚛</div>
+              <div>Trucks</div>
+            </div>
+            <div class="sidebar-item">
+              <div class="sidebar-icon">🗺️</div>
+              <div>Map</div>
             </div>
           </div>
 
-          <div class="card">
-            <h4>Recent Loads</h4>
-            <div class="btn-row">
-              <button class="btn btn-primary">+ New Load</button>
-              <button class="btn btn-secondary">Find Trucks</button>
+          <div class="main-content">
+            <div class="stats-row">
+              <div class="stat-card primary">
+                <h4>Active Loads</h4>
+                <div class="value">24</div>
+              </div>
+              <div class="stat-card secondary">
+                <h4>Available Trucks</h4>
+                <div class="value">18</div>
+              </div>
+              <div class="stat-card success">
+                <h4>Completed</h4>
+                <div class="value">156</div>
+              </div>
             </div>
-            <div class="table-header">
-              <span>Route</span>
-              <span>Status</span>
-              <span>Price</span>
-              <span>Date</span>
-            </div>
-            <div class="table-row">
-              <span>Addis → Mekelle</span>
-              <span class="badge badge-transit">In Transit</span>
-              <span>45,000 ETB</span>
-              <span>Today</span>
-            </div>
-            <div class="table-row">
-              <span>Bahir Dar → Gondar</span>
-              <span class="badge badge-pending">Pending</span>
-              <span>28,000 ETB</span>
-              <span>Tomorrow</span>
-            </div>
-            <div class="table-row">
-              <span>Hawassa → Addis</span>
-              <span class="badge badge-approved">Delivered</span>
-              <span>32,000 ETB</span>
-              <span>Jan 8</span>
+
+            <div class="card">
+              <h4>Recent Loads</h4>
+              <div class="btn-row">
+                <button class="btn btn-primary">+ New Load</button>
+                <button class="btn btn-secondary">Find Trucks</button>
+              </div>
+              <div class="table-header">
+                <span>Route</span>
+                <span>Status</span>
+                <span>Price</span>
+                <span>Date</span>
+              </div>
+              <div class="table-row">
+                <span>Addis → Mekelle</span>
+                <span class="badge badge-transit">In Transit</span>
+                <span>45,000 ETB</span>
+                <span>Today</span>
+              </div>
+              <div class="table-row">
+                <span>Bahir Dar → Gondar</span>
+                <span class="badge badge-pending">Pending</span>
+                <span>28,000 ETB</span>
+                <span>Tomorrow</span>
+              </div>
+              <div class="table-row">
+                <span>Hawassa → Addis</span>
+                <span class="badge badge-approved">Delivered</span>
+                <span>32,000 ETB</span>
+                <span>Jan 8</span>
+              </div>
             </div>
           </div>
         </div>
+
+        <div class="color-swatches">
+          <div class="swatch" style="background: #6366f1"></div>
+          <div class="swatch" style="background: #818cf8"></div>
+          <div class="swatch" style="background: #14b8a6"></div>
+          <div class="swatch" style="background: #10b981"></div>
+          <div class="swatch" style="background: #fb923c"></div>
+          <div class="swatch" style="background: #f87171"></div>
+        </div>
+
+        <div class="vibes">Modern • Friendly • Startup • Easy on Eyes</div>
+
+        <div class="choose-label">Choose Option B</div>
       </div>
 
-      <div class="color-swatches">
-        <div class="swatch" style="background: #1E3A8A;"></div>
-        <div class="swatch" style="background: #3B82F6;"></div>
-        <div class="swatch" style="background: #F97316;"></div>
-        <div class="swatch" style="background: #059669;"></div>
-        <div class="swatch" style="background: #EAB308;"></div>
-        <div class="swatch" style="background: #DC2626;"></div>
-      </div>
+      <!-- Option C - Dark Mode / Premium -->
+      <div class="option option-c">
+        <div class="option-header">
+          <h2>Option C</h2>
+          <p>Dark Mode / Premium</p>
+        </div>
 
-      <div class="vibes">
-        Corporate • Trustworthy • Established • Authoritative
-      </div>
+        <div class="mock-app">
+          <div class="sidebar">
+            <div class="sidebar-item active">
+              <div class="sidebar-icon">📊</div>
+              <div>Dashboard</div>
+            </div>
+            <div class="sidebar-item">
+              <div class="sidebar-icon">📦</div>
+              <div>Loads</div>
+            </div>
+            <div class="sidebar-item">
+              <div class="sidebar-icon">🚛</div>
+              <div>Trucks</div>
+            </div>
+            <div class="sidebar-item">
+              <div class="sidebar-icon">🗺️</div>
+              <div>Map</div>
+            </div>
+          </div>
 
-      <div class="choose-label">Choose Option A</div>
+          <div class="main-content">
+            <div class="stats-row">
+              <div class="stat-card primary">
+                <h4>Active Loads</h4>
+                <div class="value">24</div>
+              </div>
+              <div class="stat-card secondary">
+                <h4>Available Trucks</h4>
+                <div class="value">18</div>
+              </div>
+              <div class="stat-card success">
+                <h4>Completed</h4>
+                <div class="value">156</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h4>Recent Loads</h4>
+              <div class="btn-row">
+                <button class="btn btn-primary">+ New Load</button>
+                <button class="btn btn-secondary">Find Trucks</button>
+              </div>
+              <div class="table-header">
+                <span>Route</span>
+                <span>Status</span>
+                <span>Price</span>
+                <span>Date</span>
+              </div>
+              <div class="table-row">
+                <span>Addis → Mekelle</span>
+                <span class="badge badge-transit">In Transit</span>
+                <span>45,000 ETB</span>
+                <span>Today</span>
+              </div>
+              <div class="table-row">
+                <span>Bahir Dar → Gondar</span>
+                <span class="badge badge-pending">Pending</span>
+                <span>28,000 ETB</span>
+                <span>Tomorrow</span>
+              </div>
+              <div class="table-row">
+                <span>Hawassa → Addis</span>
+                <span class="badge badge-approved">Delivered</span>
+                <span>32,000 ETB</span>
+                <span>Jan 8</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="color-swatches">
+          <div class="swatch" style="background: #0ea5e9"></div>
+          <div class="swatch" style="background: #38bdf8"></div>
+          <div class="swatch" style="background: #34d399"></div>
+          <div class="swatch" style="background: #22c55e"></div>
+          <div class="swatch" style="background: #fbbf24"></div>
+          <div class="swatch" style="background: #ef4444"></div>
+        </div>
+
+        <div class="vibes">Premium • Sleek • Tech-Forward • Stands Out</div>
+
+        <div class="choose-label">Choose Option C</div>
+      </div>
     </div>
-
-    <!-- Option B - Clean & Minimal -->
-    <div class="option option-b">
-      <div class="option-header">
-        <h2>Option B</h2>
-        <p>Clean & Minimal</p>
-      </div>
-
-      <div class="mock-app">
-        <div class="sidebar">
-          <div class="sidebar-item active">
-            <div class="sidebar-icon">📊</div>
-            <div>Dashboard</div>
-          </div>
-          <div class="sidebar-item">
-            <div class="sidebar-icon">📦</div>
-            <div>Loads</div>
-          </div>
-          <div class="sidebar-item">
-            <div class="sidebar-icon">🚛</div>
-            <div>Trucks</div>
-          </div>
-          <div class="sidebar-item">
-            <div class="sidebar-icon">🗺️</div>
-            <div>Map</div>
-          </div>
-        </div>
-
-        <div class="main-content">
-          <div class="stats-row">
-            <div class="stat-card primary">
-              <h4>Active Loads</h4>
-              <div class="value">24</div>
-            </div>
-            <div class="stat-card secondary">
-              <h4>Available Trucks</h4>
-              <div class="value">18</div>
-            </div>
-            <div class="stat-card success">
-              <h4>Completed</h4>
-              <div class="value">156</div>
-            </div>
-          </div>
-
-          <div class="card">
-            <h4>Recent Loads</h4>
-            <div class="btn-row">
-              <button class="btn btn-primary">+ New Load</button>
-              <button class="btn btn-secondary">Find Trucks</button>
-            </div>
-            <div class="table-header">
-              <span>Route</span>
-              <span>Status</span>
-              <span>Price</span>
-              <span>Date</span>
-            </div>
-            <div class="table-row">
-              <span>Addis → Mekelle</span>
-              <span class="badge badge-transit">In Transit</span>
-              <span>45,000 ETB</span>
-              <span>Today</span>
-            </div>
-            <div class="table-row">
-              <span>Bahir Dar → Gondar</span>
-              <span class="badge badge-pending">Pending</span>
-              <span>28,000 ETB</span>
-              <span>Tomorrow</span>
-            </div>
-            <div class="table-row">
-              <span>Hawassa → Addis</span>
-              <span class="badge badge-approved">Delivered</span>
-              <span>32,000 ETB</span>
-              <span>Jan 8</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="color-swatches">
-        <div class="swatch" style="background: #6366F1;"></div>
-        <div class="swatch" style="background: #818CF8;"></div>
-        <div class="swatch" style="background: #14B8A6;"></div>
-        <div class="swatch" style="background: #10B981;"></div>
-        <div class="swatch" style="background: #FB923C;"></div>
-        <div class="swatch" style="background: #F87171;"></div>
-      </div>
-
-      <div class="vibes">
-        Modern • Friendly • Startup • Easy on Eyes
-      </div>
-
-      <div class="choose-label">Choose Option B</div>
-    </div>
-
-    <!-- Option C - Dark Mode / Premium -->
-    <div class="option option-c">
-      <div class="option-header">
-        <h2>Option C</h2>
-        <p>Dark Mode / Premium</p>
-      </div>
-
-      <div class="mock-app">
-        <div class="sidebar">
-          <div class="sidebar-item active">
-            <div class="sidebar-icon">📊</div>
-            <div>Dashboard</div>
-          </div>
-          <div class="sidebar-item">
-            <div class="sidebar-icon">📦</div>
-            <div>Loads</div>
-          </div>
-          <div class="sidebar-item">
-            <div class="sidebar-icon">🚛</div>
-            <div>Trucks</div>
-          </div>
-          <div class="sidebar-item">
-            <div class="sidebar-icon">🗺️</div>
-            <div>Map</div>
-          </div>
-        </div>
-
-        <div class="main-content">
-          <div class="stats-row">
-            <div class="stat-card primary">
-              <h4>Active Loads</h4>
-              <div class="value">24</div>
-            </div>
-            <div class="stat-card secondary">
-              <h4>Available Trucks</h4>
-              <div class="value">18</div>
-            </div>
-            <div class="stat-card success">
-              <h4>Completed</h4>
-              <div class="value">156</div>
-            </div>
-          </div>
-
-          <div class="card">
-            <h4>Recent Loads</h4>
-            <div class="btn-row">
-              <button class="btn btn-primary">+ New Load</button>
-              <button class="btn btn-secondary">Find Trucks</button>
-            </div>
-            <div class="table-header">
-              <span>Route</span>
-              <span>Status</span>
-              <span>Price</span>
-              <span>Date</span>
-            </div>
-            <div class="table-row">
-              <span>Addis → Mekelle</span>
-              <span class="badge badge-transit">In Transit</span>
-              <span>45,000 ETB</span>
-              <span>Today</span>
-            </div>
-            <div class="table-row">
-              <span>Bahir Dar → Gondar</span>
-              <span class="badge badge-pending">Pending</span>
-              <span>28,000 ETB</span>
-              <span>Tomorrow</span>
-            </div>
-            <div class="table-row">
-              <span>Hawassa → Addis</span>
-              <span class="badge badge-approved">Delivered</span>
-              <span>32,000 ETB</span>
-              <span>Jan 8</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="color-swatches">
-        <div class="swatch" style="background: #0EA5E9;"></div>
-        <div class="swatch" style="background: #38BDF8;"></div>
-        <div class="swatch" style="background: #34D399;"></div>
-        <div class="swatch" style="background: #22C55E;"></div>
-        <div class="swatch" style="background: #FBBF24;"></div>
-        <div class="swatch" style="background: #EF4444;"></div>
-      </div>
-
-      <div class="vibes">
-        Premium • Sleek • Tech-Forward • Stands Out
-      </div>
-
-      <div class="choose-label">Choose Option C</div>
-    </div>
-  </div>
-</body>
+  </body>
 </html>

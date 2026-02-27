@@ -3,11 +3,11 @@
  * View and analyze automation rule executions
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { requirePermission, Permission } from '@/lib/rbac';
-import { Prisma } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { requirePermission, Permission } from "@/lib/rbac";
+import { Prisma } from "@prisma/client";
 
 // GET /api/automation/executions - List rule executions
 export async function GET(request: NextRequest) {
@@ -15,12 +15,16 @@ export async function GET(request: NextRequest) {
     await requirePermission(Permission.VIEW_RULES);
 
     const { searchParams } = new URL(request.url);
-    const ruleId = searchParams.get('ruleId');
-    const status = searchParams.get('status');
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const pageSize = parseInt(searchParams.get('pageSize') || '50', 10);
-    const from = searchParams.get('from') ? new Date(searchParams.get('from')!) : undefined;
-    const to = searchParams.get('to') ? new Date(searchParams.get('to')!) : undefined;
+    const ruleId = searchParams.get("ruleId");
+    const status = searchParams.get("status");
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const pageSize = parseInt(searchParams.get("pageSize") || "50", 10);
+    const from = searchParams.get("from")
+      ? new Date(searchParams.get("from")!)
+      : undefined;
+    const to = searchParams.get("to")
+      ? new Date(searchParams.get("to")!)
+      : undefined;
 
     const where: Prisma.AutomationRuleExecutionWhereInput = {};
 
@@ -41,7 +45,7 @@ export async function GET(request: NextRequest) {
     const [executions, total] = await Promise.all([
       db.automationRuleExecution.findMany({
         where,
-        orderBy: { executedAt: 'desc' },
+        orderBy: { executedAt: "desc" },
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: {
@@ -60,7 +64,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate statistics
     const stats = await db.automationRuleExecution.groupBy({
-      by: ['status'],
+      by: ["status"],
       where,
       _count: { status: true },
     });
@@ -87,9 +91,9 @@ export async function GET(request: NextRequest) {
       stats: statusCounts,
     });
   } catch (error) {
-    console.error('List automation executions error:', error);
+    console.error("List automation executions error:", error);
     return NextResponse.json(
-      { error: 'Failed to list automation executions' },
+      { error: "Failed to list automation executions" },
       { status: 500 }
     );
   }

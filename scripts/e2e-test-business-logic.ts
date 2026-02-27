@@ -11,23 +11,28 @@
  * 7. Complete data flow verification
  */
 
-import { config } from 'dotenv';
-import { resolve } from 'path';
+import { config } from "dotenv";
+import { resolve } from "path";
 
 // Load environment variables
-config({ path: resolve(process.cwd(), '.env.local') });
-config({ path: resolve(process.cwd(), '.env') });
+config({ path: resolve(process.cwd(), ".env.local") });
+config({ path: resolve(process.cwd(), ".env") });
 
-import { PrismaClient, LoadStatus, TripStatus, RequestStatus } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
-import { Decimal } from 'decimal.js';
+import {
+  PrismaClient,
+  LoadStatus,
+  TripStatus,
+  RequestStatus,
+} from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
+import { Decimal } from "decimal.js";
 
 // Initialize Prisma with pg adapter
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-  throw new Error('DATABASE_URL is not defined');
+  throw new Error("DATABASE_URL is not defined");
 }
 
 const pool = new Pool({ connectionString });
@@ -35,16 +40,20 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  console.log('🧪 Starting E2E Business Logic Tests\n');
+  console.log("🧪 Starting E2E Business Logic Tests\n");
 
   let testsPassed = 0;
   let testsFailed = 0;
   const issues: string[] = [];
 
   // Test 1: Load Lifecycle Status Transitions
-  console.log('═══════════════════════════════════════════════════════════════');
-  console.log('TEST 1: Load Lifecycle Status Transitions');
-  console.log('═══════════════════════════════════════════════════════════════\n');
+  console.log(
+    "═══════════════════════════════════════════════════════════════"
+  );
+  console.log("TEST 1: Load Lifecycle Status Transitions");
+  console.log(
+    "═══════════════════════════════════════════════════════════════\n"
+  );
 
   try {
     // Get load count
@@ -53,44 +62,64 @@ async function main() {
 
     // Check load status distribution
     const statusCounts = await prisma.load.groupBy({
-      by: ['status'],
+      by: ["status"],
       _count: { id: true },
     });
 
-    console.log('Load Status Distribution:');
-    statusCounts.forEach(s => {
+    console.log("Load Status Distribution:");
+    statusCounts.forEach((s) => {
       console.log(`  ${s.status}: ${s._count.id}`);
     });
     console.log();
 
     // Verify expected statuses exist in enum
     const validStatuses: string[] = [
-      'DRAFT', 'POSTED', 'SEARCHING', 'OFFERED', 'ASSIGNED',
-      'PICKUP_PENDING', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED',
-      'EXCEPTION', 'CANCELLED', 'EXPIRED', 'UNPOSTED'
+      "DRAFT",
+      "POSTED",
+      "SEARCHING",
+      "OFFERED",
+      "ASSIGNED",
+      "PICKUP_PENDING",
+      "IN_TRANSIT",
+      "DELIVERED",
+      "COMPLETED",
+      "EXCEPTION",
+      "CANCELLED",
+      "EXPIRED",
+      "UNPOSTED",
     ];
 
-    const foundStatuses = statusCounts.map(s => s.status);
-    const hasValidStatuses = foundStatuses.every(s => validStatuses.includes(s as string));
+    const foundStatuses = statusCounts.map((s) => s.status);
+    const hasValidStatuses = foundStatuses.every((s) =>
+      validStatuses.includes(s as string)
+    );
 
     if (hasValidStatuses) {
-      console.log('✅ All load statuses are valid\n');
+      console.log("✅ All load statuses are valid\n");
       testsPassed++;
     } else {
-      const invalidStatuses = foundStatuses.filter(s => !validStatuses.includes(s as string));
-      console.log(`❌ Found invalid load statuses: ${invalidStatuses.join(', ')}\n`);
-      issues.push(`Invalid load statuses: ${invalidStatuses.join(', ')}`);
+      const invalidStatuses = foundStatuses.filter(
+        (s) => !validStatuses.includes(s as string)
+      );
+      console.log(
+        `❌ Found invalid load statuses: ${invalidStatuses.join(", ")}\n`
+      );
+      issues.push(`Invalid load statuses: ${invalidStatuses.join(", ")}`);
       testsFailed++;
     }
   } catch (error) {
-    console.log('❌ Load lifecycle test failed:', error);
+    console.log("❌ Load lifecycle test failed:", error);
     testsFailed++;
   }
 
   // Test 2: Corridor Setup and Pricing
-  console.log('═══════════════════════════════════════════════════════════════');
-  console.log('TEST 2: Corridor Setup and Pricing');
-  console.log('═══════════════════════════════════════════════════════════════\n');
+  console.log(
+    "═══════════════════════════════════════════════════════════════"
+  );
+  console.log("TEST 2: Corridor Setup and Pricing");
+  console.log(
+    "═══════════════════════════════════════════════════════════════\n"
+  );
 
   try {
     const corridors = await prisma.corridor.findMany({
@@ -100,8 +129,8 @@ async function main() {
     console.log(`Found ${corridors.length} corridors\n`);
 
     if (corridors.length > 0) {
-      console.log('Corridor Details:');
-      corridors.forEach(c => {
+      console.log("Corridor Details:");
+      corridors.forEach((c) => {
         const baseFee = Number(c.distanceKm) * Number(c.pricePerKm);
         let finalFee = baseFee;
 
@@ -122,34 +151,40 @@ async function main() {
         console.log();
       });
 
-      console.log('✅ Corridor pricing setup verified\n');
+      console.log("✅ Corridor pricing setup verified\n");
       testsPassed++;
     } else {
-      console.log('⚠️  No corridors found - this should be set up by admin\n');
-      issues.push('No corridors configured');
+      console.log("⚠️  No corridors found - this should be set up by admin\n");
+      issues.push("No corridors configured");
       testsPassed++; // Not a failure, just a setup issue
     }
   } catch (error) {
-    console.log('❌ Corridor test failed:', error);
+    console.log("❌ Corridor test failed:", error);
     testsFailed++;
   }
 
   // Test 3: Service Fee Status Distribution
-  console.log('═══════════════════════════════════════════════════════════════');
-  console.log('TEST 3: Service Fee Status Distribution');
-  console.log('═══════════════════════════════════════════════════════════════\n');
+  console.log(
+    "═══════════════════════════════════════════════════════════════"
+  );
+  console.log("TEST 3: Service Fee Status Distribution");
+  console.log(
+    "═══════════════════════════════════════════════════════════════\n"
+  );
 
   try {
     const serviceFeeCounts = await prisma.load.groupBy({
-      by: ['serviceFeeStatus'],
+      by: ["serviceFeeStatus"],
       _count: { id: true },
     });
 
-    const withFees = serviceFeeCounts.filter(s => s.serviceFeeStatus !== null);
+    const withFees = serviceFeeCounts.filter(
+      (s) => s.serviceFeeStatus !== null
+    );
 
     if (withFees.length > 0) {
-      console.log('Service Fee Status Distribution:');
-      withFees.forEach(s => {
+      console.log("Service Fee Status Distribution:");
+      withFees.forEach((s) => {
         console.log(`  ${s.serviceFeeStatus}: ${s._count.id}`);
       });
       console.log();
@@ -168,8 +203,8 @@ async function main() {
     });
 
     if (loadsWithFees.length > 0) {
-      console.log('Sample Loads with Service Fees:');
-      loadsWithFees.forEach(load => {
+      console.log("Sample Loads with Service Fees:");
+      loadsWithFees.forEach((load) => {
         console.log(`  Load ${load.id.slice(0, 8)}...:`);
         console.log(`    Status: ${load.status}`);
         console.log(`    Service Fee: ${load.serviceFeeEtb} ETB`);
@@ -180,30 +215,36 @@ async function main() {
         console.log();
       });
 
-      console.log('✅ Service fee tracking verified\n');
+      console.log("✅ Service fee tracking verified\n");
     } else {
-      console.log('ℹ️  No loads with service fees found yet\n');
-      console.log('   This is expected if no loads have been assigned through the corridor system\n');
+      console.log("ℹ️  No loads with service fees found yet\n");
+      console.log(
+        "   This is expected if no loads have been assigned through the corridor system\n"
+      );
     }
     testsPassed++;
   } catch (error) {
-    console.log('❌ Service fee test failed:', error);
+    console.log("❌ Service fee test failed:", error);
     testsFailed++;
   }
 
   // Test 4: Financial Accounts (Wallets)
-  console.log('═══════════════════════════════════════════════════════════════');
-  console.log('TEST 4: Financial Accounts (Wallets)');
-  console.log('═══════════════════════════════════════════════════════════════\n');
+  console.log(
+    "═══════════════════════════════════════════════════════════════"
+  );
+  console.log("TEST 4: Financial Accounts (Wallets)");
+  console.log(
+    "═══════════════════════════════════════════════════════════════\n"
+  );
 
   try {
     const accountTypes = await prisma.financialAccount.groupBy({
-      by: ['accountType'],
+      by: ["accountType"],
       _count: { id: true },
     });
 
-    console.log('Financial Account Types:');
-    accountTypes.forEach(a => {
+    console.log("Financial Account Types:");
+    accountTypes.forEach((a) => {
       console.log(`  ${a.accountType}: ${a._count.id} accounts`);
     });
     console.log();
@@ -211,12 +252,12 @@ async function main() {
     // Get total balances by type
     const accounts = await prisma.financialAccount.findMany();
     const balanceByType: Record<string, number> = {};
-    accounts.forEach(a => {
+    accounts.forEach((a) => {
       if (!balanceByType[a.accountType]) balanceByType[a.accountType] = 0;
       balanceByType[a.accountType] += Number(a.balance);
     });
 
-    console.log('Total Balances by Type:');
+    console.log("Total Balances by Type:");
     Object.entries(balanceByType).forEach(([type, balance]) => {
       console.log(`  ${type}: ${balance.toFixed(2)} ETB`);
     });
@@ -224,73 +265,89 @@ async function main() {
 
     // Check for platform revenue account
     const platformAccount = await prisma.financialAccount.findFirst({
-      where: { accountType: 'PLATFORM_REVENUE' },
+      where: { accountType: "PLATFORM_REVENUE" },
     });
 
     if (platformAccount) {
-      console.log(`✅ Platform revenue account exists: Balance ${platformAccount.balance} ETB\n`);
+      console.log(
+        `✅ Platform revenue account exists: Balance ${platformAccount.balance} ETB\n`
+      );
     } else {
-      console.log('⚠️  No platform revenue account found\n');
-      issues.push('No platform revenue account configured');
+      console.log("⚠️  No platform revenue account found\n");
+      issues.push("No platform revenue account configured");
     }
 
     testsPassed++;
   } catch (error) {
-    console.log('❌ Financial accounts test failed:', error);
+    console.log("❌ Financial accounts test failed:", error);
     testsFailed++;
   }
 
   // Test 5: Journal Entries (Transaction Audit Trail)
-  console.log('═══════════════════════════════════════════════════════════════');
-  console.log('TEST 5: Journal Entries (Transaction Audit Trail)');
-  console.log('═══════════════════════════════════════════════════════════════\n');
+  console.log(
+    "═══════════════════════════════════════════════════════════════"
+  );
+  console.log("TEST 5: Journal Entries (Transaction Audit Trail)");
+  console.log(
+    "═══════════════════════════════════════════════════════════════\n"
+  );
 
   try {
     const journalTypes = await prisma.journalEntry.groupBy({
-      by: ['transactionType'],
+      by: ["transactionType"],
       _count: { id: true },
     });
 
     if (journalTypes.length > 0) {
-      console.log('Transaction Type Summary:');
-      journalTypes.forEach(j => {
+      console.log("Transaction Type Summary:");
+      journalTypes.forEach((j) => {
         console.log(`  ${j.transactionType}: ${j._count.id} entries`);
       });
       console.log();
     } else {
-      console.log('No journal entries found yet\n');
+      console.log("No journal entries found yet\n");
     }
 
     // Check for service fee transactions
     const serviceFeeTransactions = await prisma.journalEntry.findMany({
       where: {
         transactionType: {
-          in: ['SERVICE_FEE_RESERVE', 'SERVICE_FEE_DEDUCT', 'SERVICE_FEE_REFUND'],
+          in: [
+            "SERVICE_FEE_RESERVE",
+            "SERVICE_FEE_DEDUCT",
+            "SERVICE_FEE_REFUND",
+          ],
         },
       },
       take: 5,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     if (serviceFeeTransactions.length > 0) {
-      console.log('Recent Service Fee Transactions:');
-      serviceFeeTransactions.forEach(t => {
-        console.log(`  ${t.transactionType}: ${t.description} (${t.createdAt.toISOString().split('T')[0]})`);
+      console.log("Recent Service Fee Transactions:");
+      serviceFeeTransactions.forEach((t) => {
+        console.log(
+          `  ${t.transactionType}: ${t.description} (${t.createdAt.toISOString().split("T")[0]})`
+        );
       });
       console.log();
     }
 
-    console.log('✅ Journal entry system verified\n');
+    console.log("✅ Journal entry system verified\n");
     testsPassed++;
   } catch (error) {
-    console.log('❌ Journal entries test failed:', error);
+    console.log("❌ Journal entries test failed:", error);
     testsFailed++;
   }
 
   // Test 6: Trucks and GPS Tracking
-  console.log('═══════════════════════════════════════════════════════════════');
-  console.log('TEST 6: Trucks and GPS Tracking');
-  console.log('═══════════════════════════════════════════════════════════════\n');
+  console.log(
+    "═══════════════════════════════════════════════════════════════"
+  );
+  console.log("TEST 6: Trucks and GPS Tracking");
+  console.log(
+    "═══════════════════════════════════════════════════════════════\n"
+  );
 
   try {
     const totalTrucks = await prisma.truck.count();
@@ -308,13 +365,13 @@ async function main() {
 
     // Check truck approval statuses
     const approvalCounts = await prisma.truck.groupBy({
-      by: ['approvalStatus'],
+      by: ["approvalStatus"],
       _count: { id: true },
     });
 
-    console.log('Truck Approval Status:');
-    approvalCounts.forEach(a => {
-      console.log(`  ${a.approvalStatus || 'PENDING'}: ${a._count.id}`);
+    console.log("Truck Approval Status:");
+    approvalCounts.forEach((a) => {
+      console.log(`  ${a.approvalStatus || "PENDING"}: ${a._count.id}`);
     });
     console.log();
 
@@ -333,34 +390,40 @@ async function main() {
     });
 
     if (loadsWithProgress.length > 0) {
-      console.log('Loads with Trip Progress:');
-      loadsWithProgress.forEach(l => {
-        console.log(`  Load ${l.id.slice(0, 8)}...: ${l.tripProgressPercent}% complete`);
+      console.log("Loads with Trip Progress:");
+      loadsWithProgress.forEach((l) => {
+        console.log(
+          `  Load ${l.id.slice(0, 8)}...: ${l.tripProgressPercent}% complete`
+        );
       });
       console.log();
     }
 
-    console.log('✅ Truck and GPS tracking verified\n');
+    console.log("✅ Truck and GPS tracking verified\n");
     testsPassed++;
   } catch (error) {
-    console.log('❌ Truck/GPS test failed:', error);
+    console.log("❌ Truck/GPS test failed:", error);
     testsFailed++;
   }
 
   // Test 7: Notification System
-  console.log('═══════════════════════════════════════════════════════════════');
-  console.log('TEST 7: Notification System');
-  console.log('═══════════════════════════════════════════════════════════════\n');
+  console.log(
+    "═══════════════════════════════════════════════════════════════"
+  );
+  console.log("TEST 7: Notification System");
+  console.log(
+    "═══════════════════════════════════════════════════════════════\n"
+  );
 
   try {
     const notificationTypes = await prisma.notification.groupBy({
-      by: ['type'],
+      by: ["type"],
       _count: { id: true },
     });
 
     if (notificationTypes.length > 0) {
-      console.log('Notification Types:');
-      notificationTypes.forEach(n => {
+      console.log("Notification Types:");
+      notificationTypes.forEach((n) => {
         console.log(`  ${n.type}: ${n._count.id}`);
       });
       console.log();
@@ -374,27 +437,31 @@ async function main() {
     console.log(`Unread notifications: ${unreadCount}`);
     console.log();
 
-    console.log('✅ Notification system verified\n');
+    console.log("✅ Notification system verified\n");
     testsPassed++;
   } catch (error) {
-    console.log('❌ Notification test failed:', error);
+    console.log("❌ Notification test failed:", error);
     testsFailed++;
   }
 
   // Test 8: Match Proposals
-  console.log('═══════════════════════════════════════════════════════════════');
-  console.log('TEST 8: Match Proposals');
-  console.log('═══════════════════════════════════════════════════════════════\n');
+  console.log(
+    "═══════════════════════════════════════════════════════════════"
+  );
+  console.log("TEST 8: Match Proposals");
+  console.log(
+    "═══════════════════════════════════════════════════════════════\n"
+  );
 
   try {
     const proposals = await prisma.matchProposal.groupBy({
-      by: ['status'],
+      by: ["status"],
       _count: { id: true },
     });
 
     if (proposals.length > 0) {
-      console.log('Match Proposal Status Distribution:');
-      proposals.forEach(p => {
+      console.log("Match Proposal Status Distribution:");
+      proposals.forEach((p) => {
         console.log(`  ${p.status}: ${p._count.id}`);
       });
       console.log();
@@ -402,7 +469,7 @@ async function main() {
 
     const recentProposals = await prisma.matchProposal.findMany({
       take: 3,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       include: {
         load: { select: { id: true, status: true, serviceFeeEtb: true } },
         truck: { select: { licensePlate: true } },
@@ -410,8 +477,8 @@ async function main() {
     });
 
     if (recentProposals.length > 0) {
-      console.log('Recent Match Proposals:');
-      recentProposals.forEach(p => {
+      console.log("Recent Match Proposals:");
+      recentProposals.forEach((p) => {
         console.log(`  Proposal ${p.id.slice(0, 8)}...:`);
         console.log(`    Status: ${p.status}`);
         console.log(`    Truck: ${p.truck.licensePlate}`);
@@ -423,87 +490,101 @@ async function main() {
       });
     }
 
-    console.log('✅ Match proposal system verified\n');
+    console.log("✅ Match proposal system verified\n");
     testsPassed++;
   } catch (error) {
-    console.log('❌ Match proposal test failed:', error);
+    console.log("❌ Match proposal test failed:", error);
     testsFailed++;
   }
 
   // Test 9: Organizations
-  console.log('═══════════════════════════════════════════════════════════════');
-  console.log('TEST 9: Organizations');
-  console.log('═══════════════════════════════════════════════════════════════\n');
+  console.log(
+    "═══════════════════════════════════════════════════════════════"
+  );
+  console.log("TEST 9: Organizations");
+  console.log(
+    "═══════════════════════════════════════════════════════════════\n"
+  );
 
   try {
     const orgTypes = await prisma.organization.groupBy({
-      by: ['type'],
+      by: ["type"],
       _count: { id: true },
     });
 
-    console.log('Organization Types:');
-    orgTypes.forEach(o => {
+    console.log("Organization Types:");
+    orgTypes.forEach((o) => {
       console.log(`  ${o.type}: ${o._count.id}`);
     });
     console.log();
 
     const orgVerification = await prisma.organization.groupBy({
-      by: ['isVerified'],
+      by: ["isVerified"],
       _count: { id: true },
     });
 
-    console.log('Organization Verification:');
-    orgVerification.forEach(o => {
-      console.log(`  ${o.isVerified ? 'Verified' : 'Not Verified'}: ${o._count.id}`);
+    console.log("Organization Verification:");
+    orgVerification.forEach((o) => {
+      console.log(
+        `  ${o.isVerified ? "Verified" : "Not Verified"}: ${o._count.id}`
+      );
     });
     console.log();
 
-    console.log('✅ Organization system verified\n');
+    console.log("✅ Organization system verified\n");
     testsPassed++;
   } catch (error) {
-    console.log('❌ Organization test failed:', error);
+    console.log("❌ Organization test failed:", error);
     testsFailed++;
   }
 
   // Test 10: Users
-  console.log('═══════════════════════════════════════════════════════════════');
-  console.log('TEST 10: Users');
-  console.log('═══════════════════════════════════════════════════════════════\n');
+  console.log(
+    "═══════════════════════════════════════════════════════════════"
+  );
+  console.log("TEST 10: Users");
+  console.log(
+    "═══════════════════════════════════════════════════════════════\n"
+  );
 
   try {
     const userRoles = await prisma.user.groupBy({
-      by: ['role'],
+      by: ["role"],
       _count: { id: true },
     });
 
-    console.log('User Roles:');
-    userRoles.forEach(u => {
+    console.log("User Roles:");
+    userRoles.forEach((u) => {
       console.log(`  ${u.role}: ${u._count.id}`);
     });
     console.log();
 
     const userStatuses = await prisma.user.groupBy({
-      by: ['status'],
+      by: ["status"],
       _count: { id: true },
     });
 
-    console.log('User Status:');
-    userStatuses.forEach(u => {
+    console.log("User Status:");
+    userStatuses.forEach((u) => {
       console.log(`  ${u.status}: ${u._count.id}`);
     });
     console.log();
 
-    console.log('✅ User system verified\n');
+    console.log("✅ User system verified\n");
     testsPassed++;
   } catch (error) {
-    console.log('❌ User test failed:', error);
+    console.log("❌ User test failed:", error);
     testsFailed++;
   }
 
   // Test 11: Trip Model and Status Flow
-  console.log('═══════════════════════════════════════════════════════════════');
-  console.log('TEST 11: Trip Model and Status Flow');
-  console.log('═══════════════════════════════════════════════════════════════\n');
+  console.log(
+    "═══════════════════════════════════════════════════════════════"
+  );
+  console.log("TEST 11: Trip Model and Status Flow");
+  console.log(
+    "═══════════════════════════════════════════════════════════════\n"
+  );
 
   try {
     const totalTrips = await prisma.trip.count();
@@ -511,13 +592,13 @@ async function main() {
 
     // Trip status distribution
     const tripStatuses = await prisma.trip.groupBy({
-      by: ['status'],
+      by: ["status"],
       _count: { id: true },
     });
 
     if (tripStatuses.length > 0) {
-      console.log('Trip Status Distribution:');
-      tripStatuses.forEach(t => {
+      console.log("Trip Status Distribution:");
+      tripStatuses.forEach((t) => {
         console.log(`  ${t.status}: ${t._count.id}`);
       });
       console.log();
@@ -527,7 +608,14 @@ async function main() {
     const tripsWithRelations = await prisma.trip.findMany({
       take: 5,
       include: {
-        load: { select: { id: true, status: true, pickupCity: true, deliveryCity: true } },
+        load: {
+          select: {
+            id: true,
+            status: true,
+            pickupCity: true,
+            deliveryCity: true,
+          },
+        },
         truck: { select: { id: true, licensePlate: true } },
         carrier: { select: { id: true, name: true } },
         shipper: { select: { id: true, name: true } },
@@ -535,57 +623,69 @@ async function main() {
     });
 
     if (tripsWithRelations.length > 0) {
-      console.log('Sample Trips (with relationships):');
-      tripsWithRelations.forEach(trip => {
+      console.log("Sample Trips (with relationships):");
+      tripsWithRelations.forEach((trip) => {
         console.log(`  Trip ${trip.id.slice(0, 8)}...:`);
         console.log(`    Status: ${trip.status}`);
-        console.log(`    Load: ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}`);
-        console.log(`    Truck: ${trip.truck?.licensePlate || 'N/A'}`);
-        console.log(`    Carrier: ${trip.carrier?.name || 'N/A'}`);
-        console.log(`    Shipper: ${trip.shipper?.name || 'N/A'}`);
-        console.log(`    Tracking: ${trip.trackingEnabled ? 'Enabled' : 'Disabled'}`);
+        console.log(
+          `    Load: ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}`
+        );
+        console.log(`    Truck: ${trip.truck?.licensePlate || "N/A"}`);
+        console.log(`    Carrier: ${trip.carrier?.name || "N/A"}`);
+        console.log(`    Shipper: ${trip.shipper?.name || "N/A"}`);
+        console.log(
+          `    Tracking: ${trip.trackingEnabled ? "Enabled" : "Disabled"}`
+        );
         console.log();
       });
 
       // Verify all required relationships exist
       const tripWithMissingRelation = tripsWithRelations.find(
-        t => !t.load || !t.truck || !t.carrier || !t.shipper
+        (t) => !t.load || !t.truck || !t.carrier || !t.shipper
       );
 
       if (tripWithMissingRelation) {
-        console.log('❌ Found trip with missing relationship\n');
-        issues.push('Trip has missing relationship');
+        console.log("❌ Found trip with missing relationship\n");
+        issues.push("Trip has missing relationship");
         testsFailed++;
       } else {
-        console.log('✅ All trip relationships verified (load, truck, carrier, shipper)\n');
+        console.log(
+          "✅ All trip relationships verified (load, truck, carrier, shipper)\n"
+        );
         testsPassed++;
       }
     } else {
-      console.log('ℹ️  No trips found yet - this is normal if no loads have been assigned\n');
+      console.log(
+        "ℹ️  No trips found yet - this is normal if no loads have been assigned\n"
+      );
       testsPassed++;
     }
   } catch (error) {
-    console.log('❌ Trip model test failed:', error);
+    console.log("❌ Trip model test failed:", error);
     testsFailed++;
   }
 
   // Test 12: TruckRequest Flow (Shipper → Truck)
-  console.log('═══════════════════════════════════════════════════════════════');
-  console.log('TEST 12: TruckRequest Flow (Shipper → Truck)');
-  console.log('═══════════════════════════════════════════════════════════════\n');
+  console.log(
+    "═══════════════════════════════════════════════════════════════"
+  );
+  console.log("TEST 12: TruckRequest Flow (Shipper → Truck)");
+  console.log(
+    "═══════════════════════════════════════════════════════════════\n"
+  );
 
   try {
     const totalTruckRequests = await prisma.truckRequest.count();
     console.log(`Total Truck Requests: ${totalTruckRequests}\n`);
 
     const truckRequestStatuses = await prisma.truckRequest.groupBy({
-      by: ['status'],
+      by: ["status"],
       _count: { id: true },
     });
 
     if (truckRequestStatuses.length > 0) {
-      console.log('Truck Request Status Distribution:');
-      truckRequestStatuses.forEach(r => {
+      console.log("Truck Request Status Distribution:");
+      truckRequestStatuses.forEach((r) => {
         console.log(`  ${r.status}: ${r._count.id}`);
       });
       console.log();
@@ -594,7 +694,7 @@ async function main() {
     // Sample truck requests with relations
     const sampleTruckRequests = await prisma.truckRequest.findMany({
       take: 3,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       include: {
         load: { select: { id: true, pickupCity: true, deliveryCity: true } },
         truck: { select: { licensePlate: true } },
@@ -604,41 +704,49 @@ async function main() {
     });
 
     if (sampleTruckRequests.length > 0) {
-      console.log('Recent Truck Requests:');
-      sampleTruckRequests.forEach(req => {
+      console.log("Recent Truck Requests:");
+      sampleTruckRequests.forEach((req) => {
         console.log(`  Request ${req.id.slice(0, 8)}...:`);
         console.log(`    Status: ${req.status}`);
         console.log(`    Shipper: ${req.shipper?.name} requests`);
-        console.log(`    Truck: ${req.truck?.licensePlate} (${req.carrier?.name})`);
-        console.log(`    For Load: ${req.load?.pickupCity} → ${req.load?.deliveryCity}`);
+        console.log(
+          `    Truck: ${req.truck?.licensePlate} (${req.carrier?.name})`
+        );
+        console.log(
+          `    For Load: ${req.load?.pickupCity} → ${req.load?.deliveryCity}`
+        );
         console.log();
       });
     }
 
-    console.log('✅ Truck request flow verified\n');
+    console.log("✅ Truck request flow verified\n");
     testsPassed++;
   } catch (error) {
-    console.log('❌ Truck request test failed:', error);
+    console.log("❌ Truck request test failed:", error);
     testsFailed++;
   }
 
   // Test 13: LoadRequest Flow (Carrier → Load)
-  console.log('═══════════════════════════════════════════════════════════════');
-  console.log('TEST 13: LoadRequest Flow (Carrier → Load)');
-  console.log('═══════════════════════════════════════════════════════════════\n');
+  console.log(
+    "═══════════════════════════════════════════════════════════════"
+  );
+  console.log("TEST 13: LoadRequest Flow (Carrier → Load)");
+  console.log(
+    "═══════════════════════════════════════════════════════════════\n"
+  );
 
   try {
     const totalLoadRequests = await prisma.loadRequest.count();
     console.log(`Total Load Requests: ${totalLoadRequests}\n`);
 
     const loadRequestStatuses = await prisma.loadRequest.groupBy({
-      by: ['status'],
+      by: ["status"],
       _count: { id: true },
     });
 
     if (loadRequestStatuses.length > 0) {
-      console.log('Load Request Status Distribution:');
-      loadRequestStatuses.forEach(r => {
+      console.log("Load Request Status Distribution:");
+      loadRequestStatuses.forEach((r) => {
         console.log(`  ${r.status}: ${r._count.id}`);
       });
       console.log();
@@ -647,7 +755,7 @@ async function main() {
     // Sample load requests with relations
     const sampleLoadRequests = await prisma.loadRequest.findMany({
       take: 3,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       include: {
         load: { select: { id: true, pickupCity: true, deliveryCity: true } },
         truck: { select: { licensePlate: true } },
@@ -657,44 +765,50 @@ async function main() {
     });
 
     if (sampleLoadRequests.length > 0) {
-      console.log('Recent Load Requests:');
-      sampleLoadRequests.forEach(req => {
+      console.log("Recent Load Requests:");
+      sampleLoadRequests.forEach((req) => {
         console.log(`  Request ${req.id.slice(0, 8)}...:`);
         console.log(`    Status: ${req.status}`);
         console.log(`    Carrier: ${req.carrier?.name} requests`);
-        console.log(`    Load: ${req.load?.pickupCity} → ${req.load?.deliveryCity}`);
+        console.log(
+          `    Load: ${req.load?.pickupCity} → ${req.load?.deliveryCity}`
+        );
         console.log(`    Using Truck: ${req.truck?.licensePlate}`);
         console.log(`    Shipper: ${req.shipper?.name} (must approve)`);
         console.log();
       });
     }
 
-    console.log('✅ Load request flow verified\n');
+    console.log("✅ Load request flow verified\n");
     testsPassed++;
   } catch (error) {
-    console.log('❌ Load request test failed:', error);
+    console.log("❌ Load request test failed:", error);
     testsFailed++;
   }
 
   // Test 14: Role-Based Data Access Verification
-  console.log('═══════════════════════════════════════════════════════════════');
-  console.log('TEST 14: Role-Based Data Access Verification');
-  console.log('═══════════════════════════════════════════════════════════════\n');
+  console.log(
+    "═══════════════════════════════════════════════════════════════"
+  );
+  console.log("TEST 14: Role-Based Data Access Verification");
+  console.log(
+    "═══════════════════════════════════════════════════════════════\n"
+  );
 
   try {
     // Get sample organizations by type
     const carrierOrg = await prisma.organization.findFirst({
-      where: { type: { in: ['CARRIER_COMPANY', 'CARRIER_INDIVIDUAL'] } },
+      where: { type: { in: ["CARRIER_COMPANY", "CARRIER_INDIVIDUAL"] } },
       select: { id: true, name: true, type: true },
     });
 
     const shipperOrg = await prisma.organization.findFirst({
-      where: { type: 'SHIPPER' },
+      where: { type: "SHIPPER" },
       select: { id: true, name: true, type: true },
     });
 
     if (carrierOrg && shipperOrg) {
-      console.log('Test Organizations:');
+      console.log("Test Organizations:");
       console.log(`  Carrier: ${carrierOrg.name} (${carrierOrg.type})`);
       console.log(`  Shipper: ${shipperOrg.name} (${shipperOrg.type})\n`);
 
@@ -708,7 +822,7 @@ async function main() {
 
       console.log(`Carrier "${carrierOrg.name}" owns ${carrierTrucks} trucks`);
       console.log(`Other carriers own ${otherTrucks} trucks`);
-      console.log('✅ Truck ownership filtering works\n');
+      console.log("✅ Truck ownership filtering works\n");
 
       // Verify shipper can only see their loads
       const shipperLoads = await prisma.load.count({
@@ -720,7 +834,7 @@ async function main() {
 
       console.log(`Shipper "${shipperOrg.name}" owns ${shipperLoads} loads`);
       console.log(`Other shippers own ${otherLoads} loads`);
-      console.log('✅ Load ownership filtering works\n');
+      console.log("✅ Load ownership filtering works\n");
 
       // Verify trip filtering by role
       const carrierTrips = await prisma.trip.count({
@@ -732,27 +846,33 @@ async function main() {
 
       console.log(`Carrier "${carrierOrg.name}" has ${carrierTrips} trips`);
       console.log(`Shipper "${shipperOrg.name}" has ${shipperTrips} trips`);
-      console.log('✅ Trip role-based filtering works\n');
+      console.log("✅ Trip role-based filtering works\n");
 
       testsPassed++;
     } else {
-      console.log('⚠️  Could not find both carrier and shipper organizations for testing\n');
+      console.log(
+        "⚠️  Could not find both carrier and shipper organizations for testing\n"
+      );
       testsPassed++; // Not a failure, just missing data
     }
   } catch (error) {
-    console.log('❌ Role-based access test failed:', error);
+    console.log("❌ Role-based access test failed:", error);
     testsFailed++;
   }
 
   // Test 15: Complete Data Flow Verification
-  console.log('═══════════════════════════════════════════════════════════════');
-  console.log('TEST 15: Complete Data Flow Verification');
-  console.log('═══════════════════════════════════════════════════════════════\n');
+  console.log(
+    "═══════════════════════════════════════════════════════════════"
+  );
+  console.log("TEST 15: Complete Data Flow Verification");
+  console.log(
+    "═══════════════════════════════════════════════════════════════\n"
+  );
 
   try {
     // Find a completed trip to verify the full flow
     const completedTrip = await prisma.trip.findFirst({
-      where: { status: { in: ['DELIVERED', 'COMPLETED'] } },
+      where: { status: { in: ["DELIVERED", "COMPLETED"] } },
       include: {
         load: {
           select: {
@@ -760,7 +880,7 @@ async function main() {
             status: true,
             pickupCity: true,
             deliveryCity: true,
-          }
+          },
         },
         truck: { select: { licensePlate: true, carrierId: true } },
         carrier: { select: { name: true } },
@@ -769,39 +889,49 @@ async function main() {
     });
 
     if (completedTrip) {
-      console.log('Found Completed Trip - Verifying Full Data Flow:\n');
+      console.log("Found Completed Trip - Verifying Full Data Flow:\n");
 
-      console.log('1. SHIPPER posted LOAD:');
+      console.log("1. SHIPPER posted LOAD:");
       console.log(`   Shipper: ${completedTrip.shipper?.name}`);
-      console.log(`   Load: ${completedTrip.load?.pickupCity} → ${completedTrip.load?.deliveryCity}`);
+      console.log(
+        `   Load: ${completedTrip.load?.pickupCity} → ${completedTrip.load?.deliveryCity}`
+      );
       console.log();
 
-      console.log('2. CARRIER assigned TRUCK:');
+      console.log("2. CARRIER assigned TRUCK:");
       console.log(`   Carrier: ${completedTrip.carrier?.name}`);
       console.log(`   Truck: ${completedTrip.truck?.licensePlate}`);
       console.log();
 
-      console.log('3. TRIP created and completed:');
+      console.log("3. TRIP created and completed:");
       console.log(`   Trip ID: ${completedTrip.id.slice(0, 12)}...`);
       console.log(`   Trip Status: ${completedTrip.status}`);
       console.log(`   Load Status: ${completedTrip.load?.status}`);
-      console.log(`   Started: ${completedTrip.startedAt?.toISOString() || 'N/A'}`);
-      console.log(`   Delivered: ${completedTrip.deliveredAt?.toISOString() || 'N/A'}`);
+      console.log(
+        `   Started: ${completedTrip.startedAt?.toISOString() || "N/A"}`
+      );
+      console.log(
+        `   Delivered: ${completedTrip.deliveredAt?.toISOString() || "N/A"}`
+      );
       console.log();
 
       // Verify trip status matches load status
       const tripLoadStatusMatch =
-        (completedTrip.status === 'DELIVERED' && completedTrip.load?.status === 'DELIVERED') ||
-        (completedTrip.status === 'COMPLETED' && completedTrip.load?.status === 'COMPLETED');
+        (completedTrip.status === "DELIVERED" &&
+          completedTrip.load?.status === "DELIVERED") ||
+        (completedTrip.status === "COMPLETED" &&
+          completedTrip.load?.status === "COMPLETED");
 
       if (tripLoadStatusMatch) {
-        console.log('✅ Trip status synced with Load status correctly\n');
+        console.log("✅ Trip status synced with Load status correctly\n");
       } else {
-        console.log(`⚠️  Status mismatch: Trip=${completedTrip.status}, Load=${completedTrip.load?.status}\n`);
-        issues.push('Trip and Load status not synced');
+        console.log(
+          `⚠️  Status mismatch: Trip=${completedTrip.status}, Load=${completedTrip.load?.status}\n`
+        );
+        issues.push("Trip and Load status not synced");
       }
 
-      console.log('✅ Complete data flow verified\n');
+      console.log("✅ Complete data flow verified\n");
       testsPassed++;
     } else {
       // Check if there's at least an assigned trip
@@ -814,33 +944,41 @@ async function main() {
       });
 
       if (anyTrip) {
-        console.log('Found Trip (not yet completed):');
+        console.log("Found Trip (not yet completed):");
         console.log(`  Trip Status: ${anyTrip.status}`);
         console.log(`  Carrier: ${anyTrip.carrier?.name}`);
         console.log(`  Shipper: ${anyTrip.shipper?.name}`);
         console.log();
-        console.log('✅ Trip model is working, waiting for trip completion\n');
+        console.log("✅ Trip model is working, waiting for trip completion\n");
         testsPassed++;
       } else {
-        console.log('ℹ️  No trips found yet');
-        console.log('   This is expected if no loads have been assigned to trucks\n');
-        console.log('   To test full flow:');
-        console.log('   1. Shipper posts a load');
-        console.log('   2. Carrier requests the load (or shipper requests a truck)');
-        console.log('   3. Request is approved → Trip is created');
-        console.log('   4. Carrier progresses trip through status stages\n');
+        console.log("ℹ️  No trips found yet");
+        console.log(
+          "   This is expected if no loads have been assigned to trucks\n"
+        );
+        console.log("   To test full flow:");
+        console.log("   1. Shipper posts a load");
+        console.log(
+          "   2. Carrier requests the load (or shipper requests a truck)"
+        );
+        console.log("   3. Request is approved → Trip is created");
+        console.log("   4. Carrier progresses trip through status stages\n");
         testsPassed++;
       }
     }
   } catch (error) {
-    console.log('❌ Complete data flow test failed:', error);
+    console.log("❌ Complete data flow test failed:", error);
     testsFailed++;
   }
 
   // Test 16: GPS Position and Route History
-  console.log('═══════════════════════════════════════════════════════════════');
-  console.log('TEST 16: GPS Position and Route History');
-  console.log('═══════════════════════════════════════════════════════════════\n');
+  console.log(
+    "═══════════════════════════════════════════════════════════════"
+  );
+  console.log("TEST 16: GPS Position and Route History");
+  console.log(
+    "═══════════════════════════════════════════════════════════════\n"
+  );
 
   try {
     const totalPositions = await prisma.gpsPosition.count();
@@ -860,31 +998,39 @@ async function main() {
         include: {
           routeHistory: {
             take: 5,
-            orderBy: { timestamp: 'desc' },
+            orderBy: { timestamp: "desc" },
           },
         },
       });
 
       if (tripWithRoute) {
-        console.log(`\nTrip ${tripWithRoute.id.slice(0, 8)}... has ${tripWithRoute.routeHistory.length}+ GPS points`);
-        console.log('Sample positions:');
-        tripWithRoute.routeHistory.forEach(pos => {
-          console.log(`  ${pos.timestamp.toISOString()}: (${pos.latitude}, ${pos.longitude})`);
+        console.log(
+          `\nTrip ${tripWithRoute.id.slice(0, 8)}... has ${tripWithRoute.routeHistory.length}+ GPS points`
+        );
+        console.log("Sample positions:");
+        tripWithRoute.routeHistory.forEach((pos) => {
+          console.log(
+            `  ${pos.timestamp.toISOString()}: (${pos.latitude}, ${pos.longitude})`
+          );
         });
       }
     }
 
-    console.log('\n✅ GPS position tracking verified\n');
+    console.log("\n✅ GPS position tracking verified\n");
     testsPassed++;
   } catch (error) {
-    console.log('❌ GPS position test failed:', error);
+    console.log("❌ GPS position test failed:", error);
     testsFailed++;
   }
 
   // Summary
-  console.log('═══════════════════════════════════════════════════════════════');
-  console.log('TEST SUMMARY');
-  console.log('═══════════════════════════════════════════════════════════════\n');
+  console.log(
+    "═══════════════════════════════════════════════════════════════"
+  );
+  console.log("TEST SUMMARY");
+  console.log(
+    "═══════════════════════════════════════════════════════════════\n"
+  );
 
   console.log(`Total Tests: ${testsPassed + testsFailed}`);
   console.log(`✅ Passed: ${testsPassed}`);
@@ -892,17 +1038,17 @@ async function main() {
   console.log();
 
   if (issues.length > 0) {
-    console.log('Issues Found:');
-    issues.forEach(issue => {
+    console.log("Issues Found:");
+    issues.forEach((issue) => {
       console.log(`  ⚠️  ${issue}`);
     });
     console.log();
   }
 
   if (testsFailed === 0) {
-    console.log('🎉 All business logic tests passed!\n');
+    console.log("🎉 All business logic tests passed!\n");
   } else {
-    console.log('⚠️  Some tests failed - review issues above\n');
+    console.log("⚠️  Some tests failed - review issues above\n");
   }
 
   await prisma.$disconnect();
@@ -910,6 +1056,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('Test script error:', error);
+  console.error("Test script error:", error);
   process.exit(1);
 });

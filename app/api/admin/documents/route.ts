@@ -5,10 +5,10 @@
  * Sprint 10 - Story 10.4: Document Verification Queue
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requirePermission, Permission } from '@/lib/rbac';
-import { VerificationStatus } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requirePermission, Permission } from "@/lib/rbac";
+import { VerificationStatus } from "@prisma/client";
 
 // Type for transformed document with user details
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -33,23 +33,24 @@ export async function GET(request: NextRequest) {
     await requirePermission(Permission.VERIFY_DOCUMENTS);
 
     const { searchParams } = request.nextUrl;
-    const status = (searchParams.get('status') || 'PENDING') as VerificationStatus;
-    const entityType = searchParams.get('entityType') || 'all';
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const status = (searchParams.get("status") ||
+      "PENDING") as VerificationStatus;
+    const entityType = searchParams.get("entityType") || "all";
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "20");
 
     // Validate status
-    if (!['PENDING', 'APPROVED', 'REJECTED'].includes(status)) {
+    if (!["PENDING", "APPROVED", "REJECTED"].includes(status)) {
       return NextResponse.json(
-        { error: 'Invalid status. Must be PENDING, APPROVED, or REJECTED' },
+        { error: "Invalid status. Must be PENDING, APPROVED, or REJECTED" },
         { status: 400 }
       );
     }
 
     // Validate entity type
-    if (!['company', 'truck', 'all'].includes(entityType)) {
+    if (!["company", "truck", "all"].includes(entityType)) {
       return NextResponse.json(
-        { error: 'Invalid entityType. Must be company, truck, or all' },
+        { error: "Invalid entityType. Must be company, truck, or all" },
         { status: 400 }
       );
     }
@@ -68,14 +69,14 @@ export async function GET(request: NextRequest) {
           lastName: true,
         },
       });
-      return new Map(users.map(u => [u.id, u]));
+      return new Map(users.map((u) => [u.id, u]));
     };
 
     // Fetch company documents
     let companyDocuments: TransformedDocument[] = [];
     let companyCount = 0;
 
-    if (entityType === 'company' || entityType === 'all') {
+    if (entityType === "company" || entityType === "all") {
       [companyDocuments, companyCount] = await Promise.all([
         db.companyDocument.findMany({
           where: {
@@ -91,10 +92,10 @@ export async function GET(request: NextRequest) {
             },
           },
           orderBy: {
-            uploadedAt: 'desc',
+            uploadedAt: "desc",
           },
-          skip: entityType === 'company' ? skip : 0,
-          take: entityType === 'company' ? limit : undefined,
+          skip: entityType === "company" ? skip : 0,
+          take: entityType === "company" ? limit : undefined,
         }),
         db.companyDocument.count({
           where: {
@@ -104,19 +105,26 @@ export async function GET(request: NextRequest) {
       ]);
 
       // Fetch user details for uploadedBy and verifiedBy
-      const companyUserIds = companyDocuments.flatMap(doc =>
+      const companyUserIds = companyDocuments.flatMap((doc) =>
         [doc.uploadedById, doc.verifiedById].filter(Boolean)
       );
       const companyUserMap = await fetchUserDetails(companyUserIds);
 
       // Add entityType and user details to each document
-      companyDocuments = companyDocuments.map(doc => ({
+      companyDocuments = companyDocuments.map((doc) => ({
         ...doc,
-        entityType: 'company',
+        entityType: "company",
         entityName: doc.organization.name,
         fileSize: Number(doc.fileSize),
-        uploadedBy: companyUserMap.get(doc.uploadedById) || { id: doc.uploadedById, email: 'Unknown', firstName: null, lastName: null },
-        verifiedBy: doc.verifiedById ? companyUserMap.get(doc.verifiedById) || null : null,
+        uploadedBy: companyUserMap.get(doc.uploadedById) || {
+          id: doc.uploadedById,
+          email: "Unknown",
+          firstName: null,
+          lastName: null,
+        },
+        verifiedBy: doc.verifiedById
+          ? companyUserMap.get(doc.verifiedById) || null
+          : null,
       }));
     }
 
@@ -124,7 +132,7 @@ export async function GET(request: NextRequest) {
     let truckDocuments: TransformedDocument[] = [];
     let truckCount = 0;
 
-    if (entityType === 'truck' || entityType === 'all') {
+    if (entityType === "truck" || entityType === "all") {
       [truckDocuments, truckCount] = await Promise.all([
         db.truckDocument.findMany({
           where: {
@@ -146,10 +154,10 @@ export async function GET(request: NextRequest) {
             },
           },
           orderBy: {
-            uploadedAt: 'desc',
+            uploadedAt: "desc",
           },
-          skip: entityType === 'truck' ? skip : 0,
-          take: entityType === 'truck' ? limit : undefined,
+          skip: entityType === "truck" ? skip : 0,
+          take: entityType === "truck" ? limit : undefined,
         }),
         db.truckDocument.count({
           where: {
@@ -159,20 +167,27 @@ export async function GET(request: NextRequest) {
       ]);
 
       // Fetch user details for uploadedBy and verifiedBy
-      const truckUserIds = truckDocuments.flatMap(doc =>
+      const truckUserIds = truckDocuments.flatMap((doc) =>
         [doc.uploadedById, doc.verifiedById].filter(Boolean)
       );
       const truckUserMap = await fetchUserDetails(truckUserIds);
 
       // Add entityType and user details to each document
-      truckDocuments = truckDocuments.map(doc => ({
+      truckDocuments = truckDocuments.map((doc) => ({
         ...doc,
-        entityType: 'truck',
+        entityType: "truck",
         entityName: `${doc.truck.carrier.name} - ${doc.truck.licensePlate}`,
         organization: doc.truck.carrier,
         fileSize: Number(doc.fileSize),
-        uploadedBy: truckUserMap.get(doc.uploadedById) || { id: doc.uploadedById, email: 'Unknown', firstName: null, lastName: null },
-        verifiedBy: doc.verifiedById ? truckUserMap.get(doc.verifiedById) || null : null,
+        uploadedBy: truckUserMap.get(doc.uploadedById) || {
+          id: doc.uploadedById,
+          email: "Unknown",
+          firstName: null,
+          lastName: null,
+        },
+        verifiedBy: doc.verifiedById
+          ? truckUserMap.get(doc.verifiedById) || null
+          : null,
       }));
     }
 
@@ -180,19 +195,20 @@ export async function GET(request: NextRequest) {
     let documents: TransformedDocument[] = [];
     let total = 0;
 
-    if (entityType === 'all') {
+    if (entityType === "all") {
       // Combine both arrays
       const combined = [...companyDocuments, ...truckDocuments];
 
       // Sort by uploadedAt descending
-      combined.sort((a, b) =>
-        new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+      combined.sort(
+        (a, b) =>
+          new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
       );
 
       // Paginate
       documents = combined.slice(skip, skip + limit);
       total = companyCount + truckCount;
-    } else if (entityType === 'company') {
+    } else if (entityType === "company") {
       documents = companyDocuments;
       total = companyCount;
     } else {
@@ -215,14 +231,14 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching admin documents:', error);
+    console.error("Error fetching admin documents:", error);
 
-    if (error instanceof Error && error.name === 'ForbiddenError') {
+    if (error instanceof Error && error.name === "ForbiddenError") {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

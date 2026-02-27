@@ -10,7 +10,7 @@
  * @see VEHICLE-TYPE-CONTRACT.md for documentation
  */
 
-import { TruckType, GpsDeviceStatus } from '@prisma/client';
+import { TruckType, GpsDeviceStatus } from "@prisma/client";
 
 // Re-export Prisma enums for frontend use
 export { TruckType, GpsDeviceStatus };
@@ -19,7 +19,7 @@ export { TruckType, GpsDeviceStatus };
  * Truck availability status for map display.
  * Derived from Truck.isAvailable boolean in database.
  */
-export type TruckAvailabilityStatus = 'AVAILABLE' | 'IN_TRANSIT';
+export type TruckAvailabilityStatus = "AVAILABLE" | "IN_TRANSIT";
 
 /**
  * GPS status for frontend display.
@@ -29,7 +29,7 @@ export type TruckAvailabilityStatus = 'AVAILABLE' | 'IN_TRANSIT';
  * OFFLINE: GPS device exists but signal is stale (last update >= 15 min)
  * NO_DEVICE: No GPS location data available
  */
-export type GpsDisplayStatus = 'ACTIVE' | 'OFFLINE' | 'NO_DEVICE';
+export type GpsDisplayStatus = "ACTIVE" | "OFFLINE" | "NO_DEVICE";
 
 /**
  * Vehicle location data with optional telemetry.
@@ -166,12 +166,12 @@ export function mapGpsStatus(
   isRecent: boolean
 ): GpsDisplayStatus {
   if (!hasLocation) {
-    return 'NO_DEVICE';
+    return "NO_DEVICE";
   }
   if (isRecent) {
-    return 'ACTIVE';
+    return "ACTIVE";
   }
-  return 'OFFLINE';
+  return "OFFLINE";
 }
 
 /**
@@ -181,19 +181,23 @@ export function mapGpsStatus(
  * @returns TruckAvailabilityStatus for frontend
  */
 export function mapTruckStatus(isAvailable: boolean): TruckAvailabilityStatus {
-  return isAvailable ? 'AVAILABLE' : 'IN_TRANSIT';
+  return isAvailable ? "AVAILABLE" : "IN_TRANSIT";
 }
 
 /**
  * Type guard to check if a value is a valid GpsDisplayStatus.
  */
-export function isValidGpsDisplayStatus(value: unknown): value is GpsDisplayStatus {
-  return value === 'ACTIVE' || value === 'OFFLINE' || value === 'NO_DEVICE';
+export function isValidGpsDisplayStatus(
+  value: unknown
+): value is GpsDisplayStatus {
+  return value === "ACTIVE" || value === "OFFLINE" || value === "NO_DEVICE";
 }
 
 /**
  * Type guard to check if a value is a valid TruckAvailabilityStatus.
  */
-export function isValidTruckStatus(value: unknown): value is TruckAvailabilityStatus {
-  return value === 'AVAILABLE' || value === 'IN_TRANSIT';
+export function isValidTruckStatus(
+  value: unknown
+): value is TruckAvailabilityStatus {
+  return value === "AVAILABLE" || value === "IN_TRANSIT";
 }

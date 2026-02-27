@@ -6,14 +6,18 @@
  * Admin endpoint to manage automated bypass warnings
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requirePermission, Permission } from '@/lib/rbac';
-import { checkAndSendWarnings, sendBypassWarning, BypassWarningType } from '@/lib/bypassWarnings';
-import { z } from 'zod';
+import { NextRequest, NextResponse } from "next/server";
+import { requirePermission, Permission } from "@/lib/rbac";
+import {
+  checkAndSendWarnings,
+  sendBypassWarning,
+  BypassWarningType,
+} from "@/lib/bypassWarnings";
+import { z } from "zod";
 // M8 FIX: Add CSRF validation
-import { validateCSRFWithMobile } from '@/lib/csrf';
+import { validateCSRFWithMobile } from "@/lib/csrf";
 // H10 FIX: Use zodErrorResponse instead of leaking details
-import { zodErrorResponse } from '@/lib/validation';
+import { zodErrorResponse } from "@/lib/validation";
 
 const manualWarningSchema = z.object({
   organizationId: z.string().min(1),
@@ -57,7 +61,7 @@ export async function POST(request: NextRequest) {
       const validWarningTypes = Object.values(BypassWarningType) as string[];
       if (!validWarningTypes.includes(warningType)) {
         return NextResponse.json(
-          { error: 'Invalid warning type' },
+          { error: "Invalid warning type" },
           { status: 400 }
         );
       }
@@ -65,7 +69,7 @@ export async function POST(request: NextRequest) {
       await sendBypassWarning(organizationId, warningType as BypassWarningType);
 
       return NextResponse.json({
-        message: 'Warning sent successfully',
+        message: "Warning sent successfully",
         organizationId,
         warningType,
       });
@@ -74,22 +78,22 @@ export async function POST(request: NextRequest) {
       const result = await checkAndSendWarnings();
 
       return NextResponse.json({
-        message: 'Automated warning check completed',
+        message: "Automated warning check completed",
         ...result,
         timestamp: new Date().toISOString(),
       });
     }
-  // H11 FIX: Use unknown type with type guard
+    // H11 FIX: Use unknown type with type guard
   } catch (error: unknown) {
-    console.error('Bypass warnings error:', error);
+    console.error("Bypass warnings error:", error);
 
-    if (error instanceof Error && error.name === 'ForbiddenError') {
+    if (error instanceof Error && error.name === "ForbiddenError") {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
 
     // H12 FIX: Don't leak error details, log them server-side only
     return NextResponse.json(
-      { error: 'Failed to process bypass warnings' },
+      { error: "Failed to process bypass warnings" },
       { status: 500 }
     );
   }
@@ -104,7 +108,7 @@ export async function GET(request: NextRequest) {
   try {
     await requirePermission(Permission.VIEW_USERS);
 
-    const { db } = await import('@/lib/db');
+    const { db } = await import("@/lib/db");
 
     // Get counts of organizations in different warning states
     const [
@@ -146,16 +150,16 @@ export async function GET(request: NextRequest) {
       },
       timestamp: new Date().toISOString(),
     });
-  // H11 FIX: Use unknown type with type guard
+    // H11 FIX: Use unknown type with type guard
   } catch (error: unknown) {
-    console.error('Get warning stats error:', error);
+    console.error("Get warning stats error:", error);
 
-    if (error instanceof Error && error.name === 'ForbiddenError') {
+    if (error instanceof Error && error.name === "ForbiddenError") {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

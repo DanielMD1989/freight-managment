@@ -7,12 +7,18 @@
  * Allows SuperAdmins to view and filter all platform audit logs
  */
 
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 interface AuditLogMetadata {
-  [key: string]: string | number | boolean | null | undefined | AuditLogMetadata;
+  [key: string]:
+    | string
+    | number
+    | boolean
+    | null
+    | undefined
+    | AuditLogMetadata;
 }
 
 interface AuditLog {
@@ -58,10 +64,10 @@ export default function AuditLogViewerClient() {
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
   // Filters
-  const [severityFilter, setSeverityFilter] = useState<string>('');
-  const [eventTypeFilter, setEventTypeFilter] = useState<string>('');
-  const [resultFilter, setResultFilter] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [severityFilter, setSeverityFilter] = useState<string>("");
+  const [eventTypeFilter, setEventTypeFilter] = useState<string>("");
+  const [resultFilter, setResultFilter] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [limit, setLimit] = useState(50);
   const [offset, setOffset] = useState(0);
 
@@ -74,11 +80,11 @@ export default function AuditLogViewerClient() {
       setLoading(true);
 
       const params = new URLSearchParams();
-      if (severityFilter) params.append('severity', severityFilter);
-      if (eventTypeFilter) params.append('eventType', eventTypeFilter);
-      if (resultFilter) params.append('result', resultFilter);
-      params.append('limit', limit.toString());
-      params.append('offset', offset.toString());
+      if (severityFilter) params.append("severity", severityFilter);
+      if (eventTypeFilter) params.append("eventType", eventTypeFilter);
+      if (resultFilter) params.append("result", resultFilter);
+      params.append("limit", limit.toString());
+      params.append("offset", offset.toString());
 
       const response = await fetch(`/api/admin/audit-logs?${params}`);
 
@@ -87,10 +93,10 @@ export default function AuditLogViewerClient() {
         setLogs(data.logs);
         setTotalCount(data.total);
       } else {
-        console.error('Failed to fetch audit logs');
+        console.error("Failed to fetch audit logs");
       }
     } catch (error) {
-      console.error('Error fetching audit logs:', error);
+      console.error("Error fetching audit logs:", error);
     } finally {
       setLoading(false);
     }
@@ -98,22 +104,20 @@ export default function AuditLogViewerClient() {
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'CRITICAL':
-        return 'bg-red-100 text-red-800 border-red-300';
-      case 'ERROR':
-        return 'bg-orange-100 text-orange-800 border-orange-300';
-      case 'WARNING':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'INFO':
+      case "CRITICAL":
+        return "bg-red-100 text-red-800 border-red-300";
+      case "ERROR":
+        return "bg-orange-100 text-orange-800 border-orange-300";
+      case "WARNING":
+        return "bg-yellow-100 text-yellow-800 border-yellow-300";
+      case "INFO":
       default:
-        return 'bg-blue-100 text-blue-800 border-blue-300';
+        return "bg-blue-100 text-blue-800 border-blue-300";
     }
   };
 
   const getResultColor = (result: string) => {
-    return result === 'SUCCESS'
-      ? 'text-green-600'
-      : 'text-red-600';
+    return result === "SUCCESS" ? "text-green-600" : "text-red-600";
   };
 
   const handleSearch = () => {
@@ -131,9 +135,9 @@ export default function AuditLogViewerClient() {
 
   if (loading && logs.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow p-12 text-center">
-        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        <p className="text-gray-600 mt-4">Loading audit logs...</p>
+      <div className="rounded-lg bg-white p-12 text-center shadow">
+        <div className="inline-block h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
+        <p className="mt-4 text-gray-600">Loading audit logs...</p>
       </div>
     );
   }
@@ -141,11 +145,11 @@ export default function AuditLogViewerClient() {
   return (
     <div className="space-y-6">
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Filters</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">Filters</h2>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
               Severity
             </label>
             <select
@@ -154,7 +158,7 @@ export default function AuditLogViewerClient() {
                 setSeverityFilter(e.target.value);
                 setOffset(0);
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
             >
               <option value="">All</option>
               <option value="CRITICAL">Critical</option>
@@ -165,7 +169,7 @@ export default function AuditLogViewerClient() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
               Result
             </label>
             <select
@@ -174,7 +178,7 @@ export default function AuditLogViewerClient() {
                 setResultFilter(e.target.value);
                 setOffset(0);
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
             >
               <option value="">All</option>
               <option value="SUCCESS">Success</option>
@@ -183,7 +187,7 @@ export default function AuditLogViewerClient() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
               Event Type
             </label>
             <input
@@ -191,18 +195,18 @@ export default function AuditLogViewerClient() {
               value={eventTypeFilter}
               onChange={(e) => setEventTypeFilter(e.target.value)}
               onKeyPress={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === "Enter") {
                   setOffset(0);
                   fetchAuditLogs();
                 }
               }}
               placeholder="e.g., AUTH_LOGIN"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
               Records per page
             </label>
             <select
@@ -211,7 +215,7 @@ export default function AuditLogViewerClient() {
                 setLimit(parseInt(e.target.value));
                 setOffset(0);
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
             >
               <option value="25">25</option>
               <option value="50">50</option>
@@ -223,35 +227,33 @@ export default function AuditLogViewerClient() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
           <p className="text-sm text-gray-600">Total Logs</p>
-          <p className="text-3xl font-bold text-gray-900 mt-1">
+          <p className="mt-1 text-3xl font-bold text-gray-900">
             {totalCount.toLocaleString()}
           </p>
         </div>
-        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
           <p className="text-sm text-gray-600">Showing</p>
-          <p className="text-3xl font-bold text-blue-600 mt-1">
-            {logs.length}
-          </p>
+          <p className="mt-1 text-3xl font-bold text-blue-600">{logs.length}</p>
         </div>
-        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
           <p className="text-sm text-gray-600">Page</p>
-          <p className="text-3xl font-bold text-gray-900 mt-1">
+          <p className="mt-1 text-3xl font-bold text-gray-900">
             {Math.floor(offset / limit) + 1}
           </p>
         </div>
-        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
           <p className="text-sm text-gray-600">Failures</p>
-          <p className="text-3xl font-bold text-red-600 mt-1">
-            {logs.filter((l) => l.result === 'FAILURE').length}
+          <p className="mt-1 text-3xl font-bold text-red-600">
+            {logs.filter((l) => l.result === "FAILURE").length}
           </p>
         </div>
       </div>
 
       {/* Audit Logs Table */}
-      <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow">
         {logs.length === 0 ? (
           <div className="p-12 text-center">
             <svg
@@ -280,37 +282,37 @@ export default function AuditLogViewerClient() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                       Timestamp
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                       Event
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                       User
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                       Severity
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                       Result
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                       Message
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-200 bg-white">
                   {logs.map((log) => (
                     <tr
                       key={log.id}
-                      className="hover:bg-gray-50 cursor-pointer"
+                      className="cursor-pointer hover:bg-gray-50"
                       onClick={() => setSelectedLog(log)}
                     >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
                         {new Date(log.timestamp).toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -318,7 +320,9 @@ export default function AuditLogViewerClient() {
                           {log.eventType}
                         </div>
                         {log.action && (
-                          <div className="text-xs text-gray-500">{log.action}</div>
+                          <div className="text-xs text-gray-500">
+                            {log.action}
+                          </div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -327,7 +331,9 @@ export default function AuditLogViewerClient() {
                             <div className="font-medium text-gray-900">
                               {log.user.firstName} {log.user.lastName}
                             </div>
-                            <div className="text-gray-500">{log.user.email}</div>
+                            <div className="text-gray-500">
+                              {log.user.email}
+                            </div>
                           </div>
                         ) : (
                           <span className="text-sm text-gray-500">N/A</span>
@@ -335,7 +341,7 @@ export default function AuditLogViewerClient() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded border ${getSeverityColor(
+                          className={`inline-flex rounded border px-2 py-1 text-xs leading-5 font-semibold ${getSeverityColor(
                             log.severity
                           )}`}
                         >
@@ -351,10 +357,10 @@ export default function AuditLogViewerClient() {
                           {log.result}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 max-w-md truncate">
+                      <td className="max-w-md truncate px-6 py-4 text-sm text-gray-900">
                         {log.message}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td className="px-6 py-4 text-right text-sm font-medium whitespace-nowrap">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -372,47 +378,46 @@ export default function AuditLogViewerClient() {
             </div>
 
             {/* Pagination */}
-            <div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-t border-gray-200">
-              <div className="flex-1 flex justify-between sm:hidden">
+            <div className="flex items-center justify-between border-t border-gray-200 bg-gray-50 px-6 py-3">
+              <div className="flex flex-1 justify-between sm:hidden">
                 <button
                   onClick={handlePreviousPage}
                   disabled={offset === 0}
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                  className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 >
                   Previous
                 </button>
                 <button
                   onClick={handleNextPage}
                   disabled={offset + limit >= totalCount}
-                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                  className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 >
                   Next
                 </button>
               </div>
-              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm text-gray-700">
-                    Showing{' '}
-                    <span className="font-medium">{offset + 1}</span> to{' '}
+                    Showing <span className="font-medium">{offset + 1}</span> to{" "}
                     <span className="font-medium">
                       {Math.min(offset + limit, totalCount)}
-                    </span>{' '}
+                    </span>{" "}
                     of <span className="font-medium">{totalCount}</span> results
                   </p>
                 </div>
                 <div>
-                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                  <nav className="relative z-0 inline-flex -space-x-px rounded-md shadow-sm">
                     <button
                       onClick={handlePreviousPage}
                       disabled={offset === 0}
-                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                      className="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                     >
                       Previous
                     </button>
                     <button
                       onClick={handleNextPage}
                       disabled={offset + limit >= totalCount}
-                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                      className="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                     >
                       Next
                     </button>
@@ -427,14 +432,14 @@ export default function AuditLogViewerClient() {
       {/* Detail Modal */}
       {selectedLog && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black"
           onClick={() => setSelectedLog(null)}
         >
           <div
-            className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+            className="mx-4 max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg bg-white shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b border-gray-200">
+            <div className="border-b border-gray-200 p-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900">
                   Audit Log Details
@@ -460,7 +465,7 @@ export default function AuditLogViewerClient() {
               </div>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="space-y-4 p-6">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-gray-600">Event Type:</span>
@@ -478,7 +483,7 @@ export default function AuditLogViewerClient() {
                   <span className="text-gray-600">Severity:</span>
                   <p>
                     <span
-                      className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded border ${getSeverityColor(
+                      className={`inline-flex rounded border px-2 py-1 text-xs leading-5 font-semibold ${getSeverityColor(
                         selectedLog.severity
                       )}`}
                     >
@@ -543,7 +548,7 @@ export default function AuditLogViewerClient() {
                     <div>
                       <span className="text-gray-600">Resource ID:</span>
                       <p className="font-medium text-gray-900">
-                        {selectedLog.resourceId || 'N/A'}
+                        {selectedLog.resourceId || "N/A"}
                       </p>
                     </div>
                   </>
@@ -560,7 +565,7 @@ export default function AuditLogViewerClient() {
 
               <div>
                 <span className="text-sm text-gray-600">Message:</span>
-                <p className="text-sm font-medium text-gray-900 mt-1 p-3 bg-gray-50 rounded">
+                <p className="mt-1 rounded bg-gray-50 p-3 text-sm font-medium text-gray-900">
                   {selectedLog.message}
                 </p>
               </div>
@@ -568,7 +573,7 @@ export default function AuditLogViewerClient() {
               {selectedLog.userAgent && (
                 <div>
                   <span className="text-sm text-gray-600">User Agent:</span>
-                  <p className="text-xs text-gray-700 mt-1 p-3 bg-gray-50 rounded break-all">
+                  <p className="mt-1 rounded bg-gray-50 p-3 text-xs break-all text-gray-700">
                     {selectedLog.userAgent}
                   </p>
                 </div>
@@ -578,17 +583,17 @@ export default function AuditLogViewerClient() {
                 Object.keys(selectedLog.metadata).length > 0 && (
                   <div>
                     <span className="text-sm text-gray-600">Metadata:</span>
-                    <pre className="text-xs text-gray-700 mt-1 p-3 bg-gray-50 rounded overflow-auto max-h-64">
+                    <pre className="mt-1 max-h-64 overflow-auto rounded bg-gray-50 p-3 text-xs text-gray-700">
                       {JSON.stringify(selectedLog.metadata, null, 2)}
                     </pre>
                   </div>
                 )}
             </div>
 
-            <div className="p-6 border-t border-gray-200 bg-gray-50">
+            <div className="border-t border-gray-200 bg-gray-50 p-6">
               <button
                 onClick={() => setSelectedLog(null)}
-                className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                className="w-full rounded-lg bg-gray-600 px-4 py-2 text-white hover:bg-gray-700"
               >
                 Close
               </button>

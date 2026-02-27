@@ -12,15 +12,15 @@
  * Uses roundPercentage() for all percentage and time metrics (1 decimal place)
  */
 
-import { db } from '@/lib/db';
-import { roundPercentage } from './rounding';
+import { db } from "@/lib/db";
+import { roundPercentage } from "./rounding";
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
 export interface SLAMetrics {
-  period: 'day' | 'week' | 'month';
+  period: "day" | "week" | "month";
   startDate: Date;
   endDate: Date;
 
@@ -71,19 +71,22 @@ export interface DailySLARecord {
 // DATE HELPERS
 // =============================================================================
 
-function getDateRange(period: 'day' | 'week' | 'month'): { start: Date; end: Date } {
+function getDateRange(period: "day" | "week" | "month"): {
+  start: Date;
+  end: Date;
+} {
   const end = new Date();
   const start = new Date();
 
   switch (period) {
-    case 'day':
+    case "day":
       start.setHours(0, 0, 0, 0);
       break;
-    case 'week':
+    case "week":
       start.setDate(start.getDate() - 7);
       start.setHours(0, 0, 0, 0);
       break;
-    case 'month':
+    case "month":
       start.setMonth(start.getMonth() - 1);
       start.setHours(0, 0, 0, 0);
       break;
@@ -92,23 +95,28 @@ function getDateRange(period: 'day' | 'week' | 'month'): { start: Date; end: Dat
   return { start, end };
 }
 
-function parseDockHours(dockHours: string | null): { start: number; end: number } | null {
+function parseDockHours(
+  dockHours: string | null
+): { start: number; end: number } | null {
   if (!dockHours) return null;
 
   // Parse format like "8:00 AM - 5:00 PM"
-  const match = dockHours.match(/(\d{1,2}):(\d{2})\s*(AM|PM)\s*-\s*(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  const match = dockHours.match(
+    /(\d{1,2}):(\d{2})\s*(AM|PM)\s*-\s*(\d{1,2}):(\d{2})\s*(AM|PM)/i
+  );
   if (!match) return null;
 
-  const [, startHour, startMin, startPeriod, endHour, endMin, endPeriod] = match;
+  const [, startHour, startMin, startPeriod, endHour, endMin, endPeriod] =
+    match;
 
   let start = parseInt(startHour);
-  if (startPeriod.toUpperCase() === 'PM' && start !== 12) start += 12;
-  if (startPeriod.toUpperCase() === 'AM' && start === 12) start = 0;
+  if (startPeriod.toUpperCase() === "PM" && start !== 12) start += 12;
+  if (startPeriod.toUpperCase() === "AM" && start === 12) start = 0;
   start = start * 60 + parseInt(startMin);
 
   let end = parseInt(endHour);
-  if (endPeriod.toUpperCase() === 'PM' && end !== 12) end += 12;
-  if (endPeriod.toUpperCase() === 'AM' && end === 12) end = 0;
+  if (endPeriod.toUpperCase() === "PM" && end !== 12) end += 12;
+  if (endPeriod.toUpperCase() === "AM" && end === 12) end = 0;
   end = end * 60 + parseInt(endMin);
 
   return { start, end };
@@ -153,7 +161,7 @@ async function calculatePickupSLA(
   start: Date,
   end: Date,
   filters?: { shipperId?: string; carrierId?: string }
-): Promise<SLAMetrics['pickup']> {
+): Promise<SLAMetrics["pickup"]> {
   // Get all trips with pickups in the period
   const whereClause: Record<string, unknown> = {
     pickedUpAt: {
@@ -161,7 +169,7 @@ async function calculatePickupSLA(
       lte: end,
     },
     status: {
-      in: ['IN_TRANSIT', 'DELIVERED', 'COMPLETED'],
+      in: ["IN_TRANSIT", "DELIVERED", "COMPLETED"],
     },
   };
 
@@ -231,14 +239,14 @@ async function calculateDeliverySLA(
   start: Date,
   end: Date,
   filters?: { shipperId?: string; carrierId?: string }
-): Promise<SLAMetrics['delivery']> {
+): Promise<SLAMetrics["delivery"]> {
   const whereClause: Record<string, unknown> = {
     deliveredAt: {
       gte: start,
       lte: end,
     },
     status: {
-      in: ['DELIVERED', 'COMPLETED'],
+      in: ["DELIVERED", "COMPLETED"],
     },
   };
 
@@ -281,7 +289,10 @@ async function calculateDeliverySLA(
       onTime++;
     } else {
       late++;
-      const delay = calculateDelayHours(trip.deliveredAt, trip.load.deliveryDate);
+      const delay = calculateDelayHours(
+        trip.deliveredAt,
+        trip.load.deliveryDate
+      );
       totalDelayHours += delay;
       lateCount++;
     }
@@ -307,7 +318,7 @@ async function calculateCancellationRate(
   start: Date,
   end: Date,
   filters?: { shipperId?: string; carrierId?: string }
-): Promise<SLAMetrics['cancellation']> {
+): Promise<SLAMetrics["cancellation"]> {
   const baseWhere: Record<string, unknown> = {
     createdAt: {
       gte: start,
@@ -326,7 +337,7 @@ async function calculateCancellationRate(
   const cancelled = await db.load.count({
     where: {
       ...baseWhere,
-      status: 'CANCELLED',
+      status: "CANCELLED",
     },
   });
 
@@ -346,7 +357,7 @@ async function calculateExceptionMTTR(
   start: Date,
   end: Date,
   filters?: { shipperId?: string; carrierId?: string }
-): Promise<SLAMetrics['exceptions']> {
+): Promise<SLAMetrics["exceptions"]> {
   const baseWhere: Record<string, unknown> = {
     createdAt: {
       gte: start,
@@ -373,13 +384,13 @@ async function calculateExceptionMTTR(
 
   const total = filteredExceptions.length;
   const resolved = filteredExceptions.filter(
-    (e) => e.status === 'RESOLVED' || e.status === 'CLOSED'
+    (e) => e.status === "RESOLVED" || e.status === "CLOSED"
   ).length;
   const open = total - resolved;
 
   // Calculate MTTR
   const resolvedWithTime = filteredExceptions.filter(
-    (e) => e.resolvedAt && (e.status === 'RESOLVED' || e.status === 'CLOSED')
+    (e) => e.resolvedAt && (e.status === "RESOLVED" || e.status === "CLOSED")
   );
 
   let totalMTTR = 0;
@@ -440,7 +451,7 @@ async function calculateExceptionMTTR(
  * Calculate all SLA metrics for a given period
  */
 export async function calculateSLAMetrics(
-  period: 'day' | 'week' | 'month' = 'day',
+  period: "day" | "week" | "month" = "day",
   filters?: { shipperId?: string; carrierId?: string }
 ): Promise<SLAMetrics> {
   const { start, end } = getDateRange(period);
@@ -489,7 +500,7 @@ export async function runDailySLAAggregation(): Promise<{
     ]);
 
     const metrics: SLAMetrics = {
-      period: 'day',
+      period: "day",
       startDate: yesterday,
       endDate: endOfYesterday,
       pickup,
@@ -500,11 +511,11 @@ export async function runDailySLAAggregation(): Promise<{
 
     return { success: true, metrics };
   } catch (error) {
-    console.error('[SLA] Aggregation failed:', error);
+    console.error("[SLA] Aggregation failed:", error);
     return {
       success: false,
       metrics: null,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -513,7 +524,7 @@ export async function runDailySLAAggregation(): Promise<{
  * Get SLA summary for dashboards
  */
 export async function getSLASummary(
-  period: 'day' | 'week' | 'month' = 'week',
+  period: "day" | "week" | "month" = "week",
   filters?: { shipperId?: string; carrierId?: string }
 ): Promise<{
   onTimePickupRate: number;
@@ -571,7 +582,7 @@ export async function getSLATrends(
     ]);
 
     trends.push({
-      date: date.toISOString().split('T')[0],
+      date: date.toISOString().split("T")[0],
       pickupRate: pickup.rate,
       deliveryRate: delivery.rate,
       cancellationRate: cancellation.rate,

@@ -11,11 +11,11 @@
  * - Remove members
  */
 
-import { Suspense } from 'react';
-import { requireAuth } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { redirect } from 'next/navigation';
-import TeamManagementClient from './TeamManagementClient';
+import { Suspense } from "react";
+import { requireAuth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { redirect } from "next/navigation";
+import TeamManagementClient from "./TeamManagementClient";
 
 async function getTeamData(organizationId: string) {
   const [organization, members, invitations] = await Promise.all([
@@ -40,12 +40,12 @@ async function getTeamData(organizationId: string) {
         createdAt: true,
         lastLoginAt: true,
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: "asc" },
     }),
     db.invitation.findMany({
       where: {
         organizationId,
-        status: 'PENDING',
+        status: "PENDING",
         expiresAt: { gt: new Date() },
       },
       select: {
@@ -55,7 +55,7 @@ async function getTeamData(organizationId: string) {
         createdAt: true,
         expiresAt: true,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     }),
   ]);
 
@@ -65,8 +65,8 @@ async function getTeamData(organizationId: string) {
 export default async function CarrierTeamPage() {
   const session = await requireAuth();
 
-  if (session.role !== 'CARRIER') {
-    redirect('/carrier');
+  if (session.role !== "CARRIER") {
+    redirect("/carrier");
   }
 
   // Get user's organization
@@ -76,19 +76,21 @@ export default async function CarrierTeamPage() {
   });
 
   if (!user?.organizationId) {
-    redirect('/carrier');
+    redirect("/carrier");
   }
 
-  const { organization, members, invitations } = await getTeamData(user.organizationId);
+  const { organization, members, invitations } = await getTeamData(
+    user.organizationId
+  );
 
   if (!organization) {
-    redirect('/carrier');
+    redirect("/carrier");
   }
 
   // Transform data for client component
   const transformedMembers = members.map((m) => ({
     id: m.id,
-    name: [m.firstName, m.lastName].filter(Boolean).join(' ') || m.email,
+    name: [m.firstName, m.lastName].filter(Boolean).join(" ") || m.email,
     email: m.email,
     role: m.role,
     status: m.status,
@@ -110,8 +112,8 @@ export default async function CarrierTeamPage() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
           Team Management
         </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Manage your company's team members and invitations
+        <p className="mt-1 text-gray-600 dark:text-gray-400">
+          Manage your company&apos;s team members and invitations
         </p>
       </div>
 
@@ -130,8 +132,8 @@ export default async function CarrierTeamPage() {
 function TeamSkeleton() {
   return (
     <div className="animate-pulse space-y-4">
-      <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-      <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded"></div>
+      <div className="h-12 w-1/3 rounded bg-gray-200 dark:bg-gray-700"></div>
+      <div className="h-64 rounded bg-gray-200 dark:bg-gray-700"></div>
     </div>
   );
 }

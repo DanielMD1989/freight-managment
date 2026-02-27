@@ -5,12 +5,12 @@
  * Sprint 14 - Professional UI Transformation
  */
 
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
-import { verifyToken } from '@/lib/auth';
-import { db } from '@/lib/db';
-import RoleAwareSidebar from '@/components/RoleAwareSidebar';
-import ShipperHeader from '@/components/ShipperHeader';
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { verifyToken } from "@/lib/auth";
+import { db } from "@/lib/db";
+import RoleAwareSidebar from "@/components/RoleAwareSidebar";
+import ShipperHeader from "@/components/ShipperHeader";
 
 export default async function ShipperLayout({
   children,
@@ -19,26 +19,26 @@ export default async function ShipperLayout({
 }) {
   // Check authentication
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get('session');
+  const sessionCookie = cookieStore.get("session");
 
   if (!sessionCookie) {
-    redirect('/login?redirect=/shipper');
+    redirect("/login?redirect=/shipper");
   }
 
   const session = await verifyToken(sessionCookie.value);
 
   if (!session) {
-    redirect('/login?redirect=/shipper');
+    redirect("/login?redirect=/shipper");
   }
 
   // H7 FIX: Intentional admin access for support purposes
   // ADMIN and SUPER_ADMIN can access shipper panel to assist users
   // This is a documented design decision for customer support workflows
-  const isShipper = session.role === 'SHIPPER';
-  const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+  const isShipper = session.role === "SHIPPER";
+  const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
   if (!isShipper && !isAdmin) {
-    redirect('/unauthorized');
+    redirect("/unauthorized");
   }
 
   // Fetch user data for header
@@ -49,18 +49,24 @@ export default async function ShipperLayout({
 
   // Layout with sidebar and header
   return (
-    <div className="flex min-h-screen" style={{ background: 'var(--background)' }}>
+    <div
+      className="flex min-h-screen"
+      style={{ background: "var(--background)" }}
+    >
       <RoleAwareSidebar userRole={session.role} portalType="shipper" />
-      <div className="flex-1 flex flex-col overflow-auto">
+      <div className="flex flex-1 flex-col overflow-auto">
         <ShipperHeader
           user={{
-            firstName: user?.firstName || '',
-            lastName: user?.lastName || '',
-            email: user?.email || '',
+            firstName: user?.firstName || "",
+            lastName: user?.lastName || "",
+            email: user?.email || "",
             role: session.role,
           }}
         />
-        <main className="flex-1 overflow-auto" style={{ color: 'var(--foreground)' }}>
+        <main
+          className="flex-1 overflow-auto"
+          style={{ color: "var(--foreground)" }}
+        >
           {children}
         </main>
       </div>

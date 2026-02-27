@@ -1,19 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { validateCSRFWithMobile } from '@/lib/csrf';
-import { z } from 'zod';
-import { enableTrackingForLoad } from '@/lib/gpsTracking';
-import { canAssignLoads } from '@/lib/dispatcherPermissions';
-import { validateStateTransition, LoadStatus } from '@/lib/loadStateMachine';
-import { checkAssignmentConflicts } from '@/lib/assignmentConflictDetection'; // Sprint 4
-import { RULE_CARRIER_FINAL_AUTHORITY } from '@/lib/foundation-rules'; // Phase 2
-import { validateWalletBalancesForTrip } from '@/lib/serviceFeeManagement'; // Service Fee Implementation
-import { createTripForLoad } from '@/lib/tripManagement'; // Trip Management
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { z } from "zod";
+import { enableTrackingForLoad } from "@/lib/gpsTracking";
+import { canAssignLoads } from "@/lib/dispatcherPermissions";
+import { validateStateTransition, LoadStatus } from "@/lib/loadStateMachine";
+import { checkAssignmentConflicts } from "@/lib/assignmentConflictDetection"; // Sprint 4
+import { RULE_CARRIER_FINAL_AUTHORITY } from "@/lib/foundation-rules"; // Phase 2
+import { validateWalletBalancesForTrip } from "@/lib/serviceFeeManagement"; // Service Fee Implementation
+import { createTripForLoad } from "@/lib/tripManagement"; // Trip Management
 // P0-005 FIX: Import CacheInvalidation for post-assignment cache clearing
-import { CacheInvalidation } from '@/lib/cache';
-import crypto from 'crypto';
-import { zodErrorResponse } from '@/lib/validation';
+import { CacheInvalidation } from "@/lib/cache";
+import crypto from "crypto";
+import { zodErrorResponse } from "@/lib/validation";
 
 const assignLoadSchema = z.object({
   truckId: z.string(),
@@ -51,16 +51,13 @@ export async function POST(
         status: true,
         shipperId: true,
         createdById: true,
-        pickupDate: true,  // Sprint 4: For conflict detection
+        pickupDate: true, // Sprint 4: For conflict detection
         deliveryDate: true, // Sprint 4: For conflict detection
       },
     });
 
     if (!load) {
-      return NextResponse.json(
-        { error: 'Load not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // Check permissions
@@ -71,10 +68,7 @@ export async function POST(
 
     // Sprint 16: Use dispatcher permissions utility
     if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const userCanAssign = canAssignLoads(
@@ -88,7 +82,7 @@ export async function POST(
 
     if (!userCanAssign) {
       return NextResponse.json(
-        { error: 'You do not have permission to assign this load' },
+        { error: "You do not have permission to assign this load" },
         { status: 403 }
       );
     }
@@ -125,18 +119,15 @@ export async function POST(
     });
 
     if (!truck) {
-      return NextResponse.json(
-        { error: 'Truck not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
     // PHASE 2: Carrier can only assign their own trucks
     // Foundation Rule: CARRIER_FINAL_AUTHORITY
-    if (user.role === 'CARRIER') {
+    if (user.role === "CARRIER") {
       if (truck.carrierId !== user.organizationId) {
         return NextResponse.json(
-          { error: 'Carriers can only assign their own trucks' },
+          { error: "Carriers can only assign their own trucks" },
           { status: 403 }
         );
       }
@@ -153,7 +144,7 @@ export async function POST(
     if (conflictCheck.hasConflict) {
       return NextResponse.json(
         {
-          error: 'Assignment conflicts detected',
+          error: "Assignment conflicts detected",
           conflicts: conflictCheck.conflicts,
           warnings: conflictCheck.warnings,
         },
@@ -163,16 +154,22 @@ export async function POST(
 
     // Log warnings if any (but don't block assignment)
     if (conflictCheck.warnings.length > 0) {
-      console.warn(`Assignment warnings for load ${loadId}:`, conflictCheck.warnings);
+      console.warn(
+        `Assignment warnings for load ${loadId}:`,
+        conflictCheck.warnings
+      );
     }
 
     // SERVICE FEE: Validate wallet balances before assignment
     // This is validation only - fees are deducted on trip completion
-    const walletValidation = await validateWalletBalancesForTrip(loadId, truck.carrierId);
+    const walletValidation = await validateWalletBalancesForTrip(
+      loadId,
+      truck.carrierId
+    );
     if (!walletValidation.valid) {
       return NextResponse.json(
         {
-          error: 'Insufficient wallet balance for trip service fees',
+          error: "Insufficient wallet balance for trip service fees",
           details: walletValidation.errors,
           fees: {
             shipperFee: walletValidation.shipperFee,
@@ -188,7 +185,11 @@ export async function POST(
     // P0-005 & P0-006 FIX: Wrap all critical operations in a single transaction
     // with fresh re-fetch to prevent race conditions
     // FIX: Use Record types instead of any
-    let result: { load: Record<string, unknown>; trip: Record<string, unknown>; trackingUrl: string | null };
+    let result: {
+      load: Record<string, unknown>;
+      trip: Record<string, unknown>;
+      trackingUrl: string | null;
+    };
 
     try {
       result = await db.$transaction(async (tx) => {
@@ -214,15 +215,15 @@ export async function POST(
         });
 
         if (!freshLoad) {
-          throw new Error('LOAD_NOT_FOUND');
+          throw new Error("LOAD_NOT_FOUND");
         }
 
         // Check load is still available (race condition protection)
         if (freshLoad.assignedTruckId) {
-          throw new Error('LOAD_ALREADY_ASSIGNED');
+          throw new Error("LOAD_ALREADY_ASSIGNED");
         }
 
-        const availableStatuses = ['POSTED', 'SEARCHING', 'OFFERED'];
+        const availableStatuses = ["POSTED", "SEARCHING", "OFFERED"];
         if (!availableStatuses.includes(freshLoad.status)) {
           throw new Error(`LOAD_NOT_AVAILABLE:${freshLoad.status}`);
         }
@@ -231,20 +232,22 @@ export async function POST(
         const truckBusy = await tx.load.findFirst({
           where: {
             assignedTruckId: truckId,
-            status: { in: ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT'] },
+            status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
           },
           select: { id: true, pickupCity: true, deliveryCity: true },
         });
 
         if (truckBusy) {
-          throw new Error(`TRUCK_ALREADY_BUSY:${truckBusy.pickupCity}:${truckBusy.deliveryCity}`);
+          throw new Error(
+            `TRUCK_ALREADY_BUSY:${truckBusy.pickupCity}:${truckBusy.deliveryCity}`
+          );
         }
 
         // Unassign truck from any completed loads (cleanup)
         await tx.load.updateMany({
           where: {
             assignedTruckId: truckId,
-            status: { in: ['DELIVERED', 'COMPLETED', 'CANCELLED', 'EXPIRED'] },
+            status: { in: ["DELIVERED", "COMPLETED", "CANCELLED", "EXPIRED"] },
           },
           data: { assignedTruckId: null },
         });
@@ -255,12 +258,12 @@ export async function POST(
           data: {
             assignedTruckId: truckId,
             assignedAt: new Date(),
-            status: 'ASSIGNED',
+            status: "ASSIGNED",
           },
         });
 
         // Create Trip record inside transaction (atomic with assignment)
-        const trackingUrl = `trip-${loadId.slice(-6)}-${crypto.randomBytes(12).toString('hex')}`;
+        const trackingUrl = `trip-${loadId.slice(-6)}-${crypto.randomBytes(12).toString("hex")}`;
 
         const trip = await tx.trip.create({
           data: {
@@ -268,7 +271,7 @@ export async function POST(
             truckId: truckId,
             carrierId: truck.carrierId,
             shipperId: freshLoad.shipperId,
-            status: 'ASSIGNED',
+            status: "ASSIGNED",
             pickupLat: freshLoad.originLat,
             pickupLng: freshLoad.originLon,
             pickupAddress: freshLoad.pickupAddress,
@@ -287,7 +290,7 @@ export async function POST(
         await tx.loadEvent.create({
           data: {
             loadId,
-            eventType: 'ASSIGNED',
+            eventType: "ASSIGNED",
             description: `Load assigned to truck ${truck.licensePlate}`,
             userId: session.userId,
             metadata: {
@@ -300,46 +303,51 @@ export async function POST(
 
         // Cancel other pending requests for this load
         await tx.loadRequest.updateMany({
-          where: { loadId: loadId, status: 'PENDING' },
-          data: { status: 'CANCELLED' },
+          where: { loadId: loadId, status: "PENDING" },
+          data: { status: "CANCELLED" },
         });
 
         await tx.truckRequest.updateMany({
-          where: { loadId: loadId, status: 'PENDING' },
-          data: { status: 'CANCELLED' },
+          where: { loadId: loadId, status: "PENDING" },
+          data: { status: "CANCELLED" },
         });
 
         await tx.matchProposal.updateMany({
-          where: { loadId: loadId, status: 'PENDING' },
-          data: { status: 'CANCELLED' },
+          where: { loadId: loadId, status: "PENDING" },
+          data: { status: "CANCELLED" },
         });
 
         return { load: updatedLoad, trip, trackingUrl };
       });
-    // FIX: Use unknown type with type guard
+      // FIX: Use unknown type with type guard
     } catch (error: unknown) {
       // Handle specific transaction errors
-      const errorMessage = error instanceof Error ? error.message : '';
-      if (errorMessage === 'LOAD_NOT_FOUND') {
-        return NextResponse.json({ error: 'Load not found' }, { status: 404 });
+      const errorMessage = error instanceof Error ? error.message : "";
+      if (errorMessage === "LOAD_NOT_FOUND") {
+        return NextResponse.json({ error: "Load not found" }, { status: 404 });
       }
-      if (errorMessage === 'LOAD_ALREADY_ASSIGNED') {
+      if (errorMessage === "LOAD_ALREADY_ASSIGNED") {
         return NextResponse.json(
-          { error: 'Load has already been assigned to another truck. Please refresh and try again.' },
+          {
+            error:
+              "Load has already been assigned to another truck. Please refresh and try again.",
+          },
           { status: 409 }
         );
       }
-      if (errorMessage.startsWith('LOAD_NOT_AVAILABLE:')) {
-        const status = errorMessage.split(':')[1];
+      if (errorMessage.startsWith("LOAD_NOT_AVAILABLE:")) {
+        const status = errorMessage.split(":")[1];
         return NextResponse.json(
           { error: `Load is no longer available (status: ${status})` },
           { status: 400 }
         );
       }
-      if (errorMessage.startsWith('TRUCK_ALREADY_BUSY:')) {
-        const [, pickup, delivery] = errorMessage.split(':');
+      if (errorMessage.startsWith("TRUCK_ALREADY_BUSY:")) {
+        const [, pickup, delivery] = errorMessage.split(":");
         return NextResponse.json(
-          { error: `This truck is already assigned to an active load (${pickup} → ${delivery})` },
+          {
+            error: `This truck is already assigned to an active load (${pickup} → ${delivery})`,
+          },
           { status: 409 }
         );
       }
@@ -363,13 +371,13 @@ export async function POST(
         await db.loadEvent.create({
           data: {
             loadId,
-            eventType: 'TRACKING_ENABLED',
+            eventType: "TRACKING_ENABLED",
             description: `GPS tracking enabled: ${trackingUrl}`,
             userId: session.userId,
           },
         });
       } catch (error) {
-        console.error('Failed to enable GPS tracking:', error);
+        console.error("Failed to enable GPS tracking:", error);
       }
     }
 
@@ -382,38 +390,44 @@ export async function POST(
         validated: true,
         shipperFee: walletValidation.shipperFee.toFixed(2),
         carrierFee: walletValidation.carrierFee.toFixed(2),
-        note: 'Fees will be deducted on trip completion',
+        note: "Fees will be deducted on trip completion",
       },
       message: trackingUrl
-        ? 'Load assigned successfully. GPS tracking enabled.'
-        : 'Load assigned successfully. GPS tracking not available for this truck.',
+        ? "Load assigned successfully. GPS tracking enabled."
+        : "Load assigned successfully. GPS tracking not available for this truck.",
     });
-  // FIX: Use unknown type with type guard
+    // FIX: Use unknown type with type guard
   } catch (error: unknown) {
-    console.error('Assign load error:', error);
+    console.error("Assign load error:", error);
 
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
 
     // Handle unique constraint violation (race condition) - Prisma error
-    const prismaError = error as { code?: string; meta?: { target?: string[] } };
-    if (prismaError?.code === 'P2002') {
-      const field = prismaError?.meta?.target?.[0] || 'field';
-      if (field === 'assignedTruckId') {
+    const prismaError = error as {
+      code?: string;
+      meta?: { target?: string[] };
+    };
+    if (prismaError?.code === "P2002") {
+      const field = prismaError?.meta?.target?.[0] || "field";
+      if (field === "assignedTruckId") {
         return NextResponse.json(
-          { error: 'This truck is already assigned to another load. Please refresh and try again.' },
+          {
+            error:
+              "This truck is already assigned to another load. Please refresh and try again.",
+          },
           { status: 409 }
         );
       }
       return NextResponse.json(
-        { error: 'A conflict occurred. Please refresh and try again.' },
+        { error: "A conflict occurred. Please refresh and try again." },
         { status: 409 }
       );
     }
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
@@ -449,10 +463,7 @@ export async function DELETE(
     });
 
     if (!load) {
-      return NextResponse.json(
-        { error: 'Load not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // Check permissions
@@ -463,10 +474,7 @@ export async function DELETE(
 
     // Sprint 16: Use dispatcher permissions utility
     if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const userCanUnassign = canAssignLoads(
@@ -480,14 +488,14 @@ export async function DELETE(
 
     if (!userCanUnassign) {
       return NextResponse.json(
-        { error: 'You do not have permission to unassign this load' },
+        { error: "You do not have permission to unassign this load" },
         { status: 403 }
       );
     }
 
     if (!load.assignedTruckId) {
       return NextResponse.json(
-        { error: 'Load is not assigned to any truck' },
+        { error: "Load is not assigned to any truck" },
         { status: 400 }
       );
     }
@@ -498,11 +506,11 @@ export async function DELETE(
     // Other states → cannot unassign
     let targetStatus: LoadStatus;
 
-    if (load.status === 'ASSIGNED' || load.status === 'PICKUP_PENDING') {
+    if (load.status === "ASSIGNED" || load.status === "PICKUP_PENDING") {
       targetStatus = LoadStatus.SEARCHING;
-    } else if (load.status === 'IN_TRANSIT' || load.status === 'DELIVERED') {
+    } else if (load.status === "IN_TRANSIT" || load.status === "DELIVERED") {
       return NextResponse.json(
-        { error: 'Cannot unassign load that is in transit or delivered' },
+        { error: "Cannot unassign load that is in transit or delivered" },
         { status: 400 }
       );
     } else {
@@ -551,8 +559,8 @@ export async function DELETE(
     await db.loadEvent.create({
       data: {
         loadId,
-        eventType: 'UNASSIGNED',
-        description: 'Load unassigned from truck',
+        eventType: "UNASSIGNED",
+        description: "Load unassigned from truck",
         userId: session.userId,
         metadata: {
           previousTruckId,
@@ -569,12 +577,12 @@ export async function DELETE(
 
     return NextResponse.json({
       load: updatedLoad,
-      message: 'Load unassigned successfully. GPS tracking disabled.',
+      message: "Load unassigned successfully. GPS tracking disabled.",
     });
   } catch (error) {
-    console.error('Unassign load error:', error);
+    console.error("Unassign load error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

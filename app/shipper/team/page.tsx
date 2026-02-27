@@ -5,11 +5,11 @@
  * Task 16.9B.1: Company User Management
  */
 
-import { Suspense } from 'react';
-import { requireAuth } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { redirect } from 'next/navigation';
-import TeamManagementClient from '@/app/carrier/team/TeamManagementClient';
+import { Suspense } from "react";
+import { requireAuth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { redirect } from "next/navigation";
+import TeamManagementClient from "@/app/carrier/team/TeamManagementClient";
 
 async function getTeamData(organizationId: string) {
   const [organization, members, invitations] = await Promise.all([
@@ -34,12 +34,12 @@ async function getTeamData(organizationId: string) {
         createdAt: true,
         lastLoginAt: true,
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: "asc" },
     }),
     db.invitation.findMany({
       where: {
         organizationId,
-        status: 'PENDING',
+        status: "PENDING",
         expiresAt: { gt: new Date() },
       },
       select: {
@@ -49,7 +49,7 @@ async function getTeamData(organizationId: string) {
         createdAt: true,
         expiresAt: true,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     }),
   ]);
 
@@ -59,8 +59,8 @@ async function getTeamData(organizationId: string) {
 export default async function ShipperTeamPage() {
   const session = await requireAuth();
 
-  if (session.role !== 'SHIPPER') {
-    redirect('/shipper');
+  if (session.role !== "SHIPPER") {
+    redirect("/shipper");
   }
 
   const user = await db.user.findUnique({
@@ -69,19 +69,21 @@ export default async function ShipperTeamPage() {
   });
 
   if (!user?.organizationId) {
-    redirect('/shipper');
+    redirect("/shipper");
   }
 
-  const { organization, members, invitations } = await getTeamData(user.organizationId);
+  const { organization, members, invitations } = await getTeamData(
+    user.organizationId
+  );
 
   if (!organization) {
-    redirect('/shipper');
+    redirect("/shipper");
   }
 
   // Transform data for client component
   const transformedMembers = members.map((m) => ({
     id: m.id,
-    name: [m.firstName, m.lastName].filter(Boolean).join(' ') || m.email,
+    name: [m.firstName, m.lastName].filter(Boolean).join(" ") || m.email,
     email: m.email,
     role: m.role,
     status: m.status,
@@ -98,19 +100,16 @@ export default async function ShipperTeamPage() {
   }));
 
   return (
-    <div className="p-6" style={{ background: 'var(--background)' }}>
+    <div className="p-6" style={{ background: "var(--background)" }}>
       <div className="mb-6">
         <h1
           className="text-2xl font-bold"
-          style={{ color: 'var(--foreground)' }}
+          style={{ color: "var(--foreground)" }}
         >
           Team Management
         </h1>
-        <p
-          className="mt-1"
-          style={{ color: 'var(--foreground-muted)' }}
-        >
-          Manage your company's team members and invitations
+        <p className="mt-1" style={{ color: "var(--foreground-muted)" }}>
+          Manage your company&apos;s team members and invitations
         </p>
       </div>
 
@@ -130,12 +129,12 @@ function TeamSkeleton() {
   return (
     <div className="animate-pulse space-y-4">
       <div
-        className="h-12 rounded w-1/3"
-        style={{ background: 'var(--bg-tinted)' }}
+        className="h-12 w-1/3 rounded"
+        style={{ background: "var(--bg-tinted)" }}
       />
       <div
         className="h-64 rounded"
-        style={{ background: 'var(--bg-tinted)' }}
+        style={{ background: "var(--bg-tinted)" }}
       />
     </div>
   );

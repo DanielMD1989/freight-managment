@@ -5,7 +5,12 @@
  * Created to fix H1-H14 type safety issues
  */
 
-import { Prisma, UserRole, UserStatus, VerificationStatus } from '@prisma/client';
+import {
+  Prisma,
+  UserRole,
+  UserStatus,
+  VerificationStatus,
+} from "@prisma/client";
 
 // ============================================
 // User Management Types
@@ -14,9 +19,9 @@ import { Prisma, UserRole, UserStatus, VerificationStatus } from '@prisma/client
 export interface AdminUserWhereInput {
   role?: UserRole;
   OR?: Array<{
-    email?: { contains: string; mode: 'insensitive' };
-    firstName?: { contains: string; mode: 'insensitive' };
-    lastName?: { contains: string; mode: 'insensitive' };
+    email?: { contains: string; mode: "insensitive" };
+    firstName?: { contains: string; mode: "insensitive" };
+    lastName?: { contains: string; mode: "insensitive" };
   }>;
 }
 
@@ -80,16 +85,22 @@ export interface TruckDocumentWithCarrier {
   };
 }
 
-export type VerificationDocument = CompanyDocumentWithOrg | TruckDocumentWithCarrier;
+export type VerificationDocument =
+  | CompanyDocumentWithOrg
+  | TruckDocumentWithCarrier;
 
 // Type guard for company documents
-export function isCompanyDocument(doc: VerificationDocument): doc is CompanyDocumentWithOrg {
-  return 'organization' in doc;
+export function isCompanyDocument(
+  doc: VerificationDocument
+): doc is CompanyDocumentWithOrg {
+  return "organization" in doc;
 }
 
 // Type guard for truck documents
-export function isTruckDocument(doc: VerificationDocument): doc is TruckDocumentWithCarrier {
-  return 'truck' in doc;
+export function isTruckDocument(
+  doc: VerificationDocument
+): doc is TruckDocumentWithCarrier {
+  return "truck" in doc;
 }
 
 // ============================================
@@ -129,7 +140,7 @@ export interface AdminCorridor {
   originRegion: string;
   destinationRegion: string;
   distanceKm: number;
-  direction: 'ONE_WAY' | 'ROUND_TRIP' | 'BIDIRECTIONAL';
+  direction: "ONE_WAY" | "ROUND_TRIP" | "BIDIRECTIONAL";
   isActive: boolean;
   createdAt: string;
   loadsCount: number;
@@ -162,7 +173,7 @@ export interface FeatureFlag {
   name: string;
   description: string;
   enabled: boolean;
-  category: 'core' | 'experimental' | 'beta' | 'deprecated';
+  category: "core" | "experimental" | "beta" | "deprecated";
   rolloutPercentage: number;
   lastModifiedAt: string;
   lastModifiedBy: string;
@@ -262,7 +273,7 @@ export function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
   }
-  return 'An unknown error occurred';
+  return "An unknown error occurred";
 }
 
 // Prisma error type guard
@@ -272,5 +283,5 @@ export interface PrismaError {
 }
 
 export function isPrismaError(error: unknown): error is PrismaError {
-  return typeof error === 'object' && error !== null && 'code' in error;
+  return typeof error === "object" && error !== null && "code" in error;
 }

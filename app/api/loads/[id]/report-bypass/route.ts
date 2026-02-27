@@ -6,12 +6,12 @@
  * Allows users to report bypass attempts
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { validateCSRFWithMobile } from '@/lib/csrf';
-import { recordBypassReport } from '@/lib/bypassDetection';
-import { z } from 'zod';
-import { zodErrorResponse } from '@/lib/validation';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { recordBypassReport } from "@/lib/bypassDetection";
+import { z } from "zod";
+import { zodErrorResponse } from "@/lib/validation";
 
 const reportBypassSchema = z.object({
   reason: z.string().optional(),
@@ -42,20 +42,23 @@ export async function POST(
     await recordBypassReport(loadId, session.userId, validatedData.reason);
 
     return NextResponse.json({
-      message: 'Bypass attempt reported successfully',
+      message: "Bypass attempt reported successfully",
       loadId,
     });
-  // FIX: Use unknown type with type guards
+    // FIX: Use unknown type with type guards
   } catch (error: unknown) {
-    console.error('Report bypass error:', error);
+    console.error("Report bypass error:", error);
 
-    if (error instanceof Error && error.message === 'Load not found') {
-      return NextResponse.json({ error: 'Load not found' }, { status: 404 });
+    if (error instanceof Error && error.message === "Load not found") {
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
-    if (error instanceof Error && error.message === 'Bypass already reported for this load') {
+    if (
+      error instanceof Error &&
+      error.message === "Bypass already reported for this load"
+    ) {
       return NextResponse.json(
-        { error: 'Bypass already reported for this load' },
+        { error: "Bypass already reported for this load" },
         { status: 400 }
       );
     }
@@ -65,7 +68,7 @@ export async function POST(
     }
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

@@ -3,11 +3,11 @@
  * API endpoints for managing escalations across all loads
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { canViewSystemDashboard } from '@/lib/dispatcherPermissions';
-import { UserRole, Prisma } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { canViewSystemDashboard } from "@/lib/dispatcherPermissions";
+import { UserRole, Prisma } from "@prisma/client";
 
 // GET /api/escalations - List all escalations (dispatcher queue)
 export async function GET(request: NextRequest) {
@@ -24,20 +24,23 @@ export async function GET(request: NextRequest) {
 
     if (!canView) {
       return NextResponse.json(
-        { error: 'You do not have permission to view escalations' },
+        { error: "You do not have permission to view escalations" },
         { status: 403 }
       );
     }
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const priority = searchParams.get('priority');
-    const escalationType = searchParams.get('escalationType');
-    const assignedTo = searchParams.get('assignedTo');
+    const status = searchParams.get("status");
+    const priority = searchParams.get("priority");
+    const escalationType = searchParams.get("escalationType");
+    const assignedTo = searchParams.get("assignedTo");
     // M1 FIX: Add pagination bounds to prevent DoS
-    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '50', 10), 1), 100);
-    const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10), 0);
+    const limit = Math.min(
+      Math.max(parseInt(searchParams.get("limit") || "50", 10), 1),
+      100
+    );
+    const offset = Math.max(parseInt(searchParams.get("offset") || "0", 10), 0);
 
     // Build where clause
     const where: Prisma.LoadEscalationWhereInput = {};
@@ -63,9 +66,9 @@ export async function GET(request: NextRequest) {
       db.loadEscalation.findMany({
         where,
         orderBy: [
-          { priority: 'desc' }, // CRITICAL first
-          { status: 'asc' },    // OPEN first
-          { createdAt: 'desc' },
+          { priority: "desc" }, // CRITICAL first
+          { status: "asc" }, // OPEN first
+          { createdAt: "desc" },
         ],
         take: limit,
         skip: offset,
@@ -103,12 +106,12 @@ export async function GET(request: NextRequest) {
 
     // Get statistics
     const stats = await db.loadEscalation.groupBy({
-      by: ['status'],
+      by: ["status"],
       _count: true,
     });
 
     const priorityStats = await db.loadEscalation.groupBy({
-      by: ['priority'],
+      by: ["priority"],
       _count: true,
     });
 
@@ -118,21 +121,26 @@ export async function GET(request: NextRequest) {
       limit,
       offset,
       stats: {
-        byStatus: stats.reduce((acc, s) => {
-          acc[s.status] = s._count;
-          return acc;
-        }, {} as Record<string, number>),
-        byPriority: priorityStats.reduce((acc, p) => {
-          acc[p.priority] = p._count;
-          return acc;
-        }, {} as Record<string, number>),
+        byStatus: stats.reduce(
+          (acc, s) => {
+            acc[s.status] = s._count;
+            return acc;
+          },
+          {} as Record<string, number>
+        ),
+        byPriority: priorityStats.reduce(
+          (acc, p) => {
+            acc[p.priority] = p._count;
+            return acc;
+          },
+          {} as Record<string, number>
+        ),
       },
     });
-
   } catch (error) {
-    console.error('Escalations fetch error:', error);
+    console.error("Escalations fetch error:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch escalations' },
+      { error: "Failed to fetch escalations" },
       { status: 500 }
     );
   }

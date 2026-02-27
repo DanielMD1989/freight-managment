@@ -51,40 +51,41 @@ GET /api/health?detailed=true
 
 ### Database Metrics
 
-| Metric | Description | Alert Threshold |
-|--------|-------------|-----------------|
-| `database.latencyMs` | Query latency | > 100ms |
-| `pool.utilizationPercent` | Connection pool usage | > 80% |
-| `pool.waitingRequests` | Queued connections | > 0 |
+| Metric                    | Description           | Alert Threshold |
+| ------------------------- | --------------------- | --------------- |
+| `database.latencyMs`      | Query latency         | > 100ms         |
+| `pool.utilizationPercent` | Connection pool usage | > 80%           |
+| `pool.waitingRequests`    | Queued connections    | > 0             |
 
 ### Cache Metrics
 
-| Metric | Description | Alert Threshold |
-|--------|-------------|-----------------|
-| `cache.hitRate` | Cache hit percentage | < 50% |
-| `cache.status` | Cache health | != "optimal" |
+| Metric          | Description          | Alert Threshold |
+| --------------- | -------------------- | --------------- |
+| `cache.hitRate` | Cache hit percentage | < 50%           |
+| `cache.status`  | Cache health         | != "optimal"    |
 
 ### Queue Metrics
 
-| Metric | Description | Alert Threshold |
-|--------|-------------|-----------------|
-| `queues.totals.failed` | Failed jobs | > 0 |
-| `queues.totals.waiting` | Waiting jobs | > 100 |
-| `queues.status` | Queue health | != "active" |
+| Metric                  | Description  | Alert Threshold |
+| ----------------------- | ------------ | --------------- |
+| `queues.totals.failed`  | Failed jobs  | > 0             |
+| `queues.totals.waiting` | Waiting jobs | > 100           |
+| `queues.status`         | Queue health | != "active"     |
 
 ### System Metrics
 
-| Metric | Description | Alert Threshold |
-|--------|-------------|-----------------|
-| `system.cpu.usage` | CPU percentage | > 80% |
-| `system.memory.usagePercent` | Memory usage | > 85% |
-| `system.eventLoop.latencyMs` | Event loop lag | > 100ms |
+| Metric                       | Description    | Alert Threshold |
+| ---------------------------- | -------------- | --------------- |
+| `system.cpu.usage`           | CPU percentage | > 80%           |
+| `system.memory.usagePercent` | Memory usage   | > 85%           |
+| `system.eventLoop.latencyMs` | Event loop lag | > 100ms         |
 
 ## Grafana Setup
 
 ### 1. Add Data Source
 
 Configure Prometheus or JSON API data source pointing to:
+
 ```
 https://your-domain.com/api/health?detailed=true
 ```
@@ -98,9 +99,7 @@ https://your-domain.com/api/health?detailed=true
     {
       "title": "System Health",
       "type": "stat",
-      "targets": [
-        { "expr": "monitoring.healthScore" }
-      ],
+      "targets": [{ "expr": "monitoring.healthScore" }],
       "thresholds": [
         { "color": "red", "value": 0 },
         { "color": "yellow", "value": 70 },
@@ -110,25 +109,19 @@ https://your-domain.com/api/health?detailed=true
     {
       "title": "Database Latency",
       "type": "graph",
-      "targets": [
-        { "expr": "database.latencyMs" }
-      ]
+      "targets": [{ "expr": "database.latencyMs" }]
     },
     {
       "title": "Cache Hit Rate",
       "type": "gauge",
-      "targets": [
-        { "expr": "cache.hitRate" }
-      ],
+      "targets": [{ "expr": "cache.hitRate" }],
       "min": 0,
       "max": 100
     },
     {
       "title": "Queue Status",
       "type": "table",
-      "targets": [
-        { "expr": "queues.totals" }
-      ]
+      "targets": [{ "expr": "queues.totals" }]
     }
   ]
 }
@@ -163,12 +156,12 @@ https://your-domain.com/api/health?detailed=true
 ```yaml
 # prometheus.yml
 scrape_configs:
-  - job_name: 'freight-management'
-    metrics_path: '/api/health'
+  - job_name: "freight-management"
+    metrics_path: "/api/health"
     params:
-      detailed: ['true']
+      detailed: ["true"]
     static_configs:
-      - targets: ['your-domain.com']
+      - targets: ["your-domain.com"]
     scrape_interval: 30s
 ```
 
@@ -329,13 +322,13 @@ The platform uses structured logging with these fields:
 
 The platform tracks these SLA metrics:
 
-| Metric | Target | Endpoint |
-|--------|--------|----------|
-| Uptime | 99.9% | `/api/health` |
-| Response Time P95 | < 500ms | `/api/health?detailed=true` |
-| Error Rate | < 1% | `logging.requests.errorCount` |
-| On-time Pickup | > 90% | `/api/shipper/analytics` |
-| On-time Delivery | > 85% | `/api/shipper/analytics` |
+| Metric            | Target  | Endpoint                      |
+| ----------------- | ------- | ----------------------------- |
+| Uptime            | 99.9%   | `/api/health`                 |
+| Response Time P95 | < 500ms | `/api/health?detailed=true`   |
+| Error Rate        | < 1%    | `logging.requests.errorCount` |
+| On-time Pickup    | > 90%   | `/api/shipper/analytics`      |
+| On-time Delivery  | > 85%   | `/api/shipper/analytics`      |
 
 ## Runbook
 

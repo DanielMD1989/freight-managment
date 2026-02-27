@@ -6,25 +6,25 @@
  * Password, MFA, and session management settings
  */
 
-import { cookies } from 'next/headers';
-import { verifyToken } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { redirect } from 'next/navigation';
-import SecuritySettingsClient from './SecuritySettingsClient';
+import { cookies } from "next/headers";
+import { verifyToken } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { redirect } from "next/navigation";
+import SecuritySettingsClient from "./SecuritySettingsClient";
 
 export default async function SecuritySettingsPage() {
   // Check authentication
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get('session');
+  const sessionCookie = cookieStore.get("session");
 
   if (!sessionCookie) {
-    redirect('/login?redirect=/settings/security');
+    redirect("/login?redirect=/settings/security");
   }
 
   const session = await verifyToken(sessionCookie.value);
 
   if (!session) {
-    redirect('/login?redirect=/settings/security');
+    redirect("/login?redirect=/settings/security");
   }
 
   // Fetch user data with MFA status and sessions
@@ -55,14 +55,14 @@ export default async function SecuritySettingsPage() {
           lastSeenAt: true,
           createdAt: true,
         },
-        orderBy: { lastSeenAt: 'desc' },
+        orderBy: { lastSeenAt: "desc" },
         take: 10,
       },
     },
   });
 
   if (!user) {
-    redirect('/login');
+    redirect("/login");
   }
 
   // Get recent security events
@@ -76,7 +76,7 @@ export default async function SecuritySettingsPage() {
       success: true,
       createdAt: true,
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
     take: 10,
   });
 
@@ -89,7 +89,8 @@ export default async function SecuritySettingsPage() {
         lastLoginAt: user.lastLoginAt?.toISOString() || null,
         mfaEnabled: user.mfa?.enabled || false,
         mfaPhone: user.mfa?.phone || null,
-        recoveryCodesGeneratedAt: user.mfa?.recoveryCodesGeneratedAt?.toISOString() || null,
+        recoveryCodesGeneratedAt:
+          user.mfa?.recoveryCodesGeneratedAt?.toISOString() || null,
         recoveryCodesUsedCount: user.mfa?.recoveryCodesUsedCount || 0,
       }}
       sessions={user.sessions.map((s) => ({

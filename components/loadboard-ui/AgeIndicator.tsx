@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Age Indicator Component
@@ -9,17 +9,17 @@
  * - Centralized age calculation utility
  */
 
-import React, { useState, useEffect } from 'react';
-import { AgeIndicatorProps } from '@/types/loadboard-ui';
-import { calculateAge, formatExactTimestamp } from '@/lib/utils/ageCalculation';
+import React, { useState, useEffect } from "react";
+import { AgeIndicatorProps } from "@/types/loadboard-ui";
+import { calculateAge, formatExactTimestamp } from "@/lib/utils/ageCalculation";
 
 export default function AgeIndicator({
   date,
-  className = '',
+  className = "",
   showIcon = true,
 }: AgeIndicatorProps) {
   // State to trigger re-render on age update
-  const [currentTime, setCurrentTime] = useState(Date.now());
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
 
   // Real-time updates every minute
   useEffect(() => {
@@ -36,16 +36,7 @@ export default function AgeIndicator({
 
   return (
     <div
-      className={`
-        inline-flex items-center gap-1
-        px-2 py-1
-        rounded-md
-        border
-        text-xs font-medium
-        ${ageResult.colorClass}
-        ${className}
-        cursor-help
-      `}
+      className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium ${ageResult.colorClass} ${className} cursor-help`}
       title={`Posted: ${exactTimestamp}`}
     >
       {showIcon && <span>🕐</span>}

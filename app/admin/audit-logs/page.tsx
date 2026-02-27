@@ -6,10 +6,10 @@
  * Sprint 16 - Story 16.9A: SuperAdmin Tools (Enhanced)
  */
 
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
-import { getCurrentUser } from '@/lib/auth';
-import AuditLogViewerClient from './AuditLogViewerClient';
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { getCurrentUser } from "@/lib/auth";
+import AuditLogViewerClient from "./AuditLogViewerClient";
 
 interface AuditLog {
   id: string;
@@ -24,8 +24,8 @@ interface AuditLog {
   resource: string | null;
   resourceId: string | null;
   action: string | null;
-  result: 'SUCCESS' | 'FAILURE';
-  details: Record<string, any> | null;
+  result: "SUCCESS" | "FAILURE";
+  details: Record<string, unknown> | null;
   timestamp: string;
 }
 
@@ -53,43 +53,43 @@ async function getAuditLogs(
 ): Promise<AuditLogsResponse | null> {
   try {
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('session');
+    const sessionCookie = cookieStore.get("session");
 
     if (!sessionCookie) {
       return null;
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
     const params = new URLSearchParams({
       offset: offset.toString(),
       limit: limit.toString(),
     });
 
     if (filters) {
-      if (filters.severity) params.append('severity', filters.severity);
-      if (filters.eventType) params.append('eventType', filters.eventType);
-      if (filters.userId) params.append('userId', filters.userId);
+      if (filters.severity) params.append("severity", filters.severity);
+      if (filters.eventType) params.append("eventType", filters.eventType);
+      if (filters.userId) params.append("userId", filters.userId);
       if (filters.organizationId)
-        params.append('organizationId', filters.organizationId);
-      if (filters.startDate) params.append('startDate', filters.startDate);
-      if (filters.endDate) params.append('endDate', filters.endDate);
+        params.append("organizationId", filters.organizationId);
+      if (filters.startDate) params.append("startDate", filters.startDate);
+      if (filters.endDate) params.append("endDate", filters.endDate);
     }
 
     const response = await fetch(`${baseUrl}/api/admin/audit-logs?${params}`, {
       headers: {
         Cookie: `session=${sessionCookie.value}`,
       },
-      cache: 'no-store',
+      cache: "no-store",
     });
 
     if (!response.ok) {
-      console.error('Failed to fetch audit logs:', response.status);
+      console.error("Failed to fetch audit logs:", response.status);
       return null;
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Error fetching audit logs:', error);
+    console.error("Error fetching audit logs:", error);
     return null;
   }
 }
@@ -101,55 +101,57 @@ export default async function AdminAuditLogsPage() {
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect('/login');
+    redirect("/login");
   }
 
   // Only Super Admins can access
-  if (user.role !== 'SUPER_ADMIN') {
-    redirect('/unauthorized');
+  if (user.role !== "SUPER_ADMIN") {
+    redirect("/unauthorized");
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
             Global Audit Log Viewer
           </h1>
-          <p className="text-gray-600 mt-2">
+          <p className="mt-2 text-gray-600">
             View and filter all platform activity and security events
           </p>
         </div>
 
         {/* Info Panel */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-          <h3 className="font-semibold text-blue-900 mb-3">
-            About Audit Logs
-          </h3>
+        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-6">
+          <h3 className="mb-3 font-semibold text-blue-900">About Audit Logs</h3>
           <ul className="space-y-2 text-sm text-blue-800">
             <li className="flex items-start gap-2">
               <span className="font-bold">•</span>
               <span>
-                <strong>Security Events:</strong> Authentication attempts, permission changes, and access violations
+                <strong>Security Events:</strong> Authentication attempts,
+                permission changes, and access violations
               </span>
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold">•</span>
               <span>
-                <strong>Data Operations:</strong> Create, update, and delete operations on critical resources
+                <strong>Data Operations:</strong> Create, update, and delete
+                operations on critical resources
               </span>
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold">•</span>
               <span>
-                <strong>System Events:</strong> Configuration changes, automation runs, and system alerts
+                <strong>System Events:</strong> Configuration changes,
+                automation runs, and system alerts
               </span>
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold">•</span>
               <span>
-                <strong>Compliance:</strong> All events are immutable and retained for audit and compliance purposes
+                <strong>Compliance:</strong> All events are immutable and
+                retained for audit and compliance purposes
               </span>
             </li>
           </ul>

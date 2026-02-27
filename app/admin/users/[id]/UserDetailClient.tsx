@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * User Detail Client Component
@@ -7,9 +7,10 @@
  * Sprint 10 - Story 10.2: User Management
  */
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { getCSRFToken } from '@/lib/csrfFetch';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { getCSRFToken } from "@/lib/csrfFetch";
 
 interface UserDetail {
   id: string;
@@ -50,46 +51,46 @@ interface Transaction {
 }
 
 const STATUS_OPTIONS = [
-  { value: 'REGISTERED', label: 'Registered' },
-  { value: 'PENDING_VERIFICATION', label: 'Pending Verification' },
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'SUSPENDED', label: 'Suspended' },
-  { value: 'REJECTED', label: 'Rejected' },
+  { value: "REGISTERED", label: "Registered" },
+  { value: "PENDING_VERIFICATION", label: "Pending Verification" },
+  { value: "ACTIVE", label: "Active" },
+  { value: "SUSPENDED", label: "Suspended" },
+  { value: "REJECTED", label: "Rejected" },
 ];
 
 function formatDate(dateString: string | null): string {
-  if (!dateString) return 'Never';
+  if (!dateString) return "Never";
   const date = new Date(dateString);
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(date);
 }
 
 function getRoleBadgeColor(role: string): string {
   const colors: Record<string, string> = {
-    ADMIN: 'bg-purple-100 text-purple-800',
-    SUPER_ADMIN: 'bg-red-100 text-red-800',
-    SHIPPER: 'bg-green-100 text-green-800',
-    CARRIER: 'bg-yellow-100 text-yellow-800',
-    DISPATCHER: 'bg-blue-100 text-blue-800',
-    DRIVER: 'bg-gray-100 text-gray-800',
+    ADMIN: "bg-purple-100 text-purple-800",
+    SUPER_ADMIN: "bg-red-100 text-red-800",
+    SHIPPER: "bg-green-100 text-green-800",
+    CARRIER: "bg-yellow-100 text-yellow-800",
+    DISPATCHER: "bg-blue-100 text-blue-800",
+    DRIVER: "bg-gray-100 text-gray-800",
   };
-  return colors[role] || 'bg-gray-100 text-gray-800';
+  return colors[role] || "bg-gray-100 text-gray-800";
 }
 
 function getStatusBadgeColor(status: string): string {
   const colors: Record<string, string> = {
-    ACTIVE: 'bg-green-100 text-green-800',
-    PENDING_VERIFICATION: 'bg-yellow-100 text-yellow-800',
-    REGISTERED: 'bg-blue-100 text-blue-800',
-    SUSPENDED: 'bg-red-100 text-red-800',
-    REJECTED: 'bg-gray-100 text-gray-800',
+    ACTIVE: "bg-green-100 text-green-800",
+    PENDING_VERIFICATION: "bg-yellow-100 text-yellow-800",
+    REGISTERED: "bg-blue-100 text-blue-800",
+    SUSPENDED: "bg-red-100 text-red-800",
+    REJECTED: "bg-gray-100 text-gray-800",
   };
-  return colors[status] || 'bg-gray-100 text-gray-800';
+  return colors[status] || "bg-gray-100 text-gray-800";
 }
 
 export default function UserDetailClient({
@@ -106,7 +107,7 @@ export default function UserDetailClient({
   const [success, setSuccess] = useState<string | null>(null);
 
   // Edit form state
-  const [phone, setPhone] = useState(user.phone || '');
+  const [phone, setPhone] = useState(user.phone || "");
   const [status, setStatus] = useState(user.status);
 
   // Wallet state
@@ -116,18 +117,20 @@ export default function UserDetailClient({
   // L41 FIX: Add wallet error state to surface API failures
   const [walletError, setWalletError] = useState<string | null>(null);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
-  const [topUpAmount, setTopUpAmount] = useState('');
-  const [topUpPaymentMethod, setTopUpPaymentMethod] = useState('BANK_TRANSFER');
-  const [topUpReference, setTopUpReference] = useState('');
-  const [topUpNote, setTopUpNote] = useState('');
+  const [topUpAmount, setTopUpAmount] = useState("");
+  const [topUpPaymentMethod, setTopUpPaymentMethod] = useState("BANK_TRANSFER");
+  const [topUpReference, setTopUpReference] = useState("");
+  const [topUpNote, setTopUpNote] = useState("");
   const [topUpLoading, setTopUpLoading] = useState(false);
 
   // Check if current user can edit this user
-  const canEdit = currentUserRole === 'SUPER_ADMIN' ||
-    (currentUserRole === 'ADMIN' && !['ADMIN', 'SUPER_ADMIN'].includes(user.role));
+  const canEdit =
+    currentUserRole === "SUPER_ADMIN" ||
+    (currentUserRole === "ADMIN" &&
+      !["ADMIN", "SUPER_ADMIN"].includes(user.role));
 
   // Check if user has a wallet (shippers and carriers have wallets)
-  const hasWallet = ['SHIPPER', 'CARRIER'].includes(user.role);
+  const hasWallet = ["SHIPPER", "CARRIER"].includes(user.role);
 
   /**
    * Fetch wallet data
@@ -153,12 +156,12 @@ export default function UserDetailClient({
         }
       } else {
         // L41 FIX: Set wallet error state instead of silently failing
-        setWalletError('Failed to fetch wallet data');
+        setWalletError("Failed to fetch wallet data");
       }
     } catch (err) {
       // L41 FIX: Set wallet error state instead of just logging
-      setWalletError('Network error while fetching wallet');
-      console.error('Failed to fetch wallet:', err);
+      setWalletError("Network error while fetching wallet");
+      console.error("Failed to fetch wallet:", err);
     } finally {
       setWalletLoading(false);
     }
@@ -172,7 +175,7 @@ export default function UserDetailClient({
 
     const amount = parseFloat(topUpAmount);
     if (isNaN(amount) || amount <= 0) {
-      setError('Please enter a valid amount');
+      setError("Please enter a valid amount");
       return;
     }
 
@@ -182,10 +185,10 @@ export default function UserDetailClient({
     try {
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/admin/users/${user.id}/wallet/topup`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
         body: JSON.stringify({
           amount,
@@ -197,28 +200,30 @@ export default function UserDetailClient({
 
       if (response.ok) {
         const data = await response.json();
-        setSuccess(`Successfully added ${formatCurrency(amount)} to wallet. New balance: ${formatCurrency(data.newBalance)}`);
+        setSuccess(
+          `Successfully added ${formatCurrency(amount)} to wallet. New balance: ${formatCurrency(data.newBalance)}`
+        );
         setShowTopUpModal(false);
-        setTopUpAmount('');
-        setTopUpPaymentMethod('BANK_TRANSFER');
-        setTopUpReference('');
-        setTopUpNote('');
+        setTopUpAmount("");
+        setTopUpPaymentMethod("BANK_TRANSFER");
+        setTopUpReference("");
+        setTopUpNote("");
         fetchWalletData(); // Refresh wallet data
       } else {
         const data = await response.json();
-        setError(data.error || 'Failed to top up wallet');
+        setError(data.error || "Failed to top up wallet");
       }
     } catch (err) {
-      setError('An error occurred while processing top-up');
+      setError("An error occurred while processing top-up");
     } finally {
       setTopUpLoading(false);
     }
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-ET', {
-      style: 'currency',
-      currency: 'ETB',
+    return new Intl.NumberFormat("en-ET", {
+      style: "currency",
+      currency: "ETB",
       minimumFractionDigits: 2,
     }).format(amount);
   };
@@ -236,7 +241,7 @@ export default function UserDetailClient({
       const updates: Record<string, string> = {};
 
       // Only include changed fields
-      if (phone !== (user.phone || '')) {
+      if (phone !== (user.phone || "")) {
         updates.phone = phone;
       }
       if (status !== user.status) {
@@ -244,16 +249,16 @@ export default function UserDetailClient({
       }
 
       if (Object.keys(updates).length === 0) {
-        setError('No changes to save');
+        setError("No changes to save");
         setSaving(false);
         return;
       }
 
       const response = await fetch(`/api/admin/users/${user.id}`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
         body: JSON.stringify(updates),
       });
@@ -261,14 +266,14 @@ export default function UserDetailClient({
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess('User updated successfully');
+        setSuccess("User updated successfully");
         setIsEditing(false);
         router.refresh();
       } else {
-        setError(data.error || 'Failed to update user');
+        setError(data.error || "Failed to update user");
       }
     } catch (err) {
-      setError('An error occurred while saving');
+      setError("An error occurred while saving");
     } finally {
       setSaving(false);
     }
@@ -278,7 +283,7 @@ export default function UserDetailClient({
    * Handle cancel
    */
   const handleCancel = () => {
-    setPhone(user.phone || '');
+    setPhone(user.phone || "");
     setStatus(user.status);
     setIsEditing(false);
     setError(null);
@@ -291,7 +296,11 @@ export default function UserDetailClient({
    * Handle delete
    */
   const handleDelete = async () => {
-    if (!confirm(`Are you sure you want to delete ${user.email}? This action cannot be undone.`)) {
+    if (
+      !confirm(
+        `Are you sure you want to delete ${user.email}? This action cannot be undone.`
+      )
+    ) {
       return;
     }
 
@@ -302,20 +311,20 @@ export default function UserDetailClient({
     try {
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/admin/users/${user.id}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
       });
 
       if (response.ok) {
-        router.push('/admin/users');
+        router.push("/admin/users");
       } else {
         const data = await response.json();
-        setError(data.error || 'Failed to delete user');
+        setError(data.error || "Failed to delete user");
       }
     } catch (err) {
-      setError('An error occurred while deleting');
+      setError("An error occurred while deleting");
     } finally {
       setIsDeleting(false);
     }
@@ -325,19 +334,19 @@ export default function UserDetailClient({
     <div className="space-y-6">
       {/* Messages */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
           <p className="text-red-800">{error}</p>
         </div>
       )}
       {success && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
           <p className="text-green-800">{success}</p>
         </div>
       )}
 
       {/* User Info Card */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between items-start mb-6">
+      <div className="rounded-lg bg-white p-6 shadow">
+        <div className="mb-6 flex items-start justify-between">
           <div>
             <h2 className="text-xl font-semibold text-gray-900">
               {user.firstName && user.lastName
@@ -347,29 +356,33 @@ export default function UserDetailClient({
             <p className="text-gray-600">{user.email}</p>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`px-3 py-1 text-sm font-semibold rounded-full ${getRoleBadgeColor(user.role)}`}>
-              {user.role.replace(/_/g, ' ')}
+            <span
+              className={`rounded-full px-3 py-1 text-sm font-semibold ${getRoleBadgeColor(user.role)}`}
+            >
+              {user.role.replace(/_/g, " ")}
             </span>
-            <span className={`px-3 py-1 text-sm font-semibold rounded-full ${getStatusBadgeColor(user.status)}`}>
-              {user.status.replace(/_/g, ' ')}
+            <span
+              className={`rounded-full px-3 py-1 text-sm font-semibold ${getStatusBadgeColor(user.status)}`}
+            >
+              {user.status.replace(/_/g, " ")}
             </span>
           </div>
         </div>
 
         {/* User Details Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {/* Contact Information */}
           <div>
-            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">
+            <h3 className="mb-3 text-sm font-medium tracking-wider text-gray-500 uppercase">
               Contact Information
             </h3>
             <dl className="space-y-3">
               <div>
                 <dt className="text-sm text-gray-600">Email</dt>
-                <dd className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                <dd className="flex items-center gap-2 text-sm font-medium text-gray-900">
                   {user.email}
                   {user.isEmailVerified && (
-                    <span className="text-green-600 text-xs bg-green-100 px-2 py-0.5 rounded-full">
+                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-600">
                       Verified
                     </span>
                   )}
@@ -377,20 +390,20 @@ export default function UserDetailClient({
               </div>
               <div>
                 <dt className="text-sm text-gray-600">Phone</dt>
-                <dd className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                <dd className="flex items-center gap-2 text-sm font-medium text-gray-900">
                   {isEditing ? (
                     <input
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="rounded-lg border border-gray-300 px-3 py-1 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                       placeholder="Phone number"
                     />
                   ) : (
                     <>
-                      {user.phone || 'Not set'}
+                      {user.phone || "Not set"}
                       {user.isPhoneVerified && (
-                        <span className="text-green-600 text-xs bg-green-100 px-2 py-0.5 rounded-full">
+                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-600">
                           Verified
                         </span>
                       )}
@@ -403,7 +416,7 @@ export default function UserDetailClient({
 
           {/* Account Status */}
           <div>
-            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">
+            <h3 className="mb-3 text-sm font-medium tracking-wider text-gray-500 uppercase">
               Account Status
             </h3>
             <dl className="space-y-3">
@@ -414,7 +427,7 @@ export default function UserDetailClient({
                     <select
                       value={status}
                       onChange={(e) => setStatus(e.target.value)}
-                      className="px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="rounded-lg border border-gray-300 px-3 py-1 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                     >
                       {STATUS_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -423,8 +436,10 @@ export default function UserDetailClient({
                       ))}
                     </select>
                   ) : (
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(user.status)}`}>
-                      {user.status.replace(/_/g, ' ')}
+                    <span
+                      className={`rounded-full px-2 py-1 text-xs font-semibold ${getStatusBadgeColor(user.status)}`}
+                    >
+                      {user.status.replace(/_/g, " ")}
                     </span>
                   )}
                 </dd>
@@ -432,7 +447,7 @@ export default function UserDetailClient({
               <div>
                 <dt className="text-sm text-gray-600">Active</dt>
                 <dd className="text-sm font-medium text-gray-900">
-                  {user.isActive ? 'Yes' : 'No'}
+                  {user.isActive ? "Yes" : "No"}
                 </dd>
               </div>
             </dl>
@@ -440,17 +455,17 @@ export default function UserDetailClient({
 
           {/* Organization */}
           <div>
-            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">
+            <h3 className="mb-3 text-sm font-medium tracking-wider text-gray-500 uppercase">
               Organization
             </h3>
             {user.organization ? (
               <dl className="space-y-3">
                 <div>
                   <dt className="text-sm text-gray-600">Name</dt>
-                  <dd className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                  <dd className="flex items-center gap-2 text-sm font-medium text-gray-900">
                     {user.organization.name}
                     {user.organization.isVerified && (
-                      <span className="text-blue-600 text-xs bg-blue-100 px-2 py-0.5 rounded-full">
+                      <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-600">
                         Verified
                       </span>
                     )}
@@ -459,7 +474,7 @@ export default function UserDetailClient({
                 <div>
                   <dt className="text-sm text-gray-600">Type</dt>
                   <dd className="text-sm font-medium text-gray-900">
-                    {user.organization.type.replace(/_/g, ' ')}
+                    {user.organization.type.replace(/_/g, " ")}
                   </dd>
                 </div>
                 <div>
@@ -478,7 +493,7 @@ export default function UserDetailClient({
 
           {/* Timestamps */}
           <div>
-            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">
+            <h3 className="mb-3 text-sm font-medium tracking-wider text-gray-500 uppercase">
               Activity
             </h3>
             <dl className="space-y-3">
@@ -506,12 +521,12 @@ export default function UserDetailClient({
 
         {/* Actions */}
         {canEdit && (
-          <div className="mt-8 pt-6 border-t border-gray-200 flex justify-between">
+          <div className="mt-8 flex justify-between border-t border-gray-200 pt-6">
             <div>
               {!isEditing ? (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700"
                 >
                   Edit User
                 </button>
@@ -520,14 +535,14 @@ export default function UserDetailClient({
                   <button
                     onClick={handleSave}
                     disabled={isSaving}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
+                    className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
                   >
-                    {isSaving ? 'Saving...' : 'Save Changes'}
+                    {isSaving ? "Saving..." : "Save Changes"}
                   </button>
                   <button
                     onClick={handleCancel}
                     disabled={isSaving}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                    className="rounded-lg bg-gray-200 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-300"
                   >
                     Cancel
                   </button>
@@ -537,15 +552,15 @@ export default function UserDetailClient({
             <button
               onClick={handleDelete}
               disabled={isDeleting}
-              className="px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-lg px-4 py-2 font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isDeleting ? 'Deleting...' : 'Delete User'}
+              {isDeleting ? "Deleting..." : "Delete User"}
             </button>
           </div>
         )}
 
         {!canEdit && (
-          <div className="mt-8 pt-6 border-t border-gray-200">
+          <div className="mt-8 border-t border-gray-200 pt-6">
             <p className="text-sm text-gray-500">
               You do not have permission to edit this user.
             </p>
@@ -555,13 +570,13 @@ export default function UserDetailClient({
 
       {/* Wallet Section */}
       {hasWallet && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex justify-between items-center mb-6">
+        <div className="rounded-lg bg-white p-6 shadow">
+          <div className="mb-6 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Wallet</h3>
             {canEdit && wallet && (
               <button
                 onClick={() => setShowTopUpModal(true)}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm"
+                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
               >
                 Top Up
               </button>
@@ -569,14 +584,16 @@ export default function UserDetailClient({
           </div>
 
           {walletLoading ? (
-            <div className="text-center py-4 text-gray-500">Loading wallet...</div>
+            <div className="py-4 text-center text-gray-500">
+              Loading wallet...
+            </div>
           ) : walletError ? (
             /* L41 FIX: Show wallet error state */
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
               <p className="text-red-700">{walletError}</p>
               <button
                 onClick={fetchWalletData}
-                className="mt-2 text-sm text-red-600 hover:text-red-800 font-medium"
+                className="mt-2 text-sm font-medium text-red-600 hover:text-red-800"
               >
                 Retry
               </button>
@@ -584,17 +601,19 @@ export default function UserDetailClient({
           ) : wallet ? (
             <div className="space-y-6">
               {/* Balance Card */}
-              <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white">
+              <div className="rounded-xl bg-gradient-to-r from-green-500 to-green-600 p-6 text-white">
                 <p className="text-sm opacity-80">Current Balance</p>
-                <p className="text-3xl font-bold mt-1">{formatCurrency(wallet.balance)}</p>
-                <p className="text-sm opacity-80 mt-2">
-                  {wallet.accountType.replace(/_/g, ' ')} Account
+                <p className="mt-1 text-3xl font-bold">
+                  {formatCurrency(wallet.balance)}
+                </p>
+                <p className="mt-2 text-sm opacity-80">
+                  {wallet.accountType.replace(/_/g, " ")} Account
                 </p>
               </div>
 
               {/* Recent Transactions */}
               <div>
-                <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">
+                <h4 className="mb-3 text-sm font-medium tracking-wider text-gray-500 uppercase">
                   Recent Transactions
                 </h4>
                 {transactions.length > 0 ? (
@@ -602,11 +621,11 @@ export default function UserDetailClient({
                     {transactions.map((tx) => (
                       <div
                         key={tx.id}
-                        className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0"
+                        className="flex items-center justify-between border-b border-gray-100 py-2 last:border-0"
                       >
                         <div>
                           <p className="text-sm font-medium text-gray-900">
-                            {tx.description || tx.type.replace(/_/g, ' ')}
+                            {tx.description || tx.type.replace(/_/g, " ")}
                           </p>
                           <p className="text-xs text-gray-500">
                             {formatDate(tx.createdAt)}
@@ -614,10 +633,10 @@ export default function UserDetailClient({
                         </div>
                         <span
                           className={`text-sm font-semibold ${
-                            tx.amount >= 0 ? 'text-green-600' : 'text-red-600'
+                            tx.amount >= 0 ? "text-green-600" : "text-red-600"
                           }`}
                         >
-                          {tx.amount >= 0 ? '+' : ''}
+                          {tx.amount >= 0 ? "+" : ""}
                           {formatCurrency(tx.amount)}
                         </span>
                       </div>
@@ -629,8 +648,8 @@ export default function UserDetailClient({
               </div>
             </div>
           ) : (
-            <div className="text-center py-4 text-gray-500">
-              No wallet found for this user's organization
+            <div className="py-4 text-center text-gray-500">
+              No wallet found for this user&apos;s organization
             </div>
           )}
         </div>
@@ -638,16 +657,18 @@ export default function UserDetailClient({
 
       {/* Top Up Modal */}
       {showTopUpModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Manual Top-Up</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Add funds to {user.firstName || user.email}'s wallet
+        <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
+          <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <h3 className="mb-4 text-lg font-semibold text-gray-900">
+              Manual Top-Up
+            </h3>
+            <p className="mb-4 text-sm text-gray-600">
+              Add funds to {user.firstName || user.email}&apos;s wallet
             </p>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
                   Amount (ETB) *
                 </label>
                 <input
@@ -657,18 +678,18 @@ export default function UserDetailClient({
                   placeholder="Enter amount"
                   min="0"
                   step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-green-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
                   Payment Method *
                 </label>
                 <select
                   value={topUpPaymentMethod}
                   onChange={(e) => setTopUpPaymentMethod(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-green-500"
                 >
                   <option value="BANK_TRANSFER">Bank Transfer</option>
                   <option value="CASH">Cash</option>
@@ -679,7 +700,7 @@ export default function UserDetailClient({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
                   Reference Number
                 </label>
                 <input
@@ -687,12 +708,12 @@ export default function UserDetailClient({
                   value={topUpReference}
                   onChange={(e) => setTopUpReference(e.target.value)}
                   placeholder="Bank slip #, receipt #, etc."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-green-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
                   Notes (optional)
                 </label>
                 <textarea
@@ -700,31 +721,31 @@ export default function UserDetailClient({
                   onChange={(e) => setTopUpNote(e.target.value)}
                   placeholder="Additional notes..."
                   rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                  className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-green-500"
                 />
               </div>
             </div>
 
-            <div className="mt-6 flex gap-3 justify-end">
+            <div className="mt-6 flex justify-end gap-3">
               <button
                 onClick={() => {
                   setShowTopUpModal(false);
-                  setTopUpAmount('');
-                  setTopUpPaymentMethod('BANK_TRANSFER');
-                  setTopUpReference('');
-                  setTopUpNote('');
+                  setTopUpAmount("");
+                  setTopUpPaymentMethod("BANK_TRANSFER");
+                  setTopUpReference("");
+                  setTopUpNote("");
                 }}
                 disabled={topUpLoading}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleTopUp}
                 disabled={topUpLoading || !topUpAmount}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {topUpLoading ? 'Processing...' : 'Process Top-Up'}
+                {topUpLoading ? "Processing..." : "Process Top-Up"}
               </button>
             </div>
           </div>
@@ -733,12 +754,12 @@ export default function UserDetailClient({
 
       {/* Back Link */}
       <div>
-        <a
+        <Link
           href="/admin/users"
-          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+          className="text-sm font-medium text-blue-600 hover:text-blue-800"
         >
           ← Back to Users
-        </a>
+        </Link>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Reference Pricing Component
@@ -7,15 +7,15 @@
  * Load Board UI Component Library
  */
 
-import React from 'react';
-import { ReferencePricingProps } from '@/types/loadboard-ui';
+import React from "react";
+import { ReferencePricingProps } from "@/types/loadboard-ui";
 
 export default function ReferencePricing({
   trihaulRate,
   triHaulRate,
   brokerSpotRate,
   loading = false,
-  className = '',
+  className = "",
 }: ReferencePricingProps) {
   // Support both naming conventions
   const effectiveTrihaulRate = trihaulRate ?? triHaulRate;
@@ -24,7 +24,7 @@ export default function ReferencePricing({
    * Format currency
    */
   const formatCurrency = (amount: number | null | undefined): string => {
-    if (amount === null || amount === undefined) return 'N/A';
+    if (amount === null || amount === undefined) return "N/A";
     return `$${amount.toFixed(2)}`;
   };
 
@@ -50,12 +50,18 @@ export default function ReferencePricing({
     <div className={`text-sm font-medium text-cyan-600 ${className}`}>
       {effectiveTrihaulRate && (
         <span className="mr-4">
-          Best TriHaul: <span className="font-semibold">{formatCurrency(effectiveTrihaulRate)}</span>
+          Best TriHaul:{" "}
+          <span className="font-semibold">
+            {formatCurrency(effectiveTrihaulRate)}
+          </span>
         </span>
       )}
       {brokerSpotRate && (
         <span>
-          Broker Spot: <span className="font-semibold">{formatCurrency(brokerSpotRate)}</span>
+          Broker Spot:{" "}
+          <span className="font-semibold">
+            {formatCurrency(brokerSpotRate)}
+          </span>
         </span>
       )}
     </div>

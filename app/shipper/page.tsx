@@ -5,35 +5,37 @@
  * Sprint 14 - Professional UI Transformation
  */
 
-import { Suspense } from 'react';
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
-import { verifyToken } from '@/lib/auth';
-import ShipperLoadboardClient from './loadboard/ShipperLoadboardClient';
+import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { verifyToken } from "@/lib/auth";
+import ShipperLoadboardClient from "./loadboard/ShipperLoadboardClient";
 
 export const metadata = {
-  title: 'FreightET - Shipper Portal',
-  description: 'Professional freight load board for shippers',
+  title: "FreightET - Shipper Portal",
+  description: "Professional freight load board for shippers",
 };
 
 export default async function ShipperPage() {
   // Verify authentication
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get('session');
+  const sessionCookie = cookieStore.get("session");
 
   if (!sessionCookie) {
-    redirect('/login?redirect=/shipper');
+    redirect("/login?redirect=/shipper");
   }
 
   const session = await verifyToken(sessionCookie.value);
 
-  if (!session || (session.role !== 'SHIPPER' && session.role !== 'ADMIN')) {
-    redirect('/unauthorized');
+  if (!session || (session.role !== "SHIPPER" && session.role !== "ADMIN")) {
+    redirect("/unauthorized");
   }
 
   // Return load board interface wrapped in Suspense for useSearchParams
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-100 animate-pulse" />}>
+    <Suspense
+      fallback={<div className="min-h-screen animate-pulse bg-gray-100" />}
+    >
       <ShipperLoadboardClient user={session} />
     </Suspense>
   );

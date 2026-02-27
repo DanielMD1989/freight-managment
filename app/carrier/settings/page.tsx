@@ -10,11 +10,11 @@
  * - Display preferences
  */
 
-import { Suspense } from 'react';
-import { requireAuth } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { redirect } from 'next/navigation';
-import CompanySettingsClient from './CompanySettingsClient';
+import { Suspense } from "react";
+import { requireAuth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { redirect } from "next/navigation";
+import CompanySettingsClient from "./CompanySettingsClient";
 
 async function getOrganizationData(organizationId: string) {
   const organization = await db.organization.findUnique({
@@ -43,8 +43,8 @@ async function getOrganizationData(organizationId: string) {
 export default async function CarrierSettingsPage() {
   const session = await requireAuth();
 
-  if (session.role !== 'CARRIER') {
-    redirect('/carrier');
+  if (session.role !== "CARRIER") {
+    redirect("/carrier");
   }
 
   // Get user's organization
@@ -54,13 +54,13 @@ export default async function CarrierSettingsPage() {
   });
 
   if (!user?.organizationId) {
-    redirect('/carrier');
+    redirect("/carrier");
   }
 
   const organization = await getOrganizationData(user.organizationId);
 
   if (!organization) {
-    redirect('/carrier');
+    redirect("/carrier");
   }
 
   // Transform dates for client component
@@ -71,12 +71,10 @@ export default async function CarrierSettingsPage() {
   };
 
   return (
-    <div className="p-6 min-h-screen bg-[var(--bg-tinted)]">
+    <div className="min-h-screen bg-[var(--bg-tinted)] p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#064d51]">
-          Company Settings
-        </h1>
-        <p className="text-[#064d51]/70 mt-1">
+        <h1 className="text-2xl font-bold text-[#064d51]">Company Settings</h1>
+        <p className="mt-1 text-[#064d51]/70">
           Manage your company profile and preferences
         </p>
       </div>
@@ -91,8 +89,8 @@ export default async function CarrierSettingsPage() {
 function SettingsSkeleton() {
   return (
     <div className="animate-pulse space-y-4">
-      <div className="h-12 bg-[#064d51]/10 rounded-lg w-1/3"></div>
-      <div className="h-64 bg-[#064d51]/10 rounded-xl"></div>
+      <div className="h-12 w-1/3 rounded-lg bg-[#064d51]/10"></div>
+      <div className="h-64 rounded-xl bg-[#064d51]/10"></div>
     </div>
   );
 }

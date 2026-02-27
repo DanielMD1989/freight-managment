@@ -11,13 +11,13 @@
  * MAP + GPS Implementation - Phase 2
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { broadcastGpsPosition } from '@/lib/websocket-server';
-import { z } from 'zod';
-import { withRpsLimit, RPS_CONFIGS } from '@/lib/rateLimit';
-import { zodErrorResponse } from '@/lib/validation';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { broadcastGpsPosition } from "@/lib/websocket-server";
+import { z } from "zod";
+import { withRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { zodErrorResponse } from "@/lib/validation";
 
 const positionSchema = z.object({
   latitude: z.number().min(-90).max(90),
@@ -39,9 +39,9 @@ async function postHandler(request: NextRequest) {
     const session = await requireAuth();
 
     // Only carriers can update GPS positions
-    if (session.role !== 'CARRIER') {
+    if (session.role !== "CARRIER") {
       return NextResponse.json(
-        { error: 'Only carriers can update GPS positions' },
+        { error: "Only carriers can update GPS positions" },
         { status: 403 }
       );
     }
@@ -54,7 +54,7 @@ async function postHandler(request: NextRequest) {
 
     if (!user?.organizationId) {
       return NextResponse.json(
-        { error: 'User does not belong to an organization' },
+        { error: "User does not belong to an organization" },
         { status: 400 }
       );
     }
@@ -77,14 +77,14 @@ async function postHandler(request: NextRequest) {
 
     if (!truck) {
       return NextResponse.json(
-        { error: 'Truck not found or does not belong to your organization' },
+        { error: "Truck not found or does not belong to your organization" },
         { status: 404 }
       );
     }
 
     if (!truck.gpsDeviceId) {
       return NextResponse.json(
-        { error: 'Truck does not have a GPS device registered' },
+        { error: "Truck does not have a GPS device registered" },
         { status: 400 }
       );
     }
@@ -93,14 +93,15 @@ async function postHandler(request: NextRequest) {
     const activeLoad = await db.load.findFirst({
       where: {
         assignedTruckId: data.truckId,
-        status: 'IN_TRANSIT',
+        status: "IN_TRANSIT",
       },
       select: { id: true },
     });
 
     // Sort positions by timestamp (oldest first)
     const sortedPositions = [...data.positions].sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      (a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
 
     // Create GPS position records
@@ -132,7 +133,7 @@ async function postHandler(request: NextRequest) {
           currentLocationLon: latestPosition.longitude,
           locationUpdatedAt: new Date(latestPosition.timestamp),
           gpsLastSeenAt: new Date(),
-          gpsStatus: 'ACTIVE',
+          gpsStatus: "ACTIVE",
         },
       });
     });
@@ -166,14 +167,14 @@ async function postHandler(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('GPS batch update error:', error);
+    console.error("GPS batch update error:", error);
 
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

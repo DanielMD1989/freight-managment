@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Rate Analysis Component
@@ -7,11 +7,11 @@
  * Load Board UI Component Library
  */
 
-import React from 'react';
-import { RateAnalysisProps } from '@/types/loadboard-ui';
+import React from "react";
+import { RateAnalysisProps } from "@/types/loadboard-ui";
 
 export default function RateAnalysis({
-  rateType = 'SHIPPER-TO-CARRIER SPOT',
+  rateType = "SHIPPER-TO-CARRIER SPOT",
   ratePerMile,
   ratePerTrip,
   totalMiles,
@@ -20,13 +20,13 @@ export default function RateAnalysis({
   onRateBias,
   onEdit,
   onDelete,
-  className = '',
+  className = "",
 }: RateAnalysisProps) {
   /**
    * Format currency
    */
   const formatCurrency = (amount: number | null | undefined): string => {
-    if (amount === null || amount === undefined) return 'N/A';
+    if (amount === null || amount === undefined) return "N/A";
     return `$${amount.toFixed(2)}`;
   };
 
@@ -34,8 +34,8 @@ export default function RateAnalysis({
    * Format large currency (for per trip)
    */
   const formatLargeCurrency = (amount: number | null | undefined): string => {
-    if (amount === null || amount === undefined) return 'N/A';
-    return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (amount === null || amount === undefined) return "N/A";
+    return `$${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   /**
@@ -52,23 +52,25 @@ export default function RateAnalysis({
       parts.push(`${averageSpeed.toFixed(2)} mph`);
     }
 
-    return parts.length > 0 ? `incl. ${parts.join(' ')}` : '';
+    return parts.length > 0 ? `incl. ${parts.join(" ")}` : "";
   };
 
   const metadata = getMetadata();
 
   return (
-    <div className={`bg-gradient-to-br from-[#f0fdfa] to-[#1e9c99]/10 rounded-lg p-6 border border-[#1e9c99]/20 ${className}`}>
+    <div
+      className={`rounded-lg border border-[#1e9c99]/20 bg-gradient-to-br from-[#f0fdfa] to-[#1e9c99]/10 p-6 ${className}`}
+    >
       {/* Header with Badge */}
-      <div className="flex items-center justify-between mb-4">
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#1e9c99] text-white">
+      <div className="mb-4 flex items-center justify-between">
+        <span className="inline-flex items-center rounded-full bg-[#1e9c99] px-3 py-1 text-xs font-semibold text-white">
           {rateType}
         </span>
         <div className="flex gap-2">
           {onRateBias && (
             <button
               onClick={onRateBias}
-              className="text-xs text-[#1e9c99] hover:text-[#064d51] font-medium"
+              className="text-xs font-medium text-[#1e9c99] hover:text-[#064d51]"
             >
               Rate Bias
             </button>
@@ -76,7 +78,7 @@ export default function RateAnalysis({
           {onEdit && (
             <button
               onClick={onEdit}
-              className="text-xs text-[#1e9c99] hover:text-[#064d51] font-medium"
+              className="text-xs font-medium text-[#1e9c99] hover:text-[#064d51]"
             >
               Edit
             </button>
@@ -84,7 +86,7 @@ export default function RateAnalysis({
           {onDelete && (
             <button
               onClick={onDelete}
-              className="text-xs text-red-600 hover:text-red-800 font-medium"
+              className="text-xs font-medium text-red-600 hover:text-red-800"
             >
               Delete
             </button>
@@ -93,33 +95,31 @@ export default function RateAnalysis({
       </div>
 
       {/* Rate Display */}
-      <div className="grid grid-cols-2 gap-6 mb-4">
+      <div className="mb-4 grid grid-cols-2 gap-6">
         {/* Rate per Mile */}
         <div>
-          <div className="text-sm text-[#064d51]/70 mb-1">Rate per Mile</div>
+          <div className="mb-1 text-sm text-[#064d51]/70">Rate per Mile</div>
           <div className="text-4xl font-bold text-[#1e9c99]">
             {formatCurrency(ratePerMile)}
           </div>
-          <div className="text-xs text-[#064d51]/60 mt-1">per mile</div>
+          <div className="mt-1 text-xs text-[#064d51]/60">per mile</div>
         </div>
 
         {/* Rate per Trip */}
         <div>
-          <div className="text-sm text-[#064d51]/70 mb-1">Rate per Trip</div>
+          <div className="mb-1 text-sm text-[#064d51]/70">Rate per Trip</div>
           <div className="text-2xl font-bold text-[#064d51]">
             {formatLargeCurrency(ratePerTrip)}
           </div>
-          <div className="text-xs text-[#064d51]/60 mt-1">
-            {totalMiles ? `${totalMiles} miles total` : 'total trip'}
+          <div className="mt-1 text-xs text-[#064d51]/60">
+            {totalMiles ? `${totalMiles} miles total` : "total trip"}
           </div>
         </div>
       </div>
 
       {/* Metadata */}
       {metadata && (
-        <div className="text-xs text-[#064d51]/70 mb-4 italic">
-          {metadata}
-        </div>
+        <div className="mb-4 text-xs text-[#064d51]/70 italic">{metadata}</div>
       )}
 
       {/* Analysis Links */}
@@ -139,7 +139,7 @@ export default function RateAnalysis({
 
       {/* Calculation Details */}
       {ratePerMile && ratePerTrip && totalMiles && (
-        <div className="mt-4 pt-4 border-t border-[#1e9c99]/20">
+        <div className="mt-4 border-t border-[#1e9c99]/20 pt-4">
           <details className="text-xs text-[#064d51]/70">
             <summary className="cursor-pointer font-medium hover:text-[#064d51]">
               Calculation Details
@@ -147,7 +147,10 @@ export default function RateAnalysis({
             <div className="mt-2 space-y-1 pl-4">
               <div>Rate per Mile: {formatCurrency(ratePerMile)}</div>
               <div>Total Miles: {totalMiles} miles</div>
-              <div>Rate per Trip: {formatCurrency(ratePerMile)} × {totalMiles} = {formatLargeCurrency(ratePerTrip)}</div>
+              <div>
+                Rate per Trip: {formatCurrency(ratePerMile)} × {totalMiles} ={" "}
+                {formatLargeCurrency(ratePerTrip)}
+              </div>
             </div>
           </details>
         </div>

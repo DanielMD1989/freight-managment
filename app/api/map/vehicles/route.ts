@@ -17,9 +17,9 @@
  * - carrierId: Filter by carrier (admin/dispatcher only)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
 import {
   VehicleMapData,
   VehicleMapStats,
@@ -28,7 +28,7 @@ import {
   TruckAvailabilityStatus,
   mapGpsStatus,
   mapTruckStatus,
-} from '@/lib/types/vehicle';
+} from "@/lib/types/vehicle";
 
 /** Threshold for considering GPS data stale (15 minutes) */
 const GPS_OFFLINE_THRESHOLD_MS = 15 * 60 * 1000;
@@ -38,16 +38,16 @@ export async function GET(request: NextRequest) {
     const session = await requireAuth();
     const { searchParams } = request.nextUrl;
 
-    const status = searchParams.get('status');
-    const truckType = searchParams.get('truckType');
-    const carrierId = searchParams.get('carrierId');
+    const status = searchParams.get("status");
+    const truckType = searchParams.get("truckType");
+    const carrierId = searchParams.get("carrierId");
 
     // Build where clause based on role
     const where: Record<string, unknown> = {};
 
     const role = session.role;
 
-    if (role === 'CARRIER') {
+    if (role === "CARRIER") {
       // Carrier can only see their own trucks
       const user = await db.user.findUnique({
         where: { id: session.userId },
@@ -58,32 +58,50 @@ export async function GET(request: NextRequest) {
         const emptyResponse: VehicleMapResponse = {
           vehicles: [],
           total: 0,
-          stats: { total: 0, active: 0, offline: 0, noDevice: 0, available: 0, inTransit: 0 },
+          stats: {
+            total: 0,
+            active: 0,
+            offline: 0,
+            noDevice: 0,
+            available: 0,
+            inTransit: 0,
+          },
         };
         return NextResponse.json(emptyResponse);
       }
 
       where.carrierId = user.organizationId;
-    } else if (role === 'SHIPPER') {
+    } else if (role === "SHIPPER") {
       // Shippers cannot see vehicles directly (only through trips)
       const emptyResponse: VehicleMapResponse = {
         vehicles: [],
         total: 0,
-        stats: { total: 0, active: 0, offline: 0, noDevice: 0, available: 0, inTransit: 0 },
+        stats: {
+          total: 0,
+          active: 0,
+          offline: 0,
+          noDevice: 0,
+          available: 0,
+          inTransit: 0,
+        },
       };
       return NextResponse.json(emptyResponse);
-    } else if (role === 'DISPATCHER' || role === 'ADMIN' || role === 'SUPER_ADMIN') {
+    } else if (
+      role === "DISPATCHER" ||
+      role === "ADMIN" ||
+      role === "SUPER_ADMIN"
+    ) {
       // Admin/Dispatcher can see all vehicles
       if (carrierId) {
         where.carrierId = carrierId;
       }
     } else {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     // Status filter
     if (status) {
-      where.isAvailable = status === 'AVAILABLE';
+      where.isAvailable = status === "AVAILABLE";
     }
 
     // Truck type filter
@@ -113,7 +131,7 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: {
-        updatedAt: 'desc',
+        updatedAt: "desc",
       },
       take: 500, // Limit for performance
     });
@@ -123,7 +141,9 @@ export async function GET(request: NextRequest) {
     // Transform database records to VehicleMapData using shared type contract
     const vehicles: VehicleMapData[] = trucks.map((truck) => {
       // Determine if truck has GPS location data
-      const hasLocation = !!(truck.currentLocationLat && truck.currentLocationLon);
+      const hasLocation = !!(
+        truck.currentLocationLat && truck.currentLocationLon
+      );
 
       // Determine if GPS data is recent (within threshold)
       let isRecent = false;
@@ -134,8 +154,14 @@ export async function GET(request: NextRequest) {
       }
 
       // Use helper functions from shared types
-      const gpsStatus: GpsDisplayStatus = mapGpsStatus(truck.gpsStatus, hasLocation, isRecent);
-      const truckStatus: TruckAvailabilityStatus = mapTruckStatus(truck.isAvailable);
+      const gpsStatus: GpsDisplayStatus = mapGpsStatus(
+        truck.gpsStatus,
+        hasLocation,
+        isRecent
+      );
+      const truckStatus: TruckAvailabilityStatus = mapTruckStatus(
+        truck.isAvailable
+      );
 
       // Build VehicleMapData object matching the type contract exactly
       const vehicleData: VehicleMapData = {
@@ -154,8 +180,8 @@ export async function GET(request: NextRequest) {
             }
           : null,
         carrier: {
-          id: truck.carrier?.id ?? '',
-          name: truck.carrier?.name ?? 'Unknown',
+          id: truck.carrier?.id ?? "",
+          name: truck.carrier?.name ?? "Unknown",
         },
       };
 
@@ -165,11 +191,11 @@ export async function GET(request: NextRequest) {
     // Calculate stats matching VehicleMapStats type contract exactly
     const stats: VehicleMapStats = {
       total: vehicles.length,
-      active: vehicles.filter((v) => v.gpsStatus === 'ACTIVE').length,
-      offline: vehicles.filter((v) => v.gpsStatus === 'OFFLINE').length,
-      noDevice: vehicles.filter((v) => v.gpsStatus === 'NO_DEVICE').length,
-      available: vehicles.filter((v) => v.status === 'AVAILABLE').length,
-      inTransit: vehicles.filter((v) => v.status === 'IN_TRANSIT').length,
+      active: vehicles.filter((v) => v.gpsStatus === "ACTIVE").length,
+      offline: vehicles.filter((v) => v.gpsStatus === "OFFLINE").length,
+      noDevice: vehicles.filter((v) => v.gpsStatus === "NO_DEVICE").length,
+      available: vehicles.filter((v) => v.status === "AVAILABLE").length,
+      inTransit: vehicles.filter((v) => v.status === "IN_TRANSIT").length,
     };
 
     // Build response matching VehicleMapResponse type contract exactly
@@ -181,9 +207,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('Map vehicles API error:', error);
+    console.error("Map vehicles API error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * DashboardSection Component
@@ -7,8 +7,8 @@
  * Sprint 20 - Dashboard Visual Redesign
  */
 
-import React from 'react';
-import Link from 'next/link';
+import React from "react";
+import Link from "next/link";
 
 interface DashboardSectionProps {
   title: string;
@@ -27,33 +27,33 @@ export default function DashboardSection({
   subtitle,
   action,
   children,
-  className = '',
+  className = "",
   noPadding = false,
 }: DashboardSectionProps) {
   return (
     <div
-      className={`rounded-xl border overflow-hidden ${className}`}
+      className={`overflow-hidden rounded-xl border ${className}`}
       style={{
-        background: 'var(--card)',
-        borderColor: 'var(--border)',
+        background: "var(--card)",
+        borderColor: "var(--border)",
       }}
     >
       {/* Header */}
       <div
-        className="px-6 py-4 flex items-center justify-between"
-        style={{ borderBottom: '1px solid var(--border)' }}
+        className="flex items-center justify-between px-6 py-4"
+        style={{ borderBottom: "1px solid var(--border)" }}
       >
         <div>
           <h3
             className="text-base font-semibold"
-            style={{ color: 'var(--foreground)' }}
+            style={{ color: "var(--foreground)" }}
           >
             {title}
           </h3>
           {subtitle && (
             <p
-              className="text-sm mt-0.5"
-              style={{ color: 'var(--foreground-muted)' }}
+              className="mt-0.5 text-sm"
+              style={{ color: "var(--foreground-muted)" }}
             >
               {subtitle}
             </p>
@@ -63,7 +63,7 @@ export default function DashboardSection({
           <Link
             href={action.href}
             className="text-sm font-medium transition-colors hover:opacity-80"
-            style={{ color: 'var(--primary-500)' }}
+            style={{ color: "var(--primary-500)" }}
           >
             {action.label}
           </Link>
@@ -71,9 +71,7 @@ export default function DashboardSection({
       </div>
 
       {/* Content */}
-      <div className={noPadding ? '' : 'p-6'}>
-        {children}
-      </div>
+      <div className={noPadding ? "" : "p-6"}>{children}</div>
     </div>
   );
 }

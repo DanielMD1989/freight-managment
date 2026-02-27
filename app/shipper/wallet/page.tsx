@@ -7,41 +7,41 @@
  * - Transaction history with filtering
  */
 
-import { cookies } from 'next/headers';
-import { verifyToken } from '@/lib/auth';
-import { redirect } from 'next/navigation';
-import { db } from '@/lib/db';
-import ShipperWalletClient from './ShipperWalletClient';
+import { cookies } from "next/headers";
+import { verifyToken } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
+import ShipperWalletClient from "./ShipperWalletClient";
 
 export const metadata = {
-  title: 'Wallet | Shipper',
-  description: 'Manage your wallet balance and view transactions',
+  title: "Wallet | Shipper",
+  description: "Manage your wallet balance and view transactions",
 };
 
 export default async function WalletPage() {
   // Verify authentication
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get('session');
+  const sessionCookie = cookieStore.get("session");
 
   if (!sessionCookie) {
-    redirect('/login?redirect=/shipper/wallet');
+    redirect("/login?redirect=/shipper/wallet");
   }
 
   const session = await verifyToken(sessionCookie.value);
 
-  if (!session || (session.role !== 'SHIPPER' && session.role !== 'ADMIN')) {
-    redirect('/unauthorized');
+  if (!session || (session.role !== "SHIPPER" && session.role !== "ADMIN")) {
+    redirect("/unauthorized");
   }
 
   if (!session.organizationId) {
-    redirect('/shipper?error=no-organization');
+    redirect("/shipper?error=no-organization");
   }
 
   // Fetch wallet account
   const walletAccount = await db.financialAccount.findFirst({
     where: {
       organizationId: session.organizationId,
-      accountType: 'SHIPPER_WALLET',
+      accountType: "SHIPPER_WALLET",
     },
     select: {
       id: true,
@@ -55,8 +55,8 @@ export default async function WalletPage() {
   const pendingTrips = await db.load.aggregate({
     where: {
       shipperId: session.organizationId,
-      status: { in: ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT'] },
-      serviceFeeStatus: 'RESERVED',
+      status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+      serviceFeeStatus: "RESERVED",
     },
     _sum: {
       serviceFeeEtb: true,
@@ -71,11 +71,11 @@ export default async function WalletPage() {
       where: {
         account: {
           organizationId: session.organizationId,
-          accountType: 'SHIPPER_WALLET',
+          accountType: "SHIPPER_WALLET",
         },
         isDebit: false, // Credits to wallet = deposits
         journalEntry: {
-          transactionType: 'DEPOSIT',
+          transactionType: "DEPOSIT",
         },
       },
       _sum: {
@@ -88,11 +88,13 @@ export default async function WalletPage() {
       where: {
         account: {
           organizationId: session.organizationId,
-          accountType: 'SHIPPER_WALLET',
+          accountType: "SHIPPER_WALLET",
         },
         isDebit: true, // Debits from wallet = payments
         journalEntry: {
-          transactionType: { in: ['SERVICE_FEE_RESERVE', 'SERVICE_FEE_DEDUCT'] },
+          transactionType: {
+            in: ["SERVICE_FEE_RESERVE", "SERVICE_FEE_DEDUCT"],
+          },
         },
       },
       _sum: {
@@ -106,7 +108,7 @@ export default async function WalletPage() {
     where: {
       account: {
         organizationId: session.organizationId,
-        accountType: 'SHIPPER_WALLET',
+        accountType: "SHIPPER_WALLET",
       },
     },
     include: {
@@ -128,7 +130,7 @@ export default async function WalletPage() {
       },
     },
     orderBy: {
-      createdAt: 'desc',
+      createdAt: "desc",
     },
     take: 50, // Get last 50 transactions for client-side filtering
   });
@@ -150,8 +152,10 @@ export default async function WalletPage() {
 
   const walletData = {
     balance: Number(walletAccount?.balance || 0),
-    currency: walletAccount?.currency || 'ETB',
-    availableBalance: Number(walletAccount?.balance || 0) - Number(pendingTrips._sum.serviceFeeEtb || 0),
+    currency: walletAccount?.currency || "ETB",
+    availableBalance:
+      Number(walletAccount?.balance || 0) -
+      Number(pendingTrips._sum.serviceFeeEtb || 0),
     pendingAmount: Number(pendingTrips._sum.serviceFeeEtb || 0),
     pendingTripsCount: pendingTrips._count,
     totalDeposited: Number(totalDeposits._sum.amount || 0),

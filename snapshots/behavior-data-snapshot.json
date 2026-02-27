@@ -67,8 +67,8 @@
       },
       "destination": {
         "city": "Debre Berhan",
-        "lat": 9.6800,
-        "lon": 39.5300
+        "lat": 9.68,
+        "lon": 39.53
       },
       "calculatedValues": {
         "distanceKm_libGeo": 112.68426135281778,

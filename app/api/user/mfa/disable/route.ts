@@ -13,11 +13,11 @@
  * - Security event logged
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth, verifyPassword, revokeAllSessions } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { requireCSRF } from '@/lib/csrf';
-import { logSecurityEvent, SecurityEventType } from '@/lib/security-events';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth, verifyPassword, revokeAllSessions } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { requireCSRF } from "@/lib/csrf";
+import { logSecurityEvent, SecurityEventType } from "@/lib/security-events";
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,15 +26,17 @@ export async function POST(request: NextRequest) {
     if (csrfError) return csrfError;
 
     const session = await requireAuth();
-    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip');
-    const userAgent = request.headers.get('user-agent');
+    const ipAddress =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip");
+    const userAgent = request.headers.get("user-agent");
 
     const body = await request.json();
     const { password } = body;
 
     if (!password) {
       return NextResponse.json(
-        { error: 'Password is required to disable MFA' },
+        { error: "Password is required to disable MFA" },
         { status: 400 }
       );
     }
@@ -46,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     if (!mfa?.enabled) {
       return NextResponse.json(
-        { error: 'MFA is not enabled' },
+        { error: "MFA is not enabled" },
         { status: 400 }
       );
     }
@@ -58,10 +60,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user?.passwordHash) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const isValidPassword = await verifyPassword(password, user.passwordHash);
@@ -74,11 +73,11 @@ export async function POST(request: NextRequest) {
         ipAddress,
         userAgent,
         success: false,
-        metadata: { reason: 'Invalid password' },
+        metadata: { reason: "Invalid password" },
       });
 
       return NextResponse.json(
-        { error: 'Incorrect password' },
+        { error: "Incorrect password" },
         { status: 400 }
       );
     }
@@ -95,7 +94,10 @@ export async function POST(request: NextRequest) {
     });
 
     // Revoke all sessions except current (security measure)
-    const revokedCount = await revokeAllSessions(session.userId, session.sessionId);
+    const revokedCount = await revokeAllSessions(
+      session.userId,
+      session.sessionId
+    );
 
     // Log successful MFA disable
     await logSecurityEvent({
@@ -109,18 +111,18 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Two-factor authentication has been disabled',
+      message: "Two-factor authentication has been disabled",
       revokedSessions: revokedCount,
     });
   } catch (error) {
-    console.error('MFA disable error:', error);
+    console.error("MFA disable error:", error);
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     return NextResponse.json(
-      { error: 'Failed to disable MFA' },
+      { error: "Failed to disable MFA" },
       { status: 500 }
     );
   }

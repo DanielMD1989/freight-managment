@@ -7,9 +7,13 @@
  * Triggers return-load notifications at 80% progress or destination geofence entry.
  */
 
-import { db } from '@/lib/db';
-import { calculateDistance, getLoadLivePosition, isWithinGeofence } from './gpsTracking';
-import { Decimal } from 'decimal.js';
+import { db } from "@/lib/db";
+import {
+  calculateDistance,
+  getLoadLivePosition,
+  isWithinGeofence,
+} from "./gpsTracking";
+import { Decimal } from "decimal.js";
 
 export interface TripProgressInfo {
   progressPercent: number;
@@ -39,7 +43,9 @@ export interface TripProgressUpdate {
  * @param loadId - Load ID
  * @returns Trip progress information
  */
-export async function calculateTripProgress(loadId: string): Promise<TripProgressInfo | null> {
+export async function calculateTripProgress(
+  loadId: string
+): Promise<TripProgressInfo | null> {
   const load = await db.load.findUnique({
     where: { id: loadId },
     select: {
@@ -119,7 +125,12 @@ export async function calculateTripProgress(loadId: string): Promise<TripProgres
   }
 
   // Check if we have origin and destination coordinates
-  if (!load.originLat || !load.originLon || !load.destinationLat || !load.destinationLon) {
+  if (
+    !load.originLat ||
+    !load.originLon ||
+    !load.destinationLat ||
+    !load.destinationLon
+  ) {
     return {
       progressPercent: load.tripProgressPercent || 0,
       remainingKm: totalDistanceKm,
@@ -175,7 +186,11 @@ export async function calculateTripProgress(loadId: string): Promise<TripProgres
 
   // Estimate arrival time based on current speed
   let estimatedArrival: Date | null = null;
-  if (currentPosition.speed && currentPosition.speed > 0 && distanceToDestKm > 0) {
+  if (
+    currentPosition.speed &&
+    currentPosition.speed > 0 &&
+    distanceToDestKm > 0
+  ) {
     const hoursRemaining = distanceToDestKm / currentPosition.speed;
     estimatedArrival = new Date(Date.now() + hoursRemaining * 60 * 60 * 1000);
   }
@@ -200,7 +215,9 @@ export async function calculateTripProgress(loadId: string): Promise<TripProgres
  * @param loadId - Load ID
  * @returns Progress update result
  */
-export async function updateTripProgress(loadId: string): Promise<TripProgressUpdate | null> {
+export async function updateTripProgress(
+  loadId: string
+): Promise<TripProgressUpdate | null> {
   const load = await db.load.findUnique({
     where: { id: loadId },
     select: {
@@ -217,7 +234,7 @@ export async function updateTripProgress(loadId: string): Promise<TripProgressUp
   }
 
   // Only update progress for IN_TRANSIT loads with tracking enabled
-  if (load.status !== 'IN_TRANSIT' || !load.trackingEnabled) {
+  if (load.status !== "IN_TRANSIT" || !load.trackingEnabled) {
     return null;
   }
 
@@ -246,9 +263,10 @@ export async function updateTripProgress(loadId: string): Promise<TripProgressUp
       remainingDistanceKm: new Decimal(progress.remainingKm),
       lastProgressUpdateAt: new Date(),
       enteredDestGeofence: progress.enteredDestGeofence,
-      enteredDestGeofenceAt: progress.enteredDestGeofence && !previousGeofence
-        ? new Date()
-        : undefined,
+      enteredDestGeofenceAt:
+        progress.enteredDestGeofence && !previousGeofence
+          ? new Date()
+          : undefined,
     },
   });
 
@@ -268,11 +286,13 @@ export async function updateTripProgress(loadId: string): Promise<TripProgressUp
  *
  * @returns Array of updates with return-load triggers
  */
-export async function updateAllActiveLoadProgress(): Promise<TripProgressUpdate[]> {
+export async function updateAllActiveLoadProgress(): Promise<
+  TripProgressUpdate[]
+> {
   // Get all IN_TRANSIT loads with tracking enabled
   const activeLoads = await db.load.findMany({
     where: {
-      status: 'IN_TRANSIT',
+      status: "IN_TRANSIT",
       trackingEnabled: true,
     },
     select: {
@@ -318,7 +338,9 @@ export function getLoadsNeedingReturnLoadNotification(
  * @param loadId - Load ID
  * @returns true if should trigger notification
  */
-export async function shouldTriggerReturnLoadNotification(loadId: string): Promise<boolean> {
+export async function shouldTriggerReturnLoadNotification(
+  loadId: string
+): Promise<boolean> {
   const progress = await calculateTripProgress(loadId);
 
   if (!progress) {

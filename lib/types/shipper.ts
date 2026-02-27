@@ -26,7 +26,7 @@ export interface Load {
   truckType: string;
   weight: number;
   lengthM?: number | null;
-  fullPartial?: 'FULL' | 'PARTIAL';
+  fullPartial?: "FULL" | "PARTIAL";
   cargoDescription?: string | null;
   specialInstructions?: string | null;
   rate?: number | null;
@@ -45,19 +45,19 @@ export interface Load {
 }
 
 export type LoadStatus =
-  | 'DRAFT'
-  | 'UNPOSTED'
-  | 'POSTED'
-  | 'SEARCHING'
-  | 'OFFERED'
-  | 'ASSIGNED'
-  | 'PICKUP_PENDING'
-  | 'IN_TRANSIT'
-  | 'DELIVERED'
-  | 'COMPLETED'
-  | 'CANCELLED'
-  | 'EXPIRED'
-  | 'EXCEPTION';
+  | "DRAFT"
+  | "UNPOSTED"
+  | "POSTED"
+  | "SEARCHING"
+  | "OFFERED"
+  | "ASSIGNED"
+  | "PICKUP_PENDING"
+  | "IN_TRANSIT"
+  | "DELIVERED"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "EXPIRED"
+  | "EXCEPTION";
 
 export interface AssignedTruck {
   id: string;
@@ -90,7 +90,7 @@ export interface Truck {
 export interface TruckPosting {
   id: string;
   truckId: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'EXPIRED';
+  status: "ACTIVE" | "INACTIVE" | "EXPIRED";
   originCityId?: string | null;
   destinationCityId?: string | null;
   currentCity?: string | null;
@@ -113,7 +113,7 @@ export interface TruckPosting {
 export interface Organization {
   id: string;
   name: string;
-  type: 'SHIPPER' | 'CARRIER' | 'BOTH';
+  type: "SHIPPER" | "CARRIER" | "BOTH";
   isVerified?: boolean;
   phone?: string | null;
   email?: string | null;
@@ -178,7 +178,7 @@ export interface MatchProposal {
   truckId: string;
   carrierId: string;
   proposedById: string;
-  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'CANCELLED';
+  status: "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED" | "CANCELLED";
   notes?: string | null;
   proposedRate?: number | null;
   expiresAt: string;
@@ -196,7 +196,7 @@ export interface MatchProposal {
 
 export interface LoadRequest {
   id: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED' | 'CANCELLED';
+  status: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED" | "CANCELLED";
   notes: string | null;
   proposedRate: number | null;
   expiresAt: string;
@@ -215,7 +215,7 @@ export interface LoadRequest {
 
 export interface TruckRequest {
   id: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED' | 'CANCELLED';
+  status: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED" | "CANCELLED";
   notes: string | null;
   offeredRate: number | null;
   expiresAt: string;
@@ -263,12 +263,12 @@ export interface Trip {
 }
 
 export type TripStatus =
-  | 'ASSIGNED'
-  | 'PICKUP_PENDING'
-  | 'IN_TRANSIT'
-  | 'DELIVERED'
-  | 'COMPLETED'
-  | 'CANCELLED';
+  | "ASSIGNED"
+  | "PICKUP_PENDING"
+  | "IN_TRANSIT"
+  | "DELIVERED"
+  | "COMPLETED"
+  | "CANCELLED";
 
 // =============================================================================
 // User Types
@@ -282,16 +282,16 @@ export interface User {
   name?: string;
   phone?: string | null;
   role: UserRole;
-  status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
   organizationId?: string | null;
 }
 
 export type UserRole =
-  | 'SHIPPER'
-  | 'CARRIER'
-  | 'DISPATCHER'
-  | 'ADMIN'
-  | 'SUPER_ADMIN';
+  | "SHIPPER"
+  | "CARRIER"
+  | "DISPATCHER"
+  | "ADMIN"
+  | "SUPER_ADMIN";
 
 // =============================================================================
 // Wallet Types
@@ -299,7 +299,7 @@ export type UserRole =
 
 export interface WalletTransaction {
   id: string;
-  type: 'CREDIT' | 'DEBIT' | 'REFUND' | 'FEE' | 'SETTLEMENT';
+  type: "CREDIT" | "DEBIT" | "REFUND" | "FEE" | "SETTLEMENT";
   amount: number;
   balance: number;
   description: string;
@@ -351,8 +351,8 @@ export interface Escalation {
   id: string;
   loadId: string;
   escalationType: string;
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+  priority: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
   description: string;
   assignedTo?: string | null;
   resolvedAt?: string | null;
@@ -392,7 +392,7 @@ export interface LoadStatusCounts {
 export interface SavedSearch {
   id: string;
   name: string;
-  type: 'LOADS' | 'TRUCKS';
+  type: "LOADS" | "TRUCKS";
   criteria: Record<string, unknown>;
   userId: string;
   createdAt: string;
@@ -453,7 +453,7 @@ export interface LoadFormData {
   deliveryCity: string;
   pickupDockHours?: string;
   truckType: string;
-  fullPartial: 'FULL' | 'PARTIAL';
+  fullPartial: "FULL" | "PARTIAL";
   lengthM?: string;
   weight: string;
   shipperContactPhone?: string;

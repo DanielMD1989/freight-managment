@@ -49,8 +49,8 @@ export interface Load {
   weight?: number;
   tripKm?: number;
   estimatedTripKm?: number;
-  fullPartial?: 'FULL' | 'PARTIAL';
-  bookMode?: 'REQUEST' | 'INSTANT';
+  fullPartial?: "FULL" | "PARTIAL";
+  bookMode?: "REQUEST" | "INSTANT";
   cargoDescription?: string;
   rate?: number;
   shipper?: {
@@ -108,7 +108,7 @@ export interface Truck {
 export interface TruckPosting {
   id: string;
   truckId: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'EXPIRED' | 'POSTED' | 'UNPOSTED';
+  status: "ACTIVE" | "INACTIVE" | "EXPIRED" | "POSTED" | "UNPOSTED";
   originCity?: EthiopianCity;
   destinationCity?: EthiopianCity;
   originCityId?: string;
@@ -121,7 +121,7 @@ export interface TruckPosting {
   keepPosted?: boolean;
   truck: Truck;
   truckType?: string;
-  fullPartial?: 'FULL' | 'PARTIAL';
+  fullPartial?: "FULL" | "PARTIAL";
   ownerName?: string;
   contactPhone?: string;
   availableLength?: number;
@@ -147,7 +147,7 @@ export interface TruckWithPosting extends TruckPosting {
 
 export interface LoadFilterValues {
   truckType: string;
-  truckTypeMode: 'ANY' | 'EXACT' | 'ONLY';
+  truckTypeMode: "ANY" | "EXACT" | "ONLY";
   origin: string;
   destination: string;
   availDate: string;

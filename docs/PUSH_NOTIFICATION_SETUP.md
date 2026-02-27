@@ -74,11 +74,13 @@ APNS_BUNDLE_ID=com.yourcompany.freight
 #### Android (Flutter)
 
 In `mobile/android/app/build.gradle`:
+
 ```gradle
 apply plugin: 'com.google.gms.google-services'
 ```
 
 In `mobile/android/build.gradle`:
+
 ```gradle
 dependencies {
     classpath 'com.google.gms:google-services:4.4.0'
@@ -88,6 +90,7 @@ dependencies {
 #### iOS (Flutter)
 
 In `mobile/ios/Runner/Info.plist`:
+
 ```xml
 <key>UIBackgroundModes</key>
 <array>
@@ -148,37 +151,37 @@ curl -X POST https://your-domain.com/api/test/push \
 
 ### FCM Issues
 
-| Issue | Solution |
-|-------|----------|
+| Issue                                         | Solution                                               |
+| --------------------------------------------- | ------------------------------------------------------ |
 | `messaging/registration-token-not-registered` | Token expired or app uninstalled, remove from database |
-| `messaging/invalid-registration-token` | Token format invalid, verify token format |
-| `messaging/authentication-error` | Check FIREBASE_PRIVATE_KEY format |
+| `messaging/invalid-registration-token`        | Token format invalid, verify token format              |
+| `messaging/authentication-error`              | Check FIREBASE_PRIVATE_KEY format                      |
 
 ### APNs Issues
 
-| Issue | Solution |
-|-------|----------|
-| `BadDeviceToken` | Token invalid or app reinstalled |
-| `Unregistered` | User disabled notifications |
-| `ExpiredProviderToken` | Key may be revoked, regenerate |
+| Issue                  | Solution                         |
+| ---------------------- | -------------------------------- |
+| `BadDeviceToken`       | Token invalid or app reinstalled |
+| `Unregistered`         | User disabled notifications      |
+| `ExpiredProviderToken` | Key may be revoked, regenerate   |
 
 ## Notification Types
 
 The platform supports these notification types:
 
-| Type | Trigger | Priority |
-|------|---------|----------|
-| `load_request` | New load request received | High |
-| `load_assigned` | Load assigned to carrier | High |
-| `load_status_change` | Load status updated | Normal |
-| `trip_started` | Trip begins | High |
-| `trip_completed` | Trip delivered | High |
-| `payment_received` | Payment completed | High |
-| `bid_received` | New bid on load | High |
-| `bid_accepted` | Bid was accepted | High |
-| `document_required` | Document upload needed | Normal |
-| `chat_message` | New chat message | High |
-| `system_alert` | System notification | High |
+| Type                 | Trigger                   | Priority |
+| -------------------- | ------------------------- | -------- |
+| `load_request`       | New load request received | High     |
+| `load_assigned`      | Load assigned to carrier  | High     |
+| `load_status_change` | Load status updated       | Normal   |
+| `trip_started`       | Trip begins               | High     |
+| `trip_completed`     | Trip delivered            | High     |
+| `payment_received`   | Payment completed         | High     |
+| `bid_received`       | New bid on load           | High     |
+| `bid_accepted`       | Bid was accepted          | High     |
+| `document_required`  | Document upload needed    | Normal   |
+| `chat_message`       | New chat message          | High     |
+| `system_alert`       | System notification       | High     |
 
 ## Production Checklist
 

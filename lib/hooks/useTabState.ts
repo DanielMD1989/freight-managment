@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Tab State Persistence Hook
@@ -29,8 +29,8 @@
  * URL will update to: /page?tab=overview or /page?tab=details
  */
 
-import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { useCallback, useMemo } from 'react';
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useCallback, useMemo } from "react";
 
 /**
  * Custom hook for persisting tab state in URL query parameters
@@ -42,7 +42,7 @@ import { useCallback, useMemo } from 'react';
  */
 export function useTabState(
   defaultTab: string,
-  paramName: string = 'tab',
+  paramName: string = "tab",
   options: {
     /** Use replace instead of push for history */
     replace?: boolean;
@@ -84,7 +84,15 @@ export function useTabState(
         router.push(newUrl, { scroll: false });
       }
     },
-    [searchParams, router, pathname, paramName, defaultTab, replace, preserveParams]
+    [
+      searchParams,
+      router,
+      pathname,
+      paramName,
+      defaultTab,
+      replace,
+      preserveParams,
+    ]
   );
 
   return [currentTab, setTab] as const;
@@ -103,7 +111,9 @@ export function useTabState(
  * // Access: tabs.main.current, tabs.main.set('details')
  * ```
  */
-export function useMultiTabState<T extends Record<string, { default: string; param?: string }>>(
+export function useMultiTabState<
+  T extends Record<string, { default: string; param?: string }>,
+>(
   config: T
 ): {
   [K in keyof T]: {

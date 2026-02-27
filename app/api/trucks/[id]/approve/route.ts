@@ -9,22 +9,22 @@
  * POST: Approve or reject a truck
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { z } from 'zod';
-import { requireAuth } from '@/lib/auth';
-import { hasPermission, Permission } from '@/lib/rbac/permissions';
-import { createNotification } from '@/lib/notifications';
-import { UserRole } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { z } from "zod";
+import { requireAuth } from "@/lib/auth";
+import { hasPermission, Permission } from "@/lib/rbac/permissions";
+import { createNotification } from "@/lib/notifications";
+import { UserRole } from "@prisma/client";
 // P1-001-B FIX: Import CacheInvalidation for approval status changes
-import { CacheInvalidation } from '@/lib/cache';
-import { sendEmail, createEmailHTML } from '@/lib/email';
+import { CacheInvalidation } from "@/lib/cache";
+import { sendEmail, createEmailHTML } from "@/lib/email";
 // CSRF FIX: Add CSRF validation
-import { validateCSRFWithMobile } from '@/lib/csrf';
+import { validateCSRFWithMobile } from "@/lib/csrf";
 
 // Validation schema for truck approval
 const TruckApprovalSchema = z.object({
-  action: z.enum(['APPROVE', 'REJECT']),
+  action: z.enum(["APPROVE", "REJECT"]),
   reason: z.string().max(500).optional(),
 });
 
@@ -56,7 +56,7 @@ export async function POST(
     // Check admin permission
     if (!hasPermission(session.role as UserRole, Permission.VERIFY_DOCUMENTS)) {
       return NextResponse.json(
-        { error: 'Only admins can approve trucks' },
+        { error: "Only admins can approve trucks" },
         { status: 403 }
       );
     }
@@ -76,10 +76,7 @@ export async function POST(
     });
 
     if (!truck) {
-      return NextResponse.json(
-        { error: 'Truck not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
     // Validate request body
@@ -88,26 +85,26 @@ export async function POST(
 
     if (!validationResult.success) {
       // FIX: Use zodErrorResponse to avoid schema leak
-      const { zodErrorResponse } = await import('@/lib/validation');
+      const { zodErrorResponse } = await import("@/lib/validation");
       return zodErrorResponse(validationResult.error);
     }
 
     const data = validationResult.data;
 
     // Require reason for rejection
-    if (data.action === 'REJECT' && !data.reason) {
+    if (data.action === "REJECT" && !data.reason) {
       return NextResponse.json(
-        { error: 'Rejection reason is required' },
+        { error: "Rejection reason is required" },
         { status: 400 }
       );
     }
 
-    if (data.action === 'APPROVE') {
+    if (data.action === "APPROVE") {
       // Approve the truck
       const updatedTruck = await db.truck.update({
         where: { id: truckId },
         data: {
-          approvalStatus: 'APPROVED',
+          approvalStatus: "APPROVED",
           approvedAt: new Date(),
           approvedById: session.userId,
           rejectionReason: null,
@@ -126,7 +123,7 @@ export async function POST(
       const carrierUsers = await db.user.findMany({
         where: {
           organizationId: truck.carrierId,
-          status: 'ACTIVE',
+          status: "ACTIVE",
         },
         select: { id: true },
       });
@@ -135,8 +132,8 @@ export async function POST(
       for (const user of carrierUsers) {
         await createNotification({
           userId: user.id,
-          type: 'TRUCK_APPROVED',
-          title: 'Truck Approved',
+          type: "TRUCK_APPROVED",
+          title: "Truck Approved",
           message: `Your truck ${truck.licensePlate} has been approved and is now available for posting.`,
           metadata: {
             truckId: truck.id,
@@ -152,7 +149,7 @@ export async function POST(
           <p>Dear ${truck.carrier.name},</p>
           <p>Your truck <strong>${truck.licensePlate}</strong> has been approved and is now available for posting on the marketplace.</p>
           <div class="status-badge status-approved">APPROVED</div>
-          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/carrier/loadboard" class="button">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/carrier/loadboard" class="button">
             Go to Loadboard
           </a>
         `;
@@ -161,22 +158,28 @@ export async function POST(
           subject: `Truck Approved: ${truck.licensePlate}`,
           html: createEmailHTML(approvalContent),
           text: `Your truck ${truck.licensePlate} has been approved and is now available for posting.`,
-        }).catch((err) => console.error('Failed to send truck approval email:', err));
+        }).catch((err) =>
+          console.error("Failed to send truck approval email:", err)
+        );
       }
 
       // P1-001-B FIX: Invalidate cache after truck approval to update listings
-      await CacheInvalidation.truck(updatedTruck.id, updatedTruck.carrierId, updatedTruck.carrierId);
+      await CacheInvalidation.truck(
+        updatedTruck.id,
+        updatedTruck.carrierId,
+        updatedTruck.carrierId
+      );
 
       return NextResponse.json({
         truck: updatedTruck,
-        message: 'Truck approved successfully',
+        message: "Truck approved successfully",
       });
     } else {
       // Reject the truck
       const updatedTruck = await db.truck.update({
         where: { id: truckId },
         data: {
-          approvalStatus: 'REJECTED',
+          approvalStatus: "REJECTED",
           rejectionReason: data.reason,
         },
         include: {
@@ -193,7 +196,7 @@ export async function POST(
       const carrierUsers = await db.user.findMany({
         where: {
           organizationId: truck.carrierId,
-          status: 'ACTIVE',
+          status: "ACTIVE",
         },
         select: { id: true },
       });
@@ -202,8 +205,8 @@ export async function POST(
       for (const user of carrierUsers) {
         await createNotification({
           userId: user.id,
-          type: 'TRUCK_REJECTED',
-          title: 'Truck Rejected',
+          type: "TRUCK_REJECTED",
+          title: "Truck Rejected",
           message: `Your truck ${truck.licensePlate} has been rejected. Reason: ${data.reason}`,
           metadata: {
             truckId: truck.id,
@@ -224,7 +227,7 @@ export async function POST(
             <p><strong>Reason:</strong> ${data.reason}</p>
           </div>
           <p>Please address the issues and resubmit your truck for approval.</p>
-          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/carrier/loadboard" class="button">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/carrier/loadboard" class="button">
             Go to Dashboard
           </a>
         `;
@@ -233,22 +236,28 @@ export async function POST(
           subject: `Truck Rejected: ${truck.licensePlate} - Action Required`,
           html: createEmailHTML(rejectionContent),
           text: `Your truck ${truck.licensePlate} has been rejected. Reason: ${data.reason}. Please resubmit.`,
-        }).catch((err) => console.error('Failed to send truck rejection email:', err));
+        }).catch((err) =>
+          console.error("Failed to send truck rejection email:", err)
+        );
       }
 
       // P1-001-B FIX: Invalidate cache after truck rejection to update listings
-      await CacheInvalidation.truck(updatedTruck.id, updatedTruck.carrierId, updatedTruck.carrierId);
+      await CacheInvalidation.truck(
+        updatedTruck.id,
+        updatedTruck.carrierId,
+        updatedTruck.carrierId
+      );
 
       return NextResponse.json({
         truck: updatedTruck,
-        message: 'Truck rejected',
+        message: "Truck rejected",
       });
     }
   } catch (error) {
-    console.error('Error approving/rejecting truck:', error);
+    console.error("Error approving/rejecting truck:", error);
 
     return NextResponse.json(
-      { error: 'Failed to process truck approval' },
+      { error: "Failed to process truck approval" },
       { status: 500 }
     );
   }

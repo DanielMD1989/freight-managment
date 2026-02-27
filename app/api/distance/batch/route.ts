@@ -19,17 +19,20 @@
  * MAP + GPS Implementation - Phase 3
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { z } from 'zod';
-import { calculateDistanceKm } from '@/lib/geo';
-import { zodErrorResponse } from '@/lib/validation';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import { z } from "zod";
+import { calculateDistanceKm } from "@/lib/geo";
+import { zodErrorResponse } from "@/lib/validation";
 
 // Cache TTL in milliseconds (24 hours)
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 
 // In-memory cache
-const distanceCache = new Map<string, { distance: number; duration: number; timestamp: number }>();
+const distanceCache = new Map<
+  string,
+  { distance: number; duration: number; timestamp: number }
+>();
 
 const coordinateSchema = z.object({
   lat: z.number().min(-90).max(90),
@@ -52,7 +55,12 @@ const haversineDistance = calculateDistanceKm;
 /**
  * Generate cache key
  */
-function getCacheKey(oLat: number, oLng: number, dLat: number, dLng: number): string {
+function getCacheKey(
+  oLat: number,
+  oLng: number,
+  dLat: number,
+  dLng: number
+): string {
   return `${oLat.toFixed(4)},${oLng.toFixed(4)}-${dLat.toFixed(4)},${dLng.toFixed(4)}`;
 }
 
@@ -60,13 +68,19 @@ function getCacheKey(oLat: number, oLng: number, dLat: number, dLng: number): st
  * Fetch distances from Google Distance Matrix API (batch)
  */
 async function getGoogleDistances(
-  pairs: Array<{ origin: { lat: number; lng: number }; destination: { lat: number; lng: number } }>
+  pairs: Array<{
+    origin: { lat: number; lng: number };
+    destination: { lat: number; lng: number };
+  }>
 ): Promise<Map<string, { distance: number; duration: number } | null>> {
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-  const results = new Map<string, { distance: number; duration: number } | null>();
+  const results = new Map<
+    string,
+    { distance: number; duration: number } | null
+  >();
 
   if (!apiKey) {
-    console.warn('GOOGLE_MAPS_API_KEY not configured');
+    console.warn("GOOGLE_MAPS_API_KEY not configured");
     return results;
   }
 
@@ -84,20 +98,24 @@ async function getGoogleDistances(
 
     // Make API calls for each origin group
     for (const [originKey, group] of originGroups) {
-      const destinations = group.map((p) => `${p.destination.lat},${p.destination.lng}`).join('|');
+      const destinations = group
+        .map((p) => `${p.destination.lat},${p.destination.lng}`)
+        .join("|");
 
-      const url = new URL('https://maps.googleapis.com/maps/api/distancematrix/json');
-      url.searchParams.set('origins', originKey);
-      url.searchParams.set('destinations', destinations);
-      url.searchParams.set('mode', 'driving');
-      url.searchParams.set('units', 'metric');
-      url.searchParams.set('key', apiKey);
+      const url = new URL(
+        "https://maps.googleapis.com/maps/api/distancematrix/json"
+      );
+      url.searchParams.set("origins", originKey);
+      url.searchParams.set("destinations", destinations);
+      url.searchParams.set("mode", "driving");
+      url.searchParams.set("units", "metric");
+      url.searchParams.set("key", apiKey);
 
       const response = await fetch(url.toString());
       const data = await response.json();
 
-      if (data.status !== 'OK') {
-        console.error('Google API error:', data.status, data.error_message);
+      if (data.status !== "OK") {
+        console.error("Google API error:", data.status, data.error_message);
         continue;
       }
 
@@ -112,7 +130,7 @@ async function getGoogleDistances(
           pair.destination.lng
         );
 
-        if (element?.status === 'OK') {
+        if (element?.status === "OK") {
           results.set(cacheKey, {
             distance: element.distance.value / 1000,
             duration: element.duration.value / 60,
@@ -125,7 +143,7 @@ async function getGoogleDistances(
 
     return results;
   } catch (error) {
-    console.error('Google batch distance error:', error);
+    console.error("Google batch distance error:", error);
     return results;
   }
 }
@@ -171,7 +189,7 @@ export async function POST(request: NextRequest) {
           destination: pair.destination,
           distance: Math.round(cached.distance * 100) / 100,
           duration: Math.round(cached.duration),
-          source: 'google',
+          source: "google",
           cached: true,
         });
       } else {
@@ -180,9 +198,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch uncached distances from Google
-    const googleResults = uncachedPairs.length > 0
-      ? await getGoogleDistances(uncachedPairs)
-      : new Map();
+    const googleResults =
+      uncachedPairs.length > 0
+        ? await getGoogleDistances(uncachedPairs)
+        : new Map();
 
     // Process uncached pairs
     const newResults: typeof cachedResults = [];
@@ -209,7 +228,7 @@ export async function POST(request: NextRequest) {
           destination: pair.destination,
           distance: Math.round(googleResult.distance * 100) / 100,
           duration: Math.round(googleResult.duration),
-          source: 'google',
+          source: "google",
           cached: false,
         });
       } else {
@@ -229,7 +248,7 @@ export async function POST(request: NextRequest) {
           destination: pair.destination,
           distance: Math.round(estimatedRoadDistance * 100) / 100,
           duration: Math.round(estimatedDuration),
-          source: 'estimate',
+          source: "estimate",
           cached: false,
         });
       }
@@ -240,10 +259,12 @@ export async function POST(request: NextRequest) {
 
     // Sort by original order if IDs were provided
     if (data.pairs.some((p) => p.id)) {
-      const orderMap = new Map(data.pairs.map((p, i) => [p.id || i.toString(), i]));
+      const orderMap = new Map(
+        data.pairs.map((p, i) => [p.id || i.toString(), i])
+      );
       allResults.sort((a, b) => {
-        const aOrder = orderMap.get(a.id || '') ?? 999;
-        const bOrder = orderMap.get(b.id || '') ?? 999;
+        const aOrder = orderMap.get(a.id || "") ?? 999;
+        const bOrder = orderMap.get(b.id || "") ?? 999;
         return aOrder - bOrder;
       });
     }
@@ -255,14 +276,14 @@ export async function POST(request: NextRequest) {
       calculated: newResults.length,
     });
   } catch (error) {
-    console.error('Batch distance error:', error);
+    console.error("Batch distance error:", error);
 
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

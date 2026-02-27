@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Google Places Autocomplete Component
@@ -7,8 +7,8 @@
  * Sprint 15 - Story 15.1: Google Places Autocomplete Integration
  */
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
+import React, { useEffect, useRef, useState } from "react";
+import { Loader } from "@googlemaps/js-api-loader";
 
 export interface PlaceResult {
   address: string;
@@ -38,11 +38,11 @@ interface PlacesAutocompleteProps {
 export default function PlacesAutocomplete({
   value,
   onChange,
-  placeholder = 'Search for a city or address...',
-  className = '',
+  placeholder = "Search for a city or address...",
+  className = "",
   disabled = false,
-  countryRestriction = ['ET', 'DJ'], // Ethiopia and Djibouti
-  types = ['(cities)'], // Default to cities only
+  countryRestriction = ["ET", "DJ"], // Ethiopia and Djibouti
+  types = ["(cities)"], // Default to cities only
   required = false,
   name,
 }: PlacesAutocompleteProps) {
@@ -55,8 +55,10 @@ export default function PlacesAutocomplete({
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-    if (!apiKey || apiKey === 'YOUR_GOOGLE_MAPS_API_KEY_HERE') {
-      setError('Google Maps API key not configured. Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your .env.local file.');
+    if (!apiKey || apiKey === "YOUR_GOOGLE_MAPS_API_KEY_HERE") {
+      setError(
+        "Google Maps API key not configured. Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your .env.local file."
+      );
       setIsLoading(false);
       return;
     }
@@ -64,8 +66,8 @@ export default function PlacesAutocomplete({
     // Load Google Maps JavaScript API
     const loader = new Loader({
       apiKey,
-      version: 'weekly',
-      libraries: ['places'],
+      version: "weekly",
+      libraries: ["places"],
     });
 
     loader
@@ -75,8 +77,10 @@ export default function PlacesAutocomplete({
         setIsLoading(false);
       })
       .catch((err) => {
-        console.error('Error loading Google Maps API:', err);
-        setError('Failed to load Google Maps API. Please check your internet connection.');
+        console.error("Error loading Google Maps API:", err);
+        setError(
+          "Failed to load Google Maps API. Please check your internet connection."
+        );
         setIsLoading(false);
       });
   }, []);
@@ -89,34 +93,46 @@ export default function PlacesAutocomplete({
     // Initialize Autocomplete
     const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
       types,
-      componentRestrictions: countryRestriction.length > 0 ? { country: countryRestriction } : undefined,
-      fields: ['address_components', 'geometry', 'formatted_address', 'place_id', 'name'],
+      componentRestrictions:
+        countryRestriction.length > 0
+          ? { country: countryRestriction }
+          : undefined,
+      fields: [
+        "address_components",
+        "geometry",
+        "formatted_address",
+        "place_id",
+        "name",
+      ],
     });
 
     autocompleteRef.current = autocomplete;
 
     // Handle place selection
-    const listener = autocomplete.addListener('place_changed', () => {
+    const listener = autocomplete.addListener("place_changed", () => {
       const place = autocomplete.getPlace();
 
       if (!place.geometry || !place.geometry.location) {
-        console.warn('No location details available for this place');
+        console.warn("No location details available for this place");
         return;
       }
 
       // Extract city and region from address components
-      let city = '';
-      let region = '';
-      let country = '';
+      let city = "";
+      let region = "";
+      let country = "";
 
       place.address_components?.forEach((component) => {
         const types = component.types;
 
-        if (types.includes('locality') || types.includes('administrative_area_level_2')) {
+        if (
+          types.includes("locality") ||
+          types.includes("administrative_area_level_2")
+        ) {
           city = component.long_name;
-        } else if (types.includes('administrative_area_level_1')) {
+        } else if (types.includes("administrative_area_level_1")) {
           region = component.long_name;
-        } else if (types.includes('country')) {
+        } else if (types.includes("country")) {
           country = component.long_name;
         }
       });
@@ -135,11 +151,11 @@ export default function PlacesAutocomplete({
           lat: place.geometry.location.lat(),
           lng: place.geometry.location.lng(),
         },
-        placeId: place.place_id || '',
-        formattedAddress: place.formatted_address || '',
+        placeId: place.place_id || "",
+        formattedAddress: place.formatted_address || "",
       };
 
-      onChange(city || place.formatted_address || '', placeResult);
+      onChange(city || place.formatted_address || "", placeResult);
     });
 
     return () => {
@@ -169,8 +185,8 @@ export default function PlacesAutocomplete({
           required={required}
           name={name}
         />
-        <p className="text-xs text-red-600 mt-1">{error}</p>
-        <p className="text-xs text-gray-500 mt-1">Using fallback text input</p>
+        <p className="mt-1 text-xs text-red-600">{error}</p>
+        <p className="mt-1 text-xs text-gray-500">Using fallback text input</p>
       </div>
     );
   }
@@ -189,8 +205,8 @@ export default function PlacesAutocomplete({
         name={name}
       />
       {isLoading && (
-        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+        <div className="absolute top-1/2 right-3 -translate-y-1/2 transform">
+          <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-blue-600"></div>
         </div>
       )}
     </div>

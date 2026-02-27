@@ -1,9 +1,9 @@
-import { db } from '../lib/db';
+import { db } from "../lib/db";
 
 async function main() {
   const users = await db.user.findMany({
-    where: { email: { contains: 'testfreightet' } },
-    select: { id: true, email: true, status: true, role: true }
+    where: { email: { contains: "testfreightet" } },
+    select: { id: true, email: true, status: true, role: true },
   });
   console.log(JSON.stringify(users, null, 2));
 }

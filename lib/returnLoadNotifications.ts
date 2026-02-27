@@ -13,8 +13,8 @@
  * - Completed trip history for ranking
  */
 
-import { db } from '@/lib/db';
-import { createNotification, NotificationType } from './notifications';
+import { db } from "@/lib/db";
+import { createNotification, NotificationType } from "./notifications";
 
 export interface ReturnLoadMatch {
   loadId: string;
@@ -57,7 +57,7 @@ export async function findReturnLoads(
   // Build where clause for POSTED loads in the destination region
   const loads = await db.load.findMany({
     where: {
-      status: 'POSTED',
+      status: "POSTED",
       OR: [
         { pickupCity: destinationRegion },
         { pickupLocation: { region: destinationRegion } },
@@ -81,9 +81,7 @@ export async function findReturnLoads(
         },
       },
     },
-    orderBy: [
-      { postedAt: 'desc' },
-    ],
+    orderBy: [{ postedAt: "desc" }],
     take: limit * 2, // Get more than needed for scoring/ranking
   });
 
@@ -97,7 +95,8 @@ export async function findReturnLoads(
     }
 
     // Bonus for recently posted
-    const hoursOld = (Date.now() - (load.postedAt?.getTime() || 0)) / (1000 * 60 * 60);
+    const hoursOld =
+      (Date.now() - (load.postedAt?.getTime() || 0)) / (1000 * 60 * 60);
     if (hoursOld < 24) {
       matchScore += 10;
     } else if (hoursOld < 48) {
@@ -128,10 +127,10 @@ export async function findReturnLoads(
 
     return {
       loadId: load.id,
-      pickupCity: load.pickupLocation?.name || load.pickupCity || '',
-      pickupRegion: load.pickupLocation?.region || '',
-      deliveryCity: load.deliveryLocation?.name || load.deliveryCity || '',
-      deliveryRegion: load.deliveryLocation?.region || '',
+      pickupCity: load.pickupLocation?.name || load.pickupCity || "",
+      pickupRegion: load.pickupLocation?.region || "",
+      deliveryCity: load.deliveryLocation?.name || load.deliveryCity || "",
+      deliveryRegion: load.deliveryLocation?.region || "",
       weight: Number(load.weight),
       truckType: load.truckType,
       distanceKm,
@@ -141,9 +140,7 @@ export async function findReturnLoads(
   });
 
   // Sort by match score and return top results
-  return matches
-    .sort((a, b) => b.matchScore - a.matchScore)
-    .slice(0, limit);
+  return matches.sort((a, b) => b.matchScore - a.matchScore).slice(0, limit);
 }
 
 /**
@@ -179,7 +176,7 @@ export async function notifyCarrierOfReturnLoads(
               name: true,
               users: {
                 where: {
-                  role: { in: ['CARRIER', 'DISPATCHER'] },
+                  role: { in: ["CARRIER", "DISPATCHER"] },
                 },
                 select: {
                   id: true,
@@ -198,22 +195,22 @@ export async function notifyCarrierOfReturnLoads(
   if (!load) {
     return {
       success: false,
-      carrierUserId: '',
+      carrierUserId: "",
       loadId,
-      destinationRegion: '',
+      destinationRegion: "",
       matchingLoads: 0,
-      error: 'Load not found',
+      error: "Load not found",
     };
   }
 
   if (!load.assignedTruck) {
     return {
       success: false,
-      carrierUserId: '',
+      carrierUserId: "",
       loadId,
-      destinationRegion: '',
+      destinationRegion: "",
       matchingLoads: 0,
-      error: 'No truck assigned to load',
+      error: "No truck assigned to load",
     };
   }
 
@@ -221,25 +218,26 @@ export async function notifyCarrierOfReturnLoads(
   if (!carrier || carrier.users.length === 0) {
     return {
       success: false,
-      carrierUserId: '',
+      carrierUserId: "",
       loadId,
-      destinationRegion: '',
+      destinationRegion: "",
       matchingLoads: 0,
-      error: 'No carrier user to notify',
+      error: "No carrier user to notify",
     };
   }
 
   const carrierUserId = carrier.users[0].id;
-  const destinationRegion = load.deliveryLocation?.region || load.deliveryCity || '';
+  const destinationRegion =
+    load.deliveryLocation?.region || load.deliveryCity || "";
 
   if (!destinationRegion) {
     return {
       success: false,
       carrierUserId,
       loadId,
-      destinationRegion: '',
+      destinationRegion: "",
       matchingLoads: 0,
-      error: 'No destination region available',
+      error: "No destination region available",
     };
   }
 
@@ -256,13 +254,13 @@ export async function notifyCarrierOfReturnLoads(
     const notification = await createNotification({
       userId: carrierUserId,
       type: NotificationType.RETURN_LOAD_AVAILABLE,
-      title: 'Return Load Check',
+      title: "Return Load Check",
       message: `No return loads currently available from ${destinationRegion}. Check back later or post your truck as available.`,
       metadata: {
         loadId,
         destinationRegion,
         matchingLoads: 0,
-        triggerReason: load.enteredDestGeofence ? 'geofence' : 'progress_80',
+        triggerReason: load.enteredDestGeofence ? "geofence" : "progress_80",
       },
     });
 
@@ -279,20 +277,23 @@ export async function notifyCarrierOfReturnLoads(
   // Create notification with matched loads
   const topLoads = returnLoads.slice(0, 3);
   const loadSummary = topLoads
-    .map((l) => `${l.pickupCity} → ${l.deliveryCity} (${l.distanceKm.toFixed(0)} km)`)
-    .join('\n• ');
+    .map(
+      (l) =>
+        `${l.pickupCity} → ${l.deliveryCity} (${l.distanceKm.toFixed(0)} km)`
+    )
+    .join("\n• ");
 
   const notification = await createNotification({
     userId: carrierUserId,
     type: NotificationType.RETURN_LOAD_MATCHED,
     title: `${returnLoads.length} Return Loads Available`,
-    message: `Return loads available from ${destinationRegion}:\n• ${loadSummary}${returnLoads.length > 3 ? `\n...and ${returnLoads.length - 3} more` : ''}`,
+    message: `Return loads available from ${destinationRegion}:\n• ${loadSummary}${returnLoads.length > 3 ? `\n...and ${returnLoads.length - 3} more` : ""}`,
     metadata: {
       loadId,
       destinationRegion,
       matchingLoads: returnLoads.length,
       topLoadIds: topLoads.map((l) => l.loadId),
-      triggerReason: load.enteredDestGeofence ? 'geofence' : 'progress_80',
+      triggerReason: load.enteredDestGeofence ? "geofence" : "progress_80",
     },
   });
 
@@ -317,29 +318,29 @@ export async function notifyCarrierOfReturnLoads(
  */
 export async function checkAndNotifyReturnLoads(
   loadId: string,
-  triggerReason: 'progress_80' | 'geofence' | 'manual'
+  triggerReason: "progress_80" | "geofence" | "manual"
 ): Promise<ReturnLoadNotificationResult> {
   // Check if we've already notified for this load
   const existingNotification = await db.notification.findFirst({
     where: {
-      type: { in: ['RETURN_LOAD_AVAILABLE', 'RETURN_LOAD_MATCHED'] },
+      type: { in: ["RETURN_LOAD_AVAILABLE", "RETURN_LOAD_MATCHED"] },
       metadata: {
-        path: ['loadId'],
+        path: ["loadId"],
         equals: loadId,
       },
     },
   });
 
-  if (existingNotification && triggerReason !== 'manual') {
+  if (existingNotification && triggerReason !== "manual") {
     // Already notified for this load
     return {
       success: true,
       carrierUserId: existingNotification.userId,
       loadId,
-      destinationRegion: '',
+      destinationRegion: "",
       matchingLoads: 0,
       notificationId: existingNotification.id,
-      error: 'Already notified',
+      error: "Already notified",
     };
   }
 

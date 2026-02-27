@@ -3,24 +3,24 @@
  * API endpoint for dispatcher-specific audit logs
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { canViewSystemDashboard } from '@/lib/dispatcherPermissions';
-import { UserRole, Prisma } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { canViewSystemDashboard } from "@/lib/dispatcherPermissions";
+import { UserRole, Prisma } from "@prisma/client";
 
 // Dispatcher-specific event types
 export const DISPATCHER_EVENT_TYPES: string[] = [
-  'ASSIGNED',
-  'UNASSIGNED',
-  'STATUS_CHANGED',
-  'ESCALATION_CREATED',
-  'ESCALATION_UPDATED',
-  'ESCALATION_RESOLVED',
-  'ESCALATION_DELETED',
-  'TRACKING_ENABLED',
-  'TRACKING_DISABLED',
-  'DISPATCHER_NOTE_ADDED',
+  "ASSIGNED",
+  "UNASSIGNED",
+  "STATUS_CHANGED",
+  "ESCALATION_CREATED",
+  "ESCALATION_UPDATED",
+  "ESCALATION_RESOLVED",
+  "ESCALATION_DELETED",
+  "TRACKING_ENABLED",
+  "TRACKING_DISABLED",
+  "DISPATCHER_NOTE_ADDED",
 ];
 
 // GET /api/audit-logs/dispatcher - Get dispatcher action audit logs
@@ -38,20 +38,20 @@ export async function GET(request: NextRequest) {
 
     if (!canView) {
       return NextResponse.json(
-        { error: 'You do not have permission to view dispatcher audit logs' },
+        { error: "You do not have permission to view dispatcher audit logs" },
         { status: 403 }
       );
     }
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
-    const eventType = searchParams.get('eventType');
-    const userId = searchParams.get('userId');
-    const loadId = searchParams.get('loadId');
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
-    const limit = parseInt(searchParams.get('limit') || '100', 10);
-    const offset = parseInt(searchParams.get('offset') || '0', 10);
+    const eventType = searchParams.get("eventType");
+    const userId = searchParams.get("userId");
+    const loadId = searchParams.get("loadId");
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+    const limit = parseInt(searchParams.get("limit") || "100", 10);
+    const offset = parseInt(searchParams.get("offset") || "0", 10);
 
     // Build where clause
     const where: Prisma.LoadEventWhereInput = {
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
       db.loadEvent.findMany({
         where,
         orderBy: {
-          createdAt: 'desc',
+          createdAt: "desc",
         },
         take: limit,
         skip: offset,
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
 
     // Get event type statistics
     const eventStats = await db.loadEvent.groupBy({
-      by: ['eventType'],
+      by: ["eventType"],
       where: {
         eventType: {
           in: DISPATCHER_EVENT_TYPES,
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
 
     // Get top dispatchers by activity
     const topDispatchers = await db.loadEvent.groupBy({
-      by: ['userId'],
+      by: ["userId"],
       where: {
         eventType: {
           in: DISPATCHER_EVENT_TYPES,
@@ -152,14 +152,16 @@ export async function GET(request: NextRequest) {
       _count: true,
       orderBy: {
         _count: {
-          userId: 'desc',
+          userId: "desc",
         },
       },
       take: 10,
     });
 
     // Get user details for top dispatchers
-    const userIds = topDispatchers.map((d) => d.userId).filter((id): id is string => id !== null);
+    const userIds = topDispatchers
+      .map((d) => d.userId)
+      .filter((id): id is string => id !== null);
     const users = await db.user.findMany({
       where: {
         id: {
@@ -183,7 +185,9 @@ export async function GET(request: NextRequest) {
         user: user
           ? {
               email: user.email,
-              name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
+              name:
+                `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+                user.email,
               role: user.role,
             }
           : null,
@@ -196,18 +200,20 @@ export async function GET(request: NextRequest) {
       limit,
       offset,
       stats: {
-        byEventType: eventStats.reduce((acc, s) => {
-          acc[s.eventType] = s._count;
-          return acc;
-        }, {} as Record<string, number>),
+        byEventType: eventStats.reduce(
+          (acc, s) => {
+            acc[s.eventType] = s._count;
+            return acc;
+          },
+          {} as Record<string, number>
+        ),
         topDispatchers: topDispatchersWithDetails,
       },
     });
-
   } catch (error) {
-    console.error('Dispatcher audit logs fetch error:', error);
+    console.error("Dispatcher audit logs fetch error:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch dispatcher audit logs' },
+      { error: "Failed to fetch dispatcher audit logs" },
       { status: 500 }
     );
   }

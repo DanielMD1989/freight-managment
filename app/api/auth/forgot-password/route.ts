@@ -13,13 +13,13 @@
  * - No email enumeration (same response for all cases)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import { db } from '@/lib/db';
-import { generateOTP, hashPassword } from '@/lib/auth';
-import { logSecurityEvent, SecurityEventType } from '@/lib/security-events';
-import { emailSchema } from '@/lib/validation';
-import { sendEmail, createEmailHTML } from '@/lib/email';
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { db } from "@/lib/db";
+import { generateOTP, hashPassword } from "@/lib/auth";
+import { logSecurityEvent, SecurityEventType } from "@/lib/security-events";
+import { emailSchema } from "@/lib/validation";
+import { sendEmail, createEmailHTML } from "@/lib/email";
 
 // Request body schema
 const forgotPasswordSchema = z.object({
@@ -42,8 +42,10 @@ export const MAX_OTP_ATTEMPTS = 5;
  */
 export async function POST(request: NextRequest) {
   try {
-    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip');
-    const userAgent = request.headers.get('user-agent');
+    const ipAddress =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip");
+    const userAgent = request.headers.get("user-agent");
 
     const body = await request.json();
 
@@ -51,7 +53,7 @@ export async function POST(request: NextRequest) {
     const validation = forgotPasswordSchema.safeParse(body);
     if (!validation.success) {
       // FIX: Use zodErrorResponse to avoid schema leak
-      const { zodErrorResponse } = await import('@/lib/validation');
+      const { zodErrorResponse } = await import("@/lib/validation");
       return zodErrorResponse(validation.error);
     }
 
@@ -60,7 +62,9 @@ export async function POST(request: NextRequest) {
 
     // Rate limiting FIRST (before user lookup to prevent timing attacks)
     const rateLimitWindowStart = new Date();
-    rateLimitWindowStart.setHours(rateLimitWindowStart.getHours() - RATE_LIMIT_WINDOW_HOURS);
+    rateLimitWindowStart.setHours(
+      rateLimitWindowStart.getHours() - RATE_LIMIT_WINDOW_HOURS
+    );
 
     const recentRequests = await db.passwordResetToken.count({
       where: {
@@ -71,7 +75,7 @@ export async function POST(request: NextRequest) {
 
     if (recentRequests >= RATE_LIMIT_MAX_REQUESTS) {
       return NextResponse.json(
-        { error: 'Too many password reset requests. Please try again later.' },
+        { error: "Too many password reset requests. Please try again later." },
         { status: 429 }
       );
     }
@@ -91,16 +95,17 @@ export async function POST(request: NextRequest) {
     // This prevents email enumeration attacks
     if (!user) {
       // Add artificial delay to match successful request timing
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       return NextResponse.json({
         success: true,
-        message: 'If an account exists with this email, you will receive a password reset code.',
+        message:
+          "If an account exists with this email, you will receive a password reset code.",
         expiresIn: OTP_EXPIRY_MINUTES * 60,
       });
     }
 
     // Check if user account is active
-    if (user.status === 'SUSPENDED' || user.status === 'REJECTED') {
+    if (user.status === "SUSPENDED" || user.status === "REJECTED") {
       // Log attempt but don't reveal account status
       await logSecurityEvent({
         userId: user.id,
@@ -108,12 +113,13 @@ export async function POST(request: NextRequest) {
         ipAddress,
         userAgent,
         success: false,
-        metadata: { reason: 'Account not active', status: user.status },
+        metadata: { reason: "Account not active", status: user.status },
       });
 
       return NextResponse.json({
         success: true,
-        message: 'If an account exists with this email, you will receive a password reset code.',
+        message:
+          "If an account exists with this email, you will receive a password reset code.",
         expiresIn: OTP_EXPIRY_MINUTES * 60,
       });
     }
@@ -159,7 +165,7 @@ export async function POST(request: NextRequest) {
 
     // Send email with OTP via configured email provider
     // SECURITY: OTP is ONLY delivered via email, never in API response
-    const recipientName = user.firstName || 'User';
+    const recipientName = user.firstName || "User";
     const otpEmailContent = `
       <h1>Password Reset Code</h1>
       <p>Dear ${recipientName},</p>
@@ -179,24 +185,25 @@ export async function POST(request: NextRequest) {
 
     await sendEmail({
       to: user.email,
-      subject: 'Password Reset Code - FreightET',
+      subject: "Password Reset Code - FreightET",
       html: createEmailHTML(otpEmailContent),
       text: `Your password reset code is: ${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes.\n\nIf you didn't request this, ignore this email.`,
     }).catch((err) => {
       // Log but don't fail the request — user should still get success response
-      console.error('Failed to send password reset email:', err);
+      console.error("Failed to send password reset email:", err);
     });
 
     return NextResponse.json({
       success: true,
-      message: 'If an account exists with this email, you will receive a password reset code.',
+      message:
+        "If an account exists with this email, you will receive a password reset code.",
       expiresIn: OTP_EXPIRY_MINUTES * 60, // seconds
     });
   } catch (error) {
-    console.error('Failed to process forgot password request:', error);
+    console.error("Failed to process forgot password request:", error);
 
     return NextResponse.json(
-      { error: 'Failed to process request' },
+      { error: "Failed to process request" },
       { status: 500 }
     );
   }

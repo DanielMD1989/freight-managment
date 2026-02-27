@@ -13,13 +13,13 @@
  * - Signal loss detection
  */
 
-import { db } from '@/lib/db';
-import { GpsPosition } from './gpsVerification';
-import crypto from 'crypto';
-import { calculateDistanceMeters } from '@/lib/geo';
+import { db } from "@/lib/db";
+import { GpsPosition } from "./gpsVerification";
+import crypto from "crypto";
+import { calculateDistanceMeters } from "@/lib/geo";
 
 // Re-export for backwards compatibility
-export { calculateDistanceMeters as calculateDistance } from '@/lib/geo';
+export { calculateDistanceMeters as calculateDistance } from "@/lib/geo";
 
 /**
  * Tracking status information
@@ -29,14 +29,17 @@ export interface TrackingStatus {
   trackingUrl: string | null;
   startedAt: Date | null;
   currentPosition: GpsPosition | null;
-  signalStatus: 'active' | 'weak' | 'lost';
+  signalStatus: "active" | "weak" | "lost";
   lastUpdate: Date | null;
 }
 
 /**
  * Geofence event types
  */
-export type GeofenceEvent = 'ARRIVED_AT_PICKUP' | 'ARRIVED_AT_DESTINATION' | 'SIGNAL_LOST';
+export type GeofenceEvent =
+  | "ARRIVED_AT_PICKUP"
+  | "ARRIVED_AT_DESTINATION"
+  | "SIGNAL_LOST";
 
 /**
  * Geofence alert
@@ -61,7 +64,7 @@ export interface GeofenceAlert {
  */
 export function generateTrackingUrl(loadId: string): string {
   // Generate cryptographically secure random token
-  const token = crypto.randomBytes(16).toString('hex');
+  const token = crypto.randomBytes(16).toString("hex");
 
   // Create tracking URL
   return `/tracking/${token}`;
@@ -92,15 +95,15 @@ export async function enableTrackingForLoad(
   });
 
   if (!truck) {
-    throw new Error('Truck not found');
+    throw new Error("Truck not found");
   }
 
   if (!truck.imei) {
-    throw new Error('Truck does not have GPS device registered');
+    throw new Error("Truck does not have GPS device registered");
   }
 
   if (!truck.gpsVerifiedAt) {
-    throw new Error('Truck GPS has not been verified');
+    throw new Error("Truck GPS has not been verified");
   }
 
   // Generate tracking URL
@@ -141,7 +144,9 @@ export async function disableTrackingForLoad(loadId: string): Promise<void> {
  * @param loadId - Load ID
  * @returns GPS position or null if not available
  */
-export async function getLoadLivePosition(loadId: string): Promise<GpsPosition | null> {
+export async function getLoadLivePosition(
+  loadId: string
+): Promise<GpsPosition | null> {
   // Get load with assigned truck
   const load = await db.load.findUnique({
     where: { id: loadId },
@@ -149,7 +154,7 @@ export async function getLoadLivePosition(loadId: string): Promise<GpsPosition |
       assignedTruck: {
         include: {
           gpsPositions: {
-            orderBy: { timestamp: 'desc' },
+            orderBy: { timestamp: "desc" },
             take: 1,
           },
         },
@@ -204,7 +209,9 @@ export async function isTrackingActive(loadId: string): Promise<boolean> {
  * @param loadId - Load ID
  * @returns Tracking status information
  */
-export async function getTrackingStatus(loadId: string): Promise<TrackingStatus | null> {
+export async function getTrackingStatus(
+  loadId: string
+): Promise<TrackingStatus | null> {
   const load = await db.load.findUnique({
     where: { id: loadId },
     select: {
@@ -228,13 +235,14 @@ export async function getTrackingStatus(loadId: string): Promise<TrackingStatus 
   const position = await getLoadLivePosition(loadId);
 
   // Determine signal status
-  let signalStatus: 'active' | 'weak' | 'lost' = 'lost';
+  let signalStatus: "active" | "weak" | "lost" = "lost";
   if (load.assignedTruck?.gpsLastSeenAt) {
-    const diffMin = (Date.now() - load.assignedTruck.gpsLastSeenAt.getTime()) / (1000 * 60);
+    const diffMin =
+      (Date.now() - load.assignedTruck.gpsLastSeenAt.getTime()) / (1000 * 60);
     if (diffMin < 5) {
-      signalStatus = 'active';
+      signalStatus = "active";
     } else if (diffMin < 30) {
-      signalStatus = 'weak';
+      signalStatus = "weak";
     }
   }
 
@@ -279,7 +287,9 @@ export function isWithinGeofence(
  * @param loadId - Load ID
  * @returns Array of geofence alerts
  */
-export async function checkGeofenceEvents(loadId: string): Promise<GeofenceAlert[]> {
+export async function checkGeofenceEvents(
+  loadId: string
+): Promise<GeofenceAlert[]> {
   const alerts: GeofenceAlert[] = [];
 
   // Get load details
@@ -318,7 +328,7 @@ export async function checkGeofenceEvents(loadId: string): Promise<GeofenceAlert
     const diffMin = (Date.now() - lastSeen.getTime()) / (1000 * 60);
     if (diffMin > 30) {
       alerts.push({
-        event: 'SIGNAL_LOST',
+        event: "SIGNAL_LOST",
         timestamp: new Date(),
         location: {
           latitude: position.latitude,
@@ -330,7 +340,7 @@ export async function checkGeofenceEvents(loadId: string): Promise<GeofenceAlert
   }
 
   // Check arrival at pickup (if IN_TRANSIT status and origin coords available)
-  if (load.status === 'IN_TRANSIT' && load.originLat && load.originLon) {
+  if (load.status === "IN_TRANSIT" && load.originLat && load.originLon) {
     const atPickup = isWithinGeofence(
       position,
       load.originLat.toNumber(),
@@ -339,13 +349,13 @@ export async function checkGeofenceEvents(loadId: string): Promise<GeofenceAlert
 
     if (atPickup) {
       alerts.push({
-        event: 'ARRIVED_AT_PICKUP',
+        event: "ARRIVED_AT_PICKUP",
         timestamp: new Date(),
         location: {
           latitude: position.latitude,
           longitude: position.longitude,
         },
-        message: 'Truck arrived at pickup location',
+        message: "Truck arrived at pickup location",
       });
     }
   }
@@ -360,13 +370,13 @@ export async function checkGeofenceEvents(loadId: string): Promise<GeofenceAlert
 
     if (atDestination) {
       alerts.push({
-        event: 'ARRIVED_AT_DESTINATION',
+        event: "ARRIVED_AT_DESTINATION",
         timestamp: new Date(),
         location: {
           latitude: position.latitude,
           longitude: position.longitude,
         },
-        message: 'Truck arrived at delivery location',
+        message: "Truck arrived at delivery location",
       });
     }
   }
@@ -380,7 +390,9 @@ export async function checkGeofenceEvents(loadId: string): Promise<GeofenceAlert
  * @param trackingUrl - Tracking URL (e.g., "/tracking/abc123")
  * @returns Load ID or null
  */
-export async function getLoadByTrackingUrl(trackingUrl: string): Promise<string | null> {
+export async function getLoadByTrackingUrl(
+  trackingUrl: string
+): Promise<string | null> {
   const load = await db.load.findUnique({
     where: { trackingUrl },
     select: { id: true },
@@ -396,7 +408,10 @@ export async function getLoadByTrackingUrl(trackingUrl: string): Promise<string 
  * @param userId - User ID
  * @returns true if user can access tracking
  */
-export async function canAccessTracking(loadId: string, userId: string): Promise<boolean> {
+export async function canAccessTracking(
+  loadId: string,
+  userId: string
+): Promise<boolean> {
   const load = await db.load.findUnique({
     where: { id: loadId },
     select: {
@@ -428,7 +443,7 @@ export async function canAccessTracking(loadId: string, userId: string): Promise
   }
 
   // Admin and platform ops can always access
-  if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
+  if (user.role === "ADMIN" || user.role === "SUPER_ADMIN") {
     return true;
   }
 
@@ -438,7 +453,10 @@ export async function canAccessTracking(loadId: string, userId: string): Promise
   }
 
   // Carrier can access assigned loads
-  if (load.assignedTruck && user.organizationId === load.assignedTruck.carrierId) {
+  if (
+    load.assignedTruck &&
+    user.organizationId === load.assignedTruck.carrierId
+  ) {
     return true;
   }
 

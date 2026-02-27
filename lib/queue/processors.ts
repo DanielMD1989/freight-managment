@@ -13,8 +13,8 @@
  * - Bulk operations
  */
 
-import { registerProcessor, JobData } from '../queue';
-import { logger } from '../logger';
+import { registerProcessor, JobData } from "../queue";
+import { logger } from "../logger";
 
 // =============================================================================
 // EMAIL PROCESSORS
@@ -38,7 +38,7 @@ async function processEmailSend(
 
   try {
     // Dynamic import to avoid circular dependencies
-    const { sendEmail } = await import('../email');
+    const { sendEmail } = await import("../email");
 
     await updateProgress(30);
 
@@ -47,20 +47,20 @@ async function processEmailSend(
       await sendEmail({
         to: recipient,
         subject,
-        html: html || '',
+        html: html || "",
         text,
       });
     }
 
     await updateProgress(100);
 
-    logger.info('Email sent via queue', {
+    logger.info("Email sent via queue", {
       jobId: job.id,
       to: recipients.length,
       subject,
     });
   } catch (error) {
-    logger.error('Email job failed', error, { jobId: job.id });
+    logger.error("Email job failed", error, { jobId: job.id });
     throw error;
   }
 }
@@ -84,18 +84,18 @@ async function processEmailBulk(
   const total = emails.length;
   let processed = 0;
 
-  const { sendEmail } = await import('../email');
+  const { sendEmail } = await import("../email");
 
   for (const email of emails) {
     try {
       await sendEmail({
         to: email.to,
         subject: email.subject,
-        html: email.html || '',
+        html: email.html || "",
         text: email.text,
       });
     } catch (error) {
-      logger.error('Bulk email item failed', error, {
+      logger.error("Bulk email item failed", error, {
         jobId: job.id,
         to: email.to,
       });
@@ -105,7 +105,7 @@ async function processEmailBulk(
     await updateProgress(Math.round((processed / total) * 100));
   }
 
-  logger.info('Bulk email job completed', {
+  logger.info("Bulk email job completed", {
     jobId: job.id,
     total,
     processed,
@@ -132,7 +132,7 @@ async function processSmsSend(
   await updateProgress(10);
 
   try {
-    const { sendSMS } = await import('../sms/afromessage');
+    const { sendSMS } = await import("../sms/afromessage");
 
     await updateProgress(30);
 
@@ -140,17 +140,17 @@ async function processSmsSend(
 
     await updateProgress(100);
 
-    logger.info('SMS sent via queue', {
+    logger.info("SMS sent via queue", {
       jobId: job.id,
       to,
       success: result.success,
     });
 
     if (!result.success) {
-      throw new Error(result.error || 'SMS send failed');
+      throw new Error(result.error || "SMS send failed");
     }
   } catch (error) {
-    logger.error('SMS job failed', error, { jobId: job.id });
+    logger.error("SMS job failed", error, { jobId: job.id });
     throw error;
   }
 }
@@ -177,7 +177,7 @@ async function processNotificationCreate(
   await updateProgress(10);
 
   try {
-    const { createNotification } = await import('../notifications');
+    const { createNotification } = await import("../notifications");
 
     await updateProgress(30);
 
@@ -191,13 +191,13 @@ async function processNotificationCreate(
 
     await updateProgress(100);
 
-    logger.info('Notification created via queue', {
+    logger.info("Notification created via queue", {
       jobId: job.id,
       userId,
       type,
     });
   } catch (error) {
-    logger.error('Notification job failed', error, { jobId: job.id });
+    logger.error("Notification job failed", error, { jobId: job.id });
     throw error;
   }
 }
@@ -222,13 +222,13 @@ async function processNotificationBulk(
   const total = notifications.length;
   let processed = 0;
 
-  const { createNotification } = await import('../notifications');
+  const { createNotification } = await import("../notifications");
 
   for (const notification of notifications) {
     try {
       await createNotification(notification);
     } catch (error) {
-      logger.error('Bulk notification item failed', error, {
+      logger.error("Bulk notification item failed", error, {
         jobId: job.id,
         userId: notification.userId,
       });
@@ -238,7 +238,7 @@ async function processNotificationBulk(
     await updateProgress(Math.round((processed / total) * 100));
   }
 
-  logger.info('Bulk notification job completed', {
+  logger.info("Bulk notification job completed", {
     jobId: job.id,
     total,
     processed,
@@ -267,7 +267,7 @@ async function processDistanceMatrix(
   await updateProgress(10);
 
   try {
-    const { batchCalculateDistances } = await import('../googleRoutes');
+    const { batchCalculateDistances } = await import("../googleRoutes");
 
     await updateProgress(30);
 
@@ -286,23 +286,23 @@ async function processDistanceMatrix(
     if (callback) {
       try {
         await fetch(callback, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ jobId: job.id, results }),
         });
       } catch (callbackError) {
-        logger.warn('Distance matrix callback failed', { jobId: job.id });
+        logger.warn("Distance matrix callback failed", { jobId: job.id });
       }
     }
 
     await updateProgress(100);
 
-    logger.info('Distance matrix calculated via queue', {
+    logger.info("Distance matrix calculated via queue", {
       jobId: job.id,
       pairs: pairs.length,
     });
   } catch (error) {
-    logger.error('Distance matrix job failed', error, { jobId: job.id });
+    logger.error("Distance matrix job failed", error, { jobId: job.id });
     throw error;
   }
 }
@@ -330,7 +330,7 @@ async function processPdfGenerate(
   try {
     // PDF generation would use a library like puppeteer or pdfkit
     // This is a placeholder for the actual implementation
-    logger.info('PDF generation started', {
+    logger.info("PDF generation started", {
       jobId: job.id,
       template,
       filename,
@@ -340,7 +340,7 @@ async function processPdfGenerate(
 
     // Simulate PDF generation
     // In production, this would render HTML template and convert to PDF
-    const pdfBuffer = Buffer.from('PDF placeholder content');
+    const pdfBuffer = Buffer.from("PDF placeholder content");
 
     await updateProgress(80);
 
@@ -348,12 +348,12 @@ async function processPdfGenerate(
 
     await updateProgress(100);
 
-    logger.info('PDF generated via queue', {
+    logger.info("PDF generated via queue", {
       jobId: job.id,
       filename,
     });
   } catch (error) {
-    logger.error('PDF generation job failed', error, { jobId: job.id });
+    logger.error("PDF generation job failed", error, { jobId: job.id });
     throw error;
   }
 }
@@ -372,29 +372,29 @@ async function processCleanupExpiredLoads(
   await updateProgress(10);
 
   try {
-    const { db } = await import('../db');
+    const { db } = await import("../db");
 
     await updateProgress(30);
 
     // Find and update expired loads
     const result = await db.load.updateMany({
       where: {
-        status: 'POSTED',
+        status: "POSTED",
         expiresAt: { lt: new Date() },
       },
       data: {
-        status: 'EXPIRED',
+        status: "EXPIRED",
       },
     });
 
     await updateProgress(100);
 
-    logger.info('Expired loads cleanup completed', {
+    logger.info("Expired loads cleanup completed", {
       jobId: job.id,
       count: result.count,
     });
   } catch (error) {
-    logger.error('Cleanup job failed', error, { jobId: job.id });
+    logger.error("Cleanup job failed", error, { jobId: job.id });
     throw error;
   }
 }
@@ -409,28 +409,28 @@ async function processCleanupExpiredPostings(
   await updateProgress(10);
 
   try {
-    const { db } = await import('../db');
+    const { db } = await import("../db");
 
     await updateProgress(30);
 
     const result = await db.truckPosting.updateMany({
       where: {
-        status: 'ACTIVE',
+        status: "ACTIVE",
         availableTo: { lt: new Date() },
       },
       data: {
-        status: 'EXPIRED',
+        status: "EXPIRED",
       },
     });
 
     await updateProgress(100);
 
-    logger.info('Expired postings cleanup completed', {
+    logger.info("Expired postings cleanup completed", {
       jobId: job.id,
       count: result.count,
     });
   } catch (error) {
-    logger.error('Cleanup job failed', error, { jobId: job.id });
+    logger.error("Cleanup job failed", error, { jobId: job.id });
     throw error;
   }
 }
@@ -447,7 +447,7 @@ async function processCleanupGpsData(
   await updateProgress(10);
 
   try {
-    const { db } = await import('../db');
+    const { db } = await import("../db");
 
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
@@ -462,13 +462,13 @@ async function processCleanupGpsData(
 
     await updateProgress(100);
 
-    logger.info('GPS data cleanup completed', {
+    logger.info("GPS data cleanup completed", {
       jobId: job.id,
       deleted: result.count,
       retentionDays,
     });
   } catch (error) {
-    logger.error('GPS cleanup job failed', error, { jobId: job.id });
+    logger.error("GPS cleanup job failed", error, { jobId: job.id });
     throw error;
   }
 }
@@ -485,7 +485,7 @@ async function processBulkStatusUpdate(
   updateProgress: (progress: number) => Promise<void>
 ): Promise<void> {
   const { model, ids, status, isAvailable, updatedBy } = job.data as {
-    model: 'load' | 'truck' | 'user' | 'truckPosting';
+    model: "load" | "truck" | "user" | "truckPosting";
     ids: string[];
     status?: string;
     isAvailable?: boolean;
@@ -495,35 +495,47 @@ async function processBulkStatusUpdate(
   const total = ids.length;
   let processed = 0;
 
-  const { db } = await import('../db');
+  const { db } = await import("../db");
 
   for (const id of ids) {
     try {
       switch (model) {
-        case 'load':
+        case "load":
           if (status) {
-            await db.load.update({ where: { id }, data: { status: status as any } });
+            await db.load.update({
+              where: { id },
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic status enum
+              data: { status: status as any },
+            });
           }
           break;
-        case 'truck':
+        case "truck":
           // Trucks use isAvailable boolean instead of status
           if (isAvailable !== undefined) {
             await db.truck.update({ where: { id }, data: { isAvailable } });
           }
           break;
-        case 'truckPosting':
+        case "truckPosting":
           if (status) {
-            await db.truckPosting.update({ where: { id }, data: { status: status as any } });
+            await db.truckPosting.update({
+              where: { id },
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic status enum
+              data: { status: status as any },
+            });
           }
           break;
-        case 'user':
+        case "user":
           if (status) {
-            await db.user.update({ where: { id }, data: { status: status as any } });
+            await db.user.update({
+              where: { id },
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic status enum
+              data: { status: status as any },
+            });
           }
           break;
       }
     } catch (error) {
-      logger.error('Bulk update item failed', error, {
+      logger.error("Bulk update item failed", error, {
         jobId: job.id,
         model,
         id,
@@ -534,7 +546,7 @@ async function processBulkStatusUpdate(
     await updateProgress(Math.round((processed / total) * 100));
   }
 
-  logger.info('Bulk status update completed', {
+  logger.info("Bulk status update completed", {
     jobId: job.id,
     model,
     total,
@@ -558,13 +570,13 @@ async function processAutoSettle(
   await updateProgress(10);
 
   try {
-    const { db } = await import('../db');
+    const { db } = await import("../db");
 
     // Find delivered loads that could be candidates for settlement
     // Note: podStatus and settlementStatus fields will be added in future sprints
     const deliveredLoads = await db.load.findMany({
       where: {
-        status: 'DELIVERED',
+        status: "DELIVERED",
       },
       take: 100,
       select: {
@@ -578,20 +590,20 @@ async function processAutoSettle(
 
     // Log candidates for future settlement processing
     // Actual settlement logic will be added when payment integration is implemented
-    logger.info('Auto-settlement candidates identified', {
+    logger.info("Auto-settlement candidates identified", {
       jobId: job.id,
       candidateCount: deliveredLoads.length,
     });
 
     await updateProgress(100);
 
-    logger.info('Auto-settlement job completed', {
+    logger.info("Auto-settlement job completed", {
       jobId: job.id,
       found: deliveredLoads.length,
-      note: 'Settlement logic pending payment integration',
+      note: "Settlement logic pending payment integration",
     });
   } catch (error) {
-    logger.error('Auto-settlement job failed', error, { jobId: job.id });
+    logger.error("Auto-settlement job failed", error, { jobId: job.id });
     throw error;
   }
 }
@@ -602,34 +614,38 @@ async function processAutoSettle(
 
 export function registerAllProcessors(): void {
   // Email processors
-  registerProcessor('email', 'send', processEmailSend);
-  registerProcessor('email', 'bulk', processEmailBulk);
+  registerProcessor("email", "send", processEmailSend);
+  registerProcessor("email", "bulk", processEmailBulk);
 
   // SMS processors
-  registerProcessor('sms', 'send', processSmsSend);
+  registerProcessor("sms", "send", processSmsSend);
 
   // Notification processors
-  registerProcessor('notifications', 'create', processNotificationCreate);
-  registerProcessor('notifications', 'bulk', processNotificationBulk);
+  registerProcessor("notifications", "create", processNotificationCreate);
+  registerProcessor("notifications", "bulk", processNotificationBulk);
 
   // Distance matrix processors
-  registerProcessor('distance-matrix', 'calculate', processDistanceMatrix);
+  registerProcessor("distance-matrix", "calculate", processDistanceMatrix);
 
   // PDF processors
-  registerProcessor('pdf', 'generate', processPdfGenerate);
+  registerProcessor("pdf", "generate", processPdfGenerate);
 
   // Cleanup processors
-  registerProcessor('cleanup', 'expire-loads', processCleanupExpiredLoads);
-  registerProcessor('cleanup', 'expire-postings', processCleanupExpiredPostings);
-  registerProcessor('cleanup', 'gps-data', processCleanupGpsData);
+  registerProcessor("cleanup", "expire-loads", processCleanupExpiredLoads);
+  registerProcessor(
+    "cleanup",
+    "expire-postings",
+    processCleanupExpiredPostings
+  );
+  registerProcessor("cleanup", "gps-data", processCleanupGpsData);
 
   // Bulk operation processors
-  registerProcessor('bulk', 'status-update', processBulkStatusUpdate);
+  registerProcessor("bulk", "status-update", processBulkStatusUpdate);
 
   // Scheduled job processors
-  registerProcessor('scheduled', 'auto-settle', processAutoSettle);
+  registerProcessor("scheduled", "auto-settle", processAutoSettle);
 
-  logger.info('All queue processors registered');
+  logger.info("All queue processors registered");
 }
 
 export default {

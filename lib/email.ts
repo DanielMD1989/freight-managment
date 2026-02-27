@@ -26,8 +26,8 @@
  * - AWS_REGION: AWS region for SES
  */
 
-import { addJob, registerProcessor, isQueueReadySync } from './queue';
-import { logger } from './logger';
+import { addJob, registerProcessor, isQueueReadySync } from "./queue";
+import { logger } from "./logger";
 
 /**
  * Email message structure
@@ -65,7 +65,7 @@ interface EmailProvider {
 class ConsoleEmailProvider implements EmailProvider {
   async send(message: EmailMessage): Promise<EmailResult> {
     if (message.text) {
-      }
+    }
     return {
       success: true,
       messageId: `console-${Date.now()}`,
@@ -95,11 +95,11 @@ class SendGridEmailProvider implements EmailProvider {
 
   async send(message: EmailMessage): Promise<EmailResult> {
     try {
-      const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
-        method: 'POST',
+      const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           personalizations: [
@@ -107,11 +107,16 @@ class SendGridEmailProvider implements EmailProvider {
               to: [{ email: message.to }],
             },
           ],
-          from: { email: this.from.match(/<(.+)>/)?.[1] || this.from, name: this.from.match(/^(.+) </)?.[1] },
+          from: {
+            email: this.from.match(/<(.+)>/)?.[1] || this.from,
+            name: this.from.match(/^(.+) </)?.[1],
+          },
           subject: message.subject,
           content: [
-            ...(message.text ? [{ type: 'text/plain', value: message.text }] : []),
-            { type: 'text/html', value: message.html },
+            ...(message.text
+              ? [{ type: "text/plain", value: message.text }]
+              : []),
+            { type: "text/html", value: message.html },
           ],
           ...(message.replyTo && { reply_to: { email: message.replyTo } }),
         }),
@@ -119,7 +124,7 @@ class SendGridEmailProvider implements EmailProvider {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('SendGrid API error:', response.status, errorText);
+        console.error("SendGrid API error:", response.status, errorText);
         return {
           success: false,
           error: `SendGrid error: ${response.status}`,
@@ -127,17 +132,21 @@ class SendGridEmailProvider implements EmailProvider {
       }
 
       // SendGrid returns 202 Accepted with message ID in header
-      const messageId = response.headers.get('x-message-id') || `sendgrid-${Date.now()}`;
+      const messageId =
+        response.headers.get("x-message-id") || `sendgrid-${Date.now()}`;
 
       return {
         success: true,
         messageId,
       };
     } catch (error: unknown) {
-      console.error('Error sending email via SendGrid:', error);
+      console.error("Error sending email via SendGrid:", error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to send email via SendGrid',
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to send email via SendGrid",
       };
     }
   }
@@ -171,35 +180,35 @@ class AwsSesEmailProvider implements EmailProvider {
 
       // Build request body for SES SendEmail action
       const params = new URLSearchParams({
-        Action: 'SendEmail',
-        Version: '2010-12-01',
-        'Destination.ToAddresses.member.1': message.to,
-        'Message.Subject.Data': message.subject,
-        'Message.Body.Html.Data': message.html,
-        'Source': fromEmail,
+        Action: "SendEmail",
+        Version: "2010-12-01",
+        "Destination.ToAddresses.member.1": message.to,
+        "Message.Subject.Data": message.subject,
+        "Message.Body.Html.Data": message.html,
+        Source: fromEmail,
       });
 
       if (message.text) {
-        params.append('Message.Body.Text.Data', message.text);
+        params.append("Message.Body.Text.Data", message.text);
       }
 
       if (message.replyTo) {
-        params.append('ReplyToAddresses.member.1', message.replyTo);
+        params.append("ReplyToAddresses.member.1", message.replyTo);
       }
 
       // Note: In production, use @aws-sdk/client-ses for proper authentication
       // This is a simplified implementation that requires AWS credentials to be configured
       const response = await fetch(endpoint, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          "Content-Type": "application/x-www-form-urlencoded",
         },
         body: params.toString(),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('AWS SES error:', response.status, errorText);
+        console.error("AWS SES error:", response.status, errorText);
         return {
           success: false,
           error: `AWS SES error: ${response.status}`,
@@ -215,10 +224,13 @@ class AwsSesEmailProvider implements EmailProvider {
         messageId,
       };
     } catch (error: unknown) {
-      console.error('Error sending email via AWS SES:', error);
+      console.error("Error sending email via AWS SES:", error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to send email via AWS SES',
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to send email via AWS SES",
       };
     }
   }
@@ -246,11 +258,11 @@ class ResendEmailProvider implements EmailProvider {
 
   async send(message: EmailMessage): Promise<EmailResult> {
     try {
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           from: this.from,
@@ -264,10 +276,10 @@ class ResendEmailProvider implements EmailProvider {
 
       if (!response.ok) {
         const error = await response.json();
-        console.error('Resend API error:', error);
+        console.error("Resend API error:", error);
         return {
           success: false,
-          error: error.message || 'Failed to send email',
+          error: error.message || "Failed to send email",
         };
       }
 
@@ -278,10 +290,10 @@ class ResendEmailProvider implements EmailProvider {
         messageId: data.id,
       };
     } catch (error: unknown) {
-      console.error('Error sending email via Resend:', error);
+      console.error("Error sending email via Resend:", error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to send email',
+        error: error instanceof Error ? error.message : "Failed to send email",
       };
     }
   }
@@ -293,37 +305,37 @@ class ResendEmailProvider implements EmailProvider {
  * @returns Email provider instance
  */
 function getEmailProvider(): EmailProvider {
-  const provider = process.env.EMAIL_PROVIDER || 'console';
-  const from = process.env.EMAIL_FROM || 'noreply@freight-platform.com';
-  const fromName = process.env.EMAIL_FROM_NAME || 'Freight Management Platform';
+  const provider = process.env.EMAIL_PROVIDER || "console";
+  const from = process.env.EMAIL_FROM || "noreply@freight-platform.com";
+  const fromName = process.env.EMAIL_FROM_NAME || "Freight Management Platform";
   const fromAddress = `${fromName} <${from}>`;
 
   switch (provider.toLowerCase()) {
-    case 'resend':
+    case "resend":
       const resendApiKey = process.env.RESEND_API_KEY;
       if (!resendApiKey) {
-        console.warn('RESEND_API_KEY not set, falling back to console mode');
+        console.warn("RESEND_API_KEY not set, falling back to console mode");
         return new ConsoleEmailProvider();
       }
       return new ResendEmailProvider(resendApiKey, fromAddress);
 
-    case 'sendgrid':
+    case "sendgrid":
       const sendGridApiKey = process.env.SENDGRID_API_KEY;
       if (!sendGridApiKey) {
-        console.warn('SENDGRID_API_KEY not set, falling back to console mode');
+        console.warn("SENDGRID_API_KEY not set, falling back to console mode");
         return new ConsoleEmailProvider();
       }
       return new SendGridEmailProvider(sendGridApiKey, fromAddress);
 
-    case 'ses':
+    case "ses":
       const awsRegion = process.env.AWS_REGION;
       if (!awsRegion) {
-        console.warn('AWS_REGION not set, falling back to console mode');
+        console.warn("AWS_REGION not set, falling back to console mode");
         return new ConsoleEmailProvider();
       }
       return new AwsSesEmailProvider(awsRegion, fromAddress);
 
-    case 'console':
+    case "console":
     default:
       return new ConsoleEmailProvider();
   }
@@ -335,14 +347,16 @@ function getEmailProvider(): EmailProvider {
  * @param message Email message
  * @returns Send result
  */
-export async function sendEmailDirect(message: EmailMessage): Promise<EmailResult> {
+export async function sendEmailDirect(
+  message: EmailMessage
+): Promise<EmailResult> {
   const provider = getEmailProvider();
 
   try {
     const result = await provider.send(message);
 
     // Log email send attempt
-    logger.info('[EMAIL] Sent', {
+    logger.info("[EMAIL] Sent", {
       to: message.to,
       subject: message.subject,
       success: result.success,
@@ -352,14 +366,14 @@ export async function sendEmailDirect(message: EmailMessage): Promise<EmailResul
 
     return result;
   } catch (error: unknown) {
-    logger.error('[EMAIL ERROR]', error, {
+    logger.error("[EMAIL ERROR]", error, {
       to: message.to,
       subject: message.subject,
     });
 
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to send email',
+      error: error instanceof Error ? error.message : "Failed to send email",
     };
   }
 }
@@ -396,17 +410,17 @@ export async function sendEmail(message: EmailMessage): Promise<EmailResult> {
         text: message.text,
         replyTo: message.replyTo,
       };
-      const jobId = await addJob('email', 'send-email', jobData, {
+      const jobId = await addJob("email", "send-email", jobData, {
         attempts: 3,
         backoff: {
-          type: 'exponential',
+          type: "exponential",
           delay: 2000, // Start with 2s, then 4s, then 8s
         },
         removeOnComplete: 100,
         removeOnFail: 500,
       });
 
-      logger.debug('[EMAIL] Queued', {
+      logger.debug("[EMAIL] Queued", {
         jobId,
         to: message.to,
         subject: message.subject,
@@ -417,7 +431,9 @@ export async function sendEmail(message: EmailMessage): Promise<EmailResult> {
         messageId: `queued:${jobId}`,
       };
     } catch (queueError) {
-      logger.warn('[EMAIL] Queue failed, falling back to direct send', { error: queueError });
+      logger.warn("[EMAIL] Queue failed, falling back to direct send", {
+        error: queueError,
+      });
       // Fall through to direct send
     }
   }
@@ -583,13 +599,16 @@ export function createDocumentApprovalEmail(params: {
       <p><strong>Document Type:</strong> ${params.documentType}</p>
       <p><strong>File Name:</strong> ${params.documentName}</p>
       <p><strong>Organization:</strong> ${params.organizationName}</p>
-      <p><strong>Verified On:</strong> ${params.verifiedAt.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })}</p>
+      <p><strong>Verified On:</strong> ${params.verifiedAt.toLocaleDateString(
+        "en-US",
+        {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }
+      )}</p>
     </div>
 
     <p>
@@ -597,7 +616,7 @@ export function createDocumentApprovalEmail(params: {
       all platform features associated with verified accounts.
     </p>
 
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://freight-platform.com'}/" class="button">
+    <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://freight-platform.com"}/" class="button">
       Go to Portal
     </a>
 
@@ -645,13 +664,16 @@ export function createDocumentRejectionEmail(params: {
       <p><strong>Document Type:</strong> ${params.documentType}</p>
       <p><strong>File Name:</strong> ${params.documentName}</p>
       <p><strong>Organization:</strong> ${params.organizationName}</p>
-      <p><strong>Reviewed On:</strong> ${params.rejectedAt.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })}</p>
+      <p><strong>Reviewed On:</strong> ${params.rejectedAt.toLocaleDateString(
+        "en-US",
+        {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }
+      )}</p>
     </div>
 
     <div class="info-section" style="border-left-color: #ef4444;">
@@ -668,7 +690,7 @@ export function createDocumentRejectionEmail(params: {
       <li>Upload the new document through your dashboard</li>
     </ul>
 
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://freight-platform.com'}/" class="button">
+    <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://freight-platform.com"}/" class="button">
       Go to Portal
     </a>
 
@@ -741,7 +763,7 @@ export function createPasswordResetEmail(params: {
 
   return {
     to: params.recipientEmail,
-    subject: 'Reset Your Password - Freight Management Platform',
+    subject: "Reset Your Password - Freight Management Platform",
     html: createEmailHTML(content),
     text: `Password Reset Request
 
@@ -758,7 +780,7 @@ Didn't request this? You can safely ignore this email. Your password will not be
 
 ---
 Freight Management Platform
-${process.env.NEXT_PUBLIC_APP_URL || 'https://freight-platform.com'}`,
+${process.env.NEXT_PUBLIC_APP_URL || "https://freight-platform.com"}`,
   };
 }
 
@@ -779,17 +801,17 @@ export async function sendTestEmail(toEmail: string): Promise<EmailResult> {
     <p>If you received this email, your email service is configured correctly!</p>
 
     <div class="info-section">
-      <p><strong>Provider:</strong> ${process.env.EMAIL_PROVIDER || 'console'}</p>
-      <p><strong>From:</strong> ${process.env.EMAIL_FROM || 'noreply@freight-platform.com'}</p>
+      <p><strong>Provider:</strong> ${process.env.EMAIL_PROVIDER || "console"}</p>
+      <p><strong>From:</strong> ${process.env.EMAIL_FROM || "noreply@freight-platform.com"}</p>
       <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
     </div>
   `;
 
   return sendEmail({
     to: toEmail,
-    subject: 'Email Service Test - Freight Management Platform',
+    subject: "Email Service Test - Freight Management Platform",
     html: createEmailHTML(content),
-    text: 'This is a test email from the Freight Management Platform. If you received this, your email service is working correctly!',
+    text: "This is a test email from the Freight Management Platform. If you received this, your email service is working correctly!",
   });
 }
 
@@ -809,7 +831,7 @@ export async function processEmailJob(
 ): Promise<void> {
   const { to, subject, html, text, replyTo } = job.data;
 
-  logger.info('[EMAIL WORKER] Processing job', {
+  logger.info("[EMAIL WORKER] Processing job", {
     jobId: job.id,
     to,
     subject,
@@ -829,12 +851,12 @@ export async function processEmailJob(
 
   if (!result.success) {
     // Throw error to trigger retry
-    throw new Error(result.error || 'Failed to send email');
+    throw new Error(result.error || "Failed to send email");
   }
 
   await updateProgress(100);
 
-  logger.info('[EMAIL WORKER] Job completed', {
+  logger.info("[EMAIL WORKER] Job completed", {
     jobId: job.id,
     messageId: result.messageId,
   });
@@ -846,6 +868,6 @@ export async function processEmailJob(
  * Call this during application startup to enable email queue processing.
  */
 export function registerEmailProcessor(): void {
-  registerProcessor('email', 'send-email', processEmailJob);
-  logger.info('[EMAIL] Processor registered for queue: email');
+  registerProcessor("email", "send-email", processEmailJob);
+  logger.info("[EMAIL] Processor registered for queue: email");
 }

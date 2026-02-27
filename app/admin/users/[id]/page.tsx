@@ -5,10 +5,11 @@
  * Sprint 10 - Story 10.2: User Management
  */
 
-import { cookies } from 'next/headers';
-import { verifyToken } from '@/lib/auth';
-import { redirect, notFound } from 'next/navigation';
-import UserDetailClient from './UserDetailClient';
+import Link from "next/link";
+import { cookies } from "next/headers";
+import { verifyToken } from "@/lib/auth";
+import { redirect, notFound } from "next/navigation";
+import UserDetailClient from "./UserDetailClient";
 
 interface UserDetail {
   id: string;
@@ -43,19 +44,19 @@ interface UserResponse {
 async function getUser(userId: string): Promise<UserResponse | null> {
   try {
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('session');
+    const sessionCookie = cookieStore.get("session");
 
     if (!sessionCookie) {
       return null;
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
     const response = await fetch(`${baseUrl}/api/admin/users/${userId}`, {
       headers: {
         Cookie: `session=${sessionCookie.value}`,
       },
-      cache: 'no-store',
+      cache: "no-store",
     });
 
     if (response.status === 404) {
@@ -63,13 +64,13 @@ async function getUser(userId: string): Promise<UserResponse | null> {
     }
 
     if (!response.ok) {
-      console.error('Failed to fetch user:', response.status);
+      console.error("Failed to fetch user:", response.status);
       return null;
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Error fetching user:', error);
+    console.error("Error fetching user:", error);
     return null;
   }
 }
@@ -84,16 +85,19 @@ export default async function AdminUserDetailPage({
 }) {
   // Verify authentication
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get('session');
+  const sessionCookie = cookieStore.get("session");
 
   if (!sessionCookie) {
-    redirect('/login?redirect=/admin/users');
+    redirect("/login?redirect=/admin/users");
   }
 
   const session = await verifyToken(sessionCookie.value);
 
-  if (!session || (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN')) {
-    redirect('/unauthorized');
+  if (
+    !session ||
+    (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN")
+  ) {
+    redirect("/unauthorized");
   }
 
   const { id } = await params;
@@ -106,27 +110,22 @@ export default async function AdminUserDetailPage({
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="mx-auto max-w-4xl">
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-          <a href="/admin/users" className="hover:text-blue-600">
+        <div className="mb-4 flex items-center gap-2 text-sm text-gray-600">
+          <Link href="/admin/users" className="hover:text-blue-600">
             Users
-          </a>
+          </Link>
           <span>/</span>
           <span>{data.user.email}</span>
         </div>
         <h1 className="text-3xl font-bold text-gray-900">User Details</h1>
-        <p className="text-gray-600 mt-2">
-          View and manage user account
-        </p>
+        <p className="mt-2 text-gray-600">View and manage user account</p>
       </div>
 
       {/* User Detail Client Component */}
-      <UserDetailClient
-        user={data.user}
-        currentUserRole={session.role}
-      />
+      <UserDetailClient user={data.user} currentUserRole={session.role} />
     </div>
   );
 }

@@ -17,19 +17,19 @@
  * - SameSite cookie attribute provides additional protection
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import crypto from 'crypto';
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import crypto from "crypto";
 
 /**
  * CSRF token cookie name
  */
-export const CSRF_COOKIE_NAME = 'csrf_token';
+export const CSRF_COOKIE_NAME = "csrf_token";
 
 /**
  * CSRF token header name
  */
-export const CSRF_HEADER_NAME = 'x-csrf-token';
+export const CSRF_HEADER_NAME = "x-csrf-token";
 
 /**
  * CSRF token length in bytes (32 bytes = 256 bits)
@@ -42,7 +42,7 @@ const TOKEN_LENGTH = 32;
  * @returns Random token as hex string
  */
 export function generateCSRFToken(): string {
-  return crypto.randomBytes(TOKEN_LENGTH).toString('hex');
+  return crypto.randomBytes(TOKEN_LENGTH).toString("hex");
 }
 
 /**
@@ -54,9 +54,9 @@ export function generateCSRFToken(): string {
 export function setCSRFCookie(response: NextResponse, token: string): void {
   response.cookies.set(CSRF_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax', // Prevents CSRF while allowing normal navigation
-    path: '/',
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax", // Prevents CSRF while allowing normal navigation
+    path: "/",
     maxAge: 60 * 60 * 24, // 24 hours
   });
 }
@@ -122,7 +122,7 @@ export function validateCSRFToken(request: NextRequest): boolean {
 export function requireCSRF(request: NextRequest): NextResponse | null {
   // Skip CSRF check for safe methods (GET, HEAD, OPTIONS)
   const method = request.method;
-  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') {
+  if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
     return null;
   }
 
@@ -130,8 +130,8 @@ export function requireCSRF(request: NextRequest): NextResponse | null {
   if (!validateCSRFToken(request)) {
     return NextResponse.json(
       {
-        error: 'CSRF token validation failed',
-        code: 'CSRF_TOKEN_INVALID',
+        error: "CSRF token validation failed",
+        code: "CSRF_TOKEN_INVALID",
       },
       { status: 403 }
     );
@@ -149,11 +149,14 @@ export function requireCSRF(request: NextRequest): NextResponse | null {
  * @returns Wrapped handler with CSRF protection
  */
 export function withCSRFProtection<T>(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper must accept any route arguments
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper accepts any route arguments
   handler: (request: NextRequest, ...args: any[]) => Promise<NextResponse>
 ) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper must accept any route arguments
-  return async (request: NextRequest, ...args: any[]): Promise<NextResponse> => {
+  return async (
+    request: NextRequest,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper accepts any route arguments
+    ...args: any[]
+  ): Promise<NextResponse> => {
     // Check CSRF token
     const csrfError = requireCSRF(request);
     if (csrfError) {
@@ -224,7 +227,9 @@ export function hasCSRFToken(request: NextRequest): boolean {
  * @param request NextRequest to check for existing token
  * @returns CSRF token
  */
-export async function getOrCreateCSRFToken(request: NextRequest): Promise<string> {
+export async function getOrCreateCSRFToken(
+  request: NextRequest
+): Promise<string> {
   const existingToken = getCSRFTokenFromCookie(request);
 
   if (existingToken) {
@@ -254,15 +259,20 @@ export interface CSRFConfig {
  * @returns Middleware function
  */
 export function createCSRFMiddleware(config: CSRFConfig = {}) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper must accept any route arguments
-  return (handler: (request: NextRequest, ...args: any[]) => Promise<NextResponse>) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper must accept any route arguments
-    return async (request: NextRequest, ...args: any[]): Promise<NextResponse> => {
+  return (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper accepts any route arguments
+    handler: (request: NextRequest, ...args: any[]) => Promise<NextResponse>
+  ) => {
+    return async (
+      request: NextRequest,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper accepts any route arguments
+      ...args: any[]
+    ): Promise<NextResponse> => {
       const method = request.method;
       const pathname = new URL(request.url).pathname;
 
       // Skip CSRF check for safe methods
-      if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') {
+      if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
         return handler(request, ...args);
       }
 
@@ -275,8 +285,8 @@ export function createCSRFMiddleware(config: CSRFConfig = {}) {
       if (!validateCSRFToken(request)) {
         return NextResponse.json(
           {
-            error: config.errorMessage || 'CSRF token validation failed',
-            code: config.errorCode || 'CSRF_TOKEN_INVALID',
+            error: config.errorMessage || "CSRF token validation failed",
+            code: config.errorCode || "CSRF_TOKEN_INVALID",
           },
           { status: 403 }
         );
@@ -306,15 +316,15 @@ export function createCSRFMiddleware(config: CSRFConfig = {}) {
 export async function validateCSRFWithMobile(
   request: NextRequest
 ): Promise<NextResponse | null> {
-  const isMobileClient = request.headers.get('x-client-type') === 'mobile';
+  const isMobileClient = request.headers.get("x-client-type") === "mobile";
   const hasBearerAuth = request.headers
-    .get('authorization')
-    ?.startsWith('Bearer ');
+    .get("authorization")
+    ?.startsWith("Bearer ");
 
   // Mobile clients MUST have Bearer authentication (inherently CSRF-safe)
   if (isMobileClient && !hasBearerAuth) {
     return NextResponse.json(
-      { error: 'Mobile clients require Bearer authentication' },
+      { error: "Mobile clients require Bearer authentication" },
       { status: 401 }
     );
   }
@@ -341,6 +351,6 @@ export async function validateCSRFWithMobile(
  */
 export function assertCSRFValid(request: NextRequest): void {
   if (!validateCSRFToken(request)) {
-    throw new Error('CSRF token validation failed');
+    throw new Error("CSRF token validation failed");
   }
 }

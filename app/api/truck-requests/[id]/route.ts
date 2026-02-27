@@ -5,9 +5,9 @@
  * DELETE: Cancel a truck request (requester only, while PENDING)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
 
 /**
  * GET /api/truck-requests/[id]
@@ -60,7 +60,7 @@ export async function GET(
 
     if (!truckRequest) {
       return NextResponse.json(
-        { error: 'Truck request not found' },
+        { error: "Truck request not found" },
         { status: 404 }
       );
     }
@@ -68,20 +68,20 @@ export async function GET(
     // Check if user has access (shipper who created or carrier who received)
     const isShipper = truckRequest.shipperId === session.organizationId;
     const isCarrier = truckRequest.carrierId === session.organizationId;
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isShipper && !isCarrier && !isAdmin) {
       return NextResponse.json(
-        { error: 'Not authorized to view this request' },
+        { error: "Not authorized to view this request" },
         { status: 403 }
       );
     }
 
     return NextResponse.json({ request: truckRequest });
   } catch (error) {
-    console.error('Error fetching truck request:', error);
+    console.error("Error fetching truck request:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch truck request' },
+      { error: "Failed to fetch truck request" },
       { status: 500 }
     );
   }
@@ -115,7 +115,7 @@ export async function DELETE(
 
     if (!truckRequest) {
       return NextResponse.json(
-        { error: 'Truck request not found' },
+        { error: "Truck request not found" },
         { status: 404 }
       );
     }
@@ -123,19 +123,21 @@ export async function DELETE(
     // Only the shipper who created the request can cancel it
     const isShipper = truckRequest.shipperId === session.organizationId;
     const isRequester = truckRequest.requestedById === session.userId;
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isShipper && !isRequester && !isAdmin) {
       return NextResponse.json(
-        { error: 'Only the shipper who created this request can cancel it' },
+        { error: "Only the shipper who created this request can cancel it" },
         { status: 403 }
       );
     }
 
     // Can only cancel PENDING requests
-    if (truckRequest.status !== 'PENDING') {
+    if (truckRequest.status !== "PENDING") {
       return NextResponse.json(
-        { error: `Cannot cancel a ${truckRequest.status.toLowerCase()} request` },
+        {
+          error: `Cannot cancel a ${truckRequest.status.toLowerCase()} request`,
+        },
         { status: 400 }
       );
     }
@@ -144,19 +146,19 @@ export async function DELETE(
     const updatedRequest = await db.truckRequest.update({
       where: { id },
       data: {
-        status: 'CANCELLED',
+        status: "CANCELLED",
       },
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Truck request cancelled successfully',
+      message: "Truck request cancelled successfully",
       request: updatedRequest,
     });
   } catch (error) {
-    console.error('Error cancelling truck request:', error);
+    console.error("Error cancelling truck request:", error);
     return NextResponse.json(
-      { error: 'Failed to cancel truck request' },
+      { error: "Failed to cancel truck request" },
       { status: 500 }
     );
   }

@@ -9,7 +9,7 @@
  */
 
 /** CSRF token header name (must match server-side) */
-const CSRF_HEADER_NAME = 'x-csrf-token';
+const CSRF_HEADER_NAME = "x-csrf-token";
 
 /** Token cache with expiry tracking */
 interface TokenCache {
@@ -49,9 +49,9 @@ function isCacheUsable(): boolean {
  */
 async function fetchCSRFTokenInternal(): Promise<string | null> {
   try {
-    const response = await fetch('/api/csrf-token', {
-      credentials: 'include',
-      cache: 'no-store', // Don't cache this request
+    const response = await fetch("/api/csrf-token", {
+      credentials: "include",
+      cache: "no-store", // Don't cache this request
     });
 
     if (response.ok) {
@@ -60,7 +60,7 @@ async function fetchCSRFTokenInternal(): Promise<string | null> {
 
       csrfTokenCache = {
         token: data.csrfToken,
-        expiresAt: Date.now() + (expiresIn * 1000),
+        expiresAt: Date.now() + expiresIn * 1000,
       };
 
       return data.csrfToken;
@@ -71,7 +71,7 @@ async function fetchCSRFTokenInternal(): Promise<string | null> {
       csrfTokenCache = null;
     }
   } catch (error) {
-    console.warn('Failed to fetch CSRF token:', error);
+    console.warn("Failed to fetch CSRF token:", error);
   }
 
   return null;
@@ -144,7 +144,7 @@ export function clearCSRFToken(): void {
 export function setCSRFToken(token: string, expiresIn = 24 * 60 * 60): void {
   csrfTokenCache = {
     token,
-    expiresAt: Date.now() + (expiresIn * 1000),
+    expiresAt: Date.now() + expiresIn * 1000,
   };
 }
 
@@ -162,15 +162,15 @@ export async function csrfFetch(
   url: RequestInfo | URL,
   options: RequestInit = {}
 ): Promise<Response> {
-  const method = options.method?.toUpperCase() || 'GET';
+  const method = options.method?.toUpperCase() || "GET";
 
   // Only include CSRF token for state-changing requests
-  if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+  if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
     // Get CSRF token
-    let token = await getCSRFToken();
+    const token = await getCSRFToken();
 
     if (!token) {
-      console.warn('CSRF token not available, request may fail');
+      console.warn("CSRF token not available, request may fail");
     }
 
     // Add CSRF token to headers
@@ -184,7 +184,7 @@ export async function csrfFetch(
 
   // Include credentials by default
   if (!options.credentials) {
-    options.credentials = 'include';
+    options.credentials = "include";
   }
 
   // Make the request
@@ -195,7 +195,7 @@ export async function csrfFetch(
     const clonedResponse = response.clone();
     try {
       const data = await clonedResponse.json();
-      if (data.code === 'CSRF_TOKEN_INVALID' || data.error?.includes('CSRF')) {
+      if (data.code === "CSRF_TOKEN_INVALID" || data.error?.includes("CSRF")) {
         // Clear cache and get fresh token
         clearCSRFToken();
         const freshToken = await getCSRFToken(true);

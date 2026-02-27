@@ -6,8 +6,8 @@
  * Allows users to view their active sessions.
  */
 
-import { NextResponse } from 'next/server';
-import { requireAuth, getUserSessions } from '@/lib/auth';
+import { NextResponse } from "next/server";
+import { requireAuth, getUserSessions } from "@/lib/auth";
 
 /**
  * GET /api/user/sessions
@@ -22,8 +22,8 @@ export async function GET() {
     // Format sessions for response
     const formattedSessions = sessions.map((s) => ({
       id: s.id,
-      deviceInfo: s.deviceInfo || 'Unknown device',
-      ipAddress: s.ipAddress || 'Unknown location',
+      deviceInfo: s.deviceInfo || "Unknown device",
+      ipAddress: s.ipAddress || "Unknown location",
       lastSeenAt: s.lastSeenAt,
       createdAt: s.createdAt,
       // We can't reliably determine current session without session tracking in JWT
@@ -41,17 +41,14 @@ export async function GET() {
       count: formattedSessions.length,
     });
   } catch (error) {
-    console.error('Failed to get sessions:', error);
+    console.error("Failed to get sessions:", error);
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     return NextResponse.json(
-      { error: 'Failed to retrieve sessions' },
+      { error: "Failed to retrieve sessions" },
       { status: 500 }
     );
   }

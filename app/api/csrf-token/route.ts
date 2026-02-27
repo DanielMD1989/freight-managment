@@ -19,12 +19,9 @@
  * Sprint 9 - Story 9.6: CSRF Protection
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import {
-  getCSRFTokenFromCookie,
-  CSRF_COOKIE_NAME,
-} from '@/lib/csrf';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import { getCSRFTokenFromCookie, CSRF_COOKIE_NAME } from "@/lib/csrf";
 
 /**
  * GET /api/csrf-token
@@ -58,7 +55,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Generate new token
-    const { generateCSRFToken } = await import('@/lib/csrf');
+    const { generateCSRFToken } = await import("@/lib/csrf");
     const newToken = generateCSRFToken();
 
     // Create response with the token
@@ -71,27 +68,27 @@ export async function GET(request: NextRequest) {
     // Set the CSRF cookie
     response.cookies.set(CSRF_COOKIE_NAME, newToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
       maxAge: 60 * 60 * 24, // 24 hours
     });
 
     return response;
-  // FIX: Use unknown type with type guard
+    // FIX: Use unknown type with type guard
   } catch (error: unknown) {
-    console.error('Error generating CSRF token:', error);
+    console.error("Error generating CSRF token:", error);
 
     // Check if it's an auth error
-    if (error instanceof Error && error.message === 'Unauthorized') {
+    if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: "Authentication required" },
         { status: 401 }
       );
     }
 
     return NextResponse.json(
-      { error: 'Failed to generate CSRF token' },
+      { error: "Failed to generate CSRF token" },
       { status: 500 }
     );
   }

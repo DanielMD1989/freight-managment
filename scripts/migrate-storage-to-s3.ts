@@ -38,10 +38,10 @@ import {
   getPublicUrl,
   isCDNEnabled,
   getCDNDomain,
-} from '../lib/storage';
-import { db } from '../lib/db';
-import fs from 'fs/promises';
-import path from 'path';
+} from "../lib/storage";
+import { db } from "../lib/db";
+import fs from "fs/promises";
+import path from "path";
 
 // =============================================================================
 // CONFIGURATION
@@ -64,14 +64,14 @@ function parseArgs(): MigrationConfig {
   };
 
   for (const arg of args) {
-    if (arg === '--dry-run') {
+    if (arg === "--dry-run") {
       config.dryRun = true;
-    } else if (arg === '--update-db') {
+    } else if (arg === "--update-db") {
       config.updateDb = true;
-    } else if (arg === '--delete-local') {
+    } else if (arg === "--delete-local") {
       config.deleteLocal = true;
-    } else if (arg.startsWith('--batch-size=')) {
-      config.batchSize = parseInt(arg.split('=')[1]);
+    } else if (arg.startsWith("--batch-size=")) {
+      config.batchSize = parseInt(arg.split("=")[1]);
     }
   }
 
@@ -98,49 +98,51 @@ async function getDocumentsWithLocalUrls(): Promise<DocumentRecord[]> {
   const companyDocs = await db.companyDocument.findMany({
     where: {
       OR: [
-        { fileUrl: { startsWith: '/uploads/' } },
-        { fileUrl: { startsWith: '/api/uploads/' } },
+        { fileUrl: { startsWith: "/uploads/" } },
+        { fileUrl: { startsWith: "/api/uploads/" } },
       ],
     },
     select: { id: true, fileUrl: true },
   });
-  documents.push(...companyDocs.map(d => ({ ...d, table: 'companyDocument' })));
+  documents.push(
+    ...companyDocs.map((d) => ({ ...d, table: "companyDocument" }))
+  );
 
   // TruckDocuments
   const truckDocs = await db.truckDocument.findMany({
     where: {
       OR: [
-        { fileUrl: { startsWith: '/uploads/' } },
-        { fileUrl: { startsWith: '/api/uploads/' } },
+        { fileUrl: { startsWith: "/uploads/" } },
+        { fileUrl: { startsWith: "/api/uploads/" } },
       ],
     },
     select: { id: true, fileUrl: true },
   });
-  documents.push(...truckDocs.map(d => ({ ...d, table: 'truckDocument' })));
+  documents.push(...truckDocs.map((d) => ({ ...d, table: "truckDocument" })));
 
   // Load Documents
   const loadDocs = await db.document.findMany({
     where: {
       OR: [
-        { fileUrl: { startsWith: '/uploads/' } },
-        { fileUrl: { startsWith: '/api/uploads/' } },
+        { fileUrl: { startsWith: "/uploads/" } },
+        { fileUrl: { startsWith: "/api/uploads/" } },
       ],
     },
     select: { id: true, fileUrl: true },
   });
-  documents.push(...loadDocs.map(d => ({ ...d, table: 'document' })));
+  documents.push(...loadDocs.map((d) => ({ ...d, table: "document" })));
 
   // TripPods
   const tripPods = await db.tripPod.findMany({
     where: {
       OR: [
-        { fileUrl: { startsWith: '/uploads/' } },
-        { fileUrl: { startsWith: '/api/uploads/' } },
+        { fileUrl: { startsWith: "/uploads/" } },
+        { fileUrl: { startsWith: "/api/uploads/" } },
       ],
     },
     select: { id: true, fileUrl: true },
   });
-  documents.push(...tripPods.map(d => ({ ...d, table: 'tripPod' })));
+  documents.push(...tripPods.map((d) => ({ ...d, table: "tripPod" })));
 
   return documents;
 }
@@ -150,11 +152,11 @@ async function getDocumentsWithLocalUrls(): Promise<DocumentRecord[]> {
  */
 function extractKeyFromUrl(url: string): string {
   // Handle /uploads/... or /api/uploads/...
-  if (url.startsWith('/api/uploads/')) {
-    return url.replace('/api/uploads/', '');
+  if (url.startsWith("/api/uploads/")) {
+    return url.replace("/api/uploads/", "");
   }
-  if (url.startsWith('/uploads/')) {
-    return url.replace('/uploads/', '');
+  if (url.startsWith("/uploads/")) {
+    return url.replace("/uploads/", "");
   }
   return url;
 }
@@ -169,25 +171,25 @@ async function updateDocumentUrl(
 ): Promise<boolean> {
   try {
     switch (table) {
-      case 'companyDocument':
+      case "companyDocument":
         await db.companyDocument.update({
           where: { id },
           data: { fileUrl: newUrl },
         });
         break;
-      case 'truckDocument':
+      case "truckDocument":
         await db.truckDocument.update({
           where: { id },
           data: { fileUrl: newUrl },
         });
         break;
-      case 'document':
+      case "document":
         await db.document.update({
           where: { id },
           data: { fileUrl: newUrl },
         });
         break;
-      case 'tripPod':
+      case "tripPod":
         await db.tripPod.update({
           where: { id },
           data: { fileUrl: newUrl },
@@ -208,22 +210,22 @@ async function updateDocumentUrl(
 // =============================================================================
 
 async function runMigration(config: MigrationConfig): Promise<void> {
-  console.log('\n' + '='.repeat(60));
-  console.log('STORAGE MIGRATION: Local -> S3 + CDN');
-  console.log('='.repeat(60));
+  console.log("\n" + "=".repeat(60));
+  console.log("STORAGE MIGRATION: Local -> S3 + CDN");
+  console.log("=".repeat(60));
 
   // Check configuration
-  console.log('\n📋 Configuration:');
+  console.log("\n📋 Configuration:");
   console.log(`   Dry run: ${config.dryRun}`);
   console.log(`   Update DB: ${config.updateDb}`);
   console.log(`   Delete local: ${config.deleteLocal}`);
   console.log(`   Batch size: ${config.batchSize}`);
 
   // Check storage health
-  console.log('\n🔍 Checking storage health...');
+  console.log("\n🔍 Checking storage health...");
   const health = await checkStorageHealth();
   console.log(`   Provider: ${health.provider}`);
-  console.log(`   Healthy: ${health.healthy ? '✅' : '❌'}`);
+  console.log(`   Healthy: ${health.healthy ? "✅" : "❌"}`);
   console.log(`   CDN Enabled: ${health.cdnEnabled}`);
   if (health.cdnDomain) {
     console.log(`   CDN Domain: ${health.cdnDomain}`);
@@ -232,28 +234,30 @@ async function runMigration(config: MigrationConfig): Promise<void> {
     console.log(`   Error: ${health.error}`);
   }
 
-  if (health.provider !== 's3') {
+  if (health.provider !== "s3") {
     console.log('\n⚠️  Warning: STORAGE_PROVIDER is not set to "s3"');
-    console.log('   Set STORAGE_PROVIDER=s3 in .env to use S3 storage');
+    console.log("   Set STORAGE_PROVIDER=s3 in .env to use S3 storage");
     if (!config.dryRun) {
-      console.log('   Exiting...');
+      console.log("   Exiting...");
       return;
     }
   }
 
   // Get storage stats
-  console.log('\n📊 Storage Statistics:');
+  console.log("\n📊 Storage Statistics:");
   const stats = await getStorageStats();
   console.log(`   Local files: ${stats.localFileCount}`);
-  console.log(`   Total size: ${(stats.localTotalSize / 1024 / 1024).toFixed(2)} MB`);
+  console.log(
+    `   Total size: ${(stats.localTotalSize / 1024 / 1024).toFixed(2)} MB`
+  );
 
   if (stats.localFileCount === 0) {
-    console.log('\n✅ No local files to migrate');
+    console.log("\n✅ No local files to migrate");
     return;
   }
 
   // List files to migrate
-  console.log('\n📁 Files to migrate:');
+  console.log("\n📁 Files to migrate:");
   const files = await listLocalFiles();
   for (const file of files.slice(0, 10)) {
     console.log(`   - ${file}`);
@@ -263,10 +267,10 @@ async function runMigration(config: MigrationConfig): Promise<void> {
   }
 
   if (config.dryRun) {
-    console.log('\n🔍 DRY RUN - No changes will be made');
+    console.log("\n🔍 DRY RUN - No changes will be made");
 
     // Show what would be migrated
-    console.log('\n📋 Database records to update:');
+    console.log("\n📋 Database records to update:");
     const documents = await getDocumentsWithLocalUrls();
     console.log(`   Total records: ${documents.length}`);
 
@@ -278,13 +282,18 @@ async function runMigration(config: MigrationConfig): Promise<void> {
       console.log(`   - ${table}: ${count}`);
     }
 
-    console.log('\n✅ Dry run complete');
+    console.log("\n✅ Dry run complete");
     return;
   }
 
   // Perform migration
-  console.log('\n🚀 Starting migration...');
-  const migrationResults: { key: string; success: boolean; newUrl?: string; error?: string }[] = [];
+  console.log("\n🚀 Starting migration...");
+  const migrationResults: {
+    key: string;
+    success: boolean;
+    newUrl?: string;
+    error?: string;
+  }[] = [];
   let successful = 0;
   let failed = 0;
 
@@ -310,7 +319,12 @@ async function runMigration(config: MigrationConfig): Promise<void> {
         successful++;
         if (config.deleteLocal) {
           try {
-            const localPath = path.join(process.cwd(), 'public', 'uploads', result.key);
+            const localPath = path.join(
+              process.cwd(),
+              "public",
+              "uploads",
+              result.key
+            );
             await fs.unlink(localPath);
           } catch {
             // File may already be deleted
@@ -322,17 +336,19 @@ async function runMigration(config: MigrationConfig): Promise<void> {
       }
     }
 
-    console.log(`   Progress: ${Math.min(i + config.batchSize, files.length)}/${files.length} (${successful} successful, ${failed} failed)`);
+    console.log(
+      `   Progress: ${Math.min(i + config.batchSize, files.length)}/${files.length} (${successful} successful, ${failed} failed)`
+    );
   }
 
-  console.log('\n📊 Migration Results:');
+  console.log("\n📊 Migration Results:");
   console.log(`   Total: ${files.length}`);
   console.log(`   Successful: ${successful}`);
   console.log(`   Failed: ${failed}`);
 
   // Update database records
   if (config.updateDb && successful > 0) {
-    console.log('\n📝 Updating database records...');
+    console.log("\n📝 Updating database records...");
 
     const documents = await getDocumentsWithLocalUrls();
     let dbUpdated = 0;
@@ -340,10 +356,16 @@ async function runMigration(config: MigrationConfig): Promise<void> {
 
     for (const doc of documents) {
       const key = extractKeyFromUrl(doc.fileUrl);
-      const migrationResult = migrationResults.find(r => r.key === key && r.success);
+      const migrationResult = migrationResults.find(
+        (r) => r.key === key && r.success
+      );
 
       if (migrationResult && migrationResult.newUrl) {
-        const updated = await updateDocumentUrl(doc.table, doc.id, migrationResult.newUrl);
+        const updated = await updateDocumentUrl(
+          doc.table,
+          doc.id,
+          migrationResult.newUrl
+        );
         if (updated) {
           dbUpdated++;
         } else {
@@ -356,19 +378,21 @@ async function runMigration(config: MigrationConfig): Promise<void> {
     console.log(`   Failed: ${dbFailed}`);
   }
 
-  console.log('\n' + '='.repeat(60));
-  console.log('MIGRATION COMPLETE');
-  console.log('='.repeat(60));
+  console.log("\n" + "=".repeat(60));
+  console.log("MIGRATION COMPLETE");
+  console.log("=".repeat(60));
 
   // Summary
   if (failed > 0) {
-    console.log('\n⚠️  Some files failed to migrate. Review errors above.');
+    console.log("\n⚠️  Some files failed to migrate. Review errors above.");
   } else {
-    console.log('\n✅ All files migrated successfully!');
+    console.log("\n✅ All files migrated successfully!");
   }
 
   if (isCDNEnabled()) {
-    console.log(`\n🌐 Files are now served via CDN: https://${getCDNDomain()}/`);
+    console.log(
+      `\n🌐 Files are now served via CDN: https://${getCDNDomain()}/`
+    );
   }
 }
 
@@ -382,7 +406,7 @@ async function main(): Promise<void> {
   try {
     await runMigration(config);
   } catch (error) {
-    console.error('\n❌ Migration failed:', error);
+    console.error("\n❌ Migration failed:", error);
     process.exit(1);
   } finally {
     await db.$disconnect();

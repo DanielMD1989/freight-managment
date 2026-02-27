@@ -3,7 +3,6 @@
  */
 import React from "react";
 import { View, Text, ScrollView, StyleSheet, Switch } from "react-native";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useSettingsStore } from "../../src/stores/settings";
@@ -17,7 +16,6 @@ import i18n from "../../src/i18n/config";
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
-  const router = useRouter();
   const {
     locale,
     setLocale,

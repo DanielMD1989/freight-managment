@@ -1,704 +1,1001 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FreightET - Color Palette Options</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Inter', sans-serif;
-      background: #f8fafc;
-      color: #1e293b;
-      line-height: 1.6;
-    }
-
-    .header {
-      text-align: center;
-      padding: 60px 20px 40px;
-      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-      color: white;
-    }
-    .header h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 10px; }
-    .header p { font-size: 1.1rem; opacity: 0.9; max-width: 600px; margin: 0 auto; }
-
-    .options-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 30px;
-      max-width: 1400px;
-      margin: -40px auto 60px;
-      padding: 0 30px;
-    }
-
-    .option-card {
-      background: white;
-      border-radius: 20px;
-      overflow: hidden;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-      transition: transform 0.3s, box-shadow 0.3s;
-    }
-    .option-card:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-    }
-
-    .option-header {
-      padding: 30px;
-      color: white;
-      text-align: center;
-    }
-    .option-header h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; }
-    .option-header p { font-size: 0.95rem; opacity: 0.9; }
-
-    .color-swatches {
-      display: flex;
-      padding: 0 20px;
-      margin-top: -20px;
-      gap: 10px;
-      justify-content: center;
-    }
-    .swatch {
-      width: 50px;
-      height: 50px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      border: 3px solid white;
-    }
-
-    .preview-section {
-      padding: 25px;
-    }
-    .preview-section h3 {
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: #64748b;
-      margin-bottom: 15px;
-    }
-
-    /* Mini Components Preview */
-    .mini-sidebar {
-      width: 100%;
-      height: 200px;
-      border-radius: 12px;
-      overflow: hidden;
-      margin-bottom: 20px;
-      display: flex;
-    }
-    .mini-sidebar-nav {
-      width: 60px;
-      padding: 15px 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .mini-sidebar-nav .nav-item {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .mini-sidebar-content {
-      flex: 1;
-      padding: 15px;
-    }
-    .mini-card {
-      border-radius: 10px;
-      padding: 12px;
-      margin-bottom: 10px;
-    }
-    .mini-stat {
-      font-size: 1.2rem;
-      font-weight: 700;
-    }
-    .mini-label {
-      font-size: 0.7rem;
-      opacity: 0.7;
-    }
-
-    .button-row {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
-    .btn {
-      padding: 10px 20px;
-      border-radius: 10px;
-      font-weight: 600;
-      font-size: 0.85rem;
-      border: none;
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-    .btn:hover { transform: scale(1.05); }
-
-    .badge-row {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 15px;
-    }
-    .badge {
-      padding: 5px 12px;
-      border-radius: 20px;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-
-    .input-preview {
-      padding: 12px 16px;
-      border-radius: 10px;
-      font-size: 0.9rem;
-      width: 100%;
-      margin-bottom: 15px;
-    }
-
-    .table-preview {
-      width: 100%;
-      border-radius: 10px;
-      overflow: hidden;
-      font-size: 0.8rem;
-    }
-    .table-preview th, .table-preview td {
-      padding: 10px 12px;
-      text-align: left;
-    }
-
-    /* Option A - Bold & Professional */
-    .option-a .option-header {
-      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
-    }
-    .option-a .primary { background: #1e3a8a; }
-    .option-a .secondary { background: #f97316; }
-    .option-a .accent { background: #0ea5e9; }
-    .option-a .success { background: #22c55e; }
-    .option-a .neutral { background: #64748b; }
-
-    .option-a .mini-sidebar {
-      background: #f1f5f9;
-    }
-    .option-a .mini-sidebar-nav {
-      background: #0f172a;
-    }
-    .option-a .mini-sidebar-nav .nav-item {
-      background: rgba(255,255,255,0.1);
-    }
-    .option-a .mini-sidebar-nav .nav-item.active {
-      background: #1e3a8a;
-    }
-    .option-a .mini-sidebar-nav .nav-item svg { stroke: white; }
-    .option-a .mini-card {
-      background: white;
-      border: 1px solid #e2e8f0;
-    }
-    .option-a .mini-stat { color: #0f172a; }
-
-    .option-a .btn-primary {
-      background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
-      color: white;
-    }
-    .option-a .btn-secondary {
-      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-      color: white;
-    }
-    .option-a .btn-outline {
-      background: white;
-      border: 2px solid #1e3a8a;
-      color: #1e3a8a;
-    }
-
-    .option-a .badge-pending { background: #fef3c7; color: #92400e; }
-    .option-a .badge-approved { background: #dcfce7; color: #166534; }
-    .option-a .badge-transit { background: #dbeafe; color: #1e40af; }
-    .option-a .badge-delivered { background: #d1fae5; color: #065f46; }
-
-    .option-a .input-preview {
-      background: white;
-      border: 2px solid #e2e8f0;
-      color: #0f172a;
-    }
-    .option-a .input-preview:focus {
-      border-color: #1e3a8a;
-      outline: none;
-    }
-
-    .option-a .table-preview {
-      background: white;
-      border: 1px solid #e2e8f0;
-    }
-    .option-a .table-preview th {
-      background: #f8fafc;
-      color: #64748b;
-      font-weight: 600;
-    }
-    .option-a .table-preview td {
-      border-top: 1px solid #f1f5f9;
-    }
-    .option-a .table-preview tr:hover td {
-      background: #f8fafc;
-    }
-
-    /* Option B - Clean & Minimal */
-    .option-b .option-header {
-      background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
-    }
-    .option-b .primary { background: #0f766e; }
-    .option-b .secondary { background: #6366f1; }
-    .option-b .accent { background: #14b8a6; }
-    .option-b .success { background: #10b981; }
-    .option-b .neutral { background: #94a3b8; }
-
-    .option-b .mini-sidebar {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-    }
-    .option-b .mini-sidebar-nav {
-      background: #fafafa;
-      border-right: 1px solid #e2e8f0;
-    }
-    .option-b .mini-sidebar-nav .nav-item {
-      background: transparent;
-    }
-    .option-b .mini-sidebar-nav .nav-item.active {
-      background: #0f766e;
-    }
-    .option-b .mini-sidebar-nav .nav-item svg { stroke: #64748b; }
-    .option-b .mini-sidebar-nav .nav-item.active svg { stroke: white; }
-    .option-b .mini-card {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-    }
-    .option-b .mini-stat { color: #0f766e; }
-
-    .option-b .btn-primary {
-      background: #0f766e;
-      color: white;
-    }
-    .option-b .btn-secondary {
-      background: #6366f1;
-      color: white;
-    }
-    .option-b .btn-outline {
-      background: white;
-      border: 1.5px solid #0f766e;
-      color: #0f766e;
-    }
-
-    .option-b .badge-pending { background: #fef9c3; color: #854d0e; }
-    .option-b .badge-approved { background: #d1fae5; color: #065f46; }
-    .option-b .badge-transit { background: #ccfbf1; color: #0f766e; }
-    .option-b .badge-delivered { background: #d1fae5; color: #065f46; }
-
-    .option-b .input-preview {
-      background: #fafafa;
-      border: 1.5px solid #e2e8f0;
-      color: #1e293b;
-    }
-
-    .option-b .table-preview {
-      background: white;
-    }
-    .option-b .table-preview th {
-      background: #fafafa;
-      color: #64748b;
-      font-weight: 500;
-      border-bottom: 1px solid #e2e8f0;
-    }
-    .option-b .table-preview td {
-      border-bottom: 1px solid #f1f5f9;
-    }
-
-    /* Option C - Dark Mode / Premium */
-    .option-c .option-header {
-      background: linear-gradient(135deg, #18181b 0%, #3f3f46 100%);
-    }
-    .option-c .primary { background: #8b5cf6; }
-    .option-c .secondary { background: #06b6d4; }
-    .option-c .accent { background: #f59e0b; }
-    .option-c .success { background: #10b981; }
-    .option-c .neutral { background: #71717a; }
-
-    .option-c .mini-sidebar {
-      background: #18181b;
-    }
-    .option-c .mini-sidebar-nav {
-      background: #09090b;
-    }
-    .option-c .mini-sidebar-nav .nav-item {
-      background: rgba(255,255,255,0.05);
-    }
-    .option-c .mini-sidebar-nav .nav-item.active {
-      background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
-    }
-    .option-c .mini-sidebar-nav .nav-item svg { stroke: #a1a1aa; }
-    .option-c .mini-sidebar-nav .nav-item.active svg { stroke: white; }
-    .option-c .mini-sidebar-content {
-      color: #fafafa;
-    }
-    .option-c .mini-card {
-      background: #27272a;
-      border: 1px solid #3f3f46;
-    }
-    .option-c .mini-stat { color: #8b5cf6; }
-    .option-c .mini-label { color: #a1a1aa; }
-
-    .option-c .btn-primary {
-      background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
-      color: white;
-    }
-    .option-c .btn-secondary {
-      background: linear-gradient(135deg, #06b6d4 0%, #22d3ee 100%);
-      color: #18181b;
-    }
-    .option-c .btn-outline {
-      background: transparent;
-      border: 2px solid #8b5cf6;
-      color: #8b5cf6;
-    }
-
-    .option-c .badge-pending { background: #422006; color: #fbbf24; }
-    .option-c .badge-approved { background: #052e16; color: #4ade80; }
-    .option-c .badge-transit { background: #1e1b4b; color: #a78bfa; }
-    .option-c .badge-delivered { background: #042f2e; color: #2dd4bf; }
-
-    .option-c .input-preview {
-      background: #27272a;
-      border: 2px solid #3f3f46;
-      color: #fafafa;
-    }
-
-    .option-c .table-preview {
-      background: #18181b;
-      color: #fafafa;
-    }
-    .option-c .table-preview th {
-      background: #27272a;
-      color: #a1a1aa;
-      font-weight: 600;
-    }
-    .option-c .table-preview td {
-      border-top: 1px solid #27272a;
-    }
-    .option-c .table-preview tr:hover td {
-      background: #27272a;
-    }
-
-    /* Color labels */
-    .color-labels {
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-      padding: 20px;
-      flex-wrap: wrap;
-    }
-    .color-label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.8rem;
-      color: #64748b;
-    }
-    .color-label .dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-    }
-
-    /* Bottom section */
-    .bottom-section {
-      background: #1e293b;
-      color: white;
-      padding: 60px 30px;
-      text-align: center;
-    }
-    .bottom-section h2 {
-      font-size: 2rem;
-      margin-bottom: 15px;
-    }
-    .bottom-section p {
-      opacity: 0.8;
-      max-width: 600px;
-      margin: 0 auto 30px;
-    }
-    .choice-buttons {
-      display: flex;
-      gap: 20px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    .choice-btn {
-      padding: 15px 40px;
-      border-radius: 12px;
-      font-weight: 700;
-      font-size: 1rem;
-      border: none;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .choice-btn:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    }
-    .choice-a { background: linear-gradient(135deg, #1e3a8a 0%, #f97316 100%); color: white; }
-    .choice-b { background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%); color: white; }
-    .choice-c { background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%); color: white; }
-
-    @media (max-width: 1100px) {
-      .options-grid {
-        grid-template-columns: 1fr;
-        max-width: 500px;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FreightET - Color Palette Options</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
       }
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>FreightET Design System</h1>
-    <p>Choose your preferred color palette for Ethiopia's leading freight management platform</p>
-  </div>
+      body {
+        font-family: "Inter", sans-serif;
+        background: #f8fafc;
+        color: #1e293b;
+        line-height: 1.6;
+      }
 
-  <div class="options-grid">
-    <!-- Option A: Bold & Professional -->
-    <div class="option-card option-a">
-      <div class="option-header">
-        <h2>Option A</h2>
-        <p>Bold & Professional</p>
-      </div>
-      <div class="color-swatches">
-        <div class="swatch primary"></div>
-        <div class="swatch secondary"></div>
-        <div class="swatch accent"></div>
-        <div class="swatch success"></div>
-        <div class="swatch neutral"></div>
-      </div>
-      <div class="color-labels">
-        <div class="color-label"><div class="dot" style="background:#1e3a8a"></div>Navy</div>
-        <div class="color-label"><div class="dot" style="background:#f97316"></div>Orange</div>
-        <div class="color-label"><div class="dot" style="background:#0ea5e9"></div>Sky</div>
-        <div class="color-label"><div class="dot" style="background:#22c55e"></div>Green</div>
-      </div>
-      <div class="preview-section">
-        <h3>Dashboard Preview</h3>
-        <div class="mini-sidebar">
-          <div class="mini-sidebar-nav">
-            <div class="nav-item active">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 14a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1v-5zM14 14a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1h-4a1 1 0 01-1-1v-5z"/></svg>
+      .header {
+        text-align: center;
+        padding: 60px 20px 40px;
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        color: white;
+      }
+      .header h1 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 10px;
+      }
+      .header p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      .options-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 30px;
+        max-width: 1400px;
+        margin: -40px auto 60px;
+        padding: 0 30px;
+      }
+
+      .option-card {
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        transition:
+          transform 0.3s,
+          box-shadow 0.3s;
+      }
+      .option-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      }
+
+      .option-header {
+        padding: 30px;
+        color: white;
+        text-align: center;
+      }
+      .option-header h2 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+      .option-header p {
+        font-size: 0.95rem;
+        opacity: 0.9;
+      }
+
+      .color-swatches {
+        display: flex;
+        padding: 0 20px;
+        margin-top: -20px;
+        gap: 10px;
+        justify-content: center;
+      }
+      .swatch {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        border: 3px solid white;
+      }
+
+      .preview-section {
+        padding: 25px;
+      }
+      .preview-section h3 {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #64748b;
+        margin-bottom: 15px;
+      }
+
+      /* Mini Components Preview */
+      .mini-sidebar {
+        width: 100%;
+        height: 200px;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 20px;
+        display: flex;
+      }
+      .mini-sidebar-nav {
+        width: 60px;
+        padding: 15px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .mini-sidebar-nav .nav-item {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .mini-sidebar-content {
+        flex: 1;
+        padding: 15px;
+      }
+      .mini-card {
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 10px;
+      }
+      .mini-stat {
+        font-size: 1.2rem;
+        font-weight: 700;
+      }
+      .mini-label {
+        font-size: 0.7rem;
+        opacity: 0.7;
+      }
+
+      .button-row {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+      .btn {
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        border: none;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+      .btn:hover {
+        transform: scale(1.05);
+      }
+
+      .badge-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 15px;
+      }
+      .badge {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+
+      .input-preview {
+        padding: 12px 16px;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        width: 100%;
+        margin-bottom: 15px;
+      }
+
+      .table-preview {
+        width: 100%;
+        border-radius: 10px;
+        overflow: hidden;
+        font-size: 0.8rem;
+      }
+      .table-preview th,
+      .table-preview td {
+        padding: 10px 12px;
+        text-align: left;
+      }
+
+      /* Option A - Bold & Professional */
+      .option-a .option-header {
+        background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+      }
+      .option-a .primary {
+        background: #1e3a8a;
+      }
+      .option-a .secondary {
+        background: #f97316;
+      }
+      .option-a .accent {
+        background: #0ea5e9;
+      }
+      .option-a .success {
+        background: #22c55e;
+      }
+      .option-a .neutral {
+        background: #64748b;
+      }
+
+      .option-a .mini-sidebar {
+        background: #f1f5f9;
+      }
+      .option-a .mini-sidebar-nav {
+        background: #0f172a;
+      }
+      .option-a .mini-sidebar-nav .nav-item {
+        background: rgba(255, 255, 255, 0.1);
+      }
+      .option-a .mini-sidebar-nav .nav-item.active {
+        background: #1e3a8a;
+      }
+      .option-a .mini-sidebar-nav .nav-item svg {
+        stroke: white;
+      }
+      .option-a .mini-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+      }
+      .option-a .mini-stat {
+        color: #0f172a;
+      }
+
+      .option-a .btn-primary {
+        background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+        color: white;
+      }
+      .option-a .btn-secondary {
+        background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+        color: white;
+      }
+      .option-a .btn-outline {
+        background: white;
+        border: 2px solid #1e3a8a;
+        color: #1e3a8a;
+      }
+
+      .option-a .badge-pending {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .option-a .badge-approved {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .option-a .badge-transit {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+      .option-a .badge-delivered {
+        background: #d1fae5;
+        color: #065f46;
+      }
+
+      .option-a .input-preview {
+        background: white;
+        border: 2px solid #e2e8f0;
+        color: #0f172a;
+      }
+      .option-a .input-preview:focus {
+        border-color: #1e3a8a;
+        outline: none;
+      }
+
+      .option-a .table-preview {
+        background: white;
+        border: 1px solid #e2e8f0;
+      }
+      .option-a .table-preview th {
+        background: #f8fafc;
+        color: #64748b;
+        font-weight: 600;
+      }
+      .option-a .table-preview td {
+        border-top: 1px solid #f1f5f9;
+      }
+      .option-a .table-preview tr:hover td {
+        background: #f8fafc;
+      }
+
+      /* Option B - Clean & Minimal */
+      .option-b .option-header {
+        background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+      }
+      .option-b .primary {
+        background: #0f766e;
+      }
+      .option-b .secondary {
+        background: #6366f1;
+      }
+      .option-b .accent {
+        background: #14b8a6;
+      }
+      .option-b .success {
+        background: #10b981;
+      }
+      .option-b .neutral {
+        background: #94a3b8;
+      }
+
+      .option-b .mini-sidebar {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+      }
+      .option-b .mini-sidebar-nav {
+        background: #fafafa;
+        border-right: 1px solid #e2e8f0;
+      }
+      .option-b .mini-sidebar-nav .nav-item {
+        background: transparent;
+      }
+      .option-b .mini-sidebar-nav .nav-item.active {
+        background: #0f766e;
+      }
+      .option-b .mini-sidebar-nav .nav-item svg {
+        stroke: #64748b;
+      }
+      .option-b .mini-sidebar-nav .nav-item.active svg {
+        stroke: white;
+      }
+      .option-b .mini-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+      }
+      .option-b .mini-stat {
+        color: #0f766e;
+      }
+
+      .option-b .btn-primary {
+        background: #0f766e;
+        color: white;
+      }
+      .option-b .btn-secondary {
+        background: #6366f1;
+        color: white;
+      }
+      .option-b .btn-outline {
+        background: white;
+        border: 1.5px solid #0f766e;
+        color: #0f766e;
+      }
+
+      .option-b .badge-pending {
+        background: #fef9c3;
+        color: #854d0e;
+      }
+      .option-b .badge-approved {
+        background: #d1fae5;
+        color: #065f46;
+      }
+      .option-b .badge-transit {
+        background: #ccfbf1;
+        color: #0f766e;
+      }
+      .option-b .badge-delivered {
+        background: #d1fae5;
+        color: #065f46;
+      }
+
+      .option-b .input-preview {
+        background: #fafafa;
+        border: 1.5px solid #e2e8f0;
+        color: #1e293b;
+      }
+
+      .option-b .table-preview {
+        background: white;
+      }
+      .option-b .table-preview th {
+        background: #fafafa;
+        color: #64748b;
+        font-weight: 500;
+        border-bottom: 1px solid #e2e8f0;
+      }
+      .option-b .table-preview td {
+        border-bottom: 1px solid #f1f5f9;
+      }
+
+      /* Option C - Dark Mode / Premium */
+      .option-c .option-header {
+        background: linear-gradient(135deg, #18181b 0%, #3f3f46 100%);
+      }
+      .option-c .primary {
+        background: #8b5cf6;
+      }
+      .option-c .secondary {
+        background: #06b6d4;
+      }
+      .option-c .accent {
+        background: #f59e0b;
+      }
+      .option-c .success {
+        background: #10b981;
+      }
+      .option-c .neutral {
+        background: #71717a;
+      }
+
+      .option-c .mini-sidebar {
+        background: #18181b;
+      }
+      .option-c .mini-sidebar-nav {
+        background: #09090b;
+      }
+      .option-c .mini-sidebar-nav .nav-item {
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .option-c .mini-sidebar-nav .nav-item.active {
+        background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+      }
+      .option-c .mini-sidebar-nav .nav-item svg {
+        stroke: #a1a1aa;
+      }
+      .option-c .mini-sidebar-nav .nav-item.active svg {
+        stroke: white;
+      }
+      .option-c .mini-sidebar-content {
+        color: #fafafa;
+      }
+      .option-c .mini-card {
+        background: #27272a;
+        border: 1px solid #3f3f46;
+      }
+      .option-c .mini-stat {
+        color: #8b5cf6;
+      }
+      .option-c .mini-label {
+        color: #a1a1aa;
+      }
+
+      .option-c .btn-primary {
+        background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+        color: white;
+      }
+      .option-c .btn-secondary {
+        background: linear-gradient(135deg, #06b6d4 0%, #22d3ee 100%);
+        color: #18181b;
+      }
+      .option-c .btn-outline {
+        background: transparent;
+        border: 2px solid #8b5cf6;
+        color: #8b5cf6;
+      }
+
+      .option-c .badge-pending {
+        background: #422006;
+        color: #fbbf24;
+      }
+      .option-c .badge-approved {
+        background: #052e16;
+        color: #4ade80;
+      }
+      .option-c .badge-transit {
+        background: #1e1b4b;
+        color: #a78bfa;
+      }
+      .option-c .badge-delivered {
+        background: #042f2e;
+        color: #2dd4bf;
+      }
+
+      .option-c .input-preview {
+        background: #27272a;
+        border: 2px solid #3f3f46;
+        color: #fafafa;
+      }
+
+      .option-c .table-preview {
+        background: #18181b;
+        color: #fafafa;
+      }
+      .option-c .table-preview th {
+        background: #27272a;
+        color: #a1a1aa;
+        font-weight: 600;
+      }
+      .option-c .table-preview td {
+        border-top: 1px solid #27272a;
+      }
+      .option-c .table-preview tr:hover td {
+        background: #27272a;
+      }
+
+      /* Color labels */
+      .color-labels {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        padding: 20px;
+        flex-wrap: wrap;
+      }
+      .color-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.8rem;
+        color: #64748b;
+      }
+      .color-label .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+
+      /* Bottom section */
+      .bottom-section {
+        background: #1e293b;
+        color: white;
+        padding: 60px 30px;
+        text-align: center;
+      }
+      .bottom-section h2 {
+        font-size: 2rem;
+        margin-bottom: 15px;
+      }
+      .bottom-section p {
+        opacity: 0.8;
+        max-width: 600px;
+        margin: 0 auto 30px;
+      }
+      .choice-buttons {
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .choice-btn {
+        padding: 15px 40px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 1rem;
+        border: none;
+        cursor: pointer;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+      }
+      .choice-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      }
+      .choice-a {
+        background: linear-gradient(135deg, #1e3a8a 0%, #f97316 100%);
+        color: white;
+      }
+      .choice-b {
+        background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+        color: white;
+      }
+      .choice-c {
+        background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+        color: white;
+      }
+
+      @media (max-width: 1100px) {
+        .options-grid {
+          grid-template-columns: 1fr;
+          max-width: 500px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>FreightET Design System</h1>
+      <p>
+        Choose your preferred color palette for Ethiopia's leading freight
+        management platform
+      </p>
+    </div>
+
+    <div class="options-grid">
+      <!-- Option A: Bold & Professional -->
+      <div class="option-card option-a">
+        <div class="option-header">
+          <h2>Option A</h2>
+          <p>Bold & Professional</p>
+        </div>
+        <div class="color-swatches">
+          <div class="swatch primary"></div>
+          <div class="swatch secondary"></div>
+          <div class="swatch accent"></div>
+          <div class="swatch success"></div>
+          <div class="swatch neutral"></div>
+        </div>
+        <div class="color-labels">
+          <div class="color-label">
+            <div class="dot" style="background: #1e3a8a"></div>
+            Navy
+          </div>
+          <div class="color-label">
+            <div class="dot" style="background: #f97316"></div>
+            Orange
+          </div>
+          <div class="color-label">
+            <div class="dot" style="background: #0ea5e9"></div>
+            Sky
+          </div>
+          <div class="color-label">
+            <div class="dot" style="background: #22c55e"></div>
+            Green
+          </div>
+        </div>
+        <div class="preview-section">
+          <h3>Dashboard Preview</h3>
+          <div class="mini-sidebar">
+            <div class="mini-sidebar-nav">
+              <div class="nav-item active">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 14a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1v-5zM14 14a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1h-4a1 1 0 01-1-1v-5z"
+                  />
+                </svg>
+              </div>
+              <div class="nav-item">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10M13 16a2 2 0 012-2h4l2 2v4h-2m0-4h-5"
+                  />
+                </svg>
+              </div>
+              <div class="nav-item">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                  />
+                </svg>
+              </div>
             </div>
-            <div class="nav-item">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10M13 16a2 2 0 012-2h4l2 2v4h-2m0-4h-5"/></svg>
-            </div>
-            <div class="nav-item">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+            <div class="mini-sidebar-content">
+              <div class="mini-card">
+                <div class="mini-stat">247</div>
+                <div class="mini-label">Active Loads</div>
+              </div>
+              <div class="mini-card">
+                <div class="mini-stat">89</div>
+                <div class="mini-label">Available Trucks</div>
+              </div>
             </div>
           </div>
-          <div class="mini-sidebar-content">
-            <div class="mini-card">
-              <div class="mini-stat">247</div>
-              <div class="mini-label">Active Loads</div>
-            </div>
-            <div class="mini-card">
-              <div class="mini-stat">89</div>
-              <div class="mini-label">Available Trucks</div>
-            </div>
+
+          <h3>Buttons</h3>
+          <div class="button-row">
+            <button class="btn btn-primary">Primary</button>
+            <button class="btn btn-secondary">Secondary</button>
+            <button class="btn btn-outline">Outline</button>
+          </div>
+
+          <h3>Status Badges</h3>
+          <div class="badge-row">
+            <span class="badge badge-pending">Pending</span>
+            <span class="badge badge-approved">Approved</span>
+            <span class="badge badge-transit">In Transit</span>
+            <span class="badge badge-delivered">Delivered</span>
+          </div>
+
+          <h3>Input Field</h3>
+          <input
+            type="text"
+            class="input-preview"
+            placeholder="Enter pickup location..."
+          />
+
+          <h3>Table</h3>
+          <table class="table-preview">
+            <thead>
+              <tr>
+                <th>Route</th>
+                <th>Rate</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Addis → Dire Dawa</td>
+                <td>45,000 ETB</td>
+                <td><span class="badge badge-transit">Transit</span></td>
+              </tr>
+              <tr>
+                <td>Mekelle → Addis</td>
+                <td>52,000 ETB</td>
+                <td><span class="badge badge-pending">Pending</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Option B: Clean & Minimal -->
+      <div class="option-card option-b">
+        <div class="option-header">
+          <h2>Option B</h2>
+          <p>Clean & Minimal</p>
+        </div>
+        <div class="color-swatches">
+          <div class="swatch primary"></div>
+          <div class="swatch secondary"></div>
+          <div class="swatch accent"></div>
+          <div class="swatch success"></div>
+          <div class="swatch neutral"></div>
+        </div>
+        <div class="color-labels">
+          <div class="color-label">
+            <div class="dot" style="background: #0f766e"></div>
+            Teal
+          </div>
+          <div class="color-label">
+            <div class="dot" style="background: #6366f1"></div>
+            Indigo
+          </div>
+          <div class="color-label">
+            <div class="dot" style="background: #14b8a6"></div>
+            Cyan
+          </div>
+          <div class="color-label">
+            <div class="dot" style="background: #10b981"></div>
+            Emerald
           </div>
         </div>
+        <div class="preview-section">
+          <h3>Dashboard Preview</h3>
+          <div class="mini-sidebar">
+            <div class="mini-sidebar-nav">
+              <div class="nav-item active">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 14a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1v-5zM14 14a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1h-4a1 1 0 01-1-1v-5z"
+                  />
+                </svg>
+              </div>
+              <div class="nav-item">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10M13 16a2 2 0 012-2h4l2 2v4h-2m0-4h-5"
+                  />
+                </svg>
+              </div>
+              <div class="nav-item">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                  />
+                </svg>
+              </div>
+            </div>
+            <div class="mini-sidebar-content">
+              <div class="mini-card">
+                <div class="mini-stat">247</div>
+                <div class="mini-label">Active Loads</div>
+              </div>
+              <div class="mini-card">
+                <div class="mini-stat">89</div>
+                <div class="mini-label">Available Trucks</div>
+              </div>
+            </div>
+          </div>
 
-        <h3>Buttons</h3>
-        <div class="button-row">
-          <button class="btn btn-primary">Primary</button>
-          <button class="btn btn-secondary">Secondary</button>
-          <button class="btn btn-outline">Outline</button>
+          <h3>Buttons</h3>
+          <div class="button-row">
+            <button class="btn btn-primary">Primary</button>
+            <button class="btn btn-secondary">Secondary</button>
+            <button class="btn btn-outline">Outline</button>
+          </div>
+
+          <h3>Status Badges</h3>
+          <div class="badge-row">
+            <span class="badge badge-pending">Pending</span>
+            <span class="badge badge-approved">Approved</span>
+            <span class="badge badge-transit">In Transit</span>
+            <span class="badge badge-delivered">Delivered</span>
+          </div>
+
+          <h3>Input Field</h3>
+          <input
+            type="text"
+            class="input-preview"
+            placeholder="Enter pickup location..."
+          />
+
+          <h3>Table</h3>
+          <table class="table-preview">
+            <thead>
+              <tr>
+                <th>Route</th>
+                <th>Rate</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Addis → Dire Dawa</td>
+                <td>45,000 ETB</td>
+                <td><span class="badge badge-transit">Transit</span></td>
+              </tr>
+              <tr>
+                <td>Mekelle → Addis</td>
+                <td>52,000 ETB</td>
+                <td><span class="badge badge-pending">Pending</span></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
+      </div>
 
-        <h3>Status Badges</h3>
-        <div class="badge-row">
-          <span class="badge badge-pending">Pending</span>
-          <span class="badge badge-approved">Approved</span>
-          <span class="badge badge-transit">In Transit</span>
-          <span class="badge badge-delivered">Delivered</span>
+      <!-- Option C: Dark Mode / Premium -->
+      <div class="option-card option-c">
+        <div class="option-header">
+          <h2>Option C</h2>
+          <p>Dark Mode / Premium</p>
         </div>
+        <div class="color-swatches">
+          <div class="swatch primary"></div>
+          <div class="swatch secondary"></div>
+          <div class="swatch accent"></div>
+          <div class="swatch success"></div>
+          <div class="swatch neutral"></div>
+        </div>
+        <div class="color-labels">
+          <div class="color-label">
+            <div class="dot" style="background: #8b5cf6"></div>
+            Violet
+          </div>
+          <div class="color-label">
+            <div class="dot" style="background: #06b6d4"></div>
+            Cyan
+          </div>
+          <div class="color-label">
+            <div class="dot" style="background: #f59e0b"></div>
+            Amber
+          </div>
+          <div class="color-label">
+            <div class="dot" style="background: #10b981"></div>
+            Emerald
+          </div>
+        </div>
+        <div
+          class="preview-section"
+          style="background: #09090b; border-radius: 0 0 20px 20px"
+        >
+          <h3 style="color: #a1a1aa">Dashboard Preview</h3>
+          <div class="mini-sidebar">
+            <div class="mini-sidebar-nav">
+              <div class="nav-item active">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 14a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1v-5zM14 14a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1h-4a1 1 0 01-1-1v-5z"
+                  />
+                </svg>
+              </div>
+              <div class="nav-item">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10M13 16a2 2 0 012-2h4l2 2v4h-2m0-4h-5"
+                  />
+                </svg>
+              </div>
+              <div class="nav-item">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                  />
+                </svg>
+              </div>
+            </div>
+            <div class="mini-sidebar-content">
+              <div class="mini-card">
+                <div class="mini-stat">247</div>
+                <div class="mini-label">Active Loads</div>
+              </div>
+              <div class="mini-card">
+                <div class="mini-stat">89</div>
+                <div class="mini-label">Available Trucks</div>
+              </div>
+            </div>
+          </div>
 
-        <h3>Input Field</h3>
-        <input type="text" class="input-preview" placeholder="Enter pickup location..." />
+          <h3 style="color: #a1a1aa">Buttons</h3>
+          <div class="button-row">
+            <button class="btn btn-primary">Primary</button>
+            <button class="btn btn-secondary">Secondary</button>
+            <button class="btn btn-outline">Outline</button>
+          </div>
 
-        <h3>Table</h3>
-        <table class="table-preview">
-          <thead>
-            <tr><th>Route</th><th>Rate</th><th>Status</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Addis → Dire Dawa</td><td>45,000 ETB</td><td><span class="badge badge-transit">Transit</span></td></tr>
-            <tr><td>Mekelle → Addis</td><td>52,000 ETB</td><td><span class="badge badge-pending">Pending</span></td></tr>
-          </tbody>
-        </table>
+          <h3 style="color: #a1a1aa">Status Badges</h3>
+          <div class="badge-row">
+            <span class="badge badge-pending">Pending</span>
+            <span class="badge badge-approved">Approved</span>
+            <span class="badge badge-transit">In Transit</span>
+            <span class="badge badge-delivered">Delivered</span>
+          </div>
+
+          <h3 style="color: #a1a1aa">Input Field</h3>
+          <input
+            type="text"
+            class="input-preview"
+            placeholder="Enter pickup location..."
+          />
+
+          <h3 style="color: #a1a1aa">Table</h3>
+          <table class="table-preview">
+            <thead>
+              <tr>
+                <th>Route</th>
+                <th>Rate</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Addis → Dire Dawa</td>
+                <td>45,000 ETB</td>
+                <td><span class="badge badge-transit">Transit</span></td>
+              </tr>
+              <tr>
+                <td>Mekelle → Addis</td>
+                <td>52,000 ETB</td>
+                <td><span class="badge badge-pending">Pending</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
-    <!-- Option B: Clean & Minimal -->
-    <div class="option-card option-b">
-      <div class="option-header">
-        <h2>Option B</h2>
-        <p>Clean & Minimal</p>
-      </div>
-      <div class="color-swatches">
-        <div class="swatch primary"></div>
-        <div class="swatch secondary"></div>
-        <div class="swatch accent"></div>
-        <div class="swatch success"></div>
-        <div class="swatch neutral"></div>
-      </div>
-      <div class="color-labels">
-        <div class="color-label"><div class="dot" style="background:#0f766e"></div>Teal</div>
-        <div class="color-label"><div class="dot" style="background:#6366f1"></div>Indigo</div>
-        <div class="color-label"><div class="dot" style="background:#14b8a6"></div>Cyan</div>
-        <div class="color-label"><div class="dot" style="background:#10b981"></div>Emerald</div>
-      </div>
-      <div class="preview-section">
-        <h3>Dashboard Preview</h3>
-        <div class="mini-sidebar">
-          <div class="mini-sidebar-nav">
-            <div class="nav-item active">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 14a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1v-5zM14 14a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1h-4a1 1 0 01-1-1v-5z"/></svg>
-            </div>
-            <div class="nav-item">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10M13 16a2 2 0 012-2h4l2 2v4h-2m0-4h-5"/></svg>
-            </div>
-            <div class="nav-item">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-            </div>
-          </div>
-          <div class="mini-sidebar-content">
-            <div class="mini-card">
-              <div class="mini-stat">247</div>
-              <div class="mini-label">Active Loads</div>
-            </div>
-            <div class="mini-card">
-              <div class="mini-stat">89</div>
-              <div class="mini-label">Available Trucks</div>
-            </div>
-          </div>
-        </div>
-
-        <h3>Buttons</h3>
-        <div class="button-row">
-          <button class="btn btn-primary">Primary</button>
-          <button class="btn btn-secondary">Secondary</button>
-          <button class="btn btn-outline">Outline</button>
-        </div>
-
-        <h3>Status Badges</h3>
-        <div class="badge-row">
-          <span class="badge badge-pending">Pending</span>
-          <span class="badge badge-approved">Approved</span>
-          <span class="badge badge-transit">In Transit</span>
-          <span class="badge badge-delivered">Delivered</span>
-        </div>
-
-        <h3>Input Field</h3>
-        <input type="text" class="input-preview" placeholder="Enter pickup location..." />
-
-        <h3>Table</h3>
-        <table class="table-preview">
-          <thead>
-            <tr><th>Route</th><th>Rate</th><th>Status</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Addis → Dire Dawa</td><td>45,000 ETB</td><td><span class="badge badge-transit">Transit</span></td></tr>
-            <tr><td>Mekelle → Addis</td><td>52,000 ETB</td><td><span class="badge badge-pending">Pending</span></td></tr>
-          </tbody>
-        </table>
+    <div class="bottom-section">
+      <h2>Which palette speaks to you?</h2>
+      <p>
+        Choose the design direction that best represents FreightET - Ethiopia's
+        leading freight management platform.
+      </p>
+      <div class="choice-buttons">
+        <button class="choice-btn choice-a">A: Bold & Professional</button>
+        <button class="choice-btn choice-b">B: Clean & Minimal</button>
+        <button class="choice-btn choice-c">C: Dark Mode Premium</button>
       </div>
     </div>
-
-    <!-- Option C: Dark Mode / Premium -->
-    <div class="option-card option-c">
-      <div class="option-header">
-        <h2>Option C</h2>
-        <p>Dark Mode / Premium</p>
-      </div>
-      <div class="color-swatches">
-        <div class="swatch primary"></div>
-        <div class="swatch secondary"></div>
-        <div class="swatch accent"></div>
-        <div class="swatch success"></div>
-        <div class="swatch neutral"></div>
-      </div>
-      <div class="color-labels">
-        <div class="color-label"><div class="dot" style="background:#8b5cf6"></div>Violet</div>
-        <div class="color-label"><div class="dot" style="background:#06b6d4"></div>Cyan</div>
-        <div class="color-label"><div class="dot" style="background:#f59e0b"></div>Amber</div>
-        <div class="color-label"><div class="dot" style="background:#10b981"></div>Emerald</div>
-      </div>
-      <div class="preview-section" style="background:#09090b; border-radius: 0 0 20px 20px;">
-        <h3 style="color:#a1a1aa;">Dashboard Preview</h3>
-        <div class="mini-sidebar">
-          <div class="mini-sidebar-nav">
-            <div class="nav-item active">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 14a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1v-5zM14 14a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1h-4a1 1 0 01-1-1v-5z"/></svg>
-            </div>
-            <div class="nav-item">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10M13 16a2 2 0 012-2h4l2 2v4h-2m0-4h-5"/></svg>
-            </div>
-            <div class="nav-item">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-            </div>
-          </div>
-          <div class="mini-sidebar-content">
-            <div class="mini-card">
-              <div class="mini-stat">247</div>
-              <div class="mini-label">Active Loads</div>
-            </div>
-            <div class="mini-card">
-              <div class="mini-stat">89</div>
-              <div class="mini-label">Available Trucks</div>
-            </div>
-          </div>
-        </div>
-
-        <h3 style="color:#a1a1aa;">Buttons</h3>
-        <div class="button-row">
-          <button class="btn btn-primary">Primary</button>
-          <button class="btn btn-secondary">Secondary</button>
-          <button class="btn btn-outline">Outline</button>
-        </div>
-
-        <h3 style="color:#a1a1aa;">Status Badges</h3>
-        <div class="badge-row">
-          <span class="badge badge-pending">Pending</span>
-          <span class="badge badge-approved">Approved</span>
-          <span class="badge badge-transit">In Transit</span>
-          <span class="badge badge-delivered">Delivered</span>
-        </div>
-
-        <h3 style="color:#a1a1aa;">Input Field</h3>
-        <input type="text" class="input-preview" placeholder="Enter pickup location..." />
-
-        <h3 style="color:#a1a1aa;">Table</h3>
-        <table class="table-preview">
-          <thead>
-            <tr><th>Route</th><th>Rate</th><th>Status</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Addis → Dire Dawa</td><td>45,000 ETB</td><td><span class="badge badge-transit">Transit</span></td></tr>
-            <tr><td>Mekelle → Addis</td><td>52,000 ETB</td><td><span class="badge badge-pending">Pending</span></td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <div class="bottom-section">
-    <h2>Which palette speaks to you?</h2>
-    <p>Choose the design direction that best represents FreightET - Ethiopia's leading freight management platform.</p>
-    <div class="choice-buttons">
-      <button class="choice-btn choice-a">A: Bold & Professional</button>
-      <button class="choice-btn choice-b">B: Clean & Minimal</button>
-      <button class="choice-btn choice-c">C: Dark Mode Premium</button>
-    </div>
-  </div>
-</body>
+  </body>
 </html>

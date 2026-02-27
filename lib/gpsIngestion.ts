@@ -6,9 +6,9 @@
  * Handles ingestion and storage of GPS position data
  */
 
-import { db } from './db';
-import { Decimal } from 'decimal.js';
-import { GpsDeviceStatus } from '@prisma/client';
+import { db } from "./db";
+import { Decimal } from "decimal.js";
+import { GpsDeviceStatus } from "@prisma/client";
 
 export interface GpsPositionData {
   latitude: number;
@@ -248,8 +248,8 @@ export async function getActiveTruckLoadId(
   if (
     truck?.assignedLoad &&
     truck.assignedLoad.trackingEnabled &&
-    (truck.assignedLoad.status === 'IN_TRANSIT' ||
-      truck.assignedLoad.status === 'ASSIGNED')
+    (truck.assignedLoad.status === "IN_TRANSIT" ||
+      truck.assignedLoad.status === "ASSIGNED")
   ) {
     return truck.assignedLoad.id;
   }

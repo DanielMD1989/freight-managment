@@ -6,11 +6,11 @@
  * Get available return loads for a carrier in a specific region
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { getReturnLoadSuggestions } from '@/lib/returnLoadNotifications';
-import { z } from 'zod';
-import { zodErrorResponse } from '@/lib/validation';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import { getReturnLoadSuggestions } from "@/lib/returnLoadNotifications";
+import { z } from "zod";
+import { zodErrorResponse } from "@/lib/validation";
 
 const returnLoadsQuerySchema = z.object({
   region: z.string().min(1),
@@ -31,23 +31,27 @@ export async function GET(request: NextRequest) {
     const session = await requireAuth();
 
     // Must be carrier or dispatcher
-    if (session.role !== 'CARRIER' && session.role !== 'DISPATCHER' && session.role !== 'ADMIN') {
+    if (
+      session.role !== "CARRIER" &&
+      session.role !== "DISPATCHER" &&
+      session.role !== "ADMIN"
+    ) {
       return NextResponse.json(
-        { error: 'Unauthorized - Carrier access required' },
+        { error: "Unauthorized - Carrier access required" },
         { status: 403 }
       );
     }
 
     if (!session.organizationId) {
       return NextResponse.json(
-        { error: 'No organization associated with user' },
+        { error: "No organization associated with user" },
         { status: 400 }
       );
     }
 
     const { searchParams } = new URL(request.url);
-    const region = searchParams.get('region');
-    const truckType = searchParams.get('truckType');
+    const region = searchParams.get("region");
+    const truckType = searchParams.get("truckType");
 
     const validatedData = returnLoadsQuerySchema.parse({
       region,
@@ -82,14 +86,14 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error('Return loads error:', error);
+    console.error("Return loads error:", error);
 
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

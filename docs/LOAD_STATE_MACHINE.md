@@ -13,6 +13,7 @@ The load lifecycle state machine ensures that loads follow the correct workflow 
 The system supports 13 distinct load states:
 
 ### 1. DRAFT
+
 **Description**: Load created but not yet posted to marketplace
 
 **Purpose**: Allows shippers to create and save loads without immediately posting them
@@ -24,6 +25,7 @@ The system supports 13 distinct load states:
 ---
 
 ### 2. POSTED
+
 **Description**: Load posted to marketplace, carriers can search and view
 
 **Purpose**: Makes load visible to carriers in the marketplace
@@ -35,6 +37,7 @@ The system supports 13 distinct load states:
 ---
 
 ### 3. SEARCHING
+
 **Description**: Actively being matched with carriers by dispatcher or automation
 
 **Purpose**: Indicates the platform is actively finding suitable carriers
@@ -46,6 +49,7 @@ The system supports 13 distinct load states:
 ---
 
 ### 4. OFFERED
+
 **Description**: Load offered to a specific carrier
 
 **Purpose**: Carrier has been selected and offered the load, awaiting acceptance
@@ -57,6 +61,7 @@ The system supports 13 distinct load states:
 ---
 
 ### 5. ASSIGNED
+
 **Description**: Carrier accepted, load assigned
 
 **Purpose**: Carrier has accepted the load and is committed to transport
@@ -68,6 +73,7 @@ The system supports 13 distinct load states:
 ---
 
 ### 6. PICKUP_PENDING
+
 **Description**: Waiting for carrier to pick up load
 
 **Purpose**: Load assigned but not yet picked up by carrier
@@ -79,6 +85,7 @@ The system supports 13 distinct load states:
 ---
 
 ### 7. IN_TRANSIT
+
 **Description**: Load picked up, in transit to destination
 
 **Purpose**: Active transportation phase, load is on the truck
@@ -90,6 +97,7 @@ The system supports 13 distinct load states:
 ---
 
 ### 8. DELIVERED
+
 **Description**: Load delivered to destination
 
 **Purpose**: Carrier has delivered the load, awaiting POD and completion
@@ -101,6 +109,7 @@ The system supports 13 distinct load states:
 ---
 
 ### 9. COMPLETED
+
 **Description**: POD uploaded, payment processed
 
 **Purpose**: Final successful state, all paperwork and payment complete
@@ -112,6 +121,7 @@ The system supports 13 distinct load states:
 ---
 
 ### 10. EXCEPTION
+
 **Description**: Issue detected (late delivery, damage, rejection, etc.)
 
 **Purpose**: Handles any problems during the load lifecycle
@@ -125,6 +135,7 @@ The system supports 13 distinct load states:
 ---
 
 ### 11. CANCELLED
+
 **Description**: Load cancelled by shipper or due to unresolvable issue
 
 **Purpose**: Terminal state for cancelled loads
@@ -136,6 +147,7 @@ The system supports 13 distinct load states:
 ---
 
 ### 12. EXPIRED
+
 **Description**: Load expired (no carrier found within time limit)
 
 **Purpose**: Automatic expiration when load cannot be matched
@@ -147,6 +159,7 @@ The system supports 13 distinct load states:
 ---
 
 ### 13. UNPOSTED
+
 **Description**: Load removed from marketplace by shipper
 
 **Purpose**: Shipper wants to temporarily remove load from marketplace
@@ -187,7 +200,9 @@ EXCEPTION (can transition from/to most states for problem resolution)
 ## Role Permissions
 
 ### SHIPPER
+
 Can only manage draft and posting lifecycle:
+
 - DRAFT - Create new loads
 - POSTED - Post loads to marketplace
 - UNPOSTED - Remove loads from marketplace
@@ -198,7 +213,9 @@ Can only manage draft and posting lifecycle:
 ---
 
 ### CARRIER
+
 Can only update assigned loads during transport:
+
 - ASSIGNED - Accept offered loads
 - PICKUP_PENDING - Mark as ready for pickup
 - IN_TRANSIT - Mark as picked up and in transit
@@ -209,7 +226,9 @@ Can only update assigned loads during transport:
 ---
 
 ### DISPATCHER
+
 Can manage the matching and assignment process:
+
 - SEARCHING - Initiate carrier search
 - OFFERED - Offer load to specific carrier
 - ASSIGNED - Assign load to carrier
@@ -221,7 +240,9 @@ Can manage the matching and assignment process:
 ---
 
 ### ADMIN / SUPER_ADMIN
+
 Can set any status for exception handling and platform management:
+
 - All 13 states available
 - Used for resolving edge cases
 - Manual intervention capabilities
@@ -331,6 +352,7 @@ Can set any status for exception handling and platform management:
 ## API Endpoints
 
 ### Update Load Status
+
 ```http
 PATCH /api/loads/[id]/status
 Content-Type: application/json
@@ -343,6 +365,7 @@ Content-Type: application/json
 ```
 
 **Response**:
+
 ```json
 {
   "message": "Load status updated to IN_TRANSIT",
@@ -356,6 +379,7 @@ Content-Type: application/json
 ```
 
 **Error Response** (invalid transition):
+
 ```json
 {
   "error": "Invalid transition: DELIVERED → DRAFT. Valid transitions: COMPLETED, EXCEPTION"
@@ -363,6 +387,7 @@ Content-Type: application/json
 ```
 
 **Error Response** (permission denied):
+
 ```json
 {
   "error": "Role CARRIER cannot set status to POSTED"
@@ -372,21 +397,18 @@ Content-Type: application/json
 ---
 
 ### Get Load Status and Valid Next States
+
 ```http
 GET /api/loads/[id]/status
 ```
 
 **Response**:
+
 ```json
 {
   "currentStatus": "ASSIGNED",
   "description": "Carrier accepted, load assigned",
-  "validNextStates": [
-    "PICKUP_PENDING",
-    "IN_TRANSIT",
-    "EXCEPTION",
-    "CANCELLED"
-  ]
+  "validNextStates": ["PICKUP_PENDING", "IN_TRANSIT", "EXCEPTION", "CANCELLED"]
 }
 ```
 
@@ -395,11 +417,13 @@ GET /api/loads/[id]/status
 ## Validation Rules
 
 ### State Transition Validation
+
 1. **Transition must be in VALID_TRANSITIONS map** - Cannot jump to arbitrary states
 2. **Role must have permission for target state** - Role-based access control
 3. **Ownership verification** - Shippers can only update their loads, carriers can only update assigned loads
 
 ### Example Validation Logic
+
 ```typescript
 // 1. Check if transition is valid
 if (!isValidTransition(currentStatus, newStatus)) {
@@ -412,7 +436,7 @@ if (!canRoleSetStatus(userRole, newStatus)) {
 }
 
 // 3. Check ownership (if not admin/dispatcher)
-if (role === 'SHIPPER' && load.shipperId !== userId) {
+if (role === "SHIPPER" && load.shipperId !== userId) {
   return { error: "Not authorized" };
 }
 ```
@@ -422,6 +446,7 @@ if (role === 'SHIPPER' && load.shipperId !== userId) {
 ## Future Enhancements
 
 ### Planned Features (TODOs in code)
+
 1. **LoadStatusHistory model** - Audit trail for all status changes
 2. **Automated notifications** - Notify relevant parties on status change
 3. **Automation rules** - Trigger workflows based on status (e.g., auto-create invoice on DELIVERED)
@@ -429,6 +454,7 @@ if (role === 'SHIPPER' && load.shipperId !== userId) {
 5. **Escalation rules** - Auto-escalate to EXCEPTION on certain conditions
 
 ### Integration Points
+
 - **Wallet System** (Sprint 8): Hold/release funds based on load status
 - **Exception System** (Sprint 5): Auto-generate exceptions on certain transitions
 - **Automation Engine** (Sprint 7): Trigger rules on status changes

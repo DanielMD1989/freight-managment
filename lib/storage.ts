@@ -19,16 +19,16 @@
  * - CLOUDINARY_API_SECRET: Cloudinary API secret
  */
 
-import fs from 'fs/promises';
-import path from 'path';
-import crypto from 'crypto';
+import fs from "fs/promises";
+import path from "path";
+import crypto from "crypto";
 
 // Helper to prevent webpack from analyzing dynamic requires
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic require for optional SDK dependencies (AWS S3, Cloudinary)
-const dynamicRequire = (moduleName: string): any => { // eslint-disable-line @typescript-eslint/no-explicit-any
+const dynamicRequire = (moduleName: string): any => {
   // Use eval to prevent webpack bundling analysis
-  // eslint-disable-next-line no-eval
-  return eval('require')(moduleName);
+
+  return eval("require")(moduleName);
 };
 
 // ============================================================================
@@ -39,7 +39,7 @@ const dynamicRequire = (moduleName: string): any => { // eslint-disable-line @ty
  * Check if CDN is enabled
  */
 export function isCDNEnabled(): boolean {
-  return process.env.CDN_ENABLED === 'true' && !!process.env.CDN_DOMAIN;
+  return process.env.CDN_ENABLED === "true" && !!process.env.CDN_DOMAIN;
 }
 
 /**
@@ -59,7 +59,7 @@ export function getCDNUrl(key: string): string {
   }
   // Fallback to S3 URL
   const bucket = process.env.AWS_S3_BUCKET;
-  const region = process.env.AWS_REGION || 'us-east-1';
+  const region = process.env.AWS_REGION || "us-east-1";
   return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
 }
 
@@ -70,16 +70,16 @@ export function getPublicUrl(key: string): string {
   const provider = getStorageProvider();
 
   switch (provider) {
-    case 's3':
+    case "s3":
       if (isCDNEnabled()) {
         return getCDNUrl(key);
       }
       const bucket = process.env.AWS_S3_BUCKET;
-      const region = process.env.AWS_REGION || 'us-east-1';
+      const region = process.env.AWS_REGION || "us-east-1";
       return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
-    case 'cloudinary':
+    case "cloudinary":
       return `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/raw/upload/${key}`;
-    case 'local':
+    case "local":
     default:
       return `/uploads/${key}`;
   }
@@ -100,13 +100,13 @@ export interface UploadResult {
 /**
  * Storage provider type
  */
-export type StorageProvider = 'local' | 's3' | 'cloudinary';
+export type StorageProvider = "local" | "s3" | "cloudinary";
 
 /**
  * Get current storage provider from environment
  */
 export function getStorageProvider(): StorageProvider {
-  const provider = process.env.STORAGE_PROVIDER || 'local';
+  const provider = process.env.STORAGE_PROVIDER || "local";
   return provider as StorageProvider;
 }
 
@@ -115,12 +115,12 @@ export function getStorageProvider(): StorageProvider {
  */
 export function generateFileKey(prefix: string, originalName: string): string {
   const timestamp = Date.now();
-  const randomId = crypto.randomBytes(8).toString('hex');
+  const randomId = crypto.randomBytes(8).toString("hex");
   const ext = path.extname(originalName);
   const safeName = originalName
-    .replace(/[^a-zA-Z0-9.-]/g, '_')
+    .replace(/[^a-zA-Z0-9.-]/g, "_")
     .substring(0, 50);
-  return `${prefix}/${timestamp}_${randomId}_${safeName}${ext ? '' : '.bin'}`;
+  return `${prefix}/${timestamp}_${randomId}_${safeName}${ext ? "" : ".bin"}`;
 }
 
 /**
@@ -134,11 +134,11 @@ export async function uploadFile(
   const provider = getStorageProvider();
 
   switch (provider) {
-    case 'local':
+    case "local":
       return uploadToLocal(buffer, key);
-    case 's3':
+    case "s3":
       return uploadToS3(buffer, key, mimeType);
-    case 'cloudinary':
+    case "cloudinary":
       return uploadToCloudinary(buffer, key, mimeType);
     default:
       return uploadToLocal(buffer, key);
@@ -152,11 +152,11 @@ export async function deleteFile(key: string): Promise<boolean> {
   const provider = getStorageProvider();
 
   switch (provider) {
-    case 'local':
+    case "local":
       return deleteFromLocal(key);
-    case 's3':
+    case "s3":
       return deleteFromS3(key);
-    case 'cloudinary':
+    case "cloudinary":
       return deleteFromCloudinary(key);
     default:
       return deleteFromLocal(key);
@@ -166,15 +166,18 @@ export async function deleteFile(key: string): Promise<boolean> {
 /**
  * Get a signed URL for file access (useful for private files)
  */
-export async function getSignedUrl(key: string, expiresIn: number = 3600): Promise<string | null> {
+export async function getSignedUrl(
+  key: string,
+  expiresIn: number = 3600
+): Promise<string | null> {
   const provider = getStorageProvider();
 
   switch (provider) {
-    case 'local':
+    case "local":
       return `/uploads/${key}`;
-    case 's3':
+    case "s3":
       return getS3SignedUrl(key, expiresIn);
-    case 'cloudinary':
+    case "cloudinary":
       // Cloudinary URLs are typically public by default
       return `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/raw/upload/${key}`;
     default:
@@ -186,7 +189,7 @@ export async function getSignedUrl(key: string, expiresIn: number = 3600): Promi
 // LOCAL FILESYSTEM STORAGE (Development)
 // ============================================================================
 
-const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
+const UPLOADS_DIR = path.join(process.cwd(), "public", "uploads");
 
 /**
  * Ensure uploads directory exists
@@ -203,7 +206,10 @@ async function ensureUploadsDir(subdir: string): Promise<void> {
 /**
  * Upload file to local filesystem
  */
-async function uploadToLocal(buffer: Buffer | ArrayBuffer, key: string): Promise<UploadResult> {
+async function uploadToLocal(
+  buffer: Buffer | ArrayBuffer,
+  key: string
+): Promise<UploadResult> {
   try {
     await ensureUploadsDir(key);
     const filePath = path.join(UPLOADS_DIR, key);
@@ -217,10 +223,10 @@ async function uploadToLocal(buffer: Buffer | ArrayBuffer, key: string): Promise
       size: data.length,
     };
   } catch (error) {
-    console.error('Local upload error:', error);
+    console.error("Local upload error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Upload failed',
+      error: error instanceof Error ? error.message : "Upload failed",
     };
   }
 }
@@ -234,7 +240,7 @@ async function deleteFromLocal(key: string): Promise<boolean> {
     await fs.unlink(filePath);
     return true;
   } catch (error) {
-    console.error('Local delete error:', error);
+    console.error("Local delete error:", error);
     return false;
   }
 }
@@ -255,20 +261,19 @@ async function uploadToS3(
   mimeType: string
 ): Promise<UploadResult> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { S3Client, PutObjectCommand } = dynamicRequire('@aws-sdk/client-s3');
+    const { S3Client, PutObjectCommand } = dynamicRequire("@aws-sdk/client-s3");
 
     const client = new S3Client({
-      region: process.env.AWS_REGION || 'us-east-1',
+      region: process.env.AWS_REGION || "us-east-1",
       credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
       },
     });
 
     const bucket = process.env.AWS_S3_BUCKET;
     if (!bucket) {
-      throw new Error('AWS_S3_BUCKET not configured');
+      throw new Error("AWS_S3_BUCKET not configured");
     }
 
     const data = buffer instanceof ArrayBuffer ? Buffer.from(buffer) : buffer;
@@ -285,7 +290,7 @@ async function uploadToS3(
     // PHASE 3: Return CDN URL if enabled, otherwise direct S3 URL
     const url = isCDNEnabled()
       ? getCDNUrl(key)
-      : `https://${bucket}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${key}`;
+      : `https://${bucket}.s3.${process.env.AWS_REGION || "us-east-1"}.amazonaws.com/${key}`;
 
     return {
       success: true,
@@ -294,10 +299,10 @@ async function uploadToS3(
       size: data.length,
     };
   } catch (error) {
-    console.error('S3 upload error:', error);
+    console.error("S3 upload error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'S3 upload failed',
+      error: error instanceof Error ? error.message : "S3 upload failed",
     };
   }
 }
@@ -310,14 +315,14 @@ async function uploadToS3(
  */
 async function deleteFromS3(key: string): Promise<boolean> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { S3Client, DeleteObjectCommand } = dynamicRequire('@aws-sdk/client-s3');
+    const { S3Client, DeleteObjectCommand } =
+      dynamicRequire("@aws-sdk/client-s3");
 
     const client = new S3Client({
-      region: process.env.AWS_REGION || 'us-east-1',
+      region: process.env.AWS_REGION || "us-east-1",
       credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
       },
     });
 
@@ -335,7 +340,7 @@ async function deleteFromS3(key: string): Promise<boolean> {
 
     return true;
   } catch (error) {
-    console.error('S3 delete error:', error);
+    console.error("S3 delete error:", error);
     return false;
   }
 }
@@ -343,18 +348,22 @@ async function deleteFromS3(key: string): Promise<boolean> {
 /**
  * Get signed URL from S3
  */
-async function getS3SignedUrl(key: string, expiresIn: number): Promise<string | null> {
+async function getS3SignedUrl(
+  key: string,
+  expiresIn: number
+): Promise<string | null> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { S3Client, GetObjectCommand } = dynamicRequire('@aws-sdk/client-s3');
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getSignedUrl: s3GetSignedUrl } = dynamicRequire('@aws-sdk/s3-request-presigner');
+    const { S3Client, GetObjectCommand } = dynamicRequire("@aws-sdk/client-s3");
+
+    const { getSignedUrl: s3GetSignedUrl } = dynamicRequire(
+      "@aws-sdk/s3-request-presigner"
+    );
 
     const client = new S3Client({
-      region: process.env.AWS_REGION || 'us-east-1',
+      region: process.env.AWS_REGION || "us-east-1",
       credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
       },
     });
 
@@ -370,7 +379,7 @@ async function getS3SignedUrl(key: string, expiresIn: number): Promise<string | 
 
     return await s3GetSignedUrl(client, command, { expiresIn });
   } catch (error) {
-    console.error('S3 signed URL error:', error);
+    console.error("S3 signed URL error:", error);
     return null;
   }
 }
@@ -391,8 +400,7 @@ async function uploadToCloudinary(
   mimeType: string
 ): Promise<UploadResult> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const cloudinary = dynamicRequire('cloudinary');
+    const cloudinary = dynamicRequire("cloudinary");
 
     cloudinary.v2.config({
       cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -401,13 +409,13 @@ async function uploadToCloudinary(
     });
 
     const data = buffer instanceof ArrayBuffer ? Buffer.from(buffer) : buffer;
-    const base64Data = data.toString('base64');
+    const base64Data = data.toString("base64");
     const dataUri = `data:${mimeType};base64,${base64Data}`;
 
     const result = await cloudinary.v2.uploader.upload(dataUri, {
-      public_id: key.replace(/\.[^/.]+$/, ''), // Remove extension for public_id
-      resource_type: 'auto',
-      folder: 'freight-management',
+      public_id: key.replace(/\.[^/.]+$/, ""), // Remove extension for public_id
+      resource_type: "auto",
+      folder: "freight-management",
     });
 
     return {
@@ -418,10 +426,11 @@ async function uploadToCloudinary(
       size: data.length,
     };
   } catch (error) {
-    console.error('Cloudinary upload error:', error);
+    console.error("Cloudinary upload error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Cloudinary upload failed',
+      error:
+        error instanceof Error ? error.message : "Cloudinary upload failed",
     };
   }
 }
@@ -431,8 +440,7 @@ async function uploadToCloudinary(
  */
 async function deleteFromCloudinary(key: string): Promise<boolean> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const cloudinary = dynamicRequire('cloudinary');
+    const cloudinary = dynamicRequire("cloudinary");
 
     cloudinary.v2.config({
       cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -440,12 +448,12 @@ async function deleteFromCloudinary(key: string): Promise<boolean> {
       api_secret: process.env.CLOUDINARY_API_SECRET,
     });
 
-    const publicId = key.replace(/\.[^/.]+$/, '');
+    const publicId = key.replace(/\.[^/.]+$/, "");
     await cloudinary.v2.uploader.destroy(`freight-management/${publicId}`);
 
     return true;
   } catch (error) {
-    console.error('Cloudinary delete error:', error);
+    console.error("Cloudinary delete error:", error);
     return false;
   }
 }
@@ -538,13 +546,13 @@ export async function checkStorageHealth(): Promise<StorageHealthResult> {
 
   try {
     switch (provider) {
-      case 's3':
+      case "s3":
         await checkS3Health();
         break;
-      case 'cloudinary':
+      case "cloudinary":
         await checkCloudinaryHealth();
         break;
-      case 'local':
+      case "local":
       default:
         await checkLocalHealth();
         break;
@@ -554,7 +562,8 @@ export async function checkStorageHealth(): Promise<StorageHealthResult> {
     result.latencyMs = Date.now() - startTime;
   } catch (error) {
     result.healthy = false;
-    result.error = error instanceof Error ? error.message : 'Health check failed';
+    result.error =
+      error instanceof Error ? error.message : "Health check failed";
     result.latencyMs = Date.now() - startTime;
   }
 
@@ -568,26 +577,33 @@ export async function checkStorageHealth(): Promise<StorageHealthResult> {
 async function checkS3Health(): Promise<void> {
   const bucket = process.env.AWS_S3_BUCKET;
   if (!bucket) {
-    throw new Error('AWS_S3_BUCKET not configured');
+    throw new Error("AWS_S3_BUCKET not configured");
   }
 
   // Try to load AWS SDK dynamically using require (wrapped in try-catch)
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { S3Client, HeadBucketCommand } = dynamicRequire('@aws-sdk/client-s3');
+    const { S3Client, HeadBucketCommand } =
+      dynamicRequire("@aws-sdk/client-s3");
 
     const client = new S3Client({
-      region: process.env.AWS_REGION || 'us-east-1',
+      region: process.env.AWS_REGION || "us-east-1",
       credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
       },
     });
 
     await client.send(new HeadBucketCommand({ Bucket: bucket }));
   } catch (error: unknown) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'MODULE_NOT_FOUND') {
-      throw new Error('AWS SDK not installed. Run: npm install @aws-sdk/client-s3');
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "MODULE_NOT_FOUND"
+    ) {
+      throw new Error(
+        "AWS SDK not installed. Run: npm install @aws-sdk/client-s3"
+      );
     }
     throw error;
   }
@@ -600,13 +616,14 @@ async function checkS3Health(): Promise<void> {
 async function checkCloudinaryHealth(): Promise<void> {
   // Check if required env vars are set
   if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY) {
-    throw new Error('Cloudinary not configured. Set CLOUDINARY_* environment variables.');
+    throw new Error(
+      "Cloudinary not configured. Set CLOUDINARY_* environment variables."
+    );
   }
 
   // Try to load cloudinary module dynamically using require (wrapped in try-catch)
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const cloudinary = dynamicRequire('cloudinary');
+    const cloudinary = dynamicRequire("cloudinary");
 
     cloudinary.v2.config({
       cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -616,8 +633,15 @@ async function checkCloudinaryHealth(): Promise<void> {
 
     await cloudinary.v2.api.ping();
   } catch (error: unknown) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'MODULE_NOT_FOUND') {
-      throw new Error('Cloudinary SDK not installed. Run: npm install cloudinary');
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "MODULE_NOT_FOUND"
+    ) {
+      throw new Error(
+        "Cloudinary SDK not installed. Run: npm install cloudinary"
+      );
     }
     throw error;
   }
@@ -654,7 +678,7 @@ export interface MigrationResult {
 /**
  * List all files in local storage
  */
-export async function listLocalFiles(subdir: string = ''): Promise<string[]> {
+export async function listLocalFiles(subdir: string = ""): Promise<string[]> {
   const dir = path.join(UPLOADS_DIR, subdir);
   const files: string[] = [];
 
@@ -681,7 +705,9 @@ export async function listLocalFiles(subdir: string = ''): Promise<string[]> {
 /**
  * Migrate a single file from local to S3
  */
-export async function migrateFileToS3(localKey: string): Promise<MigrationResult> {
+export async function migrateFileToS3(
+  localKey: string
+): Promise<MigrationResult> {
   const result: MigrationResult = {
     localPath: path.join(UPLOADS_DIR, localKey),
     key: localKey,
@@ -696,14 +722,14 @@ export async function migrateFileToS3(localKey: string): Promise<MigrationResult
     // Determine MIME type from extension
     const ext = path.extname(localKey).toLowerCase();
     const mimeTypes: Record<string, string> = {
-      '.pdf': 'application/pdf',
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.png': 'image/png',
-      '.gif': 'image/gif',
-      '.webp': 'image/webp',
+      ".pdf": "application/pdf",
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".png": "image/png",
+      ".gif": "image/gif",
+      ".webp": "image/webp",
     };
-    const mimeType = mimeTypes[ext] || 'application/octet-stream';
+    const mimeType = mimeTypes[ext] || "application/octet-stream";
 
     // Upload to S3
     const uploadResult = await uploadToS3(buffer, localKey, mimeType);
@@ -715,7 +741,7 @@ export async function migrateFileToS3(localKey: string): Promise<MigrationResult
       result.error = uploadResult.error;
     }
   } catch (error) {
-    result.error = error instanceof Error ? error.message : 'Migration failed';
+    result.error = error instanceof Error ? error.message : "Migration failed";
   }
 
   return result;
@@ -746,7 +772,7 @@ export async function migrateAllFilesToS3(options?: {
   for (let i = 0; i < files.length; i += batchSize) {
     const batch = files.slice(i, i + batchSize);
     const batchResults = await Promise.all(
-      batch.map(file => migrateFileToS3(file))
+      batch.map((file) => migrateFileToS3(file))
     );
 
     for (const result of batchResults) {
@@ -762,8 +788,7 @@ export async function migrateAllFilesToS3(options?: {
     if (onProgress) {
       onProgress(Math.min(i + batchSize, files.length), files.length);
     }
-
-    }
+  }
 
   return {
     total: files.length,
@@ -811,12 +836,12 @@ export async function fileExists(key: string): Promise<boolean> {
   const provider = getStorageProvider();
 
   switch (provider) {
-    case 's3':
+    case "s3":
       return s3FileExists(key);
-    case 'cloudinary':
+    case "cloudinary":
       // Cloudinary doesn't have a direct check, try to get the URL
       return true; // Assume exists for Cloudinary
-    case 'local':
+    case "local":
     default:
       try {
         await fs.access(path.join(UPLOADS_DIR, key));
@@ -832,14 +857,14 @@ export async function fileExists(key: string): Promise<boolean> {
  */
 async function s3FileExists(key: string): Promise<boolean> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { S3Client, HeadObjectCommand } = dynamicRequire('@aws-sdk/client-s3');
+    const { S3Client, HeadObjectCommand } =
+      dynamicRequire("@aws-sdk/client-s3");
 
     const client = new S3Client({
-      region: process.env.AWS_REGION || 'us-east-1',
+      region: process.env.AWS_REGION || "us-east-1",
       credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
       },
     });
 

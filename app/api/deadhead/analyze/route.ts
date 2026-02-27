@@ -3,10 +3,15 @@
  * Analyze deadhead metrics for loads and provide optimization insights
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { calculateDHO, calculateDHD, calculateDeadheadMetrics, getTruckCurrentLocation } from '@/lib/deadheadOptimization';
-import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import {
+  calculateDHO,
+  calculateDHD,
+  calculateDeadheadMetrics,
+  getTruckCurrentLocation,
+} from "@/lib/deadheadOptimization";
+import { db } from "@/lib/db";
 
 // POST /api/deadhead/analyze - Analyze deadhead for a specific scenario
 export async function POST(request: NextRequest) {
@@ -18,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     if (!truckId || !loadId) {
       return NextResponse.json(
-        { error: 'truckId and loadId are required' },
+        { error: "truckId and loadId are required" },
         { status: 400 }
       );
     }
@@ -27,7 +32,7 @@ export async function POST(request: NextRequest) {
     const truckLocation = await getTruckCurrentLocation(truckId);
     if (!truckLocation) {
       return NextResponse.json(
-        { error: 'Truck location not available' },
+        { error: "Truck location not available" },
         { status: 404 }
       );
     }
@@ -60,17 +65,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (!load) {
-      return NextResponse.json(
-        { error: 'Load not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // Calculate DH-O
     const dho = await calculateDHO(truckId, loadId);
     if (dho === null) {
       return NextResponse.json(
-        { error: 'Could not calculate DH-O' },
+        { error: "Could not calculate DH-O" },
         { status: 400 }
       );
     }
@@ -91,7 +93,8 @@ export async function POST(request: NextRequest) {
 
     // Calculate total distance for efficiency metrics
     const totalDistance = dho + tripKm + dhd;
-    const paidPercentage = totalDistance > 0 ? (tripKm / totalDistance) * 100 : 0;
+    const paidPercentage =
+      totalDistance > 0 ? (tripKm / totalDistance) * 100 : 0;
 
     return NextResponse.json({
       analysis: {
@@ -112,33 +115,35 @@ export async function POST(request: NextRequest) {
         distance: {
           totalDistance: Math.round(totalDistance * 10) / 10,
         },
-        recommendation: getRecommendation(metrics.efficiency, metrics.totalDeadheadPercent),
+        recommendation: getRecommendation(
+          metrics.efficiency,
+          metrics.totalDeadheadPercent
+        ),
       },
     });
-
   } catch (error) {
-    console.error('Deadhead analysis error:', error);
+    console.error("Deadhead analysis error:", error);
     return NextResponse.json(
-      { error: 'Failed to analyze deadhead' },
+      { error: "Failed to analyze deadhead" },
       { status: 500 }
     );
   }
 }
 
 function getRecommendation(
-  efficiency: 'excellent' | 'good' | 'acceptable' | 'poor',
+  efficiency: "excellent" | "good" | "acceptable" | "poor",
   totalDeadheadPercent: number
 ): string {
   switch (efficiency) {
-    case 'excellent':
-      return 'Excellent opportunity! Minimal empty miles make this highly profitable.';
-    case 'good':
-      return 'Good load with reasonable deadhead. Should be profitable.';
-    case 'acceptable':
+    case "excellent":
+      return "Excellent opportunity! Minimal empty miles make this highly profitable.";
+    case "good":
+      return "Good load with reasonable deadhead. Should be profitable.";
+    case "acceptable":
       return `Acceptable load but ${Math.round(totalDeadheadPercent)}% deadhead. Consider looking for closer loads.`;
-    case 'poor':
+    case "poor":
       return `High deadhead (${Math.round(totalDeadheadPercent)}%). Look for loads with better positioning or negotiate higher rate.`;
     default:
-      return 'Unable to provide recommendation';
+      return "Unable to provide recommendation";
   }
 }

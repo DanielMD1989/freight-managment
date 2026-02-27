@@ -5,10 +5,10 @@
  * Allows filtering by status and viewing proposal details
  */
 
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useState } from "react";
+import Link from "next/link";
 
 interface MatchProposal {
   id: string;
@@ -41,34 +41,38 @@ interface Props {
   proposals: MatchProposal[];
 }
 
-type StatusFilter = 'all' | 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
+type StatusFilter = "all" | "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED";
 
-export default function ProposalsClient({ proposals: initialProposals }: Props) {
+export default function ProposalsClient({
+  proposals: initialProposals,
+}: Props) {
   const [proposals] = useState<MatchProposal[]>(initialProposals);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const filteredProposals =
-    statusFilter === 'all'
+    statusFilter === "all"
       ? proposals
       : proposals.filter((p) => p.status === statusFilter);
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      PENDING: 'bg-amber-50 text-amber-700 border border-amber-200',
-      ACCEPTED: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-      REJECTED: 'bg-rose-50 text-rose-700 border border-rose-200',
-      EXPIRED: 'bg-slate-50 text-slate-600 border border-slate-200',
-      CANCELLED: 'bg-slate-50 text-slate-600 border border-slate-200',
+      PENDING: "bg-amber-50 text-amber-700 border border-amber-200",
+      ACCEPTED: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+      REJECTED: "bg-rose-50 text-rose-700 border border-rose-200",
+      EXPIRED: "bg-slate-50 text-slate-600 border border-slate-200",
+      CANCELLED: "bg-slate-50 text-slate-600 border border-slate-200",
     };
-    return styles[status] || 'bg-slate-50 text-slate-600 border border-slate-200';
+    return (
+      styles[status] || "bg-slate-50 text-slate-600 border border-slate-200"
+    );
   };
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -77,7 +81,7 @@ export default function ProposalsClient({ proposals: initialProposals }: Props) 
     const expiry = new Date(expiresAt);
     const diff = expiry.getTime() - now.getTime();
 
-    if (diff <= 0) return 'Expired';
+    if (diff <= 0) return "Expired";
 
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -91,133 +95,195 @@ export default function ProposalsClient({ proposals: initialProposals }: Props) 
 
   const statusCounts = {
     all: proposals.length,
-    PENDING: proposals.filter((p) => p.status === 'PENDING').length,
-    ACCEPTED: proposals.filter((p) => p.status === 'ACCEPTED').length,
-    REJECTED: proposals.filter((p) => p.status === 'REJECTED').length,
-    EXPIRED: proposals.filter((p) => p.status === 'EXPIRED' || p.status === 'CANCELLED').length,
+    PENDING: proposals.filter((p) => p.status === "PENDING").length,
+    ACCEPTED: proposals.filter((p) => p.status === "ACCEPTED").length,
+    REJECTED: proposals.filter((p) => p.status === "REJECTED").length,
+    EXPIRED: proposals.filter(
+      (p) => p.status === "EXPIRED" || p.status === "CANCELLED"
+    ).length,
   };
 
   return (
     <div className="space-y-6">
       {/* Status Filter Tabs */}
-      <div className="flex gap-2 flex-wrap">
-        {(['all', 'PENDING', 'ACCEPTED', 'REJECTED', 'EXPIRED'] as StatusFilter[]).map((status) => (
+      <div className="flex flex-wrap gap-2">
+        {(
+          [
+            "all",
+            "PENDING",
+            "ACCEPTED",
+            "REJECTED",
+            "EXPIRED",
+          ] as StatusFilter[]
+        ).map((status) => (
           <button
             key={status}
             onClick={() => setStatusFilter(status)}
-            className={`px-4 py-2 rounded-xl font-medium text-sm transition-all ${
+            className={`rounded-xl px-4 py-2 text-sm font-medium transition-all ${
               statusFilter === status
-                ? 'bg-gradient-to-r from-teal-600 to-teal-500 text-white shadow-md shadow-teal-500/25'
-                : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
+                ? "bg-gradient-to-r from-teal-600 to-teal-500 text-white shadow-md shadow-teal-500/25"
+                : "border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
             }`}
           >
-            {status === 'all' ? 'All' : status} ({statusCounts[status]})
+            {status === "all" ? "All" : status} ({statusCounts[status]})
           </button>
         ))}
       </div>
 
       {/* Proposals List */}
       {filteredProposals.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-12 text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-amber-100 to-amber-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        <div className="rounded-2xl border border-slate-200/60 bg-white p-12 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-100 to-amber-200">
+            <svg
+              className="h-8 w-8 text-amber-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-slate-800 mb-2">No Match Proposals</h3>
-          <p className="text-slate-500 mb-4 max-w-md mx-auto">
-            {statusFilter === 'all'
+          <h3 className="mb-2 text-lg font-semibold text-slate-800">
+            No Match Proposals
+          </h3>
+          <p className="mx-auto mb-4 max-w-md text-slate-500">
+            {statusFilter === "all"
               ? "You haven't created any match proposals yet. Find loads or trucks and propose matches to carriers."
               : `No ${statusFilter.toLowerCase()} proposals at this time.`}
           </p>
           <div className="flex items-center justify-center gap-3">
             <Link
               href="/dispatcher/loads"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium"
+              className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                />
               </svg>
               Find Loads
             </Link>
             <Link
               href="/dispatcher/trucks"
-              className="inline-flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 17h8M8 17a2 2 0 11-4 0 2 2 0 014 0zm8 0a2 2 0 104 0 2 2 0 00-4 0zM3 9h13a2 2 0 012 2v4H3V9zm13-4l4 4h-4V5z" />
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 17h8M8 17a2 2 0 11-4 0 2 2 0 014 0zm8 0a2 2 0 104 0 2 2 0 00-4 0zM3 9h13a2 2 0 012 2v4H3V9zm13-4l4 4h-4V5z"
+                />
               </svg>
               Find Trucks
             </Link>
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
+        <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-200">
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-slate-500 uppercase">
                     Load Route
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-slate-500 uppercase">
                     Truck
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-slate-500 uppercase">
                     Carrier
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-slate-500 uppercase">
                     Status
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-slate-500 uppercase">
                     Created
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-slate-500 uppercase">
                     Expires
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredProposals.map((proposal) => (
-                  <tr key={proposal.id} className="hover:bg-slate-50 transition-colors">
+                  <tr
+                    key={proposal.id}
+                    className="transition-colors hover:bg-slate-50"
+                  >
                     <td className="px-4 py-4">
                       <div>
                         <p className="font-medium text-slate-800">
-                          {proposal.load.pickupCity} → {proposal.load.deliveryCity}
+                          {proposal.load.pickupCity} →{" "}
+                          {proposal.load.deliveryCity}
                         </p>
                         <p className="text-sm text-slate-500">
-                          {proposal.load.truckType} • {proposal.load.weight?.toLocaleString()} kg
+                          {proposal.load.truckType} •{" "}
+                          {proposal.load.weight?.toLocaleString()} kg
                         </p>
                         <p className="text-xs text-slate-400">
-                          Pickup: {new Date(proposal.load.pickupDate).toLocaleDateString()}
+                          Pickup:{" "}
+                          {new Date(
+                            proposal.load.pickupDate
+                          ).toLocaleDateString()}
                         </p>
                       </div>
                     </td>
                     <td className="px-4 py-4">
                       <div>
-                        <p className="font-medium text-slate-800">{proposal.truck.licensePlate}</p>
-                        <p className="text-sm text-slate-500">{proposal.truck.truckType}</p>
+                        <p className="font-medium text-slate-800">
+                          {proposal.truck.licensePlate}
+                        </p>
+                        <p className="text-sm text-slate-500">
+                          {proposal.truck.truckType}
+                        </p>
                       </div>
                     </td>
                     <td className="px-4 py-4">
                       <p className="text-slate-700">{proposal.carrier.name}</p>
                     </td>
                     <td className="px-4 py-4">
-                      <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${getStatusBadge(proposal.status)}`}>
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${getStatusBadge(proposal.status)}`}
+                      >
                         {proposal.status}
                       </span>
-                      {proposal.status === 'REJECTED' && proposal.responseNotes && (
-                        <p className="text-xs text-rose-600 mt-1 max-w-[150px] truncate" title={proposal.responseNotes}>
-                          {proposal.responseNotes}
-                        </p>
-                      )}
+                      {proposal.status === "REJECTED" &&
+                        proposal.responseNotes && (
+                          <p
+                            className="mt-1 max-w-[150px] truncate text-xs text-rose-600"
+                            title={proposal.responseNotes}
+                          >
+                            {proposal.responseNotes}
+                          </p>
+                        )}
                     </td>
                     <td className="px-4 py-4">
-                      <p className="text-sm text-slate-600">{formatDate(proposal.createdAt)}</p>
+                      <p className="text-sm text-slate-600">
+                        {formatDate(proposal.createdAt)}
+                      </p>
                     </td>
                     <td className="px-4 py-4">
-                      {proposal.status === 'PENDING' ? (
-                        <p className="text-sm text-amber-600 font-medium">
+                      {proposal.status === "PENDING" ? (
+                        <p className="text-sm font-medium text-amber-600">
                           {getTimeRemaining(proposal.expiresAt)}
                         </p>
                       ) : proposal.respondedAt ? (
@@ -238,21 +304,29 @@ export default function ProposalsClient({ proposals: initialProposals }: Props) 
 
       {/* Summary Stats */}
       {proposals.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <p className="text-2xl font-bold text-slate-800">{statusCounts.all}</p>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <p className="text-2xl font-bold text-slate-800">
+              {statusCounts.all}
+            </p>
             <p className="text-sm text-slate-500">Total Proposals</p>
           </div>
-          <div className="bg-amber-50 rounded-xl border border-amber-200 p-4">
-            <p className="text-2xl font-bold text-amber-700">{statusCounts.PENDING}</p>
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <p className="text-2xl font-bold text-amber-700">
+              {statusCounts.PENDING}
+            </p>
             <p className="text-sm text-amber-600">Awaiting Response</p>
           </div>
-          <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-4">
-            <p className="text-2xl font-bold text-emerald-700">{statusCounts.ACCEPTED}</p>
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <p className="text-2xl font-bold text-emerald-700">
+              {statusCounts.ACCEPTED}
+            </p>
             <p className="text-sm text-emerald-600">Accepted</p>
           </div>
-          <div className="bg-rose-50 rounded-xl border border-rose-200 p-4">
-            <p className="text-2xl font-bold text-rose-700">{statusCounts.REJECTED}</p>
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-4">
+            <p className="text-2xl font-bold text-rose-700">
+              {statusCounts.REJECTED}
+            </p>
             <p className="text-sm text-rose-600">Rejected</p>
           </div>
         </div>

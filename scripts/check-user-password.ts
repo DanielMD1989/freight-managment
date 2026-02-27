@@ -1,11 +1,11 @@
-import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import "dotenv/config";
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function checkUser() {
-  const email = 'daniel.mulugeta1989@gmail.com';
+  const email = "daniel.mulugeta1989@gmail.com";
 
   const user = await prisma.user.findUnique({
     where: { email },
@@ -18,30 +18,39 @@ async function checkUser() {
       status: true,
       isActive: true,
       passwordHash: true,
-      organizationId: true
-    }
+      organizationId: true,
+    },
   });
 
   if (!user) {
-    console.log('User not found');
+    console.log("User not found");
     return;
   }
 
-  console.log('User found:');
-  console.log('  ID:', user.id);
-  console.log('  Email:', user.email);
-  console.log('  Name:', user.firstName, user.lastName);
-  console.log('  Role:', user.role);
-  console.log('  Status:', user.status);
-  console.log('  isActive:', user.isActive);
-  console.log('  organizationId:', user.organizationId);
-  console.log('  passwordHash length:', user.passwordHash?.length);
-  console.log('  passwordHash starts with $2:', user.passwordHash?.startsWith('$2'));
+  console.log("User found:");
+  console.log("  ID:", user.id);
+  console.log("  Email:", user.email);
+  console.log("  Name:", user.firstName, user.lastName);
+  console.log("  Role:", user.role);
+  console.log("  Status:", user.status);
+  console.log("  isActive:", user.isActive);
+  console.log("  organizationId:", user.organizationId);
+  console.log("  passwordHash length:", user.passwordHash?.length);
+  console.log(
+    "  passwordHash starts with $2:",
+    user.passwordHash?.startsWith("$2")
+  );
 
   // Test some common passwords
-  const testPasswords = ['password', 'Password123', 'admin', 'test123', 'Admin123!'];
+  const testPasswords = [
+    "password",
+    "Password123",
+    "admin",
+    "test123",
+    "Admin123!",
+  ];
 
-  console.log('\nTesting common passwords:');
+  console.log("\nTesting common passwords:");
   for (const pwd of testPasswords) {
     const match = await bcrypt.compare(pwd, user.passwordHash);
     if (match) {

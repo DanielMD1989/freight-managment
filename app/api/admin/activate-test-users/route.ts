@@ -7,11 +7,11 @@
  * Admin only endpoint
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
 // M4 FIX: Add CSRF validation
-import { validateCSRFWithMobile } from '@/lib/csrf';
+import { validateCSRFWithMobile } from "@/lib/csrf";
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,9 +21,9 @@ export async function POST(request: NextRequest) {
 
     // Require admin authentication
     const session = await requireAuth();
-    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
+    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: 'Admin access required' },
+        { error: "Admin access required" },
         { status: 403 }
       );
     }
@@ -32,11 +32,11 @@ export async function POST(request: NextRequest) {
     const result = await db.user.updateMany({
       where: {
         email: {
-          contains: 'testfreightet.com',
+          contains: "testfreightet.com",
         },
       },
       data: {
-        status: 'ACTIVE',
+        status: "ACTIVE",
       },
     });
 
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     const users = await db.user.findMany({
       where: {
         email: {
-          contains: 'testfreightet.com',
+          contains: "testfreightet.com",
         },
       },
       select: {
@@ -58,11 +58,11 @@ export async function POST(request: NextRequest) {
       message: `Updated ${result.count} test users to ACTIVE status`,
       users,
     });
-  // H7 FIX: Use unknown type with type guard
+    // H7 FIX: Use unknown type with type guard
   } catch (error: unknown) {
-    console.error('Error activating test users:', error);
+    console.error("Error activating test users:", error);
     return NextResponse.json(
-      { error: 'Failed to activate test users' },
+      { error: "Failed to activate test users" },
       { status: 500 }
     );
   }
@@ -73,9 +73,9 @@ export async function GET(request: NextRequest) {
   try {
     // Require admin authentication
     const session = await requireAuth();
-    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
+    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: 'Admin access required' },
+        { error: "Admin access required" },
         { status: 403 }
       );
     }
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
     const users = await db.user.findMany({
       where: {
         email: {
-          contains: 'testfreightet.com',
+          contains: "testfreightet.com",
         },
       },
       select: {
@@ -95,11 +95,11 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ users });
-  // H7 FIX: Use unknown type with type guard
+    // H7 FIX: Use unknown type with type guard
   } catch (error: unknown) {
-    console.error('Error fetching test users:', error);
+    console.error("Error fetching test users:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch test users' },
+      { error: "Failed to fetch test users" },
       { status: 500 }
     );
   }

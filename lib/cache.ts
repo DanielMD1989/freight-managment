@@ -33,7 +33,7 @@
  * - Active trips: 1min (real-time updates)
  */
 
-import { redis, isRedisEnabled, RedisKeys } from './redis';
+import { redis, isRedisEnabled, RedisKeys } from "./redis";
 
 // =============================================================================
 // CACHE METRICS & MONITORING
@@ -89,11 +89,17 @@ function recordError(namespace: string): void {
  */
 export function getCacheMetrics(): {
   overall: { hitRate: number; totalHits: number; totalMisses: number };
-  byNamespace: Record<string, { hitRate: number; hits: number; misses: number }>;
+  byNamespace: Record<
+    string,
+    { hitRate: number; hits: number; misses: number }
+  >;
 } {
   let totalHits = 0;
   let totalMisses = 0;
-  const byNamespace: Record<string, { hitRate: number; hits: number; misses: number }> = {};
+  const byNamespace: Record<
+    string,
+    { hitRate: number; hits: number; misses: number }
+  > = {};
 
   for (const [ns, m] of Object.entries(metrics)) {
     totalHits += m.hits;
@@ -208,7 +214,7 @@ class LRUCache implements CacheAdapter {
   }
 
   async deletePattern(pattern: string): Promise<number> {
-    const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+    const regex = new RegExp("^" + pattern.replace(/\*/g, ".*") + "$");
     let count = 0;
 
     for (const key of this.cache.keys()) {
@@ -237,7 +243,7 @@ class LRUCache implements CacheAdapter {
       return allKeys;
     }
 
-    const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+    const regex = new RegExp("^" + pattern.replace(/\*/g, ".*") + "$");
     return allKeys.filter((key) => regex.test(key));
   }
 
@@ -281,7 +287,7 @@ class RedisCache implements CacheAdapter {
 
   constructor(options: CacheOptions = {}) {
     this.defaultTtl = options.defaultTtlSeconds || 300;
-    this.keyPrefix = options.keyPrefix || 'cache:';
+    this.keyPrefix = options.keyPrefix || "cache:";
   }
 
   private prefixKey(key: string): string {
@@ -296,7 +302,7 @@ class RedisCache implements CacheAdapter {
       if (!data) return null;
       return JSON.parse(data) as T;
     } catch (error) {
-      console.error('[Cache Redis] get error:', error);
+      console.error("[Cache Redis] get error:", error);
       return null;
     }
   }
@@ -314,7 +320,7 @@ class RedisCache implements CacheAdapter {
         await redis.set(this.prefixKey(key), data);
       }
     } catch (error) {
-      console.error('[Cache Redis] set error:', error);
+      console.error("[Cache Redis] set error:", error);
     }
   }
 
@@ -325,7 +331,7 @@ class RedisCache implements CacheAdapter {
       const result = await redis.del(this.prefixKey(key));
       return result > 0;
     } catch (error) {
-      console.error('[Cache Redis] delete error:', error);
+      console.error("[Cache Redis] delete error:", error);
       return false;
     }
   }
@@ -338,7 +344,7 @@ class RedisCache implements CacheAdapter {
       if (keys.length === 0) return 0;
       return await redis.del(...keys);
     } catch (error) {
-      console.error('[Cache Redis] deletePattern error:', error);
+      console.error("[Cache Redis] deletePattern error:", error);
       return 0;
     }
   }
@@ -350,7 +356,7 @@ class RedisCache implements CacheAdapter {
       const exists = await redis.exists(this.prefixKey(key));
       return exists > 0;
     } catch (error) {
-      console.error('[Cache Redis] has error:', error);
+      console.error("[Cache Redis] has error:", error);
       return false;
     }
   }
@@ -364,7 +370,7 @@ class RedisCache implements CacheAdapter {
         await redis.del(...keys);
       }
     } catch (error) {
-      console.error('[Cache Redis] clear error:', error);
+      console.error("[Cache Redis] clear error:", error);
     }
   }
 
@@ -372,10 +378,12 @@ class RedisCache implements CacheAdapter {
     if (!redis) return [];
 
     try {
-      const searchPattern = pattern ? this.prefixKey(pattern) : `${this.keyPrefix}*`;
+      const searchPattern = pattern
+        ? this.prefixKey(pattern)
+        : `${this.keyPrefix}*`;
       return await redis.keys(searchPattern);
     } catch (error) {
-      console.error('[Cache Redis] keys error:', error);
+      console.error("[Cache Redis] keys error:", error);
       return [];
     }
   }
@@ -392,7 +400,7 @@ const inMemoryCache = new LRUCache({
 
 const redisCache = new RedisCache({
   defaultTtlSeconds: 300,
-  keyPrefix: 'cache:',
+  keyPrefix: "cache:",
 });
 
 /**
@@ -410,7 +418,7 @@ function getCacheAdapter(): CacheAdapter {
  */
 export const cache: CacheAdapter = {
   async get<T>(key: string): Promise<T | null> {
-    const namespace = key.split(':')[0] || 'default';
+    const namespace = key.split(":")[0] || "default";
     const adapter = getCacheAdapter();
     const result = await adapter.get<T>(key);
 
@@ -424,14 +432,14 @@ export const cache: CacheAdapter = {
   },
 
   async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
-    const namespace = key.split(':')[0] || 'default';
+    const namespace = key.split(":")[0] || "default";
     const adapter = getCacheAdapter();
     await adapter.set(key, value, ttlSeconds);
     recordSet(namespace);
   },
 
   async delete(key: string): Promise<boolean> {
-    const namespace = key.split(':')[0] || 'default';
+    const namespace = key.split(":")[0] || "default";
     const adapter = getCacheAdapter();
     const result = await adapter.delete(key);
     recordDelete(namespace);
@@ -519,16 +527,19 @@ export const CacheKeys = {
   trip: (id: string) => `trip:${id}`,
   tripsByCarrier: (carrierId: string) => `trips:carrier:${carrierId}`,
   tripsByShipper: (shipperId: string) => `trips:shipper:${shipperId}`,
-  activeTrips: () => 'trips:active',
+  activeTrips: () => "trips:active",
   activeTripsByOrg: (orgId: string) => `trips:active:org:${orgId}`,
 
   // Geodata cache keys
-  locations: () => 'geodata:locations',
+  locations: () => "geodata:locations",
   location: (id: string) => `geodata:location:${id}`,
-  distance: (originId: string, destId: string) => `geodata:distance:${originId}:${destId}`,
-  corridor: (originId: string, destId: string) => `geodata:corridor:${originId}:${destId}`,
-  corridors: () => 'geodata:corridors',
-  route: (originId: string, destId: string) => `geodata:route:${originId}:${destId}`,
+  distance: (originId: string, destId: string) =>
+    `geodata:distance:${originId}:${destId}`,
+  corridor: (originId: string, destId: string) =>
+    `geodata:corridor:${originId}:${destId}`,
+  corridors: () => "geodata:corridors",
+  route: (originId: string, destId: string) =>
+    `geodata:route:${originId}:${destId}`,
 };
 
 // =============================================================================
@@ -569,7 +580,7 @@ export function memoize<TArgs extends unknown[], TResult>(
     keyGenerator?: (...args: TArgs) => string;
   } = {}
 ): (...args: TArgs) => Promise<TResult> {
-  const { ttlSeconds = 60, keyPrefix = 'memo', keyGenerator } = options;
+  const { ttlSeconds = 60, keyPrefix = "memo", keyGenerator } = options;
 
   return async (...args: TArgs): Promise<TResult> => {
     const key = keyGenerator
@@ -595,7 +606,10 @@ export function memoize<TArgs extends unknown[], TResult>(
 /**
  * Invalidate cache for a specific entity
  */
-export async function invalidateEntity(entityType: string, entityId: string): Promise<void> {
+export async function invalidateEntity(
+  entityType: string,
+  entityId: string
+): Promise<void> {
   await cache.deletePattern(`${entityType}:${entityId}*`);
   await cache.deletePattern(`*:${entityType}:${entityId}*`);
 }
@@ -632,11 +646,15 @@ export const CacheInvalidation = {
   },
 
   /** Invalidate load and listing caches */
-  async load(loadId: string, shipperId?: string, orgId?: string): Promise<void> {
+  async load(
+    loadId: string,
+    shipperId?: string,
+    orgId?: string
+  ): Promise<void> {
     const promises = [
       cache.delete(CacheKeys.load(loadId)),
-      cache.deletePattern('loads:list:*'),
-      cache.deletePattern('loads:status:*'),
+      cache.deletePattern("loads:list:*"),
+      cache.deletePattern("loads:status:*"),
     ];
     if (shipperId) {
       promises.push(cache.delete(CacheKeys.loadsByShipper(shipperId)));
@@ -648,13 +666,17 @@ export const CacheInvalidation = {
   },
 
   /** Invalidate truck and posting caches - P1-001 FIX: Also invalidate matching caches */
-  async truck(truckId: string, carrierId?: string, orgId?: string): Promise<void> {
+  async truck(
+    truckId: string,
+    carrierId?: string,
+    orgId?: string
+  ): Promise<void> {
     const promises = [
       cache.delete(CacheKeys.truck(truckId)),
-      cache.deletePattern('trucks:list:*'),
+      cache.deletePattern("trucks:list:*"),
       // P1-001 FIX: Invalidate matching caches to ensure new trucks are visible immediately
-      cache.deletePattern('matching:*'),
-      cache.deletePattern('truck-postings:*'),
+      cache.deletePattern("matching:*"),
+      cache.deletePattern("truck-postings:*"),
     ];
     if (carrierId) {
       promises.push(cache.delete(CacheKeys.truckPostings(carrierId)));
@@ -666,7 +688,12 @@ export const CacheInvalidation = {
   },
 
   /** Invalidate trip caches */
-  async trip(tripId: string, carrierId?: string, shipperId?: string, orgId?: string): Promise<void> {
+  async trip(
+    tripId: string,
+    carrierId?: string,
+    shipperId?: string,
+    orgId?: string
+  ): Promise<void> {
     const promises = [
       cache.delete(CacheKeys.trip(tripId)),
       cache.delete(CacheKeys.activeTrips()),
@@ -695,10 +722,10 @@ export const CacheInvalidation = {
   /** Invalidate all listing caches (after bulk operations) */
   async allListings(): Promise<void> {
     await Promise.all([
-      cache.deletePattern('loads:list:*'),
-      cache.deletePattern('loads:status:*'),
-      cache.deletePattern('trucks:list:*'),
-      cache.deletePattern('trips:active*'),
+      cache.deletePattern("loads:list:*"),
+      cache.deletePattern("loads:status:*"),
+      cache.deletePattern("trucks:list:*"),
+      cache.deletePattern("trips:active*"),
     ]);
   },
 };
@@ -722,7 +749,12 @@ export const SessionCache = {
 
   async set(
     sessionId: string,
-    session: { userId: string; email: string; role: string; organizationId?: string }
+    session: {
+      userId: string;
+      email: string;
+      role: string;
+      organizationId?: string;
+    }
   ): Promise<void> {
     await cache.set(CacheKeys.session(sessionId), session, CacheTTL.SESSION);
   },
@@ -798,7 +830,11 @@ export const PermissionsCache = {
       organizationType?: string;
     }
   ): Promise<void> {
-    await cache.set(CacheKeys.userPermissions(userId), permissions, CacheTTL.PERMISSIONS);
+    await cache.set(
+      CacheKeys.userPermissions(userId),
+      permissions,
+      CacheTTL.PERMISSIONS
+    );
   },
 
   async invalidate(userId: string): Promise<void> {
@@ -823,12 +859,19 @@ export const LoadCache = {
     return cache.get(CacheKeys.loadList(filterKey));
   },
 
-  async setList(filters: Record<string, unknown>, loads: unknown[]): Promise<void> {
+  async setList(
+    filters: Record<string, unknown>,
+    loads: unknown[]
+  ): Promise<void> {
     const filterKey = JSON.stringify(filters);
     await cache.set(CacheKeys.loadList(filterKey), loads, CacheTTL.LISTINGS);
   },
 
-  async invalidate(loadId: string, shipperId?: string, orgId?: string): Promise<void> {
+  async invalidate(
+    loadId: string,
+    shipperId?: string,
+    orgId?: string
+  ): Promise<void> {
     await CacheInvalidation.load(loadId, shipperId, orgId);
   },
 };
@@ -850,12 +893,19 @@ export const TruckCache = {
     return cache.get(CacheKeys.truckList(filterKey));
   },
 
-  async setList(filters: Record<string, unknown>, trucks: unknown[]): Promise<void> {
+  async setList(
+    filters: Record<string, unknown>,
+    trucks: unknown[]
+  ): Promise<void> {
     const filterKey = JSON.stringify(filters);
     await cache.set(CacheKeys.truckList(filterKey), trucks, CacheTTL.LISTINGS);
   },
 
-  async invalidate(truckId: string, carrierId?: string, orgId?: string): Promise<void> {
+  async invalidate(
+    truckId: string,
+    carrierId?: string,
+    orgId?: string
+  ): Promise<void> {
     await CacheInvalidation.truck(truckId, carrierId, orgId);
   },
 };
@@ -885,10 +935,19 @@ export const TripCache = {
   },
 
   async setByOrg(orgId: string, trips: unknown[]): Promise<void> {
-    await cache.set(CacheKeys.activeTripsByOrg(orgId), trips, CacheTTL.ACTIVE_TRIP);
+    await cache.set(
+      CacheKeys.activeTripsByOrg(orgId),
+      trips,
+      CacheTTL.ACTIVE_TRIP
+    );
   },
 
-  async invalidate(tripId: string, carrierId?: string, shipperId?: string, orgId?: string): Promise<void> {
+  async invalidate(
+    tripId: string,
+    carrierId?: string,
+    shipperId?: string,
+    orgId?: string
+  ): Promise<void> {
     await CacheInvalidation.trip(tripId, carrierId, shipperId, orgId);
   },
 };
@@ -905,7 +964,10 @@ export const GeoCache = {
     await cache.set(CacheKeys.locations(), locations, CacheTTL.LOCATIONS);
   },
 
-  async getDistance(originId: string, destId: string): Promise<{ distanceKm: number; durationMinutes?: number } | null> {
+  async getDistance(
+    originId: string,
+    destId: string
+  ): Promise<{ distanceKm: number; durationMinutes?: number } | null> {
     return cache.get(CacheKeys.distance(originId, destId));
   },
 
@@ -914,15 +976,27 @@ export const GeoCache = {
     destId: string,
     data: { distanceKm: number; durationMinutes?: number }
   ): Promise<void> {
-    await cache.set(CacheKeys.distance(originId, destId), data, CacheTTL.GEODATA);
+    await cache.set(
+      CacheKeys.distance(originId, destId),
+      data,
+      CacheTTL.GEODATA
+    );
   },
 
   async getCorridor(originId: string, destId: string): Promise<unknown | null> {
     return cache.get(CacheKeys.corridor(originId, destId));
   },
 
-  async setCorridor(originId: string, destId: string, corridor: unknown): Promise<void> {
-    await cache.set(CacheKeys.corridor(originId, destId), corridor, CacheTTL.CORRIDOR);
+  async setCorridor(
+    originId: string,
+    destId: string,
+    corridor: unknown
+  ): Promise<void> {
+    await cache.set(
+      CacheKeys.corridor(originId, destId),
+      corridor,
+      CacheTTL.CORRIDOR
+    );
   },
 
   async getAllCorridors(): Promise<unknown[] | null> {
@@ -937,7 +1011,11 @@ export const GeoCache = {
     return cache.get(CacheKeys.route(originId, destId));
   },
 
-  async setRoute(originId: string, destId: string, route: unknown): Promise<void> {
+  async setRoute(
+    originId: string,
+    destId: string,
+    route: unknown
+  ): Promise<void> {
     await cache.set(CacheKeys.route(originId, destId), route, CacheTTL.GEODATA);
   },
 };
@@ -950,14 +1028,14 @@ export const GeoCache = {
  * Get comprehensive cache statistics for monitoring
  */
 export function getCacheStats(): {
-  adapter: 'redis' | 'memory';
+  adapter: "redis" | "memory";
   metrics: ReturnType<typeof getCacheMetrics>;
   memoryStats?: { size: number; maxSize: number };
 } {
   const isUsingRedis = isRedisEnabled() && redis;
 
   return {
-    adapter: isUsingRedis ? 'redis' : 'memory',
+    adapter: isUsingRedis ? "redis" : "memory",
     metrics: getCacheMetrics(),
     memoryStats: !isUsingRedis ? inMemoryCache.getStats() : undefined,
   };
@@ -971,19 +1049,17 @@ export function getCacheStats(): {
  * Warm cache with frequently accessed data
  * Call this on application startup or periodically
  */
-export async function warmCache(
-  fetchers: {
-    locations?: () => Promise<unknown[]>;
-    corridors?: () => Promise<unknown[]>;
-  }
-): Promise<void> {
+export async function warmCache(fetchers: {
+  locations?: () => Promise<unknown[]>;
+  corridors?: () => Promise<unknown[]>;
+}): Promise<void> {
   const promises: Promise<void>[] = [];
 
   if (fetchers.locations) {
     promises.push(
       fetchers.locations().then(async (locations) => {
         await GeoCache.setLocations(locations);
-        })
+      })
     );
   }
 
@@ -991,9 +1067,9 @@ export async function warmCache(
     promises.push(
       fetchers.corridors().then(async (corridors) => {
         await GeoCache.setAllCorridors(corridors);
-        })
+      })
     );
   }
 
   await Promise.all(promises);
-  }
+}

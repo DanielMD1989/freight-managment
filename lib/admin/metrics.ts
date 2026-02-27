@@ -12,7 +12,7 @@
  * - Service Fees: Uses serviceFeeEtb from Load model (legacy but consistent)
  */
 
-import { db } from '@/lib/db';
+import { db } from "@/lib/db";
 
 // ============================================================================
 // TYPES
@@ -34,8 +34,8 @@ export interface LoadMetrics {
   total: number;
   byStatus: Record<string, number>;
   // Grouped counts
-  active: number;       // POSTED + SEARCHING + OFFERED
-  inProgress: number;   // ASSIGNED + PICKUP_PENDING + IN_TRANSIT
+  active: number; // POSTED + SEARCHING + OFFERED
+  inProgress: number; // ASSIGNED + PICKUP_PENDING + IN_TRANSIT
   delivered: number;
   completed: number;
   cancelled: number;
@@ -44,8 +44,8 @@ export interface LoadMetrics {
 export interface TripMetrics {
   total: number;
   byStatus: Record<string, number>;
-  active: number;       // ASSIGNED + PICKUP_PENDING + IN_TRANSIT
-  completed: number;    // DELIVERED + COMPLETED
+  active: number; // ASSIGNED + PICKUP_PENDING + IN_TRANSIT
+  completed: number; // DELIVERED + COMPLETED
   cancelled: number;
 }
 
@@ -57,8 +57,8 @@ export interface TruckMetrics {
 }
 
 export interface RevenueMetrics {
-  platformBalance: number;      // PLATFORM_REVENUE account balance
-  serviceFeeCollected: number;  // Sum of serviceFeeEtb for period
+  platformBalance: number; // PLATFORM_REVENUE account balance
+  serviceFeeCollected: number; // Sum of serviceFeeEtb for period
   pendingWithdrawals: number;
 }
 
@@ -88,24 +88,47 @@ export interface AdminDashboardMetrics {
 
 /** All valid LoadStatus values from Prisma schema */
 export const LOAD_STATUSES = [
-  'DRAFT', 'POSTED', 'SEARCHING', 'OFFERED', 'ASSIGNED',
-  'PICKUP_PENDING', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED',
-  'EXCEPTION', 'CANCELLED', 'EXPIRED', 'UNPOSTED'
+  "DRAFT",
+  "POSTED",
+  "SEARCHING",
+  "OFFERED",
+  "ASSIGNED",
+  "PICKUP_PENDING",
+  "IN_TRANSIT",
+  "DELIVERED",
+  "COMPLETED",
+  "EXCEPTION",
+  "CANCELLED",
+  "EXPIRED",
+  "UNPOSTED",
 ] as const;
 
 /** Load statuses considered "active" (waiting for assignment) */
-export const ACTIVE_LOAD_STATUSES = ['POSTED', 'SEARCHING', 'OFFERED'] as const;
+export const ACTIVE_LOAD_STATUSES = ["POSTED", "SEARCHING", "OFFERED"] as const;
 
 /** Load statuses considered "in progress" (being worked on) */
-export const IN_PROGRESS_LOAD_STATUSES = ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT'] as const;
+export const IN_PROGRESS_LOAD_STATUSES = [
+  "ASSIGNED",
+  "PICKUP_PENDING",
+  "IN_TRANSIT",
+] as const;
 
 /** All valid TripStatus values from Prisma schema */
 export const TRIP_STATUSES = [
-  'ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED', 'CANCELLED'
+  "ASSIGNED",
+  "PICKUP_PENDING",
+  "IN_TRANSIT",
+  "DELIVERED",
+  "COMPLETED",
+  "CANCELLED",
 ] as const;
 
 /** Trip statuses considered "active" */
-export const ACTIVE_TRIP_STATUSES = ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT'] as const;
+export const ACTIVE_TRIP_STATUSES = [
+  "ASSIGNED",
+  "PICKUP_PENDING",
+  "IN_TRANSIT",
+] as const;
 
 // ============================================================================
 // CORE METRICS FUNCTIONS
@@ -115,12 +138,13 @@ export const ACTIVE_TRIP_STATUSES = ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT']
  * Get entity counts for admin dashboard
  */
 export async function getCountMetrics(): Promise<CountMetrics> {
-  const [totalUsers, totalOrganizations, totalLoads, totalTrucks] = await Promise.all([
-    db.user.count(),
-    db.organization.count(),
-    db.load.count(),
-    db.truck.count(),
-  ]);
+  const [totalUsers, totalOrganizations, totalLoads, totalTrucks] =
+    await Promise.all([
+      db.user.count(),
+      db.organization.count(),
+      db.load.count(),
+      db.truck.count(),
+    ]);
 
   return { totalUsers, totalOrganizations, totalLoads, totalTrucks };
 }
@@ -130,7 +154,7 @@ export async function getCountMetrics(): Promise<CountMetrics> {
  */
 export async function getLoadMetrics(): Promise<LoadMetrics> {
   const loadsByStatus = await db.load.groupBy({
-    by: ['status'],
+    by: ["status"],
     _count: true,
   });
 
@@ -154,11 +178,14 @@ export async function getLoadMetrics(): Promise<LoadMetrics> {
   return {
     total,
     byStatus,
-    active: getCount('POSTED') + getCount('SEARCHING') + getCount('OFFERED'),
-    inProgress: getCount('ASSIGNED') + getCount('PICKUP_PENDING') + getCount('IN_TRANSIT'),
-    delivered: getCount('DELIVERED'),
-    completed: getCount('COMPLETED'),
-    cancelled: getCount('CANCELLED'),
+    active: getCount("POSTED") + getCount("SEARCHING") + getCount("OFFERED"),
+    inProgress:
+      getCount("ASSIGNED") +
+      getCount("PICKUP_PENDING") +
+      getCount("IN_TRANSIT"),
+    delivered: getCount("DELIVERED"),
+    completed: getCount("COMPLETED"),
+    cancelled: getCount("CANCELLED"),
   };
 }
 
@@ -171,7 +198,7 @@ export async function getLoadMetrics(): Promise<LoadMetrics> {
  */
 export async function getTripMetrics(): Promise<TripMetrics> {
   const tripsByStatus = await db.trip.groupBy({
-    by: ['status'],
+    by: ["status"],
     _count: true,
   });
 
@@ -195,9 +222,12 @@ export async function getTripMetrics(): Promise<TripMetrics> {
   return {
     total,
     byStatus,
-    active: getCount('ASSIGNED') + getCount('PICKUP_PENDING') + getCount('IN_TRANSIT'),
-    completed: getCount('DELIVERED') + getCount('COMPLETED'),
-    cancelled: getCount('CANCELLED'),
+    active:
+      getCount("ASSIGNED") +
+      getCount("PICKUP_PENDING") +
+      getCount("IN_TRANSIT"),
+    completed: getCount("DELIVERED") + getCount("COMPLETED"),
+    cancelled: getCount("CANCELLED"),
   };
 }
 
@@ -208,11 +238,11 @@ export async function getTruckMetrics(): Promise<TruckMetrics> {
   const [total, byAvailability, byApproval] = await Promise.all([
     db.truck.count(),
     db.truck.groupBy({
-      by: ['isAvailable'],
+      by: ["isAvailable"],
       _count: true,
     }),
     db.truck.groupBy({
-      by: ['approvalStatus'],
+      by: ["approvalStatus"],
       _count: true,
     }),
   ]);
@@ -222,8 +252,8 @@ export async function getTruckMetrics(): Promise<TruckMetrics> {
     byApprovalStatus[item.approvalStatus] = item._count;
   }
 
-  const available = byAvailability.find(t => t.isAvailable)?._count || 0;
-  const unavailable = byAvailability.find(t => !t.isAvailable)?._count || 0;
+  const available = byAvailability.find((t) => t.isAvailable)?._count || 0;
+  const unavailable = byAvailability.find((t) => !t.isAvailable)?._count || 0;
 
   return {
     total,
@@ -240,25 +270,27 @@ export async function getTruckMetrics(): Promise<TruckMetrics> {
  * revenue balance. Service fees are calculated from Load.serviceFeeEtb
  * for historical compatibility.
  */
-export async function getRevenueMetrics(dateRange?: DateRange): Promise<RevenueMetrics> {
+export async function getRevenueMetrics(
+  dateRange?: DateRange
+): Promise<RevenueMetrics> {
   const [platformAccount, pendingWithdrawals, serviceFees] = await Promise.all([
     db.financialAccount.findFirst({
-      where: { accountType: 'PLATFORM_REVENUE' },
+      where: { accountType: "PLATFORM_REVENUE" },
       select: { balance: true },
     }),
     db.withdrawalRequest.count({
-      where: { status: 'PENDING' },
+      where: { status: "PENDING" },
     }),
     dateRange
       ? db.load.aggregate({
           where: {
-            serviceFeeStatus: 'DEDUCTED',
+            serviceFeeStatus: "DEDUCTED",
             serviceFeeDeductedAt: { gte: dateRange.start, lte: dateRange.end },
           },
           _sum: { serviceFeeEtb: true },
         })
       : db.load.aggregate({
-          where: { serviceFeeStatus: 'DEDUCTED' },
+          where: { serviceFeeStatus: "DEDUCTED" },
           _sum: { serviceFeeEtb: true },
         }),
   ]);
@@ -275,17 +307,17 @@ export async function getRevenueMetrics(dateRange?: DateRange): Promise<RevenueM
  */
 export async function getDisputeMetrics(): Promise<DisputeMetrics> {
   const disputesByStatus = await db.dispute.groupBy({
-    by: ['status'],
+    by: ["status"],
     _count: true,
   });
 
   const getCount = (status: string) =>
-    disputesByStatus.find(d => d.status === status)?._count || 0;
+    disputesByStatus.find((d) => d.status === status)?._count || 0;
 
   return {
-    open: getCount('OPEN'),
-    underReview: getCount('UNDER_REVIEW'),
-    resolved: getCount('RESOLVED'),
+    open: getCount("OPEN"),
+    underReview: getCount("UNDER_REVIEW"),
+    resolved: getCount("RESOLVED"),
     total: disputesByStatus.reduce((sum, d) => sum + d._count, 0),
   };
 }
@@ -319,15 +351,16 @@ export async function getRecentActivityMetrics(days: number = 7): Promise<{
  * It fetches all metrics in parallel for optimal performance.
  */
 export async function getAdminDashboardMetrics(): Promise<AdminDashboardMetrics> {
-  const [counts, loads, trips, trucks, revenue, disputes, recentActivity] = await Promise.all([
-    getCountMetrics(),
-    getLoadMetrics(),
-    getTripMetrics(),
-    getTruckMetrics(),
-    getRevenueMetrics(),
-    getDisputeMetrics(),
-    getRecentActivityMetrics(),
-  ]);
+  const [counts, loads, trips, trucks, revenue, disputes, recentActivity] =
+    await Promise.all([
+      getCountMetrics(),
+      getLoadMetrics(),
+      getTripMetrics(),
+      getTruckMetrics(),
+      getRevenueMetrics(),
+      getDisputeMetrics(),
+      getRecentActivityMetrics(),
+    ]);
 
   return {
     counts,
@@ -344,7 +377,7 @@ export async function getAdminDashboardMetrics(): Promise<AdminDashboardMetrics>
 // PERIOD-BASED METRICS (for analytics)
 // ============================================================================
 
-export type TimePeriod = 'day' | 'week' | 'month' | 'year';
+export type TimePeriod = "day" | "week" | "month" | "year";
 
 /**
  * Get date range for a given time period
@@ -354,16 +387,16 @@ export function getDateRangeForPeriod(period: TimePeriod): DateRange {
   const start = new Date();
 
   switch (period) {
-    case 'day':
+    case "day":
       start.setHours(0, 0, 0, 0);
       break;
-    case 'week':
+    case "week":
       start.setDate(start.getDate() - 7);
       break;
-    case 'month':
+    case "month":
       start.setMonth(start.getMonth() - 1);
       break;
-    case 'year':
+    case "year":
       start.setFullYear(start.getFullYear() - 1);
       break;
   }
@@ -375,30 +408,31 @@ export function getDateRangeForPeriod(period: TimePeriod): DateRange {
  * Get counts for entities created within a time period
  */
 export async function getPeriodMetrics(dateRange: DateRange) {
-  const [newUsers, newLoads, newTrucks, completedTrips, cancelledTrips] = await Promise.all([
-    db.user.count({
-      where: { createdAt: { gte: dateRange.start, lte: dateRange.end } },
-    }),
-    db.load.count({
-      where: { createdAt: { gte: dateRange.start, lte: dateRange.end } },
-    }),
-    db.truck.count({
-      where: { createdAt: { gte: dateRange.start, lte: dateRange.end } },
-    }),
-    // Use Trip model for completed trips
-    db.trip.count({
-      where: {
-        status: { in: ['DELIVERED', 'COMPLETED'] },
-        updatedAt: { gte: dateRange.start, lte: dateRange.end },
-      },
-    }),
-    db.trip.count({
-      where: {
-        status: 'CANCELLED',
-        updatedAt: { gte: dateRange.start, lte: dateRange.end },
-      },
-    }),
-  ]);
+  const [newUsers, newLoads, newTrucks, completedTrips, cancelledTrips] =
+    await Promise.all([
+      db.user.count({
+        where: { createdAt: { gte: dateRange.start, lte: dateRange.end } },
+      }),
+      db.load.count({
+        where: { createdAt: { gte: dateRange.start, lte: dateRange.end } },
+      }),
+      db.truck.count({
+        where: { createdAt: { gte: dateRange.start, lte: dateRange.end } },
+      }),
+      // Use Trip model for completed trips
+      db.trip.count({
+        where: {
+          status: { in: ["DELIVERED", "COMPLETED"] },
+          updatedAt: { gte: dateRange.start, lte: dateRange.end },
+        },
+      }),
+      db.trip.count({
+        where: {
+          status: "CANCELLED",
+          updatedAt: { gte: dateRange.start, lte: dateRange.end },
+        },
+      }),
+    ]);
 
   return {
     newUsers,
@@ -446,15 +480,15 @@ export async function getChartData(dateRange: DateRange) {
   ]);
 
   return {
-    loadsOverTime: loadsOverTime.map(item => ({
+    loadsOverTime: loadsOverTime.map((item) => ({
       date: item.date,
       count: Number(item.count),
     })),
-    revenueOverTime: revenueOverTime.map(item => ({
+    revenueOverTime: revenueOverTime.map((item) => ({
       date: item.date,
       total: Number(item.total),
     })),
-    tripsOverTime: tripsOverTime.map(item => ({
+    tripsOverTime: tripsOverTime.map((item) => ({
       date: item.date,
       completed: Number(item.completed),
       cancelled: Number(item.cancelled),

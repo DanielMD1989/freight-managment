@@ -4,10 +4,10 @@
  * Client-side dashboard for settlement automation monitoring
  */
 
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { getCSRFToken } from '@/lib/csrfFetch';
+import { useEffect, useState } from "react";
+import { getCSRFToken } from "@/lib/csrfFetch";
 
 interface SettlementStats {
   pendingPODSubmission: number;
@@ -40,26 +40,28 @@ export default function SettlementAutomationClient() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('/api/admin/settlement-automation');
+      const response = await fetch("/api/admin/settlement-automation");
 
       if (response.ok) {
         const data = await response.json();
         setStats(data.stats);
       } else {
         // L41 FIX: Set error state instead of just logging
-        setError('Failed to fetch settlement statistics');
-        console.error('Failed to fetch stats');
+        setError("Failed to fetch settlement statistics");
+        console.error("Failed to fetch stats");
       }
     } catch (error) {
       // L41 FIX: Set error state instead of just logging
-      setError('Network error while fetching statistics');
-      console.error('Error fetching stats:', error);
+      setError("Network error while fetching statistics");
+      console.error("Error fetching stats:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const runAutomation = async (action: 'auto-verify' | 'process-settlements' | 'full') => {
+  const runAutomation = async (
+    action: "auto-verify" | "process-settlements" | "full"
+  ) => {
     if (!confirm(`Run settlement automation (${action})?`)) {
       return;
     }
@@ -71,7 +73,10 @@ export default function SettlementAutomationClient() {
       const csrfToken = await getCSRFToken();
       const response = await fetch(
         `/api/admin/settlement-automation?action=${action}`,
-        { method: 'POST', headers: { ...(csrfToken && { 'X-CSRF-Token': csrfToken }) } }
+        {
+          method: "POST",
+          headers: { ...(csrfToken && { "X-CSRF-Token": csrfToken }) },
+        }
       );
 
       if (response.ok) {
@@ -80,15 +85,15 @@ export default function SettlementAutomationClient() {
         setResult(data.result);
         setLastRun(data.timestamp);
         alert(
-          `Automation complete!\n${action === 'auto-verify' ? 'Auto-verified: ' + data.result.autoVerifiedCount : action === 'process-settlements' ? 'Settled: ' + data.result.settledCount : 'Auto-verified: ' + data.result.autoVerifiedCount + ', Settled: ' + data.result.settledCount}`
+          `Automation complete!\n${action === "auto-verify" ? "Auto-verified: " + data.result.autoVerifiedCount : action === "process-settlements" ? "Settled: " + data.result.settledCount : "Auto-verified: " + data.result.autoVerifiedCount + ", Settled: " + data.result.settledCount}`
         );
       } else {
         const data = await response.json();
-        alert(`Error: ${data.error || 'Failed to run automation'}`);
+        alert(`Error: ${data.error || "Failed to run automation"}`);
       }
     } catch (error: unknown) {
-      alert('Failed to run automation');
-      console.error('Automation error:', error);
+      alert("Failed to run automation");
+      console.error("Automation error:", error);
     } finally {
       setRunning(false);
     }
@@ -96,9 +101,9 @@ export default function SettlementAutomationClient() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow p-12 text-center">
-        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        <p className="text-gray-600 mt-4">Loading settlement statistics...</p>
+      <div className="rounded-lg bg-white p-12 text-center shadow">
+        <div className="inline-block h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
+        <p className="mt-4 text-gray-600">Loading settlement statistics...</p>
       </div>
     );
   }
@@ -106,12 +111,14 @@ export default function SettlementAutomationClient() {
   // L41 FIX: Show error state to user
   if (!stats || error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-        <h3 className="text-red-800 font-semibold mb-2">Error</h3>
-        <p className="text-red-700">{error || 'Failed to load settlement statistics'}</p>
+      <div className="rounded-lg border border-red-200 bg-red-50 p-6">
+        <h3 className="mb-2 font-semibold text-red-800">Error</h3>
+        <p className="text-red-700">
+          {error || "Failed to load settlement statistics"}
+        </p>
         <button
           onClick={fetchStats}
-          className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          className="mt-4 rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
         >
           Retry
         </button>
@@ -122,42 +129,42 @@ export default function SettlementAutomationClient() {
   return (
     <div className="space-y-6">
       {/* Action Buttons */}
-      <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">
           Manual Controls
         </h2>
         <div className="flex flex-wrap gap-3">
           <button
-            onClick={() => runAutomation('auto-verify')}
+            onClick={() => runAutomation("auto-verify")}
             disabled={running}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Auto-Verify Expired PODs
           </button>
           <button
-            onClick={() => runAutomation('process-settlements')}
+            onClick={() => runAutomation("process-settlements")}
             disabled={running}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="rounded-lg bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Process Ready Settlements
           </button>
           <button
-            onClick={() => runAutomation('full')}
+            onClick={() => runAutomation("full")}
             disabled={running}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="rounded-lg bg-purple-600 px-4 py-2 font-medium text-white hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Run Full Automation
           </button>
           <button
             onClick={fetchStats}
             disabled={running}
-            className="px-4 py-2 bg-gray-100 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="rounded-lg border border-gray-300 bg-gray-100 px-4 py-2 font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Refresh Stats
           </button>
         </div>
         {lastRun && (
-          <p className="text-sm text-gray-500 mt-3">
+          <p className="mt-3 text-sm text-gray-500">
             Last run: {new Date(lastRun).toLocaleString()}
           </p>
         )}
@@ -165,8 +172,8 @@ export default function SettlementAutomationClient() {
 
       {/* Last Run Result */}
       {result && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <h3 className="font-semibold text-green-900 mb-2">
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+          <h3 className="mb-2 font-semibold text-green-900">
             ✓ Last Automation Result
           </h3>
           <div className="text-sm text-green-800">
@@ -182,18 +189,18 @@ export default function SettlementAutomationClient() {
       )}
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-5">
         {/* Pending POD Submission */}
-        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Pending POD Submission</p>
-              <p className="text-3xl font-bold text-yellow-600 mt-1">
+              <p className="mt-1 text-3xl font-bold text-yellow-600">
                 {stats.pendingPODSubmission}
               </p>
             </div>
             <svg
-              className="w-12 h-12 text-yellow-200"
+              className="h-12 w-12 text-yellow-200"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -205,22 +212,22 @@ export default function SettlementAutomationClient() {
               />
             </svg>
           </div>
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="mt-2 text-xs text-gray-500">
             Delivered, awaiting carrier POD upload
           </p>
         </div>
 
         {/* Pending POD Verification */}
-        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Pending Verification</p>
-              <p className="text-3xl font-bold text-orange-600 mt-1">
+              <p className="mt-1 text-3xl font-bold text-orange-600">
                 {stats.pendingPODVerification}
               </p>
             </div>
             <svg
-              className="w-12 h-12 text-orange-200"
+              className="h-12 w-12 text-orange-200"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -231,22 +238,22 @@ export default function SettlementAutomationClient() {
               />
             </svg>
           </div>
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="mt-2 text-xs text-gray-500">
             Auto-verifies after 24 hours
           </p>
         </div>
 
         {/* Ready for Settlement */}
-        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Ready for Settlement</p>
-              <p className="text-3xl font-bold text-blue-600 mt-1">
+              <p className="mt-1 text-3xl font-bold text-blue-600">
                 {stats.readyForSettlement}
               </p>
             </div>
             <svg
-              className="w-12 h-12 text-blue-200"
+              className="h-12 w-12 text-blue-200"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -258,22 +265,22 @@ export default function SettlementAutomationClient() {
               />
             </svg>
           </div>
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="mt-2 text-xs text-gray-500">
             POD verified, processing service fees
           </p>
         </div>
 
         {/* Settled */}
-        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Settled</p>
-              <p className="text-3xl font-bold text-green-600 mt-1">
+              <p className="mt-1 text-3xl font-bold text-green-600">
                 {stats.settled}
               </p>
             </div>
             <svg
-              className="w-12 h-12 text-green-200"
+              className="h-12 w-12 text-green-200"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -284,22 +291,22 @@ export default function SettlementAutomationClient() {
               />
             </svg>
           </div>
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="mt-2 text-xs text-gray-500">
             Service fees deducted successfully
           </p>
         </div>
 
         {/* Disputes */}
-        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Disputes</p>
-              <p className="text-3xl font-bold text-red-600 mt-1">
+              <p className="mt-1 text-3xl font-bold text-red-600">
                 {stats.disputes}
               </p>
             </div>
             <svg
-              className="w-12 h-12 text-red-200"
+              className="h-12 w-12 text-red-200"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -310,15 +317,15 @@ export default function SettlementAutomationClient() {
               />
             </svg>
           </div>
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="mt-2 text-xs text-gray-500">
             Settlement failed, requires manual review
           </p>
         </div>
       </div>
 
       {/* Information Panel */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <h3 className="font-semibold text-blue-900 mb-3">
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-6">
+        <h3 className="mb-3 font-semibold text-blue-900">
           How Settlement Automation Works
         </h3>
         <ul className="space-y-2 text-sm text-blue-800">
@@ -337,28 +344,30 @@ export default function SettlementAutomationClient() {
           <li className="flex items-start gap-2">
             <span className="font-bold">3.</span>
             <span>
-              If shipper doesn't respond within 24 hours, POD is automatically
-              verified
+              If shipper doesn&apos;t respond within 24 hours, POD is
+              automatically verified
             </span>
           </li>
           <li className="flex items-start gap-2">
             <span className="font-bold">4.</span>
             <span>
-              Once POD is verified, corridor-based service fees are deducted from
-              wallets
+              Once POD is verified, corridor-based service fees are deducted
+              from wallets
             </span>
           </li>
           <li className="flex items-start gap-2">
             <span className="font-bold">5.</span>
             <span>
-              Settlement status changes to "PAID" and platform revenue is recorded
+              Settlement status changes to &quot;PAID&quot; and platform revenue
+              is recorded
             </span>
           </li>
         </ul>
-        <div className="mt-4 p-3 bg-blue-100 rounded">
+        <div className="mt-4 rounded bg-blue-100 p-3">
           <p className="text-sm text-blue-900">
-            <strong>Note:</strong> Run automation manually or schedule it via cron
-            job for automatic processing. Recommended: Run every 30 minutes.
+            <strong>Note:</strong> Run automation manually or schedule it via
+            cron job for automatic processing. Recommended: Run every 30
+            minutes.
           </p>
         </div>
       </div>

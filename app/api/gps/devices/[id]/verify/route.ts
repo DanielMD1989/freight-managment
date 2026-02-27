@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requirePermission, Permission } from '@/lib/rbac';
-import { GpsDeviceStatus } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requirePermission, Permission } from "@/lib/rbac";
+import { GpsDeviceStatus } from "@prisma/client";
 
 // POST /api/gps/devices/[id]/verify - Manually verify GPS device
 export async function POST(
@@ -25,7 +25,7 @@ export async function POST(
 
     if (!device) {
       return NextResponse.json(
-        { error: 'GPS device not found' },
+        { error: "GPS device not found" },
         { status: 404 }
       );
     }
@@ -55,12 +55,12 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      device: updatedDevice
+      device: updatedDevice,
     });
   } catch (error) {
-    console.error('Verify GPS device error:', error);
+    console.error("Verify GPS device error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

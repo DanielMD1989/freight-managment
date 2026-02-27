@@ -6,11 +6,11 @@
  * - My Load Requests: Outgoing load requests to shippers
  */
 
-import { Suspense } from 'react';
-import { requireAuth } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { redirect } from 'next/navigation';
-import RequestsTabs from './RequestsTabs';
+import { Suspense } from "react";
+import { requireAuth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { redirect } from "next/navigation";
+import RequestsTabs from "./RequestsTabs";
 
 // Get incoming truck requests from shippers
 async function getShipperRequests(userId: string) {
@@ -51,7 +51,7 @@ async function getShipperRequests(userId: string) {
         },
       },
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
   });
 
   return requests;
@@ -118,7 +118,7 @@ async function getLoadRequests(userId: string) {
         },
       },
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
   });
 
   return requests;
@@ -167,7 +167,7 @@ async function getMatchProposals(userId: string) {
         },
       },
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
   });
 
   return proposals;
@@ -176,8 +176,12 @@ async function getMatchProposals(userId: string) {
 export default async function CarrierRequestsPage() {
   const session = await requireAuth();
 
-  if (session.role !== 'CARRIER' && session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
-    redirect('/carrier');
+  if (
+    session.role !== "CARRIER" &&
+    session.role !== "ADMIN" &&
+    session.role !== "SUPER_ADMIN"
+  ) {
+    redirect("/carrier");
   }
 
   // Fetch all types of requests in parallel
@@ -202,9 +206,11 @@ export default async function CarrierRequestsPage() {
       status: req.load.status,
       weight: Number(req.load.weight),
       truckType: req.load.truckType,
-      cargoType: req.load.cargoDescription || 'General',
-      pickupCity: req.load.pickupLocation?.name || req.load.pickupCity || 'Unknown',
-      deliveryCity: req.load.deliveryLocation?.name || req.load.deliveryCity || 'Unknown',
+      cargoType: req.load.cargoDescription || "General",
+      pickupCity:
+        req.load.pickupLocation?.name || req.load.pickupCity || "Unknown",
+      deliveryCity:
+        req.load.deliveryLocation?.name || req.load.deliveryCity || "Unknown",
       pickupDate: req.load.pickupDate.toISOString(),
       deliveryDate: req.load.deliveryDate.toISOString(),
       shipper: req.load.shipper,
@@ -220,7 +226,7 @@ export default async function CarrierRequestsPage() {
           id: req.requestedBy.id,
           name: [req.requestedBy.firstName, req.requestedBy.lastName]
             .filter(Boolean)
-            .join(' '),
+            .join(" "),
           email: req.requestedBy.email,
         }
       : null,
@@ -242,8 +248,10 @@ export default async function CarrierRequestsPage() {
       status: req.load.status,
       weight: Number(req.load.weight),
       truckType: req.load.truckType,
-      pickupCity: req.load.pickupLocation?.name || req.load.pickupCity || 'Unknown',
-      deliveryCity: req.load.deliveryLocation?.name || req.load.deliveryCity || 'Unknown',
+      pickupCity:
+        req.load.pickupLocation?.name || req.load.pickupCity || "Unknown",
+      deliveryCity:
+        req.load.deliveryLocation?.name || req.load.deliveryCity || "Unknown",
       pickupDate: req.load.pickupDate.toISOString(),
     },
     truck: {
@@ -258,7 +266,7 @@ export default async function CarrierRequestsPage() {
           id: req.requestedBy.id,
           name: [req.requestedBy.firstName, req.requestedBy.lastName]
             .filter(Boolean)
-            .join(' '),
+            .join(" "),
           email: req.requestedBy.email,
         }
       : null,
@@ -275,8 +283,8 @@ export default async function CarrierRequestsPage() {
     respondedAt: proposal.respondedAt?.toISOString() || null,
     load: {
       id: proposal.load.id,
-      pickupCity: proposal.load.pickupCity || 'Unknown',
-      deliveryCity: proposal.load.deliveryCity || 'Unknown',
+      pickupCity: proposal.load.pickupCity || "Unknown",
+      deliveryCity: proposal.load.deliveryCity || "Unknown",
       pickupDate: proposal.load.pickupDate.toISOString(),
       weight: Number(proposal.load.weight),
       truckType: proposal.load.truckType,
@@ -290,28 +298,45 @@ export default async function CarrierRequestsPage() {
     },
     proposedBy: proposal.proposedBy
       ? {
-          name: [proposal.proposedBy.firstName, proposal.proposedBy.lastName]
-            .filter(Boolean)
-            .join(' ') || 'Dispatcher',
+          name:
+            [proposal.proposedBy.firstName, proposal.proposedBy.lastName]
+              .filter(Boolean)
+              .join(" ") || "Dispatcher",
         }
       : null,
   }));
 
-  const pendingShipperRequests = transformedShipperRequests.filter(r => r.status === 'PENDING').length;
-  const pendingMatchProposals = transformedMatchProposals.filter(p => p.status === 'PENDING').length;
+  const pendingShipperRequests = transformedShipperRequests.filter(
+    (r) => r.status === "PENDING"
+  ).length;
+  const pendingMatchProposals = transformedMatchProposals.filter(
+    (p) => p.status === "PENDING"
+  ).length;
 
   return (
     <div className="p-6">
       <div className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-md shadow-teal-500/25">
-            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+        <div className="mb-2 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 shadow-md shadow-teal-500/25">
+            <svg
+              className="h-5 w-5 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+              />
             </svg>
           </div>
           <div>
             <h1 className="text-2xl font-bold text-slate-800">Requests</h1>
-            <p className="text-slate-500 text-sm">Manage shipper booking requests and your load requests</p>
+            <p className="text-sm text-slate-500">
+              Manage shipper booking requests and your load requests
+            </p>
           </div>
         </div>
       </div>
@@ -332,8 +357,8 @@ export default async function CarrierRequestsPage() {
 function RequestsSkeleton() {
   return (
     <div className="animate-pulse space-y-4">
-      <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-      <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded"></div>
+      <div className="h-12 w-1/3 rounded bg-gray-200 dark:bg-gray-700"></div>
+      <div className="h-64 rounded bg-gray-200 dark:bg-gray-700"></div>
     </div>
   );
 }

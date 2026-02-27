@@ -9,11 +9,11 @@
  * - Load requests (incoming - carriers requesting shipper's loads)
  */
 
-import { Suspense } from 'react';
-import { requireAuth } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { redirect } from 'next/navigation';
-import RequestsTabs from './RequestsTabs';
+import { Suspense } from "react";
+import { requireAuth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { redirect } from "next/navigation";
+import RequestsTabs from "./RequestsTabs";
 
 async function getTruckRequests(userId: string) {
   const user = await db.user.findUnique({
@@ -55,7 +55,7 @@ async function getTruckRequests(userId: string) {
         },
       },
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
   });
 
   return requests;
@@ -105,7 +105,7 @@ async function getLoadRequests(userId: string) {
         },
       },
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
   });
 
   return requests;
@@ -114,8 +114,8 @@ async function getLoadRequests(userId: string) {
 export default async function ShipperRequestsPage() {
   const session = await requireAuth();
 
-  if (session.role !== 'SHIPPER') {
-    redirect('/shipper');
+  if (session.role !== "SHIPPER") {
+    redirect("/shipper");
   }
 
   // Fetch both types of requests in parallel
@@ -140,8 +140,10 @@ export default async function ShipperRequestsPage() {
       weight: Number(req.load.weight),
       truckType: req.load.truckType,
       // Use location relation name OR direct city string field as fallback
-      pickupCity: req.load.pickupLocation?.name || req.load.pickupCity || 'Unknown',
-      deliveryCity: req.load.deliveryLocation?.name || req.load.deliveryCity || 'Unknown',
+      pickupCity:
+        req.load.pickupLocation?.name || req.load.pickupCity || "Unknown",
+      deliveryCity:
+        req.load.deliveryLocation?.name || req.load.deliveryCity || "Unknown",
       pickupDate: req.load.pickupDate.toISOString(),
     },
     truck: {
@@ -156,7 +158,7 @@ export default async function ShipperRequestsPage() {
           id: req.requestedBy.id,
           name: [req.requestedBy.firstName, req.requestedBy.lastName]
             .filter(Boolean)
-            .join(' '),
+            .join(" "),
         }
       : null,
   }));
@@ -177,8 +179,10 @@ export default async function ShipperRequestsPage() {
       weight: Number(req.load.weight),
       truckType: req.load.truckType,
       // Use location relation name OR direct city string field as fallback
-      pickupCity: req.load.pickupLocation?.name || req.load.pickupCity || 'Unknown',
-      deliveryCity: req.load.deliveryLocation?.name || req.load.deliveryCity || 'Unknown',
+      pickupCity:
+        req.load.pickupLocation?.name || req.load.pickupCity || "Unknown",
+      deliveryCity:
+        req.load.deliveryLocation?.name || req.load.deliveryCity || "Unknown",
       pickupDate: req.load.pickupDate.toISOString(),
     },
     truck: {
@@ -193,13 +197,15 @@ export default async function ShipperRequestsPage() {
           id: req.requestedBy.id,
           name: [req.requestedBy.firstName, req.requestedBy.lastName]
             .filter(Boolean)
-            .join(' '),
+            .join(" "),
           email: req.requestedBy.email,
         }
       : null,
   }));
 
-  const pendingLoadRequests = transformedLoadRequests.filter(r => r.status === 'PENDING').length;
+  const pendingLoadRequests = transformedLoadRequests.filter(
+    (r) => r.status === "PENDING"
+  ).length;
 
   return (
     <div className="p-6">
@@ -207,7 +213,7 @@ export default async function ShipperRequestsPage() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
           Requests
         </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
+        <p className="mt-1 text-gray-600 dark:text-gray-400">
           Manage truck booking requests and carrier load requests
         </p>
       </div>
@@ -226,8 +232,8 @@ export default async function ShipperRequestsPage() {
 function RequestsSkeleton() {
   return (
     <div className="animate-pulse space-y-4">
-      <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-      <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded"></div>
+      <div className="h-12 w-1/3 rounded bg-gray-200 dark:bg-gray-700"></div>
+      <div className="h-64 rounded bg-gray-200 dark:bg-gray-700"></div>
     </div>
   );
 }

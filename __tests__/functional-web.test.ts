@@ -14,18 +14,23 @@
  * 10. Haversine fallback removal verification
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 import {
   createMockRequest,
   generateTestJWT,
   createAuthenticatedRequest,
   cleanupTestData,
-} from './utils/testUtils';
-import { hashPassword, verifyPassword, createToken, verifyToken } from '@/lib/auth';
-import { validateCSRFToken, requireCSRF } from '@/lib/csrf';
-import { db } from '@/lib/db';
+} from "./utils/testUtils";
+import {
+  hashPassword,
+  verifyPassword,
+  createToken,
+  verifyToken,
+} from "@/lib/auth";
+import { validateCSRFToken, requireCSRF } from "@/lib/csrf";
+import { db } from "@/lib/db";
 
-describe('Functional Web Tests', () => {
+describe("Functional Web Tests", () => {
   let testUser: any;
   let testOrg: any;
   let adminUser: any;
@@ -34,25 +39,25 @@ describe('Functional Web Tests', () => {
     // Create test organization
     testOrg = await db.organization.create({
       data: {
-        name: 'Functional Test Org',
-        type: 'SHIPPER',
-        contactEmail: 'func-test@example.com',
-        contactPhone: '+251900000001',
+        name: "Functional Test Org",
+        type: "SHIPPER",
+        contactEmail: "func-test@example.com",
+        contactPhone: "+251900000001",
         isVerified: true,
       },
     });
 
     // Create test user
-    const hashedPassword = await hashPassword('TestPassword123!');
+    const hashedPassword = await hashPassword("TestPassword123!");
     testUser = await db.user.create({
       data: {
-        email: 'func-test-user@example.com',
+        email: "func-test-user@example.com",
         passwordHash: hashedPassword,
-        firstName: 'Functional',
-        lastName: 'Tester',
-        phone: '+251900000002',
-        role: 'SHIPPER',
-        status: 'ACTIVE',
+        firstName: "Functional",
+        lastName: "Tester",
+        phone: "+251900000002",
+        role: "SHIPPER",
+        status: "ACTIVE",
         organizationId: testOrg.id,
       },
     });
@@ -60,13 +65,13 @@ describe('Functional Web Tests', () => {
     // Create admin user
     adminUser = await db.user.create({
       data: {
-        email: 'func-test-admin@example.com',
+        email: "func-test-admin@example.com",
         passwordHash: hashedPassword,
-        firstName: 'Admin',
-        lastName: 'Tester',
-        phone: '+251900000003',
-        role: 'ADMIN',
-        status: 'ACTIVE',
+        firstName: "Admin",
+        lastName: "Tester",
+        phone: "+251900000003",
+        role: "ADMIN",
+        status: "ACTIVE",
       },
     });
   });
@@ -74,9 +79,14 @@ describe('Functional Web Tests', () => {
   afterAll(async () => {
     // Cleanup
     try {
-      if (testUser) await db.user.delete({ where: { id: testUser.id } }).catch(() => {});
-      if (adminUser) await db.user.delete({ where: { id: adminUser.id } }).catch(() => {});
-      if (testOrg) await db.organization.delete({ where: { id: testOrg.id } }).catch(() => {});
+      if (testUser)
+        await db.user.delete({ where: { id: testUser.id } }).catch(() => {});
+      if (adminUser)
+        await db.user.delete({ where: { id: adminUser.id } }).catch(() => {});
+      if (testOrg)
+        await db.organization
+          .delete({ where: { id: testOrg.id } })
+          .catch(() => {});
     } catch (e) {
       // Ignore cleanup errors
     }
@@ -85,18 +95,24 @@ describe('Functional Web Tests', () => {
   // ============================================================================
   // 1. LOGIN/LOGOUT/SESSION REFRESH
   // ============================================================================
-  describe('1. Login/Logout/Session Refresh', () => {
-    it('should authenticate with valid credentials', async () => {
-      const isValid = await verifyPassword('TestPassword123!', testUser.passwordHash);
+  describe("1. Login/Logout/Session Refresh", () => {
+    it("should authenticate with valid credentials", async () => {
+      const isValid = await verifyPassword(
+        "TestPassword123!",
+        testUser.passwordHash
+      );
       expect(isValid).toBe(true);
     });
 
-    it('should reject invalid credentials', async () => {
-      const isValid = await verifyPassword('WrongPassword123!', testUser.passwordHash);
+    it("should reject invalid credentials", async () => {
+      const isValid = await verifyPassword(
+        "WrongPassword123!",
+        testUser.passwordHash
+      );
       expect(isValid).toBe(false);
     });
 
-    it('should generate valid JWT token on login', async () => {
+    it("should generate valid JWT token on login", async () => {
       const token = await createToken({
         userId: testUser.id,
         email: testUser.email,
@@ -108,7 +124,7 @@ describe('Functional Web Tests', () => {
       expect(token).toMatch(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/);
     });
 
-    it('should verify valid session token', async () => {
+    it("should verify valid session token", async () => {
       const token = await createToken({
         userId: testUser.id,
         email: testUser.email,
@@ -121,11 +137,11 @@ describe('Functional Web Tests', () => {
       expect(decoded?.email).toBe(testUser.email);
     });
 
-    it('should reject expired/invalid tokens', async () => {
+    it("should reject expired/invalid tokens", async () => {
       const invalidTokens = [
-        'invalid.token.here',
-        'eyJhbGciOiJIUzI1NiJ9.invalid.signature',
-        '',
+        "invalid.token.here",
+        "eyJhbGciOiJIUzI1NiJ9.invalid.signature",
+        "",
       ];
 
       for (const token of invalidTokens) {
@@ -134,7 +150,7 @@ describe('Functional Web Tests', () => {
       }
     });
 
-    it('should handle session refresh with valid token', async () => {
+    it("should handle session refresh with valid token", async () => {
       const originalToken = await createToken({
         userId: testUser.id,
         email: testUser.email,
@@ -154,10 +170,12 @@ describe('Functional Web Tests', () => {
 
       expect(refreshedToken).toBeDefined();
       // Both tokens are valid JWTs (in mock, same payload = same token)
-      expect(refreshedToken).toMatch(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/);
+      expect(refreshedToken).toMatch(
+        /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/
+      );
     });
 
-    it('should invalidate token on logout (token becomes unused)', async () => {
+    it("should invalidate token on logout (token becomes unused)", async () => {
       const token = await createToken({
         userId: testUser.id,
         email: testUser.email,
@@ -178,8 +196,8 @@ describe('Functional Web Tests', () => {
   // ============================================================================
   // 2. MFA FLOW
   // ============================================================================
-  describe('2. MFA Flow (Enable → Disable → Validate)', () => {
-    it('should enable MFA for user via UserMFA table', async () => {
+  describe("2. MFA Flow (Enable → Disable → Validate)", () => {
+    it("should enable MFA for user via UserMFA table", async () => {
       // MFA is stored in a separate UserMFA table, not on User model
       // Check if UserMFA record can be created
       const userMFA = await db.userMFA.upsert({
@@ -187,7 +205,7 @@ describe('Functional Web Tests', () => {
         create: {
           userId: testUser.id,
           enabled: true,
-          phone: '+251900000002',
+          phone: "+251900000002",
         },
         update: {
           enabled: true,
@@ -198,7 +216,7 @@ describe('Functional Web Tests', () => {
       expect(userMFA.userId).toBe(testUser.id);
     });
 
-    it('should generate recovery codes on MFA enable', async () => {
+    it("should generate recovery codes on MFA enable", async () => {
       // In production, recovery codes would be generated
       // For this test, verify the MFA setup flow via UserMFA table
       const userMFA = await db.userMFA.findUnique({
@@ -208,10 +226,10 @@ describe('Functional Web Tests', () => {
       expect(userMFA?.enabled).toBe(true);
     });
 
-    it('should validate MFA token format', () => {
+    it("should validate MFA token format", () => {
       // TOTP tokens are 6 digits
-      const validTokens = ['123456', '000000', '999999'];
-      const invalidTokens = ['12345', '1234567', 'abcdef', ''];
+      const validTokens = ["123456", "000000", "999999"];
+      const invalidTokens = ["12345", "1234567", "abcdef", ""];
 
       for (const token of validTokens) {
         expect(token).toMatch(/^\d{6}$/);
@@ -222,7 +240,7 @@ describe('Functional Web Tests', () => {
       }
     });
 
-    it('should disable MFA for user', async () => {
+    it("should disable MFA for user", async () => {
       const userMFA = await db.userMFA.update({
         where: { userId: testUser.id },
         data: {
@@ -233,7 +251,7 @@ describe('Functional Web Tests', () => {
       expect(userMFA.enabled).toBe(false);
     });
 
-    it('should require MFA validation when enabled', async () => {
+    it("should require MFA validation when enabled", async () => {
       // Re-enable for this test
       await db.userMFA.update({
         where: { userId: testUser.id },
@@ -260,8 +278,8 @@ describe('Functional Web Tests', () => {
   // ============================================================================
   // 3. DASHBOARD LOADING
   // ============================================================================
-  describe('3. Dashboard Loading', () => {
-    it('should have dashboard data models accessible', async () => {
+  describe("3. Dashboard Loading", () => {
+    it("should have dashboard data models accessible", async () => {
       // Verify dashboard-related tables are accessible
       const loadCount = await db.load.count();
       const truckCount = await db.truck.count();
@@ -272,7 +290,7 @@ describe('Functional Web Tests', () => {
       expect(notificationCount).toBeGreaterThanOrEqual(0);
     });
 
-    it('should return user organization data for dashboard', async () => {
+    it("should return user organization data for dashboard", async () => {
       const org = await db.organization.findUnique({
         where: { id: testOrg.id },
         include: {
@@ -283,17 +301,17 @@ describe('Functional Web Tests', () => {
       });
 
       expect(org).toBeDefined();
-      expect(org?.name).toBe('Functional Test Org');
+      expect(org?.name).toBe("Functional Test Org");
     });
 
-    it('should load dashboard metrics', async () => {
+    it("should load dashboard metrics", async () => {
       // Simulate dashboard metrics query using count (groupBy not available in mock)
       const loadCount = await db.load.count();
       const truckCount = await db.truck.count();
 
       // Both counts should be numbers >= 0
-      expect(typeof loadCount).toBe('number');
-      expect(typeof truckCount).toBe('number');
+      expect(typeof loadCount).toBe("number");
+      expect(typeof truckCount).toBe("number");
       expect(loadCount).toBeGreaterThanOrEqual(0);
       expect(truckCount).toBeGreaterThanOrEqual(0);
     });
@@ -302,24 +320,24 @@ describe('Functional Web Tests', () => {
   // ============================================================================
   // 4. JOB (LOAD) CREATION FORM
   // ============================================================================
-  describe('4. Job Creation Form (All Fields)', () => {
+  describe("4. Job Creation Form (All Fields)", () => {
     let createdLoad: any;
 
-    it('should create load with all required fields', async () => {
+    it("should create load with all required fields", async () => {
       createdLoad = await db.load.create({
         data: {
-          status: 'POSTED',
-          pickupCity: 'Addis Ababa',
-          pickupAddress: '123 Test Pickup Street',
+          status: "POSTED",
+          pickupCity: "Addis Ababa",
+          pickupAddress: "123 Test Pickup Street",
           pickupDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          deliveryCity: 'Dire Dawa',
-          deliveryAddress: '456 Test Delivery Ave',
+          deliveryCity: "Dire Dawa",
+          deliveryAddress: "456 Test Delivery Ave",
           deliveryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
-          truckType: 'DRY_VAN',
+          truckType: "DRY_VAN",
           weight: 5000,
-          cargoDescription: 'Test Cargo - Electronics',
+          cargoDescription: "Test Cargo - Electronics",
           isFullLoad: true,
-          fullPartial: 'FULL',
+          fullPartial: "FULL",
           estimatedTripKm: 300,
           shipperId: testOrg.id,
           createdById: testUser.id,
@@ -328,12 +346,12 @@ describe('Functional Web Tests', () => {
       });
 
       expect(createdLoad).toBeDefined();
-      expect(createdLoad.status).toBe('POSTED');
-      expect(createdLoad.pickupCity).toBe('Addis Ababa');
-      expect(createdLoad.deliveryCity).toBe('Dire Dawa');
+      expect(createdLoad.status).toBe("POSTED");
+      expect(createdLoad.pickupCity).toBe("Addis Ababa");
+      expect(createdLoad.deliveryCity).toBe("Dire Dawa");
     });
 
-    it('should validate all load form fields', async () => {
+    it("should validate all load form fields", async () => {
       expect(createdLoad.pickupCity).toBeDefined();
       expect(createdLoad.pickupAddress).toBeDefined();
       expect(createdLoad.pickupDate).toBeDefined();
@@ -345,18 +363,18 @@ describe('Functional Web Tests', () => {
       expect(createdLoad.cargoDescription).toBeDefined();
     });
 
-    it('should validate distance fields', async () => {
+    it("should validate distance fields", async () => {
       // Note: Pricing fields removed - negotiated off-platform
       expect(Number(createdLoad.estimatedTripKm)).toBe(300);
     });
 
-    it('should update load status', async () => {
+    it("should update load status", async () => {
       const updated = await db.load.update({
         where: { id: createdLoad.id },
-        data: { status: 'ASSIGNED' },
+        data: { status: "ASSIGNED" },
       });
 
-      expect(updated.status).toBe('ASSIGNED');
+      expect(updated.status).toBe("ASSIGNED");
     });
 
     afterAll(async () => {
@@ -369,36 +387,48 @@ describe('Functional Web Tests', () => {
   // ============================================================================
   // 5. FILE UPLOADS
   // ============================================================================
-  describe('5. File Uploads (Images + PDFs)', () => {
-    it('should validate allowed file types', () => {
+  describe("5. File Uploads (Images + PDFs)", () => {
+    it("should validate allowed file types", () => {
       const allowedTypes = [
-        'image/jpeg',
-        'image/png',
-        'image/gif',
-        'image/webp',
-        'application/pdf',
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+        "application/pdf",
       ];
 
       const disallowedTypes = [
-        'application/x-msdownload',
-        'application/x-sh',
-        'text/html',
-        'application/javascript',
+        "application/x-msdownload",
+        "application/x-sh",
+        "text/html",
+        "application/javascript",
       ];
 
       for (const type of allowedTypes) {
-        expect(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf']).toContain(type);
+        expect([
+          "image/jpeg",
+          "image/png",
+          "image/gif",
+          "image/webp",
+          "application/pdf",
+        ]).toContain(type);
       }
 
       for (const type of disallowedTypes) {
-        expect(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf']).not.toContain(type);
+        expect([
+          "image/jpeg",
+          "image/png",
+          "image/gif",
+          "image/webp",
+          "application/pdf",
+        ]).not.toContain(type);
       }
     });
 
-    it('should validate file size limits', () => {
+    it("should validate file size limits", () => {
       const maxSize = 10 * 1024 * 1024; // 10MB
       const testSizes = [
-        { size: 1024, shouldPass: true },           // 1KB
+        { size: 1024, shouldPass: true }, // 1KB
         { size: 5 * 1024 * 1024, shouldPass: true }, // 5MB
         { size: 10 * 1024 * 1024, shouldPass: true }, // 10MB
         { size: 15 * 1024 * 1024, shouldPass: false }, // 15MB
@@ -409,20 +439,34 @@ describe('Functional Web Tests', () => {
       }
     });
 
-    it('should generate unique file keys', () => {
-      const { generateFileKey } = require('@/lib/storage');
+    it("should generate unique file keys", () => {
+      const { generateFileKey } = require("@/lib/storage");
 
-      const key1 = generateFileKey('documents', 'test.pdf');
-      const key2 = generateFileKey('documents', 'test.pdf');
+      const key1 = generateFileKey("documents", "test.pdf");
+      const key2 = generateFileKey("documents", "test.pdf");
 
       expect(key1).toBeDefined();
       expect(key2).toBeDefined();
       expect(key1).not.toBe(key2); // Should be unique
     });
 
-    it('should validate file extensions', () => {
-      const allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp'];
-      const disallowedExtensions = ['.exe', '.sh', '.bat', '.cmd', '.js', '.html'];
+    it("should validate file extensions", () => {
+      const allowedExtensions = [
+        ".pdf",
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".webp",
+      ];
+      const disallowedExtensions = [
+        ".exe",
+        ".sh",
+        ".bat",
+        ".cmd",
+        ".js",
+        ".html",
+      ];
 
       for (const ext of allowedExtensions) {
         expect(allowedExtensions).toContain(ext);
@@ -437,27 +481,27 @@ describe('Functional Web Tests', () => {
   // ============================================================================
   // 6. WEBSOCKET EVENTS
   // ============================================================================
-  describe('6. WebSocket Events (Job Updates)', () => {
-    it('should have WebSocket server module available', () => {
-      const wsModule = require('@/lib/websocket-server');
+  describe("6. WebSocket Events (Job Updates)", () => {
+    it("should have WebSocket server module available", () => {
+      const wsModule = require("@/lib/websocket-server");
       expect(wsModule).toBeDefined();
     });
 
-    it('should validate WebSocket event types', () => {
+    it("should validate WebSocket event types", () => {
       const validEvents = [
-        'gps:update',
-        'load:statusChange',
-        'trip:update',
-        'notification:new',
+        "gps:update",
+        "load:statusChange",
+        "trip:update",
+        "notification:new",
       ];
 
       for (const event of validEvents) {
-        expect(typeof event).toBe('string');
+        expect(typeof event).toBe("string");
         expect(event).toMatch(/^[a-z]+:[a-zA-Z]+$/);
       }
     });
 
-    it('should require authentication for WebSocket connection', async () => {
+    it("should require authentication for WebSocket connection", async () => {
       // WebSocket connections should validate JWT tokens
       const token = await createToken({
         userId: testUser.id,
@@ -473,25 +517,25 @@ describe('Functional Web Tests', () => {
   // ============================================================================
   // 7. RATE LIMITED ENDPOINTS
   // ============================================================================
-  describe('7. Rate Limited Endpoints', () => {
-    it('should have rate limiting module available', () => {
-      const rateLimit = require('@/lib/rateLimit');
+  describe("7. Rate Limited Endpoints", () => {
+    it("should have rate limiting module available", () => {
+      const rateLimit = require("@/lib/rateLimit");
       expect(rateLimit).toBeDefined();
     });
 
-    it('should define rate limit configurations', () => {
-      const { RATE_LIMIT_AUTH } = require('@/lib/rateLimit');
+    it("should define rate limit configurations", () => {
+      const { RATE_LIMIT_AUTH } = require("@/lib/rateLimit");
       expect(RATE_LIMIT_AUTH).toBeDefined();
       expect(RATE_LIMIT_AUTH.limit).toBeDefined();
       expect(RATE_LIMIT_AUTH.windowMs).toBeDefined();
     });
 
-    it('should have protected endpoints defined', () => {
+    it("should have protected endpoints defined", () => {
       // Verify critical endpoints have rate limiting configured
       const protectedEndpoints = [
-        '/api/auth/login',
-        '/api/auth/register',
-        '/api/auth/forgot-password',
+        "/api/auth/login",
+        "/api/auth/register",
+        "/api/auth/forgot-password",
       ];
 
       for (const endpoint of protectedEndpoints) {
@@ -499,12 +543,12 @@ describe('Functional Web Tests', () => {
       }
     });
 
-    it('should return 429 status for rate limited requests', () => {
+    it("should return 429 status for rate limited requests", () => {
       // This is a design verification - actual rate limit testing requires
       // integration test with Redis
       const rateLimitedResponse = {
         status: 429,
-        message: 'Too many requests',
+        message: "Too many requests",
       };
 
       expect(rateLimitedResponse.status).toBe(429);
@@ -514,27 +558,27 @@ describe('Functional Web Tests', () => {
   // ============================================================================
   // 8. ADMIN-ONLY PAGES
   // ============================================================================
-  describe('8. Admin-Only Pages', () => {
-    it('should verify admin role exists', async () => {
+  describe("8. Admin-Only Pages", () => {
+    it("should verify admin role exists", async () => {
       const admin = await db.user.findUnique({
         where: { id: adminUser.id },
       });
 
-      expect(admin?.role).toBe('ADMIN');
+      expect(admin?.role).toBe("ADMIN");
     });
 
-    it('should generate admin token with correct role', async () => {
+    it("should generate admin token with correct role", async () => {
       const token = await createToken({
         userId: adminUser.id,
         email: adminUser.email,
-        role: 'ADMIN',
+        role: "ADMIN",
       });
 
       const decoded = await verifyToken(token);
-      expect(decoded?.role).toBe('ADMIN');
+      expect(decoded?.role).toBe("ADMIN");
     });
 
-    it('should distinguish admin from regular user', async () => {
+    it("should distinguish admin from regular user", async () => {
       const regularToken = await createToken({
         userId: testUser.id,
         email: testUser.email,
@@ -544,22 +588,22 @@ describe('Functional Web Tests', () => {
       const adminToken = await createToken({
         userId: adminUser.id,
         email: adminUser.email,
-        role: 'ADMIN',
+        role: "ADMIN",
       });
 
       const regularDecoded = await verifyToken(regularToken);
       const adminDecoded = await verifyToken(adminToken);
 
-      expect(regularDecoded?.role).not.toBe('ADMIN');
-      expect(adminDecoded?.role).toBe('ADMIN');
+      expect(regularDecoded?.role).not.toBe("ADMIN");
+      expect(adminDecoded?.role).toBe("ADMIN");
     });
 
-    it('should have admin endpoints protected', () => {
+    it("should have admin endpoints protected", () => {
       const adminEndpoints = [
-        '/api/admin/dashboard',
-        '/api/admin/users',
-        '/api/admin/analytics',
-        '/api/admin/audit-logs',
+        "/api/admin/dashboard",
+        "/api/admin/users",
+        "/api/admin/analytics",
+        "/api/admin/audit-logs",
       ];
 
       for (const endpoint of adminEndpoints) {
@@ -571,56 +615,62 @@ describe('Functional Web Tests', () => {
   // ============================================================================
   // 9. ERROR STATES (403, 429, 500)
   // ============================================================================
-  describe('9. Error States (403, 429, 500)', () => {
-    it('should handle 403 Forbidden correctly', () => {
+  describe("9. Error States (403, 429, 500)", () => {
+    it("should handle 403 Forbidden correctly", () => {
       const forbiddenResponse = NextResponse.json(
-        { error: 'Forbidden', code: 'FORBIDDEN' },
+        { error: "Forbidden", code: "FORBIDDEN" },
         { status: 403 }
       );
 
       expect(forbiddenResponse.status).toBe(403);
     });
 
-    it('should handle 429 Too Many Requests correctly', () => {
+    it("should handle 429 Too Many Requests correctly", () => {
       const rateLimitResponse = NextResponse.json(
-        { error: 'Too many requests', code: 'RATE_LIMITED' },
+        { error: "Too many requests", code: "RATE_LIMITED" },
         { status: 429 }
       );
 
       expect(rateLimitResponse.status).toBe(429);
     });
 
-    it('should handle 500 Internal Server Error correctly', () => {
+    it("should handle 500 Internal Server Error correctly", () => {
       const serverErrorResponse = NextResponse.json(
-        { error: 'Internal server error', code: 'INTERNAL_ERROR' },
+        { error: "Internal server error", code: "INTERNAL_ERROR" },
         { status: 500 }
       );
 
       expect(serverErrorResponse.status).toBe(500);
     });
 
-    it('should not leak sensitive information in error responses', () => {
-      const { sanitizeErrorMessage, createSafeErrorResponse } = require('@/lib/errorHandler');
+    it("should not leak sensitive information in error responses", () => {
+      const {
+        sanitizeErrorMessage,
+        createSafeErrorResponse,
+      } = require("@/lib/errorHandler");
 
       const sensitiveError = new Error(
-        'Error at /Users/admin/app/lib/auth.ts:123 - SELECT * FROM users'
+        "Error at /Users/admin/app/lib/auth.ts:123 - SELECT * FROM users"
       );
 
-      const { response } = createSafeErrorResponse(sensitiveError, 'req-123');
+      const { response } = createSafeErrorResponse(sensitiveError, "req-123");
 
-      expect(response.error).not.toContain('/Users/');
-      expect(response.error).not.toContain('SELECT');
-      expect(response.error).not.toContain('.ts:');
+      expect(response.error).not.toContain("/Users/");
+      expect(response.error).not.toContain("SELECT");
+      expect(response.error).not.toContain(".ts:");
     });
 
-    it('should include request ID in error responses', () => {
-      const { createSafeErrorResponse } = require('@/lib/errorHandler');
+    it("should include request ID in error responses", () => {
+      const { createSafeErrorResponse } = require("@/lib/errorHandler");
 
-      const error = new Error('Test error');
-      const { response, statusCode } = createSafeErrorResponse(error, 'req-test-123');
+      const error = new Error("Test error");
+      const { response, statusCode } = createSafeErrorResponse(
+        error,
+        "req-test-123"
+      );
 
       // requestId is included in the response object
-      expect(response.requestId).toBe('req-test-123');
+      expect(response.requestId).toBe("req-test-123");
       expect(statusCode).toBeDefined();
     });
   });
@@ -628,16 +678,16 @@ describe('Functional Web Tests', () => {
   // ============================================================================
   // 10. HAVERSINE FALLBACK VERIFICATION
   // ============================================================================
-  describe('10. Haversine Fallback Verification', () => {
-    it('should have Google Routes as primary distance service', () => {
-      const googleRoutes = require('@/lib/googleRoutes');
+  describe("10. Haversine Fallback Verification", () => {
+    it("should have Google Routes as primary distance service", () => {
+      const googleRoutes = require("@/lib/googleRoutes");
       expect(googleRoutes).toBeDefined();
       // The main function is calculateRoadDistance
       expect(googleRoutes.calculateRoadDistance).toBeDefined();
     });
 
-    it('should have Haversine available as fallback only', () => {
-      const geo = require('@/lib/geo');
+    it("should have Haversine available as fallback only", () => {
+      const geo = require("@/lib/geo");
       // The function is named calculateDistanceKm
       expect(geo.calculateDistanceKm).toBeDefined();
 
@@ -645,8 +695,8 @@ describe('Functional Web Tests', () => {
       // when Google Routes fails
     });
 
-    it('should verify distance service prefers Google Routes', () => {
-      const googleRoutes = require('@/lib/googleRoutes');
+    it("should verify distance service prefers Google Routes", () => {
+      const googleRoutes = require("@/lib/googleRoutes");
       expect(googleRoutes).toBeDefined();
       expect(googleRoutes.calculateRoadDistance).toBeDefined();
 
@@ -654,8 +704,8 @@ describe('Functional Web Tests', () => {
       // Haversine is only for fallback when API fails
     });
 
-    it('should calculate Haversine distance correctly', () => {
-      const { calculateDistanceKm } = require('@/lib/geo');
+    it("should calculate Haversine distance correctly", () => {
+      const { calculateDistanceKm } = require("@/lib/geo");
 
       // Addis Ababa to Dire Dawa (approximately 300km straight line)
       const addisAbaba = { lat: 9.0054, lng: 38.7636 };
@@ -673,7 +723,7 @@ describe('Functional Web Tests', () => {
       expect(distance).toBeLessThan(400);
     });
 
-    it('should have corridor-based distance as authoritative source', async () => {
+    it("should have corridor-based distance as authoritative source", async () => {
       // Corridors provide pre-calculated distances
       const corridorCount = await db.corridor.count();
       expect(corridorCount).toBeGreaterThanOrEqual(0);
@@ -685,37 +735,37 @@ describe('Functional Web Tests', () => {
   // ============================================================================
   // CSRF PROTECTION
   // ============================================================================
-  describe('CSRF Protection', () => {
-    it('should validate CSRF tokens for POST requests', () => {
-      const csrfToken = 'test-csrf-token-abc123';
+  describe("CSRF Protection", () => {
+    it("should validate CSRF tokens for POST requests", () => {
+      const csrfToken = "test-csrf-token-abc123";
 
       const request = createMockRequest({
-        method: 'POST',
-        url: 'http://localhost:3000/api/test',
-        headers: { 'x-csrf-token': csrfToken },
-        cookies: { 'csrf_token': csrfToken },
+        method: "POST",
+        url: "http://localhost:3000/api/test",
+        headers: { "x-csrf-token": csrfToken },
+        cookies: { csrf_token: csrfToken },
       });
 
       const isValid = validateCSRFToken(request);
       expect(isValid).toBe(true);
     });
 
-    it('should reject mismatched CSRF tokens', () => {
+    it("should reject mismatched CSRF tokens", () => {
       const request = createMockRequest({
-        method: 'POST',
-        url: 'http://localhost:3000/api/test',
-        headers: { 'x-csrf-token': 'header-token' },
-        cookies: { 'csrf_token': 'cookie-token' },
+        method: "POST",
+        url: "http://localhost:3000/api/test",
+        headers: { "x-csrf-token": "header-token" },
+        cookies: { csrf_token: "cookie-token" },
       });
 
       const isValid = validateCSRFToken(request);
       expect(isValid).toBe(false);
     });
 
-    it('should allow GET requests without CSRF', () => {
+    it("should allow GET requests without CSRF", () => {
       const request = createMockRequest({
-        method: 'GET',
-        url: 'http://localhost:3000/api/test',
+        method: "GET",
+        url: "http://localhost:3000/api/test",
       });
 
       const response = requireCSRF(request);

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Load Search Modal Component
@@ -7,9 +7,9 @@
  * Sprint 14 - Deferred Modal Implementation
  */
 
-import React, { useState } from 'react';
-import { ActionButton } from '@/components/loadboard-ui';
-import { getCSRFToken } from '@/lib/csrfFetch';
+import React, { useState } from "react";
+import { ActionButton } from "@/components/loadboard-ui";
+import { getCSRFToken } from "@/lib/csrfFetch";
 
 interface LoadSearchModalProps {
   isOpen: boolean;
@@ -24,17 +24,17 @@ export default function LoadSearchModal({
 }: LoadSearchModalProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    origin: '',
-    destination: '',
-    truckType: '',
-    loadType: '',
+    name: "",
+    origin: "",
+    destination: "",
+    truckType: "",
+    loadType: "",
     ageHours: 72,
     minWeight: 0,
     maxWeight: 40000,
     minLength: 0,
     minRate: 0,
-    pickupDate: '',
+    pickupDate: "",
     showVerifiedOnly: false,
   });
 
@@ -43,9 +43,14 @@ export default function LoadSearchModal({
   const validate = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.name) newErrors.name = 'Search name is required';
-    if (!formData.origin && !formData.destination && !formData.truckType && !formData.loadType) {
-      newErrors.general = 'At least one search criterion is required';
+    if (!formData.name) newErrors.name = "Search name is required";
+    if (
+      !formData.origin &&
+      !formData.destination &&
+      !formData.truckType &&
+      !formData.loadType
+    ) {
+      newErrors.general = "At least one search criterion is required";
     }
 
     setErrors(newErrors);
@@ -59,7 +64,10 @@ export default function LoadSearchModal({
     setLoading(true);
     try {
       // Build search criteria
-      const criteria: Record<string, string | number | boolean | { min: number; max: number }> = {};
+      const criteria: Record<
+        string,
+        string | number | boolean | { min: number; max: number }
+      > = {};
       if (formData.origin) criteria.origin = formData.origin;
       if (formData.destination) criteria.destination = formData.destination;
       if (formData.truckType) criteria.truckType = formData.truckType;
@@ -75,24 +83,27 @@ export default function LoadSearchModal({
 
       // Save search
       const csrfToken = await getCSRFToken();
-      const response = await fetch('/api/saved-searches', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
+      const response = await fetch("/api/saved-searches", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+        },
         body: JSON.stringify({
           name: formData.name,
-          type: 'LOADS',
+          type: "LOADS",
           criteria,
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to create search');
+      if (!response.ok) throw new Error("Failed to create search");
 
       const { search } = await response.json();
-      alert('Load search created successfully!');
+      alert("Load search created successfully!");
       onSuccess(search.id);
       onClose();
     } catch (error: unknown) {
-      alert(error instanceof Error ? error.message : 'Failed to create search');
+      alert(error instanceof Error ? error.message : "Failed to create search");
     } finally {
       setLoading(false);
     }
@@ -101,14 +112,14 @@ export default function LoadSearchModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black p-4">
+      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-xl">
         {/* Header */}
-        <div className="bg-[#1e9c99] px-6 py-4 flex items-center justify-between rounded-t-lg">
+        <div className="flex items-center justify-between rounded-t-lg bg-[#1e9c99] px-6 py-4">
           <h2 className="text-xl font-bold text-white">NEW LOAD SEARCH</h2>
           <button
             onClick={onClose}
-            className="text-white hover:text-gray-200 text-2xl font-bold"
+            className="text-2xl font-bold text-white hover:text-gray-200"
             aria-label="Close modal"
           >
             ×
@@ -118,50 +129,64 @@ export default function LoadSearchModal({
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6">
           {errors.general && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
+            <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
               {errors.general}
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {/* Search Name */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-[#064d51]/80 mb-1">
+              <label className="mb-1 block text-sm font-medium text-[#064d51]/80">
                 Search Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className={`w-full px-3 py-2 border rounded-md ${
-                  errors.name ? 'border-red-500' : 'border-[#064d51]/20'
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                className={`w-full rounded-md border px-3 py-2 ${
+                  errors.name ? "border-red-500" : "border-[#064d51]/20"
                 }`}
                 placeholder="e.g., Addis to Dire Dawa - High Value Cargo"
               />
-              {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+              {errors.name && (
+                <p className="mt-1 text-xs text-red-500">{errors.name}</p>
+              )}
             </div>
 
             {/* Location */}
-            <div className="md:col-span-2 border-b border-[#064d51]/15 pb-4">
-              <h3 className="text-lg font-semibold text-[#064d51] mb-4">Location Criteria</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="border-b border-[#064d51]/15 pb-4 md:col-span-2">
+              <h3 className="mb-4 text-lg font-semibold text-[#064d51]">
+                Location Criteria
+              </h3>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Origin</label>
+                  <label className="mb-1 block text-sm font-medium text-[#064d51]/80">
+                    Origin
+                  </label>
                   <input
                     type="text"
                     value={formData.origin}
-                    onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    onChange={(e) =>
+                      setFormData({ ...formData, origin: e.target.value })
+                    }
+                    className="w-full rounded-md border border-[#064d51]/20 px-3 py-2"
                     placeholder="e.g., Addis Ababa"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Destination</label>
+                  <label className="mb-1 block text-sm font-medium text-[#064d51]/80">
+                    Destination
+                  </label>
                   <input
                     type="text"
                     value={formData.destination}
-                    onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    onChange={(e) =>
+                      setFormData({ ...formData, destination: e.target.value })
+                    }
+                    className="w-full rounded-md border border-[#064d51]/20 px-3 py-2"
                     placeholder="e.g., Dire Dawa"
                   />
                 </div>
@@ -169,15 +194,21 @@ export default function LoadSearchModal({
             </div>
 
             {/* Load Specifications */}
-            <div className="md:col-span-2 border-b border-[#064d51]/15 pb-4">
-              <h3 className="text-lg font-semibold text-[#064d51] mb-4">Load Specifications</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="border-b border-[#064d51]/15 pb-4 md:col-span-2">
+              <h3 className="mb-4 text-lg font-semibold text-[#064d51]">
+                Load Specifications
+              </h3>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Truck Type</label>
+                  <label className="mb-1 block text-sm font-medium text-[#064d51]/80">
+                    Truck Type
+                  </label>
                   <select
                     value={formData.truckType}
-                    onChange={(e) => setFormData({ ...formData, truckType: e.target.value })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    onChange={(e) =>
+                      setFormData({ ...formData, truckType: e.target.value })
+                    }
+                    className="w-full rounded-md border border-[#064d51]/20 px-3 py-2"
                   >
                     <option value="">Any</option>
                     <option value="VAN">VAN</option>
@@ -188,11 +219,15 @@ export default function LoadSearchModal({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Load Type</label>
+                  <label className="mb-1 block text-sm font-medium text-[#064d51]/80">
+                    Load Type
+                  </label>
                   <select
                     value={formData.loadType}
-                    onChange={(e) => setFormData({ ...formData, loadType: e.target.value })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    onChange={(e) =>
+                      setFormData({ ...formData, loadType: e.target.value })
+                    }
+                    className="w-full rounded-md border border-[#064d51]/20 px-3 py-2"
                   >
                     <option value="">Any</option>
                     <option value="FULL">FULL</option>
@@ -200,47 +235,75 @@ export default function LoadSearchModal({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Max Age (hours)</label>
+                  <label className="mb-1 block text-sm font-medium text-[#064d51]/80">
+                    Max Age (hours)
+                  </label>
                   <input
                     type="number"
                     value={formData.ageHours}
-                    onChange={(e) => setFormData({ ...formData, ageHours: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        ageHours: parseInt(e.target.value),
+                      })
+                    }
+                    className="w-full rounded-md border border-[#064d51]/20 px-3 py-2"
                     min="0"
                     max="168"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Min Weight (kg)</label>
+                  <label className="mb-1 block text-sm font-medium text-[#064d51]/80">
+                    Min Weight (kg)
+                  </label>
                   <input
                     type="number"
                     value={formData.minWeight}
-                    onChange={(e) => setFormData({ ...formData, minWeight: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        minWeight: parseInt(e.target.value),
+                      })
+                    }
+                    className="w-full rounded-md border border-[#064d51]/20 px-3 py-2"
                     placeholder="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Max Weight (kg)</label>
+                  <label className="mb-1 block text-sm font-medium text-[#064d51]/80">
+                    Max Weight (kg)
+                  </label>
                   <input
                     type="number"
                     value={formData.maxWeight}
-                    onChange={(e) => setFormData({ ...formData, maxWeight: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        maxWeight: parseInt(e.target.value),
+                      })
+                    }
+                    className="w-full rounded-md border border-[#064d51]/20 px-3 py-2"
                     placeholder="40000"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Min Length (m)</label>
+                  <label className="mb-1 block text-sm font-medium text-[#064d51]/80">
+                    Min Length (m)
+                  </label>
                   <input
                     type="number"
                     step="0.1"
                     value={formData.minLength}
-                    onChange={(e) => setFormData({ ...formData, minLength: parseFloat(e.target.value) })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        minLength: parseFloat(e.target.value),
+                      })
+                    }
+                    className="w-full rounded-md border border-[#064d51]/20 px-3 py-2"
                     placeholder="0"
                   />
                 </div>
@@ -248,26 +311,39 @@ export default function LoadSearchModal({
             </div>
 
             {/* Pricing & Timing */}
-            <div className="md:col-span-2 border-b border-[#064d51]/15 pb-4">
-              <h3 className="text-lg font-semibold text-[#064d51] mb-4">Pricing & Timing</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="border-b border-[#064d51]/15 pb-4 md:col-span-2">
+              <h3 className="mb-4 text-lg font-semibold text-[#064d51]">
+                Pricing & Timing
+              </h3>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Min Rate (ETB)</label>
+                  <label className="mb-1 block text-sm font-medium text-[#064d51]/80">
+                    Min Rate (ETB)
+                  </label>
                   <input
                     type="number"
                     value={formData.minRate}
-                    onChange={(e) => setFormData({ ...formData, minRate: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        minRate: parseInt(e.target.value),
+                      })
+                    }
+                    className="w-full rounded-md border border-[#064d51]/20 px-3 py-2"
                     placeholder="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#064d51]/80 mb-1">Pickup Date</label>
+                  <label className="mb-1 block text-sm font-medium text-[#064d51]/80">
+                    Pickup Date
+                  </label>
                   <input
                     type="date"
                     value={formData.pickupDate}
-                    onChange={(e) => setFormData({ ...formData, pickupDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-[#064d51]/20 rounded-md"
+                    onChange={(e) =>
+                      setFormData({ ...formData, pickupDate: e.target.value })
+                    }
+                    className="w-full rounded-md border border-[#064d51]/20 px-3 py-2"
                   />
                 </div>
               </div>
@@ -275,16 +351,26 @@ export default function LoadSearchModal({
 
             {/* Company Filters */}
             <div className="md:col-span-2">
-              <h3 className="text-lg font-semibold text-[#064d51] mb-4">Company Filters</h3>
+              <h3 className="mb-4 text-lg font-semibold text-[#064d51]">
+                Company Filters
+              </h3>
               <div className="flex items-center">
                 <input
                   type="checkbox"
                   id="verifiedOnly"
                   checked={formData.showVerifiedOnly}
-                  onChange={(e) => setFormData({ ...formData, showVerifiedOnly: e.target.checked })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      showVerifiedOnly: e.target.checked,
+                    })
+                  }
                   className="h-4 w-4 rounded border-[#064d51]/20 text-[#1e9c99]"
                 />
-                <label htmlFor="verifiedOnly" className="ml-2 text-sm text-[#064d51]/80">
+                <label
+                  htmlFor="verifiedOnly"
+                  className="ml-2 text-sm text-[#064d51]/80"
+                >
                   Show verified companies only
                 </label>
               </div>
@@ -292,11 +378,11 @@ export default function LoadSearchModal({
           </div>
 
           {/* Actions */}
-          <div className="flex gap-4 justify-end mt-6 pt-6 border-t border-[#064d51]/15">
+          <div className="mt-6 flex justify-end gap-4 border-t border-[#064d51]/15 pt-6">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 border border-[#064d51]/20 rounded-md text-[#064d51]/80 hover:bg-[#f0fdfa]"
+              className="rounded-md border border-[#064d51]/20 px-6 py-2 text-[#064d51]/80 hover:bg-[#f0fdfa]"
               disabled={loading}
             >
               Cancel
@@ -304,14 +390,14 @@ export default function LoadSearchModal({
             <ActionButton
               variant="primary"
               onClick={() => {
-                const form = document.querySelector('form');
+                const form = document.querySelector("form");
                 if (form) {
                   form.requestSubmit();
                 }
               }}
               disabled={loading}
             >
-              {loading ? 'Creating...' : 'Create Search'}
+              {loading ? "Creating..." : "Create Search"}
             </ActionButton>
           </div>
         </form>

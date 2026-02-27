@@ -15,13 +15,16 @@
  * MAP + GPS Implementation - Phase 4
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { calculateDistanceKm } from '@/lib/geo';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { calculateDistanceKm } from "@/lib/geo";
 
 // Cache for ETA calculations (5 minute TTL)
-const etaCache = new Map<string, { eta: Date; distanceKm: number; durationMinutes: number; timestamp: number }>();
+const etaCache = new Map<
+  string,
+  { eta: Date; distanceKm: number; durationMinutes: number; timestamp: number }
+>();
 const CACHE_TTL = 5 * 60 * 1000;
 
 // Use centralized haversine from lib/geo.ts
@@ -40,33 +43,39 @@ async function getGoogleETA(
   if (!apiKey) return null;
 
   try {
-    const url = new URL('https://maps.googleapis.com/maps/api/distancematrix/json');
-    url.searchParams.set('origins', `${originLat},${originLng}`);
-    url.searchParams.set('destinations', `${destLat},${destLng}`);
-    url.searchParams.set('mode', 'driving');
-    url.searchParams.set('departure_time', 'now');
-    url.searchParams.set('traffic_model', 'best_guess');
-    url.searchParams.set('units', 'metric');
-    url.searchParams.set('key', apiKey);
+    const url = new URL(
+      "https://maps.googleapis.com/maps/api/distancematrix/json"
+    );
+    url.searchParams.set("origins", `${originLat},${originLng}`);
+    url.searchParams.set("destinations", `${destLat},${destLng}`);
+    url.searchParams.set("mode", "driving");
+    url.searchParams.set("departure_time", "now");
+    url.searchParams.set("traffic_model", "best_guess");
+    url.searchParams.set("units", "metric");
+    url.searchParams.set("key", apiKey);
 
     const response = await fetch(url.toString());
     const data = await response.json();
 
-    if (data.status !== 'OK' || data.rows?.[0]?.elements?.[0]?.status !== 'OK') {
+    if (
+      data.status !== "OK" ||
+      data.rows?.[0]?.elements?.[0]?.status !== "OK"
+    ) {
       return null;
     }
 
     const element = data.rows[0].elements[0];
 
     // Use duration_in_traffic if available, otherwise use duration
-    const durationSeconds = element.duration_in_traffic?.value || element.duration.value;
+    const durationSeconds =
+      element.duration_in_traffic?.value || element.duration.value;
 
     return {
       distanceKm: element.distance.value / 1000,
       durationMinutes: durationSeconds / 60,
     };
   } catch (error) {
-    console.error('Google ETA calculation error:', error);
+    console.error("Google ETA calculation error:", error);
     return null;
   }
 }
@@ -79,9 +88,19 @@ async function calculateETA(
   originLng: number,
   destLat: number,
   destLng: number
-): Promise<{ eta: Date; distanceKm: number; durationMinutes: number; source: string }> {
+): Promise<{
+  eta: Date;
+  distanceKm: number;
+  durationMinutes: number;
+  source: string;
+}> {
   // Try Google first
-  const googleResult = await getGoogleETA(originLat, originLng, destLat, destLng);
+  const googleResult = await getGoogleETA(
+    originLat,
+    originLng,
+    destLat,
+    destLng
+  );
 
   if (googleResult) {
     const eta = new Date(Date.now() + googleResult.durationMinutes * 60 * 1000);
@@ -89,12 +108,17 @@ async function calculateETA(
       eta,
       distanceKm: googleResult.distanceKm,
       durationMinutes: googleResult.durationMinutes,
-      source: 'google',
+      source: "google",
     };
   }
 
   // Fallback to Haversine estimate
-  const straightLine = haversineDistance(originLat, originLng, destLat, destLng);
+  const straightLine = haversineDistance(
+    originLat,
+    originLng,
+    destLat,
+    destLng
+  );
   const estimatedRoadDistance = straightLine * 1.3; // Road factor
   const averageSpeedKmh = 50; // Average truck speed in Ethiopia
   const estimatedDuration = (estimatedRoadDistance / averageSpeedKmh) * 60; // in minutes
@@ -104,7 +128,7 @@ async function calculateETA(
     eta,
     distanceKm: estimatedRoadDistance,
     durationMinutes: estimatedDuration,
-    source: 'estimate',
+    source: "estimate",
   };
 }
 
@@ -112,11 +136,11 @@ export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth();
     const { searchParams } = request.nextUrl;
-    const loadId = searchParams.get('loadId');
+    const loadId = searchParams.get("loadId");
 
     if (!loadId) {
       return NextResponse.json(
-        { error: 'loadId is required' },
+        { error: "loadId is required" },
         { status: 400 }
       );
     }
@@ -153,27 +177,27 @@ export async function GET(request: NextRequest) {
     });
 
     if (!load) {
-      return NextResponse.json({ error: 'Load not found' }, { status: 404 });
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // Access control
-    if (session.role === 'CARRIER') {
+    if (session.role === "CARRIER") {
       if (load.assignedTruck?.carrierId !== user?.organizationId) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+        return NextResponse.json({ error: "Access denied" }, { status: 403 });
       }
-    } else if (session.role === 'SHIPPER') {
+    } else if (session.role === "SHIPPER") {
       if (load.shipperId !== user?.organizationId) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+        return NextResponse.json({ error: "Access denied" }, { status: 403 });
       }
     }
 
     // Check if trip is in transit
-    if (load.status !== 'IN_TRANSIT') {
+    if (load.status !== "IN_TRANSIT") {
       return NextResponse.json({
         loadId: load.id,
         status: load.status,
         eta: null,
-        message: 'ETA is only available for trips IN_TRANSIT',
+        message: "ETA is only available for trips IN_TRANSIT",
       });
     }
 
@@ -184,7 +208,7 @@ export async function GET(request: NextRequest) {
         loadId: load.id,
         status: load.status,
         eta: null,
-        message: 'No GPS position available for this truck',
+        message: "No GPS position available for this truck",
       });
     }
 
@@ -194,7 +218,7 @@ export async function GET(request: NextRequest) {
         loadId: load.id,
         status: load.status,
         eta: null,
-        message: 'Delivery location not available',
+        message: "Delivery location not available",
       });
     }
 
@@ -223,7 +247,7 @@ export async function GET(request: NextRequest) {
           arrivalTime: cached.eta.toISOString(),
           remainingDistanceKm: Math.round(cached.distanceKm * 10) / 10,
           remainingDurationMinutes: Math.round(cached.durationMinutes),
-          source: 'cached',
+          source: "cached",
         },
         calculatedAt: new Date(cached.timestamp).toISOString(),
       });
@@ -271,9 +295,9 @@ export async function GET(request: NextRequest) {
       calculatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('ETA calculation error:', error);
+    console.error("ETA calculation error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

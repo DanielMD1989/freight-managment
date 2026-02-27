@@ -5,9 +5,9 @@
  * based on configurable conditions and triggers
  */
 
-import { db } from '@/lib/db';
-import { LoadStatus } from '@prisma/client';
-import { calculateDistanceKm } from '@/lib/geo';
+import { db } from "@/lib/db";
+import { LoadStatus } from "@prisma/client";
+import { calculateDistanceKm } from "@/lib/geo";
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -55,11 +55,16 @@ export interface RuleCondition {
 }
 
 export interface RuleAction {
-  type: 'CREATE_ESCALATION' | 'SEND_NOTIFICATION' | 'CHANGE_LOAD_STATUS' | 'SEND_EMAIL' | 'WEBHOOK';
+  type:
+    | "CREATE_ESCALATION"
+    | "SEND_NOTIFICATION"
+    | "CHANGE_LOAD_STATUS"
+    | "SEND_EMAIL"
+    | "WEBHOOK";
 
   // Escalation action params
   escalationType?: string;
-  priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  priority?: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
   title?: string;
   description?: string;
 
@@ -79,7 +84,7 @@ export interface RuleAction {
 
   // Webhook params
   webhookUrl?: string;
-  webhookMethod?: 'GET' | 'POST';
+  webhookMethod?: "GET" | "POST";
   webhookPayload?: Record<string, unknown>;
 }
 
@@ -127,15 +132,15 @@ export async function evaluateRule(
   if (!rule || !rule.isEnabled) {
     return {
       ruleId,
-      ruleName: rule?.name || 'Unknown',
+      ruleName: rule?.name || "Unknown",
       matched: false,
-      reason: 'Rule not found or disabled',
+      reason: "Rule not found or disabled",
       actionsToExecute: [],
     };
   }
 
   // Check if trigger matches
-  if (rule.trigger !== 'ON_STATUS_CHANGE' && rule.trigger !== trigger) {
+  if (rule.trigger !== "ON_STATUS_CHANGE" && rule.trigger !== trigger) {
     return {
       ruleId,
       ruleName: rule.name,
@@ -162,7 +167,7 @@ export async function evaluateRule(
       ruleId,
       ruleName: rule.name,
       matched: false,
-      reason: 'Load not found',
+      reason: "Load not found",
       actionsToExecute: [],
     };
   }
@@ -171,13 +176,17 @@ export async function evaluateRule(
   const load: AutomationLoad = {
     ...loadData,
     tripKm: loadData.tripKm ? Number(loadData.tripKm) : null,
-    assignedTruck: loadData.assignedTruck ? {
-      id: loadData.assignedTruck.id,
-      gpsDevice: loadData.assignedTruck.gpsDevice ? {
-        id: loadData.assignedTruck.gpsDevice.id,
-        imei: loadData.assignedTruck.gpsDevice.imei,
-      } : null,
-    } : null,
+    assignedTruck: loadData.assignedTruck
+      ? {
+          id: loadData.assignedTruck.id,
+          gpsDevice: loadData.assignedTruck.gpsDevice
+            ? {
+                id: loadData.assignedTruck.gpsDevice.id,
+                imei: loadData.assignedTruck.gpsDevice.imei,
+              }
+            : null,
+        }
+      : null,
   };
 
   const conditions = rule.conditions as RuleCondition;
@@ -190,21 +199,33 @@ export async function evaluateRule(
 
   // Evaluate based on rule type
   let matched = false;
-  let reason = '';
-  let metadata: Record<string, any> = {};
+  let reason = "";
+  let metadata: Record<string, unknown> = {};
 
   switch (rule.ruleType) {
-    case 'TIME_BASED':
-      ({ matched, reason, metadata } = await evaluateTimeBased(context, conditions));
+    case "TIME_BASED":
+      ({ matched, reason, metadata } = await evaluateTimeBased(
+        context,
+        conditions
+      ));
       break;
-    case 'GPS_BASED':
-      ({ matched, reason, metadata } = await evaluateGpsBased(context, conditions));
+    case "GPS_BASED":
+      ({ matched, reason, metadata } = await evaluateGpsBased(
+        context,
+        conditions
+      ));
       break;
-    case 'THRESHOLD_BASED':
-      ({ matched, reason, metadata } = await evaluateThresholdBased(context, conditions));
+    case "THRESHOLD_BASED":
+      ({ matched, reason, metadata } = await evaluateThresholdBased(
+        context,
+        conditions
+      ));
       break;
-    case 'CUSTOM':
-      ({ matched, reason, metadata } = await evaluateCustom(context, conditions));
+    case "CUSTOM":
+      ({ matched, reason, metadata } = await evaluateCustom(
+        context,
+        conditions
+      ));
       break;
     default:
       matched = false;
@@ -227,7 +248,11 @@ export async function evaluateRule(
 async function evaluateTimeBased(
   context: RuleEvaluationContext,
   conditions: RuleCondition
-): Promise<{ matched: boolean; reason: string; metadata: Record<string, unknown> }> {
+): Promise<{
+  matched: boolean;
+  reason: string;
+  metadata: Record<string, unknown>;
+}> {
   const { load, currentTime } = context;
   const graceHours = conditions.graceHours || 2;
   const gracePeriodMs = graceHours * 60 * 60 * 1000;
@@ -236,13 +261,16 @@ async function evaluateTimeBased(
   if (conditions.statuses && !conditions.statuses.includes(load.status)) {
     return {
       matched: false,
-      reason: `Load status ${load.status} not in ${conditions.statuses.join(', ')}`,
+      reason: `Load status ${load.status} not in ${conditions.statuses.join(", ")}`,
       metadata: {},
     };
   }
 
   // Late pickup check
-  if ((load.status === 'ASSIGNED' || load.status === 'PICKUP_PENDING') && load.pickupDate) {
+  if (
+    (load.status === "ASSIGNED" || load.status === "PICKUP_PENDING") &&
+    load.pickupDate
+  ) {
     const pickupTime = new Date(load.pickupDate);
     if (currentTime.getTime() > pickupTime.getTime() + gracePeriodMs) {
       const hoursLate = Math.floor(
@@ -262,7 +290,7 @@ async function evaluateTimeBased(
   }
 
   // Late delivery check
-  if (load.status === 'IN_TRANSIT' && load.deliveryDate) {
+  if (load.status === "IN_TRANSIT" && load.deliveryDate) {
     const deliveryTime = new Date(load.deliveryDate);
     if (currentTime.getTime() > deliveryTime.getTime() + gracePeriodMs) {
       const hoursLate = Math.floor(
@@ -283,7 +311,7 @@ async function evaluateTimeBased(
 
   return {
     matched: false,
-    reason: 'No time-based condition met',
+    reason: "No time-based condition met",
     metadata: {},
   };
 }
@@ -294,13 +322,17 @@ async function evaluateTimeBased(
 async function evaluateGpsBased(
   context: RuleEvaluationContext,
   conditions: RuleCondition
-): Promise<{ matched: boolean; reason: string; metadata: Record<string, unknown> }> {
+): Promise<{
+  matched: boolean;
+  reason: string;
+  metadata: Record<string, unknown>;
+}> {
   const { load, currentTime } = context;
 
   if (!load.assignedTruck) {
     return {
       matched: false,
-      reason: 'No truck assigned',
+      reason: "No truck assigned",
       metadata: {},
     };
   }
@@ -309,7 +341,7 @@ async function evaluateGpsBased(
   if (!gpsDevice) {
     return {
       matched: false,
-      reason: 'No GPS device found',
+      reason: "No GPS device found",
       metadata: {},
     };
   }
@@ -320,7 +352,7 @@ async function evaluateGpsBased(
 
   const latestPosition = await db.gpsPosition.findFirst({
     where: { truckId: load.assignedTruck.id },
-    orderBy: { timestamp: 'desc' },
+    orderBy: { timestamp: "desc" },
     select: {
       timestamp: true,
       latitude: true,
@@ -331,12 +363,13 @@ async function evaluateGpsBased(
   if (!latestPosition) {
     return {
       matched: true,
-      reason: 'No GPS data available',
+      reason: "No GPS data available",
       metadata: { gpsDevice: gpsDevice.imei },
     };
   }
 
-  const timeSinceLastUpdate = currentTime.getTime() - new Date(latestPosition.timestamp).getTime();
+  const timeSinceLastUpdate =
+    currentTime.getTime() - new Date(latestPosition.timestamp).getTime();
   if (timeSinceLastUpdate > offlineThresholdMs) {
     const hoursOffline = Math.floor(timeSinceLastUpdate / (60 * 60 * 1000));
 
@@ -352,7 +385,7 @@ async function evaluateGpsBased(
   }
 
   // Stalled load check (only for IN_TRANSIT)
-  if (load.status === 'IN_TRANSIT' && conditions.stalledCheckHours) {
+  if (load.status === "IN_TRANSIT" && conditions.stalledCheckHours) {
     const stalledCheckMs = conditions.stalledCheckHours * 60 * 60 * 1000;
     const checkFrom = new Date(currentTime.getTime() - stalledCheckMs);
 
@@ -361,7 +394,7 @@ async function evaluateGpsBased(
         truckId: load.assignedTruck.id,
         timestamp: { gte: checkFrom },
       },
-      orderBy: { timestamp: 'asc' },
+      orderBy: { timestamp: "asc" },
       select: {
         latitude: true,
         longitude: true,
@@ -399,7 +432,7 @@ async function evaluateGpsBased(
 
   return {
     matched: false,
-    reason: 'No GPS-based condition met',
+    reason: "No GPS-based condition met",
     metadata: {},
   };
 }
@@ -410,7 +443,11 @@ async function evaluateGpsBased(
 async function evaluateThresholdBased(
   context: RuleEvaluationContext,
   conditions: RuleCondition
-): Promise<{ matched: boolean; reason: string; metadata: Record<string, unknown> }> {
+): Promise<{
+  matched: boolean;
+  reason: string;
+  metadata: Record<string, unknown>;
+}> {
   const { load } = context;
 
   // Check min/max value thresholds (can be extended for various metrics)
@@ -438,7 +475,7 @@ async function evaluateThresholdBased(
 
   return {
     matched: false,
-    reason: 'No threshold condition met',
+    reason: "No threshold condition met",
     metadata: {},
   };
 }
@@ -449,11 +486,15 @@ async function evaluateThresholdBased(
 async function evaluateCustom(
   context: RuleEvaluationContext,
   conditions: RuleCondition
-): Promise<{ matched: boolean; reason: string; metadata: Record<string, unknown> }> {
+): Promise<{
+  matched: boolean;
+  reason: string;
+  metadata: Record<string, unknown>;
+}> {
   if (!conditions.customLogic) {
     return {
       matched: false,
-      reason: 'No custom logic defined',
+      reason: "No custom logic defined",
       metadata: {},
     };
   }
@@ -465,13 +506,13 @@ async function evaluateCustom(
 
     return {
       matched: !!result,
-      reason: result ? 'Custom logic matched' : 'Custom logic did not match',
+      reason: result ? "Custom logic matched" : "Custom logic did not match",
       metadata: { customLogic: conditions.customLogic },
     };
   } catch (error) {
     return {
       matched: false,
-      reason: `Custom logic error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      reason: `Custom logic error: ${error instanceof Error ? error.message : "Unknown error"}`,
       metadata: {},
     };
   }
@@ -480,11 +521,14 @@ async function evaluateCustom(
 /**
  * Safely evaluate custom logic (placeholder - use vm2 in production)
  */
-function evaluateCustomLogic(logic: string, context: RuleEvaluationContext): boolean {
+function evaluateCustomLogic(
+  logic: string,
+  context: RuleEvaluationContext
+): boolean {
   // This is a simplified placeholder
   // In production, use vm2 or similar for safe JavaScript evaluation
   // For now, just return false to prevent security issues
-  console.warn('Custom logic evaluation not implemented:', logic);
+  console.warn("Custom logic evaluation not implemented:", logic);
   return false;
 }
 
@@ -499,11 +543,12 @@ export async function evaluateRulesForTrigger(
     where: {
       isEnabled: true,
       OR: [
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic trigger enum value
         { trigger: trigger as any },
-        { trigger: 'ON_STATUS_CHANGE' }, // Always check these
+        { trigger: "ON_STATUS_CHANGE" }, // Always check these
       ],
     },
-    orderBy: { priority: 'desc' }, // Higher priority first
+    orderBy: { priority: "desc" }, // Higher priority first
     select: { id: true },
   });
 
@@ -521,7 +566,11 @@ export async function evaluateScheduledRules(): Promise<{
   executed: number;
   successful: number;
   failed: number;
-  results: Array<{ ruleId: string; loadId: string; result: RuleEvaluationResult }>;
+  results: Array<{
+    ruleId: string;
+    loadId: string;
+    result: RuleEvaluationResult;
+  }>;
 }> {
   const now = new Date();
 
@@ -529,19 +578,20 @@ export async function evaluateScheduledRules(): Promise<{
   const rules = await db.automationRule.findMany({
     where: {
       isEnabled: true,
-      trigger: 'ON_SCHEDULE',
-      OR: [
-        { nextExecutionAt: null },
-        { nextExecutionAt: { lte: now } },
-      ],
+      trigger: "ON_SCHEDULE",
+      OR: [{ nextExecutionAt: null }, { nextExecutionAt: { lte: now } }],
     },
-    orderBy: { priority: 'desc' },
+    orderBy: { priority: "desc" },
   });
 
   let executed = 0;
   let successful = 0;
   let failed = 0;
-  const results: Array<{ ruleId: string; loadId: string; result: RuleEvaluationResult }> = [];
+  const results: Array<{
+    ruleId: string;
+    loadId: string;
+    result: RuleEvaluationResult;
+  }> = [];
 
   for (const rule of rules) {
     const conditions = rule.conditions as RuleCondition;
@@ -550,7 +600,11 @@ export async function evaluateScheduledRules(): Promise<{
     const loads = await db.load.findMany({
       where: {
         status: {
-          in: conditions.statuses || ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT'],
+          in: conditions.statuses || [
+            "ASSIGNED",
+            "PICKUP_PENDING",
+            "IN_TRANSIT",
+          ],
         },
       },
       select: { id: true },
@@ -560,11 +614,14 @@ export async function evaluateScheduledRules(): Promise<{
       executed++;
 
       try {
-        const result = await evaluateRule(rule.id, load.id, 'ON_SCHEDULE');
+        const result = await evaluateRule(rule.id, load.id, "ON_SCHEDULE");
         results.push({ ruleId: rule.id, loadId: load.id, result });
         successful++;
       } catch (error) {
-        console.error(`Rule ${rule.id} evaluation failed for load ${load.id}:`, error);
+        console.error(
+          `Rule ${rule.id} evaluation failed for load ${load.id}:`,
+          error
+        );
         failed++;
       }
     }

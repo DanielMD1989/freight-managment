@@ -14,11 +14,13 @@
  * - Environment variables set (DATABASE_URL, etc.)
  */
 
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
-const connectionString = process.env.DATABASE_URL || 'postgresql://danieldamitew@localhost:5432/freight_db?schema=public';
+const connectionString =
+  process.env.DATABASE_URL ||
+  "postgresql://danieldamitew@localhost:5432/freight_db?schema=public";
 const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 
@@ -27,15 +29,38 @@ const prisma = new PrismaClient({ adapter });
 // Valid enum values from Prisma schema
 const VALID_ENUMS = {
   LoadStatus: [
-    'DRAFT', 'POSTED', 'SEARCHING', 'OFFERED', 'ASSIGNED',
-    'PICKUP_PENDING', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED',
-    'EXCEPTION', 'CANCELLED', 'EXPIRED', 'UNPOSTED'
+    "DRAFT",
+    "POSTED",
+    "SEARCHING",
+    "OFFERED",
+    "ASSIGNED",
+    "PICKUP_PENDING",
+    "IN_TRANSIT",
+    "DELIVERED",
+    "COMPLETED",
+    "EXCEPTION",
+    "CANCELLED",
+    "EXPIRED",
+    "UNPOSTED",
   ],
-  PostingStatus: ['ACTIVE', 'EXPIRED', 'CANCELLED', 'MATCHED'],
-  TripStatus: ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED', 'CANCELLED'],
-  GpsDeviceStatus: ['ACTIVE', 'INACTIVE', 'SIGNAL_LOST', 'MAINTENANCE'],
-  UserStatus: ['REGISTERED', 'PENDING_VERIFICATION', 'ACTIVE', 'SUSPENDED', 'REJECTED'],
-  VerificationStatus: ['PENDING', 'APPROVED', 'REJECTED', 'EXPIRED'],
+  PostingStatus: ["ACTIVE", "EXPIRED", "CANCELLED", "MATCHED"],
+  TripStatus: [
+    "ASSIGNED",
+    "PICKUP_PENDING",
+    "IN_TRANSIT",
+    "DELIVERED",
+    "COMPLETED",
+    "CANCELLED",
+  ],
+  GpsDeviceStatus: ["ACTIVE", "INACTIVE", "SIGNAL_LOST", "MAINTENANCE"],
+  UserStatus: [
+    "REGISTERED",
+    "PENDING_VERIFICATION",
+    "ACTIVE",
+    "SUSPENDED",
+    "REJECTED",
+  ],
+  VerificationStatus: ["PENDING", "APPROVED", "REJECTED", "EXPIRED"],
 };
 
 interface TestResult {
@@ -65,7 +90,7 @@ function fail(name: string, message: string, details?: any) {
 // ============================================================================
 
 async function getGroundTruth() {
-  console.log('\n📊 Fetching ground truth from database...\n');
+  console.log("\n📊 Fetching ground truth from database...\n");
 
   const [
     totalLoads,
@@ -80,13 +105,13 @@ async function getGroundTruth() {
     totalOrganizations,
   ] = await Promise.all([
     prisma.load.count(),
-    prisma.load.groupBy({ by: ['status'], _count: true }),
+    prisma.load.groupBy({ by: ["status"], _count: true }),
     prisma.truck.count(),
-    prisma.truck.groupBy({ by: ['isAvailable'], _count: true }),
+    prisma.truck.groupBy({ by: ["isAvailable"], _count: true }),
     prisma.trip.count(),
-    prisma.trip.groupBy({ by: ['status'], _count: true }),
+    prisma.trip.groupBy({ by: ["status"], _count: true }),
     prisma.truckPosting.count(),
-    prisma.truckPosting.groupBy({ by: ['status'], _count: true }),
+    prisma.truckPosting.groupBy({ by: ["status"], _count: true }),
     prisma.user.count(),
     prisma.organization.count(),
   ]);
@@ -94,20 +119,27 @@ async function getGroundTruth() {
   return {
     loads: {
       total: totalLoads,
-      byStatus: Object.fromEntries(loadsByStatus.map(s => [s.status, s._count])),
+      byStatus: Object.fromEntries(
+        loadsByStatus.map((s) => [s.status, s._count])
+      ),
     },
     trucks: {
       total: totalTrucks,
-      available: trucksByAvailability.find(t => t.isAvailable)?._count || 0,
-      unavailable: trucksByAvailability.find(t => !t.isAvailable)?._count || 0,
+      available: trucksByAvailability.find((t) => t.isAvailable)?._count || 0,
+      unavailable:
+        trucksByAvailability.find((t) => !t.isAvailable)?._count || 0,
     },
     trips: {
       total: totalTrips,
-      byStatus: Object.fromEntries(tripsByStatus.map(s => [s.status, s._count])),
+      byStatus: Object.fromEntries(
+        tripsByStatus.map((s) => [s.status, s._count])
+      ),
     },
     postings: {
       total: totalPostings,
-      byStatus: Object.fromEntries(postingsByStatus.map(s => [s.status, s._count])),
+      byStatus: Object.fromEntries(
+        postingsByStatus.map((s) => [s.status, s._count])
+      ),
     },
     users: { total: totalUsers },
     organizations: { total: totalOrganizations },
@@ -118,25 +150,39 @@ async function getGroundTruth() {
 // TEST 1: LOAD STATUS ENUM VALIDATION
 // ============================================================================
 
-async function testLoadStatusEnums(groundTruth: Awaited<ReturnType<typeof getGroundTruth>>) {
-  console.log('\n🔍 Test 1: Load Status Enum Validation\n');
+async function testLoadStatusEnums(
+  groundTruth: Awaited<ReturnType<typeof getGroundTruth>>
+) {
+  console.log("\n🔍 Test 1: Load Status Enum Validation\n");
 
   const invalidStatuses = Object.keys(groundTruth.loads.byStatus).filter(
-    status => !VALID_ENUMS.LoadStatus.includes(status)
+    (status) => !VALID_ENUMS.LoadStatus.includes(status)
   );
 
   if (invalidStatuses.length === 0) {
-    pass('LoadStatus Enums', 'All load statuses are valid enum values');
+    pass("LoadStatus Enums", "All load statuses are valid enum values");
   } else {
-    fail('LoadStatus Enums', `Found invalid statuses: ${invalidStatuses.join(', ')}`);
+    fail(
+      "LoadStatus Enums",
+      `Found invalid statuses: ${invalidStatuses.join(", ")}`
+    );
   }
 
   // Verify sum equals total
-  const sum = Object.values(groundTruth.loads.byStatus).reduce((a, b) => a + b, 0);
+  const sum = Object.values(groundTruth.loads.byStatus).reduce(
+    (a, b) => a + b,
+    0
+  );
   if (sum === groundTruth.loads.total) {
-    pass('Load Count Sum', `Sum of statuses (${sum}) equals total (${groundTruth.loads.total})`);
+    pass(
+      "Load Count Sum",
+      `Sum of statuses (${sum}) equals total (${groundTruth.loads.total})`
+    );
   } else {
-    fail('Load Count Sum', `Sum (${sum}) != Total (${groundTruth.loads.total})`);
+    fail(
+      "Load Count Sum",
+      `Sum (${sum}) != Total (${groundTruth.loads.total})`
+    );
   }
 }
 
@@ -144,25 +190,39 @@ async function testLoadStatusEnums(groundTruth: Awaited<ReturnType<typeof getGro
 // TEST 2: TRIP STATUS ENUM VALIDATION
 // ============================================================================
 
-async function testTripStatusEnums(groundTruth: Awaited<ReturnType<typeof getGroundTruth>>) {
-  console.log('\n🔍 Test 2: Trip Status Enum Validation\n');
+async function testTripStatusEnums(
+  groundTruth: Awaited<ReturnType<typeof getGroundTruth>>
+) {
+  console.log("\n🔍 Test 2: Trip Status Enum Validation\n");
 
   const invalidStatuses = Object.keys(groundTruth.trips.byStatus).filter(
-    status => !VALID_ENUMS.TripStatus.includes(status)
+    (status) => !VALID_ENUMS.TripStatus.includes(status)
   );
 
   if (invalidStatuses.length === 0) {
-    pass('TripStatus Enums', 'All trip statuses are valid enum values');
+    pass("TripStatus Enums", "All trip statuses are valid enum values");
   } else {
-    fail('TripStatus Enums', `Found invalid statuses: ${invalidStatuses.join(', ')}`);
+    fail(
+      "TripStatus Enums",
+      `Found invalid statuses: ${invalidStatuses.join(", ")}`
+    );
   }
 
   // Verify sum equals total
-  const sum = Object.values(groundTruth.trips.byStatus).reduce((a, b) => a + b, 0);
+  const sum = Object.values(groundTruth.trips.byStatus).reduce(
+    (a, b) => a + b,
+    0
+  );
   if (sum === groundTruth.trips.total) {
-    pass('Trip Count Sum', `Sum of statuses (${sum}) equals total (${groundTruth.trips.total})`);
+    pass(
+      "Trip Count Sum",
+      `Sum of statuses (${sum}) equals total (${groundTruth.trips.total})`
+    );
   } else {
-    fail('Trip Count Sum', `Sum (${sum}) != Total (${groundTruth.trips.total})`);
+    fail(
+      "Trip Count Sum",
+      `Sum (${sum}) != Total (${groundTruth.trips.total})`
+    );
   }
 }
 
@@ -170,25 +230,39 @@ async function testTripStatusEnums(groundTruth: Awaited<ReturnType<typeof getGro
 // TEST 3: POSTING STATUS ENUM VALIDATION
 // ============================================================================
 
-async function testPostingStatusEnums(groundTruth: Awaited<ReturnType<typeof getGroundTruth>>) {
-  console.log('\n🔍 Test 3: Posting Status Enum Validation\n');
+async function testPostingStatusEnums(
+  groundTruth: Awaited<ReturnType<typeof getGroundTruth>>
+) {
+  console.log("\n🔍 Test 3: Posting Status Enum Validation\n");
 
   const invalidStatuses = Object.keys(groundTruth.postings.byStatus).filter(
-    status => !VALID_ENUMS.PostingStatus.includes(status)
+    (status) => !VALID_ENUMS.PostingStatus.includes(status)
   );
 
   if (invalidStatuses.length === 0) {
-    pass('PostingStatus Enums', 'All posting statuses are valid enum values');
+    pass("PostingStatus Enums", "All posting statuses are valid enum values");
   } else {
-    fail('PostingStatus Enums', `Found invalid statuses: ${invalidStatuses.join(', ')}`);
+    fail(
+      "PostingStatus Enums",
+      `Found invalid statuses: ${invalidStatuses.join(", ")}`
+    );
   }
 
   // Verify sum equals total
-  const sum = Object.values(groundTruth.postings.byStatus).reduce((a, b) => a + b, 0);
+  const sum = Object.values(groundTruth.postings.byStatus).reduce(
+    (a, b) => a + b,
+    0
+  );
   if (sum === groundTruth.postings.total) {
-    pass('Posting Count Sum', `Sum of statuses (${sum}) equals total (${groundTruth.postings.total})`);
+    pass(
+      "Posting Count Sum",
+      `Sum of statuses (${sum}) equals total (${groundTruth.postings.total})`
+    );
   } else {
-    fail('Posting Count Sum', `Sum (${sum}) != Total (${groundTruth.postings.total})`);
+    fail(
+      "Posting Count Sum",
+      `Sum (${sum}) != Total (${groundTruth.postings.total})`
+    );
   }
 }
 
@@ -196,18 +270,20 @@ async function testPostingStatusEnums(groundTruth: Awaited<ReturnType<typeof get
 // TEST 4: TRUCK AVAILABILITY MATH
 // ============================================================================
 
-async function testTruckAvailabilityMath(groundTruth: Awaited<ReturnType<typeof getGroundTruth>>) {
-  console.log('\n🔍 Test 4: Truck Availability Math\n');
+async function testTruckAvailabilityMath(
+  groundTruth: Awaited<ReturnType<typeof getGroundTruth>>
+) {
+  console.log("\n🔍 Test 4: Truck Availability Math\n");
 
   const sum = groundTruth.trucks.available + groundTruth.trucks.unavailable;
   if (sum === groundTruth.trucks.total) {
     pass(
-      'Truck Availability',
+      "Truck Availability",
       `Available (${groundTruth.trucks.available}) + Unavailable (${groundTruth.trucks.unavailable}) = Total (${groundTruth.trucks.total})`
     );
   } else {
     fail(
-      'Truck Availability',
+      "Truck Availability",
       `Sum (${sum}) != Total (${groundTruth.trucks.total})`,
       groundTruth.trucks
     );
@@ -219,22 +295,30 @@ async function testTruckAvailabilityMath(groundTruth: Awaited<ReturnType<typeof 
 // ============================================================================
 
 async function testGpsStatusEnums() {
-  console.log('\n🔍 Test 5: GPS Status Enum Validation\n');
+  console.log("\n🔍 Test 5: GPS Status Enum Validation\n");
 
   const trucksWithGps = await prisma.truck.findMany({
     where: { gpsStatus: { not: null } },
     select: { gpsStatus: true },
   });
 
-  const uniqueStatuses = [...new Set(trucksWithGps.map(t => t.gpsStatus).filter(Boolean))];
+  const uniqueStatuses = [
+    ...new Set(trucksWithGps.map((t) => t.gpsStatus).filter(Boolean)),
+  ];
   const invalidStatuses = uniqueStatuses.filter(
-    status => !VALID_ENUMS.GpsDeviceStatus.includes(status as string)
+    (status) => !VALID_ENUMS.GpsDeviceStatus.includes(status as string)
   );
 
   if (invalidStatuses.length === 0) {
-    pass('GpsDeviceStatus Enums', `All GPS statuses are valid (found: ${uniqueStatuses.join(', ') || 'none'})`);
+    pass(
+      "GpsDeviceStatus Enums",
+      `All GPS statuses are valid (found: ${uniqueStatuses.join(", ") || "none"})`
+    );
   } else {
-    fail('GpsDeviceStatus Enums', `Found invalid statuses: ${invalidStatuses.join(', ')}`);
+    fail(
+      "GpsDeviceStatus Enums",
+      `Found invalid statuses: ${invalidStatuses.join(", ")}`
+    );
   }
 }
 
@@ -243,21 +327,24 @@ async function testGpsStatusEnums() {
 // ============================================================================
 
 async function testUserStatusEnums() {
-  console.log('\n🔍 Test 6: User Status Enum Validation\n');
+  console.log("\n🔍 Test 6: User Status Enum Validation\n");
 
   const usersByStatus = await prisma.user.groupBy({
-    by: ['status'],
+    by: ["status"],
     _count: true,
   });
 
   const invalidStatuses = usersByStatus
-    .map(u => u.status)
-    .filter(status => !VALID_ENUMS.UserStatus.includes(status));
+    .map((u) => u.status)
+    .filter((status) => !VALID_ENUMS.UserStatus.includes(status));
 
   if (invalidStatuses.length === 0) {
-    pass('UserStatus Enums', 'All user statuses are valid enum values');
+    pass("UserStatus Enums", "All user statuses are valid enum values");
   } else {
-    fail('UserStatus Enums', `Found invalid statuses: ${invalidStatuses.join(', ')}`);
+    fail(
+      "UserStatus Enums",
+      `Found invalid statuses: ${invalidStatuses.join(", ")}`
+    );
   }
 }
 
@@ -266,28 +353,34 @@ async function testUserStatusEnums() {
 // ============================================================================
 
 async function testCarrierLoadboardMath() {
-  console.log('\n🔍 Test 7: Carrier LoadBoard Math (per carrier)\n');
+  console.log("\n🔍 Test 7: Carrier LoadBoard Math (per carrier)\n");
 
   // Get all carriers
   const carriers = await prisma.organization.findMany({
-    where: { type: { in: ['CARRIER_COMPANY', 'CARRIER_INDIVIDUAL', 'FLEET_OWNER'] } },
+    where: {
+      type: { in: ["CARRIER_COMPANY", "CARRIER_INDIVIDUAL", "FLEET_OWNER"] },
+    },
     select: { id: true, name: true },
   });
 
   let allPassed = true;
   const failures: string[] = [];
 
-  for (const carrier of carriers.slice(0, 5)) { // Test first 5 carriers
-    const [totalTrucks, activePostings, trucksWithoutActivePosting] = await Promise.all([
-      prisma.truck.count({ where: { carrierId: carrier.id } }),
-      prisma.truckPosting.count({ where: { carrierId: carrier.id, status: 'ACTIVE' } }),
-      prisma.truck.count({
-        where: {
-          carrierId: carrier.id,
-          postings: { none: { status: 'ACTIVE' } },
-        },
-      }),
-    ]);
+  for (const carrier of carriers.slice(0, 5)) {
+    // Test first 5 carriers
+    const [totalTrucks, activePostings, trucksWithoutActivePosting] =
+      await Promise.all([
+        prisma.truck.count({ where: { carrierId: carrier.id } }),
+        prisma.truckPosting.count({
+          where: { carrierId: carrier.id, status: "ACTIVE" },
+        }),
+        prisma.truck.count({
+          where: {
+            carrierId: carrier.id,
+            postings: { none: { status: "ACTIVE" } },
+          },
+        }),
+      ]);
 
     // Note: A truck can have an active posting OR not have one
     // But the same truck could have multiple postings (historical)
@@ -298,14 +391,19 @@ async function testCarrierLoadboardMath() {
       // This is correct
     } else {
       allPassed = false;
-      failures.push(`${carrier.name}: with(${trucksWithActivePosting}) + without(${trucksWithoutActivePosting}) != total(${totalTrucks})`);
+      failures.push(
+        `${carrier.name}: with(${trucksWithActivePosting}) + without(${trucksWithoutActivePosting}) != total(${totalTrucks})`
+      );
     }
   }
 
   if (allPassed) {
-    pass('Carrier LoadBoard Math', 'Posted + Unposted = Total for all tested carriers');
+    pass(
+      "Carrier LoadBoard Math",
+      "Posted + Unposted = Total for all tested carriers"
+    );
   } else {
-    fail('Carrier LoadBoard Math', 'Math mismatch', failures);
+    fail("Carrier LoadBoard Math", "Math mismatch", failures);
   }
 }
 
@@ -313,33 +411,47 @@ async function testCarrierLoadboardMath() {
 // TEST 8: ADMIN TOTALS CONSISTENCY
 // ============================================================================
 
-async function testAdminTotalsConsistency(groundTruth: Awaited<ReturnType<typeof getGroundTruth>>) {
-  console.log('\n🔍 Test 8: Admin Totals Consistency\n');
+async function testAdminTotalsConsistency(
+  groundTruth: Awaited<ReturnType<typeof getGroundTruth>>
+) {
+  console.log("\n🔍 Test 8: Admin Totals Consistency\n");
 
   // Sum of all shipper loads should equal total loads
   const shipperLoads = await prisma.load.groupBy({
-    by: ['shipperId'],
+    by: ["shipperId"],
     _count: true,
   });
   const sumShipperLoads = shipperLoads.reduce((sum, s) => sum + s._count, 0);
 
   if (sumShipperLoads === groundTruth.loads.total) {
-    pass('Admin Load Totals', `Sum of shipper loads (${sumShipperLoads}) = Total loads (${groundTruth.loads.total})`);
+    pass(
+      "Admin Load Totals",
+      `Sum of shipper loads (${sumShipperLoads}) = Total loads (${groundTruth.loads.total})`
+    );
   } else {
-    fail('Admin Load Totals', `Sum (${sumShipperLoads}) != Total (${groundTruth.loads.total})`);
+    fail(
+      "Admin Load Totals",
+      `Sum (${sumShipperLoads}) != Total (${groundTruth.loads.total})`
+    );
   }
 
   // Sum of all carrier trucks should equal total trucks
   const carrierTrucks = await prisma.truck.groupBy({
-    by: ['carrierId'],
+    by: ["carrierId"],
     _count: true,
   });
   const sumCarrierTrucks = carrierTrucks.reduce((sum, t) => sum + t._count, 0);
 
   if (sumCarrierTrucks === groundTruth.trucks.total) {
-    pass('Admin Truck Totals', `Sum of carrier trucks (${sumCarrierTrucks}) = Total trucks (${groundTruth.trucks.total})`);
+    pass(
+      "Admin Truck Totals",
+      `Sum of carrier trucks (${sumCarrierTrucks}) = Total trucks (${groundTruth.trucks.total})`
+    );
   } else {
-    fail('Admin Truck Totals', `Sum (${sumCarrierTrucks}) != Total (${groundTruth.trucks.total})`);
+    fail(
+      "Admin Truck Totals",
+      `Sum (${sumCarrierTrucks}) != Total (${groundTruth.trucks.total})`
+    );
   }
 }
 
@@ -348,7 +460,7 @@ async function testAdminTotalsConsistency(groundTruth: Awaited<ReturnType<typeof
 // ============================================================================
 
 async function testNoOrphanedReferences() {
-  console.log('\n🔍 Test 9: No Orphaned References\n');
+  console.log("\n🔍 Test 9: No Orphaned References\n");
 
   // Note: shipperId, carrierId, loadId are required fields in the schema,
   // so Prisma enforces referential integrity. We verify the counts match.
@@ -358,15 +470,21 @@ async function testNoOrphanedReferences() {
   const loadsWithShipper = await prisma.load.count({
     where: {
       shipper: {
-        id: { not: '' }, // Has a valid shipper with non-empty ID
+        id: { not: "" }, // Has a valid shipper with non-empty ID
       },
     },
   });
 
   if (loadsWithShipper === totalLoads) {
-    pass('Load-Shipper Integrity', `All ${totalLoads} loads have valid shipper references`);
+    pass(
+      "Load-Shipper Integrity",
+      `All ${totalLoads} loads have valid shipper references`
+    );
   } else {
-    fail('Load-Shipper Integrity', `${totalLoads - loadsWithShipper} of ${totalLoads} loads missing shipper`);
+    fail(
+      "Load-Shipper Integrity",
+      `${totalLoads - loadsWithShipper} of ${totalLoads} loads missing shipper`
+    );
   }
 
   // Count trucks and verify all have carrier relations
@@ -374,15 +492,21 @@ async function testNoOrphanedReferences() {
   const trucksWithCarrier = await prisma.truck.count({
     where: {
       carrier: {
-        id: { not: '' },
+        id: { not: "" },
       },
     },
   });
 
   if (trucksWithCarrier === totalTrucks) {
-    pass('Truck-Carrier Integrity', `All ${totalTrucks} trucks have valid carrier references`);
+    pass(
+      "Truck-Carrier Integrity",
+      `All ${totalTrucks} trucks have valid carrier references`
+    );
   } else {
-    fail('Truck-Carrier Integrity', `${totalTrucks - trucksWithCarrier} of ${totalTrucks} trucks missing carrier`);
+    fail(
+      "Truck-Carrier Integrity",
+      `${totalTrucks - trucksWithCarrier} of ${totalTrucks} trucks missing carrier`
+    );
   }
 
   // Count trips and verify all have load relations
@@ -390,15 +514,21 @@ async function testNoOrphanedReferences() {
   const tripsWithLoad = await prisma.trip.count({
     where: {
       load: {
-        id: { not: '' },
+        id: { not: "" },
       },
     },
   });
 
   if (tripsWithLoad === totalTrips) {
-    pass('Trip-Load Integrity', `All ${totalTrips} trips have valid load references`);
+    pass(
+      "Trip-Load Integrity",
+      `All ${totalTrips} trips have valid load references`
+    );
   } else {
-    fail('Trip-Load Integrity', `${totalTrips - tripsWithLoad} of ${totalTrips} trips missing load`);
+    fail(
+      "Trip-Load Integrity",
+      `${totalTrips - tripsWithLoad} of ${totalTrips} trips missing load`
+    );
   }
 }
 
@@ -407,16 +537,24 @@ async function testNoOrphanedReferences() {
 // ============================================================================
 
 async function main() {
-  console.log('╔════════════════════════════════════════════════════════════════╗');
-  console.log('║         DATA INTEGRITY VERIFICATION SCRIPT                     ║');
-  console.log('╚════════════════════════════════════════════════════════════════╝');
+  console.log(
+    "╔════════════════════════════════════════════════════════════════╗"
+  );
+  console.log(
+    "║         DATA INTEGRITY VERIFICATION SCRIPT                     ║"
+  );
+  console.log(
+    "╚════════════════════════════════════════════════════════════════╝"
+  );
 
   try {
     const groundTruth = await getGroundTruth();
 
-    console.log('Ground Truth Summary:');
+    console.log("Ground Truth Summary:");
     console.log(`  Loads: ${groundTruth.loads.total}`);
-    console.log(`  Trucks: ${groundTruth.trucks.total} (${groundTruth.trucks.available} available)`);
+    console.log(
+      `  Trucks: ${groundTruth.trucks.total} (${groundTruth.trucks.available} available)`
+    );
     console.log(`  Trips: ${groundTruth.trips.total}`);
     console.log(`  Postings: ${groundTruth.postings.total}`);
     console.log(`  Users: ${groundTruth.users.total}`);
@@ -434,36 +572,44 @@ async function main() {
     await testNoOrphanedReferences();
 
     // Summary
-    console.log('\n╔════════════════════════════════════════════════════════════════╗');
-    console.log('║                        SUMMARY                                 ║');
-    console.log('╚════════════════════════════════════════════════════════════════╝\n');
+    console.log(
+      "\n╔════════════════════════════════════════════════════════════════╗"
+    );
+    console.log(
+      "║                        SUMMARY                                 ║"
+    );
+    console.log(
+      "╚════════════════════════════════════════════════════════════════╝\n"
+    );
 
-    const passed = results.filter(r => r.passed).length;
-    const failed = results.filter(r => !r.passed).length;
+    const passed = results.filter((r) => r.passed).length;
+    const failed = results.filter((r) => !r.passed).length;
 
     console.log(`  Total Tests: ${results.length}`);
     console.log(`  ✓ Passed: ${passed}`);
     console.log(`  ✗ Failed: ${failed}`);
 
     if (failed > 0) {
-      console.log('\n  Failed Tests:');
-      results.filter(r => !r.passed).forEach(r => {
-        console.log(`    - ${r.name}: ${r.message}`);
-      });
+      console.log("\n  Failed Tests:");
+      results
+        .filter((r) => !r.passed)
+        .forEach((r) => {
+          console.log(`    - ${r.name}: ${r.message}`);
+        });
     }
 
-    console.log('\n');
+    console.log("\n");
 
     // Exit with error code if any tests failed
     if (failed > 0) {
-      console.log('❌ VERIFICATION FAILED\n');
+      console.log("❌ VERIFICATION FAILED\n");
       process.exit(1);
     } else {
-      console.log('✅ ALL VERIFICATIONS PASSED\n');
+      console.log("✅ ALL VERIFICATIONS PASSED\n");
       process.exit(0);
     }
   } catch (error) {
-    console.error('Error running verification:', error);
+    console.error("Error running verification:", error);
     process.exit(1);
   } finally {
     await prisma.$disconnect();

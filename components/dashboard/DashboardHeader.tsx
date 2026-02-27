@@ -7,10 +7,10 @@
  * Shows welcome message with user name and current date
  */
 
-'use client';
+"use client";
 
-import React from 'react';
-import { getTimeGreeting, getTodayFormatted } from '@/lib/formatters';
+import React from "react";
+import { getTimeGreeting, getTodayFormatted } from "@/lib/formatters";
 
 interface DashboardHeaderProps {
   userName?: string;
@@ -28,24 +28,24 @@ export default function DashboardHeader({
 
   // Extract first name from full name or email
   const firstName = userName
-    ? userName.split(' ')[0]
+    ? userName.split(" ")[0]
     : userEmail
-      ? userEmail.split('@')[0]
-      : 'there';
+      ? userEmail.split("@")[0]
+      : "there";
 
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between">
         <div>
           <h1
-            className="text-2xl lg:text-[28px] font-bold tracking-tight"
-            style={{ color: 'var(--foreground)' }}
+            className="text-2xl font-bold tracking-tight lg:text-[28px]"
+            style={{ color: "var(--foreground)" }}
           >
             {greeting}, {firstName}
           </h1>
           <p
-            className="text-sm mt-1"
-            style={{ color: 'var(--foreground-muted)' }}
+            className="mt-1 text-sm"
+            style={{ color: "var(--foreground-muted)" }}
           >
             {subtitle || today}
           </p>

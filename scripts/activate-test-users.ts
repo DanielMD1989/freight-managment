@@ -4,13 +4,13 @@
  * Updates test users to ACTIVE status so they can use marketplace features
  */
 
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
-  throw new Error('DATABASE_URL is not defined');
+  throw new Error("DATABASE_URL is not defined");
 }
 
 const pool = new Pool({ connectionString });
@@ -18,17 +18,17 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  console.log('🔧 Activating test users...\n');
+  console.log("🔧 Activating test users...\n");
 
   // Update all test users to ACTIVE status
   const result = await prisma.user.updateMany({
     where: {
       email: {
-        contains: 'testfreightet.com',
+        contains: "testfreightet.com",
       },
     },
     data: {
-      status: 'ACTIVE',
+      status: "ACTIVE",
     },
   });
 
@@ -38,7 +38,7 @@ async function main() {
   const users = await prisma.user.findMany({
     where: {
       email: {
-        contains: 'testfreightet.com',
+        contains: "testfreightet.com",
       },
     },
     select: {
@@ -48,7 +48,7 @@ async function main() {
     },
   });
 
-  console.log('\n📋 Test Users:');
+  console.log("\n📋 Test Users:");
   users.forEach((user) => {
     console.log(`  • ${user.email} - ${user.role} - ${user.status}`);
   });
@@ -56,7 +56,7 @@ async function main() {
 
 main()
   .catch((e) => {
-    console.error('❌ Failed:', e);
+    console.error("❌ Failed:", e);
     process.exit(1);
   })
   .finally(async () => {

@@ -6,10 +6,10 @@
  * Get service fee status for a specific load
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { calculateFeePreview } from '@/lib/serviceFeeCalculation';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { calculateFeePreview } from "@/lib/serviceFeeCalculation";
 
 /**
  * GET /api/loads/[id]/service-fee
@@ -56,24 +56,18 @@ export async function GET(
     });
 
     if (!load) {
-      return NextResponse.json(
-        { error: 'Load not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // Check access - must be shipper, carrier, or admin
     const hasAccess =
-      session.role === 'ADMIN' ||
-      session.role === 'SUPER_ADMIN' ||
+      session.role === "ADMIN" ||
+      session.role === "SUPER_ADMIN" ||
       session.organizationId === load.shipperId ||
       session.organizationId === load.assignedTruck?.carrierId;
 
     if (!hasAccess) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     // Calculate fee breakdown if corridor exists (using centralized function)
@@ -83,12 +77,15 @@ export async function GET(
         Number(load.corridor.distanceKm),
         Number(load.corridor.pricePerKm),
         load.corridor.promoFlag,
-        load.corridor.promoDiscountPct ? Number(load.corridor.promoDiscountPct) : null
+        load.corridor.promoDiscountPct
+          ? Number(load.corridor.promoDiscountPct)
+          : null
       );
 
       feeBreakdown = {
         ...preview,
-        promoApplied: load.corridor.promoFlag && !!load.corridor.promoDiscountPct,
+        promoApplied:
+          load.corridor.promoFlag && !!load.corridor.promoDiscountPct,
       };
     }
 
@@ -101,22 +98,26 @@ export async function GET(
         deductedAt: load.serviceFeeDeductedAt,
         refundedAt: load.serviceFeeRefundedAt,
       },
-      corridor: load.corridor ? {
-        id: load.corridor.id,
-        name: load.corridor.name,
-        originRegion: load.corridor.originRegion,
-        destinationRegion: load.corridor.destinationRegion,
-        distanceKm: Number(load.corridor.distanceKm),
-        pricePerKm: Number(load.corridor.pricePerKm),
-        promoFlag: load.corridor.promoFlag,
-        promoDiscountPct: load.corridor.promoDiscountPct ? Number(load.corridor.promoDiscountPct) : null,
-      } : null,
+      corridor: load.corridor
+        ? {
+            id: load.corridor.id,
+            name: load.corridor.name,
+            originRegion: load.corridor.originRegion,
+            destinationRegion: load.corridor.destinationRegion,
+            distanceKm: Number(load.corridor.distanceKm),
+            pricePerKm: Number(load.corridor.pricePerKm),
+            promoFlag: load.corridor.promoFlag,
+            promoDiscountPct: load.corridor.promoDiscountPct
+              ? Number(load.corridor.promoDiscountPct)
+              : null,
+          }
+        : null,
       feeBreakdown,
     });
   } catch (error) {
-    console.error('Get service fee error:', error);
+    console.error("Get service fee error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

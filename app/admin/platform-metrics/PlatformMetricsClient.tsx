@@ -7,9 +7,9 @@
  * Comprehensive platform health and performance metrics
  */
 
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 interface PlatformMetrics {
   timestamp: string;
@@ -69,17 +69,17 @@ export default function PlatformMetricsClient() {
   const fetchMetrics = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/platform-metrics');
+      const response = await fetch("/api/admin/platform-metrics");
 
       if (response.ok) {
         const data = await response.json();
         setMetrics(data);
         setLastRefresh(new Date());
       } else {
-        console.error('Failed to fetch metrics');
+        console.error("Failed to fetch metrics");
       }
     } catch (error) {
-      console.error('Error fetching metrics:', error);
+      console.error("Error fetching metrics:", error);
     } finally {
       setLoading(false);
     }
@@ -87,9 +87,9 @@ export default function PlatformMetricsClient() {
 
   if (loading || !metrics) {
     return (
-      <div className="bg-white rounded-lg shadow p-12 text-center">
-        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        <p className="text-gray-600 mt-4">Loading platform metrics...</p>
+      <div className="rounded-lg bg-white p-12 text-center shadow">
+        <div className="inline-block h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
+        <p className="mt-4 text-gray-600">Loading platform metrics...</p>
       </div>
     );
   }
@@ -99,38 +99,38 @@ export default function PlatformMetricsClient() {
   return (
     <div className="space-y-6">
       {/* Refresh Header */}
-      <div className="bg-white rounded-lg shadow border border-gray-200 p-4 flex items-center justify-between">
+      <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 shadow">
         <div className="text-sm text-gray-600">
           Last updated: {lastRefresh.toLocaleTimeString()}
         </div>
         <button
           onClick={fetchMetrics}
           disabled={loading}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+          className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
-          {loading ? 'Refreshing...' : 'Refresh Metrics'}
+          {loading ? "Refreshing..." : "Refresh Metrics"}
         </button>
       </div>
 
       {/* User & Organization Metrics */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">
           User & Organization Metrics
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Total Users</p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">
+                <p className="mt-1 text-3xl font-bold text-gray-900">
                   {m.users.total.toLocaleString()}
                 </p>
-                <p className="text-xs text-green-600 mt-1">
+                <p className="mt-1 text-xs text-green-600">
                   {m.users.activeRate.toFixed(1)}% active
                 </p>
               </div>
               <svg
-                className="w-12 h-12 text-blue-200"
+                className="h-12 w-12 text-blue-200"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -139,19 +139,19 @@ export default function PlatformMetricsClient() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Total Organizations</p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">
+                <p className="mt-1 text-3xl font-bold text-gray-900">
                   {m.organizations.total.toLocaleString()}
                 </p>
-                <p className="text-xs text-green-600 mt-1">
+                <p className="mt-1 text-xs text-green-600">
                   {m.organizations.verificationRate.toFixed(1)}% verified
                 </p>
               </div>
               <svg
-                className="w-12 h-12 text-purple-200"
+                className="h-12 w-12 text-purple-200"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -164,23 +164,31 @@ export default function PlatformMetricsClient() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
             <p className="text-sm text-gray-600">Carriers</p>
-            <p className="text-3xl font-bold text-green-600 mt-1">
+            <p className="mt-1 text-3xl font-bold text-green-600">
               {m.organizations.carriers.toLocaleString()}
             </p>
-            <p className="text-xs text-gray-500 mt-1">
-              {((m.organizations.carriers / m.organizations.total) * 100).toFixed(1)}% of total
+            <p className="mt-1 text-xs text-gray-500">
+              {(
+                (m.organizations.carriers / m.organizations.total) *
+                100
+              ).toFixed(1)}
+              % of total
             </p>
           </div>
 
-          <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
             <p className="text-sm text-gray-600">Shippers</p>
-            <p className="text-3xl font-bold text-blue-600 mt-1">
+            <p className="mt-1 text-3xl font-bold text-blue-600">
               {m.organizations.shippers.toLocaleString()}
             </p>
-            <p className="text-xs text-gray-500 mt-1">
-              {((m.organizations.shippers / m.organizations.total) * 100).toFixed(1)}% of total
+            <p className="mt-1 text-xs text-gray-500">
+              {(
+                (m.organizations.shippers / m.organizations.total) *
+                100
+              ).toFixed(1)}
+              % of total
             </p>
           </div>
         </div>
@@ -188,13 +196,13 @@ export default function PlatformMetricsClient() {
 
       {/* Load & Truck Metrics */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">
           Load & Truck Metrics
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
             <p className="text-sm text-gray-600">Total Loads</p>
-            <p className="text-3xl font-bold text-gray-900 mt-1">
+            <p className="mt-1 text-3xl font-bold text-gray-900">
               {m.loads.total.toLocaleString()}
             </p>
             <div className="mt-2 flex items-center gap-2">
@@ -207,32 +215,28 @@ export default function PlatformMetricsClient() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
             <p className="text-sm text-gray-600">Active Loads</p>
-            <p className="text-3xl font-bold text-blue-600 mt-1">
+            <p className="mt-1 text-3xl font-bold text-blue-600">
               {m.loads.active.toLocaleString()}
             </p>
-            <p className="text-xs text-gray-500 mt-1">
-              In transit or assigned
-            </p>
+            <p className="mt-1 text-xs text-gray-500">In transit or assigned</p>
           </div>
 
-          <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
             <p className="text-sm text-gray-600">Completed Loads</p>
-            <p className="text-3xl font-bold text-green-600 mt-1">
+            <p className="mt-1 text-3xl font-bold text-green-600">
               {m.loads.completed.toLocaleString()}
             </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Successfully delivered
-            </p>
+            <p className="mt-1 text-xs text-gray-500">Successfully delivered</p>
           </div>
 
-          <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
             <p className="text-sm text-gray-600">Total Trucks</p>
-            <p className="text-3xl font-bold text-gray-900 mt-1">
+            <p className="mt-1 text-3xl font-bold text-gray-900">
               {m.trucks.total.toLocaleString()}
             </p>
-            <p className="text-xs text-green-600 mt-1">
+            <p className="mt-1 text-xs text-green-600">
               {m.trucks.active} available
             </p>
           </div>
@@ -241,67 +245,63 @@ export default function PlatformMetricsClient() {
 
       {/* Financial Metrics */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">
           Financial Metrics
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow p-6 text-white">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="rounded-lg bg-gradient-to-br from-green-500 to-green-600 p-6 text-white shadow">
             <p className="text-sm opacity-90">Total Platform Revenue</p>
-            <p className="text-4xl font-bold mt-2">
+            <p className="mt-2 text-4xl font-bold">
               {m.financial.totalRevenue.toLocaleString()} ETB
             </p>
-            <p className="text-xs opacity-75 mt-1">
+            <p className="mt-1 text-xs opacity-75">
               From {m.financial.paidSettlements} completed settlements
             </p>
           </div>
 
-          <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
             <p className="text-sm text-gray-600">Pending Settlements</p>
-            <p className="text-3xl font-bold text-orange-600 mt-1">
+            <p className="mt-1 text-3xl font-bold text-orange-600">
               {m.financial.pendingSettlements.toLocaleString()}
             </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Awaiting processing
-            </p>
+            <p className="mt-1 text-xs text-gray-500">Awaiting processing</p>
           </div>
 
-          <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
             <p className="text-sm text-gray-600">Paid Settlements</p>
-            <p className="text-3xl font-bold text-green-600 mt-1">
+            <p className="mt-1 text-3xl font-bold text-green-600">
               {m.financial.paidSettlements.toLocaleString()}
             </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Successfully processed
-            </p>
+            <p className="mt-1 text-xs text-gray-500">Successfully processed</p>
           </div>
         </div>
       </div>
 
       {/* Activity Metrics */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">
           Recent Activity (Last 7 Days)
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-gray-600">User Logins</p>
-                <p className="text-3xl font-bold text-blue-600 mt-1">
+                <p className="mt-1 text-3xl font-bold text-blue-600">
                   {m.activity.recentLogins.toLocaleString()}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">New Loads</p>
-                <p className="text-3xl font-bold text-green-600 mt-1">
+                <p className="mt-1 text-3xl font-bold text-green-600">
                   {m.activity.recentLoads.toLocaleString()}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
-            <p className="text-sm text-gray-600 mb-3">Top Events</p>
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
+            <p className="mb-3 text-sm text-gray-600">Top Events</p>
             <div className="space-y-2">
               {m.activity.topEvents.map((event, index) => (
                 <div
@@ -321,23 +321,21 @@ export default function PlatformMetricsClient() {
 
       {/* Trust & Safety Metrics */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">
           Trust & Safety Metrics
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-lg shadow border border-red-200 p-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="rounded-lg border border-red-200 bg-white p-6 shadow">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Flagged Organizations</p>
-                <p className="text-3xl font-bold text-red-600 mt-1">
+                <p className="mt-1 text-3xl font-bold text-red-600">
                   {m.trust.flaggedOrganizations}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Require review
-                </p>
+                <p className="mt-1 text-xs text-gray-500">Require review</p>
               </div>
               <svg
-                className="w-12 h-12 text-red-200"
+                className="h-12 w-12 text-red-200"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -350,19 +348,17 @@ export default function PlatformMetricsClient() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow border border-orange-200 p-6">
+          <div className="rounded-lg border border-orange-200 bg-white p-6 shadow">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Total Disputes</p>
-                <p className="text-3xl font-bold text-orange-600 mt-1">
+                <p className="mt-1 text-3xl font-bold text-orange-600">
                   {m.trust.disputes}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Platform-wide
-                </p>
+                <p className="mt-1 text-xs text-gray-500">Platform-wide</p>
               </div>
               <svg
-                className="w-12 h-12 text-orange-200"
+                className="h-12 w-12 text-orange-200"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -375,19 +371,19 @@ export default function PlatformMetricsClient() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow border border-yellow-200 p-6">
+          <div className="rounded-lg border border-yellow-200 bg-white p-6 shadow">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Bypass Attempts</p>
-                <p className="text-3xl font-bold text-yellow-600 mt-1">
+                <p className="mt-1 text-3xl font-bold text-yellow-600">
                   {m.trust.bypassAttempts}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="mt-1 text-xs text-gray-500">
                   Detected violations
                 </p>
               </div>
               <svg
-                className="w-12 h-12 text-yellow-200"
+                className="h-12 w-12 text-yellow-200"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -403,15 +399,15 @@ export default function PlatformMetricsClient() {
       </div>
 
       {/* Load Status Breakdown */}
-      <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">
           Load Status Breakdown
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
           {m.loads.byStatus.map((item) => (
             <div key={item.status} className="text-center">
               <p className="text-xs text-gray-600 uppercase">{item.status}</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
+              <p className="mt-1 text-2xl font-bold text-gray-900">
                 {item.count.toLocaleString()}
               </p>
               <p className="text-xs text-gray-500">

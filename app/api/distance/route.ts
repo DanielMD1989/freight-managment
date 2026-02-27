@@ -14,10 +14,10 @@
  * Sprint 8 - Story 8.3: Map-Based Distance Calculation
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { calculateDistanceKm } from '@/lib/geo';
-import { roundDistance1 } from '@/lib/rounding';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { calculateDistanceKm } from "@/lib/geo";
+import { roundDistance1 } from "@/lib/rounding";
 
 /**
  * GET /api/distance
@@ -50,13 +50,13 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
 
-    const originId = searchParams.get('originId');
-    const destinationId = searchParams.get('destinationId');
+    const originId = searchParams.get("originId");
+    const destinationId = searchParams.get("destinationId");
 
     // Validate required parameters
     if (!originId || !destinationId) {
       return NextResponse.json(
-        { error: 'Both originId and destinationId are required' },
+        { error: "Both originId and destinationId are required" },
         { status: 400 }
       );
     }
@@ -64,20 +64,20 @@ export async function GET(request: NextRequest) {
     // Validate IDs are different
     if (originId === destinationId) {
       return NextResponse.json(
-        { error: 'Origin and destination must be different locations' },
+        { error: "Origin and destination must be different locations" },
         { status: 400 }
       );
     }
 
     // Validate ID format (cuid)
     if (
-      typeof originId !== 'string' ||
+      typeof originId !== "string" ||
       originId.length < 10 ||
-      typeof destinationId !== 'string' ||
+      typeof destinationId !== "string" ||
       destinationId.length < 10
     ) {
       return NextResponse.json(
-        { error: 'Invalid location ID format' },
+        { error: "Invalid location ID format" },
         { status: 400 }
       );
     }
@@ -109,25 +109,27 @@ export async function GET(request: NextRequest) {
     // Validate locations exist and are active
     if (!origin || !origin.isActive) {
       return NextResponse.json(
-        { error: 'Origin location not found or inactive' },
+        { error: "Origin location not found or inactive" },
         { status: 404 }
       );
     }
 
     if (!destination || !destination.isActive) {
       return NextResponse.json(
-        { error: 'Destination location not found or inactive' },
+        { error: "Destination location not found or inactive" },
         { status: 404 }
       );
     }
 
     // Calculate distance using Haversine formula (delegated to lib/geo.ts)
-    const distance = roundDistance1(calculateDistanceKm(
-      Number(origin.latitude),
-      Number(origin.longitude),
-      Number(destination.latitude),
-      Number(destination.longitude)
-    ));
+    const distance = roundDistance1(
+      calculateDistanceKm(
+        Number(origin.latitude),
+        Number(origin.longitude),
+        Number(destination.latitude),
+        Number(destination.longitude)
+      )
+    );
 
     // Return result
     return NextResponse.json({
@@ -144,14 +146,14 @@ export async function GET(request: NextRequest) {
         latitude: Number(destination.latitude),
         longitude: Number(destination.longitude),
       },
-      method: 'haversine',
-      note: 'Straight-line distance. Road distance may vary by 10-30%.',
+      method: "haversine",
+      note: "Straight-line distance. Road distance may vary by 10-30%.",
     });
   } catch (error) {
-    console.error('Error calculating distance:', error);
+    console.error("Error calculating distance:", error);
 
     return NextResponse.json(
-      { error: 'Failed to calculate distance' },
+      { error: "Failed to calculate distance" },
       { status: 500 }
     );
   }

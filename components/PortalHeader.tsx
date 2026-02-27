@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Portal Header Component
@@ -9,8 +9,8 @@
  * Includes notification bell and profile menu dropdown
  */
 
-import NotificationBell from '@/components/NotificationBell';
-import ProfileMenu from '@/components/ProfileMenu';
+import NotificationBell from "@/components/NotificationBell";
+import ProfileMenu from "@/components/ProfileMenu";
 
 interface PortalHeaderProps {
   user: {
@@ -22,7 +22,10 @@ interface PortalHeaderProps {
   portalPrefix?: string; // e.g., '/shipper', '/carrier', '/admin', '/dispatcher'
 }
 
-export default function PortalHeader({ user, portalPrefix = '' }: PortalHeaderProps) {
+export default function PortalHeader({
+  user,
+  portalPrefix = "",
+}: PortalHeaderProps) {
   return (
     <div className="portal-header">
       {/* Spacer to push user info to the right */}
@@ -32,7 +35,7 @@ export default function PortalHeader({ user, portalPrefix = '' }: PortalHeaderPr
       <div className="flex items-center gap-4">
         <NotificationBell />
 
-        <div className="h-8 w-px bg-white/20 hidden sm:block" />
+        <div className="hidden h-8 w-px bg-white/20 sm:block" />
 
         {/* Profile Menu Dropdown */}
         <ProfileMenu user={user} portalPrefix={portalPrefix} />

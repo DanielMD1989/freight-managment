@@ -256,7 +256,7 @@ export interface MapTruck {
   truckType: string;
   capacity: number;
   status: string;
-  gpsStatus?: 'ACTIVE' | 'OFFLINE' | 'NO_DEVICE';
+  gpsStatus?: "ACTIVE" | "OFFLINE" | "NO_DEVICE";
   currentLocation?: {
     lat: number;
     lng: number;
@@ -345,12 +345,40 @@ export const DISPATCHER_MAX_PICKUPS_TODAY = 10;
 // Status Filter Types
 // ============================================
 
-export type LoadStatusFilter = 'ALL' | 'DRAFT' | 'POSTED' | 'ASSIGNED' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED';
-export type TruckStatusFilter = 'ALL' | 'ACTIVE' | 'EXPIRED' | 'MATCHED';
-export type TripStatusFilter = 'ALL' | 'ASSIGNED' | 'PICKUP_PENDING' | 'IN_TRANSIT' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED';
-export type EscalationStatusFilter = 'ALL' | 'OPEN' | 'IN_PROGRESS' | 'RESOLVED';
-export type EscalationPriorityFilter = 'ALL' | 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
-export type ProposalStatusFilter = 'all' | 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
+export type LoadStatusFilter =
+  | "ALL"
+  | "DRAFT"
+  | "POSTED"
+  | "ASSIGNED"
+  | "IN_TRANSIT"
+  | "DELIVERED"
+  | "CANCELLED";
+export type TruckStatusFilter = "ALL" | "ACTIVE" | "EXPIRED" | "MATCHED";
+export type TripStatusFilter =
+  | "ALL"
+  | "ASSIGNED"
+  | "PICKUP_PENDING"
+  | "IN_TRANSIT"
+  | "DELIVERED"
+  | "COMPLETED"
+  | "CANCELLED";
+export type EscalationStatusFilter =
+  | "ALL"
+  | "OPEN"
+  | "IN_PROGRESS"
+  | "RESOLVED";
+export type EscalationPriorityFilter =
+  | "ALL"
+  | "CRITICAL"
+  | "HIGH"
+  | "MEDIUM"
+  | "LOW";
+export type ProposalStatusFilter =
+  | "all"
+  | "PENDING"
+  | "ACCEPTED"
+  | "REJECTED"
+  | "EXPIRED";
 
 // ============================================
 // Error Handling Utility
@@ -360,5 +388,5 @@ export function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
   }
-  return 'An unknown error occurred';
+  return "An unknown error occurred";
 }

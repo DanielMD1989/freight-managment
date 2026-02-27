@@ -7,10 +7,10 @@
  * Sprint 15 - Story 15.8: Match Calculation
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { findMatchingTrucks } from '@/lib/matchingEngine';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { findMatchingTrucks } from "@/lib/matchingEngine";
 
 /**
  * GET /api/loads/[id]/matching-trucks
@@ -25,9 +25,12 @@ export async function GET(
     const { id } = await params;
     const { searchParams } = new URL(request.url);
 
-    const minScore = parseInt(searchParams.get('minScore') || '50');
+    const minScore = parseInt(searchParams.get("minScore") || "50");
     // M2 FIX: Add pagination bounds
-    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '50'), 1), 100);
+    const limit = Math.min(
+      Math.max(parseInt(searchParams.get("limit") || "50"), 1),
+      100
+    );
 
     // Fetch the load with assignedTruckId for carrier authorization check
     const load = await db.load.findUnique({
@@ -47,26 +50,28 @@ export async function GET(
     });
 
     if (!load) {
-      return NextResponse.json(
-        { error: 'Load not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // H15 FIX: Proper authorization - shipper, assigned carrier, dispatcher, or admin
     const isShipper = load.shipperId === user.organizationId;
     const isAssignedCarrier = load.assignedTruckId
-      ? await db.truck.findUnique({
-          where: { id: load.assignedTruckId },
-          select: { carrierId: true },
-        }).then((t) => t?.carrierId === user.organizationId)
+      ? await db.truck
+          .findUnique({
+            where: { id: load.assignedTruckId },
+            select: { carrierId: true },
+          })
+          .then((t) => t?.carrierId === user.organizationId)
       : false;
-    const isDispatcher = user.role === 'DISPATCHER';
-    const isAdmin = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
+    const isDispatcher = user.role === "DISPATCHER";
+    const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
 
     if (!isShipper && !isAssignedCarrier && !isDispatcher && !isAdmin) {
       return NextResponse.json(
-        { error: 'You do not have permission to view matching trucks for this load' },
+        {
+          error:
+            "You do not have permission to view matching trucks for this load",
+        },
         { status: 403 }
       );
     }
@@ -74,7 +79,7 @@ export async function GET(
     // Verify load has required fields for matching
     if (!load.pickupCity || !load.deliveryCity || !load.truckType) {
       return NextResponse.json(
-        { error: 'Load missing required fields for matching' },
+        { error: "Load missing required fields for matching" },
         { status: 400 }
       );
     }
@@ -82,7 +87,7 @@ export async function GET(
     // Fetch all active truck postings
     const trucks = await db.truckPosting.findMany({
       where: {
-        status: 'ACTIVE',
+        status: "ACTIVE",
       },
       include: {
         carrier: {
@@ -128,12 +133,12 @@ export async function GET(
       fullPartial: load.fullPartial,
     };
 
-    const trucksCriteria = trucks.map(truck => ({
+    const trucksCriteria = trucks.map((truck) => ({
       id: truck.id,
-      currentCity: truck.originCity?.name || '',
+      currentCity: truck.originCity?.name || "",
       destinationCity: truck.destinationCity?.name || null,
       availableDate: truck.availableFrom,
-      truckType: truck.truck?.truckType || '',
+      truckType: truck.truck?.truckType || "",
       maxWeight: truck.availableWeight ? Number(truck.availableWeight) : null,
       lengthM: truck.availableLength ? Number(truck.availableLength) : null,
       fullPartial: truck.fullPartial,
@@ -145,25 +150,29 @@ export async function GET(
     }));
 
     // FIX: Remove any - type inferred from findMatchingTrucks return type
-    const matchedTrucks = findMatchingTrucks(loadCriteria, trucksCriteria, minScore)
+    const matchedTrucks = findMatchingTrucks(
+      loadCriteria,
+      trucksCriteria,
+      minScore
+    )
       .slice(0, limit)
       .map((truck) => ({
         ...truck,
         // Include full truck object
-        ...trucks.find(t => t.id === truck.id),
+        ...trucks.find((t) => t.id === truck.id),
       }));
 
     return NextResponse.json({
       trucks: matchedTrucks,
       total: matchedTrucks.length,
-      exactMatches: matchedTrucks.filter(t => t.isExactMatch).length,
+      exactMatches: matchedTrucks.filter((t) => t.isExactMatch).length,
     });
-  // FIX: Use unknown type
+    // FIX: Use unknown type
   } catch (error: unknown) {
-    console.error('Matching trucks error:', error);
+    console.error("Matching trucks error:", error);
     // M7 FIX: Don't leak error details
     return NextResponse.json(
-      { error: 'Failed to find matching trucks' },
+      { error: "Failed to find matching trucks" },
       { status: 500 }
     );
   }

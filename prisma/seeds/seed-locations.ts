@@ -8,16 +8,20 @@
  *   DATABASE_URL="postgresql://..." npx tsx prisma/seeds/seed-locations.ts
  */
 
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
-import { ethiopianLocations, getTotalLocations, getUniqueRegions } from './ethiopian-locations';
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
+import {
+  ethiopianLocations,
+  getTotalLocations,
+  getUniqueRegions,
+} from "./ethiopian-locations";
 
 // Initialize Prisma with PostgreSQL adapter
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-  throw new Error('DATABASE_URL is not defined');
+  throw new Error("DATABASE_URL is not defined");
 }
 
 const pool = new Pool({ connectionString });
@@ -25,14 +29,14 @@ const adapter = new PrismaPg(pool);
 
 const prisma = new PrismaClient({
   adapter,
-  log: ['error'],
+  log: ["error"],
 });
 
 async function main() {
-  console.log('🌍 Starting Ethiopian Locations Seed...\n');
+  console.log("🌍 Starting Ethiopian Locations Seed...\n");
 
   // Clear existing locations (optional - comment out if you want to preserve existing data)
-  console.log('🗑️  Clearing existing locations...');
+  console.log("🗑️  Clearing existing locations...");
   const deletedCount = await prisma.ethiopianLocation.deleteMany({});
   console.log(`   Deleted ${deletedCount.count} existing locations\n`);
 
@@ -62,7 +66,9 @@ async function main() {
       });
 
       successCount++;
-      process.stdout.write(`\r✅ Seeded: ${successCount}/${getTotalLocations()} locations`);
+      process.stdout.write(
+        `\r✅ Seeded: ${successCount}/${getTotalLocations()} locations`
+      );
     } catch (error) {
       errorCount++;
       errors.push({
@@ -72,26 +78,26 @@ async function main() {
     }
   }
 
-  console.log('\n');
+  console.log("\n");
 
   // Summary
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('📈 SEEDING SUMMARY');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("📈 SEEDING SUMMARY");
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log(`✅ Successfully seeded: ${successCount} locations`);
   console.log(`❌ Errors: ${errorCount}`);
-  console.log('');
+  console.log("");
 
   if (errors.length > 0) {
-    console.log('❌ ERROR DETAILS:');
+    console.log("❌ ERROR DETAILS:");
     errors.forEach(({ name, error }) => {
       console.log(`   - ${name}: ${error}`);
     });
-    console.log('');
+    console.log("");
   }
 
   // Regional breakdown
-  console.log('📍 REGIONAL BREAKDOWN:');
+  console.log("📍 REGIONAL BREAKDOWN:");
   const regions = getUniqueRegions();
   for (const region of regions.sort()) {
     const count = await prisma.ethiopianLocation.count({
@@ -99,29 +105,29 @@ async function main() {
     });
     console.log(`   ${region.padEnd(25)} : ${count} locations`);
   }
-  console.log('');
+  console.log("");
 
   // Sample queries
-  console.log('🔍 SAMPLE QUERIES:');
+  console.log("🔍 SAMPLE QUERIES:");
   const totalCount = await prisma.ethiopianLocation.count();
   console.log(`   Total locations in DB: ${totalCount}`);
 
   const cities = await prisma.ethiopianLocation.count({
-    where: { type: 'CITY' },
+    where: { type: "CITY" },
   });
   console.log(`   Cities: ${cities}`);
 
   const towns = await prisma.ethiopianLocation.count({
-    where: { type: 'TOWN' },
+    where: { type: "TOWN" },
   });
   console.log(`   Towns: ${towns}`);
-  console.log('');
+  console.log("");
 
   // Show some example locations
-  console.log('📌 SAMPLE LOCATIONS:');
+  console.log("📌 SAMPLE LOCATIONS:");
   const samples = await prisma.ethiopianLocation.findMany({
     take: 5,
-    orderBy: { population: 'desc' },
+    orderBy: { population: "desc" },
     select: {
       name: true,
       nameEthiopic: true,
@@ -132,20 +138,20 @@ async function main() {
     },
   });
 
-  samples.forEach(loc => {
+  samples.forEach((loc) => {
     console.log(
-      `   ${loc.name.padEnd(20)} (${loc.nameEthiopic || 'N/A'.padEnd(10)}) - ${loc.region.padEnd(20)} [${loc.latitude}, ${loc.longitude}] Pop: ${loc.population?.toLocaleString() || 'N/A'}`
+      `   ${loc.name.padEnd(20)} (${loc.nameEthiopic || "N/A".padEnd(10)}) - ${loc.region.padEnd(20)} [${loc.latitude}, ${loc.longitude}] Pop: ${loc.population?.toLocaleString() || "N/A"}`
     );
   });
-  console.log('');
+  console.log("");
 
-  console.log('✨ Ethiopian Locations seeding completed successfully!');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+  console.log("✨ Ethiopian Locations seeding completed successfully!");
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 }
 
 main()
-  .catch(error => {
-    console.error('\n❌ Fatal error during seeding:');
+  .catch((error) => {
+    console.error("\n❌ Fatal error during seeding:");
     console.error(error);
     process.exit(1);
   })

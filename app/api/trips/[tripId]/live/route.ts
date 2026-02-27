@@ -7,10 +7,10 @@
  * Used for real-time tracking on the map.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { calculateDistanceKm } from '@/lib/geo';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { calculateDistanceKm } from "@/lib/geo";
 
 /**
  * GET /api/trips/[tripId]/live
@@ -69,29 +69,35 @@ export async function GET(
     });
 
     if (!trip) {
-      return NextResponse.json(
-        { error: 'Trip not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
     // Check permissions
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
-    const isDispatcher = session.role === 'DISPATCHER';
-    const isCarrier = session.role === 'CARRIER' && trip.carrierId === session.organizationId;
-    const isShipper = session.role === 'SHIPPER' && trip.shipperId === session.organizationId;
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
+    const isDispatcher = session.role === "DISPATCHER";
+    const isCarrier =
+      session.role === "CARRIER" && trip.carrierId === session.organizationId;
+    const isShipper =
+      session.role === "SHIPPER" && trip.shipperId === session.organizationId;
 
     if (!isAdmin && !isDispatcher && !isCarrier && !isShipper) {
       return NextResponse.json(
-        { error: 'You do not have permission to view this trip' },
+        { error: "You do not have permission to view this trip" },
         { status: 403 }
       );
     }
 
     // For shippers, only allow access when trip is IN_TRANSIT (per spec)
-    if (isShipper && trip.status !== 'IN_TRANSIT' && trip.status !== 'DELIVERED' && trip.status !== 'COMPLETED') {
+    if (
+      isShipper &&
+      trip.status !== "IN_TRANSIT" &&
+      trip.status !== "DELIVERED" &&
+      trip.status !== "COMPLETED"
+    ) {
       return NextResponse.json(
-        { error: 'Live tracking is only available when the trip is in transit' },
+        {
+          error: "Live tracking is only available when the trip is in transit",
+        },
         { status: 403 }
       );
     }
@@ -99,7 +105,7 @@ export async function GET(
     // Get the latest GPS position
     const latestPosition = await db.gpsPosition.findFirst({
       where: { tripId },
-      orderBy: { timestamp: 'desc' },
+      orderBy: { timestamp: "desc" },
       select: {
         latitude: true,
         longitude: true,
@@ -112,7 +118,7 @@ export async function GET(
     // Calculate ETA if possible
     let etaMinutes: number | null = null;
     if (
-      trip.status === 'IN_TRANSIT' &&
+      trip.status === "IN_TRANSIT" &&
       trip.currentLat &&
       trip.currentLng &&
       trip.deliveryLat &&
@@ -126,20 +132,22 @@ export async function GET(
         Number(trip.deliveryLng)
       );
       // Use actual speed if available, otherwise assume 50 km/h
-      const avgSpeedKmh = latestPosition?.speed ? Number(latestPosition.speed) : 50;
+      const avgSpeedKmh = latestPosition?.speed
+        ? Number(latestPosition.speed)
+        : 50;
       etaMinutes = Math.round((remainingDistanceKm / avgSpeedKmh) * 60);
     }
 
     // Determine GPS signal status
-    let gpsStatus: 'active' | 'stale' | 'offline' = 'offline';
+    let gpsStatus: "active" | "stale" | "offline" = "offline";
     if (trip.currentLocationUpdatedAt) {
       const lastUpdateMs = Date.now() - trip.currentLocationUpdatedAt.getTime();
       if (lastUpdateMs < 5 * 60 * 1000) {
         // Less than 5 minutes
-        gpsStatus = 'active';
+        gpsStatus = "active";
       } else if (lastUpdateMs < 30 * 60 * 1000) {
         // Less than 30 minutes
-        gpsStatus = 'stale';
+        gpsStatus = "stale";
       }
     }
 
@@ -148,13 +156,20 @@ export async function GET(
       status: trip.status,
       trackingEnabled: trip.trackingEnabled,
       gpsStatus,
-      currentLocation: trip.currentLat && trip.currentLng ? {
-        latitude: Number(trip.currentLat),
-        longitude: Number(trip.currentLng),
-        speed: latestPosition?.speed ? Number(latestPosition.speed) : null,
-        heading: latestPosition?.heading ? Number(latestPosition.heading) : null,
-        updatedAt: trip.currentLocationUpdatedAt?.toISOString() || null,
-      } : null,
+      currentLocation:
+        trip.currentLat && trip.currentLng
+          ? {
+              latitude: Number(trip.currentLat),
+              longitude: Number(trip.currentLng),
+              speed: latestPosition?.speed
+                ? Number(latestPosition.speed)
+                : null,
+              heading: latestPosition?.heading
+                ? Number(latestPosition.heading)
+                : null,
+              updatedAt: trip.currentLocationUpdatedAt?.toISOString() || null,
+            }
+          : null,
       pickup: {
         latitude: trip.pickupLat ? Number(trip.pickupLat) : null,
         longitude: trip.pickupLng ? Number(trip.pickupLng) : null,
@@ -168,7 +183,9 @@ export async function GET(
         address: trip.deliveryAddress,
       },
       distance: {
-        estimated: trip.estimatedDistanceKm ? Number(trip.estimatedDistanceKm) : null,
+        estimated: trip.estimatedDistanceKm
+          ? Number(trip.estimatedDistanceKm)
+          : null,
         actual: trip.actualDistanceKm ? Number(trip.actualDistanceKm) : null,
       },
       timing: {
@@ -188,11 +205,10 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Get live position error:', error);
+    console.error("Get live position error:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch live position' },
+      { error: "Failed to fetch live position" },
       { status: 500 }
     );
   }
 }
-

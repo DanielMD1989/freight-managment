@@ -7,10 +7,10 @@
  * CSRF protection, rate limiting, and other security features.
  */
 
-import { NextRequest } from 'next/server';
-import { SignJWT } from 'jose';
-import { db } from '@/lib/db';
-import { hashPassword } from '@/lib/auth';
+import { NextRequest } from "next/server";
+import { SignJWT } from "jose";
+import { db } from "@/lib/db";
+import { hashPassword } from "@/lib/auth";
 
 /**
  * Create a mock NextRequest object
@@ -23,8 +23,8 @@ export function createMockRequest(options: {
   cookies?: Record<string, string>;
 }): NextRequest {
   const {
-    method = 'GET',
-    url = 'http://localhost:3000',
+    method = "GET",
+    url = "http://localhost:3000",
     headers = {},
     body,
     cookies = {},
@@ -53,7 +53,9 @@ export async function generateTestJWT(payload: {
   role: string;
   organizationId?: string;
 }): Promise<string> {
-  const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'test-secret');
+  const secret = new TextEncoder().encode(
+    process.env.JWT_SECRET || "test-secret"
+  );
 
   const token = await new SignJWT({
     userId: payload.userId,
@@ -61,9 +63,9 @@ export async function generateTestJWT(payload: {
     role: payload.role,
     organizationId: payload.organizationId,
   })
-    .setProtectedHeader({ alg: 'HS256' })
+    .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime('1h')
+    .setExpirationTime("1h")
     .sign(secret);
 
   return token;
@@ -76,7 +78,7 @@ export async function createTestUser(data: {
   email: string;
   password: string;
   name: string;
-  role: 'ADMIN' | 'CARRIER' | 'SHIPPER';
+  role: "ADMIN" | "CARRIER" | "SHIPPER";
   organizationId?: string;
 }) {
   const hashedPassword = await hashPassword(data.password);
@@ -100,15 +102,21 @@ export async function createTestUser(data: {
  */
 export async function createTestOrganization(data: {
   name: string;
-  type: 'SHIPPER' | 'CARRIER_COMPANY' | 'CARRIER_INDIVIDUAL' | 'CARRIER_ASSOCIATION' | 'FLEET_OWNER' | 'LOGISTICS_AGENT';
-  verificationStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  type:
+    | "SHIPPER"
+    | "CARRIER_COMPANY"
+    | "CARRIER_INDIVIDUAL"
+    | "CARRIER_ASSOCIATION"
+    | "FLEET_OWNER"
+    | "LOGISTICS_AGENT";
+  verificationStatus?: "PENDING" | "APPROVED" | "REJECTED";
 }) {
   const org = await db.organization.create({
     data: {
       name: data.name,
       type: data.type,
-      contactEmail: `${data.name.toLowerCase().replace(/\s+/g, '-')}@test.com`,
-      contactPhone: '+251900000000',
+      contactEmail: `${data.name.toLowerCase().replace(/\s+/g, "-")}@test.com`,
+      contactPhone: "+251900000000",
     },
   });
 
@@ -154,17 +162,15 @@ export async function createAuthenticatedRequest(options: {
   };
 
   if (options.csrfToken) {
-    headers['X-CSRF-Token'] = options.csrfToken;
+    headers["X-CSRF-Token"] = options.csrfToken;
   }
 
   return createMockRequest({
-    method: options.method || 'GET',
-    url: options.url || 'http://localhost:3000',
+    method: options.method || "GET",
+    url: options.url || "http://localhost:3000",
     headers,
     body: options.body,
-    cookies: options.csrfToken
-      ? { 'csrf-token': options.csrfToken }
-      : {},
+    cookies: options.csrfToken ? { "csrf-token": options.csrfToken } : {},
   });
 }
 
@@ -172,9 +178,9 @@ export async function createAuthenticatedRequest(options: {
  * Test security headers in response
  */
 export function expectSecurityHeaders(response: Response) {
-  expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');
-  expect(response.headers.get('X-Frame-Options')).toBe('DENY');
-  expect(response.headers.get('X-XSS-Protection')).toBe('1; mode=block');
+  expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+  expect(response.headers.get("X-Frame-Options")).toBe("DENY");
+  expect(response.headers.get("X-XSS-Protection")).toBe("1; mode=block");
 }
 
 /**
@@ -203,10 +209,10 @@ export const XSS_PAYLOADS = [
  * Test for path traversal vulnerability
  */
 export const PATH_TRAVERSAL_PAYLOADS = [
-  '../../../etc/passwd',
-  '..\\..\\..\\windows\\system32\\config\\sam',
-  '....//....//....//etc/passwd',
-  '..%2F..%2F..%2Fetc%2Fpasswd',
+  "../../../etc/passwd",
+  "..\\..\\..\\windows\\system32\\config\\sam",
+  "....//....//....//etc/passwd",
+  "..%2F..%2F..%2Fetc%2Fpasswd",
 ];
 
 /**
@@ -227,9 +233,9 @@ export async function testRateLimit(
   // Make requests up to limit + 5
   for (let i = 0; i < limit + 5; i++) {
     const request = createMockRequest({
-      method: 'POST',
-      url: 'http://localhost:3000/api/test',
-      headers: { 'X-Forwarded-For': '192.168.1.100' },
+      method: "POST",
+      url: "http://localhost:3000/api/test",
+      headers: { "X-Forwarded-For": "192.168.1.100" },
     });
 
     const response = await handler(request);
@@ -261,30 +267,30 @@ export async function testCSRFProtection(
   withoutTokenFailed: boolean;
   mismatchedTokenFailed: boolean;
 }> {
-  const csrfToken = 'test-csrf-token-123';
+  const csrfToken = "test-csrf-token-123";
 
   // Test 1: Request with valid CSRF token
   const validRequest = createMockRequest({
-    method: 'POST',
-    url: 'http://localhost:3000/api/test',
-    headers: { 'X-CSRF-Token': csrfToken },
-    cookies: { 'csrf-token': csrfToken },
+    method: "POST",
+    url: "http://localhost:3000/api/test",
+    headers: { "X-CSRF-Token": csrfToken },
+    cookies: { "csrf-token": csrfToken },
   });
   const validResponse = await handler(validRequest);
 
   // Test 2: Request without CSRF token
   const noTokenRequest = createMockRequest({
-    method: 'POST',
-    url: 'http://localhost:3000/api/test',
+    method: "POST",
+    url: "http://localhost:3000/api/test",
   });
   const noTokenResponse = await handler(noTokenRequest);
 
   // Test 3: Request with mismatched CSRF token
   const mismatchedRequest = createMockRequest({
-    method: 'POST',
-    url: 'http://localhost:3000/api/test',
-    headers: { 'X-CSRF-Token': 'wrong-token' },
-    cookies: { 'csrf-token': csrfToken },
+    method: "POST",
+    url: "http://localhost:3000/api/test",
+    headers: { "X-CSRF-Token": "wrong-token" },
+    cookies: { "csrf-token": csrfToken },
   });
   const mismatchedResponse = await handler(mismatchedRequest);
 

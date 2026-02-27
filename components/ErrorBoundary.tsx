@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Error Boundary Component
@@ -7,7 +7,7 @@
  * Sprint 14 - Phase 6: Polish & Optimization
  */
 
-import React, { Component, ReactNode } from 'react';
+import React, { Component, ReactNode } from "react";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -20,7 +20,10 @@ interface ErrorBoundaryState {
   errorInfo: React.ErrorInfo | null;
 }
 
-export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+export default class ErrorBoundary extends Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = {
@@ -36,7 +39,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // Log error to console in development
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
 
     this.setState({
       error,
@@ -64,12 +67,12 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
 
       // Default fallback UI
       return (
-        <div className="min-h-screen bg-[#f0fdfa] flex items-center justify-center p-6">
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-2xl w-full border border-[#064d51]/15">
-            <div className="flex items-center mb-6">
-              <div className="bg-red-100 rounded-full p-3 mr-4">
+        <div className="flex min-h-screen items-center justify-center bg-[#f0fdfa] p-6">
+          <div className="w-full max-w-2xl rounded-lg border border-[#064d51]/15 bg-white p-8 shadow-lg">
+            <div className="mb-6 flex items-center">
+              <div className="mr-4 rounded-full bg-red-100 p-3">
                 <svg
-                  className="w-8 h-8 text-red-600"
+                  className="h-8 w-8 text-red-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -87,23 +90,26 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
               </h2>
             </div>
 
-            <p className="text-[#064d51]/70 mb-6">
-              We apologize for the inconvenience. An unexpected error occurred while loading this page.
+            <p className="mb-6 text-[#064d51]/70">
+              We apologize for the inconvenience. An unexpected error occurred
+              while loading this page.
             </p>
 
             {/* Error details (only in development) */}
-            {process.env.NODE_ENV === 'development' && this.state.error && (
-              <div className="bg-[#f0fdfa] rounded-lg p-4 mb-6 overflow-auto border border-[#064d51]/10">
-                <h3 className="text-sm font-semibold text-[#064d51] mb-2">Error Details:</h3>
-                <pre className="text-xs text-red-600 whitespace-pre-wrap">
+            {process.env.NODE_ENV === "development" && this.state.error && (
+              <div className="mb-6 overflow-auto rounded-lg border border-[#064d51]/10 bg-[#f0fdfa] p-4">
+                <h3 className="mb-2 text-sm font-semibold text-[#064d51]">
+                  Error Details:
+                </h3>
+                <pre className="text-xs whitespace-pre-wrap text-red-600">
                   {this.state.error.toString()}
                 </pre>
                 {this.state.errorInfo && (
                   <details className="mt-2">
-                    <summary className="text-xs font-medium text-[#064d51]/80 cursor-pointer hover:text-[#064d51]">
+                    <summary className="cursor-pointer text-xs font-medium text-[#064d51]/80 hover:text-[#064d51]">
                       Component Stack
                     </summary>
-                    <pre className="text-xs text-[#064d51]/70 mt-2 whitespace-pre-wrap">
+                    <pre className="mt-2 text-xs whitespace-pre-wrap text-[#064d51]/70">
                       {this.state.errorInfo.componentStack}
                     </pre>
                   </details>
@@ -114,13 +120,13 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
             <div className="flex gap-4">
               <button
                 onClick={this.handleReset}
-                className="px-6 py-2 bg-[#1e9c99] text-white rounded-md hover:bg-[#064d51] transition-colors font-medium"
+                className="rounded-md bg-[#1e9c99] px-6 py-2 font-medium text-white transition-colors hover:bg-[#064d51]"
               >
                 Try Again
               </button>
               <button
-                onClick={() => window.location.href = '/'}
-                className="px-6 py-2 bg-[#064d51]/10 text-[#064d51]/80 rounded-md hover:bg-[#064d51]/20 transition-colors font-medium"
+                onClick={() => (window.location.href = "/")}
+                className="rounded-md bg-[#064d51]/10 px-6 py-2 font-medium text-[#064d51]/80 transition-colors hover:bg-[#064d51]/20"
               >
                 Go to Home
               </button>
@@ -128,7 +134,8 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
 
             {/* Help text */}
             <p className="mt-6 text-sm text-[#064d51]/60">
-              If this problem persists, please contact support or try refreshing the page.
+              If this problem persists, please contact support or try refreshing
+              the page.
             </p>
           </div>
         </div>

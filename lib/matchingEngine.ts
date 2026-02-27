@@ -20,9 +20,9 @@
  * Sprint 8 - Story 8.4: Truck/Load Matching Algorithm
  */
 
-import { db } from '@/lib/db';
-import { Load, TruckPosting, Truck, EthiopianLocation } from '@prisma/client';
-import { calculateDistanceKm } from '@/lib/geo';
+import { db } from "@/lib/db";
+import { Load, TruckPosting, Truck, EthiopianLocation } from "@prisma/client";
+import { calculateDistanceKm } from "@/lib/geo";
 
 interface MatchScore {
   score: number; // 0-100
@@ -33,7 +33,7 @@ interface MatchScore {
     deadheadScore: number; // 0-10
   };
   details: {
-    routeMatch: 'exact' | 'destination_flexible' | 'nearby';
+    routeMatch: "exact" | "destination_flexible" | "nearby";
     timeOverlap: boolean;
     capacityFit: boolean;
     deadheadKm?: number;
@@ -77,7 +77,7 @@ function calculateRouteScore(
   truckDest: EthiopianLocation | null,
   loadPickup: EthiopianLocation,
   loadDelivery: EthiopianLocation
-): { score: number; match: 'exact' | 'destination_flexible' | 'nearby' } {
+): { score: number; match: "exact" | "destination_flexible" | "nearby" } {
   // Check origin match (truck's current location should be near load's pickup)
   const originDistance = calculateDistanceKm(
     Number(truckOrigin.latitude),
@@ -88,19 +88,19 @@ function calculateRouteScore(
 
   // If truck is too far from pickup, score 0
   if (originDistance > 200) {
-    return { score: 0, match: 'nearby' };
+    return { score: 0, match: "nearby" };
   }
 
   // If truck has no destination preference (flexible routing)
   if (!truckDest) {
     // Origin nearby (within 50km): 35 points
     if (originDistance <= 50) {
-      return { score: 35, match: 'destination_flexible' };
+      return { score: 35, match: "destination_flexible" };
     }
     // Origin somewhat far (50-200km): scaled score
     return {
       score: Math.max(0, 35 - (originDistance - 50) / 5),
-      match: 'destination_flexible',
+      match: "destination_flexible",
     };
   }
 
@@ -114,25 +114,25 @@ function calculateRouteScore(
 
   // Exact match (same origin and destination cities)
   if (truckOrigin.id === loadPickup.id && truckDest.id === loadDelivery.id) {
-    return { score: 40, match: 'exact' };
+    return { score: 40, match: "exact" };
   }
 
   // Near match (both origin and dest within 50km)
   if (originDistance <= 50 && destDistance <= 50) {
-    return { score: 38, match: 'nearby' };
+    return { score: 38, match: "nearby" };
   }
 
   // Good match (origin close, dest reasonable)
   if (originDistance <= 100 && destDistance <= 100) {
-    return { score: 25, match: 'nearby' };
+    return { score: 25, match: "nearby" };
   }
 
   // Acceptable match (both within 200km)
   if (originDistance <= 200 && destDistance <= 200) {
-    return { score: 15, match: 'nearby' };
+    return { score: 15, match: "nearby" };
   }
 
-  return { score: 0, match: 'nearby' };
+  return { score: 0, match: "nearby" };
 }
 
 /**
@@ -167,7 +167,10 @@ function calculateTimeScore(
 
   // If truck is available for the entire load duration
   const loadDuration = loadEnd - loadStart;
-  if (truckStart <= loadStart && (truckEnd === Infinity || truckEnd >= loadEnd)) {
+  if (
+    truckStart <= loadStart &&
+    (truckEnd === Infinity || truckEnd >= loadEnd)
+  ) {
     return { score: 30, overlap: true };
   }
 
@@ -386,13 +389,13 @@ export async function findMatchingLoadsForTruck(
   });
 
   if (!truckPosting) {
-    throw new Error('Truck posting not found');
+    throw new Error("Truck posting not found");
   }
 
   // Fetch all POSTED loads with location details
   const loads = await db.load.findMany({
     where: {
-      status: 'POSTED',
+      status: "POSTED",
       pickupCityId: { not: null },
       deliveryCityId: { not: null },
     },
@@ -413,8 +416,12 @@ export async function findMatchingLoadsForTruck(
   const matches: LoadMatch[] = loads
     .filter((load) => load.pickupLocation && load.deliveryLocation)
     .map((load) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Prisma includes differ from strict LoadMatch type
       load: load as any,
-      matchScore: calculateMatchScore(truckPosting, load as any),
+      matchScore: calculateMatchScore(
+        truckPosting,
+        load as Parameters<typeof calculateMatchScore>[1]
+      ),
     }))
     .filter((match) => match.matchScore.score >= minScore)
     .sort((a, b) => b.matchScore.score - a.matchScore.score)
@@ -446,13 +453,13 @@ export async function findMatchingTrucksForLoad(
   });
 
   if (!load || !load.pickupLocation || !load.deliveryLocation) {
-    throw new Error('Load not found or missing location details');
+    throw new Error("Load not found or missing location details");
   }
 
   // Fetch all ACTIVE truck postings
   const truckPostings = await db.truckPosting.findMany({
     where: {
-      status: 'ACTIVE',
+      status: "ACTIVE",
     },
     include: {
       truck: true,
@@ -465,7 +472,10 @@ export async function findMatchingTrucksForLoad(
   const matches: TruckMatch[] = truckPostings
     .map((posting) => ({
       posting,
-      matchScore: calculateMatchScore(posting, load as any),
+      matchScore: calculateMatchScore(
+        posting,
+        load as Parameters<typeof calculateMatchScore>[1]
+      ),
     }))
     .filter((match) => match.matchScore.score >= minScore)
     .sort((a, b) => b.matchScore.score - a.matchScore.score)
@@ -484,15 +494,17 @@ export async function findMatchingTrucksForLoad(
  * @param load - The load being matched
  * @returns Enhanced matches with road distances
  */
-export async function enhanceMatchesWithRoadDistances<T extends TruckMatch | LoadMatch>(
+export async function enhanceMatchesWithRoadDistances<
+  T extends TruckMatch | LoadMatch,
+>(
   matches: T[],
   load: {
-    pickupLocation: { latitude: number | any; longitude: number | any };
-    deliveryLocation: { latitude: number | any; longitude: number | any };
+    pickupLocation: { latitude: number; longitude: number };
+    deliveryLocation: { latitude: number; longitude: number };
   }
 ): Promise<T[]> {
   // Dynamically import to avoid circular dependencies
-  const { calculateRoadDistance } = await import('@/lib/googleRoutes');
+  const { calculateRoadDistance } = await import("@/lib/googleRoutes");
 
   const enhanced = await Promise.all(
     matches.map(async (match) => {
@@ -501,7 +513,7 @@ export async function enhanceMatchesWithRoadDistances<T extends TruckMatch | Loa
         let originLat: number;
         let originLng: number;
 
-        if ('posting' in match) {
+        if ("posting" in match) {
           // TruckMatch
           originLat = Number(match.posting.originCity.latitude);
           originLng = Number(match.posting.originCity.longitude);
@@ -528,12 +540,12 @@ export async function enhanceMatchesWithRoadDistances<T extends TruckMatch | Loa
             ...match.matchScore.details,
             deadheadKm: dhOrigin.distanceKm,
             roadDistanceSource: dhOrigin.source,
-          } as any,
+          } as typeof match.matchScore.details,
         };
 
         return updatedMatch;
       } catch (error) {
-        console.error('Error calculating road distance:', error);
+        console.error("Error calculating road distance:", error);
         return match; // Return original if calculation fails
       }
     })
@@ -594,56 +606,56 @@ interface MatchResult {
 // Distances in kilometers (approximate road distances)
 // ============================================================================
 const ETHIOPIAN_CITY_DISTANCES: Record<string, Record<string, number>> = {
-  'addis ababa': {
-    'addis ababa': 0,
-    'dire dawa': 450,
-    'djibouti': 910,
-    'mekelle': 780,
-    'mekele': 780,
-    'hawassa': 275,
-    'bahir dar': 565,
-    'gondar': 740,
-    'jimma': 350,
-    'adama': 100,
-    'nazret': 100,
+  "addis ababa": {
+    "addis ababa": 0,
+    "dire dawa": 450,
+    djibouti: 910,
+    mekelle: 780,
+    mekele: 780,
+    hawassa: 275,
+    "bahir dar": 565,
+    gondar: 740,
+    jimma: 350,
+    adama: 100,
+    nazret: 100,
   },
-  'dire dawa': {
-    'dire dawa': 0,
-    'addis ababa': 450,
-    'djibouti': 310,
-    'mekelle': 850,
-    'mekele': 850,
-    'hawassa': 725,
-    'harar': 55,
+  "dire dawa": {
+    "dire dawa": 0,
+    "addis ababa": 450,
+    djibouti: 310,
+    mekelle: 850,
+    mekele: 850,
+    hawassa: 725,
+    harar: 55,
   },
-  'djibouti': {
-    'djibouti': 0,
-    'addis ababa': 910,
-    'dire dawa': 310,
-    'mekelle': 1100,
-    'mekele': 1100,
+  djibouti: {
+    djibouti: 0,
+    "addis ababa": 910,
+    "dire dawa": 310,
+    mekelle: 1100,
+    mekele: 1100,
   },
-  'mekelle': {
-    'mekelle': 0,
-    'mekele': 0,
-    'addis ababa': 780,
-    'dire dawa': 850,
-    'djibouti': 1100,
-    'gondar': 440,
-    'bahir dar': 570,
+  mekelle: {
+    mekelle: 0,
+    mekele: 0,
+    "addis ababa": 780,
+    "dire dawa": 850,
+    djibouti: 1100,
+    gondar: 440,
+    "bahir dar": 570,
   },
-  'mekele': {
-    'mekele': 0,
-    'mekelle': 0,
-    'addis ababa': 780,
-    'dire dawa': 850,
-    'djibouti': 1100,
+  mekele: {
+    mekele: 0,
+    mekelle: 0,
+    "addis ababa": 780,
+    "dire dawa": 850,
+    djibouti: 1100,
   },
-  'hawassa': {
-    'hawassa': 0,
-    'addis ababa': 275,
-    'dire dawa': 725,
-    'djibouti': 1000,
+  hawassa: {
+    hawassa: 0,
+    "addis ababa": 275,
+    "dire dawa": 725,
+    djibouti: 1000,
   },
 };
 
@@ -659,7 +671,7 @@ function getEthiopianCityDistance(city1: string, city2: string): number | null {
   if (c1 === c2) return 0;
 
   // Handle spelling variations
-  const normalize = (s: string) => s.replace(/e+l+e?$/i, 'elle'); // Mekele -> Mekelle
+  const normalize = (s: string) => s.replace(/e+l+e?$/i, "elle"); // Mekele -> Mekelle
   const n1 = normalize(c1);
   const n2 = normalize(c2);
 
@@ -694,7 +706,7 @@ function isSameCity(city1: string, city2: string): boolean {
   if (c1 === c2) return true;
 
   // Handle Mekelle/Mekele variations
-  const simplify = (s: string) => s.replace(/(.)\1+/g, '$1');
+  const simplify = (s: string) => s.replace(/(.)\1+/g, "$1");
   return simplify(c1) === simplify(c2);
 }
 
@@ -709,8 +721,8 @@ function isSameCity(city1: string, city2: string): boolean {
  * These groups are NOT compatible with each other
  */
 const TRUCK_TYPE_GROUPS: Record<string, string[]> = {
-  'GENERAL': ['DRY_VAN', 'FLATBED', 'CONTAINER', 'VAN'],
-  'COLD_CHAIN': ['REFRIGERATED', 'REEFER'],
+  GENERAL: ["DRY_VAN", "FLATBED", "CONTAINER", "VAN"],
+  COLD_CHAIN: ["REFRIGERATED", "REEFER"],
 };
 
 /**
@@ -720,12 +732,12 @@ const TRUCK_TYPE_GROUPS: Record<string, string[]> = {
 function checkTruckTypeCompatibility(
   loadType: string,
   truckType: string
-): 'exact' | 'compatible' | 'incompatible' {
-  const loadNorm = loadType?.toUpperCase() || '';
-  const truckNorm = truckType?.toUpperCase() || '';
+): "exact" | "compatible" | "incompatible" {
+  const loadNorm = loadType?.toUpperCase() || "";
+  const truckNorm = truckType?.toUpperCase() || "";
 
   // Exact match
-  if (loadNorm === truckNorm) return 'exact';
+  if (loadNorm === truckNorm) return "exact";
 
   // Find which group each type belongs to
   let loadGroup: string | null = null;
@@ -738,11 +750,11 @@ function checkTruckTypeCompatibility(
 
   // Same group = compatible
   if (loadGroup && truckGroup && loadGroup === truckGroup) {
-    return 'compatible';
+    return "compatible";
   }
 
   // Different groups or unknown = incompatible
-  return 'incompatible';
+  return "incompatible";
 }
 
 // ============================================================================
@@ -853,9 +865,12 @@ function calcLoadTruckMatchScore(
   // ============================================
   // HARD FILTER 1: Truck Type Compatibility
   // ============================================
-  const typeCompat = checkTruckTypeCompatibility(load.truckType, truck.truckType);
+  const typeCompat = checkTruckTypeCompatibility(
+    load.truckType,
+    truck.truckType
+  );
 
-  if (typeCompat === 'incompatible') {
+  if (typeCompat === "incompatible") {
     return {
       score: 0,
       matchReasons: [],
@@ -869,7 +884,10 @@ function calcLoadTruckMatchScore(
   // ============================================
   // HARD FILTER 2: DH-O Distance
   // ============================================
-  const dhOriginKm = getEthiopianCityDistance(truck.currentCity, load.pickupCity);
+  const dhOriginKm = getEthiopianCityDistance(
+    truck.currentCity,
+    load.pickupCity
+  );
 
   // If we can't determine distance and cities are different, assume too far
   if (dhOriginKm === null && !isSameCity(truck.currentCity, load.pickupCity)) {
@@ -920,28 +938,29 @@ function calcLoadTruckMatchScore(
     truck.currentCity,
     truck.destinationCity || null
   );
-  if (routeScore === 100) reasons.push('Perfect route match');
-  else if (routeScore >= 60) reasons.push('Good route alignment');
+  if (routeScore === 100) reasons.push("Perfect route match");
+  else if (routeScore >= 60) reasons.push("Good route alignment");
 
   // DH-O score (30%)
   const dhScore = calculateDhOriginScore(actualDhKm);
   if (actualDhKm === 0) reasons.push(`Same city pickup`);
   else if (actualDhKm <= 50) reasons.push(`Nearby: ${actualDhKm}km to pickup`);
-  else if (actualDhKm <= 100) reasons.push(`Acceptable: ${actualDhKm}km to pickup`);
+  else if (actualDhKm <= 100)
+    reasons.push(`Acceptable: ${actualDhKm}km to pickup`);
   else reasons.push(`Far: ${actualDhKm}km to pickup`);
 
   // Capacity score (20%)
   const capacityScore = calcCapacityMatchScore(load.weight, truck.maxWeight);
-  if (capacityScore === 100) reasons.push('Optimal capacity utilization');
-  else if (capacityScore === 0) reasons.push('Insufficient capacity');
+  if (capacityScore === 100) reasons.push("Optimal capacity utilization");
+  else if (capacityScore === 0) reasons.push("Insufficient capacity");
 
   // Time score (20%)
   const timeScore = calcTimeMatchScore(load.pickupDate, truck.availableDate);
-  if (timeScore === 100) reasons.push('Available on time');
-  else if (timeScore >= 50) reasons.push('Available soon');
+  if (timeScore === 100) reasons.push("Available on time");
+  else if (timeScore >= 50) reasons.push("Available soon");
 
   // Truck type bonus/info
-  if (typeCompat === 'exact') {
+  if (typeCompat === "exact") {
     reasons.push(`Exact ${truck.truckType} match`);
   } else {
     reasons.push(`Compatible: ${truck.truckType} for ${load.truckType}`);
@@ -949,17 +968,15 @@ function calcLoadTruckMatchScore(
 
   // Calculate final score: Route 30%, DH-O 30%, Capacity 20%, Time 20%
   const finalScore = Math.round(
-    routeScore * 0.30 +
-    dhScore * 0.30 +
-    capacityScore * 0.20 +
-    timeScore * 0.20
+    routeScore * 0.3 + dhScore * 0.3 + capacityScore * 0.2 + timeScore * 0.2
   );
 
   // Exact match: high score + exact type + same city
-  const isExactMatch = finalScore >= 85 && typeCompat === 'exact' && actualDhKm <= 50;
+  const isExactMatch =
+    finalScore >= 85 && typeCompat === "exact" && actualDhKm <= 50;
 
   if (isExactMatch) {
-    reasons.unshift('⭐ Excellent Match');
+    reasons.unshift("⭐ Excellent Match");
   }
 
   return {
@@ -984,9 +1001,16 @@ export function findMatchingLoads<T extends LoadMatchCriteria>(
   truck: TruckMatchCriteria,
   loads: T[],
   minScore: number = 50
-): Array<T & { matchScore: number; matchReasons: string[]; isExactMatch: boolean; dhOriginKm: number }> {
+): Array<
+  T & {
+    matchScore: number;
+    matchReasons: string[];
+    isExactMatch: boolean;
+    dhOriginKm: number;
+  }
+> {
   return loads
-    .map(load => {
+    .map((load) => {
       const match = calcLoadTruckMatchScore(load, truck);
       return {
         ...load,
@@ -998,9 +1022,17 @@ export function findMatchingLoads<T extends LoadMatchCriteria>(
         _excludeReason: match.excludeReason,
       };
     })
-    .filter(load => !load._excluded && load.matchScore >= minScore)
+    .filter((load) => !load._excluded && load.matchScore >= minScore)
     .sort((a, b) => b.matchScore - a.matchScore)
-    .map(({ _excluded, _excludeReason, ...rest }) => rest as T & { matchScore: number; matchReasons: string[]; isExactMatch: boolean; dhOriginKm: number });
+    .map(
+      ({ _excluded, _excludeReason, ...rest }) =>
+        rest as T & {
+          matchScore: number;
+          matchReasons: string[];
+          isExactMatch: boolean;
+          dhOriginKm: number;
+        }
+    );
 }
 
 /**
@@ -1016,9 +1048,16 @@ export function findMatchingTrucks<T extends TruckMatchCriteria>(
   load: LoadMatchCriteria,
   trucks: T[],
   minScore: number = 50
-): Array<T & { matchScore: number; matchReasons: string[]; isExactMatch: boolean; dhOriginKm: number }> {
+): Array<
+  T & {
+    matchScore: number;
+    matchReasons: string[];
+    isExactMatch: boolean;
+    dhOriginKm: number;
+  }
+> {
   return trucks
-    .map(truck => {
+    .map((truck) => {
       const match = calcLoadTruckMatchScore(load, truck);
       return {
         ...truck,
@@ -1030,7 +1069,15 @@ export function findMatchingTrucks<T extends TruckMatchCriteria>(
         _excludeReason: match.excludeReason,
       };
     })
-    .filter(truck => !truck._excluded && truck.matchScore >= minScore)
+    .filter((truck) => !truck._excluded && truck.matchScore >= minScore)
     .sort((a, b) => b.matchScore - a.matchScore)
-    .map(({ _excluded, _excludeReason, ...rest }) => rest as T & { matchScore: number; matchReasons: string[]; isExactMatch: boolean; dhOriginKm: number });
+    .map(
+      ({ _excluded, _excludeReason, ...rest }) =>
+        rest as T & {
+          matchScore: number;
+          matchReasons: string[];
+          isExactMatch: boolean;
+          dhOriginKm: number;
+        }
+    );
 }

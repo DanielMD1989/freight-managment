@@ -7,9 +7,9 @@
  * Based on MAP_GPS_USER_STORIES.md specification.
  */
 
-import { db } from './db';
-import { Trip, TripStatus } from '@prisma/client';
-import crypto from 'crypto';
+import { db } from "./db";
+import { Trip, TripStatus } from "@prisma/client";
+import crypto from "crypto";
 
 /**
  * Create a trip when a load is assigned to a truck
@@ -68,7 +68,7 @@ export async function createTripForLoad(
         truckId,
         carrierId: truck.carrierId,
         shipperId: load.shipperId,
-        status: 'ASSIGNED',
+        status: "ASSIGNED",
 
         // Pickup location from load
         pickupLat: load.originLat || load.pickupLocation?.latitude || null,
@@ -77,8 +77,10 @@ export async function createTripForLoad(
         pickupCity: load.pickupCity || load.pickupLocation?.name || null,
 
         // Delivery location from load
-        deliveryLat: load.destinationLat || load.deliveryLocation?.latitude || null,
-        deliveryLng: load.destinationLon || load.deliveryLocation?.longitude || null,
+        deliveryLat:
+          load.destinationLat || load.deliveryLocation?.latitude || null,
+        deliveryLng:
+          load.destinationLon || load.deliveryLocation?.longitude || null,
         deliveryAddress: load.deliveryAddress,
         deliveryCity: load.deliveryCity || load.deliveryLocation?.name || null,
 
@@ -93,7 +95,7 @@ export async function createTripForLoad(
 
     return trip;
   } catch (error) {
-    console.error('Failed to create trip:', error);
+    console.error("Failed to create trip:", error);
     return null;
   }
 }
@@ -122,7 +124,9 @@ export async function updateTripStatus(
 
     // Validate status transition
     if (!isValidStatusTransition(trip.status, newStatus)) {
-      throw new Error(`Invalid status transition from ${trip.status} to ${newStatus}`);
+      throw new Error(
+        `Invalid status transition from ${trip.status} to ${newStatus}`
+      );
     }
 
     // Build update data with timestamps
@@ -140,16 +144,16 @@ export async function updateTripStatus(
     };
 
     switch (newStatus) {
-      case 'PICKUP_PENDING':
+      case "PICKUP_PENDING":
         updateData.startedAt = new Date();
         break;
-      case 'IN_TRANSIT':
+      case "IN_TRANSIT":
         updateData.pickedUpAt = new Date();
         break;
-      case 'DELIVERED':
+      case "DELIVERED":
         updateData.deliveredAt = new Date();
         break;
-      case 'COMPLETED':
+      case "COMPLETED":
         updateData.completedAt = new Date();
         updateData.trackingEnabled = false; // GPS stops on completion
         break;
@@ -165,7 +169,7 @@ export async function updateTripStatus(
 
     return updatedTrip;
   } catch (error) {
-    console.error('Failed to update trip status:', error);
+    console.error("Failed to update trip status:", error);
     return null;
   }
 }
@@ -182,7 +186,9 @@ export async function getTripByLoadId(loadId: string): Promise<Trip | null> {
 /**
  * Get trip by tracking URL
  */
-export async function getTripByTrackingUrl(trackingUrl: string): Promise<Trip | null> {
+export async function getTripByTrackingUrl(
+  trackingUrl: string
+): Promise<Trip | null> {
   return db.trip.findUnique({
     where: { trackingUrl },
   });
@@ -215,7 +221,7 @@ export async function updateTripLocation(
  */
 function generateTrackingUrl(loadId: string): string {
   // Use cryptographically secure random bytes to prevent collisions
-  const randomBytes = crypto.randomBytes(12).toString('hex');
+  const randomBytes = crypto.randomBytes(12).toString("hex");
   const shortId = loadId.slice(-6);
   return `trip-${shortId}-${randomBytes}`;
 }
@@ -223,12 +229,15 @@ function generateTrackingUrl(loadId: string): string {
 /**
  * Validate status transition
  */
-function isValidStatusTransition(currentStatus: TripStatus, newStatus: TripStatus): boolean {
+function isValidStatusTransition(
+  currentStatus: TripStatus,
+  newStatus: TripStatus
+): boolean {
   const validTransitions: Record<TripStatus, TripStatus[]> = {
-    ASSIGNED: ['PICKUP_PENDING', 'CANCELLED'],
-    PICKUP_PENDING: ['IN_TRANSIT', 'CANCELLED'],
-    IN_TRANSIT: ['DELIVERED', 'CANCELLED'],
-    DELIVERED: ['COMPLETED', 'CANCELLED'],
+    ASSIGNED: ["PICKUP_PENDING", "CANCELLED"],
+    PICKUP_PENDING: ["IN_TRANSIT", "CANCELLED"],
+    IN_TRANSIT: ["DELIVERED", "CANCELLED"],
+    DELIVERED: ["COMPLETED", "CANCELLED"],
     COMPLETED: [], // Terminal state
     CANCELLED: [], // Terminal state
   };
@@ -239,20 +248,24 @@ function isValidStatusTransition(currentStatus: TripStatus, newStatus: TripStatu
 /**
  * Sync load status with trip status
  */
-async function syncLoadStatus(loadId: string, tripStatus: TripStatus): Promise<void> {
+async function syncLoadStatus(
+  loadId: string,
+  tripStatus: TripStatus
+): Promise<void> {
   const loadStatusMap: Record<TripStatus, string> = {
-    ASSIGNED: 'ASSIGNED',
-    PICKUP_PENDING: 'PICKUP_PENDING',
-    IN_TRANSIT: 'IN_TRANSIT',
-    DELIVERED: 'DELIVERED',
-    COMPLETED: 'COMPLETED',
-    CANCELLED: 'CANCELLED',
+    ASSIGNED: "ASSIGNED",
+    PICKUP_PENDING: "PICKUP_PENDING",
+    IN_TRANSIT: "IN_TRANSIT",
+    DELIVERED: "DELIVERED",
+    COMPLETED: "COMPLETED",
+    CANCELLED: "CANCELLED",
   };
 
   const loadStatus = loadStatusMap[tripStatus];
   if (loadStatus) {
     await db.load.update({
       where: { id: loadId },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic status enum
       data: { status: loadStatus as any },
     });
   }

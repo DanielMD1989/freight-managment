@@ -13,19 +13,19 @@
  * - Historical trip playback
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import GoogleMap, { MapMarker, MapRoute } from '@/components/GoogleMap';
-import { useGpsRealtime, GpsPosition } from '@/hooks/useGpsRealtime';
-import TripHistoryPlayback from '@/components/TripHistoryPlayback';
+import { useState, useEffect, useCallback } from "react";
+import GoogleMap, { MapMarker, MapRoute } from "@/components/GoogleMap";
+import { useGpsRealtime, GpsPosition } from "@/hooks/useGpsRealtime";
+import TripHistoryPlayback from "@/components/TripHistoryPlayback";
 
 interface Vehicle {
   id: string;
   plateNumber: string;
   truckType: string;
   status: string;
-  gpsStatus: 'ACTIVE' | 'OFFLINE' | 'NO_DEVICE';
+  gpsStatus: "ACTIVE" | "OFFLINE" | "NO_DEVICE";
   currentLocation?: {
     lat: number;
     lng: number;
@@ -91,7 +91,7 @@ interface Shipper {
   name: string;
 }
 
-type ViewMode = 'overview' | 'fleet' | 'trips' | 'historical';
+type ViewMode = "overview" | "fleet" | "trips" | "historical";
 
 export default function AdminMapPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -108,16 +108,16 @@ export default function AdminMapPage() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('overview');
+  const [viewMode, setViewMode] = useState<ViewMode>("overview");
   const [selectedItem, setSelectedItem] = useState<MapMarker | null>(null);
   const [carriers, setCarriers] = useState<Carrier[]>([]);
   const [shippers, setShippers] = useState<Shipper[]>([]);
   const [filters, setFilters] = useState({
-    carrier: '',
-    shipper: '',
-    status: '',
-    dateFrom: '',
-    dateTo: '',
+    carrier: "",
+    shipper: "",
+    status: "",
+    dateFrom: "",
+    dateTo: "",
   });
   const [showPlayback, setShowPlayback] = useState(false);
   const [playbackTripId, setPlaybackTripId] = useState<string | null>(null);
@@ -128,35 +128,39 @@ export default function AdminMapPage() {
     subscribeAll: true,
     onPositionUpdate: useCallback((position: GpsPosition) => {
       // Update vehicles with new position
-      setVehicles(prev => prev.map(v => {
-        if (v.id === position.truckId) {
-          return {
-            ...v,
-            currentLocation: {
-              lat: position.lat,
-              lng: position.lng,
-              updatedAt: position.timestamp,
-            },
-            gpsStatus: 'ACTIVE' as const,
-          };
-        }
-        return v;
-      }));
+      setVehicles((prev) =>
+        prev.map((v) => {
+          if (v.id === position.truckId) {
+            return {
+              ...v,
+              currentLocation: {
+                lat: position.lat,
+                lng: position.lng,
+                updatedAt: position.timestamp,
+              },
+              gpsStatus: "ACTIVE" as const,
+            };
+          }
+          return v;
+        })
+      );
 
       // Update trips with new position
-      setTrips(prev => prev.map(t => {
-        if (t.truck.id === position.truckId) {
-          return {
-            ...t,
-            currentLocation: {
-              lat: position.lat,
-              lng: position.lng,
-              updatedAt: position.timestamp,
-            },
-          };
-        }
-        return t;
-      }));
+      setTrips((prev) =>
+        prev.map((t) => {
+          if (t.truck.id === position.truckId) {
+            return {
+              ...t,
+              currentLocation: {
+                lat: position.lat,
+                lng: position.lng,
+                updatedAt: position.timestamp,
+              },
+            };
+          }
+          return t;
+        })
+      );
     }, []),
   });
 
@@ -170,19 +174,23 @@ export default function AdminMapPage() {
     let filtered = [...historicalTrips];
 
     if (filters.carrier) {
-      filtered = filtered.filter(t => t.carrier.id === filters.carrier);
+      filtered = filtered.filter((t) => t.carrier.id === filters.carrier);
     }
     if (filters.shipper) {
-      filtered = filtered.filter(t => t.shipper.id === filters.shipper);
+      filtered = filtered.filter((t) => t.shipper.id === filters.shipper);
     }
     if (filters.dateFrom) {
       const fromDate = new Date(filters.dateFrom);
-      filtered = filtered.filter(t => t.completedAt && new Date(t.completedAt) >= fromDate);
+      filtered = filtered.filter(
+        (t) => t.completedAt && new Date(t.completedAt) >= fromDate
+      );
     }
     if (filters.dateTo) {
       const toDate = new Date(filters.dateTo);
       toDate.setHours(23, 59, 59, 999);
-      filtered = filtered.filter(t => t.completedAt && new Date(t.completedAt) <= toDate);
+      filtered = filtered.filter(
+        (t) => t.completedAt && new Date(t.completedAt) <= toDate
+      );
     }
 
     setFilteredHistorical(filtered.slice(0, 20));
@@ -194,8 +202,8 @@ export default function AdminMapPage() {
       setError(null);
 
       const [vehiclesRes, tripsRes] = await Promise.all([
-        fetch('/api/map/vehicles?includeAll=true'),
-        fetch('/api/map/trips'),
+        fetch("/api/map/vehicles?includeAll=true"),
+        fetch("/api/map/trips"),
       ]);
 
       if (vehiclesRes.ok) {
@@ -206,25 +214,35 @@ export default function AdminMapPage() {
         setStats((prev) => ({
           ...prev,
           totalVehicles: vehicleList.length,
-          activeGps: vehicleList.filter((v: Vehicle) => v.gpsStatus === 'ACTIVE').length,
-          offlineGps: vehicleList.filter((v: Vehicle) => v.gpsStatus === 'OFFLINE').length,
-          noDevice: vehicleList.filter((v: Vehicle) => v.gpsStatus === 'NO_DEVICE').length,
+          activeGps: vehicleList.filter(
+            (v: Vehicle) => v.gpsStatus === "ACTIVE"
+          ).length,
+          offlineGps: vehicleList.filter(
+            (v: Vehicle) => v.gpsStatus === "OFFLINE"
+          ).length,
+          noDevice: vehicleList.filter(
+            (v: Vehicle) => v.gpsStatus === "NO_DEVICE"
+          ).length,
         }));
       }
 
       if (tripsRes.ok) {
         const data = await tripsRes.json();
         const tripList = data.trips || [];
-        const activeTrips = tripList.filter((t: Trip) => t.status === 'IN_TRANSIT');
+        const activeTrips = tripList.filter(
+          (t: Trip) => t.status === "IN_TRANSIT"
+        );
         const completed = tripList.filter((t: Trip) => {
-          if (t.status !== 'COMPLETED' || !t.completedAt) return false;
+          if (t.status !== "COMPLETED" || !t.completedAt) return false;
           const completedDate = new Date(t.completedAt);
           const today = new Date();
           return completedDate.toDateString() === today.toDateString();
         });
 
         setTrips(activeTrips);
-        setHistoricalTrips(tripList.filter((t: Trip) => t.status === 'COMPLETED'));
+        setHistoricalTrips(
+          tripList.filter((t: Trip) => t.status === "COMPLETED")
+        );
 
         setStats((prev) => ({
           ...prev,
@@ -233,8 +251,8 @@ export default function AdminMapPage() {
         }));
       }
     } catch (err) {
-      setError('Failed to load map data');
-      console.error('Map data fetch error:', err);
+      setError("Failed to load map data");
+      console.error("Map data fetch error:", err);
     } finally {
       setLoading(false);
     }
@@ -243,8 +261,8 @@ export default function AdminMapPage() {
   const fetchFiltersData = async () => {
     try {
       const [carriersRes, shippersRes] = await Promise.all([
-        fetch('/api/organizations?type=CARRIER_COMPANY'),
-        fetch('/api/organizations?type=SHIPPER'),
+        fetch("/api/organizations?type=CARRIER_COMPANY"),
+        fetch("/api/organizations?type=SHIPPER"),
       ]);
 
       if (carriersRes.ok) {
@@ -257,37 +275,41 @@ export default function AdminMapPage() {
         setShippers(data.organizations || []);
       }
     } catch (err) {
-      console.error('Failed to fetch filter options:', err);
+      console.error("Failed to fetch filter options:", err);
     }
   };
 
   const buildMarkers = (): MapMarker[] => {
     const markers: MapMarker[] = [];
 
-    if (viewMode === 'overview' || viewMode === 'fleet') {
+    if (viewMode === "overview" || viewMode === "fleet") {
       vehicles.forEach((vehicle) => {
         if (vehicle.currentLocation) {
           markers.push({
             id: `vehicle-${vehicle.id}`,
             position: vehicle.currentLocation,
             title: `${vehicle.plateNumber} (${vehicle.carrier.name})`,
-            type: 'truck',
-            status: vehicle.gpsStatus === 'ACTIVE' ? 'active' :
-                   vehicle.gpsStatus === 'OFFLINE' ? 'offline' : 'available',
+            type: "truck",
+            status:
+              vehicle.gpsStatus === "ACTIVE"
+                ? "active"
+                : vehicle.gpsStatus === "OFFLINE"
+                  ? "offline"
+                  : "available",
           });
         }
       });
     }
 
-    if (viewMode === 'overview' || viewMode === 'trips') {
+    if (viewMode === "overview" || viewMode === "trips") {
       trips.forEach((trip) => {
         if (trip.currentLocation) {
           markers.push({
             id: `trip-pos-${trip.id}`,
             position: trip.currentLocation,
             title: `${trip.truck.plateNumber} - In Transit`,
-            type: 'truck',
-            status: 'in_transit',
+            type: "truck",
+            status: "in_transit",
           });
         }
 
@@ -296,7 +318,7 @@ export default function AdminMapPage() {
             id: `trip-pickup-${trip.id}`,
             position: trip.pickupLocation,
             title: `Pickup: ${trip.pickupLocation.address}`,
-            type: 'pickup',
+            type: "pickup",
           });
         }
 
@@ -305,20 +327,20 @@ export default function AdminMapPage() {
             id: `trip-delivery-${trip.id}`,
             position: trip.deliveryLocation,
             title: `Delivery: ${trip.deliveryLocation.address}`,
-            type: 'delivery',
+            type: "delivery",
           });
         }
       });
     }
 
-    if (viewMode === 'historical') {
+    if (viewMode === "historical") {
       filteredHistorical.forEach((trip) => {
         if (trip.pickupLocation) {
           markers.push({
             id: `hist-pickup-${trip.id}`,
             position: trip.pickupLocation,
             title: `Pickup: ${trip.pickupLocation.address}`,
-            type: 'pickup',
+            type: "pickup",
           });
         }
         if (trip.deliveryLocation) {
@@ -326,7 +348,7 @@ export default function AdminMapPage() {
             id: `hist-delivery-${trip.id}`,
             position: trip.deliveryLocation,
             title: `Delivery: ${trip.deliveryLocation.address}`,
-            type: 'delivery',
+            type: "delivery",
           });
         }
       });
@@ -336,9 +358,9 @@ export default function AdminMapPage() {
   };
 
   const buildRoutes = (): MapRoute[] => {
-    if (viewMode === 'fleet') return [];
+    if (viewMode === "fleet") return [];
 
-    const tripList = viewMode === 'historical' ? filteredHistorical : trips;
+    const tripList = viewMode === "historical" ? filteredHistorical : trips;
 
     return tripList
       .filter((trip) => trip.pickupLocation && trip.deliveryLocation)
@@ -347,17 +369,20 @@ export default function AdminMapPage() {
         origin: trip.pickupLocation,
         destination: trip.deliveryLocation,
         waypoints: trip.currentLocation ? [trip.currentLocation] : [],
-        color: viewMode === 'historical' ? '#94a3b8' : '#2563eb',
+        color: viewMode === "historical" ? "#94a3b8" : "#2563eb",
         tripId: trip.id,
       }));
   };
 
   const handleMarkerClick = (marker: MapMarker) => {
-    const tripId = marker.id.replace(/^(trip-pos-|trip-pickup-|trip-delivery-|hist-pickup-|hist-delivery-)/, '');
-    const vehicleId = marker.id.replace('vehicle-', '');
+    const tripId = marker.id.replace(
+      /^(trip-pos-|trip-pickup-|trip-delivery-|hist-pickup-|hist-delivery-)/,
+      ""
+    );
+    const vehicleId = marker.id.replace("vehicle-", "");
 
-    const trip = [...trips, ...historicalTrips].find(t => t.id === tripId);
-    const vehicle = vehicles.find(v => v.id === vehicleId);
+    const trip = [...trips, ...historicalTrips].find((t) => t.id === tripId);
+    const vehicle = vehicles.find((v) => v.id === vehicleId);
 
     if (trip) {
       setSelectedItem({ ...marker, data: trip });
@@ -375,11 +400,11 @@ export default function AdminMapPage() {
 
   const clearFilters = () => {
     setFilters({
-      carrier: '',
-      shipper: '',
-      status: '',
-      dateFrom: '',
-      dateTo: '',
+      carrier: "",
+      shipper: "",
+      status: "",
+      dateFrom: "",
+      dateTo: "",
     });
   };
 
@@ -387,8 +412,8 @@ export default function AdminMapPage() {
     return (
       <div className="p-6">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-[600px] bg-gray-200 rounded"></div>
+          <div className="mb-4 h-8 w-1/4 rounded bg-gray-200"></div>
+          <div className="h-[600px] rounded bg-gray-200"></div>
         </div>
       </div>
     );
@@ -400,20 +425,20 @@ export default function AdminMapPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Platform Map</h1>
-          <p className="text-gray-500">
-            Global overview of all operations
-          </p>
+          <p className="text-gray-500">Global overview of all operations</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 text-sm">
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+            <div
+              className={`h-2 w-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}
+            />
             <span className="text-gray-500">
-              {isConnected ? 'Live' : 'Offline'}
+              {isConnected ? "Live" : "Offline"}
             </span>
           </div>
           <button
             onClick={fetchMapData}
-            className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"
+            className="rounded-lg bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-100"
           >
             Refresh
           </button>
@@ -421,127 +446,162 @@ export default function AdminMapPage() {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
           {error}
         </div>
       )}
 
       {/* Platform Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-2xl font-bold text-gray-900">{stats.totalVehicles}</div>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-6">
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <div className="text-2xl font-bold text-gray-900">
+            {stats.totalVehicles}
+          </div>
           <div className="text-sm text-gray-500">Total Vehicles</div>
         </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-2xl font-bold text-green-600">{stats.activeGps}</div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <div className="text-2xl font-bold text-green-600">
+            {stats.activeGps}
+          </div>
           <div className="text-sm text-gray-500">GPS Active</div>
         </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-2xl font-bold text-orange-600">{stats.offlineGps}</div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <div className="text-2xl font-bold text-orange-600">
+            {stats.offlineGps}
+          </div>
           <div className="text-sm text-gray-500">GPS Offline</div>
         </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-2xl font-bold text-gray-400">{stats.noDevice}</div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <div className="text-2xl font-bold text-gray-400">
+            {stats.noDevice}
+          </div>
           <div className="text-sm text-gray-500">No GPS Device</div>
         </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-2xl font-bold text-blue-600">{stats.activeTrips}</div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <div className="text-2xl font-bold text-blue-600">
+            {stats.activeTrips}
+          </div>
           <div className="text-sm text-gray-500">Active Trips</div>
         </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-2xl font-bold text-purple-600">{stats.completedToday}</div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <div className="text-2xl font-bold text-purple-600">
+            {stats.completedToday}
+          </div>
           <div className="text-sm text-gray-500">Completed Today</div>
         </div>
       </div>
 
       {/* View Mode Toggle */}
       <div className="flex gap-2">
-        {(['overview', 'fleet', 'trips', 'historical'] as ViewMode[]).map((mode) => (
-          <button
-            key={mode}
-            onClick={() => setViewMode(mode)}
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors capitalize ${
-              viewMode === mode
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            {mode}
-          </button>
-        ))}
+        {(["overview", "fleet", "trips", "historical"] as ViewMode[]).map(
+          (mode) => (
+            <button
+              key={mode}
+              onClick={() => setViewMode(mode)}
+              className={`rounded-lg px-4 py-2 text-sm font-medium capitalize transition-colors ${
+                viewMode === mode
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              {mode}
+            </button>
+          )
+        )}
       </div>
 
       {/* Filters (for historical view) */}
-      {viewMode === 'historical' && (
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      {viewMode === "historical" && (
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Carrier</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Carrier
+              </label>
               <select
                 value={filters.carrier}
-                onChange={(e) => setFilters({ ...filters, carrier: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                onChange={(e) =>
+                  setFilters({ ...filters, carrier: e.target.value })
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               >
                 <option value="">All Carriers</option>
-                {carriers.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                {carriers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Shipper</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Shipper
+              </label>
               <select
                 value={filters.shipper}
-                onChange={(e) => setFilters({ ...filters, shipper: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                onChange={(e) =>
+                  setFilters({ ...filters, shipper: e.target.value })
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               >
                 <option value="">All Shippers</option>
-                {shippers.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
+                {shippers.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                From Date
+              </label>
               <input
                 type="date"
                 value={filters.dateFrom}
-                onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                onChange={(e) =>
+                  setFilters({ ...filters, dateFrom: e.target.value })
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                To Date
+              </label>
               <input
                 type="date"
                 value={filters.dateTo}
-                onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                onChange={(e) =>
+                  setFilters({ ...filters, dateTo: e.target.value })
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               />
             </div>
             <div className="flex items-end">
               <button
                 onClick={clearFilters}
-                className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                className="w-full rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
               >
                 Clear Filters
               </button>
             </div>
           </div>
           <div className="mt-2 text-sm text-gray-500">
-            Showing {filteredHistorical.length} of {historicalTrips.length} historical trips
+            Showing {filteredHistorical.length} of {historicalTrips.length}{" "}
+            historical trips
           </div>
         </div>
       )}
 
       {/* Map */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
         <GoogleMap
           markers={buildMarkers()}
           routes={buildRoutes()}
           height="550px"
           autoFitBounds={true}
-          showTraffic={viewMode === 'trips'}
+          showTraffic={viewMode === "trips"}
           onMarkerClick={handleMarkerClick}
           refreshInterval={0}
         />
@@ -558,16 +618,16 @@ export default function AdminMapPage() {
       )}
 
       {/* Historical Trips List (for historical view) */}
-      {viewMode === 'historical' && filteredHistorical.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200">
-          <div className="p-4 border-b border-gray-200">
+      {viewMode === "historical" && filteredHistorical.length > 0 && (
+        <div className="rounded-lg border border-gray-200 bg-white">
+          <div className="border-b border-gray-200 p-4">
             <h3 className="font-semibold text-gray-900">Historical Trips</h3>
           </div>
-          <div className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
+          <div className="max-h-64 divide-y divide-gray-100 overflow-y-auto">
             {filteredHistorical.map((trip) => (
               <div
                 key={trip.id}
-                className="p-4 hover:bg-gray-50 cursor-pointer flex items-center justify-between"
+                className="flex cursor-pointer items-center justify-between p-4 hover:bg-gray-50"
                 onClick={() => handleViewPlayback(trip.id)}
               >
                 <div>
@@ -575,13 +635,17 @@ export default function AdminMapPage() {
                     {trip.truck.plateNumber} - {trip.carrier.name}
                   </div>
                   <div className="text-sm text-gray-500">
-                    {trip.pickupLocation.address} → {trip.deliveryLocation.address}
+                    {trip.pickupLocation.address} →{" "}
+                    {trip.deliveryLocation.address}
                   </div>
                   <div className="text-xs text-gray-400">
-                    Completed: {trip.completedAt ? new Date(trip.completedAt).toLocaleDateString() : 'N/A'}
+                    Completed:{" "}
+                    {trip.completedAt
+                      ? new Date(trip.completedAt).toLocaleDateString()
+                      : "N/A"}
                   </div>
                 </div>
-                <button className="px-3 py-1 text-sm text-blue-600 bg-blue-50 rounded hover:bg-blue-100">
+                <button className="rounded bg-blue-50 px-3 py-1 text-sm text-blue-600 hover:bg-blue-100">
                   Playback
                 </button>
               </div>
@@ -591,31 +655,31 @@ export default function AdminMapPage() {
       )}
 
       {/* Legend */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200">
-        <h3 className="font-semibold text-gray-900 mb-2">Legend</h3>
+      <div className="rounded-lg border border-gray-200 bg-white p-4">
+        <h3 className="mb-2 font-semibold text-gray-900">Legend</h3>
         <div className="flex flex-wrap gap-4 text-sm">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+            <div className="h-4 w-4 rounded-full bg-green-500"></div>
             <span className="text-gray-600">GPS Active</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
+            <div className="h-4 w-4 rounded-full bg-blue-500"></div>
             <span className="text-gray-600">In Transit</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-orange-500 rounded-full"></div>
+            <div className="h-4 w-4 rounded-full bg-orange-500"></div>
             <span className="text-gray-600">GPS Offline</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-gray-400 rounded-full"></div>
+            <div className="h-4 w-4 rounded-full bg-gray-400"></div>
             <span className="text-gray-600">No GPS</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-emerald-500 rounded"></div>
+            <div className="h-4 w-4 rounded bg-emerald-500"></div>
             <span className="text-gray-600">Pickup</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-red-500 rounded"></div>
+            <div className="h-4 w-4 rounded bg-red-500"></div>
             <span className="text-gray-600">Delivery</span>
           </div>
         </div>
@@ -623,9 +687,9 @@ export default function AdminMapPage() {
 
       {/* Trip History Playback Modal */}
       {showPlayback && playbackTripId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-lg bg-white">
+            <div className="flex items-center justify-between border-b border-gray-200 p-4">
               <h2 className="text-lg font-semibold">Trip Playback</h2>
               <button
                 onClick={() => {
@@ -665,30 +729,39 @@ function SelectedItemCard({
   onClose: () => void;
   onViewPlayback: (id: string) => void;
 }) {
-  const isVehicle = selectedItem.id.startsWith('vehicle-');
-  const isTrip = selectedItem.id.includes('trip-') || selectedItem.id.includes('hist-');
+  const isVehicle = selectedItem.id.startsWith("vehicle-");
+  const isTrip =
+    selectedItem.id.includes("trip-") || selectedItem.id.includes("hist-");
 
   const vehicle = isVehicle ? (selectedItem.data as Vehicle) : null;
   const trip = isTrip ? (selectedItem.data as Trip) : null;
 
   return (
-    <div className="bg-white p-4 rounded-lg border border-gray-200">
-      <div className="flex items-center justify-between mb-3">
+    <div className="rounded-lg border border-gray-200 bg-white p-4">
+      <div className="mb-3 flex items-center justify-between">
         <h3 className="font-semibold text-gray-900">{selectedItem.title}</h3>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
           Close
         </button>
       </div>
-      <div className="text-sm text-gray-600 space-y-1">
+      <div className="space-y-1 text-sm text-gray-600">
         {vehicle && (
           <div className="grid grid-cols-2 gap-2">
-            <p><strong>Type:</strong> {vehicle.truckType}</p>
-            <p><strong>Status:</strong> {vehicle.status}</p>
-            <p><strong>GPS:</strong> {vehicle.gpsStatus}</p>
-            <p><strong>Carrier:</strong> {vehicle.carrier.name}</p>
+            <p>
+              <strong>Type:</strong> {vehicle.truckType}
+            </p>
+            <p>
+              <strong>Status:</strong> {vehicle.status}
+            </p>
+            <p>
+              <strong>GPS:</strong> {vehicle.gpsStatus}
+            </p>
+            <p>
+              <strong>Carrier:</strong> {vehicle.carrier.name}
+            </p>
             {vehicle.currentLocation?.updatedAt && (
               <p className="col-span-2">
-                <strong>Last Update:</strong>{' '}
+                <strong>Last Update:</strong>{" "}
                 {new Date(vehicle.currentLocation.updatedAt).toLocaleString()}
               </p>
             )}
@@ -698,22 +771,38 @@ function SelectedItemCard({
         {trip && (
           <>
             <div className="grid grid-cols-2 gap-2">
-              <p><strong>Load ID:</strong> {trip.loadId.slice(0, 8)}...</p>
-              <p><strong>Status:</strong> {trip.status}</p>
-              <p><strong>Truck:</strong> {trip.truck.plateNumber}</p>
-              <p><strong>Carrier:</strong> {trip.carrier.name}</p>
-              <p><strong>Shipper:</strong> {trip.shipper.name}</p>
+              <p>
+                <strong>Load ID:</strong> {trip.loadId.slice(0, 8)}...
+              </p>
+              <p>
+                <strong>Status:</strong> {trip.status}
+              </p>
+              <p>
+                <strong>Truck:</strong> {trip.truck.plateNumber}
+              </p>
+              <p>
+                <strong>Carrier:</strong> {trip.carrier.name}
+              </p>
+              <p>
+                <strong>Shipper:</strong> {trip.shipper.name}
+              </p>
               {trip.startedAt && (
-                <p><strong>Started:</strong> {new Date(trip.startedAt).toLocaleString()}</p>
+                <p>
+                  <strong>Started:</strong>{" "}
+                  {new Date(trip.startedAt).toLocaleString()}
+                </p>
               )}
               {trip.completedAt && (
-                <p><strong>Completed:</strong> {new Date(trip.completedAt).toLocaleString()}</p>
+                <p>
+                  <strong>Completed:</strong>{" "}
+                  {new Date(trip.completedAt).toLocaleString()}
+                </p>
               )}
             </div>
-            {viewMode === 'historical' && (
+            {viewMode === "historical" && (
               <button
                 onClick={() => onViewPlayback(trip.id)}
-                className="mt-3 w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                className="mt-3 w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
               >
                 View Playback
               </button>

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Truck Matches Client Component
@@ -8,11 +8,11 @@
  * Updated: Task 6 - Manual Load ↔ Truck Matching
  */
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { VerifiedBadgeWithLabel } from '@/components/VerifiedBadge';
-import { toast } from 'react-hot-toast';
-import { getCSRFToken } from '@/lib/csrfFetch';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { VerifiedBadgeWithLabel } from "@/components/VerifiedBadge";
+import { toast } from "react-hot-toast";
+import { getCSRFToken } from "@/lib/csrfFetch";
 
 interface Load {
   id: string;
@@ -56,33 +56,33 @@ interface TruckMatch {
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   }).format(date);
 }
 
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-ET', {
-    style: 'currency',
-    currency: 'ETB',
+  return new Intl.NumberFormat("en-ET", {
+    style: "currency",
+    currency: "ETB",
     minimumFractionDigits: 0,
   }).format(amount);
 }
 
 function getScoreColor(score: number): string {
-  if (score >= 80) return 'text-green-600';
-  if (score >= 60) return 'text-blue-600';
-  if (score >= 40) return 'text-yellow-600';
-  return 'text-gray-600';
+  if (score >= 80) return "text-green-600";
+  if (score >= 60) return "text-blue-600";
+  if (score >= 40) return "text-yellow-600";
+  return "text-gray-600";
 }
 
 function getScoreBgColor(score: number): string {
-  if (score >= 80) return 'bg-green-100';
-  if (score >= 60) return 'bg-blue-100';
-  if (score >= 40) return 'bg-yellow-100';
-  return 'bg-gray-100';
+  if (score >= 80) return "bg-green-100";
+  if (score >= 60) return "bg-blue-100";
+  if (score >= 40) return "bg-yellow-100";
+  return "bg-gray-100";
 }
 
 export default function TruckMatchesClient({
@@ -94,10 +94,12 @@ export default function TruckMatchesClient({
 }) {
   const router = useRouter();
 
-  const [currentLoadId, setCurrentLoadId] = useState(selectedLoadId || postedLoads[0]?.id);
+  const [currentLoadId, setCurrentLoadId] = useState(
+    selectedLoadId || postedLoads[0]?.id
+  );
   const [matches, setMatches] = useState<TruckMatch[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [minScore, setMinScore] = useState(40);
   const [assigningTruckId, setAssigningTruckId] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState<{
@@ -111,7 +113,7 @@ export default function TruckMatchesClient({
    */
   const fetchMatches = async (loadId: string) => {
     setIsLoading(true);
-    setError('');
+    setError("");
 
     try {
       const response = await fetch(
@@ -123,12 +125,12 @@ export default function TruckMatchesClient({
         setMatches(data.matches || []);
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to fetch matches');
+        setError(errorData.error || "Failed to fetch matches");
         setMatches([]);
       }
     } catch (error) {
-      console.error('Error fetching matches:', error);
-      setError('Failed to fetch truck matches');
+      console.error("Error fetching matches:", error);
+      setError("Failed to fetch truck matches");
       setMatches([]);
     } finally {
       setIsLoading(false);
@@ -156,18 +158,18 @@ export default function TruckMatchesClient({
     try {
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/loads/${currentLoadId}/assign`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
         body: JSON.stringify({ truckId }),
-        credentials: 'include',
+        credentials: "include",
       });
 
       if (response.ok) {
         const data = await response.json();
-        toast.success(data.message || 'Truck matched successfully!');
+        toast.success(data.message || "Truck matched successfully!");
 
         // Refresh matches list and redirect to load details
         router.push(`/shipper/loads?success=truck-matched`);
@@ -177,17 +179,17 @@ export default function TruckMatchesClient({
 
         if (response.status === 409) {
           // Conflict - assignment issues
-          toast.error(errorData.error || 'Assignment conflict detected');
+          toast.error(errorData.error || "Assignment conflict detected");
           if (errorData.conflicts) {
-            console.warn('Conflicts:', errorData.conflicts);
+            console.warn("Conflicts:", errorData.conflicts);
           }
         } else {
-          toast.error(errorData.error || 'Failed to match truck');
+          toast.error(errorData.error || "Failed to match truck");
         }
       }
     } catch (error) {
-      console.error('Error assigning truck:', error);
-      toast.error('An unexpected error occurred. Please try again.');
+      console.error("Error assigning truck:", error);
+      toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setAssigningTruckId(null);
     }
@@ -207,13 +209,13 @@ export default function TruckMatchesClient({
   return (
     <div className="space-y-6">
       {/* Load Selection and Filters */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="rounded-lg bg-white p-6 shadow">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {/* Load Selector */}
           <div>
             <label
               htmlFor="load"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="mb-2 block text-sm font-medium text-gray-700"
             >
               Select Load
             </label>
@@ -221,11 +223,12 @@ export default function TruckMatchesClient({
               id="load"
               value={currentLoadId}
               onChange={(e) => handleLoadChange(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
             >
               {postedLoads.map((load) => (
                 <option key={load.id} value={load.id}>
-                  {load.pickupCity} → {load.deliveryCity} ({formatDate(load.pickupDate)})
+                  {load.pickupCity} → {load.deliveryCity} (
+                  {formatDate(load.pickupDate)})
                 </option>
               ))}
             </select>
@@ -235,7 +238,7 @@ export default function TruckMatchesClient({
           <div>
             <label
               htmlFor="minScore"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="mb-2 block text-sm font-medium text-gray-700"
             >
               Minimum Match Score: {minScore}%
             </label>
@@ -249,7 +252,7 @@ export default function TruckMatchesClient({
               onChange={(e) => setMinScore(parseInt(e.target.value))}
               className="w-full"
             />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <div className="mt-1 flex justify-between text-xs text-gray-500">
               <span>Any</span>
               <span>Good</span>
               <span>Excellent</span>
@@ -259,11 +262,11 @@ export default function TruckMatchesClient({
 
         {/* Current Load Details */}
         {currentLoad && (
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">
+          <div className="mt-6 border-t border-gray-200 pt-6">
+            <h3 className="mb-3 text-sm font-medium text-gray-700">
               Load Details
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
               <div>
                 <div className="text-gray-500">Route</div>
                 <div className="font-medium text-gray-900">
@@ -273,7 +276,7 @@ export default function TruckMatchesClient({
               <div>
                 <div className="text-gray-500">Truck Type</div>
                 <div className="font-medium text-gray-900">
-                  {currentLoad.truckType.replace(/_/g, ' ')}
+                  {currentLoad.truckType.replace(/_/g, " ")}
                 </div>
               </div>
               <div>
@@ -289,15 +292,15 @@ export default function TruckMatchesClient({
 
       {/* Loading State */}
       {isLoading && (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <div className="rounded-lg bg-white p-12 text-center shadow">
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
           <p className="text-gray-600">Finding matching trucks...</p>
         </div>
       )}
 
       {/* Error State */}
       {error && !isLoading && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
           <p className="text-red-800">{error}</p>
         </div>
       )}
@@ -309,11 +312,12 @@ export default function TruckMatchesClient({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">
-                  {matches.length} Matching Truck{matches.length !== 1 ? 's' : ''} Found
+                  {matches.length} Matching Truck
+                  {matches.length !== 1 ? "s" : ""} Found
                 </h2>
                 <button
                   onClick={() => fetchMatches(currentLoadId)}
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  className="text-sm font-medium text-blue-600 hover:text-blue-700"
                 >
                   Refresh
                 </button>
@@ -322,19 +326,19 @@ export default function TruckMatchesClient({
               {matches.map((match) => (
                 <div
                   key={match.truckPosting.id}
-                  className={`rounded-lg shadow hover:shadow-md transition-shadow p-6 ${
+                  className={`rounded-lg p-6 shadow transition-shadow hover:shadow-md ${
                     match.truckPosting.truck.carrier.isVerified
-                      ? 'bg-blue-50/30 border-2 border-blue-200'
-                      : 'bg-white'
+                      ? "border-2 border-blue-200 bg-blue-50/30"
+                      : "bg-white"
                   }`}
                 >
-                  <div className="flex items-start justify-between mb-4">
+                  <div className="mb-4 flex items-start justify-between">
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="mb-1 flex items-center gap-2">
                         {/* Sprint 16: Story 16.5 - Priority indicator for verified carriers */}
                         {match.truckPosting.truck.carrier.isVerified && (
                           <svg
-                            className="w-5 h-5 text-yellow-500 flex-shrink-0"
+                            className="h-5 w-5 flex-shrink-0 text-yellow-500"
                             fill="currentColor"
                             viewBox="0 0 20 20"
                           >
@@ -346,14 +350,16 @@ export default function TruckMatchesClient({
                         </h3>
                         {/* Sprint 16: Story 16.5 - Enhanced verified badge */}
                         <VerifiedBadgeWithLabel
-                          isVerified={match.truckPosting.truck.carrier.isVerified}
+                          isVerified={
+                            match.truckPosting.truck.carrier.isVerified
+                          }
                           verifiedAt={null}
                           size="sm"
                         />
                       </div>
                       <p className="text-sm text-gray-600">
-                        {match.truckPosting.truck.licensePlate} •{' '}
-                        {match.truckPosting.truck.truckType.replace(/_/g, ' ')}
+                        {match.truckPosting.truck.licensePlate} •{" "}
+                        {match.truckPosting.truck.truckType.replace(/_/g, " ")}
                       </p>
                     </div>
                     <div className="text-right">
@@ -369,9 +375,11 @@ export default function TruckMatchesClient({
                   </div>
 
                   {/* Match Details Grid */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-4">
                     <div>
-                      <div className="text-xs text-gray-500">Current Location</div>
+                      <div className="text-xs text-gray-500">
+                        Current Location
+                      </div>
                       <div className="text-sm font-medium text-gray-900">
                         {match.truckPosting.currentCity}
                       </div>
@@ -389,7 +397,9 @@ export default function TruckMatchesClient({
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs text-gray-500">Preferred Rate</div>
+                      <div className="text-xs text-gray-500">
+                        Preferred Rate
+                      </div>
                       <div className="text-sm font-medium text-gray-900">
                         {formatCurrency(match.truckPosting.preferredRate)}
                       </div>
@@ -397,7 +407,7 @@ export default function TruckMatchesClient({
                   </div>
 
                   {/* Distance Metrics */}
-                  <div className="grid grid-cols-3 gap-4 mb-4 p-3 bg-gray-50 rounded">
+                  <div className="mb-4 grid grid-cols-3 gap-4 rounded bg-gray-50 p-3">
                     <div className="text-center">
                       <div className="text-xs text-gray-500">Trip Distance</div>
                       <div className="text-sm font-semibold text-gray-900">
@@ -405,13 +415,17 @@ export default function TruckMatchesClient({
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="text-xs text-gray-500">Deadhead to Pickup</div>
+                      <div className="text-xs text-gray-500">
+                        Deadhead to Pickup
+                      </div>
                       <div className="text-sm font-semibold text-gray-900">
                         {match.distanceMetrics.dhOriginKm.toFixed(0)} km
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="text-xs text-gray-500">Deadhead from Delivery</div>
+                      <div className="text-xs text-gray-500">
+                        Deadhead from Delivery
+                      </div>
                       <div className="text-sm font-semibold text-gray-900">
                         {match.distanceMetrics.dhDestKm.toFixed(0)} km
                       </div>
@@ -421,7 +435,7 @@ export default function TruckMatchesClient({
                   {/* Match Reasons */}
                   {match.matchReasons.length > 0 && (
                     <div className="mb-4">
-                      <div className="text-xs font-medium text-gray-700 mb-2">
+                      <div className="mb-2 text-xs font-medium text-gray-700">
                         Why this match:
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -443,7 +457,7 @@ export default function TruckMatchesClient({
 
                   {/* Availability */}
                   <div className="mb-4 text-sm text-gray-600">
-                    Available: {formatDate(match.truckPosting.availableFrom)} to{' '}
+                    Available: {formatDate(match.truckPosting.availableFrom)} to{" "}
                     {formatDate(match.truckPosting.availableUntil)}
                   </div>
 
@@ -451,9 +465,11 @@ export default function TruckMatchesClient({
                   <div className="flex gap-3">
                     <button
                       onClick={() =>
-                        router.push(`/shipper/trucks/${match.truckPosting.truck.id}`)
+                        router.push(
+                          `/shipper/trucks/${match.truckPosting.truck.id}`
+                        )
                       }
-                      className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                      className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
                     >
                       View Details
                     </button>
@@ -466,7 +482,7 @@ export default function TruckMatchesClient({
                         })
                       }
                       disabled={assigningTruckId !== null}
-                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {assigningTruckId === match.truckPosting.truck.id ? (
                         <>
@@ -487,7 +503,7 @@ export default function TruckMatchesClient({
                           { duration: 5000 }
                         )
                       }
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                      className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
                     >
                       View Carrier
                     </button>
@@ -497,14 +513,14 @@ export default function TruckMatchesClient({
             </div>
           ) : (
             /* No Matches */
-            <div className="bg-white rounded-lg shadow p-12 text-center">
-              <div className="text-6xl mb-4">🔍</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <div className="rounded-lg bg-white p-12 text-center shadow">
+              <div className="mb-4 text-6xl">🔍</div>
+              <h3 className="mb-2 text-lg font-semibold text-gray-900">
                 No Matching Trucks Found
               </h3>
-              <p className="text-gray-600 mb-4">
-                There are no available trucks matching your load requirements with a
-                score above {minScore}%.
+              <p className="mb-4 text-gray-600">
+                There are no available trucks matching your load requirements
+                with a score above {minScore}%.
               </p>
               <p className="text-sm text-gray-500">
                 Try lowering the minimum match score or check back later for new
@@ -517,15 +533,15 @@ export default function TruckMatchesClient({
 
       {/* Match Truck Confirmation Modal - Task 6 */}
       {showConfirmModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black p-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <h3 className="mb-2 text-lg font-semibold text-gray-900">
               Confirm Truck Match
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="mb-4 text-gray-600">
               You are about to match this truck to your load:
             </p>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="mb-4 rounded-lg bg-gray-50 p-4">
               <div className="text-sm">
                 <div className="font-medium text-gray-900">
                   {showConfirmModal.carrierName}
@@ -535,24 +551,24 @@ export default function TruckMatchesClient({
                 </div>
               </div>
             </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
+            <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-3">
               <p className="text-sm text-blue-800">
-                <strong>Note:</strong> Once matched, the carrier will be notified.
-                You can unassign later if needed.
+                <strong>Note:</strong> Once matched, the carrier will be
+                notified. You can unassign later if needed.
               </p>
             </div>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowConfirmModal(null)}
                 disabled={assigningTruckId !== null}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium disabled:opacity-50"
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleAssignTruck(showConfirmModal.truckId)}
                 disabled={assigningTruckId !== null}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {assigningTruckId ? (
                   <>
@@ -560,7 +576,7 @@ export default function TruckMatchesClient({
                     Matching...
                   </>
                 ) : (
-                  'Confirm Match'
+                  "Confirm Match"
                 )}
               </button>
             </div>

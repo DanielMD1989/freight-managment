@@ -9,9 +9,11 @@ This document outlines the implementation of KM-based service pricing for the fr
 ## User Stories
 
 ### US-1: Shipper - GPS & Documentation Visibility ✅
+
 **As a Shipper**, I want GPS tracking with trip progress percentage and POD visibility, so I can monitor my cargo in real time.
 
 **Acceptance Criteria:**
+
 - [x] Real-time GPS tracking on map (EXISTS)
 - [x] Geofence alerts for pickup/delivery arrival (EXISTS)
 - [x] Trip progress percentage display (`GET /api/loads/[id]/progress`)
@@ -23,9 +25,11 @@ This document outlines the implementation of KM-based service pricing for the fr
 ---
 
 ### US-2: Carrier - Return-Load Notifications ✅
+
 **As a Truck Owner**, I want return-load notifications when my trip is 80%+ complete or I enter the destination geofence, so I can maximize efficiency and reduce empty miles.
 
 **Acceptance Criteria:**
+
 - [x] Notification at 80% trip progress (`TRIP_PROGRESS_80` notification type)
 - [x] Notification when entering destination geofence (EXISTS - TRUCK_AT_DELIVERY)
 - [x] List of matching loads in destination region (`GET /api/return-loads`)
@@ -36,9 +40,11 @@ This document outlines the implementation of KM-based service pricing for the fr
 ---
 
 ### US-3: Admin - Corridor Pricing Management ✅
+
 **As an Admin**, I want to define corridor distances, directions, and per-KM pricing, so service fees can be calculated automatically.
 
 **Acceptance Criteria:**
+
 - [x] CRUD for corridors (origin region, destination region, distance_km, price_per_km)
 - [x] Direction support (ONE_WAY, ROUND_TRIP, BIDIRECTIONAL)
 - [x] Promo flag with discount percentage
@@ -49,9 +55,11 @@ This document outlines the implementation of KM-based service pricing for the fr
 ---
 
 ### US-4: Platform - Service Fee Collection via Wallet ✅
+
 **As a Platform**, I want to charge service fees per KM via wallet credit, so users pay for tracking and documentation separately from freight payments.
 
 **Acceptance Criteria:**
+
 - [x] Service fee = corridor.distance_km × corridor.price_per_km
 - [x] Fee reserved from shipper wallet at trip ASSIGNED
 - [x] Fee deducted (moved to platform) at trip COMPLETED
@@ -65,6 +73,7 @@ This document outlines the implementation of KM-based service pricing for the fr
 ## Schema Changes (Additive Only)
 
 ### New Model: Corridor
+
 ```prisma
 model Corridor {
   id                String            @id @default(cuid())
@@ -99,6 +108,7 @@ enum CorridorDirection {
 ```
 
 ### New Enum: ServiceFeeStatus
+
 ```prisma
 enum ServiceFeeStatus {
   PENDING     // Not yet calculated/reserved
@@ -110,6 +120,7 @@ enum ServiceFeeStatus {
 ```
 
 ### Extend Load Model
+
 ```prisma
 model Load {
   // ... existing fields ...
@@ -133,23 +144,25 @@ model Load {
 ```
 
 ### Extend NotificationType (in /lib/notifications.ts)
+
 ```typescript
 export const NotificationType = {
   // ... existing types ...
 
   // Return Load Notifications (NEW)
-  RETURN_LOAD_AVAILABLE: 'RETURN_LOAD_AVAILABLE',
-  RETURN_LOAD_MATCHED: 'RETURN_LOAD_MATCHED',
-  TRIP_PROGRESS_80: 'TRIP_PROGRESS_80',
+  RETURN_LOAD_AVAILABLE: "RETURN_LOAD_AVAILABLE",
+  RETURN_LOAD_MATCHED: "RETURN_LOAD_MATCHED",
+  TRIP_PROGRESS_80: "TRIP_PROGRESS_80",
 
   // Service Fee Notifications (NEW)
-  SERVICE_FEE_RESERVED: 'SERVICE_FEE_RESERVED',
-  SERVICE_FEE_DEDUCTED: 'SERVICE_FEE_DEDUCTED',
-  SERVICE_FEE_REFUNDED: 'SERVICE_FEE_REFUNDED',
+  SERVICE_FEE_RESERVED: "SERVICE_FEE_RESERVED",
+  SERVICE_FEE_DEDUCTED: "SERVICE_FEE_DEDUCTED",
+  SERVICE_FEE_REFUNDED: "SERVICE_FEE_REFUNDED",
 } as const;
 ```
 
 ### Extend TransactionType Enum
+
 ```prisma
 enum TransactionType {
   // ... existing types ...
@@ -164,6 +177,7 @@ enum TransactionType {
 ## Implementation Tasks
 
 ### Task 1: Corridor Pricing Schema & Admin
+
 **Priority:** High | **Effort:** 4 hours
 
 1. Add Corridor model to schema
@@ -174,9 +188,11 @@ enum TransactionType {
 6. Build admin UI: `/app/admin/corridors/page.tsx`
 
 ### Task 2: Service Fee Calculation Logic
+
 **Priority:** High | **Effort:** 3 hours
 
 Create `/lib/serviceFeeCalculation.ts`:
+
 ```typescript
 export async function calculateServiceFee(loadId: string): Promise<{
   corridorId: string;
@@ -186,52 +202,58 @@ export async function calculateServiceFee(loadId: string): Promise<{
   baseFee: number;
   promoDiscount: number;
   finalFee: number;
-}>
+}>;
 
 export async function findMatchingCorridor(
   originRegion: string,
   destinationRegion: string
-): Promise<Corridor | null>
+): Promise<Corridor | null>;
 ```
 
 ### Task 3: Service Fee Wallet Integration
+
 **Priority:** High | **Effort:** 4 hours
 
 Create `/lib/serviceFeeManagement.ts`:
+
 ```typescript
 // Reserve fee when load status -> ASSIGNED
-export async function reserveServiceFee(loadId: string): Promise<void>
+export async function reserveServiceFee(loadId: string): Promise<void>;
 
 // Deduct fee when load status -> COMPLETED
-export async function deductServiceFee(loadId: string): Promise<void>
+export async function deductServiceFee(loadId: string): Promise<void>;
 
 // Refund fee when load status -> CANCELLED
-export async function refundServiceFee(loadId: string): Promise<void>
+export async function refundServiceFee(loadId: string): Promise<void>;
 ```
 
 Uses existing `FinancialAccount` and `JournalEntry` infrastructure.
 
 ### Task 4: Trip Progress Calculation
+
 **Priority:** Medium | **Effort:** 3 hours
 
 Extend `/lib/gpsTracking.ts`:
+
 ```typescript
 export async function calculateTripProgress(loadId: string): Promise<{
   progressPercent: number;
   remainingKm: number;
   estimatedArrival: Date | null;
-}>
+}>;
 
-export async function updateTripProgress(loadId: string): Promise<void>
+export async function updateTripProgress(loadId: string): Promise<void>;
 // Called by GPS update webhook or cron job
 ```
 
 ### Task 5: Return-Load Notification System
+
 **Priority:** Medium | **Effort:** 4 hours
 
 Create `/lib/returnLoadNotifications.ts`:
+
 ```typescript
-export async function checkReturnLoadOpportunity(loadId: string): Promise<void>
+export async function checkReturnLoadOpportunity(loadId: string): Promise<void>;
 // Triggered when:
 // - Trip progress >= 80%
 // - Truck enters destination geofence
@@ -239,30 +261,32 @@ export async function checkReturnLoadOpportunity(loadId: string): Promise<void>
 export async function findReturnLoads(
   currentRegion: string,
   carrierId: string
-): Promise<Load[]>
+): Promise<Load[]>;
 // Returns POSTED loads with pickup in currentRegion
 // Sorted by: corridor match, GPS status, priority
 
 export async function notifyCarrierOfReturnLoads(
   carrierId: string,
   loads: Load[]
-): Promise<void>
+): Promise<void>;
 ```
 
 ### Task 6: API Endpoints
+
 **Priority:** High | **Effort:** 3 hours
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/admin/corridors` | GET, POST | List/create corridors |
-| `/api/admin/corridors/[id]` | GET, PATCH, DELETE | Manage corridor |
-| `/api/corridors/match` | POST | Find corridor for route |
-| `/api/corridors/calculate-fee` | POST | Calculate service fee |
-| `/api/loads/[id]/service-fee` | GET | Get service fee status |
-| `/api/loads/[id]/progress` | GET | Get trip progress |
-| `/api/return-loads` | GET | Get matching return loads |
+| Endpoint                       | Method             | Description               |
+| ------------------------------ | ------------------ | ------------------------- |
+| `/api/admin/corridors`         | GET, POST          | List/create corridors     |
+| `/api/admin/corridors/[id]`    | GET, PATCH, DELETE | Manage corridor           |
+| `/api/corridors/match`         | POST               | Find corridor for route   |
+| `/api/corridors/calculate-fee` | POST               | Calculate service fee     |
+| `/api/loads/[id]/service-fee`  | GET                | Get service fee status    |
+| `/api/loads/[id]/progress`     | GET                | Get trip progress         |
+| `/api/return-loads`            | GET                | Get matching return loads |
 
 ### Task 7: Frontend Updates
+
 **Priority:** Medium | **Effort:** 6 hours
 
 1. Admin corridor management page
@@ -327,6 +351,7 @@ Else:
 ```
 
 Example:
+
 - Corridor: Addis Ababa → Dire Dawa
 - Distance: 453 km
 - Price per KM: 2.50 ETB
@@ -383,19 +408,22 @@ Task 7 (Frontend)
 ### Completed (Tasks 1-6)
 
 **Schema & Enums:**
+
 - [x] Corridor model added to Prisma schema
 - [x] ServiceFeeStatus enum (PENDING, RESERVED, DEDUCTED, REFUNDED, WAIVED)
 - [x] CorridorDirection enum (ONE_WAY, ROUND_TRIP, BIDIRECTIONAL)
-- [x] TransactionType extended with SERVICE_FEE_* types
+- [x] TransactionType extended with SERVICE*FEE*\* types
 - [x] Load model extended with service fee and trip progress fields
 - [x] NotificationType extended with return load and service fee types
 
 **Admin APIs & UI:**
+
 - [x] Admin CRUD API: `/api/admin/corridors`
 - [x] Admin UI: `/app/admin/corridors/page.tsx`
 - [x] Corridor management with fee preview calculator
 
 **Service Fee Libraries:**
+
 - [x] `/lib/serviceFeeCalculation.ts` - Fee calculation, corridor matching
 - [x] `/lib/serviceFeeManagement.ts` - Wallet integration
   - reserveServiceFee() - Reserve from shipper wallet on ASSIGNED
@@ -403,18 +431,21 @@ Task 7 (Frontend)
   - refundServiceFee() - Refund to shipper on CANCELLED
 
 **GPS & Trip Progress:**
+
 - [x] `/lib/tripProgress.ts` - Trip progress tracking
   - calculateTripProgress() - % completion from GPS
   - updateTripProgress() - Update load progress fields
   - updateAllActiveLoadProgress() - Batch update for cron
 
 **Return Load Notifications:**
+
 - [x] `/lib/returnLoadNotifications.ts` - Return load matching
   - findReturnLoads() - Match loads by destination region
   - notifyCarrierOfReturnLoads() - Send notifications
   - Triggers at 80% progress or destination geofence entry
 
 **Public APIs:**
+
 - [x] POST `/api/corridors/match` - Find corridor for route
 - [x] POST `/api/corridors/calculate-fee` - Calculate fee for load
 - [x] GET `/api/return-loads` - Get return load suggestions
@@ -424,6 +455,7 @@ Task 7 (Frontend)
 ### Completed (Task 7)
 
 **Load Lifecycle Integration:**
+
 - [x] `reserveServiceFee()` called on load assignment (`/api/loads/[id]/assign`)
 - [x] `reserveServiceFee()` called on match proposal acceptance (`/api/match-proposals/[id]/respond`)
 - [x] `deductServiceFee()` called on status change to COMPLETED (`/api/loads/[id]/status`)
@@ -433,20 +465,24 @@ Task 7 (Frontend)
 - [x] Service fee info returned in API responses
 
 **Files Modified:**
+
 - `app/api/loads/[id]/assign/route.ts` - Added service fee reserve on assignment
 - `app/api/match-proposals/[id]/respond/route.ts` - Added service fee reserve on proposal acceptance
 - `app/api/loads/[id]/status/route.ts` - Added service fee deduct/refund on status change
 - `lib/loadAutomation.ts` - Updated auto-settlement to use service fees instead of commission
 
 ### Completed (Frontend)
+
 - [x] Frontend service fee display on load details page (`/dashboard/loads/[id]`)
 - [x] Admin dashboard for service fee metrics (`/admin/service-fees`)
 
 ### Files Added (Frontend):
+
 - `app/admin/service-fees/page.tsx` - Admin dashboard with metrics
 - `app/api/admin/service-fees/metrics/route.ts` - Metrics aggregation API
 
 ### Frontend Features:
+
 - Load details page shows service fee with corridor info and breakdown
 - Color-coded status badges (DEDUCTED/RESERVED/REFUNDED/WAIVED/PENDING)
 - Fee timeline showing reservation, deduction, or refund dates

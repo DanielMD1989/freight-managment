@@ -13,27 +13,27 @@
  * MAP + GPS Implementation - Phase 2
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { calculateDistanceKm } from '@/lib/geo';
-import { roundToDecimals } from '@/lib/rounding';
-import { Prisma } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { calculateDistanceKm } from "@/lib/geo";
+import { roundToDecimals } from "@/lib/rounding";
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth();
     const { searchParams } = request.nextUrl;
 
-    const loadId = searchParams.get('loadId');
-    const truckId = searchParams.get('truckId');
-    const from = searchParams.get('from');
-    const to = searchParams.get('to');
-    const limit = parseInt(searchParams.get('limit') || '1000', 10);
+    const loadId = searchParams.get("loadId");
+    const truckId = searchParams.get("truckId");
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
+    const limit = parseInt(searchParams.get("limit") || "1000", 10);
 
     if (!loadId && !truckId) {
       return NextResponse.json(
-        { error: 'Either loadId or truckId is required' },
+        { error: "Either loadId or truckId is required" },
         { status: 400 }
       );
     }
@@ -63,21 +63,21 @@ export async function GET(request: NextRequest) {
       });
 
       if (!load) {
-        return NextResponse.json({ error: 'Load not found' }, { status: 404 });
+        return NextResponse.json({ error: "Load not found" }, { status: 404 });
       }
 
       // Access control
-      if (session.role === 'CARRIER') {
+      if (session.role === "CARRIER") {
         if (load.assignedTruck?.carrierId !== user?.organizationId) {
           return NextResponse.json(
-            { error: 'You do not have access to this load' },
+            { error: "You do not have access to this load" },
             { status: 403 }
           );
         }
-      } else if (session.role === 'SHIPPER') {
+      } else if (session.role === "SHIPPER") {
         if (load.shipperId !== user?.organizationId) {
           return NextResponse.json(
-            { error: 'You do not have access to this load' },
+            { error: "You do not have access to this load" },
             { status: 403 }
           );
         }
@@ -89,10 +89,10 @@ export async function GET(request: NextRequest) {
 
     if (truckId) {
       // Verify access to truck
-      if (session.role === 'CARRIER') {
+      if (session.role === "CARRIER") {
         if (!user?.organizationId) {
           return NextResponse.json(
-            { error: 'User not associated with an organization' },
+            { error: "User not associated with an organization" },
             { status: 403 }
           );
         }
@@ -106,14 +106,14 @@ export async function GET(request: NextRequest) {
 
         if (!truck) {
           return NextResponse.json(
-            { error: 'Truck not found or access denied' },
+            { error: "Truck not found or access denied" },
             { status: 403 }
           );
         }
-      } else if (session.role === 'SHIPPER') {
+      } else if (session.role === "SHIPPER") {
         // Shipper cannot access truck history directly
         return NextResponse.json(
-          { error: 'Shippers cannot access truck history directly' },
+          { error: "Shippers cannot access truck history directly" },
           { status: 403 }
         );
       }
@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
         truckId: true,
       },
       orderBy: {
-        timestamp: 'asc',
+        timestamp: "asc",
       },
       take: Math.min(limit, 5000), // Hard cap at 5000
     });
@@ -179,7 +179,12 @@ export async function GET(request: NextRequest) {
         const curr = history[i];
 
         // Haversine distance (delegated to lib/geo.ts)
-        totalDistance += calculateDistanceKm(prev.lat, prev.lng, curr.lat, curr.lng);
+        totalDistance += calculateDistanceKm(
+          prev.lat,
+          prev.lng,
+          curr.lat,
+          curr.lng
+        );
       }
 
       const startTime = new Date(history[0].timestamp).getTime();
@@ -200,13 +205,14 @@ export async function GET(request: NextRequest) {
         totalTimeHours: roundToDecimals(totalTime, 2),
         avgSpeedKmh: roundToDecimals(avgSpeed, 2),
         startTime: history.length > 0 ? history[0].timestamp : null,
-        endTime: history.length > 0 ? history[history.length - 1].timestamp : null,
+        endTime:
+          history.length > 0 ? history[history.length - 1].timestamp : null,
       },
     });
   } catch (error) {
-    console.error('GPS history error:', error);
+    console.error("GPS history error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

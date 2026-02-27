@@ -3,10 +3,10 @@
  * Manually trigger exception detection for a specific load
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { validateCSRFWithMobile } from '@/lib/csrf';
-import { checkAllRules, autoCreateEscalations } from '@/lib/exceptionDetection';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { checkAllRules, autoCreateEscalations } from "@/lib/exceptionDetection";
 
 // POST /api/loads/[id]/check-exceptions - Manually trigger exception detection
 export async function POST(
@@ -23,12 +23,12 @@ export async function POST(
 
     // Only dispatchers and admins can trigger exception checks
     if (
-      session.role !== 'DISPATCHER' &&
-      session.role !== 'ADMIN' &&
-      session.role !== 'SUPER_ADMIN'
+      session.role !== "DISPATCHER" &&
+      session.role !== "ADMIN" &&
+      session.role !== "SUPER_ADMIN"
     ) {
       return NextResponse.json(
-        { error: 'Only dispatchers and admins can check for exceptions' },
+        { error: "Only dispatchers and admins can check for exceptions" },
         { status: 403 }
       );
     }
@@ -45,11 +45,10 @@ export async function POST(
       createdEscalations: result.escalations,
       totalChecked: 4, // Number of rules checked
     });
-
   } catch (error) {
-    console.error('Exception check error:', error);
+    console.error("Exception check error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
@@ -66,12 +65,12 @@ export async function GET(
 
     // Only dispatchers and admins can view exception checks
     if (
-      session.role !== 'DISPATCHER' &&
-      session.role !== 'ADMIN' &&
-      session.role !== 'SUPER_ADMIN'
+      session.role !== "DISPATCHER" &&
+      session.role !== "ADMIN" &&
+      session.role !== "SUPER_ADMIN"
     ) {
       return NextResponse.json(
-        { error: 'Only dispatchers and admins can check for exceptions' },
+        { error: "Only dispatchers and admins can check for exceptions" },
         { status: 403 }
       );
     }
@@ -84,11 +83,10 @@ export async function GET(
       wouldCreate: triggeredRules.length,
       totalChecked: 4,
     });
-
   } catch (error) {
-    console.error('Exception preview error:', error);
+    console.error("Exception preview error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

@@ -6,13 +6,13 @@
  * Allows admins to view and update platform settings
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { z } from 'zod';
-import { zodErrorResponse } from '@/lib/validation';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { z } from "zod";
+import { zodErrorResponse } from "@/lib/validation";
 // M2 FIX: Add CSRF validation
-import { validateCSRFWithMobile } from '@/lib/csrf';
+import { validateCSRFWithMobile } from "@/lib/csrf";
 
 const settingsSchema = z.object({
   // Rate Limiting
@@ -54,9 +54,9 @@ export async function GET(request: NextRequest) {
     // Require admin access
     const session = await requireAuth();
 
-    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
+    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: 'Admin access required' },
+        { error: "Admin access required" },
         { status: 403 }
       );
     }
@@ -64,14 +64,14 @@ export async function GET(request: NextRequest) {
     // Get settings from database (or use defaults if not set)
     // For MVP, we'll use a single settings record with id 'system'
     let settings = await db.systemSettings.findUnique({
-      where: { id: 'system' },
+      where: { id: "system" },
     });
 
     // If no settings exist, create default settings
     if (!settings) {
       settings = await db.systemSettings.create({
         data: {
-          id: 'system',
+          id: "system",
           // Rate Limiting defaults
           rateLimitDocumentUpload: 10,
           rateLimitTruckPosting: 100,
@@ -108,12 +108,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       settings,
-      message: 'System settings retrieved successfully',
+      message: "System settings retrieved successfully",
     });
   } catch (error) {
-    console.error('Get settings error:', error);
+    console.error("Get settings error:", error);
     return NextResponse.json(
-      { error: 'Failed to retrieve settings' },
+      { error: "Failed to retrieve settings" },
       { status: 500 }
     );
   }
@@ -133,9 +133,9 @@ export async function PATCH(request: NextRequest) {
     // Require admin access
     const session = await requireAuth();
 
-    if (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
+    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: 'Admin access required' },
+        { error: "Admin access required" },
         { status: 403 }
       );
     }
@@ -149,9 +149,17 @@ export async function PATCH(request: NextRequest) {
       validatedData.matchScoreGood !== undefined &&
       validatedData.matchScoreExcellent !== undefined
     ) {
-      if (!(validatedData.matchScoreMinimum < validatedData.matchScoreGood && validatedData.matchScoreGood < validatedData.matchScoreExcellent)) {
+      if (
+        !(
+          validatedData.matchScoreMinimum < validatedData.matchScoreGood &&
+          validatedData.matchScoreGood < validatedData.matchScoreExcellent
+        )
+      ) {
         return NextResponse.json(
-          { error: 'Match score thresholds must be in ascending order (minimum < good < excellent)' },
+          {
+            error:
+              "Match score thresholds must be in ascending order (minimum < good < excellent)",
+          },
           { status: 400 }
         );
       }
@@ -159,9 +167,9 @@ export async function PATCH(request: NextRequest) {
 
     // Update settings
     const updatedSettings = await db.systemSettings.upsert({
-      where: { id: 'system' },
+      where: { id: "system" },
       create: {
-        id: 'system',
+        id: "system",
         ...validatedData,
         lastModifiedBy: session.userId,
       },
@@ -175,16 +183,19 @@ export async function PATCH(request: NextRequest) {
     // Create audit log
     await db.auditLog.create({
       data: {
-        eventType: 'SETTINGS_UPDATED',
-        severity: 'INFO',
+        eventType: "SETTINGS_UPDATED",
+        severity: "INFO",
         userId: session.userId,
-        resource: 'SYSTEM_SETTINGS',
-        resourceId: 'system',
-        action: 'UPDATE',
-        result: 'SUCCESS',
-        message: 'System settings updated successfully',
-        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-        userAgent: request.headers.get('user-agent') || 'unknown',
+        resource: "SYSTEM_SETTINGS",
+        resourceId: "system",
+        action: "UPDATE",
+        result: "SUCCESS",
+        message: "System settings updated successfully",
+        ipAddress:
+          request.headers.get("x-forwarded-for") ||
+          request.headers.get("x-real-ip") ||
+          "unknown",
+        userAgent: request.headers.get("user-agent") || "unknown",
         metadata: {
           changes: validatedData,
         },
@@ -193,16 +204,16 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({
       settings: updatedSettings,
-      message: 'System settings updated successfully',
+      message: "System settings updated successfully",
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
 
-    console.error('Update settings error:', error);
+    console.error("Update settings error:", error);
     return NextResponse.json(
-      { error: 'Failed to update settings' },
+      { error: "Failed to update settings" },
       { status: 500 }
     );
   }

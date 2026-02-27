@@ -5,41 +5,36 @@
  * Uses @jest/environment-jsdom docblock directive for component tests
  */
 
-const nextJest = require('next/jest')
+const nextJest = require("next/jest");
 
 const createJestConfig = nextJest({
-  dir: './',
-})
+  dir: "./",
+});
 
 // Custom Jest config
 const customJestConfig = {
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/$1',
+    "^@/(.*)$": "<rootDir>/$1",
   },
-  transformIgnorePatterns: [
-    '/node_modules/(?!jose)',
-  ],
+  transformIgnorePatterns: ["/node_modules/(?!jose)"],
   // Default to node environment for API tests
   // Component tests should use @jest-environment jsdom docblock
-  testEnvironment: 'node',
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  testMatch: [
-    '**/__tests__/**/*.test.ts',
-    '**/__tests__/**/*.test.tsx',
-  ],
+  testEnvironment: "node",
+  setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
+  testMatch: ["**/__tests__/**/*.test.ts", "**/__tests__/**/*.test.tsx"],
   testPathIgnorePatterns: [
-    '/node_modules/',
-    '/mobile/',
-    '/__tests__/api-loads.test.ts',
-    '/__tests__/loadUtils.test.ts',
+    "/node_modules/",
+    "/mobile/",
+    "/__tests__/api-loads.test.ts",
+    "/__tests__/loadUtils.test.ts",
   ],
   collectCoverageFrom: [
-    'app/**/*.{js,jsx,ts,tsx}',
-    'lib/**/*.{js,jsx,ts,tsx}',
-    'components/**/*.{js,jsx,ts,tsx}',
-    '!**/*.d.ts',
-    '!**/node_modules/**',
-    '!**/.next/**',
+    "app/**/*.{js,jsx,ts,tsx}",
+    "lib/**/*.{js,jsx,ts,tsx}",
+    "components/**/*.{js,jsx,ts,tsx}",
+    "!**/*.d.ts",
+    "!**/node_modules/**",
+    "!**/.next/**",
   ],
   coverageThreshold: {
     global: {
@@ -49,6 +44,6 @@ const customJestConfig = {
       statements: 60,
     },
   },
-}
+};
 
-module.exports = createJestConfig(customJestConfig)
+module.exports = createJestConfig(customJestConfig);

@@ -10,8 +10,8 @@
  * - NEXT_PUBLIC_GOOGLE_MAPS_API_KEY or GOOGLE_ROUTES_API_KEY
  */
 
-import { db } from '@/lib/db';
-import { calculateDistance } from '@/lib/gpsTracking';
+import { db } from "@/lib/db";
+import { calculateDistance } from "@/lib/gpsTracking";
 
 // Cache duration in milliseconds (24 hours)
 const CACHE_DURATION_MS = 24 * 60 * 60 * 1000;
@@ -22,7 +22,7 @@ export interface RouteResult {
   durationSeconds: number;
   durationMinutes: number;
   estimatedArrival: Date | null;
-  source: 'google' | 'haversine' | 'cache';
+  source: "google" | "haversine" | "cache";
 }
 
 export interface Coordinates {
@@ -54,15 +54,21 @@ export async function calculateRoadDistance(
     if (cached) {
       return {
         ...cached,
-        source: 'cache',
+        source: "cache",
       };
     }
   }
 
   // Try Google Routes API
-  const apiKey = process.env.GOOGLE_ROUTES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const apiKey =
+    process.env.GOOGLE_ROUTES_API_KEY ||
+    process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-  if (apiKey && apiKey !== 'YOUR_GOOGLE_MAPS_API_KEY_HERE' && apiKey.length > 10) {
+  if (
+    apiKey &&
+    apiKey !== "YOUR_GOOGLE_MAPS_API_KEY_HERE" &&
+    apiKey.length > 10
+  ) {
     try {
       const result = await callGoogleRoutesApi(origin, destination, apiKey);
 
@@ -71,10 +77,13 @@ export async function calculateRoadDistance(
 
       return {
         ...result,
-        source: 'google',
+        source: "google",
       };
     } catch (error) {
-      console.error('Google Routes API error, falling back to Haversine:', error);
+      console.error(
+        "Google Routes API error, falling back to Haversine:",
+        error
+      );
     }
   }
 
@@ -141,7 +150,7 @@ export async function batchCalculateDistances(
   for (let i = 0; i < pairs.length; i += batchSize) {
     const batch = pairs.slice(i, i + batchSize);
     const batchResults = await Promise.all(
-      batch.map(pair => calculateRoadDistance(pair.origin, pair.destination))
+      batch.map((pair) => calculateRoadDistance(pair.origin, pair.destination))
     );
     results.push(...batchResults);
   }
@@ -160,11 +169,11 @@ async function callGoogleRoutesApi(
   apiKey: string
 ): Promise<RouteResult> {
   // Using Google Directions API (simpler than Routes API)
-  const url = new URL('https://maps.googleapis.com/maps/api/directions/json');
-  url.searchParams.set('origin', `${origin.lat},${origin.lng}`);
-  url.searchParams.set('destination', `${destination.lat},${destination.lng}`);
-  url.searchParams.set('mode', 'driving');
-  url.searchParams.set('key', apiKey);
+  const url = new URL("https://maps.googleapis.com/maps/api/directions/json");
+  url.searchParams.set("origin", `${origin.lat},${origin.lng}`);
+  url.searchParams.set("destination", `${destination.lat},${destination.lng}`);
+  url.searchParams.set("mode", "driving");
+  url.searchParams.set("key", apiKey);
 
   const response = await fetch(url.toString());
 
@@ -174,7 +183,7 @@ async function callGoogleRoutesApi(
 
   const data = await response.json();
 
-  if (data.status !== 'OK' || !data.routes?.[0]?.legs?.[0]) {
+  if (data.status !== "OK" || !data.routes?.[0]?.legs?.[0]) {
     throw new Error(`Google API returned status: ${data.status}`);
   }
 
@@ -188,7 +197,7 @@ async function callGoogleRoutesApi(
     durationSeconds,
     durationMinutes: Math.ceil(durationSeconds / 60),
     estimatedArrival: new Date(Date.now() + durationSeconds * 1000),
-    source: 'google',
+    source: "google",
   };
 }
 
@@ -222,14 +231,17 @@ function calculateHaversineRoute(
     durationSeconds: Math.round(durationSeconds),
     durationMinutes: Math.ceil(durationSeconds / 60),
     estimatedArrival: new Date(Date.now() + durationSeconds * 1000),
-    source: 'haversine',
+    source: "haversine",
   };
 }
 
 /**
  * Generate cache key from coordinates
  */
-function generateCacheKey(origin: Coordinates, destination: Coordinates): string {
+function generateCacheKey(
+  origin: Coordinates,
+  destination: Coordinates
+): string {
   // Round to 4 decimal places (~11m precision)
   const o = `${origin.lat.toFixed(4)},${origin.lng.toFixed(4)}`;
   const d = `${destination.lat.toFixed(4)},${destination.lng.toFixed(4)}`;
@@ -261,7 +273,7 @@ async function getCachedRoute(cacheKey: string): Promise<RouteResult | null> {
       durationSeconds: cached.durationSeconds,
       durationMinutes: Math.ceil(cached.durationSeconds / 60),
       estimatedArrival: new Date(Date.now() + cached.durationSeconds * 1000),
-      source: 'cache',
+      source: "cache",
     };
   } catch {
     // Table might not exist yet, ignore error
@@ -272,7 +284,10 @@ async function getCachedRoute(cacheKey: string): Promise<RouteResult | null> {
 /**
  * Cache route result in database
  */
-async function cacheRouteResult(cacheKey: string, result: RouteResult): Promise<void> {
+async function cacheRouteResult(
+  cacheKey: string,
+  result: RouteResult
+): Promise<void> {
   try {
     await db.routeCache.upsert({
       where: { cacheKey },
@@ -290,7 +305,7 @@ async function cacheRouteResult(cacheKey: string, result: RouteResult): Promise<
     });
   } catch {
     // Table might not exist yet, ignore error
-    console.warn('Route cache table not available, skipping cache');
+    console.warn("Route cache table not available, skipping cache");
   }
 }
 

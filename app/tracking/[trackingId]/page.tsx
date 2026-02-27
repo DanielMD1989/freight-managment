@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Public GPS Tracking Page
@@ -9,17 +9,17 @@
  * Shows live map, load details, ETA, and status
  */
 
-import React, { useEffect, useState } from 'react';
-import { use } from 'react';
-import dynamic from 'next/dynamic';
-import { checkGpsFreshness } from '@/lib/gpsUtils';
+import React, { useEffect, useState } from "react";
+import { use } from "react";
+import dynamic from "next/dynamic";
+import { checkGpsFreshness } from "@/lib/gpsUtils";
 
 // Dynamically import GpsMap to avoid SSR issues with Leaflet
-const GpsMap = dynamic(() => import('@/components/GpsMap'), {
+const GpsMap = dynamic(() => import("@/components/GpsMap"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-gray-100">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500"></div>
+    <div className="flex h-full w-full items-center justify-center bg-gray-100">
+      <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-cyan-500"></div>
     </div>
   ),
 });
@@ -50,7 +50,7 @@ interface LoadData {
 interface TrackingData {
   enabled: boolean;
   startedAt: string | null;
-  signalStatus: 'active' | 'weak' | 'lost';
+  signalStatus: "active" | "weak" | "lost";
   lastUpdate: string | null;
 }
 
@@ -74,15 +74,17 @@ export default function TrackingPage({
     const fetchTrackingData = async () => {
       try {
         // First, get load ID from tracking URL
-        const response = await fetch(`/api/tracking/${resolvedParams.trackingId}`);
+        const response = await fetch(
+          `/api/tracking/${resolvedParams.trackingId}`
+        );
 
         if (!response.ok) {
           if (response.status === 404) {
-            setError('Tracking link not found or expired');
+            setError("Tracking link not found or expired");
           } else if (response.status === 403) {
-            setError('Access denied');
+            setError("Access denied");
           } else {
-            setError('Failed to load tracking data');
+            setError("Failed to load tracking data");
           }
           setLoading(false);
           return;
@@ -93,8 +95,8 @@ export default function TrackingPage({
         setTracking(data.tracking);
         setLoading(false);
       } catch (err) {
-        console.error('Failed to fetch tracking data:', err);
-        setError('Failed to load tracking data');
+        console.error("Failed to fetch tracking data:", err);
+        setError("Failed to load tracking data");
         setLoading(false);
       }
     };
@@ -104,10 +106,12 @@ export default function TrackingPage({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-cyan-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">Loading tracking information...</p>
+          <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-b-4 border-cyan-500"></div>
+          <p className="text-lg text-gray-600">
+            Loading tracking information...
+          </p>
         </div>
       </div>
     );
@@ -115,11 +119,13 @@ export default function TrackingPage({
 
   if (error || !load || !tracking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-lg text-center">
-          <div className="text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Tracking Not Available</h1>
-          <p className="text-gray-600 mb-4">{error}</p>
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="w-full max-w-md rounded-lg bg-white p-8 text-center shadow-lg">
+          <div className="mb-4 text-6xl">⚠️</div>
+          <h1 className="mb-2 text-2xl font-bold text-gray-800">
+            Tracking Not Available
+          </h1>
+          <p className="mb-4 text-gray-600">{error}</p>
           <p className="text-sm text-gray-500">
             This tracking link may have expired or been disabled.
           </p>
@@ -129,32 +135,71 @@ export default function TrackingPage({
   }
 
   const getStatusBadge = (status: string) => {
-    const badges: Record<string, { bg: string; text: string; label: string }> = {
-      ASSIGNED: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Assigned' },
-      IN_TRANSIT: { bg: 'bg-green-100', text: 'text-green-800', label: 'In Transit' },
-      DELIVERED: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Delivered' },
+    const badges: Record<string, { bg: string; text: string; label: string }> =
+      {
+        ASSIGNED: {
+          bg: "bg-blue-100",
+          text: "text-blue-800",
+          label: "Assigned",
+        },
+        IN_TRANSIT: {
+          bg: "bg-green-100",
+          text: "text-green-800",
+          label: "In Transit",
+        },
+        DELIVERED: {
+          bg: "bg-gray-100",
+          text: "text-gray-800",
+          label: "Delivered",
+        },
+      };
+
+    const badge = badges[status] || {
+      bg: "bg-gray-100",
+      text: "text-gray-800",
+      label: status,
     };
 
-    const badge = badges[status] || { bg: 'bg-gray-100', text: 'text-gray-800', label: status };
-
     return (
-      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${badge.bg} ${badge.text}`}>
+      <span
+        className={`rounded-full px-3 py-1 text-sm font-semibold ${badge.bg} ${badge.text}`}
+      >
         {badge.label}
       </span>
     );
   };
 
   const getSignalBadge = (signal: string) => {
-    const badges: Record<string, { bg: string; text: string; icon: string; label: string }> = {
-      active: { bg: 'bg-green-100', text: 'text-green-800', icon: '🟢', label: 'Signal Active' },
-      weak: { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: '🟡', label: 'Weak Signal' },
-      lost: { bg: 'bg-red-100', text: 'text-red-800', icon: '🔴', label: 'Signal Lost' },
+    const badges: Record<
+      string,
+      { bg: string; text: string; icon: string; label: string }
+    > = {
+      active: {
+        bg: "bg-green-100",
+        text: "text-green-800",
+        icon: "🟢",
+        label: "Signal Active",
+      },
+      weak: {
+        bg: "bg-yellow-100",
+        text: "text-yellow-800",
+        icon: "🟡",
+        label: "Weak Signal",
+      },
+      lost: {
+        bg: "bg-red-100",
+        text: "text-red-800",
+        icon: "🔴",
+        label: "Signal Lost",
+      },
     };
 
     const badge = badges[signal] || badges.lost;
 
     return (
-      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${badge.bg} ${badge.text}`}>
+      <span
+        className={`rounded-full px-3 py-1 text-sm font-semibold ${badge.bg} ${badge.text}`}
+      >
         {badge.icon} {badge.label}
       </span>
     );
@@ -163,12 +208,14 @@ export default function TrackingPage({
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="border-b border-gray-200 bg-white shadow-sm">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">GPS Live Tracking</h1>
-              <p className="text-sm text-gray-500 mt-1">
+              <h1 className="text-2xl font-bold text-gray-900">
+                GPS Live Tracking
+              </h1>
+              <p className="mt-1 text-sm text-gray-500">
                 {load.pickupCity} → {load.deliveryCity}
               </p>
             </div>
@@ -181,11 +228,11 @@ export default function TrackingPage({
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Map - 2/3 width */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div className="overflow-hidden rounded-lg bg-white shadow-lg">
               <div className="h-[600px]">
                 <GpsMap
                   loadId={load.id}
@@ -217,25 +264,31 @@ export default function TrackingPage({
           {/* Details Sidebar - 1/3 width */}
           <div className="space-y-6">
             {/* Load Details */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Load Details</h2>
+            <div className="rounded-lg bg-white p-6 shadow-lg">
+              <h2 className="mb-4 text-lg font-bold text-gray-900">
+                Load Details
+              </h2>
 
               <div className="space-y-3">
                 <div>
                   <p className="text-xs text-gray-500">Truck Type</p>
-                  <p className="font-semibold">{load.truckType.replace('_', ' ')}</p>
+                  <p className="font-semibold">
+                    {load.truckType.replace("_", " ")}
+                  </p>
                 </div>
 
                 <div>
                   <p className="text-xs text-gray-500">License Plate</p>
                   <p className="font-semibold">
-                    {load.assignedTruck?.licensePlate || 'N/A'}
+                    {load.assignedTruck?.licensePlate || "N/A"}
                   </p>
                 </div>
 
                 <div>
                   <p className="text-xs text-gray-500">Weight</p>
-                  <p className="font-semibold">{load.weight.toLocaleString()} kg</p>
+                  <p className="font-semibold">
+                    {load.weight.toLocaleString()} kg
+                  </p>
                 </div>
 
                 <div>
@@ -255,14 +308,16 @@ export default function TrackingPage({
             </div>
 
             {/* GPS Status */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">GPS Status</h2>
+            <div className="rounded-lg bg-white p-6 shadow-lg">
+              <h2 className="mb-4 text-lg font-bold text-gray-900">
+                GPS Status
+              </h2>
 
               <div className="space-y-3">
                 <div>
                   <p className="text-xs text-gray-500">Tracking Status</p>
                   <p className="font-semibold">
-                    {tracking.enabled ? '✓ Active' : '✗ Inactive'}
+                    {tracking.enabled ? "✓ Active" : "✗ Inactive"}
                   </p>
                 </div>
 
@@ -287,12 +342,12 @@ export default function TrackingPage({
             </div>
 
             {/* Info Notice */}
-            <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4">
+            <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-4">
               <p className="text-sm text-cyan-800">
                 <strong>ℹ️ Live Tracking</strong>
                 <br />
-                This page updates automatically every 15 seconds. GPS positions are accurate
-                to within 10-50 meters.
+                This page updates automatically every 15 seconds. GPS positions
+                are accurate to within 10-50 meters.
               </p>
             </div>
           </div>
@@ -300,8 +355,8 @@ export default function TrackingPage({
       </div>
 
       {/* Footer */}
-      <div className="bg-white border-t border-gray-200 mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="mt-12 border-t border-gray-200 bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <p className="text-center text-sm text-gray-500">
             Powered by GPS Live Tracking • Updates every 15 seconds
           </p>

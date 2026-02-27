@@ -79,20 +79,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: "#/components/schemas/LoginRequest"
       responses:
-        '200':
+        "200":
           description: Login successful or MFA required
           content:
             application/json:
               schema:
                 oneOf:
-                  - $ref: '#/components/schemas/LoginResponse'
-                  - $ref: '#/components/schemas/MFARequiredResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '429':
-          $ref: '#/components/responses/RateLimitExceeded'
+                  - $ref: "#/components/schemas/LoginResponse"
+                  - $ref: "#/components/schemas/MFARequiredResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimitExceeded"
 
   /auth/register:
     post:
@@ -106,17 +106,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RegisterRequest'
+              $ref: "#/components/schemas/RegisterRequest"
       responses:
-        '201':
+        "201":
           description: Registration successful
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RegisterResponse'
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '409':
+                $ref: "#/components/schemas/RegisterResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "409":
           description: Email already registered
 
   /auth/logout:
@@ -126,7 +126,7 @@ paths:
       description: Invalidate current session
       operationId: logout
       responses:
-        '200':
+        "200":
           description: Logout successful
 
   /auth/me:
@@ -136,14 +136,14 @@ paths:
       description: Get authenticated user's profile
       operationId: getCurrentUser
       responses:
-        '200':
+        "200":
           description: Current user profile
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /auth/verify-mfa:
     post:
@@ -164,15 +164,15 @@ paths:
                   type: string
                 code:
                   type: string
-                  pattern: '^[0-9]{6}$'
+                  pattern: "^[0-9]{6}$"
       responses:
-        '200':
+        "200":
           description: MFA verified, login complete
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoginResponse'
-        '401':
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
           description: Invalid or expired MFA code
 
   /auth/forgot-password:
@@ -193,7 +193,7 @@ paths:
                   type: string
                   format: email
       responses:
-        '200':
+        "200":
           description: Reset email sent (always returns 200 for security)
 
   /auth/reset-password:
@@ -216,9 +216,9 @@ paths:
                   type: string
                   minLength: 8
       responses:
-        '200':
+        "200":
           description: Password reset successful
-        '400':
+        "400":
           description: Invalid or expired token
 
   # ============================================================================
@@ -230,12 +230,12 @@ paths:
       summary: Get user profile
       operationId: getUserProfile
       responses:
-        '200':
+        "200":
           description: User profile
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserProfile'
+                $ref: "#/components/schemas/UserProfile"
     patch:
       tags: [user]
       summary: Update user profile
@@ -245,9 +245,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateProfileRequest'
+              $ref: "#/components/schemas/UpdateProfileRequest"
       responses:
-        '200':
+        "200":
           description: Profile updated
 
   /user/change-password:
@@ -269,9 +269,9 @@ paths:
                   type: string
                   minLength: 8
       responses:
-        '200':
+        "200":
           description: Password changed
-        '401':
+        "401":
           description: Current password incorrect
 
   /user/mfa/enable:
@@ -280,7 +280,7 @@ paths:
       summary: Enable MFA
       operationId: enableMFA
       responses:
-        '200':
+        "200":
           description: MFA enabled, verification code sent
 
   /user/mfa/disable:
@@ -299,7 +299,7 @@ paths:
                 code:
                   type: string
       responses:
-        '200':
+        "200":
           description: MFA disabled
 
   /user/sessions:
@@ -308,14 +308,14 @@ paths:
       summary: List active sessions
       operationId: listSessions
       responses:
-        '200':
+        "200":
           description: List of active sessions
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Session'
+                  $ref: "#/components/schemas/Session"
 
   /user/sessions/revoke-all:
     post:
@@ -323,7 +323,7 @@ paths:
       summary: Revoke all sessions except current
       operationId: revokeAllSessions
       responses:
-        '200':
+        "200":
           description: All other sessions revoked
 
   # ============================================================================
@@ -336,8 +336,8 @@ paths:
       description: Get paginated list of loads with filters
       operationId: listLoads
       parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/LimitParam'
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
         - name: status
           in: query
           schema:
@@ -354,7 +354,7 @@ paths:
         - name: truckType
           in: query
           schema:
-            $ref: '#/components/schemas/TruckType'
+            $ref: "#/components/schemas/TruckType"
         - name: myLoads
           in: query
           schema:
@@ -381,12 +381,12 @@ paths:
             type: string
             enum: [asc, desc]
       responses:
-        '200':
+        "200":
           description: List of loads
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoadListResponse'
+                $ref: "#/components/schemas/LoadListResponse"
     post:
       tags: [loads]
       summary: Create load
@@ -397,9 +397,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateLoadRequest'
+              $ref: "#/components/schemas/CreateLoadRequest"
       responses:
-        '201':
+        "201":
           description: Load created
           content:
             application/json:
@@ -407,9 +407,9 @@ paths:
                 type: object
                 properties:
                   load:
-                    $ref: '#/components/schemas/Load'
-        '400':
-          $ref: '#/components/responses/ValidationError'
+                    $ref: "#/components/schemas/Load"
+        "400":
+          $ref: "#/components/responses/ValidationError"
 
   /loads/{id}:
     get:
@@ -417,45 +417,45 @@ paths:
       summary: Get load details
       operationId: getLoad
       parameters:
-        - $ref: '#/components/parameters/LoadId'
+        - $ref: "#/components/parameters/LoadId"
       responses:
-        '200':
+        "200":
           description: Load details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoadDetail'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                $ref: "#/components/schemas/LoadDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
     patch:
       tags: [loads]
       summary: Update load
       operationId: updateLoad
       parameters:
-        - $ref: '#/components/parameters/LoadId'
+        - $ref: "#/components/parameters/LoadId"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateLoadRequest'
+              $ref: "#/components/schemas/UpdateLoadRequest"
       responses:
-        '200':
+        "200":
           description: Load updated
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '409':
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "409":
           description: Invalid state transition
     delete:
       tags: [loads]
       summary: Delete load
       operationId: deleteLoad
       parameters:
-        - $ref: '#/components/parameters/LoadId'
+        - $ref: "#/components/parameters/LoadId"
       responses:
-        '200':
+        "200":
           description: Load deleted
-        '409':
+        "409":
           description: Cannot delete assigned/in-transit load
 
   /loads/{id}/status:
@@ -464,7 +464,7 @@ paths:
       summary: Update load status
       operationId: updateLoadStatus
       parameters:
-        - $ref: '#/components/parameters/LoadId'
+        - $ref: "#/components/parameters/LoadId"
       requestBody:
         required: true
         content:
@@ -474,11 +474,11 @@ paths:
               required: [status]
               properties:
                 status:
-                  $ref: '#/components/schemas/LoadStatus'
+                  $ref: "#/components/schemas/LoadStatus"
       responses:
-        '200':
+        "200":
           description: Status updated
-        '409':
+        "409":
           description: Invalid state transition
 
   /loads/{id}/assign:
@@ -487,7 +487,7 @@ paths:
       summary: Assign truck to load
       operationId: assignTruckToLoad
       parameters:
-        - $ref: '#/components/parameters/LoadId'
+        - $ref: "#/components/parameters/LoadId"
       requestBody:
         required: true
         content:
@@ -499,9 +499,9 @@ paths:
                 truckId:
                   type: string
       responses:
-        '200':
+        "200":
           description: Truck assigned, trip created
-        '400':
+        "400":
           description: Truck unavailable or incompatible
 
   /loads/{id}/matching-trucks:
@@ -510,7 +510,7 @@ paths:
       summary: Find matching trucks for load
       operationId: findMatchingTrucks
       parameters:
-        - $ref: '#/components/parameters/LoadId'
+        - $ref: "#/components/parameters/LoadId"
         - name: minScore
           in: query
           schema:
@@ -518,14 +518,14 @@ paths:
             minimum: 0
             maximum: 100
       responses:
-        '200':
+        "200":
           description: Matching trucks with scores
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/TruckMatch'
+                  $ref: "#/components/schemas/TruckMatch"
 
   /loads/{id}/pod:
     post:
@@ -533,7 +533,7 @@ paths:
       summary: Upload proof of delivery
       operationId: uploadPOD
       parameters:
-        - $ref: '#/components/parameters/LoadId'
+        - $ref: "#/components/parameters/LoadId"
       requestBody:
         required: true
         content:
@@ -551,7 +551,7 @@ paths:
                 notes:
                   type: string
       responses:
-        '200':
+        "200":
           description: POD uploaded
 
   /loads/{id}/tracking:
@@ -560,14 +560,14 @@ paths:
       summary: Get load tracking info
       operationId: getLoadTracking
       parameters:
-        - $ref: '#/components/parameters/LoadId'
+        - $ref: "#/components/parameters/LoadId"
       responses:
-        '200':
+        "200":
           description: Tracking information
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TrackingInfo'
+                $ref: "#/components/schemas/TrackingInfo"
 
   /loads/{id}/service-fee:
     get:
@@ -575,14 +575,14 @@ paths:
       summary: Get service fee preview
       operationId: getServiceFee
       parameters:
-        - $ref: '#/components/parameters/LoadId'
+        - $ref: "#/components/parameters/LoadId"
       responses:
-        '200':
+        "200":
           description: Service fee breakdown
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ServiceFeePreview'
+                $ref: "#/components/schemas/ServiceFeePreview"
 
   # ============================================================================
   # TRUCKS
@@ -593,12 +593,12 @@ paths:
       summary: List trucks
       operationId: listTrucks
       parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/LimitParam'
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
         - name: truckType
           in: query
           schema:
-            $ref: '#/components/schemas/TruckType'
+            $ref: "#/components/schemas/TruckType"
         - name: isAvailable
           in: query
           schema:
@@ -612,12 +612,12 @@ paths:
           schema:
             type: boolean
       responses:
-        '200':
+        "200":
           description: List of trucks
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TruckListResponse'
+                $ref: "#/components/schemas/TruckListResponse"
     post:
       tags: [trucks]
       summary: Register truck
@@ -627,9 +627,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateTruckRequest'
+              $ref: "#/components/schemas/CreateTruckRequest"
       responses:
-        '201':
+        "201":
           description: Truck registered
           content:
             application/json:
@@ -637,7 +637,7 @@ paths:
                 type: object
                 properties:
                   truck:
-                    $ref: '#/components/schemas/Truck'
+                    $ref: "#/components/schemas/Truck"
 
   /trucks/{id}:
     get:
@@ -645,39 +645,39 @@ paths:
       summary: Get truck details
       operationId: getTruck
       parameters:
-        - $ref: '#/components/parameters/TruckId'
+        - $ref: "#/components/parameters/TruckId"
       responses:
-        '200':
+        "200":
           description: Truck details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TruckDetail'
+                $ref: "#/components/schemas/TruckDetail"
     patch:
       tags: [trucks]
       summary: Update truck
       operationId: updateTruck
       parameters:
-        - $ref: '#/components/parameters/TruckId'
+        - $ref: "#/components/parameters/TruckId"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateTruckRequest'
+              $ref: "#/components/schemas/UpdateTruckRequest"
       responses:
-        '200':
+        "200":
           description: Truck updated
     delete:
       tags: [trucks]
       summary: Delete truck
       operationId: deleteTruck
       parameters:
-        - $ref: '#/components/parameters/TruckId'
+        - $ref: "#/components/parameters/TruckId"
       responses:
-        '200':
+        "200":
           description: Truck deleted
-        '409':
+        "409":
           description: Cannot delete truck with active trips
 
   /trucks/{id}/nearby-loads:
@@ -686,21 +686,21 @@ paths:
       summary: Find nearby loads for truck
       operationId: findNearbyLoads
       parameters:
-        - $ref: '#/components/parameters/TruckId'
+        - $ref: "#/components/parameters/TruckId"
         - name: radiusKm
           in: query
           schema:
             type: integer
             default: 200
       responses:
-        '200':
+        "200":
           description: Nearby matching loads
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/LoadMatch'
+                  $ref: "#/components/schemas/LoadMatch"
 
   /trucks/{id}/position:
     post:
@@ -708,15 +708,15 @@ paths:
       summary: Update truck position
       operationId: updateTruckPosition
       parameters:
-        - $ref: '#/components/parameters/TruckId'
+        - $ref: "#/components/parameters/TruckId"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PositionUpdate'
+              $ref: "#/components/schemas/PositionUpdate"
       responses:
-        '200':
+        "200":
           description: Position updated
 
   # ============================================================================
@@ -728,8 +728,8 @@ paths:
       summary: List truck postings
       operationId: listTruckPostings
       parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/LimitParam'
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
         - name: originCity
           in: query
           schema:
@@ -741,18 +741,18 @@ paths:
         - name: truckType
           in: query
           schema:
-            $ref: '#/components/schemas/TruckType'
+            $ref: "#/components/schemas/TruckType"
         - name: myPostings
           in: query
           schema:
             type: boolean
       responses:
-        '200':
+        "200":
           description: List of truck postings
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TruckPostingListResponse'
+                $ref: "#/components/schemas/TruckPostingListResponse"
     post:
       tags: [truck-postings]
       summary: Create truck posting
@@ -762,9 +762,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateTruckPostingRequest'
+              $ref: "#/components/schemas/CreateTruckPostingRequest"
       responses:
-        '201':
+        "201":
           description: Posting created
 
   /truck-postings/{id}:
@@ -779,7 +779,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Posting details
     patch:
       tags: [truck-postings]
@@ -792,7 +792,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Posting updated
     delete:
       tags: [truck-postings]
@@ -805,7 +805,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Posting deleted
 
   /truck-postings/{id}/matching-loads:
@@ -820,7 +820,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Matching loads
 
   # ============================================================================
@@ -832,20 +832,20 @@ paths:
       summary: List trips
       operationId: listTrips
       parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/LimitParam'
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
         - name: status
           in: query
           schema:
             type: string
           description: Comma-separated statuses
       responses:
-        '200':
+        "200":
           description: List of trips
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TripListResponse'
+                $ref: "#/components/schemas/TripListResponse"
     post:
       tags: [trips]
       summary: Create trip
@@ -863,7 +863,7 @@ paths:
                 truckId:
                   type: string
       responses:
-        '201':
+        "201":
           description: Trip created
 
   /trips/{tripId}:
@@ -872,30 +872,30 @@ paths:
       summary: Get trip details
       operationId: getTrip
       parameters:
-        - $ref: '#/components/parameters/TripId'
+        - $ref: "#/components/parameters/TripId"
       responses:
-        '200':
+        "200":
           description: Trip details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TripDetail'
+                $ref: "#/components/schemas/TripDetail"
     patch:
       tags: [trips]
       summary: Update trip
       operationId: updateTrip
       parameters:
-        - $ref: '#/components/parameters/TripId'
+        - $ref: "#/components/parameters/TripId"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateTripRequest'
+              $ref: "#/components/schemas/UpdateTripRequest"
       responses:
-        '200':
+        "200":
           description: Trip updated
-        '409':
+        "409":
           description: Invalid state transition
 
   /trips/{tripId}/confirm:
@@ -904,9 +904,9 @@ paths:
       summary: Confirm trip pickup
       operationId: confirmTripPickup
       parameters:
-        - $ref: '#/components/parameters/TripId'
+        - $ref: "#/components/parameters/TripId"
       responses:
-        '200':
+        "200":
           description: Trip confirmed, status → PICKUP_PENDING
 
   /trips/{tripId}/cancel:
@@ -915,7 +915,7 @@ paths:
       summary: Cancel trip
       operationId: cancelTrip
       parameters:
-        - $ref: '#/components/parameters/TripId'
+        - $ref: "#/components/parameters/TripId"
       requestBody:
         content:
           application/json:
@@ -925,7 +925,7 @@ paths:
                 reason:
                   type: string
       responses:
-        '200':
+        "200":
           description: Trip cancelled
 
   /trips/{tripId}/pod:
@@ -934,7 +934,7 @@ paths:
       summary: Upload trip POD
       operationId: uploadTripPOD
       parameters:
-        - $ref: '#/components/parameters/TripId'
+        - $ref: "#/components/parameters/TripId"
       requestBody:
         required: true
         content:
@@ -946,7 +946,7 @@ paths:
                   type: string
                   format: binary
       responses:
-        '200':
+        "200":
           description: POD uploaded, trip completed
 
   /trips/{tripId}/live:
@@ -955,14 +955,14 @@ paths:
       summary: Get live trip position
       operationId: getLiveTripPosition
       parameters:
-        - $ref: '#/components/parameters/TripId'
+        - $ref: "#/components/parameters/TripId"
       responses:
-        '200':
+        "200":
           description: Current position
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LivePosition'
+                $ref: "#/components/schemas/LivePosition"
 
   /trips/{tripId}/history:
     get:
@@ -970,16 +970,16 @@ paths:
       summary: Get trip route history
       operationId: getTripHistory
       parameters:
-        - $ref: '#/components/parameters/TripId'
+        - $ref: "#/components/parameters/TripId"
       responses:
-        '200':
+        "200":
           description: Route history
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/RoutePoint'
+                  $ref: "#/components/schemas/RoutePoint"
 
   # ============================================================================
   # WALLET
@@ -990,12 +990,12 @@ paths:
       summary: Get wallet balance
       operationId: getWalletBalance
       responses:
-        '200':
+        "200":
           description: Wallet balance
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WalletBalance'
+                $ref: "#/components/schemas/WalletBalance"
 
   /wallet/transactions:
     get:
@@ -1003,20 +1003,20 @@ paths:
       summary: List wallet transactions
       operationId: listWalletTransactions
       parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/LimitParam'
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
         - name: type
           in: query
           schema:
             type: string
             enum: [CREDIT, DEBIT, SERVICE_FEE, REFUND]
       responses:
-        '200':
+        "200":
           description: Transaction history
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TransactionListResponse'
+                $ref: "#/components/schemas/TransactionListResponse"
 
   /financial/wallet:
     post:
@@ -1035,7 +1035,7 @@ paths:
                   type: number
                   minimum: 100
       responses:
-        '200':
+        "200":
           description: Payment initiated
           content:
             application/json:
@@ -1065,7 +1065,7 @@ paths:
                 bankAccount:
                   type: string
       responses:
-        '200':
+        "200":
           description: Withdrawal requested
 
   # ============================================================================
@@ -1077,12 +1077,12 @@ paths:
       summary: Get dispatcher dashboard
       operationId: getDispatcherDashboard
       responses:
-        '200':
+        "200":
           description: Dashboard statistics
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DispatcherDashboard'
+                $ref: "#/components/schemas/DispatcherDashboard"
 
   /dispatch:
     get:
@@ -1090,7 +1090,7 @@ paths:
       summary: Get dispatch queue
       operationId: getDispatchQueue
       responses:
-        '200':
+        "200":
           description: Loads pending dispatch
     post:
       tags: [dispatcher]
@@ -1109,7 +1109,7 @@ paths:
                 truckId:
                   type: string
       responses:
-        '200':
+        "200":
           description: Load dispatched
 
   /match-proposals:
@@ -1118,7 +1118,7 @@ paths:
       summary: List match proposals
       operationId: listMatchProposals
       responses:
-        '200':
+        "200":
           description: Match proposals
 
   /match-proposals/{id}/respond:
@@ -1144,7 +1144,7 @@ paths:
                   type: string
                   enum: [ACCEPT, REJECT]
       responses:
-        '200':
+        "200":
           description: Response recorded
 
   /escalations:
@@ -1153,14 +1153,14 @@ paths:
       summary: List escalations
       operationId: listEscalations
       responses:
-        '200':
+        "200":
           description: Active escalations
     post:
       tags: [dispatcher]
       summary: Create escalation
       operationId: createEscalation
       responses:
-        '201':
+        "201":
           description: Escalation created
 
   /escalations/{id}:
@@ -1175,7 +1175,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Escalation resolved
 
   # ============================================================================
@@ -1187,12 +1187,12 @@ paths:
       summary: Get admin dashboard
       operationId: getAdminDashboard
       responses:
-        '200':
+        "200":
           description: Admin statistics
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AdminDashboard'
+                $ref: "#/components/schemas/AdminDashboard"
 
   /admin/users:
     get:
@@ -1200,23 +1200,23 @@ paths:
       summary: List all users
       operationId: listUsers
       parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/LimitParam'
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
         - name: role
           in: query
           schema:
-            $ref: '#/components/schemas/UserRole'
+            $ref: "#/components/schemas/UserRole"
         - name: search
           in: query
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: List of users
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserListResponse'
+                $ref: "#/components/schemas/UserListResponse"
     patch:
       tags: [admin]
       summary: Update user role
@@ -1232,9 +1232,9 @@ paths:
                 userId:
                   type: string
                 role:
-                  $ref: '#/components/schemas/UserRole'
+                  $ref: "#/components/schemas/UserRole"
       responses:
-        '200':
+        "200":
           description: Role updated
 
   /admin/users/{id}:
@@ -1249,7 +1249,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: User details
     patch:
       tags: [admin]
@@ -1262,7 +1262,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: User updated
     delete:
       tags: [admin]
@@ -1275,7 +1275,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: User deactivated
 
   /admin/users/{id}/verify:
@@ -1290,7 +1290,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: User verified
 
   /admin/users/{id}/wallet:
@@ -1305,7 +1305,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: User wallet details
 
   /admin/users/{id}/wallet/topup:
@@ -1332,7 +1332,7 @@ paths:
                 reason:
                   type: string
       responses:
-        '200':
+        "200":
           description: Wallet topped up
 
   /admin/organizations:
@@ -1341,7 +1341,7 @@ paths:
       summary: List organizations
       operationId: listOrganizations
       responses:
-        '200':
+        "200":
           description: List of organizations
 
   /admin/organizations/{id}/verify:
@@ -1356,7 +1356,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Organization verified
 
   /admin/corridors:
@@ -1365,14 +1365,14 @@ paths:
       summary: List corridors
       operationId: listCorridors
       responses:
-        '200':
+        "200":
           description: List of corridors
     post:
       tags: [admin]
       summary: Create corridor
       operationId: createCorridor
       responses:
-        '201':
+        "201":
           description: Corridor created
 
   /admin/corridors/{id}:
@@ -1387,7 +1387,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Corridor updated
     delete:
       tags: [admin]
@@ -1400,7 +1400,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Corridor deleted
 
   /admin/settlements:
@@ -1409,7 +1409,7 @@ paths:
       summary: List settlements
       operationId: listSettlements
       responses:
-        '200':
+        "200":
           description: Settlement queue
 
   /admin/settlements/{id}/approve:
@@ -1424,7 +1424,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Settlement approved
 
   /admin/audit-logs:
@@ -1433,8 +1433,8 @@ paths:
       summary: List audit logs
       operationId: listAuditLogs
       parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/LimitParam'
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
         - name: action
           in: query
           schema:
@@ -1444,7 +1444,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Audit log entries
 
   /admin/platform-metrics:
@@ -1453,12 +1453,12 @@ paths:
       summary: Get platform metrics
       operationId: getPlatformMetrics
       responses:
-        '200':
+        "200":
           description: Platform-wide metrics
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PlatformMetrics'
+                $ref: "#/components/schemas/PlatformMetrics"
 
   /admin/analytics:
     get:
@@ -1477,7 +1477,7 @@ paths:
             type: string
             format: date
       responses:
-        '200':
+        "200":
           description: Analytics data
 
   # ============================================================================
@@ -1493,9 +1493,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PositionUpdate'
+              $ref: "#/components/schemas/PositionUpdate"
       responses:
-        '200':
+        "200":
           description: Position recorded
 
   /gps/batch:
@@ -1514,9 +1514,9 @@ paths:
                 positions:
                   type: array
                   items:
-                    $ref: '#/components/schemas/PositionUpdate'
+                    $ref: "#/components/schemas/PositionUpdate"
       responses:
-        '200':
+        "200":
           description: Positions recorded
 
   /gps/live:
@@ -1531,7 +1531,7 @@ paths:
             type: string
           description: Comma-separated truck IDs
       responses:
-        '200':
+        "200":
           description: Live positions
 
   /gps/devices:
@@ -1540,14 +1540,14 @@ paths:
       summary: List GPS devices
       operationId: listGPSDevices
       responses:
-        '200':
+        "200":
           description: List of GPS devices
     post:
       tags: [gps]
       summary: Register GPS device
       operationId: registerGPSDevice
       responses:
-        '201':
+        "201":
           description: Device registered
 
   /gps/eta:
@@ -1562,7 +1562,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: ETA information
           content:
             application/json:
@@ -1587,12 +1587,12 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Tracking information
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PublicTracking'
+                $ref: "#/components/schemas/PublicTracking"
 
   # ============================================================================
   # ORGANIZATIONS
@@ -1603,14 +1603,14 @@ paths:
       summary: List organizations
       operationId: listOrganizationsPublic
       responses:
-        '200':
+        "200":
           description: List of organizations
     post:
       tags: [organizations]
       summary: Create organization
       operationId: createOrganization
       responses:
-        '201':
+        "201":
           description: Organization created
 
   /organizations/me:
@@ -1619,7 +1619,7 @@ paths:
       summary: Get my organization
       operationId: getMyOrganization
       responses:
-        '200':
+        "200":
           description: Current user's organization
 
   /organizations/{id}:
@@ -1634,7 +1634,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Organization details
     patch:
       tags: [organizations]
@@ -1647,7 +1647,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Organization updated
 
   /organizations/invitations:
@@ -1656,14 +1656,14 @@ paths:
       summary: List organization invitations
       operationId: listInvitations
       responses:
-        '200':
+        "200":
           description: List of invitations
     post:
       tags: [organizations]
       summary: Send invitation
       operationId: sendInvitation
       responses:
-        '201':
+        "201":
           description: Invitation sent
 
   /organizations/invitations/{id}:
@@ -1678,7 +1678,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Response recorded
     delete:
       tags: [organizations]
@@ -1691,7 +1691,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Invitation cancelled
 
   # ============================================================================
@@ -1703,7 +1703,7 @@ paths:
       summary: List documents
       operationId: listDocuments
       responses:
-        '200':
+        "200":
           description: List of documents
 
   /documents/upload:
@@ -1731,7 +1731,7 @@ paths:
                 entityId:
                   type: string
       responses:
-        '201':
+        "201":
           description: Document uploaded
 
   /documents/{id}:
@@ -1746,7 +1746,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Document metadata
     delete:
       tags: [documents]
@@ -1759,7 +1759,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Document deleted
 
   # ============================================================================
@@ -1776,14 +1776,14 @@ paths:
           schema:
             type: boolean
       responses:
-        '200':
+        "200":
           description: List of notifications
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Notification'
+                  $ref: "#/components/schemas/Notification"
 
   /notifications/{id}/read:
     post:
@@ -1797,7 +1797,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Marked as read
 
   /notifications/mark-all-read:
@@ -1806,7 +1806,7 @@ paths:
       summary: Mark all notifications as read
       operationId: markAllNotificationsRead
       responses:
-        '200':
+        "200":
           description: All marked as read
 
   # ============================================================================
@@ -1819,7 +1819,7 @@ paths:
       operationId: healthCheck
       security: []
       responses:
-        '200':
+        "200":
           description: Service healthy
           content:
             application/json:
@@ -1842,7 +1842,7 @@ paths:
       operationId: getCSRFToken
       security: []
       responses:
-        '200':
+        "200":
           description: CSRF token
           content:
             application/json:
@@ -1859,7 +1859,7 @@ paths:
       operationId: listEthiopianLocations
       security: []
       responses:
-        '200':
+        "200":
           description: List of locations
 
   /distance:
@@ -1889,7 +1889,7 @@ paths:
           schema:
             type: number
       responses:
-        '200':
+        "200":
           description: Distance result
           content:
             application/json:
@@ -1921,12 +1921,12 @@ paths:
                 distanceKm:
                   type: number
       responses:
-        '200':
+        "200":
           description: Fee calculation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ServiceFeePreview'
+                $ref: "#/components/schemas/ServiceFeePreview"
 
 # ============================================================================
 # COMPONENTS
@@ -1983,19 +1983,19 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
     NotFound:
       description: Resource not found
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
     ValidationError:
       description: Validation error
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ValidationError'
+            $ref: "#/components/schemas/ValidationError"
     RateLimitExceeded:
       description: Rate limit exceeded
       headers:
@@ -2005,7 +2005,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
 
   schemas:
     # --------------------------------------------------------------------------
@@ -2017,15 +2017,41 @@ components:
 
     TruckType:
       type: string
-      enum: [FLATBED, REFRIGERATED, TANKER, CONTAINER, DRY_VAN, LOWBOY, DUMP_TRUCK, BOX_TRUCK]
+      enum:
+        [
+          FLATBED,
+          REFRIGERATED,
+          TANKER,
+          CONTAINER,
+          DRY_VAN,
+          LOWBOY,
+          DUMP_TRUCK,
+          BOX_TRUCK,
+        ]
 
     LoadStatus:
       type: string
-      enum: [DRAFT, POSTED, UNPOSTED, SEARCHING, OFFERED, ASSIGNED, PICKUP_PENDING, IN_TRANSIT, DELIVERED, COMPLETED, CANCELLED, EXPIRED, EXCEPTION]
+      enum:
+        [
+          DRAFT,
+          POSTED,
+          UNPOSTED,
+          SEARCHING,
+          OFFERED,
+          ASSIGNED,
+          PICKUP_PENDING,
+          IN_TRANSIT,
+          DELIVERED,
+          COMPLETED,
+          CANCELLED,
+          EXPIRED,
+          EXCEPTION,
+        ]
 
     TripStatus:
       type: string
-      enum: [ASSIGNED, PICKUP_PENDING, IN_TRANSIT, DELIVERED, COMPLETED, CANCELLED]
+      enum:
+        [ASSIGNED, PICKUP_PENDING, IN_TRANSIT, DELIVERED, COMPLETED, CANCELLED]
 
     # --------------------------------------------------------------------------
     # AUTH
@@ -2047,7 +2073,7 @@ components:
         message:
           type: string
         user:
-          $ref: '#/components/schemas/User'
+          $ref: "#/components/schemas/User"
         csrfToken:
           type: string
         sessionToken:
@@ -2093,7 +2119,7 @@ components:
         phone:
           type: string
         role:
-          $ref: '#/components/schemas/UserRole'
+          $ref: "#/components/schemas/UserRole"
         companyName:
           type: string
         carrierType:
@@ -2106,7 +2132,7 @@ components:
         message:
           type: string
         user:
-          $ref: '#/components/schemas/User'
+          $ref: "#/components/schemas/User"
 
     # --------------------------------------------------------------------------
     # USER
@@ -2125,7 +2151,7 @@ components:
         phone:
           type: string
         role:
-          $ref: '#/components/schemas/UserRole'
+          $ref: "#/components/schemas/UserRole"
         status:
           type: string
         organizationId:
@@ -2137,11 +2163,11 @@ components:
 
     UserProfile:
       allOf:
-        - $ref: '#/components/schemas/User'
+        - $ref: "#/components/schemas/User"
         - type: object
           properties:
             organization:
-              $ref: '#/components/schemas/OrganizationSummary'
+              $ref: "#/components/schemas/OrganizationSummary"
             createdAt:
               type: string
               format: date-time
@@ -2183,9 +2209,9 @@ components:
         users:
           type: array
           items:
-            $ref: '#/components/schemas/UserProfile'
+            $ref: "#/components/schemas/UserProfile"
         pagination:
-          $ref: '#/components/schemas/Pagination'
+          $ref: "#/components/schemas/Pagination"
 
     # --------------------------------------------------------------------------
     # ORGANIZATION
@@ -2211,7 +2237,7 @@ components:
         id:
           type: string
         status:
-          $ref: '#/components/schemas/LoadStatus'
+          $ref: "#/components/schemas/LoadStatus"
         pickupCity:
           type: string
         deliveryCity:
@@ -2223,7 +2249,7 @@ components:
           type: string
           format: date-time
         truckType:
-          $ref: '#/components/schemas/TruckType'
+          $ref: "#/components/schemas/TruckType"
         weight:
           type: number
         cargoDescription:
@@ -2233,11 +2259,11 @@ components:
         ageMinutes:
           type: integer
         shipper:
-          $ref: '#/components/schemas/OrganizationSummary'
+          $ref: "#/components/schemas/OrganizationSummary"
 
     LoadDetail:
       allOf:
-        - $ref: '#/components/schemas/Load'
+        - $ref: "#/components/schemas/Load"
         - type: object
           properties:
             pickupAddress:
@@ -2253,13 +2279,22 @@ components:
             safetyNotes:
               type: string
             assignedTruck:
-              $ref: '#/components/schemas/TruckSummary'
+              $ref: "#/components/schemas/TruckSummary"
             serviceFeeEtb:
               type: number
 
     CreateLoadRequest:
       type: object
-      required: [pickupCity, deliveryCity, pickupDate, deliveryDate, truckType, weight, cargoDescription]
+      required:
+        [
+          pickupCity,
+          deliveryCity,
+          pickupDate,
+          deliveryDate,
+          truckType,
+          weight,
+          cargoDescription,
+        ]
       properties:
         pickupCity:
           type: string
@@ -2278,7 +2313,7 @@ components:
           type: string
           format: date
         truckType:
-          $ref: '#/components/schemas/TruckType'
+          $ref: "#/components/schemas/TruckType"
         weight:
           type: number
           minimum: 1
@@ -2313,7 +2348,7 @@ components:
       type: object
       properties:
         status:
-          $ref: '#/components/schemas/LoadStatus'
+          $ref: "#/components/schemas/LoadStatus"
         pickupCity:
           type: string
         deliveryCity:
@@ -2331,15 +2366,15 @@ components:
         loads:
           type: array
           items:
-            $ref: '#/components/schemas/Load'
+            $ref: "#/components/schemas/Load"
         pagination:
-          $ref: '#/components/schemas/Pagination'
+          $ref: "#/components/schemas/Pagination"
 
     LoadMatch:
       type: object
       properties:
         load:
-          $ref: '#/components/schemas/Load'
+          $ref: "#/components/schemas/Load"
         matchScore:
           type: integer
           minimum: 0
@@ -2362,7 +2397,7 @@ components:
         licensePlate:
           type: string
         truckType:
-          $ref: '#/components/schemas/TruckType'
+          $ref: "#/components/schemas/TruckType"
         capacity:
           type: number
         volume:
@@ -2372,7 +2407,7 @@ components:
         hasActivePosting:
           type: boolean
         carrier:
-          $ref: '#/components/schemas/OrganizationSummary'
+          $ref: "#/components/schemas/OrganizationSummary"
 
     TruckSummary:
       type: object
@@ -2382,13 +2417,13 @@ components:
         licensePlate:
           type: string
         truckType:
-          $ref: '#/components/schemas/TruckType'
+          $ref: "#/components/schemas/TruckType"
         capacity:
           type: number
 
     TruckDetail:
       allOf:
-        - $ref: '#/components/schemas/Truck'
+        - $ref: "#/components/schemas/Truck"
         - type: object
           properties:
             currentCity:
@@ -2413,7 +2448,7 @@ components:
           type: string
           minLength: 3
         truckType:
-          $ref: '#/components/schemas/TruckType'
+          $ref: "#/components/schemas/TruckType"
         capacity:
           type: number
           minimum: 1
@@ -2429,13 +2464,13 @@ components:
           type: string
         imei:
           type: string
-          pattern: '^[0-9]{15}$'
+          pattern: "^[0-9]{15}$"
 
     UpdateTruckRequest:
       type: object
       properties:
         truckType:
-          $ref: '#/components/schemas/TruckType'
+          $ref: "#/components/schemas/TruckType"
         licensePlate:
           type: string
         capacity:
@@ -2456,15 +2491,15 @@ components:
         trucks:
           type: array
           items:
-            $ref: '#/components/schemas/Truck'
+            $ref: "#/components/schemas/Truck"
         pagination:
-          $ref: '#/components/schemas/Pagination'
+          $ref: "#/components/schemas/Pagination"
 
     TruckMatch:
       type: object
       properties:
         truck:
-          $ref: '#/components/schemas/Truck'
+          $ref: "#/components/schemas/Truck"
         matchScore:
           type: integer
           minimum: 0
@@ -2506,7 +2541,7 @@ components:
           items:
             type: object
         pagination:
-          $ref: '#/components/schemas/Pagination'
+          $ref: "#/components/schemas/Pagination"
 
     # --------------------------------------------------------------------------
     # TRIP
@@ -2517,7 +2552,7 @@ components:
         id:
           type: string
         status:
-          $ref: '#/components/schemas/TripStatus'
+          $ref: "#/components/schemas/TripStatus"
         referenceNumber:
           type: string
         loadId:
@@ -2533,17 +2568,17 @@ components:
 
     TripDetail:
       allOf:
-        - $ref: '#/components/schemas/Trip'
+        - $ref: "#/components/schemas/Trip"
         - type: object
           properties:
             load:
-              $ref: '#/components/schemas/LoadDetail'
+              $ref: "#/components/schemas/LoadDetail"
             truck:
-              $ref: '#/components/schemas/TruckDetail'
+              $ref: "#/components/schemas/TruckDetail"
             carrier:
-              $ref: '#/components/schemas/OrganizationSummary'
+              $ref: "#/components/schemas/OrganizationSummary"
             shipper:
-              $ref: '#/components/schemas/OrganizationSummary'
+              $ref: "#/components/schemas/OrganizationSummary"
             startedAt:
               type: string
               format: date-time
@@ -2559,13 +2594,13 @@ components:
             routeHistory:
               type: array
               items:
-                $ref: '#/components/schemas/RoutePoint'
+                $ref: "#/components/schemas/RoutePoint"
 
     UpdateTripRequest:
       type: object
       properties:
         status:
-          $ref: '#/components/schemas/TripStatus'
+          $ref: "#/components/schemas/TripStatus"
         receiverName:
           type: string
           maxLength: 100
@@ -2582,9 +2617,9 @@ components:
         trips:
           type: array
           items:
-            $ref: '#/components/schemas/Trip'
+            $ref: "#/components/schemas/Trip"
         pagination:
-          $ref: '#/components/schemas/Pagination'
+          $ref: "#/components/schemas/Pagination"
 
     # --------------------------------------------------------------------------
     # GPS & TRACKING
@@ -2655,9 +2690,9 @@ components:
         tripId:
           type: string
         status:
-          $ref: '#/components/schemas/TripStatus'
+          $ref: "#/components/schemas/TripStatus"
         currentPosition:
-          $ref: '#/components/schemas/LivePosition'
+          $ref: "#/components/schemas/LivePosition"
         etaMinutes:
           type: integer
         distanceRemainingKm:
@@ -2672,13 +2707,13 @@ components:
         tripId:
           type: string
         status:
-          $ref: '#/components/schemas/TripStatus'
+          $ref: "#/components/schemas/TripStatus"
         pickupCity:
           type: string
         deliveryCity:
           type: string
         currentPosition:
-          $ref: '#/components/schemas/LivePosition'
+          $ref: "#/components/schemas/LivePosition"
         etaMinutes:
           type: integer
         lastUpdated:
@@ -2739,9 +2774,9 @@ components:
         transactions:
           type: array
           items:
-            $ref: '#/components/schemas/Transaction'
+            $ref: "#/components/schemas/Transaction"
         pagination:
-          $ref: '#/components/schemas/Pagination'
+          $ref: "#/components/schemas/Pagination"
 
     ServiceFeePreview:
       type: object
@@ -2797,7 +2832,7 @@ components:
         pickupsToday:
           type: array
           items:
-            $ref: '#/components/schemas/Load'
+            $ref: "#/components/schemas/Load"
 
     AdminDashboard:
       type: object

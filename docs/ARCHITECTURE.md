@@ -9,33 +9,36 @@ The Freight Management Platform is a comprehensive logistics solution for Ethiop
 ## Tech Stack
 
 ### Frontend
-| Technology | Purpose |
-|------------|---------|
-| **Next.js 15** | React framework with App Router |
-| **React 19** | UI library |
-| **TypeScript** | Type-safe JavaScript |
-| **Tailwind CSS** | Utility-first CSS |
-| **Shadcn/ui** | Component library |
-| **React Hook Form** | Form management |
-| **Zod** | Schema validation |
-| **TanStack Query** | Data fetching & caching |
+
+| Technology          | Purpose                         |
+| ------------------- | ------------------------------- |
+| **Next.js 15**      | React framework with App Router |
+| **React 19**        | UI library                      |
+| **TypeScript**      | Type-safe JavaScript            |
+| **Tailwind CSS**    | Utility-first CSS               |
+| **Shadcn/ui**       | Component library               |
+| **React Hook Form** | Form management                 |
+| **Zod**             | Schema validation               |
+| **TanStack Query**  | Data fetching & caching         |
 
 ### Backend
-| Technology | Purpose |
-|------------|---------|
-| **Next.js API Routes** | REST API endpoints |
-| **Prisma** | ORM & database migrations |
-| **PostgreSQL** | Primary database |
-| **Redis** | Caching, rate limiting, sessions |
-| **BullMQ** | Background job queue |
+
+| Technology             | Purpose                          |
+| ---------------------- | -------------------------------- |
+| **Next.js API Routes** | REST API endpoints               |
+| **Prisma**             | ORM & database migrations        |
+| **PostgreSQL**         | Primary database                 |
+| **Redis**              | Caching, rate limiting, sessions |
+| **BullMQ**             | Background job queue             |
 
 ### Infrastructure
-| Technology | Purpose |
-|------------|---------|
-| **AWS S3** | File storage (documents, POD) |
-| **Sentry** | Error tracking |
-| **Chapa** | Ethiopian payment gateway |
-| **AfroMessage** | SMS notifications |
+
+| Technology      | Purpose                       |
+| --------------- | ----------------------------- |
+| **AWS S3**      | File storage (documents, POD) |
+| **Sentry**      | Error tracking                |
+| **Chapa**       | Ethiopian payment gateway     |
+| **AfroMessage** | SMS notifications             |
 
 ---
 
@@ -343,13 +346,13 @@ The matching engine scores trucks/loads based on multiple factors:
 
 ### Scoring Criteria
 
-| Factor | Weight | Description |
-|--------|--------|-------------|
-| **Distance (DH-O)** | 30% | Dead-head to origin (< 200km required) |
-| **Truck Type** | 25% | Exact match or compatible group |
-| **Capacity** | 20% | Weight fits, good utilization (70-95% ideal) |
-| **Destination** | 15% | Truck heading matches delivery location |
-| **Availability** | 10% | Available date matches pickup date |
+| Factor              | Weight | Description                                  |
+| ------------------- | ------ | -------------------------------------------- |
+| **Distance (DH-O)** | 30%    | Dead-head to origin (< 200km required)       |
+| **Truck Type**      | 25%    | Exact match or compatible group              |
+| **Capacity**        | 20%    | Weight fits, good utilization (70-95% ideal) |
+| **Destination**     | 15%    | Truck heading matches delivery location      |
+| **Availability**    | 10%    | Available date matches pickup date           |
 
 ### Compatibility Groups
 
@@ -380,13 +383,13 @@ Trucks in the same group can carry loads of any type in that group.
 
 ### Cache Invalidation
 
-| Entity | TTL | Invalidation |
-|--------|-----|--------------|
-| Load listings | 30s | On create/update/delete |
-| Truck listings | 30s | On create/update/delete |
-| Active trips | 60s | On status change |
-| Corridors | 5min | On admin update |
-| User sessions | 7d | On logout/revoke |
+| Entity         | TTL  | Invalidation            |
+| -------------- | ---- | ----------------------- |
+| Load listings  | 30s  | On create/update/delete |
+| Truck listings | 30s  | On create/update/delete |
+| Active trips   | 60s  | On status change        |
+| Corridors      | 5min | On admin update         |
+| User sessions  | 7d   | On logout/revoke        |
 
 ---
 
@@ -394,24 +397,24 @@ Trucks in the same group can carry loads of any type in that group.
 
 ### Job Queues (BullMQ)
 
-| Queue | Purpose |
-|-------|---------|
-| `notifications` | Email/SMS notifications |
-| `settlements` | Carrier payment processing |
-| `gps-cleanup` | Remove old GPS positions |
-| `load-expiry` | Auto-expire stale loads |
-| `posting-expiry` | Auto-expire truck postings |
-| `sla-aggregation` | Daily SLA metrics |
+| Queue             | Purpose                    |
+| ----------------- | -------------------------- |
+| `notifications`   | Email/SMS notifications    |
+| `settlements`     | Carrier payment processing |
+| `gps-cleanup`     | Remove old GPS positions   |
+| `load-expiry`     | Auto-expire stale loads    |
+| `posting-expiry`  | Auto-expire truck postings |
+| `sla-aggregation` | Daily SLA metrics          |
 
 ### Cron Jobs
 
-| Schedule | Job | Description |
-|----------|-----|-------------|
-| `*/5 * * * *` | `expire-loads` | Expire loads past pickup date |
-| `*/5 * * * *` | `expire-postings` | Expire truck postings |
-| `0 * * * *` | `gps-cleanup` | Delete GPS positions > 30 days |
-| `0 2 * * *` | `aggregate-sla` | Calculate daily SLA metrics |
-| `0 3 * * *` | `auto-settle` | Process pending settlements |
+| Schedule      | Job               | Description                    |
+| ------------- | ----------------- | ------------------------------ |
+| `*/5 * * * *` | `expire-loads`    | Expire loads past pickup date  |
+| `*/5 * * * *` | `expire-postings` | Expire truck postings          |
+| `0 * * * *`   | `gps-cleanup`     | Delete GPS positions > 30 days |
+| `0 2 * * *`   | `aggregate-sla`   | Calculate daily SLA metrics    |
+| `0 3 * * *`   | `auto-settle`     | Process pending settlements    |
 
 ---
 
@@ -427,12 +430,12 @@ class AppError extends Error {
 }
 
 // Specific errors
-class ValidationError extends AppError {}  // 400
+class ValidationError extends AppError {} // 400
 class AuthenticationError extends AppError {} // 401
-class AuthorizationError extends AppError {}  // 403
-class NotFoundError extends AppError {}       // 404
-class ConflictError extends AppError {}       // 409
-class RateLimitError extends AppError {}      // 429
+class AuthorizationError extends AppError {} // 403
+class NotFoundError extends AppError {} // 404
+class ConflictError extends AppError {} // 409
+class RateLimitError extends AppError {} // 429
 ```
 
 ### Error Flow
@@ -484,13 +487,13 @@ API Request
 
 ### Metrics (Sentry + Custom)
 
-| Metric | Type | Alert Threshold |
-|--------|------|-----------------|
-| Request latency | Histogram | P95 > 2s |
-| Error rate | Counter | > 5% |
-| Database queries | Counter | Slow queries > 1s |
-| Memory usage | Gauge | > 85% |
-| Active sessions | Gauge | - |
+| Metric           | Type      | Alert Threshold   |
+| ---------------- | --------- | ----------------- |
+| Request latency  | Histogram | P95 > 2s          |
+| Error rate       | Counter   | > 5%              |
+| Database queries | Counter   | Slow queries > 1s |
+| Memory usage     | Gauge     | > 85%             |
+| Active sessions  | Gauge     | -                 |
 
 ---
 
@@ -513,6 +516,7 @@ API Request
 ### Audit Trail
 
 All sensitive operations are logged:
+
 - User authentication events
 - Permission changes
 - Financial transactions

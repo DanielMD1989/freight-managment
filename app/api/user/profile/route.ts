@@ -11,23 +11,36 @@
  * - Security event logging for profile changes
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import { requireAuth } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { logSecurityEvent, SecurityEventType } from '@/lib/security-events';
-import { requireCSRF } from '@/lib/csrf';
-import { phoneSchema } from '@/lib/validation';
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { requireAuth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { logSecurityEvent, SecurityEventType } from "@/lib/security-events";
+import { requireCSRF } from "@/lib/csrf";
+import { phoneSchema } from "@/lib/validation";
 
 // Request body schema for profile update
-const updateProfileSchema = z.object({
-  firstName: z.string().min(1, 'First name cannot be empty').max(100, 'First name is too long').optional(),
-  lastName: z.string().min(1, 'Last name cannot be empty').max(100, 'Last name is too long').optional(),
-  phone: z.union([phoneSchema, z.null()]).optional(),
-}).refine(
-  (data) => data.firstName !== undefined || data.lastName !== undefined || data.phone !== undefined,
-  { message: 'No fields to update' }
-);
+const updateProfileSchema = z
+  .object({
+    firstName: z
+      .string()
+      .min(1, "First name cannot be empty")
+      .max(100, "First name is too long")
+      .optional(),
+    lastName: z
+      .string()
+      .min(1, "Last name cannot be empty")
+      .max(100, "Last name is too long")
+      .optional(),
+    phone: z.union([phoneSchema, z.null()]).optional(),
+  })
+  .refine(
+    (data) =>
+      data.firstName !== undefined ||
+      data.lastName !== undefined ||
+      data.phone !== undefined,
+    { message: "No fields to update" }
+  );
 
 /**
  * GET /api/user/profile
@@ -61,25 +74,19 @@ export async function GET() {
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     return NextResponse.json({ user });
   } catch (error) {
-    console.error('Failed to get user profile:', error);
+    console.error("Failed to get user profile:", error);
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     return NextResponse.json(
-      { error: 'Failed to retrieve profile' },
+      { error: "Failed to retrieve profile" },
       { status: 500 }
     );
   }
@@ -98,8 +105,10 @@ export async function PATCH(request: NextRequest) {
     }
 
     const session = await requireAuth();
-    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip');
-    const userAgent = request.headers.get('user-agent');
+    const ipAddress =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip");
+    const userAgent = request.headers.get("user-agent");
 
     const body = await request.json();
 
@@ -107,7 +116,7 @@ export async function PATCH(request: NextRequest) {
     const validation = updateProfileSchema.safeParse(body);
     if (!validation.success) {
       // FIX: Use zodErrorResponse to avoid schema leak
-      const { zodErrorResponse } = await import('@/lib/validation');
+      const { zodErrorResponse } = await import("@/lib/validation");
       return zodErrorResponse(validation.error);
     }
 
@@ -119,17 +128,17 @@ export async function PATCH(request: NextRequest) {
 
     if (firstName !== undefined) {
       updateData.firstName = firstName.trim();
-      changes.push('firstName');
+      changes.push("firstName");
     }
 
     if (lastName !== undefined) {
       updateData.lastName = lastName.trim();
-      changes.push('lastName');
+      changes.push("lastName");
     }
 
     if (phone !== undefined) {
       updateData.phone = phone ? phone.trim() : null;
-      changes.push('phone');
+      changes.push("phone");
     }
 
     // Update user profile
@@ -162,7 +171,7 @@ export async function PATCH(request: NextRequest) {
     });
 
     // If phone was changed, log it separately for security purposes
-    if (changes.includes('phone')) {
+    if (changes.includes("phone")) {
       await logSecurityEvent({
         userId: session.userId,
         eventType: SecurityEventType.PHONE_CHANGE,
@@ -174,21 +183,18 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Profile updated successfully',
+      message: "Profile updated successfully",
       user: updatedUser,
     });
   } catch (error) {
-    console.error('Failed to update profile:', error);
+    console.error("Failed to update profile:", error);
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     return NextResponse.json(
-      { error: 'Failed to update profile' },
+      { error: "Failed to update profile" },
       { status: 500 }
     );
   }

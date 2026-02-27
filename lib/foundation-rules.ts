@@ -18,9 +18,10 @@
  * - Other roles can VIEW trucks but never modify ownership
  */
 export const RULE_CARRIER_OWNS_TRUCKS = {
-  id: 'CARRIER_OWNS_TRUCKS',
-  description: 'Carrier is the sole owner of trucks. Only carrier can modify truck records.',
-  enforcement: 'Truck.carrierId is required and immutable after creation',
+  id: "CARRIER_OWNS_TRUCKS",
+  description:
+    "Carrier is the sole owner of trucks. Only carrier can modify truck records.",
+  enforcement: "Truck.carrierId is required and immutable after creation",
 } as const;
 
 // =============================================================================
@@ -33,9 +34,11 @@ export const RULE_CARRIER_OWNS_TRUCKS = {
  * - Posting is ephemeral; trucks are permanent assets
  */
 export const RULE_POSTING_IS_AVAILABILITY = {
-  id: 'POSTING_IS_AVAILABILITY',
-  description: 'Posting expresses availability, not ownership. Location lives only in posting.',
-  enforcement: 'TruckPosting references existing Truck; location fields only in TruckPosting',
+  id: "POSTING_IS_AVAILABILITY",
+  description:
+    "Posting expresses availability, not ownership. Location lives only in posting.",
+  enforcement:
+    "TruckPosting references existing Truck; location fields only in TruckPosting",
 } as const;
 
 // =============================================================================
@@ -49,9 +52,11 @@ export const RULE_POSTING_IS_AVAILABILITY = {
  * - Dispatcher CANNOT assign, accept, or start trips
  */
 export const RULE_DISPATCHER_COORDINATION_ONLY = {
-  id: 'DISPATCHER_COORDINATION_ONLY',
-  description: 'Dispatcher coordinates availability but cannot execute assignments.',
-  enforcement: 'Dispatcher has PROPOSE_MATCH permission, not ASSIGN_LOADS or ACCEPT_LOADS',
+  id: "DISPATCHER_COORDINATION_ONLY",
+  description:
+    "Dispatcher coordinates availability but cannot execute assignments.",
+  enforcement:
+    "Dispatcher has PROPOSE_MATCH permission, not ASSIGN_LOADS or ACCEPT_LOADS",
 } as const;
 
 // =============================================================================
@@ -64,9 +69,9 @@ export const RULE_DISPATCHER_COORDINATION_ONLY = {
  * - Database constraint: unique(truckId, status='ACTIVE')
  */
 export const RULE_ONE_ACTIVE_POST_PER_TRUCK = {
-  id: 'ONE_ACTIVE_POST_PER_TRUCK',
-  description: 'Each truck can have at most one active posting at any time.',
-  enforcement: 'Unique constraint on TruckPosting(truckId) where status=ACTIVE',
+  id: "ONE_ACTIVE_POST_PER_TRUCK",
+  description: "Each truck can have at most one active posting at any time.",
+  enforcement: "Unique constraint on TruckPosting(truckId) where status=ACTIVE",
 } as const;
 
 // =============================================================================
@@ -79,9 +84,11 @@ export const RULE_ONE_ACTIVE_POST_PER_TRUCK = {
  * - GPSUpdate: contains real-time location during trips
  */
 export const RULE_LOCATION_IN_DYNAMIC_TABLES = {
-  id: 'LOCATION_IN_DYNAMIC_TABLES',
-  description: 'Location data lives only in dynamic tables (posting, GPS), never in master.',
-  enforcement: 'Truck model should not have currentCity, currentLocationLat, etc.',
+  id: "LOCATION_IN_DYNAMIC_TABLES",
+  description:
+    "Location data lives only in dynamic tables (posting, GPS), never in master.",
+  enforcement:
+    "Truck model should not have currentCity, currentLocationLat, etc.",
 } as const;
 
 // =============================================================================
@@ -95,9 +102,11 @@ export const RULE_LOCATION_IN_DYNAMIC_TABLES = {
  * - Carrier starts the trip
  */
 export const RULE_CARRIER_FINAL_AUTHORITY = {
-  id: 'CARRIER_FINAL_AUTHORITY',
-  description: 'Carrier is the final authority on truck execution. No assignment without carrier approval.',
-  enforcement: 'TruckRequest requires carrier approval; Load.carrierApprovalStatus must be APPROVED',
+  id: "CARRIER_FINAL_AUTHORITY",
+  description:
+    "Carrier is the final authority on truck execution. No assignment without carrier approval.",
+  enforcement:
+    "TruckRequest requires carrier approval; Load.carrierApprovalStatus must be APPROVED",
 } as const;
 
 // =============================================================================
@@ -111,9 +120,11 @@ export const RULE_CARRIER_FINAL_AUTHORITY = {
  * - Shipper sees only own loads
  */
 export const RULE_SHIPPER_DEMAND_FOCUS = {
-  id: 'SHIPPER_DEMAND_FOCUS',
-  description: 'Shipper manages demand (loads). Can request available trucks but cannot browse fleets.',
-  enforcement: 'Shipper can view posted trucks only, not carrier fleet inventory',
+  id: "SHIPPER_DEMAND_FOCUS",
+  description:
+    "Shipper manages demand (loads). Can request available trucks but cannot browse fleets.",
+  enforcement:
+    "Shipper can view posted trucks only, not carrier fleet inventory",
 } as const;
 
 // =============================================================================
@@ -133,14 +144,14 @@ export const FOUNDATION_RULES = [
 // ENFORCEMENT HELPERS
 // =============================================================================
 
-import { Role } from './rbac/permissions';
+import { Role } from "./rbac/permissions";
 
 /**
  * Check if a role can modify truck ownership
  * Per RULE_CARRIER_OWNS_TRUCKS: Only CARRIER can own/modify trucks
  */
 export function canModifyTruckOwnership(role: Role): boolean {
-  return role === 'CARRIER';
+  return role === "CARRIER";
 }
 
 /**
@@ -151,7 +162,7 @@ export function canModifyTruckOwnership(role: Role): boolean {
 export function canDirectlyAssignLoads(role: Role): boolean {
   // Only carrier can commit their own trucks
   // Admin/SuperAdmin can override for support purposes
-  return role === 'CARRIER' || role === 'ADMIN' || role === 'SUPER_ADMIN';
+  return role === "CARRIER" || role === "ADMIN" || role === "SUPER_ADMIN";
 }
 
 /**
@@ -159,7 +170,7 @@ export function canDirectlyAssignLoads(role: Role): boolean {
  * Per RULE_DISPATCHER_COORDINATION_ONLY: Dispatcher can propose
  */
 export function canProposeMatches(role: Role): boolean {
-  return role === 'DISPATCHER' || role === 'ADMIN' || role === 'SUPER_ADMIN';
+  return role === "DISPATCHER" || role === "ADMIN" || role === "SUPER_ADMIN";
 }
 
 /**
@@ -167,7 +178,7 @@ export function canProposeMatches(role: Role): boolean {
  * Per RULE_CARRIER_FINAL_AUTHORITY: Only carrier executes
  */
 export function canStartTrips(role: Role): boolean {
-  return role === 'CARRIER';
+  return role === "CARRIER";
 }
 
 /**
@@ -175,7 +186,7 @@ export function canStartTrips(role: Role): boolean {
  * Per RULE_CARRIER_FINAL_AUTHORITY: Only carrier accepts
  */
 export function canAcceptLoadRequests(role: Role): boolean {
-  return role === 'CARRIER';
+  return role === "CARRIER";
 }
 
 /**
@@ -205,41 +216,41 @@ export function validateOneActivePostPerTruck(check: ActivePostCheck): {
  * Role-based data visibility rules
  */
 export interface VisibilityRules {
-  canViewAllTrucks: boolean;      // Fleet inventory
-  canViewPostedTrucks: boolean;   // Availability only
-  canViewAllLoads: boolean;       // All loads system-wide
-  canViewOwnLoads: boolean;       // Own loads only
-  canViewFleetDetails: boolean;   // Carrier fleet details
+  canViewAllTrucks: boolean; // Fleet inventory
+  canViewPostedTrucks: boolean; // Availability only
+  canViewAllLoads: boolean; // All loads system-wide
+  canViewOwnLoads: boolean; // Own loads only
+  canViewFleetDetails: boolean; // Carrier fleet details
 }
 
 export function getVisibilityRules(role: Role): VisibilityRules {
   switch (role) {
-    case 'CARRIER':
+    case "CARRIER":
       return {
-        canViewAllTrucks: false,       // Own trucks only
-        canViewPostedTrucks: false,    // No need to browse other trucks
-        canViewAllLoads: false,        // Posted loads only
-        canViewOwnLoads: true,         // Assigned loads
-        canViewFleetDetails: true,     // Own fleet
+        canViewAllTrucks: false, // Own trucks only
+        canViewPostedTrucks: false, // No need to browse other trucks
+        canViewAllLoads: false, // Posted loads only
+        canViewOwnLoads: true, // Assigned loads
+        canViewFleetDetails: true, // Own fleet
       };
-    case 'SHIPPER':
+    case "SHIPPER":
       return {
-        canViewAllTrucks: false,       // No fleet browsing
-        canViewPostedTrucks: true,     // Available trucks only
-        canViewAllLoads: false,        // Own loads only
-        canViewOwnLoads: true,         // Own loads
-        canViewFleetDetails: false,    // No fleet access
+        canViewAllTrucks: false, // No fleet browsing
+        canViewPostedTrucks: true, // Available trucks only
+        canViewAllLoads: false, // Own loads only
+        canViewOwnLoads: true, // Own loads
+        canViewFleetDetails: false, // No fleet access
       };
-    case 'DISPATCHER':
+    case "DISPATCHER":
       return {
-        canViewAllTrucks: false,       // No fleet browsing
-        canViewPostedTrucks: true,     // Available trucks
-        canViewAllLoads: true,         // All loads for coordination
-        canViewOwnLoads: false,        // N/A
-        canViewFleetDetails: false,    // No fleet access
+        canViewAllTrucks: false, // No fleet browsing
+        canViewPostedTrucks: true, // Available trucks
+        canViewAllLoads: true, // All loads for coordination
+        canViewOwnLoads: false, // N/A
+        canViewFleetDetails: false, // No fleet access
       };
-    case 'ADMIN':
-    case 'SUPER_ADMIN':
+    case "ADMIN":
+    case "SUPER_ADMIN":
       return {
         canViewAllTrucks: true,
         canViewPostedTrucks: true,
@@ -268,8 +279,10 @@ export class FoundationRuleViolation extends Error {
     public ruleDescription: string,
     public attemptedAction: string
   ) {
-    super(`Foundation Rule Violation [${ruleId}]: ${ruleDescription}. Attempted: ${attemptedAction}`);
-    this.name = 'FoundationRuleViolation';
+    super(
+      `Foundation Rule Violation [${ruleId}]: ${ruleDescription}. Attempted: ${attemptedAction}`
+    );
+    this.name = "FoundationRuleViolation";
   }
 }
 
@@ -277,7 +290,7 @@ export class FoundationRuleViolation extends Error {
  * Throw if dispatcher attempts to assign loads directly
  */
 export function assertDispatcherCannotAssign(role: Role, action: string): void {
-  if (role === 'DISPATCHER') {
+  if (role === "DISPATCHER") {
     throw new FoundationRuleViolation(
       RULE_DISPATCHER_COORDINATION_ONLY.id,
       RULE_DISPATCHER_COORDINATION_ONLY.description,
@@ -302,7 +315,10 @@ export function assertCarrierOwnership(role: Role, action: string): void {
 /**
  * Throw if attempting to create duplicate active post
  */
-export function assertOneActivePost(check: ActivePostCheck, action: string): void {
+export function assertOneActivePost(
+  check: ActivePostCheck,
+  action: string
+): void {
   const result = validateOneActivePostPerTruck(check);
   if (!result.valid) {
     throw new FoundationRuleViolation(

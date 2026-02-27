@@ -3,33 +3,40 @@
  * API endpoints for load escalations
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { validateCSRFWithMobile } from '@/lib/csrf';
-import { CacheInvalidation } from '@/lib/cache';
-import { z } from 'zod';
-import { validateStateTransition, LoadStatus } from '@/lib/loadStateMachine';
-import { zodErrorResponse } from '@/lib/validation';
-import { createNotification, notifyExceptionAssigned, createNotificationForRole } from '@/lib/notifications';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { CacheInvalidation } from "@/lib/cache";
+import { z } from "zod";
+import { validateStateTransition, LoadStatus } from "@/lib/loadStateMachine";
+import { zodErrorResponse } from "@/lib/validation";
+import {
+  createNotification,
+  notifyExceptionAssigned,
+  createNotificationForRole,
+} from "@/lib/notifications";
 
 const createEscalationSchema = z.object({
   escalationType: z.enum([
-    'LATE_PICKUP',
-    'LATE_DELIVERY',
-    'TRUCK_BREAKDOWN',
-    'CARRIER_NO_SHOW',
-    'ROUTE_DEVIATION',
-    'GPS_OFFLINE',
-    'CARGO_DAMAGE',
-    'SHIPPER_ISSUE',
-    'CARRIER_ISSUE',
-    'DOCUMENTATION',
-    'PAYMENT_DISPUTE',
-    'BYPASS_DETECTED',
-    'OTHER',
+    "LATE_PICKUP",
+    "LATE_DELIVERY",
+    "TRUCK_BREAKDOWN",
+    "CARRIER_NO_SHOW",
+    "ROUTE_DEVIATION",
+    "GPS_OFFLINE",
+    "CARGO_DAMAGE",
+    "SHIPPER_ISSUE",
+    "CARRIER_ISSUE",
+    "DOCUMENTATION",
+    "PAYMENT_DISPUTE",
+    "BYPASS_DETECTED",
+    "OTHER",
   ]),
-  priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional().default('MEDIUM'),
+  priority: z
+    .enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"])
+    .optional()
+    .default("MEDIUM"),
   title: z.string().min(1).max(200),
   description: z.string().optional(),
   notes: z.string().optional(),
@@ -68,10 +75,7 @@ export async function POST(
     });
 
     if (!load) {
-      return NextResponse.json(
-        { error: 'Load not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // H2 FIX: Get user's organizationId for proper ownership check
@@ -82,25 +86,33 @@ export async function POST(
 
     // Permission check: Only involved parties + dispatchers + admins can create escalations
     // H2 FIX: Compare organizationId (not userId) with shipperId/carrierId
-    const isShipper = session.role === 'SHIPPER' && load.shipperId === user?.organizationId;
-    const isCarrier = session.role === 'CARRIER' && load.assignedTruck?.carrierId === user?.organizationId;
-    const isDispatcher = session.role === 'DISPATCHER';
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+    const isShipper =
+      session.role === "SHIPPER" && load.shipperId === user?.organizationId;
+    const isCarrier =
+      session.role === "CARRIER" &&
+      load.assignedTruck?.carrierId === user?.organizationId;
+    const isDispatcher = session.role === "DISPATCHER";
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isShipper && !isCarrier && !isDispatcher && !isAdmin) {
       return NextResponse.json(
-        { error: 'You do not have permission to create escalations for this load' },
+        {
+          error:
+            "You do not have permission to create escalations for this load",
+        },
         { status: 403 }
       );
     }
 
     // Auto-set priority based on escalation type
     let priority = validatedData.priority;
-    if (validatedData.escalationType === 'CARRIER_NO_SHOW' ||
-        validatedData.escalationType === 'TRUCK_BREAKDOWN') {
-      priority = 'HIGH';
-    } else if (validatedData.escalationType === 'BYPASS_DETECTED') {
-      priority = 'CRITICAL';
+    if (
+      validatedData.escalationType === "CARRIER_NO_SHOW" ||
+      validatedData.escalationType === "TRUCK_BREAKDOWN"
+    ) {
+      priority = "HIGH";
+    } else if (validatedData.escalationType === "BYPASS_DETECTED") {
+      priority = "CRITICAL";
     }
 
     // TD-004 FIX: Wrap all escalation operations in a transaction for atomicity
@@ -117,7 +129,7 @@ export async function POST(
           createdBy: session.userId,
           assignedTo: validatedData.assignedTo,
           assignedAt: validatedData.assignedTo ? new Date() : null,
-          status: validatedData.assignedTo ? 'ASSIGNED' : 'OPEN',
+          status: validatedData.assignedTo ? "ASSIGNED" : "OPEN",
         },
         include: {
           load: {
@@ -135,7 +147,7 @@ export async function POST(
       await tx.loadEvent.create({
         data: {
           loadId,
-          eventType: 'ESCALATION_CREATED',
+          eventType: "ESCALATION_CREATED",
           description: `Escalation created: ${validatedData.title}`,
           userId: session.userId,
           metadata: {
@@ -147,7 +159,11 @@ export async function POST(
       });
 
       // Update load status to EXCEPTION if not already
-      if (load.status !== 'EXCEPTION' && load.status !== 'CANCELLED' && load.status !== 'COMPLETED') {
+      if (
+        load.status !== "EXCEPTION" &&
+        load.status !== "CANCELLED" &&
+        load.status !== "COMPLETED"
+      ) {
         // Validate state transition
         const stateValidation = validateStateTransition(
           load.status,
@@ -158,13 +174,13 @@ export async function POST(
         if (stateValidation.valid) {
           await tx.load.update({
             where: { id: loadId },
-            data: { status: 'EXCEPTION' },
+            data: { status: "EXCEPTION" },
           });
 
           await tx.loadEvent.create({
             data: {
               loadId,
-              eventType: 'STATUS_CHANGED',
+              eventType: "STATUS_CHANGED",
               description: `Status changed to EXCEPTION due to escalation`,
               userId: session.userId,
             },
@@ -190,26 +206,25 @@ export async function POST(
 
     // Notify all dispatchers and admins about new escalation
     await createNotificationForRole({
-      role: 'DISPATCHER',
-      type: 'ESCALATION_ASSIGNED',
-      title: `New ${priority} Escalation: ${validatedData.escalationType.replace(/_/g, ' ')}`,
+      role: "DISPATCHER",
+      type: "ESCALATION_ASSIGNED",
+      title: `New ${priority} Escalation: ${validatedData.escalationType.replace(/_/g, " ")}`,
       message: `Escalation "${validatedData.title}" created for load ${loadId.substring(0, 8)}. Priority: ${priority}.`,
       metadata: { escalationId: escalation.id, loadId, priority },
     });
 
     return NextResponse.json({
-      message: 'Escalation created successfully',
+      message: "Escalation created successfully",
       escalation,
     });
-
   } catch (error) {
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
 
-    console.error('Escalation creation error:', error);
+    console.error("Escalation creation error:", error);
     return NextResponse.json(
-      { error: 'Failed to create escalation' },
+      { error: "Failed to create escalation" },
       { status: 500 }
     );
   }
@@ -239,10 +254,7 @@ export async function GET(
     });
 
     if (!load) {
-      return NextResponse.json(
-        { error: 'Load not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // H17 FIX: Get user's organizationId for proper ownership check (same as POST handler)
@@ -252,14 +264,19 @@ export async function GET(
     });
 
     // Permission check - compare organizationId (not userId) with shipperId/carrierId
-    const isShipper = session.role === 'SHIPPER' && load.shipperId === user?.organizationId;
-    const isCarrier = session.role === 'CARRIER' && load.assignedTruck?.carrierId === user?.organizationId;
-    const isDispatcher = session.role === 'DISPATCHER';
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+    const isShipper =
+      session.role === "SHIPPER" && load.shipperId === user?.organizationId;
+    const isCarrier =
+      session.role === "CARRIER" &&
+      load.assignedTruck?.carrierId === user?.organizationId;
+    const isDispatcher = session.role === "DISPATCHER";
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isShipper && !isCarrier && !isDispatcher && !isAdmin) {
       return NextResponse.json(
-        { error: 'You do not have permission to view escalations for this load' },
+        {
+          error: "You do not have permission to view escalations for this load",
+        },
         { status: 403 }
       );
     }
@@ -268,8 +285,8 @@ export async function GET(
     const escalations = await db.loadEscalation.findMany({
       where: { loadId },
       orderBy: [
-        { priority: 'desc' }, // CRITICAL first
-        { createdAt: 'desc' },
+        { priority: "desc" }, // CRITICAL first
+        { createdAt: "desc" },
       ],
       include: {
         load: {
@@ -287,11 +304,10 @@ export async function GET(
       escalations,
       count: escalations.length,
     });
-
   } catch (error) {
-    console.error('Escalation fetch error:', error);
+    console.error("Escalation fetch error:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch escalations' },
+      { error: "Failed to fetch escalations" },
       { status: 500 }
     );
   }

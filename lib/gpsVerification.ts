@@ -13,8 +13,8 @@
  * Phase 2: Integrate with actual GPS providers (Teltonika, Queclink, Coban)
  */
 
-import { db } from '@/lib/db';
-import { GpsDeviceStatus } from '@prisma/client';
+import { db } from "@/lib/db";
+import { GpsDeviceStatus } from "@prisma/client";
 
 /**
  * GPS Position data structure
@@ -93,12 +93,14 @@ export function validateImeiChecksum(imei: string): boolean {
  * @param imei - GPS device IMEI
  * @returns Verification result
  */
-export async function verifyGpsDevice(imei: string): Promise<GpsVerificationResult> {
+export async function verifyGpsDevice(
+  imei: string
+): Promise<GpsVerificationResult> {
   // Validate IMEI format
   if (!validateImeiFormat(imei)) {
     return {
       success: false,
-      message: 'Invalid IMEI format. Must be 15 digits.',
+      message: "Invalid IMEI format. Must be 15 digits.",
     };
   }
 
@@ -106,7 +108,7 @@ export async function verifyGpsDevice(imei: string): Promise<GpsVerificationResu
   if (!validateImeiChecksum(imei)) {
     return {
       success: false,
-      message: 'Invalid IMEI checksum. Please verify the IMEI is correct.',
+      message: "Invalid IMEI checksum. Please verify the IMEI is correct.",
     };
   }
 
@@ -132,8 +134,8 @@ export async function verifyGpsDevice(imei: string): Promise<GpsVerificationResu
 
   return {
     success: true,
-    message: 'GPS device verified successfully',
-    provider: 'Unknown', // Phase 2: Detect provider from IMEI prefix
+    message: "GPS device verified successfully",
+    provider: "Unknown", // Phase 2: Detect provider from IMEI prefix
     lastSeen: new Date(), // Phase 2: Get actual last seen timestamp
   };
 }
@@ -147,7 +149,9 @@ export async function verifyGpsDevice(imei: string): Promise<GpsVerificationResu
  * @param imei - GPS device IMEI
  * @returns Latest position or null
  */
-export async function getLatestPosition(imei: string): Promise<GpsPosition | null> {
+export async function getLatestPosition(
+  imei: string
+): Promise<GpsPosition | null> {
   // Check if truck exists with this IMEI
   const truck = await db.truck.findFirst({
     where: { imei },
@@ -155,7 +159,7 @@ export async function getLatestPosition(imei: string): Promise<GpsPosition | nul
       id: true,
       gpsLastSeenAt: true,
       gpsPositions: {
-        orderBy: { timestamp: 'desc' },
+        orderBy: { timestamp: "desc" },
         take: 1,
       },
     },
@@ -197,7 +201,7 @@ export async function getLatestPosition(imei: string): Promise<GpsPosition | nul
  */
 export function checkGpsFreshness(lastSeenAt: Date | null): string {
   if (!lastSeenAt) {
-    return 'never';
+    return "never";
   }
 
   const now = new Date();
@@ -207,13 +211,13 @@ export function checkGpsFreshness(lastSeenAt: Date | null): string {
   const diffDay = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
   if (diffMin < 1) {
-    return 'just now';
+    return "just now";
   } else if (diffMin < 60) {
     return `${diffMin} min ago`;
   } else if (diffHour < 24) {
-    return `${diffHour} hour${diffHour > 1 ? 's' : ''} ago`;
+    return `${diffHour} hour${diffHour > 1 ? "s" : ""} ago`;
   } else {
-    return `${diffDay} day${diffDay > 1 ? 's' : ''} ago`;
+    return `${diffDay} day${diffDay > 1 ? "s" : ""} ago`;
   }
 }
 
@@ -230,7 +234,7 @@ export function checkGpsFreshness(lastSeenAt: Date | null): string {
  */
 export function determineGpsStatus(lastSeenAt: Date | null): GpsDeviceStatus {
   if (!lastSeenAt) {
-    return 'INACTIVE';
+    return "INACTIVE";
   }
 
   const now = new Date();
@@ -238,11 +242,11 @@ export function determineGpsStatus(lastSeenAt: Date | null): GpsDeviceStatus {
   const diffMin = diffMs / (1000 * 60);
 
   if (diffMin < 5) {
-    return 'ACTIVE';
+    return "ACTIVE";
   } else if (diffMin < 30) {
-    return 'SIGNAL_LOST';
+    return "SIGNAL_LOST";
   } else {
-    return 'INACTIVE';
+    return "INACTIVE";
   }
 }
 
@@ -254,14 +258,14 @@ export function determineGpsStatus(lastSeenAt: Date | null): GpsDeviceStatus {
  */
 export function getGpsStatusColor(status: GpsDeviceStatus | null): string {
   switch (status) {
-    case 'ACTIVE':
-      return 'text-green-600'; // Green dot: online (< 5 min)
-    case 'SIGNAL_LOST':
-      return 'text-yellow-600'; // Yellow dot: stale (5-30 min)
-    case 'INACTIVE':
-    case 'MAINTENANCE':
+    case "ACTIVE":
+      return "text-green-600"; // Green dot: online (< 5 min)
+    case "SIGNAL_LOST":
+      return "text-yellow-600"; // Yellow dot: stale (5-30 min)
+    case "INACTIVE":
+    case "MAINTENANCE":
     default:
-      return 'text-red-600'; // Red dot: offline (> 30 min)
+      return "text-red-600"; // Red dot: offline (> 30 min)
   }
 }
 
@@ -273,14 +277,14 @@ export function getGpsStatusColor(status: GpsDeviceStatus | null): string {
  */
 export function getGpsStatusBadgeColor(status: GpsDeviceStatus | null): string {
   switch (status) {
-    case 'ACTIVE':
-      return 'bg-green-100 text-green-800 border-green-300';
-    case 'SIGNAL_LOST':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-    case 'INACTIVE':
-    case 'MAINTENANCE':
+    case "ACTIVE":
+      return "bg-green-100 text-green-800 border-green-300";
+    case "SIGNAL_LOST":
+      return "bg-yellow-100 text-yellow-800 border-yellow-300";
+    case "INACTIVE":
+    case "MAINTENANCE":
     default:
-      return 'bg-red-100 text-red-800 border-red-300';
+      return "bg-red-100 text-red-800 border-red-300";
   }
 }
 
@@ -297,23 +301,23 @@ export function getGpsStatusBadgeColor(status: GpsDeviceStatus | null): string {
  */
 export function detectGpsProvider(imei: string): string {
   if (!validateImeiFormat(imei)) {
-    return 'Unknown';
+    return "Unknown";
   }
 
   const tac = imei.substring(0, 6); // Type Allocation Code
 
   // Teltonika devices (common TAC prefixes)
-  if (tac.startsWith('35')) {
-    return 'Teltonika';
+  if (tac.startsWith("35")) {
+    return "Teltonika";
   }
 
   // Queclink devices
-  if (tac.startsWith('86')) {
-    return 'Queclink';
+  if (tac.startsWith("86")) {
+    return "Queclink";
   }
 
   // Add more providers as needed
   // Phase 2: Maintain database of TAC → Provider mappings
 
-  return 'Unknown';
+  return "Unknown";
 }

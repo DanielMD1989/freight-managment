@@ -10,9 +10,9 @@
  * Sprint 9 - Story 9.9: Audit Logging & Monitoring
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requirePermission, Permission } from '@/lib/rbac';
-import { getAuditLogStats } from '@/lib/auditLog';
+import { NextRequest, NextResponse } from "next/server";
+import { requirePermission, Permission } from "@/lib/rbac";
+import { getAuditLogStats } from "@/lib/auditLog";
 
 /**
  * GET /api/admin/audit-logs/stats
@@ -42,9 +42,9 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
 
-    const organizationId = searchParams.get('organizationId') || undefined;
-    const startDateStr = searchParams.get('startDate');
-    const endDateStr = searchParams.get('endDate');
+    const organizationId = searchParams.get("organizationId") || undefined;
+    const startDateStr = searchParams.get("startDate");
+    const endDateStr = searchParams.get("endDate");
 
     // Parse dates
     const startDate = startDateStr ? new Date(startDateStr) : undefined;
@@ -54,12 +54,12 @@ export async function GET(request: NextRequest) {
     const stats = await getAuditLogStats(organizationId, startDate, endDate);
 
     return NextResponse.json(stats);
-  // FIX: Use unknown type with type guard
+    // FIX: Use unknown type with type guard
   } catch (error: unknown) {
-    console.error('Error getting audit log stats:', error);
+    console.error("Error getting audit log stats:", error);
 
     return NextResponse.json(
-      { error: 'Failed to get audit log statistics' },
+      { error: "Failed to get audit log statistics" },
       { status: 500 }
     );
   }

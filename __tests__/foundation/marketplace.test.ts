@@ -11,31 +11,32 @@
  * - Pricing model
  */
 
-import { db } from '@/lib/db';
-import { calculateDistanceKm } from '@/lib/geo';
+import { db } from "@/lib/db";
+import { calculateDistanceKm } from "@/lib/geo";
 
-describe('Foundation: Marketplace Core', () => {
-  describe('Load Posting', () => {
-    it('should create load with base fare + per-km pricing model', async () => {
+describe("Foundation: Marketplace Core", () => {
+  describe("Load Posting", () => {
+    it("should create load with base fare + per-km pricing model", async () => {
       // LOCKED: Pricing model must remain baseFareEtb + (perKmEtb × tripKm)
       const loadData = {
-        pickupCity: 'Addis Ababa',
-        deliveryCity: 'Dire Dawa',
-        pickupDate: new Date('2026-01-10'),
-        deliveryDate: new Date('2026-01-11'),
-        truckType: 'DRY_VAN',
+        pickupCity: "Addis Ababa",
+        deliveryCity: "Dire Dawa",
+        pickupDate: new Date("2026-01-10"),
+        deliveryDate: new Date("2026-01-11"),
+        truckType: "DRY_VAN",
         weight: 5000,
         lengthM: 12,
-        fullPartial: 'FULL',
+        fullPartial: "FULL",
         baseFareEtb: 500,
         perKmEtb: 15.5,
         tripKm: 515,
-        status: 'POSTED',
-        shipperId: 'test-shipper-id',
-        shipperContactPhone: '+251911234567',
+        status: "POSTED",
+        shipperId: "test-shipper-id",
+        shipperContactPhone: "+251911234567",
       };
 
-      const calculatedFare = loadData.baseFareEtb + (loadData.perKmEtb * loadData.tripKm);
+      const calculatedFare =
+        loadData.baseFareEtb + loadData.perKmEtb * loadData.tripKm;
 
       expect(calculatedFare).toBe(8482.5); // 500 + (15.5 * 515)
       expect(loadData.baseFareEtb).toBeGreaterThan(0);
@@ -43,11 +44,11 @@ describe('Foundation: Marketplace Core', () => {
       expect(loadData.tripKm).toBeGreaterThan(0);
     });
 
-    it('should require origin and destination cities', () => {
+    it("should require origin and destination cities", () => {
       // LOCKED: Origin/destination are required fields
       const requiredFields = {
-        pickupCity: 'Addis Ababa',
-        deliveryCity: 'Dire Dawa',
+        pickupCity: "Addis Ababa",
+        deliveryCity: "Dire Dawa",
       };
 
       expect(requiredFields.pickupCity).toBeDefined();
@@ -56,22 +57,22 @@ describe('Foundation: Marketplace Core', () => {
       expect(requiredFields.deliveryCity.length).toBeGreaterThan(0);
     });
 
-    it('should support DRAFT and POSTED status', () => {
+    it("should support DRAFT and POSTED status", () => {
       // LOCKED: Load status values
-      const validStatuses = ['DRAFT', 'POSTED'];
+      const validStatuses = ["DRAFT", "POSTED"];
 
-      expect(validStatuses).toContain('DRAFT');
-      expect(validStatuses).toContain('POSTED');
+      expect(validStatuses).toContain("DRAFT");
+      expect(validStatuses).toContain("POSTED");
     });
 
-    it('should store coordinates for origin and destination', () => {
+    it("should store coordinates for origin and destination", () => {
       // LOCKED: Coordinate fields for distance calculation
       const loadWithCoords = {
-        pickupCity: 'Addis Ababa',
-        deliveryCity: 'Dire Dawa',
-        originLat: 9.0320,
+        pickupCity: "Addis Ababa",
+        deliveryCity: "Dire Dawa",
+        originLat: 9.032,
         originLon: 38.7469,
-        destinationLat: 9.5930,
+        destinationLat: 9.593,
         destinationLon: 41.8661,
       };
 
@@ -82,36 +83,42 @@ describe('Foundation: Marketplace Core', () => {
     });
   });
 
-  describe('Load Search & Filter', () => {
-    it('should filter loads by origin city (pickupCity)', () => {
+  describe("Load Search & Filter", () => {
+    it("should filter loads by origin city (pickupCity)", () => {
       // LOCKED: Origin-based search
       const searchParams = {
-        pickupCity: 'Addis Ababa',
+        pickupCity: "Addis Ababa",
       };
 
-      expect(searchParams.pickupCity).toBe('Addis Ababa');
+      expect(searchParams.pickupCity).toBe("Addis Ababa");
     });
 
-    it('should filter loads by destination city (deliveryCity)', () => {
+    it("should filter loads by destination city (deliveryCity)", () => {
       // LOCKED: Destination-based search
       const searchParams = {
-        deliveryCity: 'Dire Dawa',
+        deliveryCity: "Dire Dawa",
       };
 
-      expect(searchParams.deliveryCity).toBe('Dire Dawa');
+      expect(searchParams.deliveryCity).toBe("Dire Dawa");
     });
 
-    it('should filter loads by truck type', () => {
+    it("should filter loads by truck type", () => {
       // LOCKED: Truck type filtering
       const searchParams = {
-        truckType: 'DRY_VAN',
+        truckType: "DRY_VAN",
       };
 
-      const validTruckTypes = ['DRY_VAN', 'FLATBED', 'REFRIGERATED', 'TANKER', 'CONTAINER'];
+      const validTruckTypes = [
+        "DRY_VAN",
+        "FLATBED",
+        "REFRIGERATED",
+        "TANKER",
+        "CONTAINER",
+      ];
       expect(validTruckTypes).toContain(searchParams.truckType);
     });
 
-    it('should filter loads by weight', () => {
+    it("should filter loads by weight", () => {
       // LOCKED: Weight filtering
       const searchParams = {
         minWeight: 1000,
@@ -121,7 +128,7 @@ describe('Foundation: Marketplace Core', () => {
       expect(searchParams.minWeight).toBeLessThan(searchParams.maxWeight);
     });
 
-    it('should filter loads by distance (tripKm)', () => {
+    it("should filter loads by distance (tripKm)", () => {
       // LOCKED: Distance-based filtering
       const searchParams = {
         minTripKm: 100,
@@ -131,29 +138,29 @@ describe('Foundation: Marketplace Core', () => {
       expect(searchParams.minTripKm).toBeLessThan(searchParams.maxTripKm);
     });
 
-    it('should support case-insensitive city search', () => {
+    it("should support case-insensitive city search", () => {
       // LOCKED: Case-insensitive search
-      const city1 = 'Addis Ababa';
-      const city2 = 'addis ababa';
-      const city3 = 'ADDIS ABABA';
+      const city1 = "Addis Ababa";
+      const city2 = "addis ababa";
+      const city3 = "ADDIS ABABA";
 
       expect(city1.toLowerCase()).toBe(city2.toLowerCase());
       expect(city1.toLowerCase()).toBe(city3.toLowerCase());
     });
   });
 
-  describe('Truck Posting', () => {
-    it('should create truck posting with origin and destination', () => {
+  describe("Truck Posting", () => {
+    it("should create truck posting with origin and destination", () => {
       // LOCKED: Truck posting requires origin/destination
       const truckPostingData = {
-        originCity: 'Addis Ababa',
-        destinationCity: 'Dire Dawa',
-        truckType: 'DRY_VAN',
+        originCity: "Addis Ababa",
+        destinationCity: "Dire Dawa",
+        truckType: "DRY_VAN",
         capacity: 15000,
         lengthM: 14,
-        fullPartial: 'FULL',
-        availableFrom: new Date('2026-01-10'),
-        carrierContactPhone: '+251911234567',
+        fullPartial: "FULL",
+        availableFrom: new Date("2026-01-10"),
+        carrierContactPhone: "+251911234567",
       };
 
       expect(truckPostingData.originCity).toBeDefined();
@@ -162,49 +169,61 @@ describe('Foundation: Marketplace Core', () => {
       expect(truckPostingData.capacity).toBeGreaterThan(0);
     });
 
-    it('should support availability window', () => {
+    it("should support availability window", () => {
       // LOCKED: Truck availability dates
       const availability = {
-        availableFrom: new Date('2026-01-10'),
-        availableTo: new Date('2026-01-15'),
+        availableFrom: new Date("2026-01-10"),
+        availableTo: new Date("2026-01-15"),
       };
 
       expect(availability.availableFrom).toBeInstanceOf(Date);
       expect(availability.availableTo).toBeInstanceOf(Date);
-      expect(availability.availableFrom.getTime()).toBeLessThan(availability.availableTo.getTime());
+      expect(availability.availableFrom.getTime()).toBeLessThan(
+        availability.availableTo.getTime()
+      );
     });
   });
 
-  describe('Deadhead Calculations', () => {
-    it('should calculate DH-O (Deadhead to Origin)', () => {
+  describe("Deadhead Calculations", () => {
+    it("should calculate DH-O (Deadhead to Origin)", () => {
       // LOCKED: DH-O = Distance from carrier current location to load pickup
-      const carrierLat = 9.0320; // Addis Ababa
+      const carrierLat = 9.032; // Addis Ababa
       const carrierLon = 38.7469;
-      const loadPickupLat = 9.5930; // Dire Dawa
+      const loadPickupLat = 9.593; // Dire Dawa
       const loadPickupLon = 41.8661;
 
       // Haversine distance calculation (delegated to lib/geo.ts)
-      const dhO = calculateDistanceKm(carrierLat, carrierLon, loadPickupLat, loadPickupLon);
+      const dhO = calculateDistanceKm(
+        carrierLat,
+        carrierLon,
+        loadPickupLat,
+        loadPickupLon
+      );
 
       expect(dhO).toBeGreaterThan(0);
       expect(dhO).toBeCloseTo(348, -1); // Approximate distance ~350km
     });
 
-    it('should calculate DH-D (Deadhead to Destination)', () => {
+    it("should calculate DH-D (Deadhead to Destination)", () => {
       // LOCKED: DH-D = Distance from load delivery to carrier home/preferred zone
-      const loadDeliveryLat = 9.5930; // Dire Dawa
+      const loadDeliveryLat = 9.593; // Dire Dawa
       const loadDeliveryLon = 41.8661;
-      const carrierHomeLat = 9.0320; // Addis Ababa
+      const carrierHomeLat = 9.032; // Addis Ababa
       const carrierHomeLon = 38.7469;
 
       // Distance calculation (delegated to lib/geo.ts)
-      const dhD = calculateDistanceKm(loadDeliveryLat, loadDeliveryLon, carrierHomeLat, carrierHomeLon);
+      const dhD = calculateDistanceKm(
+        loadDeliveryLat,
+        loadDeliveryLon,
+        carrierHomeLat,
+        carrierHomeLon
+      );
 
       expect(dhD).toBeGreaterThan(0);
       expect(dhD).toBeCloseTo(348, -1); // Approximate distance ~350km
     });
 
-    it('should use deadhead for filtering, not pricing', () => {
+    it("should use deadhead for filtering, not pricing", () => {
       // LOCKED: Deadhead is advisory only, does NOT affect pricing
       const load = {
         baseFareEtb: 500,
@@ -214,16 +233,18 @@ describe('Foundation: Marketplace Core', () => {
         dhD: 150, // Deadhead to destination
       };
 
-      const fare = load.baseFareEtb + (load.perKmEtb * load.tripKm);
+      const fare = load.baseFareEtb + load.perKmEtb * load.tripKm;
 
       // Deadhead should NOT be included in fare calculation
       expect(fare).toBe(8482.5);
-      expect(fare).not.toBe(load.baseFareEtb + (load.perKmEtb * (load.tripKm + load.dhO + load.dhD)));
+      expect(fare).not.toBe(
+        load.baseFareEtb + load.perKmEtb * (load.tripKm + load.dhO + load.dhD)
+      );
     });
   });
 
-  describe('Pricing Model Invariants', () => {
-    it('should NEVER use rate-per-mile (RPM)', () => {
+  describe("Pricing Model Invariants", () => {
+    it("should NEVER use rate-per-mile (RPM)", () => {
       // LOCKED: No RPM allowed
       const load = {
         baseFareEtb: 500,
@@ -232,20 +253,20 @@ describe('Foundation: Marketplace Core', () => {
       };
 
       expect(load.perKmEtb).toBeDefined();
-      expect(load).not.toHaveProperty('ratePerMile');
-      expect(load).not.toHaveProperty('perMileEtb');
+      expect(load).not.toHaveProperty("ratePerMile");
+      expect(load).not.toHaveProperty("perMileEtb");
     });
 
-    it('should NEVER introduce broker role', () => {
+    it("should NEVER introduce broker role", () => {
       // LOCKED: No broker intermediary
-      const roles = ['SHIPPER', 'CARRIER', 'ADMIN'];
+      const roles = ["SHIPPER", "CARRIER", "ADMIN"];
 
-      expect(roles).not.toContain('BROKER');
-      expect(roles).not.toContain('FREIGHT_BROKER');
-      expect(roles).not.toContain('INTERMEDIARY');
+      expect(roles).not.toContain("BROKER");
+      expect(roles).not.toContain("FREIGHT_BROKER");
+      expect(roles).not.toContain("INTERMEDIARY");
     });
 
-    it('should maintain load-centric marketplace model', () => {
+    it("should maintain load-centric marketplace model", () => {
       // LOCKED: Shippers post loads, carriers search loads
       const marketplaceModel = {
         shipper: {

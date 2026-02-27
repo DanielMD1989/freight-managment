@@ -7,9 +7,9 @@
  * Sprint 14 - DAT-Style UI Transformation
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
 
 /**
  * Calculate reference pricing based on route and load characteristics
@@ -46,13 +46,13 @@ function calculateReferencePricing(load: LoadForPricing): {
   let brokerMultiplier = 1.1; // Broker spot usually 10% higher
 
   // Truck type multiplier
-  if (load.truckType === 'FLATBED') {
+  if (load.truckType === "FLATBED") {
     trihaulMultiplier *= 1.05;
     brokerMultiplier *= 1.08;
-  } else if (load.truckType === 'REFRIGERATED') {
+  } else if (load.truckType === "REFRIGERATED") {
     trihaulMultiplier *= 1.25;
-    brokerMultiplier *= 1.30;
-  } else if (load.truckType === 'TANKER') {
+    brokerMultiplier *= 1.3;
+  } else if (load.truckType === "TANKER") {
     trihaulMultiplier *= 1.15;
     brokerMultiplier *= 1.18;
   }
@@ -61,29 +61,29 @@ function calculateReferencePricing(load: LoadForPricing): {
   const weightNum = Number(load.weight) || 0;
   if (weightNum) {
     if (weightNum > 10000) {
-      trihaulMultiplier *= 1.10;
+      trihaulMultiplier *= 1.1;
       brokerMultiplier *= 1.12;
     } else if (weightNum < 2000) {
-      trihaulMultiplier *= 0.90;
+      trihaulMultiplier *= 0.9;
       brokerMultiplier *= 0.92;
     }
   }
 
   // Full/Partial multiplier
-  if (load.fullPartial === 'FULL') {
+  if (load.fullPartial === "FULL") {
     trihaulMultiplier *= 1.05;
     brokerMultiplier *= 1.06;
   }
 
   // Special requirements multiplier
   if (load.requiresRefrigeration) {
-    trihaulMultiplier *= 1.20;
+    trihaulMultiplier *= 1.2;
     brokerMultiplier *= 1.22;
   }
 
   if (load.isFragile) {
     trihaulMultiplier *= 1.08;
-    brokerMultiplier *= 1.10;
+    brokerMultiplier *= 1.1;
   }
 
   // Calculate final rates
@@ -133,20 +133,17 @@ export async function GET(
     });
 
     if (!load) {
-      return NextResponse.json(
-        { error: 'Load not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // H4 FIX: Authorization check - only shipper who owns load, dispatcher, or admin
     const isOwner = user?.organizationId === load.shipperId;
-    const isDispatcher = user?.role === 'DISPATCHER';
-    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+    const isDispatcher = user?.role === "DISPATCHER";
+    const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
 
     if (!isOwner && !isDispatcher && !isAdmin) {
       return NextResponse.json(
-        { error: 'You do not have permission to view pricing for this load' },
+        { error: "You do not have permission to view pricing for this load" },
         { status: 403 }
       );
     }
@@ -156,7 +153,7 @@ export async function GET(
 
     return NextResponse.json({
       loadId: id,
-      currency: load.currency || 'ETB',
+      currency: load.currency || "ETB",
       ...pricing,
       metadata: {
         tripKm: load.tripKm,
@@ -166,12 +163,12 @@ export async function GET(
         calculatedAt: new Date().toISOString(),
       },
     });
-  // FIX: Use unknown type
+    // FIX: Use unknown type
   } catch (error: unknown) {
-    console.error('Error calculating reference pricing:', error);
+    console.error("Error calculating reference pricing:", error);
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

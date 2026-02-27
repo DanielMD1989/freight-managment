@@ -13,9 +13,9 @@
  * Uses roundPercentage2() for all percentage metrics (2 decimal places)
  */
 
-import { db } from './db';
-import { Decimal } from 'decimal.js';
-import { roundPercentage2 } from './rounding';
+import { db } from "./db";
+import { Decimal } from "decimal.js";
+import { roundPercentage2 } from "./rounding";
 
 /**
  * Calculate completion rate for an organization
@@ -35,10 +35,11 @@ export async function calculateCompletionRate(orgId: string): Promise<number> {
   });
 
   if (!organization) {
-    throw new Error('Organization not found');
+    throw new Error("Organization not found");
   }
 
-  const totalLoads = organization.totalLoadsCompleted + organization.totalLoadsCancelled;
+  const totalLoads =
+    organization.totalLoadsCompleted + organization.totalLoadsCancelled;
 
   if (totalLoads === 0) {
     return 0; // No loads yet
@@ -57,7 +58,9 @@ export async function calculateCompletionRate(orgId: string): Promise<number> {
  * @param orgId - Organization ID
  * @returns Cancellation rate as percentage (0-100)
  */
-export async function calculateCancellationRate(orgId: string): Promise<number> {
+export async function calculateCancellationRate(
+  orgId: string
+): Promise<number> {
   const organization = await db.organization.findUnique({
     where: { id: orgId },
     select: {
@@ -67,16 +70,18 @@ export async function calculateCancellationRate(orgId: string): Promise<number> 
   });
 
   if (!organization) {
-    throw new Error('Organization not found');
+    throw new Error("Organization not found");
   }
 
-  const totalLoads = organization.totalLoadsCompleted + organization.totalLoadsCancelled;
+  const totalLoads =
+    organization.totalLoadsCompleted + organization.totalLoadsCancelled;
 
   if (totalLoads === 0) {
     return 0; // No loads yet
   }
 
-  const cancellationRate = (organization.totalLoadsCancelled / totalLoads) * 100;
+  const cancellationRate =
+    (organization.totalLoadsCancelled / totalLoads) * 100;
   // Rounding delegated to lib/rounding.ts:roundPercentage2()
   return roundPercentage2(cancellationRate);
 }
@@ -100,10 +105,11 @@ export async function calculateDisputeRate(orgId: string): Promise<number> {
   });
 
   if (!organization) {
-    throw new Error('Organization not found');
+    throw new Error("Organization not found");
   }
 
-  const totalLoads = organization.totalLoadsCompleted + organization.totalLoadsCancelled;
+  const totalLoads =
+    organization.totalLoadsCompleted + organization.totalLoadsCancelled;
 
   if (totalLoads === 0) {
     return 0; // No loads yet
@@ -165,10 +171,11 @@ export async function calculateTrustScore(orgId: string): Promise<number> {
   });
 
   if (!organization) {
-    throw new Error('Organization not found');
+    throw new Error("Organization not found");
   }
 
-  const totalLoads = organization.totalLoadsCompleted + organization.totalLoadsCancelled;
+  const totalLoads =
+    organization.totalLoadsCompleted + organization.totalLoadsCancelled;
 
   // If no activity, return 0
   if (totalLoads === 0) {
@@ -192,7 +199,8 @@ export async function calculateTrustScore(orgId: string): Promise<number> {
   const disputeScore = (100 - disputeRate) * 0.2; // 20% weight (inverted - lower is better)
   const verifiedScore = organization.isVerified ? 10 : 0; // 10% weight (10 points if verified)
 
-  const trustScore = completionScore + cancellationScore + disputeScore + verifiedScore;
+  const trustScore =
+    completionScore + cancellationScore + disputeScore + verifiedScore;
 
   // Rounding delegated to lib/rounding.ts:roundPercentage2()
   return roundPercentage2(trustScore);
@@ -287,11 +295,11 @@ export async function hasHighCancellationRate(orgId: string): Promise<boolean> {
  * @returns Badge level string
  */
 export function getTrustBadgeLevel(trustScore: number): string {
-  if (trustScore >= 90) return 'PLATINUM';
-  if (trustScore >= 75) return 'GOLD';
-  if (trustScore >= 60) return 'SILVER';
-  if (trustScore >= 40) return 'BRONZE';
-  return 'NONE';
+  if (trustScore >= 90) return "PLATINUM";
+  if (trustScore >= 75) return "GOLD";
+  if (trustScore >= 60) return "SILVER";
+  if (trustScore >= 40) return "BRONZE";
+  return "NONE";
 }
 
 /**
@@ -306,37 +314,42 @@ export function getTrustBadgeLevel(trustScore: number): string {
  * @returns Status indicator object
  */
 export function getGpsStatusIndicator(lastSeenAt: Date | null): {
-  color: 'GREEN' | 'YELLOW' | 'RED' | 'GRAY';
+  color: "GREEN" | "YELLOW" | "RED" | "GRAY";
   label: string;
   minutesAgo: number | null;
 } {
   if (!lastSeenAt) {
     return {
-      color: 'GRAY',
-      label: 'No GPS',
+      color: "GRAY",
+      label: "No GPS",
       minutesAgo: null,
     };
   }
 
   const now = new Date();
-  const minutesAgo = Math.floor((now.getTime() - lastSeenAt.getTime()) / 1000 / 60);
+  const minutesAgo = Math.floor(
+    (now.getTime() - lastSeenAt.getTime()) / 1000 / 60
+  );
 
   if (minutesAgo < 5) {
     return {
-      color: 'GREEN',
-      label: 'Active',
+      color: "GREEN",
+      label: "Active",
       minutesAgo,
     };
   } else if (minutesAgo < 30) {
     return {
-      color: 'YELLOW',
+      color: "YELLOW",
       label: `${minutesAgo} min ago`,
       minutesAgo,
     };
   } else {
     return {
-      color: 'RED',
-      label: minutesAgo < 60 ? `${minutesAgo} min ago` : `${Math.floor(minutesAgo / 60)}h ago`,
+      color: "RED",
+      label:
+        minutesAgo < 60
+          ? `${minutesAgo} min ago`
+          : `${Math.floor(minutesAgo / 60)}h ago`,
       minutesAgo,
     };
   }

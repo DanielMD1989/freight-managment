@@ -14,15 +14,18 @@
  * MAP + GPS Implementation - Phase 3
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { calculateDistanceKm } from '@/lib/geo';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import { calculateDistanceKm } from "@/lib/geo";
 
 // Cache TTL in milliseconds (24 hours)
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 
 // In-memory cache for distance calculations
-const distanceCache = new Map<string, { distance: number; duration: number; timestamp: number }>();
+const distanceCache = new Map<
+  string,
+  { distance: number; duration: number; timestamp: number }
+>();
 
 // Use centralized haversine from lib/geo.ts
 const haversineDistance = calculateDistanceKm;
@@ -56,30 +59,36 @@ async function getGoogleDistance(
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
 
   if (!apiKey) {
-    console.warn('GOOGLE_MAPS_API_KEY not configured');
+    console.warn("GOOGLE_MAPS_API_KEY not configured");
     return null;
   }
 
   try {
     // Use Google Distance Matrix API
-    const url = new URL('https://maps.googleapis.com/maps/api/distancematrix/json');
-    url.searchParams.set('origins', `${originLat},${originLng}`);
-    url.searchParams.set('destinations', `${destLat},${destLng}`);
-    url.searchParams.set('mode', 'driving');
-    url.searchParams.set('units', 'metric');
-    url.searchParams.set('key', apiKey);
+    const url = new URL(
+      "https://maps.googleapis.com/maps/api/distancematrix/json"
+    );
+    url.searchParams.set("origins", `${originLat},${originLng}`);
+    url.searchParams.set("destinations", `${destLat},${destLng}`);
+    url.searchParams.set("mode", "driving");
+    url.searchParams.set("units", "metric");
+    url.searchParams.set("key", apiKey);
 
     const response = await fetch(url.toString());
     const data = await response.json();
 
-    if (data.status !== 'OK') {
-      console.error('Google Distance Matrix API error:', data.status, data.error_message);
+    if (data.status !== "OK") {
+      console.error(
+        "Google Distance Matrix API error:",
+        data.status,
+        data.error_message
+      );
       return null;
     }
 
     const element = data.rows?.[0]?.elements?.[0];
-    if (element?.status !== 'OK') {
-      console.error('Distance calculation failed:', element?.status);
+    if (element?.status !== "OK") {
+      console.error("Distance calculation failed:", element?.status);
       return null;
     }
 
@@ -88,7 +97,7 @@ async function getGoogleDistance(
       duration: element.duration.value / 60, // Convert seconds to minutes
     };
   } catch (error) {
-    console.error('Google Distance API error:', error);
+    console.error("Google Distance API error:", error);
     return null;
   }
 }
@@ -98,24 +107,29 @@ export async function GET(request: NextRequest) {
     await requireAuth();
 
     const { searchParams } = request.nextUrl;
-    const origin = searchParams.get('origin');
-    const destination = searchParams.get('destination');
-    const useCache = searchParams.get('cache') !== 'false';
+    const origin = searchParams.get("origin");
+    const destination = searchParams.get("destination");
+    const useCache = searchParams.get("cache") !== "false";
 
     if (!origin || !destination) {
       return NextResponse.json(
-        { error: 'origin and destination are required (format: lat,lng)' },
+        { error: "origin and destination are required (format: lat,lng)" },
         { status: 400 }
       );
     }
 
     // Parse coordinates
-    const [originLat, originLng] = origin.split(',').map(Number);
-    const [destLat, destLng] = destination.split(',').map(Number);
+    const [originLat, originLng] = origin.split(",").map(Number);
+    const [destLat, destLng] = destination.split(",").map(Number);
 
-    if (isNaN(originLat) || isNaN(originLng) || isNaN(destLat) || isNaN(destLng)) {
+    if (
+      isNaN(originLat) ||
+      isNaN(originLng) ||
+      isNaN(destLat) ||
+      isNaN(destLng)
+    ) {
       return NextResponse.json(
-        { error: 'Invalid coordinates format. Use: lat,lng' },
+        { error: "Invalid coordinates format. Use: lat,lng" },
         { status: 400 }
       );
     }
@@ -123,14 +137,19 @@ export async function GET(request: NextRequest) {
     // Validate coordinate ranges
     if (originLat < -90 || originLat > 90 || destLat < -90 || destLat > 90) {
       return NextResponse.json(
-        { error: 'Latitude must be between -90 and 90' },
+        { error: "Latitude must be between -90 and 90" },
         { status: 400 }
       );
     }
 
-    if (originLng < -180 || originLng > 180 || destLng < -180 || destLng > 180) {
+    if (
+      originLng < -180 ||
+      originLng > 180 ||
+      destLng < -180 ||
+      destLng > 180
+    ) {
       return NextResponse.json(
-        { error: 'Longitude must be between -180 and 180' },
+        { error: "Longitude must be between -180 and 180" },
         { status: 400 }
       );
     }
@@ -146,7 +165,7 @@ export async function GET(request: NextRequest) {
           duration: Math.round(cached.duration),
           durationMinutes: Math.round(cached.duration),
           durationText: formatDuration(cached.duration),
-          source: 'google',
+          source: "google",
           cached: true,
           origin: { lat: originLat, lng: originLng },
           destination: { lat: destLat, lng: destLng },
@@ -155,7 +174,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Try Google API first
-    const googleResult = await getGoogleDistance(originLat, originLng, destLat, destLng);
+    const googleResult = await getGoogleDistance(
+      originLat,
+      originLng,
+      destLat,
+      destLng
+    );
 
     if (googleResult) {
       // Cache the result
@@ -171,7 +195,7 @@ export async function GET(request: NextRequest) {
         duration: Math.round(googleResult.duration),
         durationMinutes: Math.round(googleResult.duration),
         durationText: formatDuration(googleResult.duration),
-        source: 'google',
+        source: "google",
         cached: false,
         origin: { lat: originLat, lng: originLng },
         destination: { lat: destLat, lng: destLng },
@@ -192,16 +216,17 @@ export async function GET(request: NextRequest) {
       duration: Math.round(estimatedDuration),
       durationMinutes: Math.round(estimatedDuration),
       durationText: formatDuration(estimatedDuration),
-      source: 'estimate',
+      source: "estimate",
       cached: false,
       origin: { lat: originLat, lng: originLng },
       destination: { lat: destLat, lng: destLng },
-      warning: 'Road distance estimated (Google API unavailable). Actual distance may vary.',
+      warning:
+        "Road distance estimated (Google API unavailable). Actual distance may vary.",
     });
   } catch (error) {
-    console.error('Distance calculation error:', error);
+    console.error("Distance calculation error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

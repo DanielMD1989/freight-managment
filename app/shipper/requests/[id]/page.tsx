@@ -9,11 +9,11 @@
  * - For rejected: shows rejection notes
  */
 
-import { Suspense } from 'react';
-import { requireAuth } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { redirect, notFound } from 'next/navigation';
-import RequestDetailClient from './RequestDetailClient';
+import { Suspense } from "react";
+import { requireAuth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { redirect, notFound } from "next/navigation";
+import RequestDetailClient from "./RequestDetailClient";
 
 async function getRequestDetails(requestId: string, userId: string) {
   const user = await db.user.findUnique({
@@ -93,8 +93,12 @@ export default async function RequestDetailPage({
   const { id } = await params;
   const session = await requireAuth();
 
-  if (session.role !== 'SHIPPER' && session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN') {
-    redirect('/shipper');
+  if (
+    session.role !== "SHIPPER" &&
+    session.role !== "ADMIN" &&
+    session.role !== "SUPER_ADMIN"
+  ) {
+    redirect("/shipper");
   }
 
   const request = await getRequestDetails(id, session.userId);
@@ -119,14 +123,21 @@ export default async function RequestDetailPage({
       status: request.load.status,
       weight: Number(request.load.weight),
       truckType: request.load.truckType,
-      pickupCity: request.load.pickupLocation?.name || request.load.pickupCity || 'Unknown',
-      deliveryCity: request.load.deliveryLocation?.name || request.load.deliveryCity || 'Unknown',
+      pickupCity:
+        request.load.pickupLocation?.name ||
+        request.load.pickupCity ||
+        "Unknown",
+      deliveryCity:
+        request.load.deliveryLocation?.name ||
+        request.load.deliveryCity ||
+        "Unknown",
       pickupDate: request.load.pickupDate.toISOString(),
       deliveryDate: request.load.deliveryDate?.toISOString() || null,
       pickupAddress: request.load.pickupAddress,
       deliveryAddress: request.load.deliveryAddress,
       cargoDescription: request.load.cargoDescription,
-      isAssigned: request.load.status !== 'DRAFT' && request.load.status !== 'SEARCHING',
+      isAssigned:
+        request.load.status !== "DRAFT" && request.load.status !== "SEARCHING",
       assignedTruck: request.load.assignedTruck
         ? {
             id: request.load.assignedTruck.id,
@@ -153,7 +164,7 @@ export default async function RequestDetailPage({
           id: request.requestedBy.id,
           name: [request.requestedBy.firstName, request.requestedBy.lastName]
             .filter(Boolean)
-            .join(' '),
+            .join(" "),
           email: request.requestedBy.email,
           phone: request.requestedBy.phone,
         }
@@ -172,10 +183,10 @@ export default async function RequestDetailPage({
 function RequestDetailSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="h-8 w-48 bg-gray-200 dark:bg-slate-700 rounded animate-pulse" />
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 h-64 bg-gray-200 dark:bg-slate-700 rounded-lg animate-pulse" />
-        <div className="h-64 bg-gray-200 dark:bg-slate-700 rounded-lg animate-pulse" />
+      <div className="h-8 w-48 animate-pulse rounded bg-gray-200 dark:bg-slate-700" />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="h-64 animate-pulse rounded-lg bg-gray-200 lg:col-span-2 dark:bg-slate-700" />
+        <div className="h-64 animate-pulse rounded-lg bg-gray-200 dark:bg-slate-700" />
       </div>
     </div>
   );

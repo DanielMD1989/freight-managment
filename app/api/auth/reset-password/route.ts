@@ -12,18 +12,23 @@
  * - All sessions revoked after password reset
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import { db } from '@/lib/db';
-import { hashPassword, validatePasswordPolicy, revokeAllSessions, verifyPassword } from '@/lib/auth';
-import { logSecurityEvent, SecurityEventType } from '@/lib/security-events';
-import { emailSchema } from '@/lib/validation';
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { db } from "@/lib/db";
+import {
+  hashPassword,
+  validatePasswordPolicy,
+  revokeAllSessions,
+  verifyPassword,
+} from "@/lib/auth";
+import { logSecurityEvent, SecurityEventType } from "@/lib/security-events";
+import { emailSchema } from "@/lib/validation";
 
 // Request body schema
 const resetPasswordSchema = z.object({
   email: emailSchema,
-  otp: z.string().min(1, 'OTP is required').max(10, 'OTP is too long'),
-  newPassword: z.string().min(8, 'Password must be at least 8 characters'),
+  otp: z.string().min(1, "OTP is required").max(10, "OTP is too long"),
+  newPassword: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 // Max OTP verification attempts per token
@@ -35,8 +40,10 @@ const MAX_OTP_ATTEMPTS = 5;
  */
 export async function POST(request: NextRequest) {
   try {
-    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip');
-    const userAgent = request.headers.get('user-agent');
+    const ipAddress =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip");
+    const userAgent = request.headers.get("user-agent");
 
     const body = await request.json();
 
@@ -44,7 +51,7 @@ export async function POST(request: NextRequest) {
     const parseResult = resetPasswordSchema.safeParse(body);
     if (!parseResult.success) {
       // FIX: Use zodErrorResponse to avoid schema leak
-      const { zodErrorResponse } = await import('@/lib/validation');
+      const { zodErrorResponse } = await import("@/lib/validation");
       return zodErrorResponse(parseResult.error);
     }
 
@@ -66,17 +73,20 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       // Add delay to prevent timing attacks
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       return NextResponse.json(
-        { error: 'Invalid or expired reset code' },
+        { error: "Invalid or expired reset code" },
         { status: 400 }
       );
     }
 
     // Check if user account is active enough for password reset
-    if (user.status === 'SUSPENDED' || user.status === 'REJECTED') {
+    if (user.status === "SUSPENDED" || user.status === "REJECTED") {
       return NextResponse.json(
-        { error: 'Account is not eligible for password reset. Please contact support.' },
+        {
+          error:
+            "Account is not eligible for password reset. Please contact support.",
+        },
         { status: 403 }
       );
     }
@@ -88,7 +98,7 @@ export async function POST(request: NextRequest) {
         usedAt: null,
         expiresAt: { gt: new Date() },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: 5, // Only check recent tokens
     });
 
@@ -100,11 +110,11 @@ export async function POST(request: NextRequest) {
         ipAddress,
         userAgent,
         success: false,
-        metadata: { reason: 'No valid tokens found' },
+        metadata: { reason: "No valid tokens found" },
       });
 
       return NextResponse.json(
-        { error: 'Invalid or expired reset code' },
+        { error: "Invalid or expired reset code" },
         { status: 400 }
       );
     }
@@ -127,7 +137,9 @@ export async function POST(request: NextRequest) {
 
     // If no match found, increment attempts on the most recent token
     if (!matchedToken) {
-      const mostRecentToken = validTokens.find(t => t.attempts < MAX_OTP_ATTEMPTS);
+      const mostRecentToken = validTokens.find(
+        (t) => t.attempts < MAX_OTP_ATTEMPTS
+      );
 
       if (mostRecentToken) {
         // Increment attempt counter
@@ -136,7 +148,8 @@ export async function POST(request: NextRequest) {
           data: { attempts: { increment: 1 } },
         });
 
-        const remainingAttempts = MAX_OTP_ATTEMPTS - mostRecentToken.attempts - 1;
+        const remainingAttempts =
+          MAX_OTP_ATTEMPTS - mostRecentToken.attempts - 1;
 
         // Log failed attempt
         await logSecurityEvent({
@@ -146,7 +159,7 @@ export async function POST(request: NextRequest) {
           userAgent,
           success: false,
           metadata: {
-            reason: 'Invalid OTP',
+            reason: "Invalid OTP",
             attemptsUsed: mostRecentToken.attempts + 1,
             remainingAttempts,
           },
@@ -154,14 +167,17 @@ export async function POST(request: NextRequest) {
 
         if (remainingAttempts <= 0) {
           return NextResponse.json(
-            { error: 'Too many failed attempts. Please request a new reset code.' },
+            {
+              error:
+                "Too many failed attempts. Please request a new reset code.",
+            },
             { status: 429 }
           );
         }
 
         return NextResponse.json(
           {
-            error: 'Invalid reset code',
+            error: "Invalid reset code",
             remainingAttempts,
           },
           { status: 400 }
@@ -169,7 +185,7 @@ export async function POST(request: NextRequest) {
       }
 
       return NextResponse.json(
-        { error: 'Invalid or expired reset code. Please request a new one.' },
+        { error: "Invalid or expired reset code. Please request a new one." },
         { status: 400 }
       );
     }
@@ -178,7 +194,10 @@ export async function POST(request: NextRequest) {
     const validation = validatePasswordPolicy(newPassword);
     if (!validation.valid) {
       return NextResponse.json(
-        { error: 'Password does not meet requirements', details: validation.errors },
+        {
+          error: "Password does not meet requirements",
+          details: validation.errors,
+        },
         { status: 400 }
       );
     }
@@ -218,13 +237,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Password reset successfully. Please log in with your new password.',
+      message:
+        "Password reset successfully. Please log in with your new password.",
     });
   } catch (error) {
-    console.error('Failed to reset password:', error);
+    console.error("Failed to reset password:", error);
 
     return NextResponse.json(
-      { error: 'Failed to reset password' },
+      { error: "Failed to reset password" },
       { status: 500 }
     );
   }

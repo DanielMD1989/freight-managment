@@ -20,7 +20,7 @@
  */
 export function checkGpsFreshness(lastSeenAt: Date | null): string {
   if (!lastSeenAt) {
-    return 'never';
+    return "never";
   }
 
   const now = new Date();
@@ -30,13 +30,13 @@ export function checkGpsFreshness(lastSeenAt: Date | null): string {
   const diffDay = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
   if (diffMin < 1) {
-    return 'just now';
+    return "just now";
   } else if (diffMin < 60) {
     return `${diffMin} min ago`;
   } else if (diffHour < 24) {
-    return `${diffHour} hour${diffHour > 1 ? 's' : ''} ago`;
+    return `${diffHour} hour${diffHour > 1 ? "s" : ""} ago`;
   } else {
-    return `${diffDay} day${diffDay > 1 ? 's' : ''} ago`;
+    return `${diffDay} day${diffDay > 1 ? "s" : ""} ago`;
   }
 }
 
@@ -48,20 +48,22 @@ export function checkGpsFreshness(lastSeenAt: Date | null): string {
  */
 export function getGpsSignalStatus(
   lastSeenAt: Date | null
-): 'active' | 'weak' | 'lost' {
+): "active" | "weak" | "lost" {
   if (!lastSeenAt) {
-    return 'lost';
+    return "lost";
   }
 
   const now = new Date();
-  const diffMin = Math.floor((now.getTime() - lastSeenAt.getTime()) / (1000 * 60));
+  const diffMin = Math.floor(
+    (now.getTime() - lastSeenAt.getTime()) / (1000 * 60)
+  );
 
   if (diffMin < 5) {
-    return 'active';
+    return "active";
   } else if (diffMin < 30) {
-    return 'weak';
+    return "weak";
   } else {
-    return 'lost';
+    return "lost";
   }
 }
 
@@ -77,37 +79,39 @@ export function getGpsSignalStatus(
  * @returns Status indicator object
  */
 export function getGpsStatusIndicator(lastSeenAt: Date | null): {
-  color: 'GREEN' | 'YELLOW' | 'RED' | 'GRAY';
+  color: "GREEN" | "YELLOW" | "RED" | "GRAY";
   label: string;
   minutesAgo: number | null;
 } {
   if (!lastSeenAt) {
     return {
-      color: 'GRAY',
-      label: 'No GPS',
+      color: "GRAY",
+      label: "No GPS",
       minutesAgo: null,
     };
   }
 
   const now = new Date();
-  const minutesAgo = Math.floor((now.getTime() - lastSeenAt.getTime()) / 1000 / 60);
+  const minutesAgo = Math.floor(
+    (now.getTime() - lastSeenAt.getTime()) / 1000 / 60
+  );
 
   if (minutesAgo < 5) {
     return {
-      color: 'GREEN',
-      label: 'Active',
+      color: "GREEN",
+      label: "Active",
       minutesAgo,
     };
   } else if (minutesAgo < 30) {
     return {
-      color: 'YELLOW',
-      label: 'Stale',
+      color: "YELLOW",
+      label: "Stale",
       minutesAgo,
     };
   } else {
     return {
-      color: 'RED',
-      label: 'Offline',
+      color: "RED",
+      label: "Offline",
       minutesAgo,
     };
   }

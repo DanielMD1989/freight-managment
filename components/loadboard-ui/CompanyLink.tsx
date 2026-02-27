@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Company Link Component
@@ -6,15 +6,15 @@
  * Clickable company name that opens company details modal
  */
 
-import React from 'react';
-import { CompanyLinkProps } from '@/types/loadboard-ui';
+import React from "react";
+import { CompanyLinkProps } from "@/types/loadboard-ui";
 
 export default function CompanyLink({
   companyId,
   companyName,
   isMasked = false,
   onClick,
-  className = '',
+  className = "",
 }: CompanyLinkProps) {
   /**
    * Get display name
@@ -22,7 +22,9 @@ export default function CompanyLink({
   const getDisplayName = (): string => {
     if (isMasked) {
       // Generate consistent masked name based on companyId
-      const hash = companyId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const hash = companyId
+        .split("")
+        .reduce((acc, char) => acc + char.charCodeAt(0), 0);
       const maskedNumber = (hash % 9000) + 1000; // 4-digit number
       return `Company #${maskedNumber}`;
     }
@@ -34,16 +36,8 @@ export default function CompanyLink({
   return (
     <button
       onClick={() => onClick?.(companyId)}
-      className={`
-        text-[#1e9c99]
-        hover:text-[#064d51]
-        hover:underline
-        font-medium
-        transition-colors
-        cursor-pointer
-        ${className}
-      `}
-      title={isMasked ? 'Click to view company details' : companyName}
+      className={`cursor-pointer font-medium text-[#1e9c99] transition-colors hover:text-[#064d51] hover:underline ${className} `}
+      title={isMasked ? "Click to view company details" : companyName}
     >
       {displayName}
     </button>

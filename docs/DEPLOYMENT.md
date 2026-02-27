@@ -158,8 +158,9 @@ npm run dev
 ```
 
 **docker-compose.dev.yml:**
+
 ```yaml
-version: '3.8'
+version: "3.8"
 services:
   postgres:
     image: postgres:16
@@ -231,7 +232,7 @@ CMD ["node", "server.js"]
 
 ```yaml
 # docker-compose.prod.yml
-version: '3.8'
+version: "3.8"
 services:
   app:
     build: .
@@ -426,8 +427,8 @@ resource "aws_cloudfront_distribution" "cdn" {
         }
       ],
       "environment": [
-        {"name": "NODE_ENV", "value": "production"},
-        {"name": "PORT", "value": "3000"}
+        { "name": "NODE_ENV", "value": "production" },
+        { "name": "PORT", "value": "3000" }
       ],
       "secrets": [
         {
@@ -448,7 +449,10 @@ resource "aws_cloudfront_distribution" "cdn" {
         }
       },
       "healthCheck": {
-        "command": ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"],
+        "command": [
+          "CMD-SHELL",
+          "curl -f http://localhost:3000/api/health || exit 1"
+        ],
         "interval": 30,
         "timeout": 5,
         "retries": 3
@@ -601,11 +605,11 @@ Expected response:
 
 ### Vertical Scaling
 
-| Component | Development | Production | High Traffic |
-|-----------|-------------|------------|--------------|
-| App | 1 CPU, 1GB | 2 CPU, 4GB | 4 CPU, 8GB |
-| Database | db.t3.micro | db.r6g.large | db.r6g.xlarge |
-| Redis | cache.t3.micro | cache.r6g.large | cache.r6g.xlarge |
+| Component | Development    | Production      | High Traffic     |
+| --------- | -------------- | --------------- | ---------------- |
+| App       | 1 CPU, 1GB     | 2 CPU, 4GB      | 4 CPU, 8GB       |
+| Database  | db.t3.micro    | db.r6g.large    | db.r6g.xlarge    |
+| Redis     | cache.t3.micro | cache.r6g.large | cache.r6g.xlarge |
 
 ---
 
@@ -614,6 +618,7 @@ Expected response:
 ### Common Issues
 
 **1. Database Connection Errors**
+
 ```bash
 # Check connection string
 npx prisma db pull
@@ -623,12 +628,14 @@ nc -zv <db-host> 5432
 ```
 
 **2. Redis Connection Errors**
+
 ```bash
 # Test Redis connection
 redis-cli -h <host> -p 6379 -a <password> ping
 ```
 
 **3. Memory Issues**
+
 ```bash
 # Check memory usage
 docker stats
@@ -638,6 +645,7 @@ NODE_OPTIONS="--max-old-space-size=4096" npm start
 ```
 
 **4. SSL/TLS Issues**
+
 ```bash
 # Verify certificate
 openssl s_client -connect app.freightplatform.com:443

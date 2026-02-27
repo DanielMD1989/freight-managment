@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Theme Provider Component
@@ -9,8 +9,8 @@
  * Sprint 19 - Dark theme as default with neutral light toggle
  */
 
-import { ThemeProvider as NextThemesProvider } from 'next-themes';
-import { ReactNode } from 'react';
+import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { ReactNode } from "react";
 
 interface ThemeProviderProps {
   children: ReactNode;

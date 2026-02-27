@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Load Matches Client Component
@@ -8,11 +8,11 @@
  * Sprint 16 - Story 16.6: Anti-Bypass Detection Integration
  */
 
-import { useState } from 'react';
-import Link from 'next/link';
-import PlatformBenefitsDisplay from '@/components/PlatformBenefitsDisplay';
-import ReportBypassButton from '@/components/ReportBypassButton';
-import { VerifiedBadgeWithLabel } from '@/components/VerifiedBadge';
+import { useState } from "react";
+import Link from "next/link";
+import PlatformBenefitsDisplay from "@/components/PlatformBenefitsDisplay";
+import ReportBypassButton from "@/components/ReportBypassButton";
+import { VerifiedBadgeWithLabel } from "@/components/VerifiedBadge";
 
 interface TruckPosting {
   id: string;
@@ -54,26 +54,26 @@ interface LoadMatch {
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   }).format(date);
 }
 
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-ET', {
-    style: 'currency',
-    currency: 'ETB',
+  return new Intl.NumberFormat("en-ET", {
+    style: "currency",
+    currency: "ETB",
     minimumFractionDigits: 2,
   }).format(amount);
 }
 
 function getScoreColor(score: number): string {
-  if (score >= 80) return 'text-green-600';
-  if (score >= 60) return 'text-blue-600';
-  if (score >= 40) return 'text-yellow-600';
-  return 'text-gray-600';
+  if (score >= 80) return "text-green-600";
+  if (score >= 60) return "text-blue-600";
+  if (score >= 40) return "text-yellow-600";
+  return "text-gray-600";
 }
 
 export default function LoadMatchesClient({
@@ -81,7 +81,7 @@ export default function LoadMatchesClient({
 }: {
   truckPostings: TruckPosting[];
 }) {
-  const [selectedPosting, setSelectedPosting] = useState<string>('');
+  const [selectedPosting, setSelectedPosting] = useState<string>("");
   const [matches, setMatches] = useState<LoadMatch[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,12 +104,12 @@ export default function LoadMatchesClient({
         const data = await response.json();
         setMatches(data.matches || []);
       } else {
-        console.error('Failed to fetch matches');
-        setError('Failed to load matching loads. Please try again.');
+        console.error("Failed to fetch matches");
+        setError("Failed to load matching loads. Please try again.");
       }
     } catch (err) {
-      console.error('Error fetching matches:', err);
-      setError('Network error. Please check your connection and try again.');
+      console.error("Error fetching matches:", err);
+      setError("Network error. Please check your connection and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -144,17 +144,17 @@ export default function LoadMatchesClient({
 
       {truckPostings.length === 0 ? (
         /* No Postings */
-        <div className="bg-white rounded-lg shadow p-8 text-center">
-          <div className="text-6xl mb-4">📦</div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        <div className="rounded-lg bg-white p-8 text-center shadow">
+          <div className="mb-4 text-6xl">📦</div>
+          <h3 className="mb-2 text-lg font-semibold text-gray-900">
             No Active Truck Postings
           </h3>
-          <p className="text-gray-600 mb-6">
+          <p className="mb-6 text-gray-600">
             Create a truck posting to find matching loads.
           </p>
           <Link
             href="/carrier/loadboard"
-            className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            className="inline-block rounded-lg bg-blue-600 px-6 py-3 font-medium text-white transition-colors hover:bg-blue-700"
           >
             Create Posting
           </Link>
@@ -162,25 +162,25 @@ export default function LoadMatchesClient({
       ) : (
         <>
           {/* Truck Posting Selector */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="rounded-lg bg-white p-6 shadow">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {/* Truck Posting Select */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="mb-2 block text-sm font-medium text-gray-700">
                   Select Truck Posting
                 </label>
                 <select
                   value={selectedPosting}
                   onChange={(e) => handlePostingChange(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Choose a posting...</option>
                   {truckPostings.map((posting) => (
                     <option key={posting.id} value={posting.id}>
-                      {posting.truck.licensePlate} •{' '}
-                      {posting.truck.truckType.replace(/_/g, ' ')} •{' '}
-                      {posting.originCity.name} →{' '}
-                      {posting.destinationCity?.name || 'Any'}
+                      {posting.truck.licensePlate} •{" "}
+                      {posting.truck.truckType.replace(/_/g, " ")} •{" "}
+                      {posting.originCity.name} →{" "}
+                      {posting.destinationCity?.name || "Any"}
                     </option>
                   ))}
                 </select>
@@ -188,7 +188,7 @@ export default function LoadMatchesClient({
 
               {/* Min Score Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="mb-2 block text-sm font-medium text-gray-700">
                   Min Match Score: {minScore}%
                 </label>
                 <input
@@ -197,7 +197,9 @@ export default function LoadMatchesClient({
                   max="100"
                   step="10"
                   value={minScore}
-                  onChange={(e) => handleMinScoreChange(parseInt(e.target.value))}
+                  onChange={(e) =>
+                    handleMinScoreChange(parseInt(e.target.value))
+                  }
                   className="w-full"
                 />
               </div>
@@ -206,21 +208,23 @@ export default function LoadMatchesClient({
 
           {/* Loading State */}
           {isLoading && (
-            <div className="bg-white rounded-lg shadow p-8 text-center">
-              <div className="text-4xl mb-4">🔍</div>
+            <div className="rounded-lg bg-white p-8 text-center shadow">
+              <div className="mb-4 text-4xl">🔍</div>
               <p className="text-gray-600">Searching for matching loads...</p>
             </div>
           )}
 
           {/* Error State */}
           {error && !isLoading && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-              <div className="text-4xl mb-4">⚠️</div>
-              <p className="text-red-800 font-medium mb-2">Unable to Load Matches</p>
-              <p className="text-red-600 text-sm">{error}</p>
+            <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
+              <div className="mb-4 text-4xl">⚠️</div>
+              <p className="mb-2 font-medium text-red-800">
+                Unable to Load Matches
+              </p>
+              <p className="text-sm text-red-600">{error}</p>
               <button
                 onClick={() => selectedPosting && fetchMatches(selectedPosting)}
-                className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+                className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
               >
                 Try Again
               </button>
@@ -229,8 +233,8 @@ export default function LoadMatchesClient({
 
           {/* Matches List */}
           {!isLoading && !error && selectedPosting && (
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200">
+            <div className="overflow-hidden rounded-lg bg-white shadow">
+              <div className="border-b border-gray-200 px-6 py-4">
                 <h2 className="text-xl font-semibold text-gray-900">
                   Matching Loads ({matches.length})
                 </h2>
@@ -243,17 +247,17 @@ export default function LoadMatchesClient({
                       key={index}
                       className={`p-6 hover:bg-gray-50 ${
                         match.load.shipper.isVerified
-                          ? 'bg-blue-50/30 border-l-4 border-l-blue-500'
-                          : ''
+                          ? "border-l-4 border-l-blue-500 bg-blue-50/30"
+                          : ""
                       }`}
                     >
-                      <div className="flex items-start justify-between mb-4">
+                      <div className="mb-4 flex items-start justify-between">
                         <div>
-                          <div className="flex items-center gap-3 mb-2">
+                          <div className="mb-2 flex items-center gap-3">
                             {/* Sprint 16: Story 16.5 - Priority indicator for verified */}
                             {match.load.shipper.isVerified && (
                               <svg
-                                className="w-5 h-5 text-yellow-500 flex-shrink-0"
+                                className="h-5 w-5 flex-shrink-0 text-yellow-500"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
                               >
@@ -261,7 +265,8 @@ export default function LoadMatchesClient({
                               </svg>
                             )}
                             <h3 className="text-lg font-semibold text-gray-900">
-                              {match.load.pickupCity} → {match.load.deliveryCity}
+                              {match.load.pickupCity} →{" "}
+                              {match.load.deliveryCity}
                             </h3>
                             <span
                               className={`text-2xl font-bold ${getScoreColor(
@@ -272,7 +277,9 @@ export default function LoadMatchesClient({
                             </span>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <span className="font-medium">{match.load.shipper.name}</span>
+                            <span className="font-medium">
+                              {match.load.shipper.name}
+                            </span>
                             {/* Sprint 16: Story 16.5 - Enhanced verified badge */}
                             <VerifiedBadgeWithLabel
                               isVerified={match.load.shipper.isVerified}
@@ -292,15 +299,19 @@ export default function LoadMatchesClient({
                       </div>
 
                       {/* Load Details */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                      <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-4">
                         <div>
-                          <div className="text-xs text-gray-500">Pickup Date</div>
+                          <div className="text-xs text-gray-500">
+                            Pickup Date
+                          </div>
                           <div className="text-sm font-medium text-gray-900">
                             {formatDate(match.load.pickupDate)}
                           </div>
                         </div>
                         <div>
-                          <div className="text-xs text-gray-500">Delivery Date</div>
+                          <div className="text-xs text-gray-500">
+                            Delivery Date
+                          </div>
                           <div className="text-sm font-medium text-gray-900">
                             {formatDate(match.load.deliveryDate)}
                           </div>
@@ -321,7 +332,7 @@ export default function LoadMatchesClient({
 
                       {/* Cargo Description */}
                       <div className="mb-4">
-                        <div className="text-xs text-gray-500 mb-1">Cargo</div>
+                        <div className="mb-1 text-xs text-gray-500">Cargo</div>
                         <div className="text-sm text-gray-900">
                           {match.load.cargoDescription}
                         </div>
@@ -330,14 +341,14 @@ export default function LoadMatchesClient({
                       {/* Match Reasons */}
                       {match.matchReasons && match.matchReasons.length > 0 && (
                         <div className="mb-4">
-                          <div className="text-xs text-gray-500 mb-2">
+                          <div className="mb-2 text-xs text-gray-500">
                             Why this matches:
                           </div>
                           <div className="flex flex-wrap gap-2">
                             {match.matchReasons.map((reason, idx) => (
                               <span
                                 key={idx}
-                                className="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded"
+                                className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-700"
                               >
                                 {reason}
                               </span>
@@ -349,29 +360,29 @@ export default function LoadMatchesClient({
                       {/* Contact Info */}
                       {match.load.shipperContactName &&
                         match.load.shipperContactPhone && (
-                          <div className="mb-4 p-3 bg-gray-50 rounded">
-                            <div className="text-xs text-gray-500 mb-1">
+                          <div className="mb-4 rounded bg-gray-50 p-3">
+                            <div className="mb-1 text-xs text-gray-500">
                               Contact
                             </div>
                             <div className="text-sm text-gray-900">
-                              {match.load.shipperContactName} •{' '}
+                              {match.load.shipperContactName} •{" "}
                               {match.load.shipperContactPhone}
                             </div>
                           </div>
                         )}
 
                       {/* Actions */}
-                      <div className="flex gap-2 flex-wrap">
+                      <div className="flex flex-wrap gap-2">
                         <Link
                           href={`/carrier/loads/${match.load.id}`}
-                          className="px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 font-medium"
+                          className="rounded-lg border border-blue-600 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
                         >
                           View Load Details
                         </Link>
                         {match.load.shipperContactPhone && (
                           <a
                             href={`tel:${match.load.shipperContactPhone}`}
-                            className="px-4 py-2 text-sm text-green-600 border border-green-600 rounded-lg hover:bg-green-50 font-medium"
+                            className="rounded-lg border border-green-600 px-4 py-2 text-sm font-medium text-green-600 hover:bg-green-50"
                           >
                             Call Shipper
                           </a>
@@ -390,13 +401,13 @@ export default function LoadMatchesClient({
                 </div>
               ) : (
                 <div className="px-6 py-12 text-center">
-                  <div className="text-4xl mb-4">📭</div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  <div className="mb-4 text-4xl">📭</div>
+                  <h3 className="mb-2 text-lg font-semibold text-gray-900">
                     No Matching Loads Found
                   </h3>
                   <p className="text-gray-600">
-                    Try adjusting your minimum match score or create a new posting
-                    with different criteria.
+                    Try adjusting your minimum match score or create a new
+                    posting with different criteria.
                   </p>
                 </div>
               )}
@@ -405,8 +416,8 @@ export default function LoadMatchesClient({
 
           {/* Instructions */}
           {!selectedPosting && !isLoading && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <h3 className="font-semibold text-blue-900 mb-2">
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-6">
+              <h3 className="mb-2 font-semibold text-blue-900">
                 How Load Matching Works
               </h3>
               <ul className="space-y-2 text-sm text-blue-800">
@@ -425,9 +436,7 @@ export default function LoadMatchesClient({
                 </li>
                 <li className="flex items-start gap-2">
                   <span>•</span>
-                  <span>
-                    Adjust the minimum match score to filter results
-                  </span>
+                  <span>Adjust the minimum match score to filter results</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span>•</span>

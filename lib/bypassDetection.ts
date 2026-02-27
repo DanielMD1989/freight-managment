@@ -6,8 +6,8 @@
  * Detects and prevents platform bypass attempts
  */
 
-import { db } from './db';
-import { sendBypassWarning, BypassWarningType } from './bypassWarnings';
+import { db } from "./db";
+import { sendBypassWarning, BypassWarningType } from "./bypassWarnings";
 
 /**
  * Track when a user views contact information for a load
@@ -30,8 +30,8 @@ export async function trackContactView(
   await db.loadEvent.create({
     data: {
       loadId,
-      eventType: 'CONTACT_VIEWED',
-      description: 'Contact information viewed',
+      eventType: "CONTACT_VIEWED",
+      description: "Contact information viewed",
       userId,
     },
   });
@@ -70,7 +70,7 @@ export async function calculateCancellationPattern(
 
   // Count how many were cancelled after viewing contact
   const cancelledAfterView = loadsWithContactView.filter((load) => {
-    if (load.status !== 'CANCELLED') return false;
+    if (load.status !== "CANCELLED") return false;
 
     // Check if cancellation happened after contact view
     if (!load.contactViewedAt) return false;
@@ -119,7 +119,10 @@ export async function detectSuspiciousPattern(
   const cancellationAfterViewRate =
     await calculateCancellationPattern(organizationId);
 
-  if (cancellationAfterViewRate > 50 && organization.suspiciousCancellationCount >= 3) {
+  if (
+    cancellationAfterViewRate > 50 &&
+    organization.suspiciousCancellationCount >= 3
+  ) {
     return true;
   }
 
@@ -163,8 +166,8 @@ export async function flagUserForReview(
     await sendBypassWarning(organizationId, BypassWarningType.ACCOUNT_FLAGGED, {
       reason,
     });
-    } catch (error) {
-    console.error('Failed to send flagged warning:', error);
+  } catch (error) {
+    console.error("Failed to send flagged warning:", error);
     // Don't throw - flagging succeeded even if warning failed
   }
 }
@@ -191,12 +194,12 @@ export async function recordBypassReport(
   });
 
   if (!load) {
-    throw new Error('Load not found');
+    throw new Error("Load not found");
   }
 
   // Don't allow duplicate reports on same load
   if (load.bypassReported) {
-    throw new Error('Bypass already reported for this load');
+    throw new Error("Bypass already reported for this load");
   }
 
   // Update load with bypass report
@@ -223,8 +226,8 @@ export async function recordBypassReport(
   await db.loadEvent.create({
     data: {
       loadId,
-      eventType: 'BYPASS_REPORTED',
-      description: reason || 'Bypass attempt reported',
+      eventType: "BYPASS_REPORTED",
+      description: reason || "Bypass attempt reported",
       userId: reportedBy,
     },
   });
@@ -237,8 +240,8 @@ export async function recordBypassReport(
       reportedAt: new Date(),
       reason,
     });
-    } catch (error) {
-    console.error('Failed to send bypass report warning:', error);
+  } catch (error) {
+    console.error("Failed to send bypass report warning:", error);
   }
 
   // Check if organization should be flagged
@@ -315,8 +318,8 @@ export async function incrementSuspiciousCancellation(
         { count }
       );
     }
-    } catch (error) {
-    console.error('Failed to send suspicious cancellation warning:', error);
+  } catch (error) {
+    console.error("Failed to send suspicious cancellation warning:", error);
   }
 
   // Check if organization should be flagged
@@ -381,51 +384,49 @@ export function getPlatformBenefits(): Array<{
 }> {
   return [
     {
-      title: 'GPS Tracking Access',
+      title: "GPS Tracking Access",
       description:
-        'Real-time tracking of your shipments with live updates and ETAs',
-      icon: '📍',
+        "Real-time tracking of your shipments with live updates and ETAs",
+      icon: "📍",
     },
     {
-      title: 'Dispute Support & Resolution',
+      title: "Dispute Support & Resolution",
       description:
-        'Professional mediation and support for any shipment disputes',
-      icon: '🛡️',
+        "Professional mediation and support for any shipment disputes",
+      icon: "🛡️",
     },
     {
-      title: 'POD Verification',
+      title: "POD Verification",
       description:
-        'Proof of delivery system ensures accountability and transparency',
-      icon: '📄',
+        "Proof of delivery system ensures accountability and transparency",
+      icon: "📄",
     },
     {
-      title: 'Completion Rate & Verified Badges',
+      title: "Completion Rate & Verified Badges",
       description:
-        'Build trust with verified status and high completion rate badges',
-      icon: '✓',
+        "Build trust with verified status and high completion rate badges",
+      icon: "✓",
     },
     {
-      title: 'Payment Protection',
+      title: "Payment Protection",
+      description: "Secure payment processing with corridor-based service fees",
+      icon: "💳",
+    },
+    {
+      title: "Priority Listing",
       description:
-        'Secure payment processing with corridor-based service fees',
-      icon: '💳',
+        "Verified companies get priority placement in search results",
+      icon: "⭐",
     },
     {
-      title: 'Priority Listing',
-      description:
-        'Verified companies get priority placement in search results',
-      icon: '⭐',
+      title: "Transparent Pricing",
+      description: "Clear, predictable corridor-based service fees",
+      icon: "💰",
     },
     {
-      title: 'Transparent Pricing',
-      description: 'Clear, predictable corridor-based service fees',
-      icon: '💰',
-    },
-    {
-      title: 'Trust Score Bonus',
-      description: 'Higher trust scores lead to more business opportunities',
-      icon: '📊',
+      title: "Trust Score Bonus",
+      description: "Higher trust scores lead to more business opportunities",
+      icon: "📊",
     },
   ];
 }
-

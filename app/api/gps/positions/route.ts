@@ -3,7 +3,12 @@ import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { broadcastGpsPosition } from "@/lib/websocket-server";
-import { checkRateLimit, withRpsLimit, RATE_LIMIT_GPS_UPDATE, RPS_CONFIGS } from "@/lib/rateLimit";
+import {
+  checkRateLimit,
+  withRpsLimit,
+  RATE_LIMIT_GPS_UPDATE,
+  RPS_CONFIGS,
+} from "@/lib/rateLimit";
 import { Prisma } from "@prisma/client";
 
 // GET /api/gps/positions - Get latest GPS positions
@@ -116,7 +121,8 @@ async function postHandler(request: NextRequest) {
     // This is intentional - hardware cannot perform session auth
 
     const body = await request.json();
-    const { imei, latitude, longitude, speed, heading, altitude, timestamp } = body;
+    const { imei, latitude, longitude, speed, heading, altitude, timestamp } =
+      body;
 
     if (!imei || !latitude || !longitude) {
       return NextResponse.json(
@@ -135,7 +141,8 @@ async function postHandler(request: NextRequest) {
     if (!rateLimitResult.allowed) {
       return NextResponse.json(
         {
-          error: "GPS update rate limit exceeded. Maximum 12 updates per hour per device.",
+          error:
+            "GPS update rate limit exceeded. Maximum 12 updates per hour per device.",
           retryAfter: rateLimitResult.retryAfter,
         },
         {
@@ -143,7 +150,9 @@ async function postHandler(request: NextRequest) {
           headers: {
             "X-RateLimit-Limit": rateLimitResult.limit.toString(),
             "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
-            "X-RateLimit-Reset": new Date(rateLimitResult.resetTime).toISOString(),
+            "X-RateLimit-Reset": new Date(
+              rateLimitResult.resetTime
+            ).toISOString(),
             "Retry-After": rateLimitResult.retryAfter?.toString() || "60",
           },
         }

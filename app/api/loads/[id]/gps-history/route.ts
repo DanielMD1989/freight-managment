@@ -6,10 +6,10 @@
  * Get all GPS positions for a load (tracking history)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { getLoadPositions, calculateTripDistance } from '@/lib/gpsQuery';
-import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import { getLoadPositions, calculateTripDistance } from "@/lib/gpsQuery";
+import { db } from "@/lib/db";
 
 /**
  * GET /api/loads/[id]/gps-history
@@ -40,7 +40,7 @@ export async function GET(
     });
 
     if (!load) {
-      return NextResponse.json({ error: 'Load not found' }, { status: 404 });
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // Check permissions
@@ -54,18 +54,21 @@ export async function GET(
 
     const isShipper = user?.organizationId === load.shipperId;
     const isCarrier = user?.organizationId === load.assignedTruck?.carrierId;
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN' || session.role === 'DISPATCHER';
+    const isAdmin =
+      session.role === "ADMIN" ||
+      session.role === "SUPER_ADMIN" ||
+      session.role === "DISPATCHER";
 
     if (!isShipper && !isCarrier && !isAdmin) {
       return NextResponse.json(
-        { error: 'Unauthorized to view GPS history for this load' },
+        { error: "Unauthorized to view GPS history for this load" },
         { status: 403 }
       );
     }
 
     if (!load.trackingEnabled) {
       return NextResponse.json(
-        { error: 'GPS tracking is not enabled for this load' },
+        { error: "GPS tracking is not enabled for this load" },
         { status: 400 }
       );
     }
@@ -84,9 +87,9 @@ export async function GET(
       trackingEnabled: load.trackingEnabled,
     });
   } catch (error) {
-    console.error('Get load GPS history error:', error);
+    console.error("Get load GPS history error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

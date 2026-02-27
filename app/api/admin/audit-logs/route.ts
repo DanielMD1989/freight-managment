@@ -13,14 +13,14 @@
  * Sprint 9 - Story 9.9: Audit Logging & Monitoring
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requirePermission, Permission } from '@/lib/rbac';
+import { NextRequest, NextResponse } from "next/server";
+import { requirePermission, Permission } from "@/lib/rbac";
 import {
   queryAuditLogs,
   getAuditLogStats,
   AuditEventType,
   AuditSeverity,
-} from '@/lib/auditLog';
+} from "@/lib/auditLog";
 
 /**
  * GET /api/admin/audit-logs
@@ -49,15 +49,17 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
 
     // Parse filters
-    const userId = searchParams.get('userId') || undefined;
-    const organizationId = searchParams.get('organizationId') || undefined;
-    const eventType = searchParams.get('eventType') as AuditEventType | undefined;
-    const severity = searchParams.get('severity') as AuditSeverity | undefined;
-    const startDateStr = searchParams.get('startDate');
-    const endDateStr = searchParams.get('endDate');
-    const limit = parseInt(searchParams.get('limit') || '100', 10);
-    const offset = parseInt(searchParams.get('offset') || '0', 10);
-    const format = searchParams.get('format') || 'json';
+    const userId = searchParams.get("userId") || undefined;
+    const organizationId = searchParams.get("organizationId") || undefined;
+    const eventType = searchParams.get("eventType") as
+      | AuditEventType
+      | undefined;
+    const severity = searchParams.get("severity") as AuditSeverity | undefined;
+    const startDateStr = searchParams.get("startDate");
+    const endDateStr = searchParams.get("endDate");
+    const limit = parseInt(searchParams.get("limit") || "100", 10);
+    const offset = parseInt(searchParams.get("offset") || "0", 10);
+    const format = searchParams.get("format") || "json";
 
     // Parse dates
     const startDate = startDateStr ? new Date(startDateStr) : undefined;
@@ -66,7 +68,7 @@ export async function GET(request: NextRequest) {
     // Validate event type if provided
     if (eventType && !Object.values(AuditEventType).includes(eventType)) {
       return NextResponse.json(
-        { error: 'Invalid event type' },
+        { error: "Invalid event type" },
         { status: 400 }
       );
     }
@@ -74,7 +76,7 @@ export async function GET(request: NextRequest) {
     // Validate severity if provided
     if (severity && !Object.values(AuditSeverity).includes(severity)) {
       return NextResponse.json(
-        { error: 'Invalid severity level' },
+        { error: "Invalid severity level" },
         { status: 400 }
       );
     }
@@ -92,27 +94,27 @@ export async function GET(request: NextRequest) {
     });
 
     // Export as CSV if requested
-    if (format === 'csv') {
+    if (format === "csv") {
       const csv = convertLogsToCSV(result.logs);
-      const filename = `audit-logs-${new Date().toISOString().split('T')[0]}.csv`;
+      const filename = `audit-logs-${new Date().toISOString().split("T")[0]}.csv`;
 
       return new NextResponse(csv, {
         status: 200,
         headers: {
-          'Content-Type': 'text/csv',
-          'Content-Disposition': `attachment; filename="${filename}"`,
-          'Cache-Control': 'no-cache',
+          "Content-Type": "text/csv",
+          "Content-Disposition": `attachment; filename="${filename}"`,
+          "Cache-Control": "no-cache",
         },
       });
     }
 
     return NextResponse.json(result);
-  // FIX: Use unknown type with type guard
+    // FIX: Use unknown type with type guard
   } catch (error: unknown) {
-    console.error('Error querying audit logs:', error);
+    console.error("Error querying audit logs:", error);
 
     return NextResponse.json(
-      { error: 'Failed to query audit logs' },
+      { error: "Failed to query audit logs" },
       { status: 500 }
     );
   }
@@ -140,46 +142,46 @@ interface AuditLogEntry {
 function convertLogsToCSV(logs: AuditLogEntry[]): string {
   // CSV header
   const header = [
-    'Timestamp',
-    'Event Type',
-    'Severity',
-    'User ID',
-    'Organization ID',
-    'IP Address',
-    'User Agent',
-    'Resource Type',
-    'Resource ID',
-    'Action',
-    'Details',
-  ].join(',');
+    "Timestamp",
+    "Event Type",
+    "Severity",
+    "User ID",
+    "Organization ID",
+    "IP Address",
+    "User Agent",
+    "Resource Type",
+    "Resource ID",
+    "Action",
+    "Details",
+  ].join(",");
 
   // CSV rows
   const rows = logs.map((log) => {
     const row = [
-      log.createdAt || '',
-      log.eventType || '',
-      log.severity || '',
-      log.userId || '',
-      log.organizationId || '',
-      log.ipAddress || '',
-      escapeCSV(log.userAgent || ''),
-      log.resourceType || '',
-      log.resourceId || '',
-      log.action || '',
+      log.createdAt || "",
+      log.eventType || "",
+      log.severity || "",
+      log.userId || "",
+      log.organizationId || "",
+      log.ipAddress || "",
+      escapeCSV(log.userAgent || ""),
+      log.resourceType || "",
+      log.resourceId || "",
+      log.action || "",
       escapeCSV(JSON.stringify(log.details || {})),
     ];
 
-    return row.map(String).join(',');
+    return row.map(String).join(",");
   });
 
-  return [header, ...rows].join('\n');
+  return [header, ...rows].join("\n");
 }
 
 /**
  * Escape CSV values to handle commas, quotes, and newlines
  */
 function escapeCSV(value: string): string {
-  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
     return `"${value.replace(/"/g, '""')}"`;
   }
   return value;
@@ -202,9 +204,9 @@ export async function stats(request: NextRequest) {
     await requirePermission(Permission.VIEW_AUDIT_LOGS);
 
     const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId') || undefined;
-    const startDateStr = searchParams.get('startDate');
-    const endDateStr = searchParams.get('endDate');
+    const organizationId = searchParams.get("organizationId") || undefined;
+    const startDateStr = searchParams.get("startDate");
+    const endDateStr = searchParams.get("endDate");
 
     const startDate = startDateStr ? new Date(startDateStr) : undefined;
     const endDate = endDateStr ? new Date(endDateStr) : undefined;
@@ -212,12 +214,12 @@ export async function stats(request: NextRequest) {
     const stats = await getAuditLogStats(organizationId, startDate, endDate);
 
     return NextResponse.json(stats);
-  // FIX: Use unknown type with type guard
+    // FIX: Use unknown type with type guard
   } catch (error: unknown) {
-    console.error('Error getting audit log stats:', error);
+    console.error("Error getting audit log stats:", error);
 
     return NextResponse.json(
-      { error: 'Failed to get audit log statistics' },
+      { error: "Failed to get audit log statistics" },
       { status: 500 }
     );
   }

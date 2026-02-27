@@ -6,9 +6,9 @@
  * Utilities for querying GPS position data
  */
 
-import { db } from './db';
-import { Decimal } from 'decimal.js';
-import { calculateDistanceKm } from './geo';
+import { db } from "./db";
+import { Decimal } from "decimal.js";
+import { calculateDistanceKm } from "./geo";
 
 export interface GpsPosition {
   id: string;
@@ -35,7 +35,7 @@ export async function getLatestPosition(
   const position = await db.gpsPosition.findFirst({
     where: { truckId },
     orderBy: {
-      timestamp: 'desc',
+      timestamp: "desc",
     },
     select: {
       id: true,
@@ -82,7 +82,7 @@ export async function getPositionHistory(
       },
     },
     orderBy: {
-      timestamp: 'asc',
+      timestamp: "asc",
     },
     take: limit,
     select: {
@@ -114,7 +114,7 @@ export async function getLoadPositions(loadId: string): Promise<GpsPosition[]> {
   const positions = await db.gpsPosition.findMany({
     where: { loadId },
     orderBy: {
-      timestamp: 'asc',
+      timestamp: "asc",
     },
     select: {
       id: true,
@@ -238,7 +238,9 @@ export async function getPositionCount(
   startDate?: Date,
   endDate?: Date
 ): Promise<number> {
-  const where: { truckId: string; timestamp?: { gte?: Date; lte?: Date } } = { truckId };
+  const where: { truckId: string; timestamp?: { gte?: Date; lte?: Date } } = {
+    truckId,
+  };
 
   if (startDate || endDate) {
     where.timestamp = {};
@@ -257,7 +259,9 @@ export async function getPositionCount(
  * @param daysToKeep - Number of days to keep (default: 90)
  * @returns Number of deleted positions
  */
-export async function deleteOldPositions(daysToKeep: number = 90): Promise<number> {
+export async function deleteOldPositions(
+  daysToKeep: number = 90
+): Promise<number> {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 

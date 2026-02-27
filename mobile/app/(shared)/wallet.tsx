@@ -13,7 +13,6 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "../../src/api/client";
 import { Card } from "../../src/components/Card";
@@ -60,7 +59,6 @@ function useWalletTransactions() {
 }
 
 export default function WalletScreen() {
-  const { t } = useTranslation();
   const {
     data: balance,
     isLoading: balanceLoading,

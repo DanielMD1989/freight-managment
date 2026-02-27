@@ -6,7 +6,7 @@
  * 2. Have expiresAt date in the past
  */
 
-import { db } from './db';
+import { db } from "./db";
 
 export interface ExpirePostingsResult {
   success: boolean;
@@ -30,7 +30,7 @@ export async function expireOldTruckPostings(): Promise<ExpirePostingsResult> {
     // Either availableTo has passed or expiresAt has passed
     const postingsToExpire = await db.truckPosting.findMany({
       where: {
-        status: 'ACTIVE',
+        status: "ACTIVE",
         OR: [
           // availableTo has passed
           {
@@ -97,7 +97,7 @@ export async function expireOldTruckPostings(): Promise<ExpirePostingsResult> {
         },
       },
       data: {
-        status: 'EXPIRED',
+        status: "EXPIRED",
         updatedAt: now,
       },
     });
@@ -111,11 +111,11 @@ export async function expireOldTruckPostings(): Promise<ExpirePostingsResult> {
       },
     };
   } catch (error) {
-    console.error('[TruckPostingAutomation] Error expiring postings:', error);
+    console.error("[TruckPostingAutomation] Error expiring postings:", error);
     return {
       success: false,
       expiredCount: 0,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -136,13 +136,13 @@ export async function expireOldRequests(): Promise<{
     // Expire load requests
     const loadRequestResult = await db.loadRequest.updateMany({
       where: {
-        status: 'PENDING',
+        status: "PENDING",
         expiresAt: {
           lt: now,
         },
       },
       data: {
-        status: 'EXPIRED',
+        status: "EXPIRED",
         updatedAt: now,
       },
     });
@@ -150,13 +150,13 @@ export async function expireOldRequests(): Promise<{
     // Expire truck requests
     const truckRequestResult = await db.truckRequest.updateMany({
       where: {
-        status: 'PENDING',
+        status: "PENDING",
         expiresAt: {
           lt: now,
         },
       },
       data: {
-        status: 'EXPIRED',
+        status: "EXPIRED",
         updatedAt: now,
       },
     });
@@ -167,12 +167,12 @@ export async function expireOldRequests(): Promise<{
       truckRequestsExpired: truckRequestResult.count,
     };
   } catch (error) {
-    console.error('[TruckPostingAutomation] Error expiring requests:', error);
+    console.error("[TruckPostingAutomation] Error expiring requests:", error);
     return {
       success: false,
       loadRequestsExpired: 0,
       truckRequestsExpired: 0,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }

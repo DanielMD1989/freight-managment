@@ -1,815 +1,855 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Option A Refined - Freight Management</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: 'Inter', sans-serif;
-      background: #0f172a;
-      padding: 40px;
-      min-height: 100vh;
-    }
-
-    h1 {
-      text-align: center;
-      margin-bottom: 16px;
-      color: #f8fafc;
-      font-size: 32px;
-    }
-
-    .subtitle {
-      text-align: center;
-      color: #94a3b8;
-      margin-bottom: 40px;
-      font-size: 16px;
-    }
-
-    .options-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 30px;
-      max-width: 1600px;
-      margin: 0 auto;
-    }
-
-    .option {
-      border-radius: 20px;
-      overflow: hidden;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-      transition: transform 0.3s, box-shadow 0.3s;
-    }
-
-    .option:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 16px 48px rgba(0,0,0,0.4);
-    }
-
-    .option-header {
-      padding: 24px;
-      text-align: center;
-      color: white;
-    }
-
-    .option-header h2 {
-      font-size: 20px;
-      margin-bottom: 4px;
-      font-weight: 700;
-    }
-
-    .option-header p {
-      font-size: 13px;
-      opacity: 0.9;
-    }
-
-    /* Option A1 - Classic Professional */
-    .option-a1 .option-header {
-      background: linear-gradient(135deg, #1e40af, #3b82f6);
-    }
-
-    .option-a1 .mock-app {
-      background: #f8fafc;
-    }
-
-    .option-a1 .sidebar {
-      background: linear-gradient(180deg, #0f172a, #1e293b);
-    }
-
-    .option-a1 .sidebar-item {
-      color: #94a3b8;
-    }
-
-    .option-a1 .sidebar-item.active {
-      background: linear-gradient(90deg, #3b82f6, transparent);
-      color: white;
-      border-left: 3px solid #3b82f6;
-    }
-
-    .option-a1 .stat-card.primary {
-      background: linear-gradient(135deg, #1e40af, #3b82f6);
-    }
-
-    .option-a1 .stat-card.secondary {
-      background: linear-gradient(135deg, #ea580c, #f97316);
-    }
-
-    .option-a1 .stat-card.success {
-      background: linear-gradient(135deg, #047857, #10b981);
-    }
-
-    .option-a1 .btn-primary {
-      background: linear-gradient(135deg, #1e40af, #3b82f6);
-    }
-
-    .option-a1 .btn-secondary {
-      background: linear-gradient(135deg, #ea580c, #f97316);
-    }
-
-    .option-a1 .badge-pending { background: #fef3c7; color: #b45309; }
-    .option-a1 .badge-approved { background: #d1fae5; color: #047857; }
-    .option-a1 .badge-transit { background: #dbeafe; color: #1e40af; }
-
-    /* Option A2 - Modern Navy */
-    .option-a2 .option-header {
-      background: linear-gradient(135deg, #0c4a6e, #0284c7);
-    }
-
-    .option-a2 .mock-app {
-      background: #f1f5f9;
-    }
-
-    .option-a2 .sidebar {
-      background: #0f172a;
-      border-right: 1px solid #1e293b;
-    }
-
-    .option-a2 .sidebar-item {
-      color: #64748b;
-    }
-
-    .option-a2 .sidebar-item.active {
-      background: rgba(14, 165, 233, 0.15);
-      color: #0ea5e9;
-      border-radius: 8px;
-    }
-
-    .option-a2 .stat-card.primary {
-      background: linear-gradient(135deg, #0c4a6e, #0284c7);
-    }
-
-    .option-a2 .stat-card.secondary {
-      background: linear-gradient(135deg, #c2410c, #ea580c);
-    }
-
-    .option-a2 .stat-card.success {
-      background: linear-gradient(135deg, #065f46, #059669);
-    }
-
-    .option-a2 .btn-primary {
-      background: linear-gradient(135deg, #0c4a6e, #0284c7);
-    }
-
-    .option-a2 .btn-secondary {
-      background: linear-gradient(135deg, #c2410c, #ea580c);
-    }
-
-    .option-a2 .badge-pending { background: #ffedd5; color: #c2410c; }
-    .option-a2 .badge-approved { background: #d1fae5; color: #065f46; }
-    .option-a2 .badge-transit { background: #e0f2fe; color: #0c4a6e; }
-
-    .option-a2 .card {
-      border: none;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    }
-
-    /* Option A3 - Ethiopian Pride */
-    .option-a3 .option-header {
-      background: linear-gradient(135deg, #15803d, #166534);
-    }
-
-    .option-a3 .mock-app {
-      background: #fafaf9;
-    }
-
-    .option-a3 .sidebar {
-      background: linear-gradient(180deg, #1c1917, #292524);
-    }
-
-    .option-a3 .sidebar-item {
-      color: #a8a29e;
-    }
-
-    .option-a3 .sidebar-item.active {
-      background: linear-gradient(90deg, rgba(234, 179, 8, 0.3), transparent);
-      color: #eab308;
-      border-left: 3px solid #eab308;
-    }
-
-    .option-a3 .stat-card.primary {
-      background: linear-gradient(135deg, #15803d, #22c55e);
-    }
-
-    .option-a3 .stat-card.secondary {
-      background: linear-gradient(135deg, #b45309, #eab308);
-    }
-
-    .option-a3 .stat-card.success {
-      background: linear-gradient(135deg, #b91c1c, #ef4444);
-    }
-
-    .option-a3 .btn-primary {
-      background: linear-gradient(135deg, #15803d, #22c55e);
-    }
-
-    .option-a3 .btn-secondary {
-      background: linear-gradient(135deg, #b45309, #eab308);
-      color: #1c1917;
-    }
-
-    .option-a3 .badge-pending { background: #fef9c3; color: #a16207; }
-    .option-a3 .badge-approved { background: #dcfce7; color: #15803d; }
-    .option-a3 .badge-transit { background: #fee2e2; color: #b91c1c; }
-
-    .option-a3 .card {
-      border: 1px solid #e7e5e4;
-    }
-
-    /* Mock App Styles */
-    .mock-app {
-      height: 480px;
-      display: flex;
-    }
-
-    .sidebar {
-      width: 72px;
-      padding: 16px 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .sidebar-item {
-      padding: 12px 8px;
-      border-radius: 8px;
-      text-align: center;
-      font-size: 10px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .sidebar-icon {
-      font-size: 20px;
-      margin-bottom: 4px;
-    }
-
-    .main-content {
-      flex: 1;
-      padding: 20px;
-      overflow: hidden;
-    }
-
-    .page-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-
-    .page-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: #0f172a;
-    }
-
-    .option-a3 .page-title {
-      color: #1c1917;
-    }
-
-    .header-actions {
-      display: flex;
-      gap: 8px;
-    }
-
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-
-    .stat-card {
-      padding: 16px;
-      border-radius: 12px;
-      color: white;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .stat-card::after {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -50%;
-      width: 100%;
-      height: 100%;
-      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-    }
-
-    .stat-card h4 {
-      font-size: 11px;
-      font-weight: 500;
-      opacity: 0.9;
-      margin-bottom: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .stat-card .value {
-      font-size: 28px;
-      font-weight: 800;
-    }
-
-    .stat-card .change {
-      font-size: 11px;
-      opacity: 0.8;
-      margin-top: 4px;
-    }
-
-    .card {
-      background: white;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 16px;
-      border: 1px solid #e2e8f0;
-    }
-
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-
-    .card h4 {
-      font-size: 14px;
-      color: #1e293b;
-      font-weight: 600;
-    }
-
-    .btn-row {
-      display: flex;
-      gap: 8px;
-    }
-
-    .btn {
-      padding: 8px 14px;
-      border-radius: 8px;
-      color: white;
-      font-size: 12px;
-      font-weight: 600;
-      border: none;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.2s;
-    }
-
-    .btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-
-    .badge {
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 600;
-    }
-
-    .table-header {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr;
-      padding: 10px 12px;
-      background: #f8fafc;
-      border-radius: 8px;
-      font-size: 11px;
-      color: #64748b;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .option-a2 .table-header,
-    .option-a3 .table-header {
-      background: #f1f5f9;
-    }
-
-    .option-a3 .table-header {
-      background: #f5f5f4;
-      color: #78716c;
-    }
-
-    .table-row {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr;
-      padding: 12px;
-      border-bottom: 1px solid #f1f5f9;
-      font-size: 13px;
-      align-items: center;
-      color: #334155;
-    }
-
-    .table-row:last-child {
-      border-bottom: none;
-    }
-
-    .option-a3 .table-row {
-      border-color: #f5f5f4;
-      color: #44403c;
-    }
-
-    .route-cell {
-      font-weight: 500;
-    }
-
-    .color-swatches {
-      display: flex;
-      gap: 8px;
-      padding: 16px;
-      background: white;
-      justify-content: center;
-      border-top: 1px solid #e2e8f0;
-    }
-
-    .option-a3 .color-swatches {
-      border-color: #e7e5e4;
-    }
-
-    .swatch {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      border: 3px solid white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    }
-
-    .vibes {
-      padding: 12px 16px;
-      background: #f8fafc;
-      text-align: center;
-      font-size: 12px;
-      color: #64748b;
-      font-weight: 500;
-    }
-
-    .option-a3 .vibes {
-      background: #fafaf9;
-      color: #78716c;
-    }
-
-    .choose-label {
-      text-align: center;
-      padding: 18px;
-      font-size: 16px;
-      font-weight: 700;
-      color: white;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .choose-label:hover {
-      filter: brightness(1.1);
-    }
-
-    .option-a1 .choose-label {
-      background: linear-gradient(135deg, #1e40af, #3b82f6);
-    }
-
-    .option-a2 .choose-label {
-      background: linear-gradient(135deg, #0c4a6e, #0284c7);
-    }
-
-    .option-a3 .choose-label {
-      background: linear-gradient(135deg, #15803d, #22c55e);
-    }
-
-    .flag-stripe {
-      height: 4px;
-      background: linear-gradient(90deg, #22c55e 33%, #eab308 33%, #eab308 66%, #ef4444 66%);
-    }
-  </style>
-</head>
-<body>
-  <h1>Option A - Refined Variations</h1>
-  <p class="subtitle">Choose the perfect professional look for your freight management platform</p>
-
-  <div class="options-grid">
-    <!-- Option A1 - Classic Professional -->
-    <div class="option option-a1">
-      <div class="option-header">
-        <h2>A1: Classic Professional</h2>
-        <p>Deep Blue + Vibrant Orange</p>
-      </div>
-
-      <div class="mock-app">
-        <div class="sidebar">
-          <div class="sidebar-item active">
-            <div class="sidebar-icon">📊</div>
-            <div>Dashboard</div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Option A Refined - Freight Management</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Inter", sans-serif;
+        background: #0f172a;
+        padding: 40px;
+        min-height: 100vh;
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 16px;
+        color: #f8fafc;
+        font-size: 32px;
+      }
+
+      .subtitle {
+        text-align: center;
+        color: #94a3b8;
+        margin-bottom: 40px;
+        font-size: 16px;
+      }
+
+      .options-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 30px;
+        max-width: 1600px;
+        margin: 0 auto;
+      }
+
+      .option {
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        transition:
+          transform 0.3s,
+          box-shadow 0.3s;
+      }
+
+      .option:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+      }
+
+      .option-header {
+        padding: 24px;
+        text-align: center;
+        color: white;
+      }
+
+      .option-header h2 {
+        font-size: 20px;
+        margin-bottom: 4px;
+        font-weight: 700;
+      }
+
+      .option-header p {
+        font-size: 13px;
+        opacity: 0.9;
+      }
+
+      /* Option A1 - Classic Professional */
+      .option-a1 .option-header {
+        background: linear-gradient(135deg, #1e40af, #3b82f6);
+      }
+
+      .option-a1 .mock-app {
+        background: #f8fafc;
+      }
+
+      .option-a1 .sidebar {
+        background: linear-gradient(180deg, #0f172a, #1e293b);
+      }
+
+      .option-a1 .sidebar-item {
+        color: #94a3b8;
+      }
+
+      .option-a1 .sidebar-item.active {
+        background: linear-gradient(90deg, #3b82f6, transparent);
+        color: white;
+        border-left: 3px solid #3b82f6;
+      }
+
+      .option-a1 .stat-card.primary {
+        background: linear-gradient(135deg, #1e40af, #3b82f6);
+      }
+
+      .option-a1 .stat-card.secondary {
+        background: linear-gradient(135deg, #ea580c, #f97316);
+      }
+
+      .option-a1 .stat-card.success {
+        background: linear-gradient(135deg, #047857, #10b981);
+      }
+
+      .option-a1 .btn-primary {
+        background: linear-gradient(135deg, #1e40af, #3b82f6);
+      }
+
+      .option-a1 .btn-secondary {
+        background: linear-gradient(135deg, #ea580c, #f97316);
+      }
+
+      .option-a1 .badge-pending {
+        background: #fef3c7;
+        color: #b45309;
+      }
+      .option-a1 .badge-approved {
+        background: #d1fae5;
+        color: #047857;
+      }
+      .option-a1 .badge-transit {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+
+      /* Option A2 - Modern Navy */
+      .option-a2 .option-header {
+        background: linear-gradient(135deg, #0c4a6e, #0284c7);
+      }
+
+      .option-a2 .mock-app {
+        background: #f1f5f9;
+      }
+
+      .option-a2 .sidebar {
+        background: #0f172a;
+        border-right: 1px solid #1e293b;
+      }
+
+      .option-a2 .sidebar-item {
+        color: #64748b;
+      }
+
+      .option-a2 .sidebar-item.active {
+        background: rgba(14, 165, 233, 0.15);
+        color: #0ea5e9;
+        border-radius: 8px;
+      }
+
+      .option-a2 .stat-card.primary {
+        background: linear-gradient(135deg, #0c4a6e, #0284c7);
+      }
+
+      .option-a2 .stat-card.secondary {
+        background: linear-gradient(135deg, #c2410c, #ea580c);
+      }
+
+      .option-a2 .stat-card.success {
+        background: linear-gradient(135deg, #065f46, #059669);
+      }
+
+      .option-a2 .btn-primary {
+        background: linear-gradient(135deg, #0c4a6e, #0284c7);
+      }
+
+      .option-a2 .btn-secondary {
+        background: linear-gradient(135deg, #c2410c, #ea580c);
+      }
+
+      .option-a2 .badge-pending {
+        background: #ffedd5;
+        color: #c2410c;
+      }
+      .option-a2 .badge-approved {
+        background: #d1fae5;
+        color: #065f46;
+      }
+      .option-a2 .badge-transit {
+        background: #e0f2fe;
+        color: #0c4a6e;
+      }
+
+      .option-a2 .card {
+        border: none;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      }
+
+      /* Option A3 - Ethiopian Pride */
+      .option-a3 .option-header {
+        background: linear-gradient(135deg, #15803d, #166534);
+      }
+
+      .option-a3 .mock-app {
+        background: #fafaf9;
+      }
+
+      .option-a3 .sidebar {
+        background: linear-gradient(180deg, #1c1917, #292524);
+      }
+
+      .option-a3 .sidebar-item {
+        color: #a8a29e;
+      }
+
+      .option-a3 .sidebar-item.active {
+        background: linear-gradient(90deg, rgba(234, 179, 8, 0.3), transparent);
+        color: #eab308;
+        border-left: 3px solid #eab308;
+      }
+
+      .option-a3 .stat-card.primary {
+        background: linear-gradient(135deg, #15803d, #22c55e);
+      }
+
+      .option-a3 .stat-card.secondary {
+        background: linear-gradient(135deg, #b45309, #eab308);
+      }
+
+      .option-a3 .stat-card.success {
+        background: linear-gradient(135deg, #b91c1c, #ef4444);
+      }
+
+      .option-a3 .btn-primary {
+        background: linear-gradient(135deg, #15803d, #22c55e);
+      }
+
+      .option-a3 .btn-secondary {
+        background: linear-gradient(135deg, #b45309, #eab308);
+        color: #1c1917;
+      }
+
+      .option-a3 .badge-pending {
+        background: #fef9c3;
+        color: #a16207;
+      }
+      .option-a3 .badge-approved {
+        background: #dcfce7;
+        color: #15803d;
+      }
+      .option-a3 .badge-transit {
+        background: #fee2e2;
+        color: #b91c1c;
+      }
+
+      .option-a3 .card {
+        border: 1px solid #e7e5e4;
+      }
+
+      /* Mock App Styles */
+      .mock-app {
+        height: 480px;
+        display: flex;
+      }
+
+      .sidebar {
+        width: 72px;
+        padding: 16px 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .sidebar-item {
+        padding: 12px 8px;
+        border-radius: 8px;
+        text-align: center;
+        font-size: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .sidebar-icon {
+        font-size: 20px;
+        margin-bottom: 4px;
+      }
+
+      .main-content {
+        flex: 1;
+        padding: 20px;
+        overflow: hidden;
+      }
+
+      .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .page-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #0f172a;
+      }
+
+      .option-a3 .page-title {
+        color: #1c1917;
+      }
+
+      .header-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .stats-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .stat-card {
+        padding: 16px;
+        border-radius: 12px;
+        color: white;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .stat-card::after {
+        content: "";
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(
+          circle,
+          rgba(255, 255, 255, 0.1) 0%,
+          transparent 70%
+        );
+      }
+
+      .stat-card h4 {
+        font-size: 11px;
+        font-weight: 500;
+        opacity: 0.9;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .stat-card .value {
+        font-size: 28px;
+        font-weight: 800;
+      }
+
+      .stat-card .change {
+        font-size: 11px;
+        opacity: 0.8;
+        margin-top: 4px;
+      }
+
+      .card {
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+        border: 1px solid #e2e8f0;
+      }
+
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+
+      .card h4 {
+        font-size: 14px;
+        color: #1e293b;
+        font-weight: 600;
+      }
+
+      .btn-row {
+        display: flex;
+        gap: 8px;
+      }
+
+      .btn {
+        padding: 8px 14px;
+        border-radius: 8px;
+        color: white;
+        font-size: 12px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .badge {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .table-header {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+        padding: 10px 12px;
+        background: #f8fafc;
+        border-radius: 8px;
+        font-size: 11px;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .option-a2 .table-header,
+      .option-a3 .table-header {
+        background: #f1f5f9;
+      }
+
+      .option-a3 .table-header {
+        background: #f5f5f4;
+        color: #78716c;
+      }
+
+      .table-row {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+        padding: 12px;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 13px;
+        align-items: center;
+        color: #334155;
+      }
+
+      .table-row:last-child {
+        border-bottom: none;
+      }
+
+      .option-a3 .table-row {
+        border-color: #f5f5f4;
+        color: #44403c;
+      }
+
+      .route-cell {
+        font-weight: 500;
+      }
+
+      .color-swatches {
+        display: flex;
+        gap: 8px;
+        padding: 16px;
+        background: white;
+        justify-content: center;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .option-a3 .color-swatches {
+        border-color: #e7e5e4;
+      }
+
+      .swatch {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      .vibes {
+        padding: 12px 16px;
+        background: #f8fafc;
+        text-align: center;
+        font-size: 12px;
+        color: #64748b;
+        font-weight: 500;
+      }
+
+      .option-a3 .vibes {
+        background: #fafaf9;
+        color: #78716c;
+      }
+
+      .choose-label {
+        text-align: center;
+        padding: 18px;
+        font-size: 16px;
+        font-weight: 700;
+        color: white;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .choose-label:hover {
+        filter: brightness(1.1);
+      }
+
+      .option-a1 .choose-label {
+        background: linear-gradient(135deg, #1e40af, #3b82f6);
+      }
+
+      .option-a2 .choose-label {
+        background: linear-gradient(135deg, #0c4a6e, #0284c7);
+      }
+
+      .option-a3 .choose-label {
+        background: linear-gradient(135deg, #15803d, #22c55e);
+      }
+
+      .flag-stripe {
+        height: 4px;
+        background: linear-gradient(
+          90deg,
+          #22c55e 33%,
+          #eab308 33%,
+          #eab308 66%,
+          #ef4444 66%
+        );
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Option A - Refined Variations</h1>
+    <p class="subtitle">
+      Choose the perfect professional look for your freight management platform
+    </p>
+
+    <div class="options-grid">
+      <!-- Option A1 - Classic Professional -->
+      <div class="option option-a1">
+        <div class="option-header">
+          <h2>A1: Classic Professional</h2>
+          <p>Deep Blue + Vibrant Orange</p>
+        </div>
+
+        <div class="mock-app">
+          <div class="sidebar">
+            <div class="sidebar-item active">
+              <div class="sidebar-icon">📊</div>
+              <div>Dashboard</div>
+            </div>
+            <div class="sidebar-item">
+              <div class="sidebar-icon">📦</div>
+              <div>Loads</div>
+            </div>
+            <div class="sidebar-item">
+              <div class="sidebar-icon">🚛</div>
+              <div>Trucks</div>
+            </div>
+            <div class="sidebar-item">
+              <div class="sidebar-icon">🗺️</div>
+              <div>Map</div>
+            </div>
+            <div class="sidebar-item">
+              <div class="sidebar-icon">⚙️</div>
+              <div>Settings</div>
+            </div>
           </div>
-          <div class="sidebar-item">
-            <div class="sidebar-icon">📦</div>
-            <div>Loads</div>
-          </div>
-          <div class="sidebar-item">
-            <div class="sidebar-icon">🚛</div>
-            <div>Trucks</div>
-          </div>
-          <div class="sidebar-item">
-            <div class="sidebar-icon">🗺️</div>
-            <div>Map</div>
-          </div>
-          <div class="sidebar-item">
-            <div class="sidebar-icon">⚙️</div>
-            <div>Settings</div>
+
+          <div class="main-content">
+            <div class="page-header">
+              <div class="page-title">Dashboard</div>
+              <div class="header-actions">
+                <button class="btn btn-primary">+ New Load</button>
+                <button class="btn btn-secondary">Find Trucks</button>
+              </div>
+            </div>
+
+            <div class="stats-row">
+              <div class="stat-card primary">
+                <h4>Active Loads</h4>
+                <div class="value">24</div>
+                <div class="change">↑ 12% this week</div>
+              </div>
+              <div class="stat-card secondary">
+                <h4>Available Trucks</h4>
+                <div class="value">18</div>
+                <div class="change">3 pending</div>
+              </div>
+              <div class="stat-card success">
+                <h4>Delivered</h4>
+                <div class="value">156</div>
+                <div class="change">↑ 8% this month</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h4>Recent Shipments</h4>
+              </div>
+              <div class="table-header">
+                <span>Route</span>
+                <span>Status</span>
+                <span>Price</span>
+                <span>Date</span>
+              </div>
+              <div class="table-row">
+                <span class="route-cell">Addis Ababa → Mekelle</span>
+                <span class="badge badge-transit">In Transit</span>
+                <span>45,000 ETB</span>
+                <span>Today</span>
+              </div>
+              <div class="table-row">
+                <span class="route-cell">Bahir Dar → Gondar</span>
+                <span class="badge badge-pending">Pending</span>
+                <span>28,000 ETB</span>
+                <span>Tomorrow</span>
+              </div>
+              <div class="table-row">
+                <span class="route-cell">Hawassa → Addis</span>
+                <span class="badge badge-approved">Delivered</span>
+                <span>32,000 ETB</span>
+                <span>Jan 8</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="main-content">
-          <div class="page-header">
-            <div class="page-title">Dashboard</div>
-            <div class="header-actions">
-              <button class="btn btn-primary">+ New Load</button>
-              <button class="btn btn-secondary">Find Trucks</button>
+        <div class="color-swatches">
+          <div class="swatch" style="background: #1e40af"></div>
+          <div class="swatch" style="background: #3b82f6"></div>
+          <div class="swatch" style="background: #f97316"></div>
+          <div class="swatch" style="background: #10b981"></div>
+          <div class="swatch" style="background: #0f172a"></div>
+        </div>
+
+        <div class="vibes">Uber Freight Style • Corporate • Trustworthy</div>
+
+        <div class="choose-label">Select A1</div>
+      </div>
+
+      <!-- Option A2 - Modern Navy -->
+      <div class="option option-a2">
+        <div class="option-header">
+          <h2>A2: Modern Navy</h2>
+          <p>Ocean Blue + Burnt Orange</p>
+        </div>
+
+        <div class="mock-app">
+          <div class="sidebar">
+            <div class="sidebar-item active">
+              <div class="sidebar-icon">📊</div>
+              <div>Dashboard</div>
+            </div>
+            <div class="sidebar-item">
+              <div class="sidebar-icon">📦</div>
+              <div>Loads</div>
+            </div>
+            <div class="sidebar-item">
+              <div class="sidebar-icon">🚛</div>
+              <div>Trucks</div>
+            </div>
+            <div class="sidebar-item">
+              <div class="sidebar-icon">🗺️</div>
+              <div>Map</div>
+            </div>
+            <div class="sidebar-item">
+              <div class="sidebar-icon">⚙️</div>
+              <div>Settings</div>
             </div>
           </div>
 
-          <div class="stats-row">
-            <div class="stat-card primary">
-              <h4>Active Loads</h4>
-              <div class="value">24</div>
-              <div class="change">↑ 12% this week</div>
+          <div class="main-content">
+            <div class="page-header">
+              <div class="page-title">Dashboard</div>
+              <div class="header-actions">
+                <button class="btn btn-primary">+ New Load</button>
+                <button class="btn btn-secondary">Find Trucks</button>
+              </div>
             </div>
-            <div class="stat-card secondary">
-              <h4>Available Trucks</h4>
-              <div class="value">18</div>
-              <div class="change">3 pending</div>
-            </div>
-            <div class="stat-card success">
-              <h4>Delivered</h4>
-              <div class="value">156</div>
-              <div class="change">↑ 8% this month</div>
-            </div>
-          </div>
 
-          <div class="card">
-            <div class="card-header">
-              <h4>Recent Shipments</h4>
+            <div class="stats-row">
+              <div class="stat-card primary">
+                <h4>Active Loads</h4>
+                <div class="value">24</div>
+                <div class="change">↑ 12% this week</div>
+              </div>
+              <div class="stat-card secondary">
+                <h4>Available Trucks</h4>
+                <div class="value">18</div>
+                <div class="change">3 pending</div>
+              </div>
+              <div class="stat-card success">
+                <h4>Delivered</h4>
+                <div class="value">156</div>
+                <div class="change">↑ 8% this month</div>
+              </div>
             </div>
-            <div class="table-header">
-              <span>Route</span>
-              <span>Status</span>
-              <span>Price</span>
-              <span>Date</span>
-            </div>
-            <div class="table-row">
-              <span class="route-cell">Addis Ababa → Mekelle</span>
-              <span class="badge badge-transit">In Transit</span>
-              <span>45,000 ETB</span>
-              <span>Today</span>
-            </div>
-            <div class="table-row">
-              <span class="route-cell">Bahir Dar → Gondar</span>
-              <span class="badge badge-pending">Pending</span>
-              <span>28,000 ETB</span>
-              <span>Tomorrow</span>
-            </div>
-            <div class="table-row">
-              <span class="route-cell">Hawassa → Addis</span>
-              <span class="badge badge-approved">Delivered</span>
-              <span>32,000 ETB</span>
-              <span>Jan 8</span>
+
+            <div class="card">
+              <div class="card-header">
+                <h4>Recent Shipments</h4>
+              </div>
+              <div class="table-header">
+                <span>Route</span>
+                <span>Status</span>
+                <span>Price</span>
+                <span>Date</span>
+              </div>
+              <div class="table-row">
+                <span class="route-cell">Addis Ababa → Mekelle</span>
+                <span class="badge badge-transit">In Transit</span>
+                <span>45,000 ETB</span>
+                <span>Today</span>
+              </div>
+              <div class="table-row">
+                <span class="route-cell">Bahir Dar → Gondar</span>
+                <span class="badge badge-pending">Pending</span>
+                <span>28,000 ETB</span>
+                <span>Tomorrow</span>
+              </div>
+              <div class="table-row">
+                <span class="route-cell">Hawassa → Addis</span>
+                <span class="badge badge-approved">Delivered</span>
+                <span>32,000 ETB</span>
+                <span>Jan 8</span>
+              </div>
             </div>
           </div>
         </div>
+
+        <div class="color-swatches">
+          <div class="swatch" style="background: #0c4a6e"></div>
+          <div class="swatch" style="background: #0284c7"></div>
+          <div class="swatch" style="background: #ea580c"></div>
+          <div class="swatch" style="background: #059669"></div>
+          <div class="swatch" style="background: #0f172a"></div>
+        </div>
+
+        <div class="vibes">Flexport Style • Clean • Professional</div>
+
+        <div class="choose-label">Select A2</div>
       </div>
 
-      <div class="color-swatches">
-        <div class="swatch" style="background: #1e40af;"></div>
-        <div class="swatch" style="background: #3b82f6;"></div>
-        <div class="swatch" style="background: #f97316;"></div>
-        <div class="swatch" style="background: #10b981;"></div>
-        <div class="swatch" style="background: #0f172a;"></div>
-      </div>
+      <!-- Option A3 - Ethiopian Pride -->
+      <div class="option option-a3">
+        <div class="flag-stripe"></div>
+        <div class="option-header">
+          <h2>A3: Ethiopian Pride</h2>
+          <p>Green + Gold + Red Accents</p>
+        </div>
 
-      <div class="vibes">
-        Uber Freight Style • Corporate • Trustworthy
-      </div>
+        <div class="mock-app">
+          <div class="sidebar">
+            <div class="sidebar-item active">
+              <div class="sidebar-icon">📊</div>
+              <div>Dashboard</div>
+            </div>
+            <div class="sidebar-item">
+              <div class="sidebar-icon">📦</div>
+              <div>Loads</div>
+            </div>
+            <div class="sidebar-item">
+              <div class="sidebar-icon">🚛</div>
+              <div>Trucks</div>
+            </div>
+            <div class="sidebar-item">
+              <div class="sidebar-icon">🗺️</div>
+              <div>Map</div>
+            </div>
+            <div class="sidebar-item">
+              <div class="sidebar-icon">⚙️</div>
+              <div>Settings</div>
+            </div>
+          </div>
 
-      <div class="choose-label">Select A1</div>
+          <div class="main-content">
+            <div class="page-header">
+              <div class="page-title">Dashboard</div>
+              <div class="header-actions">
+                <button class="btn btn-primary">+ New Load</button>
+                <button class="btn btn-secondary">Find Trucks</button>
+              </div>
+            </div>
+
+            <div class="stats-row">
+              <div class="stat-card primary">
+                <h4>Active Loads</h4>
+                <div class="value">24</div>
+                <div class="change">↑ 12% this week</div>
+              </div>
+              <div class="stat-card secondary">
+                <h4>Available Trucks</h4>
+                <div class="value">18</div>
+                <div class="change">3 pending</div>
+              </div>
+              <div class="stat-card success">
+                <h4>Delivered</h4>
+                <div class="value">156</div>
+                <div class="change">↑ 8% this month</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h4>Recent Shipments</h4>
+              </div>
+              <div class="table-header">
+                <span>Route</span>
+                <span>Status</span>
+                <span>Price</span>
+                <span>Date</span>
+              </div>
+              <div class="table-row">
+                <span class="route-cell">Addis Ababa → Mekelle</span>
+                <span class="badge badge-transit">In Transit</span>
+                <span>45,000 ETB</span>
+                <span>Today</span>
+              </div>
+              <div class="table-row">
+                <span class="route-cell">Bahir Dar → Gondar</span>
+                <span class="badge badge-pending">Pending</span>
+                <span>28,000 ETB</span>
+                <span>Tomorrow</span>
+              </div>
+              <div class="table-row">
+                <span class="route-cell">Hawassa → Addis</span>
+                <span class="badge badge-approved">Delivered</span>
+                <span>32,000 ETB</span>
+                <span>Jan 8</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="color-swatches">
+          <div class="swatch" style="background: #15803d"></div>
+          <div class="swatch" style="background: #eab308"></div>
+          <div class="swatch" style="background: #ef4444"></div>
+          <div class="swatch" style="background: #22c55e"></div>
+          <div class="swatch" style="background: #1c1917"></div>
+        </div>
+
+        <div class="vibes">
+          Proudly Ethiopian • National Colors • Unique Identity
+        </div>
+
+        <div class="choose-label">Select A3</div>
+      </div>
     </div>
-
-    <!-- Option A2 - Modern Navy -->
-    <div class="option option-a2">
-      <div class="option-header">
-        <h2>A2: Modern Navy</h2>
-        <p>Ocean Blue + Burnt Orange</p>
-      </div>
-
-      <div class="mock-app">
-        <div class="sidebar">
-          <div class="sidebar-item active">
-            <div class="sidebar-icon">📊</div>
-            <div>Dashboard</div>
-          </div>
-          <div class="sidebar-item">
-            <div class="sidebar-icon">📦</div>
-            <div>Loads</div>
-          </div>
-          <div class="sidebar-item">
-            <div class="sidebar-icon">🚛</div>
-            <div>Trucks</div>
-          </div>
-          <div class="sidebar-item">
-            <div class="sidebar-icon">🗺️</div>
-            <div>Map</div>
-          </div>
-          <div class="sidebar-item">
-            <div class="sidebar-icon">⚙️</div>
-            <div>Settings</div>
-          </div>
-        </div>
-
-        <div class="main-content">
-          <div class="page-header">
-            <div class="page-title">Dashboard</div>
-            <div class="header-actions">
-              <button class="btn btn-primary">+ New Load</button>
-              <button class="btn btn-secondary">Find Trucks</button>
-            </div>
-          </div>
-
-          <div class="stats-row">
-            <div class="stat-card primary">
-              <h4>Active Loads</h4>
-              <div class="value">24</div>
-              <div class="change">↑ 12% this week</div>
-            </div>
-            <div class="stat-card secondary">
-              <h4>Available Trucks</h4>
-              <div class="value">18</div>
-              <div class="change">3 pending</div>
-            </div>
-            <div class="stat-card success">
-              <h4>Delivered</h4>
-              <div class="value">156</div>
-              <div class="change">↑ 8% this month</div>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-header">
-              <h4>Recent Shipments</h4>
-            </div>
-            <div class="table-header">
-              <span>Route</span>
-              <span>Status</span>
-              <span>Price</span>
-              <span>Date</span>
-            </div>
-            <div class="table-row">
-              <span class="route-cell">Addis Ababa → Mekelle</span>
-              <span class="badge badge-transit">In Transit</span>
-              <span>45,000 ETB</span>
-              <span>Today</span>
-            </div>
-            <div class="table-row">
-              <span class="route-cell">Bahir Dar → Gondar</span>
-              <span class="badge badge-pending">Pending</span>
-              <span>28,000 ETB</span>
-              <span>Tomorrow</span>
-            </div>
-            <div class="table-row">
-              <span class="route-cell">Hawassa → Addis</span>
-              <span class="badge badge-approved">Delivered</span>
-              <span>32,000 ETB</span>
-              <span>Jan 8</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="color-swatches">
-        <div class="swatch" style="background: #0c4a6e;"></div>
-        <div class="swatch" style="background: #0284c7;"></div>
-        <div class="swatch" style="background: #ea580c;"></div>
-        <div class="swatch" style="background: #059669;"></div>
-        <div class="swatch" style="background: #0f172a;"></div>
-      </div>
-
-      <div class="vibes">
-        Flexport Style • Clean • Professional
-      </div>
-
-      <div class="choose-label">Select A2</div>
-    </div>
-
-    <!-- Option A3 - Ethiopian Pride -->
-    <div class="option option-a3">
-      <div class="flag-stripe"></div>
-      <div class="option-header">
-        <h2>A3: Ethiopian Pride</h2>
-        <p>Green + Gold + Red Accents</p>
-      </div>
-
-      <div class="mock-app">
-        <div class="sidebar">
-          <div class="sidebar-item active">
-            <div class="sidebar-icon">📊</div>
-            <div>Dashboard</div>
-          </div>
-          <div class="sidebar-item">
-            <div class="sidebar-icon">📦</div>
-            <div>Loads</div>
-          </div>
-          <div class="sidebar-item">
-            <div class="sidebar-icon">🚛</div>
-            <div>Trucks</div>
-          </div>
-          <div class="sidebar-item">
-            <div class="sidebar-icon">🗺️</div>
-            <div>Map</div>
-          </div>
-          <div class="sidebar-item">
-            <div class="sidebar-icon">⚙️</div>
-            <div>Settings</div>
-          </div>
-        </div>
-
-        <div class="main-content">
-          <div class="page-header">
-            <div class="page-title">Dashboard</div>
-            <div class="header-actions">
-              <button class="btn btn-primary">+ New Load</button>
-              <button class="btn btn-secondary">Find Trucks</button>
-            </div>
-          </div>
-
-          <div class="stats-row">
-            <div class="stat-card primary">
-              <h4>Active Loads</h4>
-              <div class="value">24</div>
-              <div class="change">↑ 12% this week</div>
-            </div>
-            <div class="stat-card secondary">
-              <h4>Available Trucks</h4>
-              <div class="value">18</div>
-              <div class="change">3 pending</div>
-            </div>
-            <div class="stat-card success">
-              <h4>Delivered</h4>
-              <div class="value">156</div>
-              <div class="change">↑ 8% this month</div>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-header">
-              <h4>Recent Shipments</h4>
-            </div>
-            <div class="table-header">
-              <span>Route</span>
-              <span>Status</span>
-              <span>Price</span>
-              <span>Date</span>
-            </div>
-            <div class="table-row">
-              <span class="route-cell">Addis Ababa → Mekelle</span>
-              <span class="badge badge-transit">In Transit</span>
-              <span>45,000 ETB</span>
-              <span>Today</span>
-            </div>
-            <div class="table-row">
-              <span class="route-cell">Bahir Dar → Gondar</span>
-              <span class="badge badge-pending">Pending</span>
-              <span>28,000 ETB</span>
-              <span>Tomorrow</span>
-            </div>
-            <div class="table-row">
-              <span class="route-cell">Hawassa → Addis</span>
-              <span class="badge badge-approved">Delivered</span>
-              <span>32,000 ETB</span>
-              <span>Jan 8</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="color-swatches">
-        <div class="swatch" style="background: #15803d;"></div>
-        <div class="swatch" style="background: #eab308;"></div>
-        <div class="swatch" style="background: #ef4444;"></div>
-        <div class="swatch" style="background: #22c55e;"></div>
-        <div class="swatch" style="background: #1c1917;"></div>
-      </div>
-
-      <div class="vibes">
-        Proudly Ethiopian • National Colors • Unique Identity
-      </div>
-
-      <div class="choose-label">Select A3</div>
-    </div>
-  </div>
-</body>
+  </body>
 </html>

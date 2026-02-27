@@ -10,10 +10,10 @@
  * for consistency with other admin endpoints.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requirePermission, Permission } from '@/lib/rbac';
-import { db } from '@/lib/db';
-import { ACTIVE_TRIP_STATUSES } from '@/lib/tripStateMachine';
+import { NextRequest, NextResponse } from "next/server";
+import { requirePermission, Permission } from "@/lib/rbac";
+import { db } from "@/lib/db";
+import { ACTIVE_TRIP_STATUSES } from "@/lib/tripStateMachine";
 
 /**
  * GET /api/admin/platform-metrics
@@ -57,7 +57,6 @@ export async function GET(request: NextRequest) {
       flaggedOrganizations,
       disputeCount,
       bypassAttempts,
-
     ] = await Promise.all([
       // Users
       db.user.count(),
@@ -66,8 +65,10 @@ export async function GET(request: NextRequest) {
       // Organizations
       db.organization.count(),
       db.organization.count({ where: { isVerified: true } }),
-      db.organization.count({ where: { type: { in: ['CARRIER_COMPANY', 'CARRIER_INDIVIDUAL'] } } }),
-      db.organization.count({ where: { type: 'SHIPPER' } }),
+      db.organization.count({
+        where: { type: { in: ["CARRIER_COMPANY", "CARRIER_INDIVIDUAL"] } },
+      }),
+      db.organization.count({ where: { type: "SHIPPER" } }),
 
       // Loads
       db.load.count(),
@@ -80,8 +81,8 @@ export async function GET(request: NextRequest) {
           },
         },
       }),
-      db.load.count({ where: { status: 'DELIVERED' } }),
-      db.load.count({ where: { status: 'CANCELLED' } }),
+      db.load.count({ where: { status: "DELIVERED" } }),
+      db.load.count({ where: { status: "CANCELLED" } }),
 
       // Trucks
       db.truck.count(),
@@ -90,19 +91,19 @@ export async function GET(request: NextRequest) {
       // Financial - aggregate total service fees collected
       db.load.aggregate({
         _sum: { serviceFeeEtb: true },
-        where: { serviceFeeStatus: 'DEDUCTED' },
+        where: { serviceFeeStatus: "DEDUCTED" },
       }),
       db.load.count({
         where: {
-          settlementStatus: 'PENDING',
+          settlementStatus: "PENDING",
         },
       }),
-      db.load.count({ where: { settlementStatus: 'PAID' } }),
+      db.load.count({ where: { settlementStatus: "PAID" } }),
 
       // Recent Activity (last 7 days)
       db.auditLog.count({
         where: {
-          eventType: 'AUTH_LOGIN_SUCCESS',
+          eventType: "AUTH_LOGIN_SUCCESS",
           timestamp: {
             gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
           },
@@ -125,7 +126,8 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Calculate derived metrics
-    const userActiveRate = totalUsers > 0 ? (activeUsers / totalUsers) * 100 : 0;
+    const userActiveRate =
+      totalUsers > 0 ? (activeUsers / totalUsers) * 100 : 0;
     const orgVerificationRate =
       totalOrganizations > 0
         ? (verifiedOrganizations / totalOrganizations) * 100
@@ -137,13 +139,13 @@ export async function GET(request: NextRequest) {
 
     // Get top event types from audit logs
     const topEvents = await db.auditLog.groupBy({
-      by: ['eventType'],
+      by: ["eventType"],
       _count: {
         eventType: true,
       },
       orderBy: {
         _count: {
-          eventType: 'desc',
+          eventType: "desc",
         },
       },
       take: 5,
@@ -151,7 +153,7 @@ export async function GET(request: NextRequest) {
 
     // Get load status breakdown
     const loadsByStatus = await db.load.groupBy({
-      by: ['status'],
+      by: ["status"],
       _count: {
         status: true,
       },
@@ -209,14 +211,14 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Get platform metrics error:', error);
+    console.error("Get platform metrics error:", error);
 
-    if (error instanceof Error && error.name === 'ForbiddenError') {
+    if (error instanceof Error && error.name === "ForbiddenError") {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

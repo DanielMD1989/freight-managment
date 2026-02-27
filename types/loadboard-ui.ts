@@ -9,8 +9,8 @@
 // BUTTON TYPES
 // ============================================================================
 
-export type ButtonVariant = 'primary' | 'secondary' | 'destructive' | 'search';
-export type ButtonSize = 'sm' | 'md' | 'lg';
+export type ButtonVariant = "primary" | "secondary" | "destructive" | "search";
+export type ButtonSize = "sm" | "md" | "lg";
 
 export interface ActionButtonProps {
   variant: ButtonVariant;
@@ -26,8 +26,12 @@ export interface ActionButtonProps {
 // TAB TYPES
 // ============================================================================
 
-export type TabKey = 'POST_LOADS' | 'SEARCH_TRUCKS' | 'POST_TRUCKS' | 'SEARCH_LOADS';
-export type UserRole = 'SHIPPER' | 'CARRIER' | 'ADMIN';
+export type TabKey =
+  | "POST_LOADS"
+  | "SEARCH_TRUCKS"
+  | "POST_TRUCKS"
+  | "SEARCH_LOADS";
+export type UserRole = "SHIPPER" | "CARRIER" | "ADMIN";
 
 export interface NavTab {
   key: TabKey;
@@ -40,7 +44,7 @@ export interface NavTabsProps {
   userRole: UserRole;
   activeTab: TabKey;
   onTabChange: (tab: TabKey) => void;
-  portalType?: 'shipper' | 'carrier';
+  portalType?: "shipper" | "carrier";
 }
 
 export interface StatusTab {
@@ -64,7 +68,8 @@ export interface TableColumn {
   label: string;
   width?: string;
   sortable?: boolean;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic table column render
   render?: (value: any, row: any) => React.ReactNode;
 }
 
@@ -73,11 +78,15 @@ export interface RowAction {
   label: string;
   icon?: React.ReactNode;
   variant: ButtonVariant;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic row action callback
   onClick: (row: any) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic row action callback
   show?: (row: any) => boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic row action callback
   render?: (row: any) => string | React.ReactNode;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic table props
 export interface DataTableProps<T = any> {
   columns: TableColumn[];
   data: T[];
@@ -98,7 +107,13 @@ export interface DataTableProps<T = any> {
 // FILTER TYPES
 // ============================================================================
 
-export type FilterType = 'slider' | 'range-slider' | 'select' | 'date-picker' | 'toggle' | 'text';
+export type FilterType =
+  | "slider"
+  | "range-slider"
+  | "select"
+  | "date-picker"
+  | "toggle"
+  | "text";
 
 export interface FilterBase {
   key: string;
@@ -107,7 +122,7 @@ export interface FilterBase {
 }
 
 export interface SliderFilter extends FilterBase {
-  type: 'slider';
+  type: "slider";
   min: number;
   max: number;
   unit?: string;
@@ -115,7 +130,7 @@ export interface SliderFilter extends FilterBase {
 }
 
 export interface RangeSliderFilter extends FilterBase {
-  type: 'range-slider';
+  type: "range-slider";
   min: number;
   max: number;
   unit?: string;
@@ -123,23 +138,23 @@ export interface RangeSliderFilter extends FilterBase {
 }
 
 export interface SelectFilter extends FilterBase {
-  type: 'select';
+  type: "select";
   options: Array<{ value: string; label: string }>;
   multiple?: boolean;
 }
 
 export interface DatePickerFilter extends FilterBase {
-  type: 'date-picker';
+  type: "date-picker";
   minDate?: Date;
   maxDate?: Date;
 }
 
 export interface ToggleFilter extends FilterBase {
-  type: 'toggle';
+  type: "toggle";
 }
 
 export interface TextFilter extends FilterBase {
-  type: 'text';
+  type: "text";
   placeholder?: string;
 }
 
@@ -154,7 +169,9 @@ export type Filter =
 export interface FilterPanelProps {
   title: string;
   filters: Filter[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Filter values can be any type
   values: Record<string, any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Filter values can be any type
   onChange: (key: string, value: any) => void;
   onReset: () => void;
 }
@@ -163,7 +180,7 @@ export interface FilterPanelProps {
 // SAVED SEARCH TYPES
 // ============================================================================
 
-export type SavedSearchType = 'LOADS' | 'TRUCKS';
+export type SavedSearchType = "LOADS" | "TRUCKS";
 
 export interface SavedSearchCriteria {
   origin?: string;
@@ -176,9 +193,10 @@ export interface SavedSearchCriteria {
   ageHours?: number;
   minTripKm?: number;
   maxTripKm?: number;
-  fullPartial?: 'FULL' | 'PARTIAL' | 'BOTH';
+  fullPartial?: "FULL" | "PARTIAL" | "BOTH";
   availableFrom?: string;
   availableTo?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Extensible search criteria
   [key: string]: any;
 }
 
@@ -207,7 +225,7 @@ export interface SavedSearchesProps {
 export interface EditField {
   key: string;
   label: string;
-  type: 'text' | 'number' | 'select' | 'date' | 'textarea';
+  type: "text" | "number" | "select" | "date" | "textarea";
   options?: Array<{ value: string; label: string }>;
   maxLength?: number;
   placeholder?: string;
@@ -215,9 +233,11 @@ export interface EditField {
 }
 
 export interface InlineEditProps {
-  data: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Inline edit data is generic
+  data: Record<string, any>;
   fields: EditField[];
-  onSave: (data: any) => Promise<void>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Inline edit data is generic
+  onSave: (data: Record<string, any>) => Promise<void>;
   onCancel: () => void;
   saving?: boolean;
 }
@@ -325,7 +345,7 @@ export interface CompanyModalProps {
 
 export interface AgeIndicatorProps {
   date: Date | string;
-  format?: 'short' | 'long';
+  format?: "short" | "long";
   showIcon?: boolean;
   className?: string;
 }
@@ -359,7 +379,15 @@ export interface ExpandableRowProps {
 
 export interface LoadPosting {
   id: string;
-  status: 'DRAFT' | 'POSTED' | 'UNPOSTED' | 'ASSIGNED' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED' | 'EXPIRED';
+  status:
+    | "DRAFT"
+    | "POSTED"
+    | "UNPOSTED"
+    | "ASSIGNED"
+    | "IN_TRANSIT"
+    | "DELIVERED"
+    | "CANCELLED"
+    | "EXPIRED";
   postedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -371,7 +399,7 @@ export interface LoadPosting {
   truckType: string;
   weight: number;
   volume?: number;
-  fullPartial: 'FULL' | 'PARTIAL';
+  fullPartial: "FULL" | "PARTIAL";
   rate: number;
   currency: string;
   isKept: boolean;
@@ -388,7 +416,7 @@ export interface LoadPosting {
 
 export interface TruckPosting {
   id: string;
-  status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED' | 'MATCHED';
+  status: "ACTIVE" | "EXPIRED" | "CANCELLED" | "MATCHED";
   postedAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -402,7 +430,7 @@ export interface TruckPosting {
     truckType: string;
     capacity: number;
   };
-  fullPartial: 'FULL' | 'PARTIAL';
+  fullPartial: "FULL" | "PARTIAL";
   contactName: string;
   contactPhone: string;
   isKept: boolean;
@@ -412,4 +440,3 @@ export interface TruckPosting {
     isVerified: boolean;
   };
 }
-

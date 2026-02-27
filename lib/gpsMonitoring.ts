@@ -7,9 +7,9 @@
  * Polls GPS devices and updates truck statuses
  */
 
-import { db } from './db';
-import { ingestGpsData } from './gpsIngestion';
-import { updateAllTruckGpsStatuses } from './gpsIngestion';
+import { db } from "./db";
+import { ingestGpsData } from "./gpsIngestion";
+import { updateAllTruckGpsStatuses } from "./gpsIngestion";
 
 export interface GpsDeviceData {
   imei: string;
@@ -54,7 +54,7 @@ export async function pollAllGpsDevices(): Promise<{
       } catch (error) {
         summary.failed++;
         summary.errors.push(
-          `Device ${device.imei}: ${error instanceof Error ? error.message : 'Unknown error'}`
+          `Device ${device.imei}: ${error instanceof Error ? error.message : "Unknown error"}`
         );
       }
     }
@@ -64,7 +64,7 @@ export async function pollAllGpsDevices(): Promise<{
 
     return summary;
   } catch (error) {
-    console.error('GPS polling error:', error);
+    console.error("GPS polling error:", error);
     throw error;
   }
 }
@@ -77,7 +77,7 @@ export async function pollAllGpsDevices(): Promise<{
 export async function getActiveGpsDevices(): Promise<GpsDeviceData[]> {
   const devices = await db.gpsDevice.findMany({
     where: {
-      status: 'ACTIVE',
+      status: "ACTIVE",
       truck: {
         isNot: null,
       },
@@ -100,7 +100,7 @@ export async function getActiveGpsDevices(): Promise<GpsDeviceData[]> {
     gpsDeviceId: device.id,
     truckId: device.truck!.id,
     truckPlateNumber: device.truck!.licensePlate,
-    provider: 'default',
+    provider: "default",
     lastSeenAt: device.lastSeenAt,
   }));
 }
@@ -116,12 +116,9 @@ export async function getActiveGpsDevices(): Promise<GpsDeviceData[]> {
 export async function pollGpsDevice(device: GpsDeviceData): Promise<void> {
   // In production, call GPS provider API based on device.provider
   // For now, we'll simulate or skip actual polling
-
   // Example for production:
-
   // MVP: Skip actual polling, devices will be updated when they push data
   // or when testing APIs are called manually
-
   // For testing purposes, you could uncomment this to generate fake data:
   /*
   const fakePosition = {
@@ -161,11 +158,11 @@ export async function fetchGpsProviderApi(
 }> {
   // Production implementation would switch based on provider
   switch (provider) {
-    case 'TELTONIKA':
+    case "TELTONIKA":
       break;
-    case 'CONCOX':
+    case "CONCOX":
       break;
-    case 'QUECLINK':
+    case "QUECLINK":
       break;
     default:
       // Generic GPS provider API call
@@ -187,13 +184,13 @@ export async function checkForOfflineTrucks(): Promise<string[]> {
   const loadsWithOfflineTrucks = await db.load.findMany({
     where: {
       status: {
-        in: ['IN_TRANSIT', 'ASSIGNED'],
+        in: ["IN_TRANSIT", "ASSIGNED"],
       },
       assignedTruckId: {
         not: null,
       },
       assignedTruck: {
-        gpsStatus: 'SIGNAL_LOST',
+        gpsStatus: "SIGNAL_LOST",
       },
     },
     select: {

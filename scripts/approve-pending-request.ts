@@ -9,31 +9,37 @@
  * 5. Create Trip record
  */
 
-import { config } from 'dotenv';
-import { resolve } from 'path';
+import { config } from "dotenv";
+import { resolve } from "path";
 
-config({ path: resolve(process.cwd(), '.env.local') });
-config({ path: resolve(process.cwd(), '.env') });
+config({ path: resolve(process.cwd(), ".env.local") });
+config({ path: resolve(process.cwd(), ".env") });
 
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function approveRequest() {
-  const requestId = 'cmkfcc1x70056heulmx4ttghm';
+  const requestId = "cmkfcc1x70056heulmx4ttghm";
 
-  console.log('=== APPROVING LOAD REQUEST ===');
+  console.log("=== APPROVING LOAD REQUEST ===");
   console.log(`Request ID: ${requestId}\n`);
 
   // Get the request with all details
   const request = await prisma.loadRequest.findUnique({
     where: { id: requestId },
     include: {
-      load: { include: { shipper: true, pickupLocation: true, deliveryLocation: true } },
+      load: {
+        include: {
+          shipper: true,
+          pickupLocation: true,
+          deliveryLocation: true,
+        },
+      },
       truck: { include: { carrier: true } },
       carrier: true,
       shipper: true,
@@ -41,21 +47,23 @@ async function approveRequest() {
   });
 
   if (!request) {
-    console.log('Request not found');
+    console.log("Request not found");
     await cleanup();
     return;
   }
 
-  if (request.status !== 'PENDING') {
+  if (request.status !== "PENDING") {
     console.log(`Request already ${request.status}`);
     await cleanup();
     return;
   }
 
-  console.log('Request Details:');
+  console.log("Request Details:");
   console.log(`  Carrier: ${request.carrier?.name}`);
   console.log(`  Truck: ${request.truck?.licensePlate}`);
-  console.log(`  Load: ${request.load?.pickupCity} → ${request.load?.deliveryCity}`);
+  console.log(
+    `  Load: ${request.load?.pickupCity} → ${request.load?.deliveryCity}`
+  );
   console.log(`  Shipper: ${request.shipper?.name}`);
   console.log();
 
@@ -65,29 +73,29 @@ async function approveRequest() {
   });
 
   if (existingTrip) {
-    console.log('Trip already exists for this load');
+    console.log("Trip already exists for this load");
     console.log(`Trip ID: ${existingTrip.id}`);
     await cleanup();
     return;
   }
 
   // Step 1: Update LoadRequest status to APPROVED
-  console.log('Step 1: Updating LoadRequest status to APPROVED...');
+  console.log("Step 1: Updating LoadRequest status to APPROVED...");
   const updatedRequest = await prisma.loadRequest.update({
     where: { id: requestId },
     data: {
-      status: 'APPROVED',
+      status: "APPROVED",
       respondedAt: new Date(),
     },
   });
   console.log(`  ✅ LoadRequest status: ${updatedRequest.status}`);
 
   // Step 2: Update Load status to ASSIGNED and assign truck
-  console.log('Step 2: Updating Load status to ASSIGNED...');
+  console.log("Step 2: Updating Load status to ASSIGNED...");
   const updatedLoad = await prisma.load.update({
     where: { id: request.loadId },
     data: {
-      status: 'ASSIGNED',
+      status: "ASSIGNED",
       assignedTruckId: request.truckId,
       assignedAt: new Date(),
     },
@@ -96,7 +104,7 @@ async function approveRequest() {
   console.log(`  ✅ Load assigned to truck: ${request.truck?.licensePlate}`);
 
   // Step 3: Update Truck availability
-  console.log('Step 3: Updating Truck availability...');
+  console.log("Step 3: Updating Truck availability...");
   await prisma.truck.update({
     where: { id: request.truckId },
     data: { isAvailable: false },
@@ -104,7 +112,7 @@ async function approveRequest() {
   console.log(`  ✅ Truck marked as unavailable`);
 
   // Step 4: Create Trip
-  console.log('Step 4: Creating Trip...');
+  console.log("Step 4: Creating Trip...");
 
   // Generate tracking URL
   const shortId = request.loadId.slice(-8);
@@ -118,22 +126,39 @@ async function approveRequest() {
       truckId: request.truckId,
       carrierId: request.truck!.carrierId,
       shipperId: request.load!.shipperId,
-      status: 'ASSIGNED',
+      status: "ASSIGNED",
 
       // Pickup location
-      pickupLat: request.load?.originLat || request.load?.pickupLocation?.latitude || null,
-      pickupLng: request.load?.originLon || request.load?.pickupLocation?.longitude || null,
+      pickupLat:
+        request.load?.originLat ||
+        request.load?.pickupLocation?.latitude ||
+        null,
+      pickupLng:
+        request.load?.originLon ||
+        request.load?.pickupLocation?.longitude ||
+        null,
       pickupAddress: request.load?.pickupAddress || null,
-      pickupCity: request.load?.pickupCity || request.load?.pickupLocation?.name || null,
+      pickupCity:
+        request.load?.pickupCity || request.load?.pickupLocation?.name || null,
 
       // Delivery location
-      deliveryLat: request.load?.destinationLat || request.load?.deliveryLocation?.latitude || null,
-      deliveryLng: request.load?.destinationLon || request.load?.deliveryLocation?.longitude || null,
+      deliveryLat:
+        request.load?.destinationLat ||
+        request.load?.deliveryLocation?.latitude ||
+        null,
+      deliveryLng:
+        request.load?.destinationLon ||
+        request.load?.deliveryLocation?.longitude ||
+        null,
       deliveryAddress: request.load?.deliveryAddress || null,
-      deliveryCity: request.load?.deliveryCity || request.load?.deliveryLocation?.name || null,
+      deliveryCity:
+        request.load?.deliveryCity ||
+        request.load?.deliveryLocation?.name ||
+        null,
 
       // Distance
-      estimatedDistanceKm: request.load?.estimatedTripKm || request.load?.tripKm || null,
+      estimatedDistanceKm:
+        request.load?.estimatedTripKm || request.load?.tripKm || null,
 
       // Tracking
       trackingUrl,
@@ -158,12 +183,18 @@ async function approveRequest() {
     },
   });
 
-  console.log('═══════════════════════════════════════════════════════════════');
-  console.log('TRIP CREATED SUCCESSFULLY');
-  console.log('═══════════════════════════════════════════════════════════════');
+  console.log(
+    "═══════════════════════════════════════════════════════════════"
+  );
+  console.log("TRIP CREATED SUCCESSFULLY");
+  console.log(
+    "═══════════════════════════════════════════════════════════════"
+  );
   console.log(`Trip ID: ${verifyTrip?.id}`);
   console.log(`Status: ${verifyTrip?.status}`);
-  console.log(`Route: ${verifyTrip?.load?.pickupCity} → ${verifyTrip?.load?.deliveryCity}`);
+  console.log(
+    `Route: ${verifyTrip?.load?.pickupCity} → ${verifyTrip?.load?.deliveryCity}`
+  );
   console.log(`Truck: ${verifyTrip?.truck?.licensePlate}`);
   console.log(`Carrier: ${verifyTrip?.carrier?.name}`);
   console.log(`Shipper: ${verifyTrip?.shipper?.name}`);
@@ -178,7 +209,7 @@ async function cleanup() {
 }
 
 approveRequest().catch(async (error) => {
-  console.error('Error:', error);
+  console.error("Error:", error);
   await cleanup();
   process.exit(1);
 });

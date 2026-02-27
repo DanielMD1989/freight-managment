@@ -5,12 +5,12 @@
  * Helps carriers minimize unprofitable empty driving
  */
 
-import { db } from '@/lib/db';
-import { calculateDistanceKm } from '@/lib/geo';
-import { LoadStatus, Prisma, TruckType } from '@prisma/client';
+import { db } from "@/lib/db";
+import { calculateDistanceKm } from "@/lib/geo";
+import { LoadStatus, Prisma, TruckType } from "@prisma/client";
 
 // Re-export for backwards compatibility
-export { calculateDistanceKm as calculateDistance } from '@/lib/geo';
+export { calculateDistanceKm as calculateDistance } from "@/lib/geo";
 
 /**
  * Calculate DH-O (Deadhead to Origin)
@@ -57,14 +57,14 @@ export async function calculateDHO(
   const pickupLat = load.originLat
     ? Number(load.originLat)
     : load.pickupLocation
-    ? Number(load.pickupLocation.latitude)
-    : null;
+      ? Number(load.pickupLocation.latitude)
+      : null;
 
   const pickupLon = load.originLon
     ? Number(load.originLon)
     : load.pickupLocation
-    ? Number(load.pickupLocation.longitude)
-    : null;
+      ? Number(load.pickupLocation.longitude)
+      : null;
 
   if (!pickupLat || !pickupLon) {
     return null;
@@ -110,14 +110,14 @@ export async function calculateDHD(
   const deliveryLat = load.destinationLat
     ? Number(load.destinationLat)
     : load.deliveryLocation
-    ? Number(load.deliveryLocation.latitude)
-    : null;
+      ? Number(load.deliveryLocation.latitude)
+      : null;
 
   const deliveryLon = load.destinationLon
     ? Number(load.destinationLon)
     : load.deliveryLocation
-    ? Number(load.deliveryLocation.longitude)
-    : null;
+      ? Number(load.deliveryLocation.longitude)
+      : null;
 
   if (!deliveryLat || !deliveryLon) {
     return null;
@@ -146,20 +146,25 @@ export async function calculateDHD(
     const nextPickupLat = nextLoad.originLat
       ? Number(nextLoad.originLat)
       : nextLoad.pickupLocation
-      ? Number(nextLoad.pickupLocation.latitude)
-      : null;
+        ? Number(nextLoad.pickupLocation.latitude)
+        : null;
 
     const nextPickupLon = nextLoad.originLon
       ? Number(nextLoad.originLon)
       : nextLoad.pickupLocation
-      ? Number(nextLoad.pickupLocation.longitude)
-      : null;
+        ? Number(nextLoad.pickupLocation.longitude)
+        : null;
 
     if (!nextPickupLat || !nextPickupLon) {
       return null;
     }
 
-    return calculateDistanceKm(deliveryLat, deliveryLon, nextPickupLat, nextPickupLon);
+    return calculateDistanceKm(
+      deliveryLat,
+      deliveryLon,
+      nextPickupLat,
+      nextPickupLon
+    );
   }
 
   // If target coordinates specified, calculate DH-D to target
@@ -176,7 +181,7 @@ export async function calculateDHD(
 export async function getTruckCurrentLocation(truckId: string): Promise<{
   latitude: number;
   longitude: number;
-  source: 'gps' | 'database' | 'none';
+  source: "gps" | "database" | "none";
   timestamp?: Date;
 } | null> {
   const truck = await db.truck.findUnique({
@@ -195,7 +200,7 @@ export async function getTruckCurrentLocation(truckId: string): Promise<{
   // Try to get latest GPS position
   const latestGPS = await db.gpsPosition.findFirst({
     where: { truckId },
-    orderBy: { timestamp: 'desc' },
+    orderBy: { timestamp: "desc" },
     select: {
       latitude: true,
       longitude: true,
@@ -212,7 +217,7 @@ export async function getTruckCurrentLocation(truckId: string): Promise<{
       return {
         latitude: Number(latestGPS.latitude),
         longitude: Number(latestGPS.longitude),
-        source: 'gps',
+        source: "gps",
         timestamp: latestGPS.timestamp,
       };
     }
@@ -223,7 +228,7 @@ export async function getTruckCurrentLocation(truckId: string): Promise<{
     return {
       latitude: Number(truck.currentLocationLat),
       longitude: Number(truck.currentLocationLon),
-      source: 'database',
+      source: "database",
     };
   }
 
@@ -244,13 +249,15 @@ export async function findLoadsWithMinimalDHO(
     pickupAfter?: Date;
     pickupBefore?: Date;
   }
-): Promise<Array<{
-  loadId: string;
-  dho: number;
-  pickupCity: string;
-  deliveryCity: string;
-  tripKm: number | null;
-}>> {
+): Promise<
+  Array<{
+    loadId: string;
+    dho: number;
+    pickupCity: string;
+    deliveryCity: string;
+    tripKm: number | null;
+  }>
+> {
   // Get truck location
   const location = await getTruckCurrentLocation(truckId);
   if (!location) {
@@ -320,8 +327,8 @@ export async function findLoadsWithMinimalDHO(
       return {
         loadId: load.id,
         dho,
-        pickupCity: load.pickupCity || '',
-        deliveryCity: load.deliveryCity || '',
+        pickupCity: load.pickupCity || "",
+        deliveryCity: load.deliveryCity || "",
         tripKm: load.tripKm ? Number(load.tripKm) : null,
       };
     })
@@ -345,14 +352,16 @@ export async function findNextLoadsWithMinimalDHD(
     maxTripKm?: number;
     pickupAfter?: Date;
   }
-): Promise<Array<{
-  loadId: string;
-  dhd: number;
-  pickupCity: string;
-  deliveryCity: string;
-  tripKm: number | null;
-  pickupDate: Date;
-}>> {
+): Promise<
+  Array<{
+    loadId: string;
+    dhd: number;
+    pickupCity: string;
+    deliveryCity: string;
+    tripKm: number | null;
+    pickupDate: Date;
+  }>
+> {
   // Get current load delivery location
   const currentLoad = await db.load.findUnique({
     where: { id: currentLoadId },
@@ -377,14 +386,14 @@ export async function findNextLoadsWithMinimalDHD(
   const deliveryLat = currentLoad.destinationLat
     ? Number(currentLoad.destinationLat)
     : currentLoad.deliveryLocation
-    ? Number(currentLoad.deliveryLocation.latitude)
-    : null;
+      ? Number(currentLoad.deliveryLocation.latitude)
+      : null;
 
   const deliveryLon = currentLoad.destinationLon
     ? Number(currentLoad.destinationLon)
     : currentLoad.deliveryLocation
-    ? Number(currentLoad.deliveryLocation.longitude)
-    : null;
+      ? Number(currentLoad.deliveryLocation.longitude)
+      : null;
 
   if (!deliveryLat || !deliveryLon) {
     return [];
@@ -416,7 +425,12 @@ export async function findNextLoadsWithMinimalDHD(
     }
   }
 
-  if (filters?.pickupAfter && where.pickupDate && typeof where.pickupDate === 'object' && 'gte' in where.pickupDate) {
+  if (
+    filters?.pickupAfter &&
+    where.pickupDate &&
+    typeof where.pickupDate === "object" &&
+    "gte" in where.pickupDate
+  ) {
     (where.pickupDate as Prisma.DateTimeFilter).gte = filters.pickupAfter;
   }
 
@@ -447,26 +461,31 @@ export async function findNextLoadsWithMinimalDHD(
       const pickupLat = load.originLat
         ? Number(load.originLat)
         : load.pickupLocation
-        ? Number(load.pickupLocation.latitude)
-        : null;
+          ? Number(load.pickupLocation.latitude)
+          : null;
 
       const pickupLon = load.originLon
         ? Number(load.originLon)
         : load.pickupLocation
-        ? Number(load.pickupLocation.longitude)
-        : null;
+          ? Number(load.pickupLocation.longitude)
+          : null;
 
       if (!pickupLat || !pickupLon) {
         return null;
       }
 
-      const dhd = calculateDistanceKm(deliveryLat, deliveryLon, pickupLat, pickupLon);
+      const dhd = calculateDistanceKm(
+        deliveryLat,
+        deliveryLon,
+        pickupLat,
+        pickupLon
+      );
 
       return {
         loadId: load.id,
         dhd,
-        pickupCity: load.pickupCity || '',
-        deliveryCity: load.deliveryCity || '',
+        pickupCity: load.pickupCity || "",
+        deliveryCity: load.deliveryCity || "",
         tripKm: load.tripKm ? Number(load.tripKm) : null,
         pickupDate: load.pickupDate,
       };
@@ -490,21 +509,21 @@ export function calculateDeadheadMetrics(
   dhoPercent: number; // DH-O as % of trip distance
   dhdPercent: number; // DH-D as % of trip distance
   totalDeadheadPercent: number; // (DH-O + DH-D) as % of trip
-  efficiency: 'excellent' | 'good' | 'acceptable' | 'poor';
+  efficiency: "excellent" | "good" | "acceptable" | "poor";
 } {
   const dhoPercent = (dho / tripKm) * 100;
   const dhdPercent = (dhd / tripKm) * 100;
   const totalDeadheadPercent = ((dho + dhd) / tripKm) * 100;
 
-  let efficiency: 'excellent' | 'good' | 'acceptable' | 'poor';
+  let efficiency: "excellent" | "good" | "acceptable" | "poor";
   if (totalDeadheadPercent < 10) {
-    efficiency = 'excellent';
+    efficiency = "excellent";
   } else if (totalDeadheadPercent < 25) {
-    efficiency = 'good';
+    efficiency = "good";
   } else if (totalDeadheadPercent < 50) {
-    efficiency = 'acceptable';
+    efficiency = "acceptable";
   } else {
-    efficiency = 'poor';
+    efficiency = "poor";
   }
 
   return {

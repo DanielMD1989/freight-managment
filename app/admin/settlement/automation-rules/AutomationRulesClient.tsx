@@ -7,11 +7,11 @@
  * Allows SuperAdmins to configure settlement automation rules
  */
 
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { getCSRFToken } from '@/lib/csrfFetch';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { getCSRFToken } from "@/lib/csrfFetch";
 
 interface AutomationSettings {
   settlementAutomationEnabled: boolean;
@@ -32,8 +32,8 @@ export default function AutomationRulesClient({
   const router = useRouter();
   const [settings, setSettings] = useState(initialSettings);
   const [isSaving, setIsSaving] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const hasChanges =
     JSON.stringify(settings) !== JSON.stringify(initialSettings);
@@ -60,21 +60,21 @@ export default function AutomationRulesClient({
       settings.autoVerifyPodTimeoutHours < 1 ||
       settings.autoVerifyPodTimeoutHours > 168
     ) {
-      return 'POD timeout must be between 1 and 168 hours (7 days)';
+      return "POD timeout must be between 1 and 168 hours (7 days)";
     }
 
     if (
       settings.settlementBatchSize < 1 ||
       settings.settlementBatchSize > 500
     ) {
-      return 'Batch size must be between 1 and 500';
+      return "Batch size must be between 1 and 500";
     }
 
     if (
       settings.autoSettlementMaxAmount > 0 &&
       settings.autoSettlementMinAmount > settings.autoSettlementMaxAmount
     ) {
-      return 'Minimum amount cannot exceed maximum amount';
+      return "Minimum amount cannot exceed maximum amount";
     }
 
     return null;
@@ -85,39 +85,41 @@ export default function AutomationRulesClient({
     const validationError = validateSettings();
     if (validationError) {
       setErrorMessage(validationError);
-      setTimeout(() => setErrorMessage(''), 5000);
+      setTimeout(() => setErrorMessage(""), 5000);
       return;
     }
 
     try {
       setIsSaving(true);
-      setSuccessMessage('');
-      setErrorMessage('');
+      setSuccessMessage("");
+      setErrorMessage("");
 
       const csrfToken = await getCSRFToken();
-      const response = await fetch('/api/admin/settings', {
-        method: 'PATCH',
+      const response = await fetch("/api/admin/settings", {
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
         body: JSON.stringify(settings),
-        credentials: 'include',
+        credentials: "include",
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to save settings');
+        throw new Error(error.error || "Failed to save settings");
       }
 
-      setSuccessMessage('Automation rules saved successfully');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setSuccessMessage("Automation rules saved successfully");
+      setTimeout(() => setSuccessMessage(""), 3000);
 
       // Refresh to get updated settings
       router.refresh();
     } catch (error: unknown) {
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to save settings');
-      setTimeout(() => setErrorMessage(''), 5000);
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to save settings"
+      );
+      setTimeout(() => setErrorMessage(""), 5000);
     } finally {
       setIsSaving(false);
     }
@@ -126,12 +128,12 @@ export default function AutomationRulesClient({
   const handleReset = () => {
     if (
       confirm(
-        'Are you sure you want to discard all changes and revert to the current saved settings?'
+        "Are you sure you want to discard all changes and revert to the current saved settings?"
       )
     ) {
       setSettings(initialSettings);
-      setSuccessMessage('');
-      setErrorMessage('');
+      setSuccessMessage("");
+      setErrorMessage("");
     }
   };
 
@@ -139,7 +141,7 @@ export default function AutomationRulesClient({
     <div className="space-y-6">
       {/* Success/Error Messages */}
       {successMessage && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
           <div className="flex items-center gap-2">
             <svg
               className="h-5 w-5 text-green-600"
@@ -160,7 +162,7 @@ export default function AutomationRulesClient({
       )}
 
       {errorMessage && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
           <div className="flex items-center gap-2">
             <svg
               className="h-5 w-5 text-red-600"
@@ -179,12 +181,12 @@ export default function AutomationRulesClient({
       )}
 
       {/* Master Toggles */}
-      <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">
           Automation Master Controls
         </h2>
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between rounded-lg bg-gray-50 p-4">
             <div>
               <h3 className="text-sm font-medium text-gray-900">
                 Settlement Automation
@@ -193,135 +195,135 @@ export default function AutomationRulesClient({
                 Enable automatic settlement processing for verified deliveries
               </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative inline-flex cursor-pointer items-center">
               <input
                 type="checkbox"
                 checked={settings.settlementAutomationEnabled}
                 onChange={(e) =>
                   handleBooleanChange(
-                    'settlementAutomationEnabled',
+                    "settlementAutomationEnabled",
                     e.target.checked
                   )
                 }
-                className="sr-only peer"
+                className="peer sr-only"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="peer h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-600 peer-focus:ring-4 peer-focus:ring-blue-300 peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
             </label>
           </div>
 
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between rounded-lg bg-gray-50 p-4">
             <div>
               <h3 className="text-sm font-medium text-gray-900">
                 Auto-Verify POD
               </h3>
               <p className="text-sm text-gray-600">
-                Automatically verify POD after timeout if shipper doesn't
+                Automatically verify POD after timeout if shipper doesn&apos;t
                 respond
               </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative inline-flex cursor-pointer items-center">
               <input
                 type="checkbox"
                 checked={settings.autoVerifyPodEnabled}
                 onChange={(e) =>
-                  handleBooleanChange('autoVerifyPodEnabled', e.target.checked)
+                  handleBooleanChange("autoVerifyPodEnabled", e.target.checked)
                 }
-                className="sr-only peer"
+                className="peer sr-only"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="peer h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-600 peer-focus:ring-4 peer-focus:ring-blue-300 peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
             </label>
           </div>
         </div>
       </div>
 
       {/* POD Verification Settings */}
-      <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">
           POD Verification Settings
         </h2>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
               Auto-Verification Timeout (hours)
             </label>
             <input
               type="number"
               value={settings.autoVerifyPodTimeoutHours}
               onChange={(e) =>
-                handleNumberChange('autoVerifyPodTimeoutHours', e.target.value)
+                handleNumberChange("autoVerifyPodTimeoutHours", e.target.value)
               }
               min="1"
               max="168"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="mt-1 text-xs text-gray-500">
               POD will be automatically verified after this many hours if
-              shipper doesn't respond (1-168 hours)
+              shipper doesn&apos;t respond (1-168 hours)
             </p>
           </div>
         </div>
       </div>
 
       {/* Settlement Processing Settings */}
-      <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">
           Settlement Processing Settings
         </h2>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
               Batch Size
             </label>
             <input
               type="number"
               value={settings.settlementBatchSize}
               onChange={(e) =>
-                handleNumberChange('settlementBatchSize', e.target.value)
+                handleNumberChange("settlementBatchSize", e.target.value)
               }
               min="1"
               max="500"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="mt-1 text-xs text-gray-500">
               Maximum number of settlements to process in a single batch (1-500)
             </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
               Minimum Amount for Auto-Settlement (ETB)
             </label>
             <input
               type="number"
               value={settings.autoSettlementMinAmount}
               onChange={(e) =>
-                handleNumberChange('autoSettlementMinAmount', e.target.value)
+                handleNumberChange("autoSettlementMinAmount", e.target.value)
               }
               min="0"
               step="0.01"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="mt-1 text-xs text-gray-500">
               Settlements below this amount require manual approval (0 = no
               minimum)
             </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
               Maximum Amount for Auto-Settlement (ETB)
             </label>
             <input
               type="number"
               value={settings.autoSettlementMaxAmount}
               onChange={(e) =>
-                handleNumberChange('autoSettlementMaxAmount', e.target.value)
+                handleNumberChange("autoSettlementMaxAmount", e.target.value)
               }
               min="0"
               step="0.01"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="mt-1 text-xs text-gray-500">
               Settlements above this amount require manual approval (0 =
               unlimited)
             </p>
@@ -330,12 +332,12 @@ export default function AutomationRulesClient({
       </div>
 
       {/* Notification Settings */}
-      <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">
           Notification Settings
         </h2>
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between rounded-lg bg-gray-50 p-4">
             <div>
               <h3 className="text-sm font-medium text-gray-900">
                 Notify on Success
@@ -344,23 +346,23 @@ export default function AutomationRulesClient({
                 Send email notification when settlements succeed
               </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative inline-flex cursor-pointer items-center">
               <input
                 type="checkbox"
                 checked={settings.emailNotifySettlementSuccess}
                 onChange={(e) =>
                   handleBooleanChange(
-                    'emailNotifySettlementSuccess',
+                    "emailNotifySettlementSuccess",
                     e.target.checked
                   )
                 }
-                className="sr-only peer"
+                className="peer sr-only"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="peer h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-600 peer-focus:ring-4 peer-focus:ring-blue-300 peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
             </label>
           </div>
 
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between rounded-lg bg-gray-50 p-4">
             <div>
               <h3 className="text-sm font-medium text-gray-900">
                 Notify on Failure
@@ -369,29 +371,29 @@ export default function AutomationRulesClient({
                 Send email notification when settlements fail (recommended)
               </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative inline-flex cursor-pointer items-center">
               <input
                 type="checkbox"
                 checked={settings.emailNotifySettlementFailure}
                 onChange={(e) =>
                   handleBooleanChange(
-                    'emailNotifySettlementFailure',
+                    "emailNotifySettlementFailure",
                     e.target.checked
                   )
                 }
-                className="sr-only peer"
+                className="peer sr-only"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="peer h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-600 peer-focus:ring-4 peer-focus:ring-blue-300 peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
             </label>
           </div>
         </div>
       </div>
 
       {/* Action Buttons */}
-      <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg border border-gray-200">
+      <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-4">
         <div className="text-sm text-gray-600">
           {hasChanges ? (
-            <span className="text-orange-600 font-medium">
+            <span className="font-medium text-orange-600">
               You have unsaved changes
             </span>
           ) : (
@@ -402,16 +404,16 @@ export default function AutomationRulesClient({
           <button
             onClick={handleReset}
             disabled={!hasChanges || isSaving}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Reset
           </button>
           <button
             onClick={handleSave}
             disabled={!hasChanges || isSaving}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSaving ? 'Saving...' : 'Save Changes'}
+            {isSaving ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </div>

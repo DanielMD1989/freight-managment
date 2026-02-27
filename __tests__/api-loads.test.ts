@@ -68,57 +68,48 @@ async function runTests() {
   console.log("📋 Validation Schema Tests\n");
 
   // Test 1: Validate tripKm required for POSTED status
-  await test(
-    "Load posting validation requires tripKm when status = POSTED",
-    async () => {
-      // This would be validated in the API endpoint via Zod schema
-      // For now, we'll verify the schema logic exists
-      const testLoad = {
-        status: "POSTED",
-        pickupCity: "Addis Ababa",
-        deliveryCity: "Dire Dawa",
-        pickupDate: new Date(),
-        truckType: "FLATBED",
-        rate: 25000,
-        // Missing tripKm - should fail validation
-      };
+  await test("Load posting validation requires tripKm when status = POSTED", async () => {
+    // This would be validated in the API endpoint via Zod schema
+    // For now, we'll verify the schema logic exists
+    const testLoad = {
+      status: "POSTED",
+      pickupCity: "Addis Ababa",
+      deliveryCity: "Dire Dawa",
+      pickupDate: new Date(),
+      truckType: "FLATBED",
+      rate: 25000,
+      // Missing tripKm - should fail validation
+    };
 
-      // In actual implementation, POST /api/loads with above data should return 400
-      // Verified by checking the createLoadSchema in app/api/loads/route.ts
-      assertEqual(true, true, "Schema validation logic verified");
-    }
-  )();
+    // In actual implementation, POST /api/loads with above data should return 400
+    // Verified by checking the createLoadSchema in app/api/loads/route.ts
+    assertEqual(true, true, "Schema validation logic verified");
+  })();
 
   // Test 2: Validate rate > 0 for POSTED loads
-  await test(
-    "Load posting validation requires rate > 0 for POSTED loads",
-    async () => {
-      const testLoad = {
-        status: "POSTED",
-        tripKm: 515,
-        rate: 0, // Invalid - should fail
-      };
+  await test("Load posting validation requires rate > 0 for POSTED loads", async () => {
+    const testLoad = {
+      status: "POSTED",
+      tripKm: 515,
+      rate: 0, // Invalid - should fail
+    };
 
-      // In actual implementation, this should be rejected
-      // Verified by checking validation logic in API
-      assertEqual(true, true, "Rate validation logic verified");
-    }
-  )();
+    // In actual implementation, this should be rejected
+    // Verified by checking validation logic in API
+    assertEqual(true, true, "Rate validation logic verified");
+  })();
 
   // Test 3: Validate tripKm > 0 for POSTED loads
-  await test(
-    "Load posting validation requires tripKm > 0 for POSTED loads",
-    async () => {
-      const testLoad = {
-        status: "POSTED",
-        tripKm: 0, // Invalid - should fail
-        rate: 25000,
-      };
+  await test("Load posting validation requires tripKm > 0 for POSTED loads", async () => {
+    const testLoad = {
+      status: "POSTED",
+      tripKm: 0, // Invalid - should fail
+      rate: 25000,
+    };
 
-      // In actual implementation, this should be rejected
-      assertEqual(true, true, "TripKm validation logic verified");
-    }
-  )();
+    // In actual implementation, this should be rejected
+    assertEqual(true, true, "TripKm validation logic verified");
+  })();
 
   // Test 4: Draft loads can be saved without tripKm
   await test("Draft loads can be saved without tripKm", async () => {
@@ -135,15 +126,12 @@ async function runTests() {
   })();
 
   // Test 5: postedAt should be set when status changes to POSTED
-  await test(
-    "postedAt timestamp is set automatically when status = POSTED",
-    async () => {
-      // This logic should be in the API handler:
-      // if (status === 'POSTED' && !postedAt) { postedAt = new Date() }
-      // Verified by checking API implementation
-      assertEqual(true, true, "PostedAt auto-set logic verified");
-    }
-  )();
+  await test("postedAt timestamp is set automatically when status = POSTED", async () => {
+    // This logic should be in the API handler:
+    // if (status === 'POSTED' && !postedAt) { postedAt = new Date() }
+    // Verified by checking API implementation
+    assertEqual(true, true, "PostedAt auto-set logic verified");
+  })();
 
   console.log("\n" + "=".repeat(60));
   console.log("\n📊 Test Summary\n");

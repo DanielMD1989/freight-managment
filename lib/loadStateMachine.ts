@@ -6,19 +6,19 @@
  */
 
 export enum LoadStatus {
-  DRAFT = 'DRAFT',
-  POSTED = 'POSTED',
-  SEARCHING = 'SEARCHING',
-  OFFERED = 'OFFERED',
-  ASSIGNED = 'ASSIGNED',
-  PICKUP_PENDING = 'PICKUP_PENDING',
-  IN_TRANSIT = 'IN_TRANSIT',
-  DELIVERED = 'DELIVERED',
-  COMPLETED = 'COMPLETED',
-  EXCEPTION = 'EXCEPTION',
-  CANCELLED = 'CANCELLED',
-  EXPIRED = 'EXPIRED',
-  UNPOSTED = 'UNPOSTED',
+  DRAFT = "DRAFT",
+  POSTED = "POSTED",
+  SEARCHING = "SEARCHING",
+  OFFERED = "OFFERED",
+  ASSIGNED = "ASSIGNED",
+  PICKUP_PENDING = "PICKUP_PENDING",
+  IN_TRANSIT = "IN_TRANSIT",
+  DELIVERED = "DELIVERED",
+  COMPLETED = "COMPLETED",
+  EXCEPTION = "EXCEPTION",
+  CANCELLED = "CANCELLED",
+  EXPIRED = "EXPIRED",
+  UNPOSTED = "UNPOSTED",
 }
 
 /**
@@ -26,10 +26,7 @@ export enum LoadStatus {
  * Key: current status, Value: array of valid next statuses
  */
 export const VALID_TRANSITIONS: Record<LoadStatus, LoadStatus[]> = {
-  [LoadStatus.DRAFT]: [
-    LoadStatus.POSTED,
-    LoadStatus.CANCELLED,
-  ],
+  [LoadStatus.DRAFT]: [LoadStatus.POSTED, LoadStatus.CANCELLED],
 
   [LoadStatus.POSTED]: [
     LoadStatus.SEARCHING,
@@ -50,7 +47,7 @@ export const VALID_TRANSITIONS: Record<LoadStatus, LoadStatus[]> = {
 
   [LoadStatus.OFFERED]: [
     LoadStatus.ASSIGNED,
-    LoadStatus.SEARCHING,  // Carrier rejected, back to searching
+    LoadStatus.SEARCHING, // Carrier rejected, back to searching
     LoadStatus.EXCEPTION,
     LoadStatus.CANCELLED,
     LoadStatus.EXPIRED,
@@ -58,7 +55,7 @@ export const VALID_TRANSITIONS: Record<LoadStatus, LoadStatus[]> = {
 
   [LoadStatus.ASSIGNED]: [
     LoadStatus.PICKUP_PENDING,
-    LoadStatus.IN_TRANSIT,  // Direct transition if pickup happens immediately
+    LoadStatus.IN_TRANSIT, // Direct transition if pickup happens immediately
     LoadStatus.EXCEPTION,
     LoadStatus.CANCELLED,
   ],
@@ -75,27 +72,21 @@ export const VALID_TRANSITIONS: Record<LoadStatus, LoadStatus[]> = {
   // 1. Create an EXCEPTION (damage, refusal, force majeure)
   // 2. From EXCEPTION, an admin can then transition to CANCELLED if needed
   // This ensures proper documentation and handling of mid-transit issues.
-  [LoadStatus.IN_TRANSIT]: [
-    LoadStatus.DELIVERED,
-    LoadStatus.EXCEPTION,
-  ],
+  [LoadStatus.IN_TRANSIT]: [LoadStatus.DELIVERED, LoadStatus.EXCEPTION],
 
-  [LoadStatus.DELIVERED]: [
-    LoadStatus.COMPLETED,
-    LoadStatus.EXCEPTION,
-  ],
+  [LoadStatus.DELIVERED]: [LoadStatus.COMPLETED, LoadStatus.EXCEPTION],
 
   [LoadStatus.COMPLETED]: [
-    LoadStatus.EXCEPTION,  // Can still report issues after completion
+    LoadStatus.EXCEPTION, // Can still report issues after completion
   ],
 
   [LoadStatus.EXCEPTION]: [
-    LoadStatus.SEARCHING,     // Resolved, reassign
-    LoadStatus.ASSIGNED,      // Resolved, same carrier
-    LoadStatus.IN_TRANSIT,    // Resolved, continue journey
+    LoadStatus.SEARCHING, // Resolved, reassign
+    LoadStatus.ASSIGNED, // Resolved, same carrier
+    LoadStatus.IN_TRANSIT, // Resolved, continue journey
     LoadStatus.PICKUP_PENDING, // Resolved, waiting for pickup
-    LoadStatus.CANCELLED,     // Unresolvable, cancel
-    LoadStatus.COMPLETED,     // Issue resolved, mark complete
+    LoadStatus.CANCELLED, // Unresolvable, cancel
+    LoadStatus.COMPLETED, // Issue resolved, mark complete
   ],
 
   [LoadStatus.CANCELLED]: [
@@ -103,13 +94,13 @@ export const VALID_TRANSITIONS: Record<LoadStatus, LoadStatus[]> = {
   ],
 
   [LoadStatus.EXPIRED]: [
-    LoadStatus.POSTED,        // Repost load
-    LoadStatus.CANCELLED,     // Permanently cancel
+    LoadStatus.POSTED, // Repost load
+    LoadStatus.CANCELLED, // Permanently cancel
   ],
 
   [LoadStatus.UNPOSTED]: [
-    LoadStatus.POSTED,        // Repost load
-    LoadStatus.CANCELLED,     // Permanently cancel
+    LoadStatus.POSTED, // Repost load
+    LoadStatus.CANCELLED, // Permanently cancel
   ],
 };
 
@@ -125,7 +116,7 @@ export const ROLE_PERMISSIONS: Record<string, LoadStatus[]> = {
   ],
 
   CARRIER: [
-    LoadStatus.ASSIGNED,      // Accept load
+    LoadStatus.ASSIGNED, // Accept load
     LoadStatus.PICKUP_PENDING,
     LoadStatus.IN_TRANSIT,
     LoadStatus.DELIVERED,
@@ -164,10 +155,7 @@ export function isValidTransition(
 /**
  * Validates if a role can trigger a specific status transition
  */
-export function canRoleSetStatus(
-  role: string,
-  newStatus: LoadStatus
-): boolean {
+export function canRoleSetStatus(role: string, newStatus: LoadStatus): boolean {
   const allowedStatuses = ROLE_PERMISSIONS[role] || [];
   return allowedStatuses.includes(newStatus);
 }
@@ -175,9 +163,7 @@ export function canRoleSetStatus(
 /**
  * Gets all valid next states for a given current state
  */
-export function getValidNextStates(
-  currentStatus: LoadStatus
-): LoadStatus[] {
+export function getValidNextStates(currentStatus: LoadStatus): LoadStatus[] {
   return VALID_TRANSITIONS[currentStatus] || [];
 }
 
@@ -197,7 +183,7 @@ export function validateStateTransition(
   if (!isValidTransition(current, next)) {
     return {
       valid: false,
-      error: `Invalid transition: ${currentStatus} → ${newStatus}. Valid transitions: ${getValidNextStates(current).join(', ')}`,
+      error: `Invalid transition: ${currentStatus} → ${newStatus}. Valid transitions: ${getValidNextStates(current).join(", ")}`,
     };
   }
 
@@ -217,20 +203,20 @@ export function validateStateTransition(
  */
 export function getStatusDescription(status: LoadStatus): string {
   const descriptions: Record<LoadStatus, string> = {
-    [LoadStatus.DRAFT]: 'Load created but not yet posted to marketplace',
-    [LoadStatus.POSTED]: 'Load posted to marketplace, carriers can search',
-    [LoadStatus.SEARCHING]: 'Actively being matched with carriers',
-    [LoadStatus.OFFERED]: 'Load offered to a specific carrier',
-    [LoadStatus.ASSIGNED]: 'Carrier accepted, load assigned',
-    [LoadStatus.PICKUP_PENDING]: 'Waiting for carrier to pick up load',
-    [LoadStatus.IN_TRANSIT]: 'Load picked up, in transit to destination',
-    [LoadStatus.DELIVERED]: 'Load delivered to destination',
-    [LoadStatus.COMPLETED]: 'POD uploaded, payment processed',
-    [LoadStatus.EXCEPTION]: 'Issue detected (late, rejected, etc.)',
-    [LoadStatus.CANCELLED]: 'Load cancelled by shipper',
-    [LoadStatus.EXPIRED]: 'Load expired (no carrier found)',
-    [LoadStatus.UNPOSTED]: 'Load removed from marketplace',
+    [LoadStatus.DRAFT]: "Load created but not yet posted to marketplace",
+    [LoadStatus.POSTED]: "Load posted to marketplace, carriers can search",
+    [LoadStatus.SEARCHING]: "Actively being matched with carriers",
+    [LoadStatus.OFFERED]: "Load offered to a specific carrier",
+    [LoadStatus.ASSIGNED]: "Carrier accepted, load assigned",
+    [LoadStatus.PICKUP_PENDING]: "Waiting for carrier to pick up load",
+    [LoadStatus.IN_TRANSIT]: "Load picked up, in transit to destination",
+    [LoadStatus.DELIVERED]: "Load delivered to destination",
+    [LoadStatus.COMPLETED]: "POD uploaded, payment processed",
+    [LoadStatus.EXCEPTION]: "Issue detected (late, rejected, etc.)",
+    [LoadStatus.CANCELLED]: "Load cancelled by shipper",
+    [LoadStatus.EXPIRED]: "Load expired (no carrier found)",
+    [LoadStatus.UNPOSTED]: "Load removed from marketplace",
   };
 
-  return descriptions[status] || 'Unknown status';
+  return descriptions[status] || "Unknown status";
 }

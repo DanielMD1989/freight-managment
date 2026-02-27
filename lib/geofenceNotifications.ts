@@ -7,10 +7,10 @@
  * Handles notifications for geofence events (truck arrivals at pickup/delivery)
  */
 
-import { db } from './db';
-import { createNotification } from './notifications';
-import { checkGeofenceEvents, GeofenceAlert } from './gpsTracking';
-import { sendEmailToUser, EmailTemplate } from './emailService';
+import { db } from "./db";
+import { createNotification } from "./notifications";
+import { checkGeofenceEvents, GeofenceAlert } from "./gpsTracking";
+import { sendEmailToUser, EmailTemplate } from "./emailService";
 
 /**
  * Geofence event tracking to prevent duplicate notifications
@@ -40,7 +40,7 @@ export async function checkAllGeofenceEvents(): Promise<number> {
     where: {
       trackingEnabled: true,
       status: {
-        in: ['ASSIGNED', 'IN_TRANSIT', 'PICKUP_PENDING'],
+        in: ["ASSIGNED", "IN_TRANSIT", "PICKUP_PENDING"],
       },
     },
     select: {
@@ -96,13 +96,13 @@ async function handleGeofenceAlert(
 
   // Send notifications based on event type
   switch (alert.event) {
-    case 'ARRIVED_AT_PICKUP':
+    case "ARRIVED_AT_PICKUP":
       await sendPickupArrivalNotification(loadId, alert);
       break;
-    case 'ARRIVED_AT_DESTINATION':
+    case "ARRIVED_AT_DESTINATION":
       await sendDeliveryArrivalNotification(loadId, alert);
       break;
-    case 'SIGNAL_LOST':
+    case "SIGNAL_LOST":
       // Signal loss is already handled by gpsAlerts.ts
       return false;
     default:
@@ -136,7 +136,7 @@ async function sendPickupArrivalNotification(
           users: {
             where: {
               role: {
-                in: ['SHIPPER', 'ADMIN'],
+                in: ["SHIPPER", "ADMIN"],
               },
             },
             select: {
@@ -155,7 +155,7 @@ async function sendPickupArrivalNotification(
               users: {
                 where: {
                   role: {
-                    in: ['CARRIER', 'DISPATCHER', 'ADMIN'],
+                    in: ["CARRIER", "DISPATCHER", "ADMIN"],
                   },
                 },
                 select: {
@@ -176,15 +176,15 @@ async function sendPickupArrivalNotification(
   // Send all notifications and emails in parallel
   await Promise.all([
     // Shipper notifications + emails
-    ...load.shipper.users.flatMap(user => [
+    ...load.shipper.users.flatMap((user) => [
       createNotification({
         userId: user.id,
-        type: 'TRUCK_AT_PICKUP',
+        type: "TRUCK_AT_PICKUP",
         title: `Truck Arrived: Load #${load.id.slice(-8)}`,
         message: `Truck ${load.assignedTruck!.licensePlate} has arrived at the pickup location.`,
         metadata: {
           loadId: load.id,
-          event: 'ARRIVED_AT_PICKUP',
+          event: "ARRIVED_AT_PICKUP",
           location: alert.location,
           timestamp: alert.timestamp,
         },
@@ -195,23 +195,22 @@ async function sendPickupArrivalNotification(
       }),
     ]),
     // Carrier notifications
-    ...load.assignedTruck.carrier.users.map(user =>
+    ...load.assignedTruck.carrier.users.map((user) =>
       createNotification({
         userId: user.id,
-        type: 'TRUCK_AT_PICKUP',
+        type: "TRUCK_AT_PICKUP",
         title: `Arrival Confirmed: ${load.assignedTruck!.licensePlate}`,
         message: `Your truck ${load.assignedTruck!.licensePlate} has arrived at the pickup location for Load #${load.id.slice(-8)}.`,
         metadata: {
           loadId: load.id,
-          event: 'ARRIVED_AT_PICKUP',
+          event: "ARRIVED_AT_PICKUP",
           location: alert.location,
           timestamp: alert.timestamp,
         },
       })
     ),
   ]);
-
-  }
+}
 
 /**
  * Send notification when truck arrives at delivery location
@@ -234,7 +233,7 @@ async function sendDeliveryArrivalNotification(
           users: {
             where: {
               role: {
-                in: ['SHIPPER', 'ADMIN'],
+                in: ["SHIPPER", "ADMIN"],
               },
             },
             select: {
@@ -253,7 +252,7 @@ async function sendDeliveryArrivalNotification(
               users: {
                 where: {
                   role: {
-                    in: ['CARRIER', 'DISPATCHER', 'ADMIN'],
+                    in: ["CARRIER", "DISPATCHER", "ADMIN"],
                   },
                 },
                 select: {
@@ -274,15 +273,15 @@ async function sendDeliveryArrivalNotification(
   // Send all notifications and emails in parallel
   await Promise.all([
     // Shipper notifications + emails
-    ...load.shipper.users.flatMap(user => [
+    ...load.shipper.users.flatMap((user) => [
       createNotification({
         userId: user.id,
-        type: 'TRUCK_AT_DELIVERY',
+        type: "TRUCK_AT_DELIVERY",
         title: `Delivery Imminent: Load #${load.id.slice(-8)}`,
         message: `Truck ${load.assignedTruck!.licensePlate} has arrived at the delivery location. Please prepare to receive the shipment.`,
         metadata: {
           loadId: load.id,
-          event: 'ARRIVED_AT_DESTINATION',
+          event: "ARRIVED_AT_DESTINATION",
           location: alert.location,
           timestamp: alert.timestamp,
         },
@@ -293,23 +292,22 @@ async function sendDeliveryArrivalNotification(
       }),
     ]),
     // Carrier notifications
-    ...load.assignedTruck.carrier.users.map(user =>
+    ...load.assignedTruck.carrier.users.map((user) =>
       createNotification({
         userId: user.id,
-        type: 'TRUCK_AT_DELIVERY',
+        type: "TRUCK_AT_DELIVERY",
         title: `Destination Reached: ${load.assignedTruck!.licensePlate}`,
         message: `Your truck has arrived at the delivery location for Load #${load.id.slice(-8)}. Please complete POD submission.`,
         metadata: {
           loadId: load.id,
-          event: 'ARRIVED_AT_DESTINATION',
+          event: "ARRIVED_AT_DESTINATION",
           location: alert.location,
           timestamp: alert.timestamp,
         },
       })
     ),
   ]);
-
-  }
+}
 
 /**
  * Clean up old geofence events from cache
@@ -330,7 +328,7 @@ function cleanupGeofenceEventCache(): void {
   keysToDelete.forEach((key) => recentGeofenceEvents.delete(key));
 
   if (keysToDelete.length > 0) {
-    }
+  }
 }
 
 /**
@@ -341,7 +339,9 @@ function cleanupGeofenceEventCache(): void {
  * @param loadId - Load ID
  * @returns Array of alerts that triggered notifications
  */
-export async function checkLoadGeofence(loadId: string): Promise<GeofenceAlert[]> {
+export async function checkLoadGeofence(
+  loadId: string
+): Promise<GeofenceAlert[]> {
   const alerts = await checkGeofenceEvents(loadId);
   const triggeredAlerts: GeofenceAlert[] = [];
 

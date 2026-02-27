@@ -11,14 +11,14 @@
  * MAP + GPS Implementation - Phase 2
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { z } from 'zod';
-import { broadcastGpsPosition } from '@/lib/websocket-server';
-import { withRpsLimit, RPS_CONFIGS } from '@/lib/rateLimit';
-import { zodErrorResponse } from '@/lib/validation';
-import { Prisma } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { z } from "zod";
+import { broadcastGpsPosition } from "@/lib/websocket-server";
+import { withRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { zodErrorResponse } from "@/lib/validation";
+import { Prisma } from "@prisma/client";
 
 const gpsUpdateSchema = z.object({
   truckId: z.string().min(1),
@@ -36,9 +36,9 @@ async function postHandler(request: NextRequest) {
     const session = await requireAuth();
 
     // Only carriers can update GPS positions
-    if (session.role !== 'CARRIER') {
+    if (session.role !== "CARRIER") {
       return NextResponse.json(
-        { error: 'Only carriers can update GPS positions' },
+        { error: "Only carriers can update GPS positions" },
         { status: 403 }
       );
     }
@@ -51,7 +51,7 @@ async function postHandler(request: NextRequest) {
 
     if (!user?.organizationId) {
       return NextResponse.json(
-        { error: 'User does not belong to an organization' },
+        { error: "User does not belong to an organization" },
         { status: 400 }
       );
     }
@@ -77,7 +77,7 @@ async function postHandler(request: NextRequest) {
 
     if (!truck) {
       return NextResponse.json(
-        { error: 'Truck not found or does not belong to your organization' },
+        { error: "Truck not found or does not belong to your organization" },
         { status: 404 }
       );
     }
@@ -86,7 +86,7 @@ async function postHandler(request: NextRequest) {
     const activeLoad = await db.load.findFirst({
       where: {
         assignedTruckId: data.truckId,
-        status: 'IN_TRANSIT',
+        status: "IN_TRANSIT",
       },
       select: { id: true },
     });
@@ -101,7 +101,7 @@ async function postHandler(request: NextRequest) {
           currentLocationLon: data.longitude,
           locationUpdatedAt: new Date(),
           gpsLastSeenAt: new Date(),
-          gpsStatus: 'ACTIVE',
+          gpsStatus: "ACTIVE",
         },
       });
 
@@ -145,12 +145,12 @@ async function postHandler(request: NextRequest) {
       );
     } catch (broadcastError) {
       // Don't fail the request if broadcast fails
-      console.error('GPS broadcast error:', broadcastError);
+      console.error("GPS broadcast error:", broadcastError);
     }
 
     return NextResponse.json({
       success: true,
-      message: 'GPS position updated',
+      message: "GPS position updated",
       truckId: data.truckId,
       loadId: activeLoad?.id || null,
       position: {
@@ -161,7 +161,7 @@ async function postHandler(request: NextRequest) {
       positionId: positionRecord?.id,
     });
   } catch (error) {
-    console.error('GPS position update error:', error);
+    console.error("GPS position update error:", error);
 
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
@@ -169,16 +169,19 @@ async function postHandler(request: NextRequest) {
 
     // Handle specific error types
     if (error instanceof Error) {
-      if (error.message === 'Unauthorized' || error.name === 'UnauthorizedError') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      if (
+        error.message === "Unauthorized" ||
+        error.name === "UnauthorizedError"
+      ) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
-      if (error.name === 'ForbiddenError') {
+      if (error.name === "ForbiddenError") {
         return NextResponse.json({ error: error.message }, { status: 403 });
       }
     }
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
@@ -197,11 +200,11 @@ async function getHandler(request: NextRequest) {
   try {
     const session = await requireAuth();
     const { searchParams } = request.nextUrl;
-    const truckId = searchParams.get('truckId');
+    const truckId = searchParams.get("truckId");
 
     if (!truckId) {
       return NextResponse.json(
-        { error: 'truckId is required' },
+        { error: "truckId is required" },
         { status: 400 }
       );
     }
@@ -215,19 +218,19 @@ async function getHandler(request: NextRequest) {
     // Build where clause based on role
     const truckWhere: Prisma.TruckWhereInput = { id: truckId };
 
-    if (session.role === 'CARRIER') {
+    if (session.role === "CARRIER") {
       if (!user?.organizationId) {
         return NextResponse.json(
-          { error: 'User not associated with an organization' },
+          { error: "User not associated with an organization" },
           { status: 403 }
         );
       }
       // Carrier can only see their own trucks
       truckWhere.carrierId = user.organizationId;
-    } else if (session.role === 'SHIPPER') {
+    } else if (session.role === "SHIPPER") {
       if (!user?.organizationId) {
         return NextResponse.json(
-          { error: 'User not associated with an organization' },
+          { error: "User not associated with an organization" },
           { status: 403 }
         );
       }
@@ -236,13 +239,13 @@ async function getHandler(request: NextRequest) {
         where: {
           assignedTruckId: truckId,
           shipperId: user.organizationId,
-          status: 'IN_TRANSIT',
+          status: "IN_TRANSIT",
         },
       });
 
       if (!activeLoad) {
         return NextResponse.json(
-          { error: 'You do not have access to this truck\'s position' },
+          { error: "You do not have access to this truck's position" },
           { status: 403 }
         );
       }
@@ -265,7 +268,7 @@ async function getHandler(request: NextRequest) {
 
     if (!truck) {
       return NextResponse.json(
-        { error: 'Truck not found or access denied' },
+        { error: "Truck not found or access denied" },
         { status: 404 }
       );
     }
@@ -274,18 +277,21 @@ async function getHandler(request: NextRequest) {
       truckId: truck.id,
       plateNumber: truck.licensePlate,
       truckType: truck.truckType,
-      currentLocation: truck.currentLocationLat && truck.currentLocationLon ? {
-        lat: Number(truck.currentLocationLat),
-        lng: Number(truck.currentLocationLon),
-        updatedAt: truck.locationUpdatedAt?.toISOString(),
-      } : null,
-      gpsStatus: truck.gpsStatus || 'INACTIVE',
+      currentLocation:
+        truck.currentLocationLat && truck.currentLocationLon
+          ? {
+              lat: Number(truck.currentLocationLat),
+              lng: Number(truck.currentLocationLon),
+              updatedAt: truck.locationUpdatedAt?.toISOString(),
+            }
+          : null,
+      gpsStatus: truck.gpsStatus || "INACTIVE",
       lastSeen: truck.gpsLastSeenAt?.toISOString(),
     });
   } catch (error) {
-    console.error('GPS position get error:', error);
+    console.error("GPS position get error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

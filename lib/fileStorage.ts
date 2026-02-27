@@ -12,29 +12,29 @@
  * Sprint 8 - Story 8.5: Document Upload System
  */
 
-import { writeFile, mkdir, readFile, unlink } from 'fs/promises';
-import { existsSync } from 'fs';
-import { join } from 'path';
-import { randomUUID } from 'crypto';
+import { writeFile, mkdir, readFile, unlink } from "fs/promises";
+import { existsSync } from "fs";
+import { join } from "path";
+import { randomUUID } from "crypto";
 
 /**
  * Allowed MIME types for document uploads
  */
 const ALLOWED_MIME_TYPES = [
-  'application/pdf',
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
+  "application/pdf",
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
 ] as const;
 
 /**
  * File type to extension mapping
  */
 const MIME_TO_EXTENSION: Record<string, string> = {
-  'application/pdf': '.pdf',
-  'image/jpeg': '.jpg',
-  'image/jpg': '.jpg',
-  'image/png': '.png',
+  "application/pdf": ".pdf",
+  "image/jpeg": ".jpg",
+  "image/jpg": ".jpg",
+  "image/png": ".png",
 };
 
 /**
@@ -42,10 +42,10 @@ const MIME_TO_EXTENSION: Record<string, string> = {
  * First few bytes of each file type to verify actual content
  */
 const MAGIC_BYTES: Record<string, number[][]> = {
-  'application/pdf': [[0x25, 0x50, 0x44, 0x46]], // %PDF
-  'image/jpeg': [[0xFF, 0xD8, 0xFF]], // JPEG
-  'image/jpg': [[0xFF, 0xD8, 0xFF]], // JPG (same as JPEG)
-  'image/png': [[0x89, 0x50, 0x4E, 0x47]], // PNG
+  "application/pdf": [[0x25, 0x50, 0x44, 0x46]], // %PDF
+  "image/jpeg": [[0xff, 0xd8, 0xff]], // JPEG
+  "image/jpg": [[0xff, 0xd8, 0xff]], // JPG (same as JPEG)
+  "image/png": [[0x89, 0x50, 0x4e, 0x47]], // PNG
 };
 
 /**
@@ -56,13 +56,13 @@ export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
 /**
  * Base upload directory (relative to project root)
  */
-const UPLOAD_DIR = process.env.UPLOAD_DIR || join(process.cwd(), 'uploads');
+const UPLOAD_DIR = process.env.UPLOAD_DIR || join(process.cwd(), "uploads");
 
 /**
  * Get the upload directory path for documents
  */
 export function getDocumentUploadDir(organizationId: string): string {
-  return join(UPLOAD_DIR, 'documents', organizationId);
+  return join(UPLOAD_DIR, "documents", organizationId);
 }
 
 /**
@@ -80,7 +80,7 @@ export async function ensureUploadDir(organizationId: string): Promise<void> {
  * Validate file type by MIME type
  */
 export function isAllowedMimeType(mimeType: string): boolean {
-  return ALLOWED_MIME_TYPES.includes(mimeType as any);
+  return (ALLOWED_MIME_TYPES as readonly string[]).includes(mimeType);
 }
 
 /**
@@ -113,9 +113,12 @@ export function isValidFileSize(size: number): boolean {
 /**
  * Generate unique filename with extension
  */
-export function generateUniqueFileName(originalName: string, mimeType: string): string {
+export function generateUniqueFileName(
+  originalName: string,
+  mimeType: string
+): string {
   const uuid = randomUUID();
-  const extension = MIME_TO_EXTENSION[mimeType] || '.bin';
+  const extension = MIME_TO_EXTENSION[mimeType] || ".bin";
 
   return `${uuid}${extension}`;
 }

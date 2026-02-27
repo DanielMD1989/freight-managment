@@ -9,17 +9,17 @@
  * Results are cached to reduce API calls.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
 import {
   calculateRoadDistance,
   calculateDeadheadOrigin,
   calculateDeadheadDestination,
   batchCalculateDistances,
   Coordinates,
-} from '@/lib/googleRoutes';
-import { z } from 'zod';
-import { zodErrorResponse } from '@/lib/validation';
+} from "@/lib/googleRoutes";
+import { z } from "zod";
+import { zodErrorResponse } from "@/lib/validation";
 
 const coordinatesSchema = z.object({
   lat: z.number().min(-90).max(90),
@@ -29,14 +29,19 @@ const coordinatesSchema = z.object({
 const singleDistanceSchema = z.object({
   origin: coordinatesSchema,
   destination: coordinatesSchema,
-  type: z.enum(['road', 'dh-o', 'dh-d']).optional().default('road'),
+  type: z.enum(["road", "dh-o", "dh-d"]).optional().default("road"),
 });
 
 const batchDistanceSchema = z.object({
-  pairs: z.array(z.object({
-    origin: coordinatesSchema,
-    destination: coordinatesSchema,
-  })).min(1).max(25), // Max 25 pairs per batch
+  pairs: z
+    .array(
+      z.object({
+        origin: coordinatesSchema,
+        destination: coordinatesSchema,
+      })
+    )
+    .min(1)
+    .max(25), // Max 25 pairs per batch
 });
 
 /**
@@ -88,11 +93,14 @@ export async function POST(request: NextRequest) {
 
     let result;
     switch (data.type) {
-      case 'dh-o':
+      case "dh-o":
         result = await calculateDeadheadOrigin(data.origin, data.destination);
         break;
-      case 'dh-d':
-        result = await calculateDeadheadDestination(data.origin, data.destination);
+      case "dh-d":
+        result = await calculateDeadheadDestination(
+          data.origin,
+          data.destination
+        );
         break;
       default:
         result = await calculateRoadDistance(data.origin, data.destination);
@@ -109,14 +117,14 @@ export async function POST(request: NextRequest) {
       source: result.source,
     });
   } catch (error) {
-    console.error('Road distance calculation error:', error);
+    console.error("Road distance calculation error:", error);
 
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
@@ -137,14 +145,19 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = request.nextUrl;
 
-    const originLat = parseFloat(searchParams.get('originLat') || '');
-    const originLng = parseFloat(searchParams.get('originLng') || '');
-    const destLat = parseFloat(searchParams.get('destLat') || '');
-    const destLng = parseFloat(searchParams.get('destLng') || '');
+    const originLat = parseFloat(searchParams.get("originLat") || "");
+    const originLng = parseFloat(searchParams.get("originLng") || "");
+    const destLat = parseFloat(searchParams.get("destLat") || "");
+    const destLng = parseFloat(searchParams.get("destLng") || "");
 
-    if (isNaN(originLat) || isNaN(originLng) || isNaN(destLat) || isNaN(destLng)) {
+    if (
+      isNaN(originLat) ||
+      isNaN(originLng) ||
+      isNaN(destLat) ||
+      isNaN(destLng)
+    ) {
       return NextResponse.json(
-        { error: 'Missing or invalid coordinates' },
+        { error: "Missing or invalid coordinates" },
         { status: 400 }
       );
     }
@@ -164,9 +177,9 @@ export async function GET(request: NextRequest) {
       source: result.source,
     });
   } catch (error) {
-    console.error('Road distance calculation error:', error);
+    console.error("Road distance calculation error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

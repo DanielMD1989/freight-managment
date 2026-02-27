@@ -39,10 +39,7 @@ export async function GET() {
     });
 
     if (!wallet) {
-      return NextResponse.json(
-        { error: "Wallet not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
     }
 
     // Get recent transactions
@@ -112,7 +109,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { amount, paymentMethod, externalTransactionId } = depositSchema.parse(body);
+    const { amount, paymentMethod, externalTransactionId } =
+      depositSchema.parse(body);
 
     // Get wallet
     const wallet = await db.financialAccount.findFirst({
@@ -125,10 +123,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!wallet) {
-      return NextResponse.json(
-        { error: "Wallet not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
     }
 
     // Create journal entry (double-entry: debit wallet, credit external)

@@ -24,7 +24,7 @@ function isIPBlockedEdge(ip: string): boolean {
 }
 
 // PHASE 3: Request logging (lightweight for Edge runtime)
-const LOG_REQUESTS = process.env.LOG_REQUESTS !== 'false';
+const LOG_REQUESTS = process.env.LOG_REQUESTS !== "false";
 
 // =============================================================================
 // CORS CONFIGURATION - Security Fix v4
@@ -32,9 +32,9 @@ const LOG_REQUESTS = process.env.LOG_REQUESTS !== 'false';
 // Allowed origins for CORS requests. Configure via ALLOWED_ORIGINS env var.
 // Format: comma-separated list of origins (e.g., "https://app.example.com,https://admin.example.com")
 const ALLOWED_ORIGINS = new Set(
-  (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000')
-    .split(',')
-    .map(origin => origin.trim())
+  (process.env.ALLOWED_ORIGINS || "http://localhost:3000,http://127.0.0.1:3000")
+    .split(",")
+    .map((origin) => origin.trim())
     .filter(Boolean)
 );
 
@@ -45,8 +45,11 @@ function isOriginAllowed(origin: string | null): boolean {
   if (!origin) return false;
 
   // In development, allow localhost origins
-  if (process.env.NODE_ENV === 'development') {
-    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+  if (process.env.NODE_ENV === "development") {
+    if (
+      origin.startsWith("http://localhost:") ||
+      origin.startsWith("http://127.0.0.1:")
+    ) {
       return true;
     }
   }
@@ -64,10 +67,11 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   }
 
   return {
-    'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRF-Token, X-Requested-With, Accept, x-client-type',
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization, X-CSRF-Token, X-Requested-With, Accept, x-client-type",
   };
 }
 
@@ -83,15 +87,17 @@ function addTimingHeaders(
   statusCode?: number
 ): NextResponse {
   const durationMs = Date.now() - startTime;
-  response.headers.set('x-request-id', requestId);
-  response.headers.set('x-response-time', `${durationMs}ms`);
-  response.headers.set('x-request-start', startTime.toString());
+  response.headers.set("x-request-id", requestId);
+  response.headers.set("x-response-time", `${durationMs}ms`);
+  response.headers.set("x-request-start", startTime.toString());
 
   // Log response in development
-  if (LOG_REQUESTS && process.env.NODE_ENV === 'development') {
+  if (LOG_REQUESTS && process.env.NODE_ENV === "development") {
     const status = statusCode || response.status || 200;
-    const logLevel = status >= 500 ? 'ERROR' : status >= 400 ? 'WARN' : 'INFO';
-    console.log(`[${logLevel}] ${method} ${pathname} ${status} ${durationMs}ms - ${requestId}`);
+    const logLevel = status >= 500 ? "ERROR" : status >= 400 ? "WARN" : "INFO";
+    console.log(
+      `[${logLevel}] ${method} ${pathname} ${status} ${durationMs}ms - ${requestId}`
+    );
   }
 
   return response;
@@ -101,29 +107,43 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "development-jwt-secret"
 );
 
-const publicPaths = ["/", "/login", "/register", "/api/auth/login", "/api/auth/register"];
+const publicPaths = [
+  "/",
+  "/login",
+  "/register",
+  "/api/auth/login",
+  "/api/auth/register",
+];
 const adminPaths = ["/admin"];
 const opsPaths = ["/ops"];
 // Sprint 2: Paths that require ACTIVE status
-const marketplacePaths = ["/shipper", "/carrier", "/dashboard", "/dispatcher", "/api/loads", "/api/trucks", "/api/truck-postings"];
+const marketplacePaths = [
+  "/shipper",
+  "/carrier",
+  "/dashboard",
+  "/dispatcher",
+  "/api/loads",
+  "/api/trucks",
+  "/api/truck-postings",
+];
 // Paths that don't require ACTIVE status (for pending users)
 const pendingAllowedPaths = ["/profile", "/verification", "/api/user"];
 
 // Routes exempt from CSRF protection
 const CSRF_EXEMPT_ROUTES = [
-  '/api/auth/login',
-  '/api/auth/register',
-  '/api/auth/logout',
-  '/api/auth/forgot-password',
-  '/api/auth/reset-password',
-  '/api/auth/verify-mfa', // MFA verification during login (pre-auth)
-  '/api/cron/',
-  '/api/webhooks/',
-  '/api/tracking/ingest', // GPS data ingestion (machine-to-machine)
+  "/api/auth/login",
+  "/api/auth/register",
+  "/api/auth/logout",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
+  "/api/auth/verify-mfa", // MFA verification during login (pre-auth)
+  "/api/cron/",
+  "/api/webhooks/",
+  "/api/tracking/ingest", // GPS data ingestion (machine-to-machine)
 ];
 
 // State-changing HTTP methods that require CSRF protection
-const STATE_CHANGING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
+const STATE_CHANGING_METHODS = ["POST", "PUT", "PATCH", "DELETE"];
 
 export async function proxy(request: NextRequest) {
   const startTime = Date.now();
@@ -131,31 +151,37 @@ export async function proxy(request: NextRequest) {
   const method = request.method;
 
   // Generate request ID for all requests (for error tracking and logging)
-  const requestId = request.headers.get('x-request-id') || generateRequestId();
+  const requestId = request.headers.get("x-request-id") || generateRequestId();
 
   // Extract client IP for logging
   const clientIP = getClientIP(request.headers);
-  const userAgent = request.headers.get('user-agent') || 'unknown';
+  const userAgent = request.headers.get("user-agent") || "unknown";
 
   // PHASE 3: Log incoming request (debug level - only in development or when enabled)
-  if (LOG_REQUESTS && process.env.NODE_ENV === 'development') {
+  if (LOG_REQUESTS && process.env.NODE_ENV === "development") {
     console.log(`[REQ] ${method} ${pathname} - ${requestId} - ${clientIP}`);
   }
 
   // Get request origin for CORS validation
-  const requestOrigin = request.headers.get('origin');
+  const requestOrigin = request.headers.get("origin");
 
   // Handle CORS preflight requests
-  if (method === 'OPTIONS') {
+  if (method === "OPTIONS") {
     const response = new NextResponse(null, { status: 204 });
 
     // Only set CORS headers if origin is allowed
     if (isOriginAllowed(requestOrigin)) {
-      response.headers.set('Access-Control-Allow-Origin', requestOrigin!);
-      response.headers.set('Access-Control-Allow-Credentials', 'true');
-      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-      response.headers.set('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, Cookie, x-client-type');
-      response.headers.set('Access-Control-Max-Age', '86400');
+      response.headers.set("Access-Control-Allow-Origin", requestOrigin!);
+      response.headers.set("Access-Control-Allow-Credentials", "true");
+      response.headers.set(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+      );
+      response.headers.set(
+        "Access-Control-Allow-Headers",
+        "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, Cookie, x-client-type"
+      );
+      response.headers.set("Access-Control-Max-Age", "86400");
     }
     return response;
   }
@@ -166,17 +192,17 @@ export async function proxy(request: NextRequest) {
   // Sprint 9: IP Blocking Check
   if (isIPBlockedEdge(clientIP)) {
     await logSecurityEvent({
-      type: 'IP_BLOCKED',
+      type: "IP_BLOCKED",
       ip: clientIP,
       details: {
         path: pathname,
         method,
-        userAgent: request.headers.get('user-agent') || 'unknown',
+        userAgent: request.headers.get("user-agent") || "unknown",
       },
     });
 
     const response = NextResponse.json(
-      { error: 'Access denied. Your IP address has been blocked.', requestId },
+      { error: "Access denied. Your IP address has been blocked.", requestId },
       { status: 403 }
     );
     addTimingHeaders(response, startTime, requestId, method, pathname, 403);
@@ -185,19 +211,29 @@ export async function proxy(request: NextRequest) {
 
   // Sprint 9: CSRF Protection for API routes with state-changing methods
   // Requests with Authorization header (Bearer token) are exempt since they're not vulnerable to CSRF
-  const authHeader = request.headers.get('authorization');
-  const hasBearerToken = authHeader?.startsWith('Bearer ');
+  const authHeader = request.headers.get("authorization");
+  const hasBearerToken = authHeader?.startsWith("Bearer ");
 
-  if (pathname.startsWith('/api') && STATE_CHANGING_METHODS.includes(method) && !hasBearerToken) {
-    const isExempt = CSRF_EXEMPT_ROUTES.some((route) => pathname.startsWith(route));
+  if (
+    pathname.startsWith("/api") &&
+    STATE_CHANGING_METHODS.includes(method) &&
+    !hasBearerToken
+  ) {
+    const isExempt = CSRF_EXEMPT_ROUTES.some((route) =>
+      pathname.startsWith(route)
+    );
 
     if (!isExempt) {
-      const csrfToken = request.headers.get('x-csrf-token');
-      const csrfCookie = request.cookies.get('csrf_token')?.value;
+      const csrfToken = request.headers.get("x-csrf-token");
+      const csrfCookie = request.cookies.get("csrf_token")?.value;
 
-      if (!csrfToken || !csrfCookie || !verifyCSRFToken(csrfToken, csrfCookie)) {
+      if (
+        !csrfToken ||
+        !csrfCookie ||
+        !verifyCSRFToken(csrfToken, csrfCookie)
+      ) {
         await logSecurityEvent({
-          type: 'CSRF_FAILURE',
+          type: "CSRF_FAILURE",
           ip: clientIP,
           details: {
             path: pathname,
@@ -208,7 +244,7 @@ export async function proxy(request: NextRequest) {
         });
 
         const response = NextResponse.json(
-          { error: 'Invalid or missing CSRF token', requestId },
+          { error: "Invalid or missing CSRF token", requestId },
           { status: 403 }
         );
         addTimingHeaders(response, startTime, requestId, method, pathname, 403);
@@ -232,15 +268,15 @@ export async function proxy(request: NextRequest) {
   let token = request.cookies.get("session")?.value;
 
   // For mobile clients, check Authorization header (authHeader already declared above)
-  if (!token && authHeader?.startsWith('Bearer ')) {
+  if (!token && authHeader?.startsWith("Bearer ")) {
     token = authHeader.substring(7);
   }
 
   if (!token) {
     // For API routes, return 401 instead of redirect
-    if (pathname.startsWith('/api')) {
+    if (pathname.startsWith("/api")) {
       const response = NextResponse.json(
-        { error: 'Authentication required', requestId },
+        { error: "Authentication required", requestId },
         { status: 401 }
       );
       addTimingHeaders(response, startTime, requestId, method, pathname, 401);
@@ -264,7 +300,7 @@ export async function proxy(request: NextRequest) {
       if (payload.role !== "ADMIN" && payload.role !== "SUPER_ADMIN") {
         return NextResponse.json(
           { error: "Forbidden: Admin access required", requestId },
-          { status: 403, headers: { 'x-request-id': requestId } }
+          { status: 403, headers: { "x-request-id": requestId } }
         );
       }
     }
@@ -274,33 +310,46 @@ export async function proxy(request: NextRequest) {
       if (payload.role !== "ADMIN" && payload.role !== "SUPER_ADMIN") {
         return NextResponse.json(
           { error: "Forbidden: Ops access required", requestId },
-          { status: 403, headers: { 'x-request-id': requestId } }
+          { status: 403, headers: { "x-request-id": requestId } }
         );
       }
     }
 
     // Sprint 2: Check user status for marketplace access
-    const isMarketplacePath = marketplacePaths.some((path) => pathname.startsWith(path));
+    const isMarketplacePath = marketplacePaths.some((path) =>
+      pathname.startsWith(path)
+    );
     if (isMarketplacePath) {
       const userStatus = payload.status as string | undefined;
 
       // Only ACTIVE users can access marketplace features
-      if (userStatus !== 'ACTIVE') {
+      if (userStatus !== "ACTIVE") {
         // ADMIN and SUPER_ADMIN bypass status check
-        if (payload.role !== 'ADMIN' && payload.role !== 'SUPER_ADMIN') {
-          if (userStatus === 'REGISTERED' || userStatus === 'PENDING_VERIFICATION') {
+        if (payload.role !== "ADMIN" && payload.role !== "SUPER_ADMIN") {
+          if (
+            userStatus === "REGISTERED" ||
+            userStatus === "PENDING_VERIFICATION"
+          ) {
             // Redirect to verification pending page
             const url = new URL("/verification-pending", request.url);
             return NextResponse.redirect(url);
-          } else if (userStatus === 'SUSPENDED') {
+          } else if (userStatus === "SUSPENDED") {
             return NextResponse.json(
-              { error: "Your account has been suspended. Please contact support.", requestId },
-              { status: 403, headers: { 'x-request-id': requestId } }
+              {
+                error:
+                  "Your account has been suspended. Please contact support.",
+                requestId,
+              },
+              { status: 403, headers: { "x-request-id": requestId } }
             );
-          } else if (userStatus === 'REJECTED') {
+          } else if (userStatus === "REJECTED") {
             return NextResponse.json(
-              { error: "Your registration has been rejected. Please contact support.", requestId },
-              { status: 403, headers: { 'x-request-id': requestId } }
+              {
+                error:
+                  "Your registration has been rejected. Please contact support.",
+                requestId,
+              },
+              { status: 403, headers: { "x-request-id": requestId } }
             );
           }
         }
@@ -318,7 +367,10 @@ export async function proxy(request: NextRequest) {
   } catch (error) {
     // PHASE 3: Log token verification failures
     if (LOG_REQUESTS) {
-      console.error(`[AUTH ERROR] Token verification failed for ${method} ${pathname} - ${requestId}:`, error);
+      console.error(
+        `[AUTH ERROR] Token verification failed for ${method} ${pathname} - ${requestId}:`,
+        error
+      );
     }
 
     // Clear invalid token and redirect to login

@@ -50,10 +50,18 @@ export function calculateDistanceKm(
 ): number {
   // Validate inputs: return 0 for invalid coordinates
   if (
-    !Number.isFinite(lat1) || !Number.isFinite(lon1) ||
-    !Number.isFinite(lat2) || !Number.isFinite(lon2) ||
-    lat1 < -90 || lat1 > 90 || lat2 < -90 || lat2 > 90 ||
-    lon1 < -180 || lon1 > 180 || lon2 < -180 || lon2 > 180
+    !Number.isFinite(lat1) ||
+    !Number.isFinite(lon1) ||
+    !Number.isFinite(lat2) ||
+    !Number.isFinite(lon2) ||
+    lat1 < -90 ||
+    lat1 > 90 ||
+    lat2 < -90 ||
+    lat2 > 90 ||
+    lon1 < -180 ||
+    lon1 > 180 ||
+    lon2 < -180 ||
+    lon2 > 180
   ) {
     return 0;
   }
@@ -91,10 +99,18 @@ export function calculateDistanceMeters(
 ): number {
   // Validate inputs: return 0 for invalid coordinates
   if (
-    !Number.isFinite(lat1) || !Number.isFinite(lon1) ||
-    !Number.isFinite(lat2) || !Number.isFinite(lon2) ||
-    lat1 < -90 || lat1 > 90 || lat2 < -90 || lat2 > 90 ||
-    lon1 < -180 || lon1 > 180 || lon2 < -180 || lon2 > 180
+    !Number.isFinite(lat1) ||
+    !Number.isFinite(lon1) ||
+    !Number.isFinite(lat2) ||
+    !Number.isFinite(lon2) ||
+    lat1 < -90 ||
+    lat1 > 90 ||
+    lat2 < -90 ||
+    lat2 > 90 ||
+    lon1 < -180 ||
+    lon1 > 180 ||
+    lon2 < -180 ||
+    lon2 > 180
   ) {
     return 0;
   }

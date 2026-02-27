@@ -38,21 +38,21 @@
  * ```
  */
 
-import { logger } from './logger';
+import { logger } from "./logger";
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
 export type QueueName =
-  | 'email'
-  | 'sms'
-  | 'notifications'
-  | 'distance-matrix'
-  | 'pdf'
-  | 'cleanup'
-  | 'bulk'
-  | 'scheduled';
+  | "email"
+  | "sms"
+  | "notifications"
+  | "distance-matrix"
+  | "pdf"
+  | "cleanup"
+  | "bulk"
+  | "scheduled";
 
 // JobData is a base type for queue job data
 // Specific job data types (EmailJobData, SMSJobData, etc.) extend this
@@ -63,7 +63,7 @@ export interface JobOptions {
   priority?: number;
   attempts?: number;
   backoff?: {
-    type: 'exponential' | 'fixed';
+    type: "exponential" | "fixed";
     delay: number;
   };
   repeat?: {
@@ -80,7 +80,7 @@ export interface QueueJob {
   name: string;
   data: JobData;
   progress: number;
-  status: 'waiting' | 'active' | 'completed' | 'failed' | 'delayed';
+  status: "waiting" | "active" | "completed" | "failed" | "delayed";
   attemptsMade: number;
   failedReason?: string;
   createdAt: Date;
@@ -113,18 +113,19 @@ interface QueueConfig {
 
 function getConfig(): QueueConfig {
   return {
-    enabled: process.env.QUEUE_ENABLED === 'true' ||
-             process.env.REDIS_ENABLED === 'true' ||
-             !!process.env.REDIS_URL,
+    enabled:
+      process.env.QUEUE_ENABLED === "true" ||
+      process.env.REDIS_ENABLED === "true" ||
+      !!process.env.REDIS_URL,
     redisUrl: process.env.REDIS_URL || null,
-    redisHost: process.env.REDIS_HOST || 'localhost',
-    redisPort: parseInt(process.env.REDIS_PORT || '6379'),
+    redisHost: process.env.REDIS_HOST || "localhost",
+    redisPort: parseInt(process.env.REDIS_PORT || "6379"),
     redisPassword: process.env.REDIS_PASSWORD || null,
     defaultJobOptions: {
-      attempts: parseInt(process.env.QUEUE_DEFAULT_ATTEMPTS || '3'),
+      attempts: parseInt(process.env.QUEUE_DEFAULT_ATTEMPTS || "3"),
       backoff: {
-        type: 'exponential',
-        delay: parseInt(process.env.QUEUE_BACKOFF_DELAY || '1000'),
+        type: "exponential",
+        delay: parseInt(process.env.QUEUE_BACKOFF_DELAY || "1000"),
       },
       removeOnComplete: 100, // Keep last 100 completed jobs
       removeOnFail: 1000, // Keep last 1000 failed jobs
@@ -136,35 +137,38 @@ function getConfig(): QueueConfig {
 // QUEUE DEFINITIONS
 // =============================================================================
 
-const QUEUE_CONFIGS: Record<QueueName, {
-  concurrency: number;
-  rateLimit?: { max: number; duration: number };
-}> = {
-  'email': {
+const QUEUE_CONFIGS: Record<
+  QueueName,
+  {
+    concurrency: number;
+    rateLimit?: { max: number; duration: number };
+  }
+> = {
+  email: {
     concurrency: 5,
     rateLimit: { max: 100, duration: 60000 }, // 100 per minute
   },
-  'sms': {
+  sms: {
     concurrency: 3,
     rateLimit: { max: 30, duration: 60000 }, // 30 per minute (API limits)
   },
-  'notifications': {
+  notifications: {
     concurrency: 10,
   },
-  'distance-matrix': {
+  "distance-matrix": {
     concurrency: 2,
     rateLimit: { max: 10, duration: 60000 }, // Google API limits
   },
-  'pdf': {
+  pdf: {
     concurrency: 3,
   },
-  'cleanup': {
+  cleanup: {
     concurrency: 1,
   },
-  'bulk': {
+  bulk: {
     concurrency: 2,
   },
-  'scheduled': {
+  scheduled: {
     concurrency: 5,
   },
 };
@@ -179,7 +183,7 @@ interface InMemoryJob {
   name: string;
   data: JobData;
   options: JobOptions;
-  status: QueueJob['status'];
+  status: QueueJob["status"];
   progress: number;
   attemptsMade: number;
   failedReason?: string;
@@ -219,7 +223,7 @@ let isShuttingDown = false;
 let isDraining = false;
 let shutdownPromise: Promise<void> | null = null;
 
-export type WorkerStatus = 'running' | 'draining' | 'stopped';
+export type WorkerStatus = "running" | "draining" | "stopped";
 
 /**
  * Get current worker status for health checks
@@ -231,9 +235,9 @@ export function getWorkerStatus(): {
   activeWorkers: number;
   activeQueues: number;
 } {
-  let status: WorkerStatus = 'stopped';
+  let status: WorkerStatus = "stopped";
   if (bullmqWorkers && bullmqWorkers.size > 0) {
-    status = isDraining ? 'draining' : 'running';
+    status = isDraining ? "draining" : "running";
   }
 
   return {
@@ -252,21 +256,21 @@ async function initializeBullMQ(): Promise<boolean> {
   const config = getConfig();
 
   if (!config.enabled) {
-    logger.info('Queue system disabled - using in-memory fallback');
+    logger.info("Queue system disabled - using in-memory fallback");
     return false;
   }
 
   try {
     // Dynamic import to avoid bundling issues
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-eval -- Dynamic require for optional BullMQ/ioredis
+
     const dynamicRequire = (moduleName: string): unknown => {
-      return eval('require')(moduleName);
+      return eval("require")(moduleName);
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- BullMQ is optionally loaded
-    const { Queue, Worker, QueueEvents } = dynamicRequire('bullmq') as any;
+    const { Queue, Worker, QueueEvents } = dynamicRequire("bullmq") as any;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ioredis is optionally loaded
-    const IORedis = dynamicRequire('ioredis') as any;
+    const IORedis = dynamicRequire("ioredis") as any;
 
     // Create Redis connection for BullMQ
     const connection = config.redisUrl
@@ -295,10 +299,13 @@ async function initializeBullMQ(): Promise<boolean> {
       logger.info(`Queue initialized: ${queueName}`);
     }
 
-    logger.info('BullMQ queues initialized successfully');
+    logger.info("BullMQ queues initialized successfully");
     return true;
   } catch (error) {
-    logger.error('Failed to initialize BullMQ, using in-memory fallback', error);
+    logger.error(
+      "Failed to initialize BullMQ, using in-memory fallback",
+      error
+    );
     bullmqQueues = null;
     return false;
   }
@@ -325,7 +332,7 @@ export async function addJob(
     const queue = bullmqQueues.get(queueName)!;
     const job = await queue.add(jobName, data, mergedOptions);
 
-    logger.debug('Job added to queue', {
+    logger.debug("Job added to queue", {
       queueName,
       jobName,
       jobId: job.id,
@@ -342,7 +349,7 @@ export async function addJob(
     name: jobName,
     data,
     options: mergedOptions,
-    status: options.delay ? 'delayed' : 'waiting',
+    status: options.delay ? "delayed" : "waiting",
     progress: 0,
     attemptsMade: 0,
     createdAt: new Date(),
@@ -355,7 +362,7 @@ export async function addJob(
   }
   inMemoryQueues.get(queueName)!.push(job);
 
-  logger.debug('Job added to in-memory queue', {
+  logger.debug("Job added to in-memory queue", {
     queueName,
     jobName,
     jobId,
@@ -459,11 +466,11 @@ export async function getQueueStats(queueName: QueueName): Promise<QueueStats> {
 
   return {
     name: queueName,
-    waiting: jobs.filter(j => j.status === 'waiting').length,
-    active: jobs.filter(j => j.status === 'active').length,
-    completed: jobs.filter(j => j.status === 'completed').length,
-    failed: jobs.filter(j => j.status === 'failed').length,
-    delayed: jobs.filter(j => j.status === 'delayed').length,
+    waiting: jobs.filter((j) => j.status === "waiting").length,
+    active: jobs.filter((j) => j.status === "active").length,
+    completed: jobs.filter((j) => j.status === "completed").length,
+    failed: jobs.filter((j) => j.status === "failed").length,
+    delayed: jobs.filter((j) => j.status === "delayed").length,
     paused: false,
   };
 }
@@ -488,7 +495,7 @@ export async function pauseQueue(queueName: QueueName): Promise<boolean> {
   if (bullmqQueues?.has(queueName)) {
     const queue = bullmqQueues.get(queueName)!;
     await queue.pause();
-    logger.info('Queue paused', { queueName });
+    logger.info("Queue paused", { queueName });
     return true;
   }
   return false;
@@ -501,7 +508,7 @@ export async function resumeQueue(queueName: QueueName): Promise<boolean> {
   if (bullmqQueues?.has(queueName)) {
     const queue = bullmqQueues.get(queueName)!;
     await queue.resume();
-    logger.info('Queue resumed', { queueName });
+    logger.info("Queue resumed", { queueName });
     return true;
   }
   return false;
@@ -529,7 +536,7 @@ export async function removeJob(
     inMemoryJobs.delete(jobId);
     const jobs = inMemoryQueues.get(queueName);
     if (jobs) {
-      const index = jobs.findIndex(j => j.id === jobId);
+      const index = jobs.findIndex((j) => j.id === jobId);
       if (index !== -1) {
         jobs.splice(index, 1);
       }
@@ -558,8 +565,8 @@ export async function retryJob(
 
   // In-memory fallback
   const job = inMemoryJobs.get(jobId);
-  if (job && job.status === 'failed') {
-    job.status = 'waiting';
+  if (job && job.status === "failed") {
+    job.status = "waiting";
     job.attemptsMade = 0;
     job.failedReason = undefined;
     processInMemoryJob(queueName);
@@ -574,12 +581,12 @@ export async function retryJob(
 export async function cleanQueue(
   queueName: QueueName,
   grace: number = 3600000, // 1 hour
-  status: 'completed' | 'failed' = 'completed'
+  status: "completed" | "failed" = "completed"
 ): Promise<number> {
   if (bullmqQueues?.has(queueName)) {
     const queue = bullmqQueues.get(queueName)!;
     const jobs = await queue.clean(grace, 1000, status);
-    logger.info('Queue cleaned', { queueName, status, removed: jobs.length });
+    logger.info("Queue cleaned", { queueName, status, removed: jobs.length });
     return jobs.length;
   }
   return 0;
@@ -611,7 +618,7 @@ export function registerProcessor<T extends JobData>(
   const key = `${queueName}:${jobName}`;
   // Type assertion is safe because T extends JobData
   processors.set(key, processor as JobProcessor<JobData>);
-  logger.info('Job processor registered', { queueName, jobName });
+  logger.info("Job processor registered", { queueName, jobName });
 }
 
 /**
@@ -619,7 +626,7 @@ export function registerProcessor<T extends JobData>(
  */
 async function processInMemoryJob(queueName: QueueName): Promise<void> {
   const jobs = inMemoryQueues.get(queueName) || [];
-  const waitingJob = jobs.find(j => j.status === 'waiting');
+  const waitingJob = jobs.find((j) => j.status === "waiting");
 
   if (!waitingJob) return;
 
@@ -627,14 +634,14 @@ async function processInMemoryJob(queueName: QueueName): Promise<void> {
   const processor = processors.get(key);
 
   if (!processor) {
-    logger.warn('No processor registered for job', {
+    logger.warn("No processor registered for job", {
       queueName,
       jobName: waitingJob.name,
     });
     return;
   }
 
-  waitingJob.status = 'active';
+  waitingJob.status = "active";
   waitingJob.processedOn = new Date();
 
   try {
@@ -645,11 +652,11 @@ async function processInMemoryJob(queueName: QueueName): Promise<void> {
       }
     );
 
-    waitingJob.status = 'completed';
+    waitingJob.status = "completed";
     waitingJob.finishedOn = new Date();
     waitingJob.progress = 100;
 
-    logger.debug('In-memory job completed', {
+    logger.debug("In-memory job completed", {
       queueName,
       jobId: waitingJob.id,
     });
@@ -658,18 +665,19 @@ async function processInMemoryJob(queueName: QueueName): Promise<void> {
     const maxAttempts = waitingJob.options.attempts || 3;
 
     if (waitingJob.attemptsMade >= maxAttempts) {
-      waitingJob.status = 'failed';
-      waitingJob.failedReason = error instanceof Error ? error.message : 'Unknown error';
+      waitingJob.status = "failed";
+      waitingJob.failedReason =
+        error instanceof Error ? error.message : "Unknown error";
       waitingJob.finishedOn = new Date();
 
-      logger.error('In-memory job failed', error, {
+      logger.error("In-memory job failed", error, {
         queueName,
         jobId: waitingJob.id,
         attempts: waitingJob.attemptsMade,
       });
     } else {
-      waitingJob.status = 'waiting';
-      logger.warn('In-memory job will retry', {
+      waitingJob.status = "waiting";
+      logger.warn("In-memory job will retry", {
         queueName,
         jobId: waitingJob.id,
         attempt: waitingJob.attemptsMade,
@@ -677,7 +685,10 @@ async function processInMemoryJob(queueName: QueueName): Promise<void> {
 
       // Retry after backoff
       const backoffDelay = waitingJob.options.backoff?.delay || 1000;
-      setTimeout(() => processInMemoryJob(queueName), backoffDelay * waitingJob.attemptsMade);
+      setTimeout(
+        () => processInMemoryJob(queueName),
+        backoffDelay * waitingJob.attemptsMade
+      );
     }
   }
 
@@ -696,20 +707,19 @@ export async function startWorkers(): Promise<void> {
   const config = getConfig();
 
   if (!config.enabled || !bullmqQueues) {
-    logger.info('Workers using in-memory processing');
+    logger.info("Workers using in-memory processing");
     return;
   }
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-eval -- Dynamic require for optional BullMQ/ioredis
     const dynamicRequire = (moduleName: string): unknown => {
-      return eval('require')(moduleName);
+      return eval("require")(moduleName);
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- BullMQ is optionally loaded
-    const { Worker } = dynamicRequire('bullmq') as any;
+    const { Worker } = dynamicRequire("bullmq") as any;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ioredis is optionally loaded
-    const IORedis = dynamicRequire('ioredis') as any;
+    const IORedis = dynamicRequire("ioredis") as any;
 
     const connection = config.redisUrl
       ? new IORedis(config.redisUrl, { maxRetriesPerRequest: null })
@@ -726,7 +736,12 @@ export async function startWorkers(): Promise<void> {
       const worker = new Worker(
         queueName,
         // BullMQ job type
-        async (job: { id: string; name: string; data: JobData; updateProgress: (progress: number) => Promise<void> }) => {
+        async (job: {
+          id: string;
+          name: string;
+          data: JobData;
+          updateProgress: (progress: number) => Promise<void>;
+        }) => {
           const key = `${queueName}:${job.name}`;
           const processor = processors.get(key);
 
@@ -749,29 +764,34 @@ export async function startWorkers(): Promise<void> {
       );
 
       // BullMQ job event types
-      worker.on('completed', (job: { id: string; name: string }) => {
-        logger.debug('Job completed', {
+      worker.on("completed", (job: { id: string; name: string }) => {
+        logger.debug("Job completed", {
           queueName,
           jobId: job.id,
           jobName: job.name,
         });
       });
 
-      worker.on('failed', (job: { id?: string; name?: string } | undefined, err: Error) => {
-        logger.error('Job failed', err, {
-          queueName,
-          jobId: job?.id,
-          jobName: job?.name,
-        });
-      });
+      worker.on(
+        "failed",
+        (job: { id?: string; name?: string } | undefined, err: Error) => {
+          logger.error("Job failed", err, {
+            queueName,
+            jobId: job?.id,
+            jobName: job?.name,
+          });
+        }
+      );
 
       bullmqWorkers.set(queueName as QueueName, worker);
-      logger.info(`Worker started: ${queueName}`, { concurrency: queueConfig.concurrency });
+      logger.info(`Worker started: ${queueName}`, {
+        concurrency: queueConfig.concurrency,
+      });
     }
 
-    logger.info('All workers started');
+    logger.info("All workers started");
   } catch (error) {
-    logger.error('Failed to start workers', error);
+    logger.error("Failed to start workers", error);
   }
 }
 
@@ -783,24 +803,29 @@ export async function stopWorkers(): Promise<void> {
   if (!bullmqWorkers) return;
 
   isDraining = true;
-  logger.info('Workers entering draining mode - waiting for active jobs to complete');
+  logger.info(
+    "Workers entering draining mode - waiting for active jobs to complete"
+  );
 
   const closePromises: Promise<void>[] = [];
 
   for (const [queueName, worker] of bullmqWorkers) {
     closePromises.push(
-      worker.close().then(() => {
-        logger.info(`Worker stopped: ${queueName}`);
-      }).catch((error: Error) => {
-        logger.error(`Error stopping worker: ${queueName}`, error);
-      })
+      worker
+        .close()
+        .then(() => {
+          logger.info(`Worker stopped: ${queueName}`);
+        })
+        .catch((error: Error) => {
+          logger.error(`Error stopping worker: ${queueName}`, error);
+        })
     );
   }
 
   await Promise.all(closePromises);
   bullmqWorkers = null;
   isDraining = false;
-  logger.info('All workers stopped');
+  logger.info("All workers stopped");
 }
 
 /**
@@ -813,17 +838,20 @@ export async function closeQueues(): Promise<void> {
 
   for (const [queueName, queue] of bullmqQueues) {
     closePromises.push(
-      queue.close().then(() => {
-        logger.info(`Queue closed: ${queueName}`);
-      }).catch((error: Error) => {
-        logger.error(`Error closing queue: ${queueName}`, error);
-      })
+      queue
+        .close()
+        .then(() => {
+          logger.info(`Queue closed: ${queueName}`);
+        })
+        .catch((error: Error) => {
+          logger.error(`Error closing queue: ${queueName}`, error);
+        })
     );
   }
 
   await Promise.all(closePromises);
   bullmqQueues = null;
-  logger.info('All queues closed');
+  logger.info("All queues closed");
 }
 
 /**
@@ -852,9 +880,9 @@ export async function gracefulShutdown(signal: string): Promise<void> {
       // Step 2: Close all queues
       await closeQueues();
 
-      logger.info('Graceful shutdown completed successfully');
+      logger.info("Graceful shutdown completed successfully");
     } catch (error) {
-      logger.error('Error during graceful shutdown', error);
+      logger.error("Error during graceful shutdown", error);
     }
   })();
 
@@ -869,17 +897,17 @@ export function registerShutdownHandlers(): void {
   if (signalHandlersRegistered) return;
   signalHandlersRegistered = true;
 
-  process.on('SIGTERM', async () => {
-    await gracefulShutdown('SIGTERM');
+  process.on("SIGTERM", async () => {
+    await gracefulShutdown("SIGTERM");
     process.exit(0);
   });
 
-  process.on('SIGINT', async () => {
-    await gracefulShutdown('SIGINT');
+  process.on("SIGINT", async () => {
+    await gracefulShutdown("SIGINT");
     process.exit(0);
   });
 
-  logger.info('Graceful shutdown handlers registered (SIGTERM, SIGINT)');
+  logger.info("Graceful shutdown handlers registered (SIGTERM, SIGINT)");
 }
 
 // =============================================================================
@@ -892,7 +920,7 @@ export function registerShutdownHandlers(): void {
 export async function initializeQueues(): Promise<void> {
   await initializeBullMQ();
   registerShutdownHandlers();
-  logger.info('Queue system initialized');
+  logger.info("Queue system initialized");
 }
 
 /**
@@ -900,7 +928,7 @@ export async function initializeQueues(): Promise<void> {
  */
 export interface QueueHealthStatus {
   ready: boolean;
-  provider: 'bullmq' | 'in-memory';
+  provider: "bullmq" | "in-memory";
   redisConnected: boolean;
   redisPingMs: number | null;
   queuesInitialized: boolean;
@@ -954,7 +982,7 @@ export async function getQueueHealthStatus(): Promise<QueueHealthStatus> {
   if (!config.enabled) {
     return {
       ready: true,
-      provider: 'in-memory',
+      provider: "in-memory",
       redisConnected: false,
       redisPingMs: null,
       queuesInitialized: true,
@@ -967,13 +995,13 @@ export async function getQueueHealthStatus(): Promise<QueueHealthStatus> {
   if (!bullmqQueues || bullmqQueues.size === 0) {
     return {
       ready: false,
-      provider: 'bullmq',
+      provider: "bullmq",
       redisConnected: false,
       redisPingMs: null,
       queuesInitialized: false,
       allQueuesOperational: false,
       pausedQueues: [],
-      error: 'BullMQ queues not initialized',
+      error: "BullMQ queues not initialized",
     };
   }
 
@@ -987,15 +1015,15 @@ export async function getQueueHealthStatus(): Promise<QueueHealthStatus> {
       const pingResult = await Promise.race([
         redisConnection.ping(),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Redis ping timeout')), 5000)
+          setTimeout(() => reject(new Error("Redis ping timeout")), 5000)
         ),
       ]);
       redisPingMs = Date.now() - pingStart;
-      redisConnected = pingResult === 'PONG';
+      redisConnected = pingResult === "PONG";
     } catch (error) {
       redisConnected = false;
       redisPingMs = null;
-      logger.warn('Redis ping failed during health check', { error });
+      logger.warn("Redis ping failed during health check", { error });
     }
   }
 
@@ -1003,13 +1031,13 @@ export async function getQueueHealthStatus(): Promise<QueueHealthStatus> {
   if (!redisConnected) {
     return {
       ready: false,
-      provider: 'bullmq',
+      provider: "bullmq",
       redisConnected: false,
       redisPingMs: null,
       queuesInitialized: true,
       allQueuesOperational: false,
       pausedQueues: [],
-      error: 'Redis connection failed',
+      error: "Redis connection failed",
     };
   }
 
@@ -1027,16 +1055,16 @@ export async function getQueueHealthStatus(): Promise<QueueHealthStatus> {
       }
     }
   } catch (error) {
-    logger.warn('Failed to check queue states', { error });
+    logger.warn("Failed to check queue states", { error });
     return {
       ready: false,
-      provider: 'bullmq',
+      provider: "bullmq",
       redisConnected,
       redisPingMs,
       queuesInitialized: true,
       allQueuesOperational: false,
       pausedQueues: [],
-      error: 'Failed to check queue states',
+      error: "Failed to check queue states",
     };
   }
 
@@ -1046,14 +1074,14 @@ export async function getQueueHealthStatus(): Promise<QueueHealthStatus> {
 
   return {
     ready,
-    provider: 'bullmq',
+    provider: "bullmq",
     redisConnected,
     redisPingMs,
     queuesInitialized: true,
     allQueuesOperational,
     pausedQueues,
     ...(pausedQueues.length === bullmqQueues.size && {
-      error: 'All queues are paused',
+      error: "All queues are paused",
     }),
   };
 }
@@ -1063,12 +1091,12 @@ export async function getQueueHealthStatus(): Promise<QueueHealthStatus> {
  */
 export function getQueueInfo(): {
   enabled: boolean;
-  provider: 'bullmq' | 'in-memory';
+  provider: "bullmq" | "in-memory";
   queues: QueueName[];
 } {
   return {
     enabled: getConfig().enabled,
-    provider: bullmqQueues ? 'bullmq' : 'in-memory',
+    provider: bullmqQueues ? "bullmq" : "in-memory",
     queues: Object.keys(QUEUE_CONFIGS) as QueueName[],
   };
 }

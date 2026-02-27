@@ -98,7 +98,8 @@ export async function getUserSecurityEvents(
   return db.securityEvent.findMany({
     where: {
       userId,
-      ...(eventTypes && eventTypes.length > 0 && { eventType: { in: eventTypes } }),
+      ...(eventTypes &&
+        eventTypes.length > 0 && { eventType: { in: eventTypes } }),
     },
     select: {
       id: true,
@@ -171,14 +172,21 @@ export async function checkSuspiciousActivity(
   });
 
   if (passwordResets >= 3) {
-    reasons.push(`${passwordResets} password reset requests in the last 24 hours`);
+    reasons.push(
+      `${passwordResets} password reset requests in the last 24 hours`
+    );
   }
 
   // Check for session revocations
   const sessionRevokes = await db.securityEvent.count({
     where: {
       userId,
-      eventType: { in: [SecurityEventType.SESSION_REVOKE, SecurityEventType.SESSION_REVOKE_ALL] },
+      eventType: {
+        in: [
+          SecurityEventType.SESSION_REVOKE,
+          SecurityEventType.SESSION_REVOKE_ALL,
+        ],
+      },
       createdAt: { gte: oneDayAgo },
     },
   });
@@ -206,14 +214,21 @@ function parseDeviceInfo(userAgent: string | null | undefined): string {
   if (userAgent.includes("Firefox/")) browser = "Firefox";
   else if (userAgent.includes("Edg/")) browser = "Edge";
   else if (userAgent.includes("Chrome/")) browser = "Chrome";
-  else if (userAgent.includes("Safari/") && !userAgent.includes("Chrome")) browser = "Safari";
-  else if (userAgent.includes("Opera") || userAgent.includes("OPR/")) browser = "Opera";
+  else if (userAgent.includes("Safari/") && !userAgent.includes("Chrome"))
+    browser = "Safari";
+  else if (userAgent.includes("Opera") || userAgent.includes("OPR/"))
+    browser = "Opera";
 
   // Detect OS
-  if (userAgent.includes("Windows NT 10") || userAgent.includes("Windows NT 11")) os = "Windows";
+  if (
+    userAgent.includes("Windows NT 10") ||
+    userAgent.includes("Windows NT 11")
+  )
+    os = "Windows";
   else if (userAgent.includes("Windows")) os = "Windows";
   else if (userAgent.includes("Mac OS X")) os = "macOS";
-  else if (userAgent.includes("Linux") && !userAgent.includes("Android")) os = "Linux";
+  else if (userAgent.includes("Linux") && !userAgent.includes("Android"))
+    os = "Linux";
   else if (userAgent.includes("Android")) os = "Android";
   else if (userAgent.includes("iPhone")) os = "iPhone";
   else if (userAgent.includes("iPad")) os = "iPad";
@@ -240,10 +255,12 @@ export function formatSecurityEvent(event: {
     [SecurityEventType.PASSWORD_RESET_REQUEST]: "Password reset requested",
     [SecurityEventType.MFA_ENABLE]: "Two-factor authentication enabled",
     [SecurityEventType.MFA_DISABLE]: "Two-factor authentication disabled",
-    [SecurityEventType.MFA_VERIFY_SUCCESS]: "Two-factor verification successful",
+    [SecurityEventType.MFA_VERIFY_SUCCESS]:
+      "Two-factor verification successful",
     [SecurityEventType.MFA_VERIFY_FAILURE]: "Two-factor verification failed",
     [SecurityEventType.RECOVERY_CODE_USED]: "Recovery code used for login",
-    [SecurityEventType.RECOVERY_CODES_REGENERATED]: "Recovery codes regenerated",
+    [SecurityEventType.RECOVERY_CODES_REGENERATED]:
+      "Recovery codes regenerated",
     [SecurityEventType.SESSION_REVOKE]: "Session revoked",
     [SecurityEventType.SESSION_REVOKE_ALL]: "All sessions revoked",
     [SecurityEventType.PROFILE_UPDATE]: "Profile updated",

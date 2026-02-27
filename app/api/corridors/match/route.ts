@@ -6,11 +6,14 @@
  * Find matching corridor for a given route
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { findMatchingCorridor, calculateFeeFromCorridor } from '@/lib/serviceFeeCalculation';
-import { z } from 'zod';
-import { zodErrorResponse } from '@/lib/validation';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import {
+  findMatchingCorridor,
+  calculateFeeFromCorridor,
+} from "@/lib/serviceFeeCalculation";
+import { z } from "zod";
+import { zodErrorResponse } from "@/lib/validation";
 
 const matchCorridorSchema = z.object({
   originRegion: z.string().min(1),
@@ -37,7 +40,7 @@ export async function POST(request: NextRequest) {
     if (!match) {
       return NextResponse.json({
         found: false,
-        message: 'No corridor found for this route',
+        message: "No corridor found for this route",
         corridor: null,
         serviceFee: null,
       });
@@ -73,14 +76,14 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Corridor match error:', error);
+    console.error("Corridor match error:", error);
 
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

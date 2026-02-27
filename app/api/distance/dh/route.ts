@@ -14,17 +14,20 @@
  * MAP + GPS Implementation - Phase 3
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { calculateDistanceKm } from '@/lib/geo';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { calculateDistanceKm } from "@/lib/geo";
 
 // Type for DH calculation result
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DhResult = Record<string, any>;
 
 // Cache for distance calculations
-const distanceCache = new Map<string, { distance: number; duration: number; timestamp: number }>();
+const distanceCache = new Map<
+  string,
+  { distance: number; duration: number; timestamp: number }
+>();
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 
 // Use centralized haversine from lib/geo.ts
@@ -49,17 +52,22 @@ async function getGoogleDistance(
   }
 
   try {
-    const url = new URL('https://maps.googleapis.com/maps/api/distancematrix/json');
-    url.searchParams.set('origins', `${originLat},${originLng}`);
-    url.searchParams.set('destinations', `${destLat},${destLng}`);
-    url.searchParams.set('mode', 'driving');
-    url.searchParams.set('units', 'metric');
-    url.searchParams.set('key', apiKey);
+    const url = new URL(
+      "https://maps.googleapis.com/maps/api/distancematrix/json"
+    );
+    url.searchParams.set("origins", `${originLat},${originLng}`);
+    url.searchParams.set("destinations", `${destLat},${destLng}`);
+    url.searchParams.set("mode", "driving");
+    url.searchParams.set("units", "metric");
+    url.searchParams.set("key", apiKey);
 
     const response = await fetch(url.toString());
     const data = await response.json();
 
-    if (data.status !== 'OK' || data.rows?.[0]?.elements?.[0]?.status !== 'OK') {
+    if (
+      data.status !== "OK" ||
+      data.rows?.[0]?.elements?.[0]?.status !== "OK"
+    ) {
       return null;
     }
 
@@ -85,18 +93,28 @@ async function calculateDistance(
   destLat: number,
   destLng: number
 ): Promise<{ distance: number; duration: number; source: string }> {
-  const googleResult = await getGoogleDistance(originLat, originLng, destLat, destLng);
+  const googleResult = await getGoogleDistance(
+    originLat,
+    originLng,
+    destLat,
+    destLng
+  );
 
   if (googleResult) {
-    return { ...googleResult, source: 'google' };
+    return { ...googleResult, source: "google" };
   }
 
   // Fallback to Haversine with road factor
-  const straightLine = haversineDistance(originLat, originLng, destLat, destLng);
+  const straightLine = haversineDistance(
+    originLat,
+    originLng,
+    destLat,
+    destLng
+  );
   return {
     distance: straightLine * 1.3,
     duration: (straightLine / 50) * 60,
-    source: 'estimate',
+    source: "estimate",
   };
 }
 
@@ -105,13 +123,13 @@ export async function GET(request: NextRequest) {
     await requireAuth();
 
     const { searchParams } = request.nextUrl;
-    const truckId = searchParams.get('truckId');
-    const loadId = searchParams.get('loadId');
-    const type = searchParams.get('type') || 'both';
+    const truckId = searchParams.get("truckId");
+    const loadId = searchParams.get("loadId");
+    const type = searchParams.get("type") || "both";
 
     if (!truckId || !loadId) {
       return NextResponse.json(
-        { error: 'truckId and loadId are required' },
+        { error: "truckId and loadId are required" },
         { status: 400 }
       );
     }
@@ -127,7 +145,7 @@ export async function GET(request: NextRequest) {
         currentCity: true,
         // Get truck's preferred destination from active posting
         postings: {
-          where: { status: 'ACTIVE' },
+          where: { status: "ACTIVE" },
           select: {
             destinationCity: {
               select: {
@@ -143,7 +161,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!truck) {
-      return NextResponse.json({ error: 'Truck not found' }, { status: 404 });
+      return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
     // Fetch load with locations
@@ -151,7 +169,7 @@ export async function GET(request: NextRequest) {
       where: { id: loadId },
       select: {
         id: true,
-                pickupCity: true,
+        pickupCity: true,
         originLat: true,
         originLon: true,
         deliveryCity: true,
@@ -161,7 +179,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!load) {
-      return NextResponse.json({ error: 'Load not found' }, { status: 404 });
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     const result: DhResult = {
@@ -172,8 +190,13 @@ export async function GET(request: NextRequest) {
     };
 
     // Calculate DH-O (truck current location → load pickup)
-    if (type === 'dho' || type === 'both') {
-      if (truck.currentLocationLat && truck.currentLocationLon && load.originLat && load.originLon) {
+    if (type === "dho" || type === "both") {
+      if (
+        truck.currentLocationLat &&
+        truck.currentLocationLon &&
+        load.originLat &&
+        load.originLon
+      ) {
         const dhoResult = await calculateDistance(
           Number(truck.currentLocationLat),
           Number(truck.currentLocationLon),
@@ -198,18 +221,25 @@ export async function GET(request: NextRequest) {
         };
       } else {
         result.dhO = {
-          error: 'Missing location data',
-          truckHasLocation: !!(truck.currentLocationLat && truck.currentLocationLon),
+          error: "Missing location data",
+          truckHasLocation: !!(
+            truck.currentLocationLat && truck.currentLocationLon
+          ),
           loadHasPickupLocation: !!(load.originLat && load.originLon),
         };
       }
     }
 
     // Calculate DH-D (load delivery → truck preferred destination)
-    if (type === 'dhd' || type === 'both') {
+    if (type === "dhd" || type === "both") {
       const truckDestination = truck.postings?.[0]?.destinationCity;
 
-      if (load.destinationLat && load.destinationLon && truckDestination?.latitude && truckDestination?.longitude) {
+      if (
+        load.destinationLat &&
+        load.destinationLon &&
+        truckDestination?.latitude &&
+        truckDestination?.longitude
+      ) {
         const dhdResult = await calculateDistance(
           Number(load.destinationLat),
           Number(load.destinationLon),
@@ -234,9 +264,13 @@ export async function GET(request: NextRequest) {
         };
       } else {
         result.dhD = {
-          error: 'Missing location data',
-          loadHasDeliveryLocation: !!(load.destinationLat && load.destinationLon),
-          truckHasPreferredDestination: !!(truckDestination?.latitude && truckDestination?.longitude),
+          error: "Missing location data",
+          loadHasDeliveryLocation: !!(
+            load.destinationLat && load.destinationLon
+          ),
+          truckHasPreferredDestination: !!(
+            truckDestination?.latitude && truckDestination?.longitude
+          ),
         };
       }
     }
@@ -244,16 +278,19 @@ export async function GET(request: NextRequest) {
     // Calculate total deadhead
     if (result.dhO?.distanceKm && result.dhD?.distanceKm) {
       result.totalDeadhead = {
-        distanceKm: Math.round((result.dhO.distanceKm + result.dhD.distanceKm) * 100) / 100,
-        durationMinutes: result.dhO.durationMinutes + result.dhD.durationMinutes,
+        distanceKm:
+          Math.round((result.dhO.distanceKm + result.dhD.distanceKm) * 100) /
+          100,
+        durationMinutes:
+          result.dhO.durationMinutes + result.dhD.durationMinutes,
       };
     }
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error('DH calculation error:', error);
+    console.error("DH calculation error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

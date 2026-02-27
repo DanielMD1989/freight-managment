@@ -5,6 +5,7 @@ A comprehensive freight management platform for connecting shippers and carriers
 ## 🌟 Features
 
 ### Sprint 1: Foundation ✅
+
 - **Authentication & Authorization**
   - Email/phone + password registration
   - JWT-based authentication with HTTP-only cookies
@@ -17,6 +18,7 @@ A comprehensive freight management platform for connecting shippers and carriers
   - Automatic financial account creation
 
 ### Sprint 2: Marketplace Core ✅
+
 - **Load Management**
   - Create, edit, and delete loads
   - Draft and publish workflow
@@ -25,6 +27,7 @@ A comprehensive freight management platform for connecting shippers and carriers
   - Auto-save functionality
 
 ### Sprint 3: Search & Profiles ✅
+
 - **Truck Management**
   - Fleet management for carriers
   - Truck type and capacity tracking
@@ -36,6 +39,7 @@ A comprehensive freight management platform for connecting shippers and carriers
   - Truck search with filters
 
 ### Sprint 4: GPS Engine ✅
+
 - **Real-time Tracking**
   - GPS device registration
   - Position data ingestion API
@@ -44,6 +48,7 @@ A comprehensive freight management platform for connecting shippers and carriers
   - Hardware device integration ready
 
 ### Sprint 5: Finance Core ✅
+
 - **Wallet System**
   - Organization-level wallets
   - Double-entry ledger system
@@ -56,6 +61,7 @@ A comprehensive freight management platform for connecting shippers and carriers
   - Balance validation
 
 ### Sprint 6: Admin & Operations ✅
+
 - **Admin Dashboard**
   - System statistics API
   - User management
@@ -123,6 +129,7 @@ npm run dev
 ## 📊 Database Configuration
 
 **Development Database (Docker):**
+
 ```
 Host: localhost
 Port: 5432
@@ -132,6 +139,7 @@ Password: freight_password
 ```
 
 Connection string in `.env.local`:
+
 ```env
 DATABASE_URL="postgresql://freight_user:freight_password@localhost:5432/freight_db?schema=public"
 ```
@@ -189,18 +197,21 @@ freight-management/
 ## 🌐 API Endpoints
 
 ### Authentication
+
 - `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - Login
 - `POST /api/auth/logout` - Logout
 - `GET /api/auth/me` - Get current user
 
 ### Organizations
+
 - `POST /api/organizations` - Create organization
 - `GET /api/organizations` - List organizations
 - `GET /api/organizations/me` - Get my organization
 - `PATCH /api/organizations/[id]` - Update organization
 
 ### Loads
+
 - `POST /api/loads` - Create load
 - `GET /api/loads` - List/search loads
 - `GET /api/loads/[id]` - Get load details
@@ -208,42 +219,48 @@ freight-management/
 - `DELETE /api/loads/[id]` - Delete load
 
 ### Trucks
+
 - `POST /api/trucks` - Create truck
 - `GET /api/trucks` - List/search trucks
 
 ### GPS
+
 - `POST /api/gps/devices` - Register GPS device
 - `GET /api/gps/devices` - List GPS devices
 - `POST /api/gps/positions` - Receive GPS data
 - `GET /api/gps/positions` - Get GPS positions
 
 ### Financial
+
 - `GET /api/financial/wallet` - Get wallet balance
 - `POST /api/financial/wallet` - Deposit funds
 - `POST /api/financial/withdraw` - Request withdrawal
 
 ### Dispatch
+
 - `POST /api/dispatch` - Assign truck to load
 
 ### Admin
+
 - `GET /api/admin/dashboard` - Get dashboard stats
 - `GET /api/admin/users` - List all users
 - `PATCH /api/admin/users` - Update user role
 
 ## 🔒 Permissions System
 
-| Role | Key Permissions |
-|------|-----------------|
-| **SHIPPER** | Create/manage loads, wallet operations |
-| **CARRIER** | Create/manage trucks, accept loads, GPS tracking |
-| **LOGISTICS_AGENT** | Combined shipper + carrier permissions |
-| **DRIVER** | View loads, trucks, GPS |
-| **PLATFORM_OPS** | Dispatch, manage disputes, approve withdrawals |
-| **ADMIN** | All permissions |
+| Role                | Key Permissions                                  |
+| ------------------- | ------------------------------------------------ |
+| **SHIPPER**         | Create/manage loads, wallet operations           |
+| **CARRIER**         | Create/manage trucks, accept loads, GPS tracking |
+| **LOGISTICS_AGENT** | Combined shipper + carrier permissions           |
+| **DRIVER**          | View loads, trucks, GPS                          |
+| **PLATFORM_OPS**    | Dispatch, manage disputes, approve withdrawals   |
+| **ADMIN**           | All permissions                                  |
 
 ## 🐳 Docker Services
 
 ### Development
+
 - **PostgreSQL** (5432) - Main database
 - **Redis** (6379) - Caching & sessions
 - **pgAdmin** (5050) - Database management UI
@@ -289,12 +306,14 @@ See `USER_STORIES_AND_TASKS.md` for detailed tracking.
 ## 🎯 Next Steps
 
 **Remaining MVP Tasks:**
+
 - [ ] Additional UI components
 - [ ] Email notification setup
 - [ ] Password reset flow
 - [ ] Comprehensive testing
 
 **Phase 2:**
+
 - [ ] Mobile app
 - [ ] Advanced analytics
 - [ ] Automated settlements

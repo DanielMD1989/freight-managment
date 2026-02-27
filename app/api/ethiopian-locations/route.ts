@@ -6,9 +6,9 @@
  * PHASE 4: Added caching - locations rarely change, cache for 1 hour
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { cacheAside, CacheKeys } from '@/lib/cache';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { cacheAside, CacheKeys } from "@/lib/cache";
 
 // Cache TTL: 1 hour (locations rarely change)
 const LOCATIONS_CACHE_TTL = 60 * 60;
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
             longitude: true,
           },
           orderBy: {
-            name: 'asc',
+            name: "asc",
           },
         });
       },
@@ -62,9 +62,9 @@ export async function GET(request: NextRequest) {
       count: locations.length,
     });
   } catch (error) {
-    console.error('Failed to fetch Ethiopian locations:', error);
+    console.error("Failed to fetch Ethiopian locations:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch locations' },
+      { error: "Failed to fetch locations" },
       { status: 500 }
     );
   }

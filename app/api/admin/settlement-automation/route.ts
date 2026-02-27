@@ -4,16 +4,16 @@
  * Admin endpoint to trigger automated settlement workflows
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requirePermission, Permission } from '@/lib/rbac';
+import { NextRequest, NextResponse } from "next/server";
+import { requirePermission, Permission } from "@/lib/rbac";
 import {
   runSettlementAutomation,
   getSettlementStats,
   autoVerifyExpiredPODs,
   processReadySettlements,
-} from '@/lib/settlementAutomation';
+} from "@/lib/settlementAutomation";
 // CSRF FIX: Add CSRF validation
-import { validateCSRFWithMobile } from '@/lib/csrf';
+import { validateCSRFWithMobile } from "@/lib/csrf";
 
 /**
  * GET /api/admin/settlement-automation
@@ -31,14 +31,14 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Get settlement stats error:', error);
+    console.error("Get settlement stats error:", error);
 
-    if (error instanceof Error && error.name === 'ForbiddenError') {
+    if (error instanceof Error && error.name === "ForbiddenError") {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
@@ -61,32 +61,37 @@ export async function POST(request: NextRequest) {
     await requirePermission(Permission.MANAGE_SETTLEMENTS);
 
     const { searchParams } = request.nextUrl;
-    const action = searchParams.get('action') || 'full';
+    const action = searchParams.get("action") || "full";
 
-    let result: { action: string; autoVerifiedCount?: number; settledCount?: number; [key: string]: unknown } = { action: '' };
+    let result: {
+      action: string;
+      autoVerifiedCount?: number;
+      settledCount?: number;
+      [key: string]: unknown;
+    } = { action: "" };
 
     switch (action) {
-      case 'auto-verify':
+      case "auto-verify":
         const autoVerifiedCount = await autoVerifyExpiredPODs();
         result = {
-          action: 'auto-verify',
+          action: "auto-verify",
           autoVerifiedCount,
         };
         break;
 
-      case 'process-settlements':
+      case "process-settlements":
         const settledCount = await processReadySettlements();
         result = {
-          action: 'process-settlements',
+          action: "process-settlements",
           settledCount,
         };
         break;
 
-      case 'full':
+      case "full":
       default:
         const automationResult = await runSettlementAutomation();
         result = {
-          action: 'full',
+          action: "full",
           ...automationResult,
         };
         break;
@@ -96,21 +101,21 @@ export async function POST(request: NextRequest) {
     const stats = await getSettlementStats();
 
     return NextResponse.json({
-      message: 'Settlement automation completed successfully',
+      message: "Settlement automation completed successfully",
       result,
       stats,
       timestamp: new Date().toISOString(),
     });
-  // FIX: Use unknown type with type guard
+    // FIX: Use unknown type with type guard
   } catch (error: unknown) {
-    console.error('Settlement automation error:', error);
+    console.error("Settlement automation error:", error);
 
-    if (error instanceof Error && error.name === 'ForbiddenError') {
+    if (error instanceof Error && error.name === "ForbiddenError") {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
 
     return NextResponse.json(
-      { error: 'Settlement automation failed' },
+      { error: "Settlement automation failed" },
       { status: 500 }
     );
   }

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Shipper Header Component
@@ -9,8 +9,8 @@
  * Uses portal-header styles from globals.css
  */
 
-import NotificationBell from '@/components/NotificationBell';
-import ProfileMenu from '@/components/ProfileMenu';
+import NotificationBell from "@/components/NotificationBell";
+import ProfileMenu from "@/components/ProfileMenu";
 
 interface ShipperHeaderProps {
   user: {
@@ -31,7 +31,7 @@ export default function ShipperHeader({ user }: ShipperHeaderProps) {
       <div className="flex items-center gap-4">
         <NotificationBell />
 
-        <div className="h-8 w-px bg-white/20 hidden sm:block" />
+        <div className="hidden h-8 w-px bg-white/20 sm:block" />
 
         {/* Profile Menu Dropdown */}
         <ProfileMenu user={user} portalPrefix="/shipper" />

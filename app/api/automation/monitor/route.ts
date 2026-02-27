@@ -3,12 +3,12 @@
  * System endpoint for running scheduled automation rules
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { requirePermission, Permission } from '@/lib/rbac';
-import { evaluateScheduledRules } from '@/lib/automationRules';
-import { executeAndRecordRuleActions } from '@/lib/automationActions';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { requirePermission, Permission } from "@/lib/rbac";
+import { evaluateScheduledRules } from "@/lib/automationRules";
+import { executeAndRecordRuleActions } from "@/lib/automationActions";
 
 // POST /api/automation/monitor - Run scheduled automation rules
 export async function POST(request: NextRequest) {
@@ -22,7 +22,11 @@ export async function POST(request: NextRequest) {
     const executionResults = [];
     for (const { ruleId, loadId, result } of scheduledResults.results) {
       if (result.matched) {
-        const execution = await executeAndRecordRuleActions(loadId, result, 'SYSTEM');
+        const execution = await executeAndRecordRuleActions(
+          loadId,
+          result,
+          "SYSTEM"
+        );
         executionResults.push({
           ruleId,
           loadId,
@@ -35,19 +39,22 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      message: 'Scheduled automation rules executed',
+      message: "Scheduled automation rules executed",
       summary: {
         rulesEvaluated: scheduledResults.executed,
         successful: scheduledResults.successful,
         failed: scheduledResults.failed,
-        actionsExecuted: executionResults.reduce((sum, r) => sum + r.actionsExecuted, 0),
+        actionsExecuted: executionResults.reduce(
+          (sum, r) => sum + r.actionsExecuted,
+          0
+        ),
       },
       executions: executionResults,
     });
   } catch (error) {
-    console.error('Monitor automation rules error:', error);
+    console.error("Monitor automation rules error:", error);
     return NextResponse.json(
-      { error: 'Failed to monitor automation rules' },
+      { error: "Failed to monitor automation rules" },
       { status: 500 }
     );
   }
@@ -63,11 +70,8 @@ export async function GET(request: NextRequest) {
     const dueRules = await db.automationRule.findMany({
       where: {
         isEnabled: true,
-        trigger: 'ON_SCHEDULE',
-        OR: [
-          { nextExecutionAt: null },
-          { nextExecutionAt: { lte: now } },
-        ],
+        trigger: "ON_SCHEDULE",
+        OR: [{ nextExecutionAt: null }, { nextExecutionAt: { lte: now } }],
       },
       select: {
         id: true,
@@ -87,7 +91,7 @@ export async function GET(request: NextRequest) {
           gte: new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24 hours
         },
       },
-      orderBy: { executedAt: 'desc' },
+      orderBy: { executedAt: "desc" },
       take: 20,
       include: {
         rule: {
@@ -110,9 +114,9 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Get automation monitor status error:', error);
+    console.error("Get automation monitor status error:", error);
     return NextResponse.json(
-      { error: 'Failed to get automation monitor status' },
+      { error: "Failed to get automation monitor status" },
       { status: 500 }
     );
   }

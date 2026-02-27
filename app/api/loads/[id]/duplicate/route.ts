@@ -8,11 +8,11 @@
  * Sprint 2 - Story 2.3: Load Listing & Editing
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requirePermission, Permission } from '@/lib/rbac';
-import { validateCSRFWithMobile } from '@/lib/csrf';
-import { CacheInvalidation } from '@/lib/cache';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requirePermission, Permission } from "@/lib/rbac";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { CacheInvalidation } from "@/lib/cache";
 
 /**
  * POST /api/loads/[id]/duplicate
@@ -44,19 +44,16 @@ export async function POST(
     });
 
     if (!originalLoad) {
-      return NextResponse.json(
-        { error: 'Load not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // H14 FIX: Verify ownership or admin access (include SUPER_ADMIN)
     const isOwner = originalLoad.shipperId === session.organizationId;
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isOwner && !isAdmin) {
       return NextResponse.json(
-        { error: 'Forbidden: You can only duplicate your own loads' },
+        { error: "Forbidden: You can only duplicate your own loads" },
         { status: 403 }
       );
     }
@@ -65,7 +62,7 @@ export async function POST(
     const duplicateLoad = await db.load.create({
       data: {
         // Copy all fields except unique identifiers and status
-        status: 'DRAFT',
+        status: "DRAFT",
         // Reset Sprint 14 DAT-style fields
         isKept: false,
         hasAlerts: false,
@@ -133,7 +130,7 @@ export async function POST(
     await db.loadEvent.create({
       data: {
         loadId: duplicateLoad.id,
-        eventType: 'DUPLICATED',
+        eventType: "DUPLICATED",
         description: `Load duplicated from load ${id}`,
         userId: session.userId,
         metadata: {
@@ -146,15 +143,15 @@ export async function POST(
     await CacheInvalidation.load(duplicateLoad.id, session.organizationId!);
 
     return NextResponse.json({
-      message: 'Load duplicated successfully',
+      message: "Load duplicated successfully",
       load: duplicateLoad,
     });
-  // FIX: Use unknown type
+    // FIX: Use unknown type
   } catch (error: unknown) {
-    console.error('Error duplicating load:', error);
+    console.error("Error duplicating load:", error);
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

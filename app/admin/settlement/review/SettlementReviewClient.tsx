@@ -7,10 +7,10 @@
  * Allows SuperAdmins to review and manage settlements globally
  */
 
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { getCSRFToken } from '@/lib/csrfFetch';
+import { useEffect, useState } from "react";
+import { getCSRFToken } from "@/lib/csrfFetch";
 
 // Simple time-ago utility function
 function getTimeAgo(date: Date): string {
@@ -20,17 +20,18 @@ function getTimeAgo(date: Date): string {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return 'just now';
-  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-  if (diffDays < 30) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  if (diffMins < 1) return "just now";
+  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? "s" : ""} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+  if (diffDays < 30) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
   const diffMonths = Math.floor(diffDays / 30);
-  if (diffMonths < 12) return `${diffMonths} month${diffMonths > 1 ? 's' : ''} ago`;
+  if (diffMonths < 12)
+    return `${diffMonths} month${diffMonths > 1 ? "s" : ""} ago`;
   const diffYears = Math.floor(diffDays / 365);
-  return `${diffYears} year${diffYears > 1 ? 's' : ''} ago`;
+  return `${diffYears} year${diffYears > 1 ? "s" : ""} ago`;
 }
 
-type SettlementStatus = 'PENDING' | 'PAID' | 'DISPUTE';
+type SettlementStatus = "PENDING" | "PAID" | "DISPUTE";
 
 interface Load {
   id: string;
@@ -75,7 +76,7 @@ interface SettlementResponse {
 }
 
 export default function SettlementReviewClient() {
-  const [activeTab, setActiveTab] = useState<SettlementStatus>('PENDING');
+  const [activeTab, setActiveTab] = useState<SettlementStatus>("PENDING");
   const [loads, setLoads] = useState<Load[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
@@ -104,13 +105,13 @@ export default function SettlementReviewClient() {
         setTotalCount(data.totalCount);
       } else {
         // L41 FIX: Set error state instead of just logging
-        setFetchError('Failed to fetch settlements');
-        console.error('Failed to fetch settlements');
+        setFetchError("Failed to fetch settlements");
+        console.error("Failed to fetch settlements");
       }
     } catch (error) {
       // L41 FIX: Set error state instead of just logging
-      setFetchError('Network error while fetching settlements');
-      console.error('Error fetching settlements:', error);
+      setFetchError("Network error while fetching settlements");
+      console.error("Error fetching settlements:", error);
     } finally {
       setLoading(false);
     }
@@ -145,18 +146,18 @@ export default function SettlementReviewClient() {
     try {
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/admin/settlements/${loadId}/approve`, {
-        method: 'POST',
-        headers: { ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
-        credentials: 'include',
+        method: "POST",
+        headers: { ...(csrfToken && { "X-CSRF-Token": csrfToken }) },
+        credentials: "include",
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to approve settlement');
+        throw new Error(data.error || "Failed to approve settlement");
       }
 
-      setApprovalSuccess('Settlement approved successfully!');
+      setApprovalSuccess("Settlement approved successfully!");
 
       // Refresh the settlements list
       await fetchSettlements();
@@ -168,7 +169,7 @@ export default function SettlementReviewClient() {
       }, 2000);
     } catch (error) {
       setApprovalError(
-        error instanceof Error ? error.message : 'Failed to approve settlement'
+        error instanceof Error ? error.message : "Failed to approve settlement"
       );
     } finally {
       setApproving(false);
@@ -177,9 +178,9 @@ export default function SettlementReviewClient() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-12 text-center">
-        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#1e9c99]"></div>
-        <p className="text-[#064d51]/70 mt-4">Loading settlements...</p>
+      <div className="rounded-xl border border-[#064d51]/10 bg-white p-12 text-center shadow-sm">
+        <div className="inline-block h-12 w-12 animate-spin rounded-full border-b-2 border-[#1e9c99]"></div>
+        <p className="mt-4 text-[#064d51]/70">Loading settlements...</p>
       </div>
     );
   }
@@ -187,12 +188,12 @@ export default function SettlementReviewClient() {
   // L41 FIX: Show error state to user
   if (fetchError) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-        <h3 className="text-red-800 font-semibold mb-2">Error</h3>
+      <div className="rounded-xl border border-red-200 bg-red-50 p-6">
+        <h3 className="mb-2 font-semibold text-red-800">Error</h3>
         <p className="text-red-700">{fetchError}</p>
         <button
           onClick={fetchSettlements}
-          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
         >
           Retry
         </button>
@@ -203,52 +204,52 @@ export default function SettlementReviewClient() {
   return (
     <div className="space-y-6">
       {/* Tab Navigation */}
-      <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10">
+      <div className="rounded-xl border border-[#064d51]/10 bg-white shadow-sm">
         <div className="border-b border-[#064d51]/10">
-          <nav className="flex -mb-px">
+          <nav className="-mb-px flex">
             <button
-              onClick={() => setActiveTab('PENDING')}
-              className={`px-6 py-3 text-sm font-medium border-b-2 ${
-                activeTab === 'PENDING'
-                  ? 'border-[#1e9c99] text-[#064d51]'
-                  : 'border-transparent text-[#064d51]/60 hover:text-[#064d51] hover:border-[#064d51]/30'
+              onClick={() => setActiveTab("PENDING")}
+              className={`border-b-2 px-6 py-3 text-sm font-medium ${
+                activeTab === "PENDING"
+                  ? "border-[#1e9c99] text-[#064d51]"
+                  : "border-transparent text-[#064d51]/60 hover:border-[#064d51]/30 hover:text-[#064d51]"
               }`}
             >
               Pending Review
-              {activeTab === 'PENDING' && totalCount > 0 && (
-                <span className="ml-2 px-2 py-0.5 text-xs bg-[#1e9c99]/15 text-[#0d6b69] rounded-full">
+              {activeTab === "PENDING" && totalCount > 0 && (
+                <span className="ml-2 rounded-full bg-[#1e9c99]/15 px-2 py-0.5 text-xs text-[#0d6b69]">
                   {totalCount}
                 </span>
               )}
             </button>
 
             <button
-              onClick={() => setActiveTab('PAID')}
-              className={`px-6 py-3 text-sm font-medium border-b-2 ${
-                activeTab === 'PAID'
-                  ? 'border-[#1e9c99] text-[#064d51]'
-                  : 'border-transparent text-[#064d51]/60 hover:text-[#064d51] hover:border-[#064d51]/30'
+              onClick={() => setActiveTab("PAID")}
+              className={`border-b-2 px-6 py-3 text-sm font-medium ${
+                activeTab === "PAID"
+                  ? "border-[#1e9c99] text-[#064d51]"
+                  : "border-transparent text-[#064d51]/60 hover:border-[#064d51]/30 hover:text-[#064d51]"
               }`}
             >
               Settled
-              {activeTab === 'PAID' && totalCount > 0 && (
-                <span className="ml-2 px-2 py-0.5 text-xs bg-emerald-100 text-emerald-800 rounded-full">
+              {activeTab === "PAID" && totalCount > 0 && (
+                <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800">
                   {totalCount}
                 </span>
               )}
             </button>
 
             <button
-              onClick={() => setActiveTab('DISPUTE')}
-              className={`px-6 py-3 text-sm font-medium border-b-2 ${
-                activeTab === 'DISPUTE'
-                  ? 'border-[#1e9c99] text-[#064d51]'
-                  : 'border-transparent text-[#064d51]/60 hover:text-[#064d51] hover:border-[#064d51]/30'
+              onClick={() => setActiveTab("DISPUTE")}
+              className={`border-b-2 px-6 py-3 text-sm font-medium ${
+                activeTab === "DISPUTE"
+                  ? "border-[#1e9c99] text-[#064d51]"
+                  : "border-transparent text-[#064d51]/60 hover:border-[#064d51]/30 hover:text-[#064d51]"
               }`}
             >
               Disputes
-              {activeTab === 'DISPUTE' && totalCount > 0 && (
-                <span className="ml-2 px-2 py-0.5 text-xs bg-rose-100 text-rose-800 rounded-full">
+              {activeTab === "DISPUTE" && totalCount > 0 && (
+                <span className="ml-2 rounded-full bg-rose-100 px-2 py-0.5 text-xs text-rose-800">
                   {totalCount}
                 </span>
               )}
@@ -258,33 +259,33 @@ export default function SettlementReviewClient() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="rounded-xl border border-[#064d51]/10 bg-white p-6 shadow-sm">
           <p className="text-sm text-[#064d51]/70">Total Settlements</p>
-          <p className="text-3xl font-bold text-[#064d51] mt-1">{totalCount}</p>
+          <p className="mt-1 text-3xl font-bold text-[#064d51]">{totalCount}</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
+        <div className="rounded-xl border border-[#064d51]/10 bg-white p-6 shadow-sm">
           <p className="text-sm text-[#064d51]/70">Total Gross Amount</p>
-          <p className="text-3xl font-bold text-[#064d51] mt-1">
+          <p className="mt-1 text-3xl font-bold text-[#064d51]">
             {loads
               .reduce((sum, load) => sum + getSettlementAmount(load), 0)
-              .toLocaleString()}{' '}
+              .toLocaleString()}{" "}
             ETB
           </p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 p-6">
+        <div className="rounded-xl border border-[#064d51]/10 bg-white p-6 shadow-sm">
           <p className="text-sm text-[#064d51]/70">Total Service Fees</p>
-          <p className="text-3xl font-bold text-[#1e9c99] mt-1">
+          <p className="mt-1 text-3xl font-bold text-[#1e9c99]">
             {loads
               .reduce((sum, load) => sum + getServiceFeeAmount(load), 0)
-              .toLocaleString()}{' '}
+              .toLocaleString()}{" "}
             ETB
           </p>
         </div>
       </div>
 
       {/* Settlements Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-[#064d51]/10 overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-[#064d51]/10 bg-white shadow-sm">
         {loads.length === 0 ? (
           <div className="p-12 text-center">
             <svg
@@ -304,11 +305,11 @@ export default function SettlementReviewClient() {
               No {activeTab.toLowerCase()} settlements
             </h3>
             <p className="mt-1 text-sm text-[#064d51]/60">
-              {activeTab === 'PENDING'
-                ? 'All settlements have been processed'
-                : activeTab === 'PAID'
-                ? 'No settlements have been completed yet'
-                : 'No disputes at this time'}
+              {activeTab === "PENDING"
+                ? "All settlements have been processed"
+                : activeTab === "PAID"
+                  ? "No settlements have been completed yet"
+                  : "No disputes at this time"}
             </p>
           </div>
         ) : (
@@ -316,37 +317,37 @@ export default function SettlementReviewClient() {
             <table className="min-w-full divide-y divide-[#064d51]/10">
               <thead className="bg-[#064d51]/5">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-[#064d51]/70 uppercase">
                     Load ID / Route
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-[#064d51]/70 uppercase">
                     Shipper
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-[#064d51]/70 uppercase">
                     Carrier
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-[#064d51]/70 uppercase">
                     Gross Amount
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-[#064d51]/70 uppercase">
                     Service Fee
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-[#064d51]/70 uppercase">
                     Net to Carrier
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-[#064d51]/70 uppercase">
                     POD Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/70 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-[#064d51]/70 uppercase">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-[#064d51]/10">
+              <tbody className="divide-y divide-[#064d51]/10 bg-white">
                 {loads.map((load) => (
                   <tr
                     key={load.id}
-                    className="hover:bg-[#f0fdfa] cursor-pointer"
+                    className="cursor-pointer hover:bg-[#f0fdfa]"
                     onClick={() => setSelectedLoad(load)}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -359,17 +360,17 @@ export default function SettlementReviewClient() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-[#064d51]">
-                        {load.shipper?.name || 'N/A'}
+                        {load.shipper?.name || "N/A"}
                       </div>
                       {load.shipper?.isVerified && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                        <span className="inline-flex items-center rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
                           Verified
                         </span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-[#064d51]">
-                        {load.assignedTruck?.carrier.name || 'N/A'}
+                        {load.assignedTruck?.carrier.name || "N/A"}
                       </div>
                       <div className="text-xs text-[#064d51]/60">
                         {load.assignedTruck?.licensePlate}
@@ -396,20 +397,20 @@ export default function SettlementReviewClient() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       {load.podVerifiedAt ? (
                         <div>
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                          <span className="inline-flex items-center rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
                             Verified
                           </span>
-                          <div className="text-xs text-[#064d51]/60 mt-1">
+                          <div className="mt-1 text-xs text-[#064d51]/60">
                             {getTimeAgo(new Date(load.podVerifiedAt))}
                           </div>
                         </div>
                       ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                        <span className="inline-flex items-center rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
                           Pending
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-6 py-4 text-right text-sm font-medium whitespace-nowrap">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -431,14 +432,14 @@ export default function SettlementReviewClient() {
       {/* Settlement Detail Modal */}
       {selectedLoad && (
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
           onClick={() => setSelectedLoad(null)}
         >
           <div
-            className="bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto border border-[#064d51]/10"
+            className="mx-4 max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl border border-[#064d51]/10 bg-white shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b border-[#064d51]/10">
+            <div className="border-b border-[#064d51]/10 p-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-[#064d51]">
                   Settlement Details
@@ -464,23 +465,23 @@ export default function SettlementReviewClient() {
               </div>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="space-y-6 p-6">
               {/* Approval Messages */}
               {approvalError && (
-                <div className="bg-rose-50 border border-rose-200 rounded-xl p-4">
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-4">
                   <p className="text-sm text-rose-800">{approvalError}</p>
                 </div>
               )}
 
               {approvalSuccess && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                   <p className="text-sm text-emerald-800">{approvalSuccess}</p>
                 </div>
               )}
 
               {/* Load Info */}
               <div>
-                <h3 className="text-sm font-semibold text-[#064d51] mb-3">
+                <h3 className="mb-3 text-sm font-semibold text-[#064d51]">
                   Load Information
                 </h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -513,20 +514,20 @@ export default function SettlementReviewClient() {
 
               {/* Parties */}
               <div>
-                <h3 className="text-sm font-semibold text-[#064d51] mb-3">
+                <h3 className="mb-3 text-sm font-semibold text-[#064d51]">
                   Parties Involved
                 </h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-[#064d51]/70">Shipper:</span>
                     <p className="font-medium text-[#064d51]">
-                      {selectedLoad.shipper?.name || 'N/A'}
+                      {selectedLoad.shipper?.name || "N/A"}
                     </p>
                   </div>
                   <div>
                     <span className="text-[#064d51]/70">Carrier:</span>
                     <p className="font-medium text-[#064d51]">
-                      {selectedLoad.assignedTruck?.carrier.name || 'N/A'}
+                      {selectedLoad.assignedTruck?.carrier.name || "N/A"}
                     </p>
                     <p className="text-xs text-[#064d51]/60">
                       {selectedLoad.assignedTruck?.licensePlate}
@@ -537,10 +538,10 @@ export default function SettlementReviewClient() {
 
               {/* Settlement Breakdown */}
               <div>
-                <h3 className="text-sm font-semibold text-[#064d51] mb-3">
+                <h3 className="mb-3 text-sm font-semibold text-[#064d51]">
                   Settlement Breakdown
                 </h3>
-                <div className="bg-[#f0fdfa] rounded-xl p-4 space-y-3 border border-[#064d51]/10">
+                <div className="space-y-3 rounded-xl border border-[#064d51]/10 bg-[#f0fdfa] p-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-[#064d51]/70">Gross Amount:</span>
                     <span className="font-bold text-[#064d51]">
@@ -555,7 +556,7 @@ export default function SettlementReviewClient() {
                       -{getServiceFeeAmount(selectedLoad).toLocaleString()} ETB
                     </span>
                   </div>
-                  <div className="border-t border-[#064d51]/20 pt-2 flex justify-between text-sm">
+                  <div className="flex justify-between border-t border-[#064d51]/20 pt-2 text-sm">
                     <span className="font-semibold text-[#064d51]">
                       Net to Carrier:
                     </span>
@@ -568,7 +569,7 @@ export default function SettlementReviewClient() {
 
               {/* POD Status */}
               <div>
-                <h3 className="text-sm font-semibold text-[#064d51] mb-3">
+                <h3 className="mb-3 text-sm font-semibold text-[#064d51]">
                   POD Verification
                 </h3>
                 <div className="space-y-2 text-sm">
@@ -579,7 +580,7 @@ export default function SettlementReviewClient() {
                         ? new Date(
                             selectedLoad.podSubmittedAt
                           ).toLocaleDateString()
-                        : 'Not submitted'}
+                        : "Not submitted"}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -589,7 +590,7 @@ export default function SettlementReviewClient() {
                         ? new Date(
                             selectedLoad.podVerifiedAt
                           ).toLocaleDateString()
-                        : 'Not verified'}
+                        : "Not verified"}
                     </span>
                   </div>
                 </div>
@@ -598,7 +599,7 @@ export default function SettlementReviewClient() {
               {/* Settlement Record */}
               {selectedLoad.settlementRecord && (
                 <div>
-                  <h3 className="text-sm font-semibold text-[#064d51] mb-3">
+                  <h3 className="mb-3 text-sm font-semibold text-[#064d51]">
                     Settlement Record
                   </h3>
                   <div className="space-y-2 text-sm">
@@ -627,7 +628,7 @@ export default function SettlementReviewClient() {
               )}
             </div>
 
-            <div className="p-6 border-t border-[#064d51]/10 bg-[#f0fdfa]">
+            <div className="border-t border-[#064d51]/10 bg-[#f0fdfa] p-6">
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => {
@@ -636,19 +637,22 @@ export default function SettlementReviewClient() {
                     setApprovalSuccess(null);
                   }}
                   disabled={approving}
-                  className="px-4 py-2 border border-[#064d51]/20 rounded-lg text-[#064d51] hover:bg-[#064d51]/5 disabled:opacity-50"
+                  className="rounded-lg border border-[#064d51]/20 px-4 py-2 text-[#064d51] hover:bg-[#064d51]/5 disabled:opacity-50"
                 >
                   Close
                 </button>
-                {selectedLoad.settlementStatus === 'PENDING' && (
+                {selectedLoad.settlementStatus === "PENDING" && (
                   <button
                     onClick={() => handleApproveSettlement(selectedLoad.id)}
                     disabled={approving}
-                    className="px-4 py-2 bg-[#064d51] text-white rounded-lg hover:bg-[#053d40] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="rounded-lg bg-[#064d51] px-4 py-2 text-white hover:bg-[#053d40] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {approving ? (
                       <span className="flex items-center gap-2">
-                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <svg
+                          className="h-4 w-4 animate-spin"
+                          viewBox="0 0 24 24"
+                        >
                           <circle
                             className="opacity-25"
                             cx="12"
@@ -667,7 +671,7 @@ export default function SettlementReviewClient() {
                         Processing...
                       </span>
                     ) : (
-                      'Approve Settlement'
+                      "Approve Settlement"
                     )}
                   </button>
                 )}

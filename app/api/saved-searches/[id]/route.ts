@@ -7,13 +7,13 @@
  * Sprint 14 - DAT-Style UI Transformation
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { validateCSRFWithMobile } from '@/lib/csrf';
-import { zodErrorResponse } from '@/lib/validation';
-import { db } from '@/lib/db';
-import { z } from 'zod';
-import { Prisma } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { zodErrorResponse } from "@/lib/validation";
+import { db } from "@/lib/db";
+import { z } from "zod";
+import { Prisma } from "@prisma/client";
 
 const updateSavedSearchSchema = z.object({
   name: z.string().min(1).optional(),
@@ -57,14 +57,14 @@ export async function PUT(
 
     if (!existingSearch) {
       return NextResponse.json(
-        { error: 'Saved search not found' },
+        { error: "Saved search not found" },
         { status: 404 }
       );
     }
 
     if (existingSearch.userId !== session.userId) {
       return NextResponse.json(
-        { error: 'Forbidden: You do not own this saved search' },
+        { error: "Forbidden: You do not own this saved search" },
         { status: 403 }
       );
     }
@@ -91,14 +91,14 @@ export async function PUT(
 
     return NextResponse.json({
       savedSearch,
-      message: 'Saved search updated successfully',
+      message: "Saved search updated successfully",
     });
-  // FIX: Use unknown type
+    // FIX: Use unknown type
   } catch (error: unknown) {
-    console.error('Error updating saved search:', error);
+    console.error("Error updating saved search:", error);
 
     return NextResponse.json(
-      { error: 'Failed to update saved search' },
+      { error: "Failed to update saved search" },
       { status: 500 }
     );
   }
@@ -135,14 +135,14 @@ export async function DELETE(
 
     if (!existingSearch) {
       return NextResponse.json(
-        { error: 'Saved search not found' },
+        { error: "Saved search not found" },
         { status: 404 }
       );
     }
 
     if (existingSearch.userId !== session.userId) {
       return NextResponse.json(
-        { error: 'Forbidden: You do not own this saved search' },
+        { error: "Forbidden: You do not own this saved search" },
         { status: 403 }
       );
     }
@@ -153,14 +153,14 @@ export async function DELETE(
     });
 
     return NextResponse.json({
-      message: 'Saved search deleted successfully',
+      message: "Saved search deleted successfully",
     });
-  // FIX: Use unknown type
+    // FIX: Use unknown type
   } catch (error: unknown) {
-    console.error('Error deleting saved search:', error);
+    console.error("Error deleting saved search:", error);
 
     return NextResponse.json(
-      { error: 'Failed to delete saved search' },
+      { error: "Failed to delete saved search" },
       { status: 500 }
     );
   }

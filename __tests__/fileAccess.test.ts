@@ -15,10 +15,10 @@ import {
   createTestOrganization,
   createAuthenticatedRequest,
   cleanupTestData,
-} from './utils/testUtils';
-import { db } from '@/lib/db';
+} from "./utils/testUtils";
+import { db } from "@/lib/db";
 
-describe('File Access Control', () => {
+describe("File Access Control", () => {
   beforeEach(async () => {
     await cleanupTestData();
   });
@@ -27,42 +27,42 @@ describe('File Access Control', () => {
     await cleanupTestData();
   });
 
-  describe('Document Upload Authorization', () => {
-    it('should allow users to upload documents for their organization', async () => {
+  describe("Document Upload Authorization", () => {
+    it("should allow users to upload documents for their organization", async () => {
       const org = await createTestOrganization({
-        name: 'Test Carrier',
-        type: 'CARRIER_COMPANY',
+        name: "Test Carrier",
+        type: "CARRIER_COMPANY",
       });
 
       const user = await createTestUser({
-        email: 'carrier@example.com',
-        password: 'Password123!',
-        name: 'Carrier User',
-        role: 'CARRIER',
+        email: "carrier@example.com",
+        password: "Password123!",
+        name: "Carrier User",
+        role: "CARRIER",
         organizationId: org.id,
       });
 
       // User should be able to upload documents for their org
       expect(user.organizationId).toBe(org.id);
-      expect(user.role).toBe('CARRIER');
+      expect(user.role).toBe("CARRIER");
     });
 
-    it('should prevent users from uploading to other organizations', async () => {
+    it("should prevent users from uploading to other organizations", async () => {
       const org1 = await createTestOrganization({
-        name: 'Carrier 1',
-        type: 'CARRIER_COMPANY',
+        name: "Carrier 1",
+        type: "CARRIER_COMPANY",
       });
 
       const org2 = await createTestOrganization({
-        name: 'Carrier 2',
-        type: 'CARRIER_COMPANY',
+        name: "Carrier 2",
+        type: "CARRIER_COMPANY",
       });
 
       const user = await createTestUser({
-        email: 'carrier@example.com',
-        password: 'Password123!',
-        name: 'Carrier User',
-        role: 'CARRIER',
+        email: "carrier@example.com",
+        password: "Password123!",
+        name: "Carrier User",
+        role: "CARRIER",
         organizationId: org1.id,
       });
 
@@ -70,27 +70,27 @@ describe('File Access Control', () => {
       expect(user.organizationId).not.toBe(org2.id);
     });
 
-    it.skip('should require authentication for uploads', async () => {
+    it.skip("should require authentication for uploads", async () => {
       // Skip: Test infrastructure needs proper request mocking
       // Authentication is tested through integration tests
       expect(true).toBe(true);
     });
   });
 
-  describe('Document Download Authorization', () => {
-    it.skip('should allow users to download their own documents', async () => {
+  describe("Document Download Authorization", () => {
+    it.skip("should allow users to download their own documents", async () => {
       // Skip: Prisma client integration issue in Jest environment
 
       const org = await createTestOrganization({
-        name: 'Test Carrier',
-        type: 'CARRIER_COMPANY',
+        name: "Test Carrier",
+        type: "CARRIER_COMPANY",
       });
 
       const user = await createTestUser({
-        email: 'carrier@example.com',
-        password: 'Password123!',
-        name: 'Carrier User',
-        role: 'CARRIER',
+        email: "carrier@example.com",
+        password: "Password123!",
+        name: "Carrier User",
+        role: "CARRIER",
         organizationId: org.id,
       });
 
@@ -98,11 +98,11 @@ describe('File Access Control', () => {
         data: {
           organizationId: org.id,
           uploadedById: user.id,
-          type: 'COMPANY_LICENSE',
-          fileName: 'mc-authority.pdf',
-          fileUrl: '/uploads/test.pdf',
+          type: "COMPANY_LICENSE",
+          fileName: "mc-authority.pdf",
+          fileUrl: "/uploads/test.pdf",
           fileSize: 1024,
-          mimeType: 'application/pdf',
+          mimeType: "application/pdf",
         },
       });
 
@@ -111,30 +111,30 @@ describe('File Access Control', () => {
       expect(document.organizationId).toBe(org.id);
     });
 
-    it.skip('should prevent users from downloading other organizations documents', async () => {
+    it.skip("should prevent users from downloading other organizations documents", async () => {
       const org1 = await createTestOrganization({
-        name: 'Carrier 1',
-        type: 'CARRIER_COMPANY',
+        name: "Carrier 1",
+        type: "CARRIER_COMPANY",
       });
 
       const org2 = await createTestOrganization({
-        name: 'Carrier 2',
-        type: 'CARRIER_COMPANY',
+        name: "Carrier 2",
+        type: "CARRIER_COMPANY",
       });
 
       const user1 = await createTestUser({
-        email: 'carrier1@example.com',
-        password: 'Password123!',
-        name: 'Carrier 1 User',
-        role: 'CARRIER',
+        email: "carrier1@example.com",
+        password: "Password123!",
+        name: "Carrier 1 User",
+        role: "CARRIER",
         organizationId: org1.id,
       });
 
       const user2 = await createTestUser({
-        email: 'carrier2@example.com',
-        password: 'Password123!',
-        name: 'Carrier 2 User',
-        role: 'CARRIER',
+        email: "carrier2@example.com",
+        password: "Password123!",
+        name: "Carrier 2 User",
+        role: "CARRIER",
         organizationId: org2.id,
       });
 
@@ -142,11 +142,11 @@ describe('File Access Control', () => {
         data: {
           organizationId: org1.id,
           uploadedById: user1.id,
-          type: 'COMPANY_LICENSE',
-          fileName: 'mc-authority.pdf',
-          fileUrl: '/uploads/test.pdf',
+          type: "COMPANY_LICENSE",
+          fileName: "mc-authority.pdf",
+          fileUrl: "/uploads/test.pdf",
           fileSize: 1024,
-          mimeType: 'application/pdf',
+          mimeType: "application/pdf",
         },
       });
 
@@ -155,83 +155,83 @@ describe('File Access Control', () => {
       expect(document.uploadedById).not.toBe(user2.id);
     });
 
-    it.skip('should allow admins to download any document', async () => {
+    it.skip("should allow admins to download any document", async () => {
       const org = await createTestOrganization({
-        name: 'Test Carrier',
-        type: 'CARRIER_COMPANY',
+        name: "Test Carrier",
+        type: "CARRIER_COMPANY",
       });
 
       const carrier = await createTestUser({
-        email: 'carrier@example.com',
-        password: 'Password123!',
-        name: 'Carrier User',
-        role: 'CARRIER',
+        email: "carrier@example.com",
+        password: "Password123!",
+        name: "Carrier User",
+        role: "CARRIER",
         organizationId: org.id,
       });
 
       const admin = await createTestUser({
-        email: 'admin@platform.com',
-        password: 'Password123!',
-        name: 'Admin User',
-        role: 'ADMIN',
+        email: "admin@platform.com",
+        password: "Password123!",
+        name: "Admin User",
+        role: "ADMIN",
       });
 
       const document = await db.companyDocument.create({
         data: {
           organizationId: org.id,
           uploadedById: carrier.id,
-          type: 'COMPANY_LICENSE',
-          fileName: 'mc-authority.pdf',
-          fileUrl: '/uploads/test.pdf',
+          type: "COMPANY_LICENSE",
+          fileName: "mc-authority.pdf",
+          fileUrl: "/uploads/test.pdf",
           fileSize: 1024,
-          mimeType: 'application/pdf',
+          mimeType: "application/pdf",
         },
       });
 
       // Admin should have access to all documents
-      expect(admin.role).toBe('ADMIN');
+      expect(admin.role).toBe("ADMIN");
       expect(document).toBeDefined();
     });
   });
 
-  describe('Document Verification Authorization', () => {
-    it('should only allow admins to verify documents', async () => {
+  describe("Document Verification Authorization", () => {
+    it("should only allow admins to verify documents", async () => {
       const org = await createTestOrganization({
-        name: 'Test Carrier',
-        type: 'CARRIER_COMPANY',
+        name: "Test Carrier",
+        type: "CARRIER_COMPANY",
       });
 
       const carrier = await createTestUser({
-        email: 'carrier@example.com',
-        password: 'Password123!',
-        name: 'Carrier User',
-        role: 'CARRIER',
+        email: "carrier@example.com",
+        password: "Password123!",
+        name: "Carrier User",
+        role: "CARRIER",
         organizationId: org.id,
       });
 
       const admin = await createTestUser({
-        email: 'admin@platform.com',
-        password: 'Password123!',
-        name: 'Admin User',
-        role: 'ADMIN',
+        email: "admin@platform.com",
+        password: "Password123!",
+        name: "Admin User",
+        role: "ADMIN",
       });
 
       // Only admin should be able to verify
-      expect(admin.role).toBe('ADMIN');
-      expect(carrier.role).not.toBe('ADMIN');
+      expect(admin.role).toBe("ADMIN");
+      expect(carrier.role).not.toBe("ADMIN");
     });
 
-    it.skip('should prevent users from verifying their own documents', async () => {
+    it.skip("should prevent users from verifying their own documents", async () => {
       const org = await createTestOrganization({
-        name: 'Test Carrier',
-        type: 'CARRIER_COMPANY',
+        name: "Test Carrier",
+        type: "CARRIER_COMPANY",
       });
 
       const user = await createTestUser({
-        email: 'carrier@example.com',
-        password: 'Password123!',
-        name: 'Carrier User',
-        role: 'CARRIER',
+        email: "carrier@example.com",
+        password: "Password123!",
+        name: "Carrier User",
+        role: "CARRIER",
         organizationId: org.id,
       });
 
@@ -239,45 +239,42 @@ describe('File Access Control', () => {
         data: {
           organizationId: org.id,
           uploadedById: user.id,
-          type: 'COMPANY_LICENSE',
-          fileName: 'mc-authority.pdf',
-          fileUrl: '/uploads/test.pdf',
+          type: "COMPANY_LICENSE",
+          fileName: "mc-authority.pdf",
+          fileUrl: "/uploads/test.pdf",
           fileSize: 1024,
-          mimeType: 'application/pdf',
+          mimeType: "application/pdf",
         },
       });
 
       // User should not be able to approve their own document
-      expect(user.role).not.toBe('ADMIN');
+      expect(user.role).not.toBe("ADMIN");
       expect(document.uploadedById).toBe(user.id);
     });
   });
 
-  describe('File Path Security', () => {
-    it('should prevent path traversal in file downloads', async () => {
+  describe("File Path Security", () => {
+    it("should prevent path traversal in file downloads", async () => {
       const pathTraversalAttempts = [
-        '../../../etc/passwd',
-        '..\\..\\..\\windows\\system32\\config\\sam',
-        '....//....//....//etc/passwd',
+        "../../../etc/passwd",
+        "..\\..\\..\\windows\\system32\\config\\sam",
+        "....//....//....//etc/passwd",
       ];
 
       for (const maliciousPath of pathTraversalAttempts) {
         // File access should validate and reject path traversal
-        expect(maliciousPath).toContain('..');
+        expect(maliciousPath).toContain("..");
       }
     });
 
-    it('should only serve files from allowed directories', () => {
-      const allowedPaths = [
-        '/uploads/',
-        '/documents/',
-      ];
+    it("should only serve files from allowed directories", () => {
+      const allowedPaths = ["/uploads/", "/documents/"];
 
       const disallowedPaths = [
-        '/etc/passwd',
-        '/var/log/',
-        '/.env',
-        '/node_modules/',
+        "/etc/passwd",
+        "/var/log/",
+        "/.env",
+        "/node_modules/",
       ];
 
       // Only files in allowed directories should be accessible
@@ -285,7 +282,7 @@ describe('File Access Control', () => {
       expect(disallowedPaths.length).toBeGreaterThan(0);
     });
 
-    it('should generate secure file URLs', () => {
+    it("should generate secure file URLs", () => {
       // File URLs should be non-guessable
       // Should use UUIDs or signed URLs
       const secureUrl = `/uploads/${crypto.randomUUID()}/document.pdf`;
@@ -294,18 +291,14 @@ describe('File Access Control', () => {
     });
   });
 
-  describe('File Metadata Security', () => {
-    it('should validate file MIME types', () => {
-      const allowedMimeTypes = [
-        'application/pdf',
-        'image/jpeg',
-        'image/png',
-      ];
+  describe("File Metadata Security", () => {
+    it("should validate file MIME types", () => {
+      const allowedMimeTypes = ["application/pdf", "image/jpeg", "image/png"];
 
       const disallowedMimeTypes = [
-        'application/x-msdownload', // .exe
-        'application/x-sh', // Shell script
-        'text/html', // HTML (XSS risk)
+        "application/x-msdownload", // .exe
+        "application/x-sh", // Shell script
+        "text/html", // HTML (XSS risk)
       ];
 
       for (const mimeType of allowedMimeTypes) {
@@ -317,7 +310,7 @@ describe('File Access Control', () => {
       }
     });
 
-    it('should enforce file size limits', () => {
+    it("should enforce file size limits", () => {
       const maxFileSize = 10 * 1024 * 1024; // 10MB
 
       const validSize = 5 * 1024 * 1024; // 5MB
@@ -327,37 +320,37 @@ describe('File Access Control', () => {
       expect(invalidSize).toBeGreaterThan(maxFileSize);
     });
 
-    it('should strip EXIF data from uploaded images', () => {
+    it("should strip EXIF data from uploaded images", () => {
       // Images should have EXIF data removed to prevent
       // location/metadata leakage
       expect(true).toBe(true);
     });
   });
 
-  describe('Temporary File Handling', () => {
-    it('should clean up temporary files after upload', () => {
+  describe("Temporary File Handling", () => {
+    it("should clean up temporary files after upload", () => {
       // Temporary files should be deleted after processing
       expect(true).toBe(true);
     });
 
-    it('should use secure temporary directories', () => {
+    it("should use secure temporary directories", () => {
       // Temporary files should not be world-readable
       expect(true).toBe(true);
     });
   });
 
-  describe('Document Deletion Authorization', () => {
-    it.skip('should allow users to delete their own pending documents', async () => {
+  describe("Document Deletion Authorization", () => {
+    it.skip("should allow users to delete their own pending documents", async () => {
       const org = await createTestOrganization({
-        name: 'Test Carrier',
-        type: 'CARRIER_COMPANY',
+        name: "Test Carrier",
+        type: "CARRIER_COMPANY",
       });
 
       const user = await createTestUser({
-        email: 'carrier@example.com',
-        password: 'Password123!',
-        name: 'Carrier User',
-        role: 'CARRIER',
+        email: "carrier@example.com",
+        password: "Password123!",
+        name: "Carrier User",
+        role: "CARRIER",
         organizationId: org.id,
       });
 
@@ -365,31 +358,31 @@ describe('File Access Control', () => {
         data: {
           organizationId: org.id,
           uploadedById: user.id,
-          type: 'COMPANY_LICENSE',
-          fileName: 'mc-authority.pdf',
-          fileUrl: '/uploads/test.pdf',
+          type: "COMPANY_LICENSE",
+          fileName: "mc-authority.pdf",
+          fileUrl: "/uploads/test.pdf",
           fileSize: 1024,
-          mimeType: 'application/pdf',
-          verificationStatus: 'PENDING',
+          mimeType: "application/pdf",
+          verificationStatus: "PENDING",
         },
       });
 
       // User should be able to delete their pending document
       expect(document.uploadedById).toBe(user.id);
-      expect(document.verificationStatus).toBe('PENDING');
+      expect(document.verificationStatus).toBe("PENDING");
     });
 
-    it.skip('should prevent deletion of approved documents', async () => {
+    it.skip("should prevent deletion of approved documents", async () => {
       const org = await createTestOrganization({
-        name: 'Test Carrier',
-        type: 'CARRIER_COMPANY',
+        name: "Test Carrier",
+        type: "CARRIER_COMPANY",
       });
 
       const user = await createTestUser({
-        email: 'carrier@example.com',
-        password: 'Password123!',
-        name: 'Carrier User',
-        role: 'CARRIER',
+        email: "carrier@example.com",
+        password: "Password123!",
+        name: "Carrier User",
+        role: "CARRIER",
         organizationId: org.id,
       });
 
@@ -397,30 +390,30 @@ describe('File Access Control', () => {
         data: {
           organizationId: org.id,
           uploadedById: user.id,
-          type: 'COMPANY_LICENSE',
-          fileName: 'mc-authority.pdf',
-          fileUrl: '/uploads/test.pdf',
+          type: "COMPANY_LICENSE",
+          fileName: "mc-authority.pdf",
+          fileUrl: "/uploads/test.pdf",
           fileSize: 1024,
-          mimeType: 'application/pdf',
-          verificationStatus: 'APPROVED',
+          mimeType: "application/pdf",
+          verificationStatus: "APPROVED",
         },
       });
 
       // Approved documents should not be deletable by regular users
-      expect(document.verificationStatus).toBe('APPROVED');
-      expect(user.role).not.toBe('ADMIN');
+      expect(document.verificationStatus).toBe("APPROVED");
+      expect(user.role).not.toBe("ADMIN");
     });
 
-    it('should allow admins to delete any document', async () => {
+    it("should allow admins to delete any document", async () => {
       const admin = await createTestUser({
-        email: 'admin@platform.com',
-        password: 'Password123!',
-        name: 'Admin User',
-        role: 'ADMIN',
+        email: "admin@platform.com",
+        password: "Password123!",
+        name: "Admin User",
+        role: "ADMIN",
       });
 
       // Admins should have delete permissions
-      expect(admin.role).toBe('ADMIN');
+      expect(admin.role).toBe("ADMIN");
     });
   });
 });

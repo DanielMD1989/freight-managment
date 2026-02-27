@@ -5,11 +5,11 @@
  * Task 16.9B.1: Company User Management
  */
 
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { getCSRFToken } from '@/lib/csrfFetch';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { getCSRFToken } from "@/lib/csrfFetch";
 
 interface Member {
   id: string;
@@ -51,10 +51,11 @@ export default function TeamManagementClient({
 }: Props) {
   const router = useRouter();
   const [members, setMembers] = useState<Member[]>(initialMembers);
-  const [invitations, setInvitations] = useState<Invitation[]>(initialInvitations);
+  const [invitations, setInvitations] =
+    useState<Invitation[]>(initialInvitations);
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState('CARRIER');
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("CARRIER");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -66,105 +67,113 @@ export default function TeamManagementClient({
 
     try {
       const csrfToken = await getCSRFToken();
-      const response = await fetch('/api/organizations/invitations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
+      const response = await fetch("/api/organizations/invitations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+        },
         body: JSON.stringify({
           email: inviteEmail,
           role: inviteRole,
           organizationId: organization.id,
         }),
-        credentials: 'include',
+        credentials: "include",
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to send invitation');
+        throw new Error(data.error || "Failed to send invitation");
       }
 
       const data = await response.json();
       setInvitations([data.invitation, ...invitations]);
       setShowInviteModal(false);
-      setInviteEmail('');
-      setSuccess('Invitation sent successfully');
+      setInviteEmail("");
+      setSuccess("Invitation sent successfully");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }
   };
 
   const handleCancelInvitation = async (invitationId: string) => {
-    if (!confirm('Are you sure you want to cancel this invitation?')) return;
+    if (!confirm("Are you sure you want to cancel this invitation?")) return;
 
     try {
       const csrfToken = await getCSRFToken();
-      const response = await fetch(`/api/organizations/invitations/${invitationId}`, {
-        method: 'DELETE',
-        headers: { ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
-        credentials: 'include',
-      });
+      const response = await fetch(
+        `/api/organizations/invitations/${invitationId}`,
+        {
+          method: "DELETE",
+          headers: { ...(csrfToken && { "X-CSRF-Token": csrfToken }) },
+          credentials: "include",
+        }
+      );
 
       if (!response.ok) {
-        throw new Error('Failed to cancel invitation');
+        throw new Error("Failed to cancel invitation");
       }
 
       setInvitations(invitations.filter((inv) => inv.id !== invitationId));
-      setSuccess('Invitation cancelled');
+      setSuccess("Invitation cancelled");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : "An error occurred");
     }
   };
 
   const handleRemoveMember = async (memberId: string, memberName: string) => {
     if (memberId === currentUserId) {
-      setError('You cannot remove yourself from the team');
+      setError("You cannot remove yourself from the team");
       return;
     }
 
-    if (!confirm(`Are you sure you want to remove ${memberName} from the team?`)) {
+    if (
+      !confirm(`Are you sure you want to remove ${memberName} from the team?`)
+    ) {
       return;
     }
 
     try {
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/organizations/members/${memberId}`, {
-        method: 'DELETE',
-        headers: { ...(csrfToken && { 'X-CSRF-Token': csrfToken }) },
-        credentials: 'include',
+        method: "DELETE",
+        headers: { ...(csrfToken && { "X-CSRF-Token": csrfToken }) },
+        credentials: "include",
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to remove member');
+        throw new Error(data.error || "Failed to remove member");
       }
 
       setMembers(members.filter((m) => m.id !== memberId));
-      setSuccess('Member removed successfully');
+      setSuccess("Member removed successfully");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : "An error occurred");
     }
   };
 
   // Status colors from StatusBadge.tsx (source of truth)
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      ACTIVE: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-      PENDING: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-      SUSPENDED: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
-      REGISTERED: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+      ACTIVE: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+      PENDING: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+      SUSPENDED: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
+      REGISTERED: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
     };
-    return styles[status] || 'bg-slate-500/10 text-slate-600';
+    return styles[status] || "bg-slate-500/10 text-slate-600";
   };
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    return new Date(date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
@@ -172,11 +181,11 @@ export default function TeamManagementClient({
     <div className="space-y-6">
       {/* Messages */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/30">
           <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
           <button
             onClick={() => setError(null)}
-            className="text-sm text-red-600 underline mt-1"
+            className="mt-1 text-sm text-red-600 underline"
           >
             Dismiss
           </button>
@@ -184,13 +193,15 @@ export default function TeamManagementClient({
       )}
 
       {success && (
-        <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-4">
-          <p className="text-sm text-green-800 dark:text-green-200">{success}</p>
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/30">
+          <p className="text-sm text-green-800 dark:text-green-200">
+            {success}
+          </p>
         </div>
       )}
 
       {/* Organization Info */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-[#064d51]/15 dark:border-slate-700 p-6">
+      <div className="rounded-lg border border-[#064d51]/15 bg-white p-6 shadow dark:border-slate-700 dark:bg-slate-800">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-[#064d51] dark:text-white">
@@ -199,7 +210,7 @@ export default function TeamManagementClient({
             <p className="text-sm text-[#064d51]/70 dark:text-gray-400">
               {organization.type} Organization
               {organization.isVerified && (
-                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                <span className="ml-2 inline-flex items-center rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
                   Verified
                 </span>
               )}
@@ -207,7 +218,7 @@ export default function TeamManagementClient({
           </div>
           <button
             onClick={() => setShowInviteModal(true)}
-            className="px-4 py-2 bg-[#1e9c99] text-white rounded-lg hover:bg-[#064d51] font-medium"
+            className="rounded-lg bg-[#1e9c99] px-4 py-2 font-medium text-white hover:bg-[#064d51]"
           >
             Invite Member
           </button>
@@ -215,8 +226,8 @@ export default function TeamManagementClient({
       </div>
 
       {/* Team Members */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-[#064d51]/15 dark:border-slate-700">
-        <div className="px-6 py-4 border-b border-[#064d51]/15 dark:border-slate-700">
+      <div className="rounded-lg border border-[#064d51]/15 bg-white shadow dark:border-slate-700 dark:bg-slate-800">
+        <div className="border-b border-[#064d51]/15 px-6 py-4 dark:border-slate-700">
           <h3 className="text-lg font-semibold text-[#064d51] dark:text-white">
             Team Members ({members.length})
           </h3>
@@ -225,35 +236,40 @@ export default function TeamManagementClient({
           <table className="w-full">
             <thead className="bg-[#f0fdfa] dark:bg-slate-700">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-[#064d51]/60 uppercase dark:text-gray-400">
                   Member
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-[#064d51]/60 uppercase dark:text-gray-400">
                   Role
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-[#064d51]/60 uppercase dark:text-gray-400">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-[#064d51]/60 uppercase dark:text-gray-400">
                   Joined
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-[#064d51]/60 uppercase dark:text-gray-400">
                   Last Login
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-[#064d51]/60 uppercase dark:text-gray-400">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
               {members.map((member) => (
-                <tr key={member.id} className="hover:bg-[#f0fdfa] dark:hover:bg-slate-700/50">
+                <tr
+                  key={member.id}
+                  className="hover:bg-[#f0fdfa] dark:hover:bg-slate-700/50"
+                >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
                       <div className="text-sm font-medium text-[#064d51] dark:text-white">
                         {member.name}
                         {member.id === currentUserId && (
-                          <span className="ml-2 text-xs text-[#064d51]/60">(You)</span>
+                          <span className="ml-2 text-xs text-[#064d51]/60">
+                            (You)
+                          </span>
                         )}
                       </div>
                       <div className="text-sm text-[#064d51]/60 dark:text-gray-400">
@@ -268,23 +284,27 @@ export default function TeamManagementClient({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadge(
+                      className={`rounded-full px-2 py-1 text-xs font-medium ${getStatusBadge(
                         member.status
                       )}`}
                     >
                       {member.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#064d51]/60 dark:text-gray-400">
+                  <td className="px-6 py-4 text-sm whitespace-nowrap text-[#064d51]/60 dark:text-gray-400">
                     {formatDate(member.createdAt)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#064d51]/60 dark:text-gray-400">
-                    {member.lastLoginAt ? formatDate(member.lastLoginAt) : 'Never'}
+                  <td className="px-6 py-4 text-sm whitespace-nowrap text-[#064d51]/60 dark:text-gray-400">
+                    {member.lastLoginAt
+                      ? formatDate(member.lastLoginAt)
+                      : "Never"}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                  <td className="px-6 py-4 text-right text-sm whitespace-nowrap">
                     {member.id !== currentUserId && (
                       <button
-                        onClick={() => handleRemoveMember(member.id, member.name)}
+                        onClick={() =>
+                          handleRemoveMember(member.id, member.name)
+                        }
                         className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
                       >
                         Remove
@@ -300,8 +320,8 @@ export default function TeamManagementClient({
 
       {/* Pending Invitations */}
       {invitations.length > 0 && (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-[#064d51]/15 dark:border-slate-700">
-          <div className="px-6 py-4 border-b border-[#064d51]/15 dark:border-slate-700">
+        <div className="rounded-lg border border-[#064d51]/15 bg-white shadow dark:border-slate-700 dark:bg-slate-800">
+          <div className="border-b border-[#064d51]/15 px-6 py-4 dark:border-slate-700">
             <h3 className="text-lg font-semibold text-[#064d51] dark:text-white">
               Pending Invitations ({invitations.length})
             </h3>
@@ -310,19 +330,19 @@ export default function TeamManagementClient({
             <table className="w-full">
               <thead className="bg-[#f0fdfa] dark:bg-slate-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-[#064d51]/60 uppercase dark:text-gray-400">
                     Email
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-[#064d51]/60 uppercase dark:text-gray-400">
                     Role
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-[#064d51]/60 uppercase dark:text-gray-400">
                     Sent
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-[#064d51]/60 uppercase dark:text-gray-400">
                     Expires
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-[#064d51]/60 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-[#064d51]/60 uppercase dark:text-gray-400">
                     Actions
                   </th>
                 </tr>
@@ -333,19 +353,19 @@ export default function TeamManagementClient({
                     key={invitation.id}
                     className="hover:bg-[#f0fdfa] dark:hover:bg-slate-700/50"
                   >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#064d51] dark:text-white">
+                    <td className="px-6 py-4 text-sm whitespace-nowrap text-[#064d51] dark:text-white">
                       {invitation.email}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#064d51] dark:text-white">
+                    <td className="px-6 py-4 text-sm whitespace-nowrap text-[#064d51] dark:text-white">
                       {invitation.role}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#064d51]/60 dark:text-gray-400">
+                    <td className="px-6 py-4 text-sm whitespace-nowrap text-[#064d51]/60 dark:text-gray-400">
                       {formatDate(invitation.createdAt)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#064d51]/60 dark:text-gray-400">
+                    <td className="px-6 py-4 text-sm whitespace-nowrap text-[#064d51]/60 dark:text-gray-400">
                       {formatDate(invitation.expiresAt)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                    <td className="px-6 py-4 text-right text-sm whitespace-nowrap">
                       <button
                         onClick={() => handleCancelInvitation(invitation.id)}
                         className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
@@ -363,16 +383,16 @@ export default function TeamManagementClient({
 
       {/* Invite Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="px-6 py-4 border-b border-[#064d51]/15 dark:border-slate-700">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="mx-4 w-full max-w-md rounded-lg bg-white shadow-xl dark:bg-slate-800">
+            <div className="border-b border-[#064d51]/15 px-6 py-4 dark:border-slate-700">
               <h3 className="text-lg font-semibold text-[#064d51] dark:text-white">
                 Invite Team Member
               </h3>
             </div>
-            <form onSubmit={handleInvite} className="p-6 space-y-4">
+            <form onSubmit={handleInvite} className="space-y-4 p-6">
               <div>
-                <label className="block text-sm font-medium text-[#064d51]/80 dark:text-gray-300 mb-1">
+                <label className="mb-1 block text-sm font-medium text-[#064d51]/80 dark:text-gray-300">
                   Email Address
                 </label>
                 <input
@@ -380,22 +400,22 @@ export default function TeamManagementClient({
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   required
-                  className="w-full px-3 py-2 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99] dark:bg-slate-700 dark:text-white"
+                  className="w-full rounded-lg border border-[#064d51]/20 px-3 py-2 focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-700 dark:text-white"
                   placeholder="colleague@example.com"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#064d51]/80 dark:text-gray-300 mb-1">
+                <label className="mb-1 block text-sm font-medium text-[#064d51]/80 dark:text-gray-300">
                   Role
                 </label>
                 <select
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value)}
-                  className="w-full px-3 py-2 border border-[#064d51]/20 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-[#1e9c99] focus:border-[#1e9c99] dark:bg-slate-700 dark:text-white"
+                  className="w-full rounded-lg border border-[#064d51]/20 px-3 py-2 focus:border-[#1e9c99] focus:ring-2 focus:ring-[#1e9c99] dark:border-slate-600 dark:bg-slate-700 dark:text-white"
                 >
                   <option value="CARRIER">Carrier</option>
                 </select>
-                <p className="text-xs text-[#064d51]/60 mt-1">
+                <p className="mt-1 text-xs text-[#064d51]/60">
                   New members will have standard carrier permissions
                 </p>
               </div>
@@ -403,16 +423,16 @@ export default function TeamManagementClient({
                 <button
                   type="button"
                   onClick={() => setShowInviteModal(false)}
-                  className="px-4 py-2 border border-[#064d51]/20 dark:border-slate-600 rounded-lg text-[#064d51]/80 dark:text-gray-300 hover:bg-[#f0fdfa] dark:hover:bg-slate-700"
+                  className="rounded-lg border border-[#064d51]/20 px-4 py-2 text-[#064d51]/80 hover:bg-[#f0fdfa] dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-700"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-4 py-2 bg-[#1e9c99] text-white rounded-lg hover:bg-[#064d51] disabled:opacity-50"
+                  className="rounded-lg bg-[#1e9c99] px-4 py-2 text-white hover:bg-[#064d51] disabled:opacity-50"
                 >
-                  {loading ? 'Sending...' : 'Send Invitation'}
+                  {loading ? "Sending..." : "Send Invitation"}
                 </button>
               </div>
             </form>

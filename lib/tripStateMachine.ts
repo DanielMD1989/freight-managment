@@ -8,12 +8,12 @@
  */
 
 export enum TripStatus {
-  ASSIGNED = 'ASSIGNED',
-  PICKUP_PENDING = 'PICKUP_PENDING',
-  IN_TRANSIT = 'IN_TRANSIT',
-  DELIVERED = 'DELIVERED',
-  COMPLETED = 'COMPLETED',
-  CANCELLED = 'CANCELLED',
+  ASSIGNED = "ASSIGNED",
+  PICKUP_PENDING = "PICKUP_PENDING",
+  IN_TRANSIT = "IN_TRANSIT",
+  DELIVERED = "DELIVERED",
+  COMPLETED = "COMPLETED",
+  CANCELLED = "CANCELLED",
 }
 
 /**
@@ -21,25 +21,13 @@ export enum TripStatus {
  * Key: current status, Value: array of valid next statuses
  */
 export const VALID_TRIP_TRANSITIONS: Record<TripStatus, TripStatus[]> = {
-  [TripStatus.ASSIGNED]: [
-    TripStatus.PICKUP_PENDING,
-    TripStatus.CANCELLED,
-  ],
+  [TripStatus.ASSIGNED]: [TripStatus.PICKUP_PENDING, TripStatus.CANCELLED],
 
-  [TripStatus.PICKUP_PENDING]: [
-    TripStatus.IN_TRANSIT,
-    TripStatus.CANCELLED,
-  ],
+  [TripStatus.PICKUP_PENDING]: [TripStatus.IN_TRANSIT, TripStatus.CANCELLED],
 
-  [TripStatus.IN_TRANSIT]: [
-    TripStatus.DELIVERED,
-    TripStatus.CANCELLED,
-  ],
+  [TripStatus.IN_TRANSIT]: [TripStatus.DELIVERED, TripStatus.CANCELLED],
 
-  [TripStatus.DELIVERED]: [
-    TripStatus.COMPLETED,
-    TripStatus.CANCELLED,
-  ],
+  [TripStatus.DELIVERED]: [TripStatus.COMPLETED, TripStatus.CANCELLED],
 
   [TripStatus.COMPLETED]: [
     // Terminal state - no transitions allowed
@@ -60,10 +48,7 @@ export const TRIP_ROLE_PERMISSIONS: Record<string, TripStatus[]> = {
     TripStatus.DELIVERED,
   ],
 
-  DISPATCHER: [
-    TripStatus.ASSIGNED,
-    TripStatus.CANCELLED,
-  ],
+  DISPATCHER: [TripStatus.ASSIGNED, TripStatus.CANCELLED],
 
   ADMIN: [
     // Admin can set any status (for exception handling)
@@ -145,7 +130,7 @@ export function validateTripStateTransition(
     const validNext = getValidNextTripStates(current);
     return {
       valid: false,
-      error: `Invalid transition: ${currentStatus} → ${newStatus}. Valid transitions: ${validNext.length > 0 ? validNext.join(', ') : 'none (terminal state)'}`,
+      error: `Invalid transition: ${currentStatus} → ${newStatus}. Valid transitions: ${validNext.length > 0 ? validNext.join(", ") : "none (terminal state)"}`,
     };
   }
 
@@ -165,15 +150,15 @@ export function validateTripStateTransition(
  */
 export function getTripStatusDescription(status: TripStatus): string {
   const descriptions: Record<TripStatus, string> = {
-    [TripStatus.ASSIGNED]: 'Carrier accepted, awaiting pickup',
-    [TripStatus.PICKUP_PENDING]: 'Carrier en route to pickup location',
-    [TripStatus.IN_TRANSIT]: 'Load picked up, in transit to destination',
-    [TripStatus.DELIVERED]: 'Load delivered, awaiting POD verification',
-    [TripStatus.COMPLETED]: 'Trip completed, POD verified, payment processed',
-    [TripStatus.CANCELLED]: 'Trip cancelled',
+    [TripStatus.ASSIGNED]: "Carrier accepted, awaiting pickup",
+    [TripStatus.PICKUP_PENDING]: "Carrier en route to pickup location",
+    [TripStatus.IN_TRANSIT]: "Load picked up, in transit to destination",
+    [TripStatus.DELIVERED]: "Load delivered, awaiting POD verification",
+    [TripStatus.COMPLETED]: "Trip completed, POD verified, payment processed",
+    [TripStatus.CANCELLED]: "Trip cancelled",
   };
 
-  return descriptions[status] || 'Unknown status';
+  return descriptions[status] || "Unknown status";
 }
 
 /**

@@ -12,18 +12,18 @@
  * MAP + GPS Implementation - Phase 2
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { Prisma } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth();
     const { searchParams } = request.nextUrl;
 
-    const loadId = searchParams.get('loadId');
-    const truckIds = searchParams.get('truckIds')?.split(',').filter(Boolean);
+    const loadId = searchParams.get("loadId");
+    const truckIds = searchParams.get("truckIds")?.split(",").filter(Boolean);
 
     // Get user's organization for access control
     const user = await db.user.findUnique({
@@ -55,31 +55,25 @@ export async function GET(request: NextRequest) {
       });
 
       if (!load) {
-        return NextResponse.json({ error: 'Load not found' }, { status: 404 });
+        return NextResponse.json({ error: "Load not found" }, { status: 404 });
       }
 
       // Access control
-      if (session.role === 'CARRIER') {
+      if (session.role === "CARRIER") {
         if (load.assignedTruck?.carrierId !== user?.organizationId) {
-          return NextResponse.json(
-            { error: 'Access denied' },
-            { status: 403 }
-          );
+          return NextResponse.json({ error: "Access denied" }, { status: 403 });
         }
-      } else if (session.role === 'SHIPPER') {
+      } else if (session.role === "SHIPPER") {
         if (load.shipperId !== user?.organizationId) {
-          return NextResponse.json(
-            { error: 'Access denied' },
-            { status: 403 }
-          );
+          return NextResponse.json({ error: "Access denied" }, { status: 403 });
         }
         // Shipper can only see position when trip is IN_TRANSIT
-        if (load.status !== 'IN_TRANSIT') {
+        if (load.status !== "IN_TRANSIT") {
           return NextResponse.json({
             loadId: load.id,
             status: load.status,
             position: null,
-            message: 'GPS tracking is only available when trip is IN_TRANSIT',
+            message: "GPS tracking is only available when trip is IN_TRANSIT",
           });
         }
       }
@@ -90,7 +84,7 @@ export async function GET(request: NextRequest) {
           loadId: load.id,
           status: load.status,
           position: null,
-          message: 'No truck assigned to this load',
+          message: "No truck assigned to this load",
         });
       }
 
@@ -102,12 +96,15 @@ export async function GET(request: NextRequest) {
           plateNumber: truck.licensePlate,
           truckType: truck.truckType,
         },
-        position: truck.currentLocationLat && truck.currentLocationLon ? {
-          lat: Number(truck.currentLocationLat),
-          lng: Number(truck.currentLocationLon),
-          updatedAt: truck.locationUpdatedAt?.toISOString(),
-          gpsStatus: truck.gpsStatus || 'INACTIVE',
-        } : null,
+        position:
+          truck.currentLocationLat && truck.currentLocationLon
+            ? {
+                lat: Number(truck.currentLocationLat),
+                lng: Number(truck.currentLocationLon),
+                updatedAt: truck.locationUpdatedAt?.toISOString(),
+                gpsStatus: truck.gpsStatus || "INACTIVE",
+              }
+            : null,
       });
     }
 
@@ -118,20 +115,26 @@ export async function GET(request: NextRequest) {
         id: { in: truckIds },
       };
 
-      if (session.role === 'CARRIER') {
+      if (session.role === "CARRIER") {
         if (!user?.organizationId) {
-          return NextResponse.json({ error: 'User not associated with an organization' }, { status: 403 });
+          return NextResponse.json(
+            { error: "User not associated with an organization" },
+            { status: 403 }
+          );
         }
         where.carrierId = user.organizationId;
-      } else if (session.role === 'SHIPPER') {
+      } else if (session.role === "SHIPPER") {
         if (!user?.organizationId) {
-          return NextResponse.json({ error: 'User not associated with an organization' }, { status: 403 });
+          return NextResponse.json(
+            { error: "User not associated with an organization" },
+            { status: 403 }
+          );
         }
         // Shipper can only get positions for trucks on their loads
         const activeLoads = await db.load.findMany({
           where: {
             shipperId: user.organizationId,
-            status: 'IN_TRANSIT',
+            status: "IN_TRANSIT",
             assignedTruckId: { in: truckIds },
           },
           select: { assignedTruckId: true },
@@ -166,12 +169,15 @@ export async function GET(request: NextRequest) {
         truckId: truck.id,
         plateNumber: truck.licensePlate,
         truckType: truck.truckType,
-        position: truck.currentLocationLat && truck.currentLocationLon ? {
-          lat: Number(truck.currentLocationLat),
-          lng: Number(truck.currentLocationLon),
-          updatedAt: truck.locationUpdatedAt?.toISOString(),
-          gpsStatus: truck.gpsStatus || 'INACTIVE',
-        } : null,
+        position:
+          truck.currentLocationLat && truck.currentLocationLon
+            ? {
+                lat: Number(truck.currentLocationLat),
+                lng: Number(truck.currentLocationLon),
+                updatedAt: truck.locationUpdatedAt?.toISOString(),
+                gpsStatus: truck.gpsStatus || "INACTIVE",
+              }
+            : null,
       }));
 
       return NextResponse.json({ positions });
@@ -179,20 +185,26 @@ export async function GET(request: NextRequest) {
 
     // If no specific query, return all active trips for the user's context
     const activeLoadsWhere: Prisma.LoadWhereInput = {
-      status: 'IN_TRANSIT',
+      status: "IN_TRANSIT",
       assignedTruckId: { not: null },
     };
 
-    if (session.role === 'CARRIER') {
+    if (session.role === "CARRIER") {
       if (!user?.organizationId) {
-        return NextResponse.json({ error: 'User not associated with an organization' }, { status: 403 });
+        return NextResponse.json(
+          { error: "User not associated with an organization" },
+          { status: 403 }
+        );
       }
       activeLoadsWhere.assignedTruck = {
         carrierId: user.organizationId,
       };
-    } else if (session.role === 'SHIPPER') {
+    } else if (session.role === "SHIPPER") {
       if (!user?.organizationId) {
-        return NextResponse.json({ error: 'User not associated with an organization' }, { status: 403 });
+        return NextResponse.json(
+          { error: "User not associated with an organization" },
+          { status: 403 }
+        );
       }
       activeLoadsWhere.shipperId = user.organizationId;
     }
@@ -221,17 +233,23 @@ export async function GET(request: NextRequest) {
     const liveTrips = activeLoads.map((load) => ({
       loadId: load.id,
       status: load.status,
-      truck: load.assignedTruck ? {
-        id: load.assignedTruck.id,
-        plateNumber: load.assignedTruck.licensePlate,
-        truckType: load.assignedTruck.truckType,
-      } : null,
-      position: load.assignedTruck?.currentLocationLat && load.assignedTruck?.currentLocationLon ? {
-        lat: Number(load.assignedTruck.currentLocationLat),
-        lng: Number(load.assignedTruck.currentLocationLon),
-        updatedAt: load.assignedTruck.locationUpdatedAt?.toISOString(),
-        gpsStatus: load.assignedTruck.gpsStatus || 'INACTIVE',
-      } : null,
+      truck: load.assignedTruck
+        ? {
+            id: load.assignedTruck.id,
+            plateNumber: load.assignedTruck.licensePlate,
+            truckType: load.assignedTruck.truckType,
+          }
+        : null,
+      position:
+        load.assignedTruck?.currentLocationLat &&
+        load.assignedTruck?.currentLocationLon
+          ? {
+              lat: Number(load.assignedTruck.currentLocationLat),
+              lng: Number(load.assignedTruck.currentLocationLon),
+              updatedAt: load.assignedTruck.locationUpdatedAt?.toISOString(),
+              gpsStatus: load.assignedTruck.gpsStatus || "INACTIVE",
+            }
+          : null,
     }));
 
     return NextResponse.json({
@@ -240,9 +258,9 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('GPS live position error:', error);
+    console.error("GPS live position error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

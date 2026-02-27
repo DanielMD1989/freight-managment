@@ -13,25 +13,25 @@
  * - maxWeight: Maximum weight filter
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { Prisma } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth();
     const { searchParams } = request.nextUrl;
 
-    const status = searchParams.get('status') || 'POSTED';
-    const cargoType = searchParams.get('cargoType');
-    const minWeight = searchParams.get('minWeight');
-    const maxWeight = searchParams.get('maxWeight');
+    const status = searchParams.get("status") || "POSTED";
+    const cargoType = searchParams.get("cargoType");
+    const minWeight = searchParams.get("minWeight");
+    const maxWeight = searchParams.get("maxWeight");
 
     const role = session.role;
 
     // Only Admin, Dispatcher, and Carriers can view posted loads on map
-    if (!['ADMIN', 'SUPER_ADMIN', 'DISPATCHER', 'CARRIER'].includes(role)) {
+    if (!["ADMIN", "SUPER_ADMIN", "DISPATCHER", "CARRIER"].includes(role)) {
       return NextResponse.json({ loads: [] });
     }
 
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
       take: 200, // Limit for performance
     });
@@ -104,15 +104,18 @@ export async function GET(request: NextRequest) {
       pickupLocation: {
         lat: Number(load.originLat),
         lng: Number(load.originLon),
-        address: load.pickupAddress || load.pickupCity || 'Unknown',
+        address: load.pickupAddress || load.pickupCity || "Unknown",
         city: load.pickupCity,
       },
-      deliveryLocation: load.destinationLat && load.destinationLon ? {
-        lat: Number(load.destinationLat),
-        lng: Number(load.destinationLon),
-        address: load.deliveryAddress || load.deliveryCity || 'Unknown',
-        city: load.deliveryCity,
-      } : null,
+      deliveryLocation:
+        load.destinationLat && load.destinationLon
+          ? {
+              lat: Number(load.destinationLat),
+              lng: Number(load.destinationLon),
+              address: load.deliveryAddress || load.deliveryCity || "Unknown",
+              city: load.deliveryCity,
+            }
+          : null,
       pickupDate: load.pickupDate?.toISOString(),
       deliveryDate: load.deliveryDate?.toISOString(),
       shipper: {
@@ -126,9 +129,9 @@ export async function GET(request: NextRequest) {
       total: mapLoads.length,
     });
   } catch (error) {
-    console.error('Map loads API error:', error);
+    console.error("Map loads API error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

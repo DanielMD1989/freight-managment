@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
 import {
   getTrackingStatus,
   canAccessTracking,
   checkGeofenceEvents,
-} from '@/lib/gpsTracking';
+} from "@/lib/gpsTracking";
 
 /**
  * GET /api/loads/[id]/tracking
@@ -26,7 +26,9 @@ export async function GET(
 
     if (!hasAccess) {
       return NextResponse.json(
-        { error: 'You do not have permission to access tracking for this load' },
+        {
+          error: "You do not have permission to access tracking for this load",
+        },
         { status: 403 }
       );
     }
@@ -35,10 +37,7 @@ export async function GET(
     const status = await getTrackingStatus(loadId);
 
     if (!status) {
-      return NextResponse.json(
-        { error: 'Load not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // Check for geofence events
@@ -49,9 +48,9 @@ export async function GET(
       events,
     });
   } catch (error) {
-    console.error('Get tracking status error:', error);
+    console.error("Get tracking status error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

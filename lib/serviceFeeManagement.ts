@@ -34,15 +34,15 @@
  * New code MUST use authoritative fields.
  */
 
-import { db } from './db';
-import { Decimal } from 'decimal.js';
-import { ServiceFeeStatus } from '@prisma/client';
+import { db } from "./db";
+import { Decimal } from "decimal.js";
+import { ServiceFeeStatus } from "@prisma/client";
 import {
   calculateServiceFee,
   findMatchingCorridor,
   calculateFeesFromCorridor,
   calculatePartyFee,
-} from './serviceFeeCalculation';
+} from "./serviceFeeCalculation";
 
 // Result interfaces
 export interface ServiceFeeDeductResult {
@@ -95,7 +95,9 @@ export interface ServiceFeeReserveResult {
  * @param loadId - Load ID to deduct service fees for
  * @returns ServiceFeeDeductResult with success status and amounts
  */
-export async function deductServiceFee(loadId: string): Promise<ServiceFeeDeductResult> {
+export async function deductServiceFee(
+  loadId: string
+): Promise<ServiceFeeDeductResult> {
   // Get load with corridor and organization info
   const load = await db.load.findUnique({
     where: { id: loadId },
@@ -109,9 +111,9 @@ export async function deductServiceFee(loadId: string): Promise<ServiceFeeDeduct
       shipperFeeStatus: true,
       carrierFeeStatus: true,
       // Trip distance fields - priority: actualTripKm > estimatedTripKm > corridor.distanceKm
-      actualTripKm: true,       // GPS-computed actual distance
-      estimatedTripKm: true,    // Estimated distance from map
-      tripKm: true,             // Legacy trip distance
+      actualTripKm: true, // GPS-computed actual distance
+      estimatedTripKm: true, // Estimated distance from map
+      tripKm: true, // Legacy trip distance
       // Legacy fields
       serviceFeeEtb: true,
       serviceFeeStatus: true,
@@ -151,12 +153,15 @@ export async function deductServiceFee(loadId: string): Promise<ServiceFeeDeduct
       carrierFee: 0,
       totalPlatformFee: 0,
       platformRevenue: new Decimal(0),
-      error: 'Load not found',
+      error: "Load not found",
     };
   }
 
   // Check if fees already deducted
-  if (load.shipperFeeStatus === 'DEDUCTED' && load.carrierFeeStatus === 'DEDUCTED') {
+  if (
+    load.shipperFeeStatus === "DEDUCTED" &&
+    load.carrierFeeStatus === "DEDUCTED"
+  ) {
     return {
       success: false,
       serviceFee: 0,
@@ -164,7 +169,7 @@ export async function deductServiceFee(loadId: string): Promise<ServiceFeeDeduct
       carrierFee: 0,
       totalPlatformFee: 0,
       platformRevenue: new Decimal(0),
-      error: 'Service fees already deducted',
+      error: "Service fees already deducted",
     };
   }
 
@@ -175,7 +180,8 @@ export async function deductServiceFee(loadId: string): Promise<ServiceFeeDeduct
   if (!corridor) {
     // Try to find matching corridor
     const originRegion = load.pickupLocation?.region || load.pickupCity;
-    const destinationRegion = load.deliveryLocation?.region || load.deliveryCity;
+    const destinationRegion =
+      load.deliveryLocation?.region || load.deliveryCity;
 
     if (originRegion && destinationRegion) {
       const match = await findMatchingCorridor(originRegion, destinationRegion);
@@ -194,12 +200,12 @@ export async function deductServiceFee(loadId: string): Promise<ServiceFeeDeduct
       await tx.load.update({
         where: { id: loadId },
         data: {
-          shipperFeeStatus: 'WAIVED',
-          carrierFeeStatus: 'WAIVED',
+          shipperFeeStatus: "WAIVED",
+          carrierFeeStatus: "WAIVED",
           shipperServiceFee: 0,
           carrierServiceFee: 0,
           // Legacy
-          serviceFeeStatus: 'WAIVED',
+          serviceFeeStatus: "WAIVED",
           serviceFeeEtb: 0,
         },
       });
@@ -212,34 +218,37 @@ export async function deductServiceFee(loadId: string): Promise<ServiceFeeDeduct
       carrierFee: 0,
       totalPlatformFee: 0,
       platformRevenue: new Decimal(0),
-      error: 'No matching corridor found - service fees waived',
+      error: "No matching corridor found - service fees waived",
     };
   }
 
   // Calculate fees for both parties
   // Priority: actualTripKm > estimatedTripKm > tripKm > corridor.distanceKm
   // Use actual GPS-tracked distance when available, fall back to estimates or corridor default
-  const distanceKm = load.actualTripKm && Number(load.actualTripKm) > 0
-    ? Number(load.actualTripKm)
-    : load.estimatedTripKm && Number(load.estimatedTripKm) > 0
-      ? Number(load.estimatedTripKm)
-      : load.tripKm && Number(load.tripKm) > 0
-        ? Number(load.tripKm)
-        : Number(corridor.distanceKm);
+  const distanceKm =
+    load.actualTripKm && Number(load.actualTripKm) > 0
+      ? Number(load.actualTripKm)
+      : load.estimatedTripKm && Number(load.estimatedTripKm) > 0
+        ? Number(load.estimatedTripKm)
+        : load.tripKm && Number(load.tripKm) > 0
+          ? Number(load.tripKm)
+          : Number(corridor.distanceKm);
 
-  const distanceSource = load.actualTripKm && Number(load.actualTripKm) > 0
-    ? 'actualTripKm (GPS)'
-    : load.estimatedTripKm && Number(load.estimatedTripKm) > 0
-      ? 'estimatedTripKm'
-      : load.tripKm && Number(load.tripKm) > 0
-        ? 'tripKm'
-        : 'corridor.distanceKm (fallback)';
+  const distanceSource =
+    load.actualTripKm && Number(load.actualTripKm) > 0
+      ? "actualTripKm (GPS)"
+      : load.estimatedTripKm && Number(load.estimatedTripKm) > 0
+        ? "estimatedTripKm"
+        : load.tripKm && Number(load.tripKm) > 0
+          ? "tripKm"
+          : "corridor.distanceKm (fallback)";
 
   // Shipper fee calculation
   const shipperPricePerKm = corridor.shipperPricePerKm
     ? Number(corridor.shipperPricePerKm)
     : Number(corridor.pricePerKm);
-  const shipperPromoFlag = corridor.shipperPromoFlag || corridor.promoFlag || false;
+  const shipperPromoFlag =
+    corridor.shipperPromoFlag || corridor.promoFlag || false;
   const shipperPromoPct = corridor.shipperPromoPct
     ? Number(corridor.shipperPromoPct)
     : corridor.promoDiscountPct
@@ -278,7 +287,7 @@ export async function deductServiceFee(loadId: string): Promise<ServiceFeeDeduct
     db.financialAccount.findFirst({
       where: {
         organizationId: load.shipperId,
-        accountType: 'SHIPPER_WALLET',
+        accountType: "SHIPPER_WALLET",
         isActive: true,
       },
       select: { id: true, balance: true },
@@ -287,7 +296,7 @@ export async function deductServiceFee(loadId: string): Promise<ServiceFeeDeduct
       ? db.financialAccount.findFirst({
           where: {
             organizationId: carrierId,
-            accountType: 'CARRIER_WALLET',
+            accountType: "CARRIER_WALLET",
             isActive: true,
           },
           select: { id: true, balance: true },
@@ -295,7 +304,7 @@ export async function deductServiceFee(loadId: string): Promise<ServiceFeeDeduct
       : null,
     db.financialAccount.findFirst({
       where: {
-        accountType: 'PLATFORM_REVENUE',
+        accountType: "PLATFORM_REVENUE",
         isActive: true,
       },
       select: { id: true },
@@ -307,9 +316,9 @@ export async function deductServiceFee(loadId: string): Promise<ServiceFeeDeduct
   if (!platformAccountId) {
     const newPlatformAccount = await db.financialAccount.create({
       data: {
-        accountType: 'PLATFORM_REVENUE',
+        accountType: "PLATFORM_REVENUE",
         balance: 0,
-        currency: 'ETB',
+        currency: "ETB",
         isActive: true,
       },
       select: { id: true },
@@ -389,8 +398,12 @@ export async function deductServiceFee(loadId: string): Promise<ServiceFeeDeduct
           where: { id: shipperWallet.id },
           select: { balance: true },
         });
-        if (!currentShipperWallet ||
-            new Decimal(currentShipperWallet.balance).lessThan(shipperFeeCalc.finalFee)) {
+        if (
+          !currentShipperWallet ||
+          new Decimal(currentShipperWallet.balance).lessThan(
+            shipperFeeCalc.finalFee
+          )
+        ) {
           throw new Error(`Insufficient shipper balance for fee deduction`);
         }
       }
@@ -401,8 +414,12 @@ export async function deductServiceFee(loadId: string): Promise<ServiceFeeDeduct
           where: { id: carrierWallet.id },
           select: { balance: true },
         });
-        if (!currentCarrierWallet ||
-            new Decimal(currentCarrierWallet.balance).lessThan(carrierFeeCalc.finalFee)) {
+        if (
+          !currentCarrierWallet ||
+          new Decimal(currentCarrierWallet.balance).lessThan(
+            carrierFeeCalc.finalFee
+          )
+        ) {
           throw new Error(`Insufficient carrier balance for fee deduction`);
         }
       }
@@ -410,8 +427,8 @@ export async function deductServiceFee(loadId: string): Promise<ServiceFeeDeduct
       // 1. Create journal entry with all lines
       const journalEntry = await tx.journalEntry.create({
         data: {
-          transactionType: 'SERVICE_FEE_DEDUCT',
-          description: `Service fees for load ${loadId}: Shipper ${load.shipper.name} (${shipperFeeCalc.finalFee.toFixed(2)} ETB), Carrier ${load.assignedTruck?.carrier?.name || 'N/A'} (${carrierFeeCalc.finalFee.toFixed(2)} ETB)`,
+          transactionType: "SERVICE_FEE_DEDUCT",
+          description: `Service fees for load ${loadId}: Shipper ${load.shipper.name} (${shipperFeeCalc.finalFee.toFixed(2)} ETB), Carrier ${load.assignedTruck?.carrier?.name || "N/A"} (${carrierFeeCalc.finalFee.toFixed(2)} ETB)`,
           reference: loadId,
           loadId,
           metadata: {
@@ -467,16 +484,18 @@ export async function deductServiceFee(loadId: string): Promise<ServiceFeeDeduct
           corridorId,
           // Shipper fee
           shipperServiceFee: shipperFeeCalc.finalFee,
-          shipperFeeStatus: shipperDeducted ? 'DEDUCTED' : 'PENDING',
+          shipperFeeStatus: shipperDeducted ? "DEDUCTED" : "PENDING",
           shipperFeeDeductedAt: shipperDeducted ? new Date() : null,
           // Carrier fee
           carrierServiceFee: carrierFeeCalc.finalFee,
-          carrierFeeStatus: carrierDeducted ? 'DEDUCTED' : 'PENDING',
+          carrierFeeStatus: carrierDeducted ? "DEDUCTED" : "PENDING",
           carrierFeeDeductedAt: carrierDeducted ? new Date() : null,
           // Legacy fields
           serviceFeeEtb: totalPlatformFee,
-          serviceFeeStatus: shipperDeducted && carrierDeducted ? 'DEDUCTED' : 'PENDING',
-          serviceFeeDeductedAt: shipperDeducted && carrierDeducted ? new Date() : null,
+          serviceFeeStatus:
+            shipperDeducted && carrierDeducted ? "DEDUCTED" : "PENDING",
+          serviceFeeDeductedAt:
+            shipperDeducted && carrierDeducted ? new Date() : null,
         },
       });
 
@@ -491,11 +510,12 @@ export async function deductServiceFee(loadId: string): Promise<ServiceFeeDeduct
       data: {
         corridorId,
         shipperServiceFee: shipperFeeCalc.finalFee,
-        shipperFeeStatus: shipperDeducted ? 'DEDUCTED' : 'PENDING',
+        shipperFeeStatus: shipperDeducted ? "DEDUCTED" : "PENDING",
         carrierServiceFee: carrierFeeCalc.finalFee,
-        carrierFeeStatus: carrierDeducted ? 'DEDUCTED' : 'PENDING',
+        carrierFeeStatus: carrierDeducted ? "DEDUCTED" : "PENDING",
         serviceFeeEtb: totalPlatformFee,
-        serviceFeeStatus: shipperDeducted && carrierDeducted ? 'DEDUCTED' : 'PENDING',
+        serviceFeeStatus:
+          shipperDeducted && carrierDeducted ? "DEDUCTED" : "PENDING",
       },
     });
   }
@@ -532,7 +552,9 @@ export async function deductServiceFee(loadId: string): Promise<ServiceFeeDeduct
  * @param loadId - Load ID to refund service fee for
  * @returns ServiceFeeRefundResult with refund details
  */
-export async function refundServiceFee(loadId: string): Promise<ServiceFeeRefundResult> {
+export async function refundServiceFee(
+  loadId: string
+): Promise<ServiceFeeRefundResult> {
   const load = await db.load.findUnique({
     where: { id: loadId },
     select: {
@@ -554,7 +576,7 @@ export async function refundServiceFee(loadId: string): Promise<ServiceFeeRefund
       success: false,
       serviceFee: new Decimal(0),
       shipperBalance: new Decimal(0),
-      error: 'Load not found',
+      error: "Load not found",
     };
   }
 
@@ -570,8 +592,8 @@ export async function refundServiceFee(loadId: string): Promise<ServiceFeeRefund
     await db.load.update({
       where: { id: loadId },
       data: {
-        shipperFeeStatus: 'REFUNDED',
-        serviceFeeStatus: 'REFUNDED',
+        shipperFeeStatus: "REFUNDED",
+        serviceFeeStatus: "REFUNDED",
         serviceFeeRefundedAt: new Date(),
       },
     });
@@ -580,20 +602,20 @@ export async function refundServiceFee(loadId: string): Promise<ServiceFeeRefund
       success: true,
       serviceFee: new Decimal(0),
       shipperBalance: new Decimal(0),
-      error: 'No fee to refund',
+      error: "No fee to refund",
     };
   }
 
   // Get accounts
   const [platformAccount, shipperWallet] = await Promise.all([
     db.financialAccount.findFirst({
-      where: { accountType: 'PLATFORM_REVENUE', isActive: true },
+      where: { accountType: "PLATFORM_REVENUE", isActive: true },
       select: { id: true, balance: true },
     }),
     db.financialAccount.findFirst({
       where: {
         organizationId: load.shipperId,
-        accountType: 'SHIPPER_WALLET',
+        accountType: "SHIPPER_WALLET",
         isActive: true,
       },
       select: { id: true, balance: true },
@@ -605,7 +627,7 @@ export async function refundServiceFee(loadId: string): Promise<ServiceFeeRefund
       success: false,
       serviceFee: feeToRefund,
       shipperBalance: new Decimal(0),
-      error: 'Required accounts not found',
+      error: "Required accounts not found",
     };
   }
 
@@ -614,76 +636,80 @@ export async function refundServiceFee(loadId: string): Promise<ServiceFeeRefund
   // This ensures journal entry, balance updates, and load updates
   // either ALL succeed or ALL fail together.
 
-  const { journalEntryId, newShipperBalance } = await db.$transaction(async (tx) => {
-    // Verify platform has sufficient balance for refund
-    const currentPlatformAccount = await tx.financialAccount.findUnique({
-      where: { id: platformAccount.id },
-      select: { balance: true },
-    });
-    if (!currentPlatformAccount ||
-        new Decimal(currentPlatformAccount.balance).lessThan(feeToRefund)) {
-      throw new Error('Insufficient platform balance for refund');
+  const { journalEntryId, newShipperBalance } = await db.$transaction(
+    async (tx) => {
+      // Verify platform has sufficient balance for refund
+      const currentPlatformAccount = await tx.financialAccount.findUnique({
+        where: { id: platformAccount.id },
+        select: { balance: true },
+      });
+      if (
+        !currentPlatformAccount ||
+        new Decimal(currentPlatformAccount.balance).lessThan(feeToRefund)
+      ) {
+        throw new Error("Insufficient platform balance for refund");
+      }
+
+      // 1. Create journal entry for refund
+      const journalEntry = await tx.journalEntry.create({
+        data: {
+          transactionType: "SERVICE_FEE_REFUND",
+          description: `Service fee refund for cancelled load ${loadId} - ${load.shipper.name}`,
+          reference: loadId,
+          loadId,
+          metadata: {
+            serviceFee: feeToRefund.toFixed(2),
+            reason: "Load cancelled",
+          },
+          lines: {
+            create: [
+              // Debit platform revenue
+              {
+                amount: feeToRefund,
+                isDebit: true,
+                accountId: platformAccount.id,
+              },
+              // Credit shipper wallet
+              {
+                amount: feeToRefund,
+                isDebit: false,
+                accountId: shipperWallet.id,
+              },
+            ],
+          },
+        },
+        select: { id: true },
+      });
+
+      // 2. Debit platform revenue (atomic with journal)
+      await tx.financialAccount.update({
+        where: { id: platformAccount.id },
+        data: { balance: { decrement: feeToRefund.toNumber() } },
+      });
+
+      // 3. Credit shipper wallet (atomic with journal)
+      const updatedShipperWallet = await tx.financialAccount.update({
+        where: { id: shipperWallet.id },
+        data: { balance: { increment: feeToRefund.toNumber() } },
+        select: { balance: true },
+      });
+
+      // 4. Update load (atomic with journal)
+      await tx.load.update({
+        where: { id: loadId },
+        data: {
+          shipperFeeStatus: "REFUNDED",
+          serviceFeeStatus: "REFUNDED",
+          serviceFeeRefundedAt: new Date(),
+        },
+      });
+
+      return {
+        journalEntryId: journalEntry.id,
+        newShipperBalance: new Decimal(updatedShipperWallet.balance),
+      };
     }
-
-    // 1. Create journal entry for refund
-    const journalEntry = await tx.journalEntry.create({
-      data: {
-        transactionType: 'SERVICE_FEE_REFUND',
-        description: `Service fee refund for cancelled load ${loadId} - ${load.shipper.name}`,
-        reference: loadId,
-        loadId,
-        metadata: {
-          serviceFee: feeToRefund.toFixed(2),
-          reason: 'Load cancelled',
-        },
-        lines: {
-          create: [
-            // Debit platform revenue
-            {
-              amount: feeToRefund,
-              isDebit: true,
-              accountId: platformAccount.id,
-            },
-            // Credit shipper wallet
-            {
-              amount: feeToRefund,
-              isDebit: false,
-              accountId: shipperWallet.id,
-            },
-          ],
-        },
-      },
-      select: { id: true },
-    });
-
-    // 2. Debit platform revenue (atomic with journal)
-    await tx.financialAccount.update({
-      where: { id: platformAccount.id },
-      data: { balance: { decrement: feeToRefund.toNumber() } },
-    });
-
-    // 3. Credit shipper wallet (atomic with journal)
-    const updatedShipperWallet = await tx.financialAccount.update({
-      where: { id: shipperWallet.id },
-      data: { balance: { increment: feeToRefund.toNumber() } },
-      select: { balance: true },
-    });
-
-    // 4. Update load (atomic with journal)
-    await tx.load.update({
-      where: { id: loadId },
-      data: {
-        shipperFeeStatus: 'REFUNDED',
-        serviceFeeStatus: 'REFUNDED',
-        serviceFeeRefundedAt: new Date(),
-      },
-    });
-
-    return {
-      journalEntryId: journalEntry.id,
-      newShipperBalance: new Decimal(updatedShipperWallet.balance),
-    };
-  });
+  );
 
   return {
     success: true,
@@ -755,7 +781,7 @@ export async function validateWalletBalancesForTrip(
       carrierFee: 0,
       shipperBalance: 0,
       carrierBalance: 0,
-      errors: ['Load not found'],
+      errors: ["Load not found"],
     };
   }
 
@@ -781,7 +807,8 @@ export async function validateWalletBalancesForTrip(
   const shipperPricePerKm = load.corridor.shipperPricePerKm
     ? Number(load.corridor.shipperPricePerKm)
     : Number(load.corridor.pricePerKm);
-  const shipperPromoFlag = load.corridor.shipperPromoFlag || load.corridor.promoFlag || false;
+  const shipperPromoFlag =
+    load.corridor.shipperPromoFlag || load.corridor.promoFlag || false;
   const shipperPromoPct = load.corridor.shipperPromoPct
     ? Number(load.corridor.shipperPromoPct)
     : load.corridor.promoDiscountPct
@@ -796,15 +823,25 @@ export async function validateWalletBalancesForTrip(
     ? Number(load.corridor.carrierPromoPct)
     : null;
 
-  const shipperFeeCalc = calculatePartyFee(distanceKm, shipperPricePerKm, shipperPromoFlag, shipperPromoPct);
-  const carrierFeeCalc = calculatePartyFee(distanceKm, carrierPricePerKm, carrierPromoFlag, carrierPromoPct);
+  const shipperFeeCalc = calculatePartyFee(
+    distanceKm,
+    shipperPricePerKm,
+    shipperPromoFlag,
+    shipperPromoPct
+  );
+  const carrierFeeCalc = calculatePartyFee(
+    distanceKm,
+    carrierPricePerKm,
+    carrierPromoFlag,
+    carrierPromoPct
+  );
 
   // Get wallet balances
   const [shipperWallet, carrierWallet] = await Promise.all([
     db.financialAccount.findFirst({
       where: {
         organizationId: load.shipperId,
-        accountType: 'SHIPPER_WALLET',
+        accountType: "SHIPPER_WALLET",
         isActive: true,
       },
       select: { balance: true },
@@ -812,7 +849,7 @@ export async function validateWalletBalancesForTrip(
     db.financialAccount.findFirst({
       where: {
         organizationId: carrierId,
-        accountType: 'CARRIER_WALLET',
+        accountType: "CARRIER_WALLET",
         isActive: true,
       },
       select: { balance: true },
@@ -857,13 +894,18 @@ export async function validateWalletBalancesForTrip(
  * This function is kept as a no-op for backward compatibility with any
  * code that may still call it. It returns success with zero values.
  */
-export async function reserveServiceFee(loadId: string): Promise<ServiceFeeReserveResult> {
-  console.warn(`reserveServiceFee(${loadId}) called but is deprecated. Use validateWalletBalancesForTrip() instead.`);
+export async function reserveServiceFee(
+  loadId: string
+): Promise<ServiceFeeReserveResult> {
+  console.warn(
+    `reserveServiceFee(${loadId}) called but is deprecated. Use validateWalletBalancesForTrip() instead.`
+  );
   return {
     success: true,
     serviceFee: new Decimal(0),
     shipperBalance: new Decimal(0),
-    error: 'Reserve flow removed - use validateWalletBalancesForTrip() for validation',
+    error:
+      "Reserve flow removed - use validateWalletBalancesForTrip() for validation",
   };
 }
 
@@ -892,7 +934,7 @@ export async function assignCorridorToLoad(loadId: string): Promise<{
   });
 
   if (!load) {
-    return { success: false, error: 'Load not found' };
+    return { success: false, error: "Load not found" };
   }
 
   if (load.corridorId) {
@@ -904,14 +946,14 @@ export async function assignCorridorToLoad(loadId: string): Promise<{
   const destinationRegion = load.deliveryLocation?.region || load.deliveryCity;
 
   if (!originRegion || !destinationRegion) {
-    return { success: true, error: 'No region information available' };
+    return { success: true, error: "No region information available" };
   }
 
   // Find matching corridor
   const match = await findMatchingCorridor(originRegion, destinationRegion);
 
   if (!match) {
-    return { success: true, error: 'No matching corridor found' };
+    return { success: true, error: "No matching corridor found" };
   }
 
   // Calculate fees for preview

@@ -15,22 +15,22 @@
  * - dateTo: Filter by end date
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { Prisma } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth();
     const { searchParams } = request.nextUrl;
 
-    const status = searchParams.get('status');
-    const roleFilter = searchParams.get('role');
-    const carrierId = searchParams.get('carrierId');
-    const shipperId = searchParams.get('shipperId');
-    const dateFrom = searchParams.get('dateFrom');
-    const dateTo = searchParams.get('dateTo');
+    const status = searchParams.get("status");
+    const roleFilter = searchParams.get("role");
+    const carrierId = searchParams.get("carrierId");
+    const shipperId = searchParams.get("shipperId");
+    const dateFrom = searchParams.get("dateFrom");
+    const dateTo = searchParams.get("dateTo");
 
     // Build where clause based on role
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     // Role-based access control
     const role = session.role;
 
-    if (role === 'CARRIER') {
+    if (role === "CARRIER") {
       // Carrier can only see their own trips
       const user = await db.user.findUnique({
         where: { id: session.userId },
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
       where.assignedTruck = {
         carrierId: user.organizationId,
       };
-    } else if (role === 'SHIPPER' || roleFilter === 'shipper') {
+    } else if (role === "SHIPPER" || roleFilter === "shipper") {
       // Shipper can only see their own loads that are IN_TRANSIT
       const user = await db.user.findUnique({
         where: { id: session.userId },
@@ -67,9 +67,13 @@ export async function GET(request: NextRequest) {
 
       where.shipperId = user.organizationId;
       // Only show trips that are approved and in transit
-      where.status = { in: ['IN_TRANSIT', 'DELIVERED'] };
+      where.status = { in: ["IN_TRANSIT", "DELIVERED"] };
       where.assignedTruckId = { not: null };
-    } else if (role === 'DISPATCHER' || role === 'ADMIN' || role === 'SUPER_ADMIN') {
+    } else if (
+      role === "DISPATCHER" ||
+      role === "ADMIN" ||
+      role === "SUPER_ADMIN"
+    ) {
       // Admin/Dispatcher can see all trips
       if (carrierId) {
         where.assignedTruck = {
@@ -80,7 +84,7 @@ export async function GET(request: NextRequest) {
         where.shipperId = shipperId;
       }
     } else {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     // Status filter
@@ -144,7 +148,7 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: {
-        updatedAt: 'desc',
+        updatedAt: "desc",
       },
       take: 100, // Limit for performance
     });
@@ -154,37 +158,52 @@ export async function GET(request: NextRequest) {
       id: load.id,
       loadId: load.id,
       status: load.status,
-      truck: load.assignedTruck ? {
-        id: load.assignedTruck.id,
-        plateNumber: load.assignedTruck.licensePlate,
-        truckType: load.assignedTruck.truckType,
-      } : null,
-      carrier: load.assignedTruck?.carrier ? {
-        id: load.assignedTruck.carrier.id,
-        name: load.assignedTruck.carrier.name,
-      } : null,
+      truck: load.assignedTruck
+        ? {
+            id: load.assignedTruck.id,
+            plateNumber: load.assignedTruck.licensePlate,
+            truckType: load.assignedTruck.truckType,
+          }
+        : null,
+      carrier: load.assignedTruck?.carrier
+        ? {
+            id: load.assignedTruck.carrier.id,
+            name: load.assignedTruck.carrier.name,
+          }
+        : null,
       shipper: {
         id: load.shipper?.id,
         name: load.shipper?.name,
       },
       // Current location comes from the assigned truck's GPS
-      currentLocation: load.assignedTruck?.currentLocationLat && load.assignedTruck?.currentLocationLon ? {
-        lat: Number(load.assignedTruck.currentLocationLat),
-        lng: Number(load.assignedTruck.currentLocationLon),
-        updatedAt: load.assignedTruck.locationUpdatedAt?.toISOString(),
-      } : null,
-      pickupLocation: load.originLat && load.originLon ? {
-        lat: Number(load.originLat),
-        lng: Number(load.originLon),
-        address: load.pickupAddress || load.pickupCity || 'Unknown',
-      } : null,
-      deliveryLocation: load.destinationLat && load.destinationLon ? {
-        lat: Number(load.destinationLat),
-        lng: Number(load.destinationLon),
-        address: load.deliveryAddress || load.deliveryCity || 'Unknown',
-      } : null,
+      currentLocation:
+        load.assignedTruck?.currentLocationLat &&
+        load.assignedTruck?.currentLocationLon
+          ? {
+              lat: Number(load.assignedTruck.currentLocationLat),
+              lng: Number(load.assignedTruck.currentLocationLon),
+              updatedAt: load.assignedTruck.locationUpdatedAt?.toISOString(),
+            }
+          : null,
+      pickupLocation:
+        load.originLat && load.originLon
+          ? {
+              lat: Number(load.originLat),
+              lng: Number(load.originLon),
+              address: load.pickupAddress || load.pickupCity || "Unknown",
+            }
+          : null,
+      deliveryLocation:
+        load.destinationLat && load.destinationLon
+          ? {
+              lat: Number(load.destinationLat),
+              lng: Number(load.destinationLon),
+              address: load.deliveryAddress || load.deliveryCity || "Unknown",
+            }
+          : null,
       startedAt: null, // Would need to track this separately
-      completedAt: load.status === 'COMPLETED' ? load.updatedAt?.toISOString() : null,
+      completedAt:
+        load.status === "COMPLETED" ? load.updatedAt?.toISOString() : null,
     }));
 
     return NextResponse.json({
@@ -192,9 +211,9 @@ export async function GET(request: NextRequest) {
       total: trips.length,
     });
   } catch (error) {
-    console.error('Map trips API error:', error);
+    console.error("Map trips API error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

@@ -7,16 +7,16 @@
  * Handles GPS-related alerts and notifications
  */
 
-import { db } from './db';
-import { createNotification } from './notifications';
-import { sendEmailToUser, EmailTemplate } from './emailService';
+import { db } from "./db";
+import { createNotification } from "./notifications";
+import { sendEmailToUser, EmailTemplate } from "./emailService";
 
 export interface GpsAlertEvent {
-  type: 'GPS_OFFLINE' | 'GPS_SIGNAL_LOST' | 'GPS_BACK_ONLINE';
+  type: "GPS_OFFLINE" | "GPS_SIGNAL_LOST" | "GPS_BACK_ONLINE";
   truckId: string;
   loadId?: string;
   timestamp: Date;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 /**
@@ -33,7 +33,10 @@ export async function triggerGpsOfflineAlerts(
     try {
       await sendGpsOfflineAlert(truckId);
     } catch (error) {
-      console.error(`Failed to send offline alert for truck ${truckId}:`, error);
+      console.error(
+        `Failed to send offline alert for truck ${truckId}:`,
+        error
+      );
     }
   }
 }
@@ -59,7 +62,7 @@ export async function sendGpsOfflineAlert(truckId: string): Promise<void> {
           users: {
             where: {
               role: {
-                in: ['CARRIER', 'DISPATCHER', 'ADMIN'],
+                in: ["CARRIER", "DISPATCHER", "ADMIN"],
               },
             },
             select: {
@@ -80,7 +83,7 @@ export async function sendGpsOfflineAlert(truckId: string): Promise<void> {
               users: {
                 where: {
                   role: {
-                    in: ['SHIPPER', 'ADMIN'],
+                    in: ["SHIPPER", "ADMIN"],
                   },
                 },
                 select: {
@@ -106,10 +109,10 @@ export async function sendGpsOfflineAlert(truckId: string): Promise<void> {
   // Send all notifications and emails in parallel
   await Promise.all([
     // Carrier notifications + emails
-    ...truck.carrier.users.flatMap(user => [
+    ...truck.carrier.users.flatMap((user) => [
       createNotification({
         userId: user.id,
-        type: 'GPS_OFFLINE',
+        type: "GPS_OFFLINE",
         title: `GPS Signal Lost: ${truck.licensePlate}`,
         message: `Truck ${truck.licensePlate} on Load #${truck.assignedLoad!.id.slice(-8)} has lost GPS signal (offline for ${minutesOffline} minutes).`,
         metadata: {
@@ -122,14 +125,14 @@ export async function sendGpsOfflineAlert(truckId: string): Promise<void> {
       sendEmailToUser(user.id, EmailTemplate.GPS_OFFLINE, {
         truckPlate: truck.licensePlate,
         loadId: truck.assignedLoad!.id,
-        lastLocation: 'Unknown',
+        lastLocation: "Unknown",
       }),
     ]),
     // Shipper notifications
-    ...truck.assignedLoad.shipper.users.map(user =>
+    ...truck.assignedLoad.shipper.users.map((user) =>
       createNotification({
         userId: user.id,
-        type: 'GPS_OFFLINE',
+        type: "GPS_OFFLINE",
         title: `Tracking Alert: Load #${truck.assignedLoad!.id.slice(-8)}`,
         message: `GPS tracking for Load #${truck.assignedLoad!.id.slice(-8)} is currently unavailable. The carrier has been notified.`,
         metadata: {
@@ -140,8 +143,7 @@ export async function sendGpsOfflineAlert(truckId: string): Promise<void> {
       })
     ),
   ]);
-
-  }
+}
 
 /**
  * Send GPS back online alert
@@ -162,7 +164,7 @@ export async function sendGpsBackOnlineAlert(truckId: string): Promise<void> {
           users: {
             where: {
               role: {
-                in: ['CARRIER', 'DISPATCHER', 'ADMIN'],
+                in: ["CARRIER", "DISPATCHER", "ADMIN"],
               },
             },
             select: {
@@ -179,7 +181,7 @@ export async function sendGpsBackOnlineAlert(truckId: string): Promise<void> {
               users: {
                 where: {
                   role: {
-                    in: ['SHIPPER', 'ADMIN'],
+                    in: ["SHIPPER", "ADMIN"],
                   },
                 },
                 select: {
@@ -200,10 +202,10 @@ export async function sendGpsBackOnlineAlert(truckId: string): Promise<void> {
   // Send all notifications and emails in parallel
   await Promise.all([
     // Carrier notifications + emails
-    ...truck.carrier.users.flatMap(user => [
+    ...truck.carrier.users.flatMap((user) => [
       createNotification({
         userId: user.id,
-        type: 'GPS_BACK_ONLINE',
+        type: "GPS_BACK_ONLINE",
         title: `GPS Restored: ${truck.licensePlate}`,
         message: `GPS signal has been restored for truck ${truck.licensePlate}.`,
         metadata: {
@@ -217,10 +219,10 @@ export async function sendGpsBackOnlineAlert(truckId: string): Promise<void> {
       }),
     ]),
     // Shipper notifications
-    ...truck.assignedLoad.shipper.users.map(user =>
+    ...truck.assignedLoad.shipper.users.map((user) =>
       createNotification({
         userId: user.id,
-        type: 'GPS_BACK_ONLINE',
+        type: "GPS_BACK_ONLINE",
         title: `Tracking Restored: Load #${truck.assignedLoad!.id.slice(-8)}`,
         message: `GPS tracking has been restored for Load #${truck.assignedLoad!.id.slice(-8)}.`,
         metadata: {
@@ -230,8 +232,7 @@ export async function sendGpsBackOnlineAlert(truckId: string): Promise<void> {
       })
     ),
   ]);
-
-  }
+}
 
 /**
  * Check if a truck just went offline (status changed to SIGNAL_LOST)
@@ -248,14 +249,14 @@ export async function handleGpsStatusChange(
   newStatus: string
 ): Promise<void> {
   // Truck went offline
-  if (oldStatus !== 'SIGNAL_LOST' && newStatus === 'SIGNAL_LOST') {
+  if (oldStatus !== "SIGNAL_LOST" && newStatus === "SIGNAL_LOST") {
     await sendGpsOfflineAlert(truckId);
   }
 
   // Truck came back online
   if (
-    oldStatus === 'SIGNAL_LOST' &&
-    (newStatus === 'ACTIVE' || newStatus === 'INACTIVE')
+    oldStatus === "SIGNAL_LOST" &&
+    (newStatus === "ACTIVE" || newStatus === "INACTIVE")
   ) {
     await sendGpsBackOnlineAlert(truckId);
   }
@@ -286,7 +287,7 @@ export async function getGpsAlertStats(
   // Get currently offline trucks with active loads
   const offlineTrucks = await db.truck.count({
     where: {
-      gpsStatus: 'SIGNAL_LOST',
+      gpsStatus: "SIGNAL_LOST",
       assignedLoad: {
         isNot: null,
       },

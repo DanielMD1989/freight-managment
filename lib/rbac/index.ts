@@ -48,7 +48,9 @@ export async function hasAnyRole(roles: Role[]): Promise<boolean> {
   return currentRole ? roles.includes(currentRole) : false;
 }
 
-export async function requireRole(allowedRoles: Role[]): Promise<SessionPayload> {
+export async function requireRole(
+  allowedRoles: Role[]
+): Promise<SessionPayload> {
   const session = await requireAuth();
 
   if (!allowedRoles.includes(session.role as Role)) {
@@ -67,21 +69,27 @@ export async function hasPermission(permission: Permission): Promise<boolean> {
   return checkPermission(role, permission);
 }
 
-export async function hasAnyPermission(permissions: Permission[]): Promise<boolean> {
+export async function hasAnyPermission(
+  permissions: Permission[]
+): Promise<boolean> {
   const role = await getCurrentUserRole();
   if (!role) return false;
 
   return checkAnyPermission(role, permissions);
 }
 
-export async function hasAllPermissions(permissions: Permission[]): Promise<boolean> {
+export async function hasAllPermissions(
+  permissions: Permission[]
+): Promise<boolean> {
   const role = await getCurrentUserRole();
   if (!role) return false;
 
   return checkAllPermissions(role, permissions);
 }
 
-export async function requirePermission(permission: Permission): Promise<SessionPayload> {
+export async function requirePermission(
+  permission: Permission
+): Promise<SessionPayload> {
   const session = await requireAuth();
 
   if (!checkPermission(session.role as Role, permission)) {
@@ -93,7 +101,9 @@ export async function requirePermission(permission: Permission): Promise<Session
   return session;
 }
 
-export async function requireAnyPermission(permissions: Permission[]): Promise<SessionPayload> {
+export async function requireAnyPermission(
+  permissions: Permission[]
+): Promise<SessionPayload> {
   const session = await requireAuth();
 
   if (!checkAnyPermission(session.role as Role, permissions)) {
@@ -105,7 +115,9 @@ export async function requireAnyPermission(permissions: Permission[]): Promise<S
   return session;
 }
 
-export async function requireAllPermissions(permissions: Permission[]): Promise<SessionPayload> {
+export async function requireAllPermissions(
+  permissions: Permission[]
+): Promise<SessionPayload> {
   const session = await requireAuth();
 
   if (!checkAllPermissions(session.role as Role, permissions)) {
@@ -133,7 +145,9 @@ export async function isSuperAdmin(): Promise<boolean> {
 }
 
 // Helper to check if user can manage an organization
-export async function canManageOrganization(organizationId: string): Promise<boolean> {
+export async function canManageOrganization(
+  organizationId: string
+): Promise<boolean> {
   const session = await getSession();
   if (!session) return false;
 

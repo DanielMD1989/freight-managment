@@ -12,15 +12,15 @@
  * - Filter and search capabilities
  */
 
-import { Metadata } from 'next';
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
-import { getCurrentUser } from '@/lib/auth';
-import DispatcherDashboardClient from './DispatcherDashboardClient';
+import { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { getCurrentUser } from "@/lib/auth";
+import DispatcherDashboardClient from "./DispatcherDashboardClient";
 
 export const metadata: Metadata = {
-  title: 'Dispatcher Dashboard - Freight Management',
-  description: 'System-wide dispatcher dashboard for load and truck management',
+  title: "Dispatcher Dashboard - Freight Management",
+  description: "System-wide dispatcher dashboard for load and truck management",
 };
 
 interface DashboardStats {
@@ -50,29 +50,29 @@ interface DashboardData {
 async function fetchDashboardData(): Promise<DashboardData | null> {
   try {
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('session');
-    const csrfCookie = cookieStore.get('csrf_token');
+    const sessionCookie = cookieStore.get("session");
+    const csrfCookie = cookieStore.get("csrf_token");
 
     if (!sessionCookie) {
       return null;
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     const response = await fetch(`${baseUrl}/api/dispatcher/dashboard`, {
       headers: {
-        Cookie: `session=${sessionCookie.value}${csrfCookie ? `; csrf_token=${csrfCookie.value}` : ''}`,
+        Cookie: `session=${sessionCookie.value}${csrfCookie ? `; csrf_token=${csrfCookie.value}` : ""}`,
       },
-      cache: 'no-store',
+      cache: "no-store",
     });
 
     if (!response.ok) {
-      console.error('Failed to fetch dispatcher dashboard:', response.status);
+      console.error("Failed to fetch dispatcher dashboard:", response.status);
       return null;
     }
 
     return response.json();
   } catch (error) {
-    console.error('Error fetching dispatcher dashboard:', error);
+    console.error("Error fetching dispatcher dashboard:", error);
     return null;
   }
 }
@@ -81,16 +81,16 @@ export default async function DispatcherDashboardPage() {
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect('/login');
+    redirect("/login");
   }
 
   // Only DISPATCHER, PLATFORM_OPS, and ADMIN can access
   if (
-    user.role !== 'DISPATCHER' &&
-    user.role !== 'SUPER_ADMIN' &&
-    user.role !== 'ADMIN'
+    user.role !== "DISPATCHER" &&
+    user.role !== "SUPER_ADMIN" &&
+    user.role !== "ADMIN"
   ) {
-    redirect('/unauthorized');
+    redirect("/unauthorized");
   }
 
   // Fetch dashboard data server-side
@@ -98,13 +98,13 @@ export default async function DispatcherDashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-[1800px] mx-auto px-4 py-6">
+      <div className="mx-auto max-w-[1800px] px-4 py-6">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900">
             Dispatcher Dashboard
           </h1>
-          <p className="text-gray-600 mt-1">
+          <p className="mt-1 text-gray-600">
             System-wide view of all loads and trucks
           </p>
         </div>
@@ -115,7 +115,9 @@ export default async function DispatcherDashboardPage() {
             userId: user.id,
             email: user.email,
             role: user.role,
-            name: [user.firstName, user.lastName].filter(Boolean).join(' ') || undefined,
+            name:
+              [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+              undefined,
           }}
           dashboardData={dashboardData}
         />

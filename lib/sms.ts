@@ -16,7 +16,7 @@
  * - TWILIO_PHONE_NUMBER: Twilio phone number to send from
  */
 
-import { logger } from './logger';
+import { logger } from "./logger";
 
 /**
  * SMS message structure
@@ -50,10 +50,10 @@ interface SmsProvider {
  */
 class ConsoleSmsProvider implements SmsProvider {
   async send(message: SmsMessage): Promise<SmsResult> {
-    console.log('\n========== SMS (Console Mode) ==========');
-    console.log('To:', message.to);
-    console.log('Message:', message.message);
-    console.log('=========================================\n');
+    console.log("\n========== SMS (Console Mode) ==========");
+    console.log("To:", message.to);
+    console.log("Message:", message.message);
+    console.log("=========================================\n");
 
     return {
       success: true,
@@ -91,18 +91,22 @@ class TwilioSmsProvider implements SmsProvider {
       const url = `https://api.twilio.com/2010-04-01/Accounts/${this.accountSid}/Messages.json`;
 
       // Format phone number (ensure E.164 format for Ethiopia)
-      let toNumber = message.to.replace(/\s+/g, '');
-      if (toNumber.startsWith('0')) {
-        toNumber = '+251' + toNumber.substring(1);
-      } else if (!toNumber.startsWith('+')) {
-        toNumber = '+' + toNumber;
+      let toNumber = message.to.replace(/\s+/g, "");
+      if (toNumber.startsWith("0")) {
+        toNumber = "+251" + toNumber.substring(1);
+      } else if (!toNumber.startsWith("+")) {
+        toNumber = "+" + toNumber;
       }
 
       const response = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': 'Basic ' + Buffer.from(`${this.accountSid}:${this.authToken}`).toString('base64'),
-          'Content-Type': 'application/x-www-form-urlencoded',
+          Authorization:
+            "Basic " +
+            Buffer.from(`${this.accountSid}:${this.authToken}`).toString(
+              "base64"
+            ),
+          "Content-Type": "application/x-www-form-urlencoded",
         },
         body: new URLSearchParams({
           To: toNumber,
@@ -114,7 +118,7 @@ class TwilioSmsProvider implements SmsProvider {
       const data = await response.json();
 
       if (!response.ok) {
-        console.error('Twilio API error:', data);
+        console.error("Twilio API error:", data);
         return {
           success: false,
           error: data.message || `Twilio error: ${response.status}`,
@@ -126,10 +130,13 @@ class TwilioSmsProvider implements SmsProvider {
         messageId: data.sid,
       };
     } catch (error: unknown) {
-      console.error('Error sending SMS via Twilio:', error);
+      console.error("Error sending SMS via Twilio:", error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to send SMS via Twilio',
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to send SMS via Twilio",
       };
     }
   }
@@ -141,23 +148,27 @@ class TwilioSmsProvider implements SmsProvider {
  * @returns SMS provider instance
  */
 function getSmsProvider(): SmsProvider {
-  const provider = process.env.SMS_PROVIDER || 'console';
+  const provider = process.env.SMS_PROVIDER || "console";
 
   switch (provider.toLowerCase()) {
-    case 'twilio':
+    case "twilio":
       const accountSid = process.env.TWILIO_ACCOUNT_SID;
       const authToken = process.env.TWILIO_AUTH_TOKEN;
       const phoneNumber = process.env.TWILIO_PHONE_NUMBER;
 
       if (!accountSid || !authToken || !phoneNumber) {
-        console.warn('Twilio credentials not fully configured, falling back to console mode');
-        console.warn('Required: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER');
+        console.warn(
+          "Twilio credentials not fully configured, falling back to console mode"
+        );
+        console.warn(
+          "Required: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER"
+        );
         return new ConsoleSmsProvider();
       }
 
       return new TwilioSmsProvider(accountSid, authToken, phoneNumber);
 
-    case 'console':
+    case "console":
     default:
       return new ConsoleSmsProvider();
   }
@@ -177,7 +188,7 @@ export async function sendSms(to: string, message: string): Promise<SmsResult> {
     const result = await provider.send({ to, message });
 
     // Log SMS send attempt
-    logger.info('[SMS] Sent', {
+    logger.info("[SMS] Sent", {
       to,
       success: result.success,
       messageId: result.messageId,
@@ -186,11 +197,11 @@ export async function sendSms(to: string, message: string): Promise<SmsResult> {
 
     return result;
   } catch (error: unknown) {
-    logger.error('[SMS ERROR]', error, { to });
+    logger.error("[SMS ERROR]", error, { to });
 
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to send SMS',
+      error: error instanceof Error ? error.message : "Failed to send SMS",
     };
   }
 }
@@ -228,7 +239,7 @@ export async function sendBulkSms(
  * @returns Send result
  */
 export async function sendTestSms(toPhone: string): Promise<SmsResult> {
-  const message = `FreightET Test: SMS service is configured correctly. Provider: ${process.env.SMS_PROVIDER || 'console'}. Timestamp: ${new Date().toISOString()}`;
+  const message = `FreightET Test: SMS service is configured correctly. Provider: ${process.env.SMS_PROVIDER || "console"}. Timestamp: ${new Date().toISOString()}`;
 
   return sendSms(toPhone, message);
 }

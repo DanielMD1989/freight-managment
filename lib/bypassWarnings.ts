@@ -6,28 +6,28 @@
  * Automated warnings for suspicious bypass behavior
  */
 
-import { db } from './db';
-import { createNotification } from './notifications';
-import { sendEmail, EmailTemplate } from './emailService';
-import { sendSms } from './sms';
+import { db } from "./db";
+import { createNotification } from "./notifications";
+import { sendEmail, EmailTemplate } from "./emailService";
+import { sendSms } from "./sms";
 
 /**
  * Warning types for bypass detection
  */
 export enum BypassWarningType {
-  FIRST_SUSPICIOUS_CANCELLATION = 'FIRST_SUSPICIOUS_CANCELLATION',
-  MULTIPLE_SUSPICIOUS_CANCELLATIONS = 'MULTIPLE_SUSPICIOUS_CANCELLATIONS',
-  ACCOUNT_FLAGGED = 'ACCOUNT_FLAGGED',
-  BYPASS_REPORTED = 'BYPASS_REPORTED',
+  FIRST_SUSPICIOUS_CANCELLATION = "FIRST_SUSPICIOUS_CANCELLATION",
+  MULTIPLE_SUSPICIOUS_CANCELLATIONS = "MULTIPLE_SUSPICIOUS_CANCELLATIONS",
+  ACCOUNT_FLAGGED = "ACCOUNT_FLAGGED",
+  BYPASS_REPORTED = "BYPASS_REPORTED",
 }
 
 /**
  * Warning severity levels
  */
 export enum WarningSeverity {
-  INFO = 'INFO',
-  WARNING = 'WARNING',
-  CRITICAL = 'CRITICAL',
+  INFO = "INFO",
+  WARNING = "WARNING",
+  CRITICAL = "CRITICAL",
 }
 
 interface WarningMessage {
@@ -48,42 +48,43 @@ function getWarningMessage(
   switch (type) {
     case BypassWarningType.FIRST_SUSPICIOUS_CANCELLATION:
       return {
-        subject: 'Platform Completion Reminder',
+        subject: "Platform Completion Reminder",
         message: `Dear ${organizationName},\n\nWe noticed that you recently cancelled a load after viewing contact information. We understand that circumstances change, but we want to remind you of the benefits of completing loads through our platform:\n\n✓ GPS Tracking & Real-time Updates\n✓ Dispute Support & Resolution\n✓ Proof of Delivery Verification\n✓ Trust Score & Verified Badges\n✓ Payment Protection\n✓ Corridor-based Service Fees\n\nCompleting loads through the platform protects both parties and builds trust in the marketplace.\n\nIf you have any questions or concerns, please contact our support team.\n\nBest regards,\nFreightET Platform Team`,
         severity: WarningSeverity.INFO,
-        actionRequired: 'None - This is a courtesy reminder',
+        actionRequired: "None - This is a courtesy reminder",
       };
 
     case BypassWarningType.MULTIPLE_SUSPICIOUS_CANCELLATIONS:
       return {
-        subject: 'Important: Multiple Suspicious Cancellations Detected',
-        message: `Dear ${organizationName},\n\nWe have detected multiple instances (${details?.count || 'several'}) where loads were cancelled shortly after viewing contact information. This pattern may indicate platform bypass attempts.\n\n⚠️ WARNING: Continued suspicious behavior may result in:\n• Account flagging and review\n• Loss of verified status\n• Reduced visibility in search results\n• Potential account suspension\n\nPlatform Benefits You're Missing:\n✓ Transparent Pricing: Clear corridor-based service fees\n✓ Priority Listing: Verified companies appear higher in search results\n✓ Trust Score Bonus: Build reputation and attract more business\n✓ GPS Tracking: Monitor your shipments in real-time\n✓ Dispute Protection: Professional mediation for any issues\n\nPlease ensure all loads are completed through the platform. If you have legitimate reasons for cancellations, please contact our support team immediately.\n\nBest regards,\nFreightET Platform Team`,
+        subject: "Important: Multiple Suspicious Cancellations Detected",
+        message: `Dear ${organizationName},\n\nWe have detected multiple instances (${details?.count || "several"}) where loads were cancelled shortly after viewing contact information. This pattern may indicate platform bypass attempts.\n\n⚠️ WARNING: Continued suspicious behavior may result in:\n• Account flagging and review\n• Loss of verified status\n• Reduced visibility in search results\n• Potential account suspension\n\nPlatform Benefits You're Missing:\n✓ Transparent Pricing: Clear corridor-based service fees\n✓ Priority Listing: Verified companies appear higher in search results\n✓ Trust Score Bonus: Build reputation and attract more business\n✓ GPS Tracking: Monitor your shipments in real-time\n✓ Dispute Protection: Professional mediation for any issues\n\nPlease ensure all loads are completed through the platform. If you have legitimate reasons for cancellations, please contact our support team immediately.\n\nBest regards,\nFreightET Platform Team`,
         severity: WarningSeverity.WARNING,
-        actionRequired: 'Review your account activity and ensure platform completion',
+        actionRequired:
+          "Review your account activity and ensure platform completion",
       };
 
     case BypassWarningType.ACCOUNT_FLAGGED:
       return {
-        subject: 'URGENT: Account Flagged for Review',
-        message: `Dear ${organizationName},\n\n🚨 URGENT NOTICE: Your account has been flagged for suspicious activity.\n\nReason: ${details?.reason || 'Pattern of suspicious cancellations after viewing contact information'}\n\nYour account is now under review by our platform operations team. During this review period:\n• Your listings may have reduced visibility\n• Some platform features may be restricted\n• You may be contacted for additional verification\n\nIMPORTATE ACTIONS REQUIRED:\n1. Review all recent load cancellations\n2. Contact our support team immediately to explain any unusual activity\n3. Ensure all future loads are completed through the platform\n4. Provide any documentation to support legitimate cancellations\n\nFailure to respond within 7 days may result in account suspension.\n\nTo protect your account standing:\n✓ Complete all loads through the platform\n✓ Maintain honest communication with all parties\n✓ Use platform features (GPS tracking, POD, disputes)\n✓ Build your trust score and completion rate\n\nContact Support: support@freightet.com\nPhone: +251-XX-XXX-XXXX\n\nBest regards,\nFreightET Platform Operations Team`,
+        subject: "URGENT: Account Flagged for Review",
+        message: `Dear ${organizationName},\n\n🚨 URGENT NOTICE: Your account has been flagged for suspicious activity.\n\nReason: ${details?.reason || "Pattern of suspicious cancellations after viewing contact information"}\n\nYour account is now under review by our platform operations team. During this review period:\n• Your listings may have reduced visibility\n• Some platform features may be restricted\n• You may be contacted for additional verification\n\nIMPORTATE ACTIONS REQUIRED:\n1. Review all recent load cancellations\n2. Contact our support team immediately to explain any unusual activity\n3. Ensure all future loads are completed through the platform\n4. Provide any documentation to support legitimate cancellations\n\nFailure to respond within 7 days may result in account suspension.\n\nTo protect your account standing:\n✓ Complete all loads through the platform\n✓ Maintain honest communication with all parties\n✓ Use platform features (GPS tracking, POD, disputes)\n✓ Build your trust score and completion rate\n\nContact Support: support@freightet.com\nPhone: +251-XX-XXX-XXXX\n\nBest regards,\nFreightET Platform Operations Team`,
         severity: WarningSeverity.CRITICAL,
-        actionRequired: 'Contact support immediately and provide explanation',
+        actionRequired: "Contact support immediately and provide explanation",
       };
 
     case BypassWarningType.BYPASS_REPORTED:
       return {
-        subject: 'Bypass Attempt Reported Against Your Account',
-        message: `Dear ${organizationName},\n\nWe have received a report from another platform user alleging that you attempted to bypass the platform after viewing contact information.\n\nReport Details:\n• Load ID: ${details?.loadId || 'N/A'}\n• Reported By: ${details?.reportedBy || 'Another user'}\n• Date: ${details?.reportedAt ? new Date(String(details.reportedAt)).toLocaleDateString() : 'N/A'}\n• Reason: ${details?.reason || 'Not provided'}\n\nThis report will be investigated by our platform operations team. Please note:\n• Multiple bypass reports may result in account flagging\n• False reports are taken seriously and investigated\n• You have the right to respond to this allegation\n\nWhat You Should Do:\n1. Review the details of the reported load\n2. If you have an explanation, contact support immediately\n3. Ensure all future loads are completed through the platform\n4. Maintain professional communication with all platform users\n\nRemember: Completing loads through the platform provides:\n✓ Legal protection for both parties\n✓ Dispute resolution support\n✓ Payment security\n✓ Trust score and reputation building\n✓ Transparent corridor-based service fees\n\nContact Support: support@freightet.com\n\nBest regards,\nFreightET Platform Team`,
+        subject: "Bypass Attempt Reported Against Your Account",
+        message: `Dear ${organizationName},\n\nWe have received a report from another platform user alleging that you attempted to bypass the platform after viewing contact information.\n\nReport Details:\n• Load ID: ${details?.loadId || "N/A"}\n• Reported By: ${details?.reportedBy || "Another user"}\n• Date: ${details?.reportedAt ? new Date(String(details.reportedAt)).toLocaleDateString() : "N/A"}\n• Reason: ${details?.reason || "Not provided"}\n\nThis report will be investigated by our platform operations team. Please note:\n• Multiple bypass reports may result in account flagging\n• False reports are taken seriously and investigated\n• You have the right to respond to this allegation\n\nWhat You Should Do:\n1. Review the details of the reported load\n2. If you have an explanation, contact support immediately\n3. Ensure all future loads are completed through the platform\n4. Maintain professional communication with all platform users\n\nRemember: Completing loads through the platform provides:\n✓ Legal protection for both parties\n✓ Dispute resolution support\n✓ Payment security\n✓ Trust score and reputation building\n✓ Transparent corridor-based service fees\n\nContact Support: support@freightet.com\n\nBest regards,\nFreightET Platform Team`,
         severity: WarningSeverity.WARNING,
-        actionRequired: 'Review the report and contact support if needed',
+        actionRequired: "Review the report and contact support if needed",
       };
 
     default:
       return {
-        subject: 'Platform Notice',
-        message: 'Please review your account activity.',
+        subject: "Platform Notice",
+        message: "Please review your account activity.",
         severity: WarningSeverity.INFO,
-        actionRequired: 'None',
+        actionRequired: "None",
       };
   }
 }
@@ -120,7 +121,10 @@ async function sendInAppNotification(
       users.map((user) =>
         createNotification({
           userId: user.id,
-          type: type === BypassWarningType.ACCOUNT_FLAGGED ? 'ACCOUNT_FLAGGED' : 'BYPASS_WARNING',
+          type:
+            type === BypassWarningType.ACCOUNT_FLAGGED
+              ? "ACCOUNT_FLAGGED"
+              : "BYPASS_WARNING",
           title: message.subject,
           message: message.message,
           metadata: {
@@ -132,7 +136,7 @@ async function sendInAppNotification(
       )
     );
   } catch (error) {
-    console.error('Failed to send in-app notification:', error);
+    console.error("Failed to send in-app notification:", error);
   }
 }
 
@@ -162,10 +166,14 @@ async function sendEmailNotification(
 
     // Send email using the email service
     if (type === BypassWarningType.ACCOUNT_FLAGGED) {
-      await sendEmail(organization.contactEmail, EmailTemplate.ACCOUNT_FLAGGED, {
-        recipientName: organization.name,
-        reason: message.message,
-      });
+      await sendEmail(
+        organization.contactEmail,
+        EmailTemplate.ACCOUNT_FLAGGED,
+        {
+          recipientName: organization.name,
+          reason: message.message,
+        }
+      );
     } else {
       // For other bypass warnings, use generic message
       await sendEmail(organization.contactEmail, EmailTemplate.BYPASS_WARNING, {
@@ -173,9 +181,8 @@ async function sendEmailNotification(
         message: message.message,
       });
     }
-
-    } catch (error) {
-    console.error('Failed to send email notification:', error);
+  } catch (error) {
+    console.error("Failed to send email notification:", error);
   }
 }
 
@@ -215,11 +222,13 @@ async function sendSmsNotification(
     const result = await sendSms(organization.contactPhone, smsText);
 
     if (result.success) {
-      } else {
-      console.error(`📱 SMS failed to: ${organization.contactPhone} - ${result.error}`);
+    } else {
+      console.error(
+        `📱 SMS failed to: ${organization.contactPhone} - ${result.error}`
+      );
     }
   } catch (error) {
-    console.error('Failed to send SMS notification:', error);
+    console.error("Failed to send SMS notification:", error);
   }
 }
 
@@ -255,9 +264,8 @@ export async function sendBypassWarning(
       sendEmailNotification(organizationId, type, message),
       sendSmsNotification(organizationId, type, message),
     ]);
-
-    } catch (error) {
-    console.error('Failed to send bypass warning:', error);
+  } catch (error) {
+    console.error("Failed to send bypass warning:", error);
     throw error;
   }
 }
@@ -296,13 +304,13 @@ export async function reportBypassAttempt(
     ]);
 
     if (!load) {
-      throw new Error('Load not found');
+      throw new Error("Load not found");
     }
 
     // Send warning to reported organization
     await sendBypassWarning(reportedOrgId, BypassWarningType.BYPASS_REPORTED, {
       loadId,
-      reportedBy: reporter?.organization?.name || 'Another user',
+      reportedBy: reporter?.organization?.name || "Another user",
       reportedAt: new Date(),
       reason,
     });
@@ -311,7 +319,7 @@ export async function reportBypassAttempt(
     const admins = await db.user.findMany({
       where: {
         role: {
-          in: ['ADMIN', 'SUPER_ADMIN'],
+          in: ["ADMIN", "SUPER_ADMIN"],
         },
         isActive: true,
       },
@@ -322,8 +330,8 @@ export async function reportBypassAttempt(
       admins.map((admin) =>
         createNotification({
           userId: admin.id,
-          type: 'BYPASS_REPORTED',
-          title: 'Bypass Attempt Reported',
+          type: "BYPASS_REPORTED",
+          title: "Bypass Attempt Reported",
           message: `A bypass attempt has been reported for Load #${loadId.slice(-8)}`,
           metadata: {
             loadId,
@@ -334,9 +342,8 @@ export async function reportBypassAttempt(
         })
       )
     );
-
-    } catch (error) {
-    console.error('Failed to report bypass attempt:', error);
+  } catch (error) {
+    console.error("Failed to report bypass attempt:", error);
     throw error;
   }
 }

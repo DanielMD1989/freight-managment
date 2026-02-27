@@ -6,17 +6,19 @@
  * Sprint 14 - DAT-Style UI Transformation
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { validateCSRFWithMobile } from '@/lib/csrf';
-import { zodErrorResponse } from '@/lib/validation';
-import { z } from 'zod';
-import { Prisma } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { zodErrorResponse } from "@/lib/validation";
+import { z } from "zod";
+import { Prisma } from "@prisma/client";
 
 const createSavedSearchSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  type: z.enum(['LOADS', 'TRUCKS'], { message: 'Type must be LOADS or TRUCKS' }),
+  name: z.string().min(1, "Name is required"),
+  type: z.enum(["LOADS", "TRUCKS"], {
+    message: "Type must be LOADS or TRUCKS",
+  }),
   criteria: z.record(z.string(), z.any()).optional(),
 });
 
@@ -28,7 +30,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await requireAuth();
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type'); // LOADS or TRUCKS
+    const type = searchParams.get("type"); // LOADS or TRUCKS
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: Record<string, any> = {
@@ -42,17 +44,17 @@ export async function GET(request: NextRequest) {
     const searches = await db.savedSearch.findMany({
       where,
       orderBy: {
-        updatedAt: 'desc',
+        updatedAt: "desc",
       },
     });
 
     return NextResponse.json({ searches });
-  // FIX: Use unknown type
+    // FIX: Use unknown type
   } catch (error: unknown) {
-    console.error('Get saved searches error:', error);
+    console.error("Get saved searches error:", error);
     // M4 FIX: Don't leak error details
     return NextResponse.json(
-      { error: 'Failed to fetch saved searches' },
+      { error: "Failed to fetch saved searches" },
       { status: 500 }
     );
   }
@@ -88,11 +90,11 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ search }, { status: 201 });
-  // FIX: Use unknown type
+    // FIX: Use unknown type
   } catch (error: unknown) {
-    console.error('Create saved search error:', error);
+    console.error("Create saved search error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

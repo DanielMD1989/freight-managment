@@ -6,9 +6,12 @@
  * Allows users to view their security activity history.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
-import { getUserSecurityEvents, formatSecurityEvent } from '@/lib/security-events';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import {
+  getUserSecurityEvents,
+  formatSecurityEvent,
+} from "@/lib/security-events";
 
 /**
  * GET /api/user/security-events
@@ -20,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
-    const limitParam = searchParams.get('limit');
+    const limitParam = searchParams.get("limit");
     const limit = limitParam ? Math.min(parseInt(limitParam, 10), 100) : 50;
 
     const events = await getUserSecurityEvents(session.userId, { limit });
@@ -36,8 +39,8 @@ export async function GET(request: NextRequest) {
         createdAt: event.createdAt,
         success: event.success,
       }),
-      deviceInfo: event.deviceInfo || 'Unknown device',
-      ipAddress: event.ipAddress || 'Unknown',
+      deviceInfo: event.deviceInfo || "Unknown device",
+      ipAddress: event.ipAddress || "Unknown",
       success: event.success,
       timestamp: event.createdAt,
     }));
@@ -47,17 +50,14 @@ export async function GET(request: NextRequest) {
       count: formattedEvents.length,
     });
   } catch (error) {
-    console.error('Failed to get security events:', error);
+    console.error("Failed to get security events:", error);
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     return NextResponse.json(
-      { error: 'Failed to retrieve security events' },
+      { error: "Failed to retrieve security events" },
       { status: 500 }
     );
   }

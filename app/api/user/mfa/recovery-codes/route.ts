@@ -12,11 +12,16 @@
  * - Old codes invalidated when regenerating
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth, verifyPassword, generateRecoveryCodes, hashRecoveryCodes } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { requireCSRF } from '@/lib/csrf';
-import { logSecurityEvent, SecurityEventType } from '@/lib/security-events';
+import { NextRequest, NextResponse } from "next/server";
+import {
+  requireAuth,
+  verifyPassword,
+  generateRecoveryCodes,
+  hashRecoveryCodes,
+} from "@/lib/auth";
+import { db } from "@/lib/db";
+import { requireCSRF } from "@/lib/csrf";
+import { logSecurityEvent, SecurityEventType } from "@/lib/security-events";
 
 /**
  * GET /api/user/mfa/recovery-codes
@@ -38,7 +43,7 @@ export async function GET() {
 
     if (!mfa?.enabled) {
       return NextResponse.json(
-        { error: 'MFA is not enabled' },
+        { error: "MFA is not enabled" },
         { status: 400 }
       );
     }
@@ -52,17 +57,20 @@ export async function GET() {
       usedCodes,
       remainingCodes,
       generatedAt: mfa.recoveryCodesGeneratedAt,
-      warning: remainingCodes <= 2 ? 'You have few recovery codes left. Consider regenerating.' : null,
+      warning:
+        remainingCodes <= 2
+          ? "You have few recovery codes left. Consider regenerating."
+          : null,
     });
   } catch (error) {
-    console.error('Get recovery codes error:', error);
+    console.error("Get recovery codes error:", error);
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     return NextResponse.json(
-      { error: 'Failed to get recovery codes status' },
+      { error: "Failed to get recovery codes status" },
       { status: 500 }
     );
   }
@@ -79,15 +87,17 @@ export async function POST(request: NextRequest) {
     if (csrfError) return csrfError;
 
     const session = await requireAuth();
-    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip');
-    const userAgent = request.headers.get('user-agent');
+    const ipAddress =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip");
+    const userAgent = request.headers.get("user-agent");
 
     const body = await request.json();
     const { password } = body;
 
     if (!password) {
       return NextResponse.json(
-        { error: 'Password is required to regenerate recovery codes' },
+        { error: "Password is required to regenerate recovery codes" },
         { status: 400 }
       );
     }
@@ -99,7 +109,7 @@ export async function POST(request: NextRequest) {
 
     if (!mfa?.enabled) {
       return NextResponse.json(
-        { error: 'MFA is not enabled' },
+        { error: "MFA is not enabled" },
         { status: 400 }
       );
     }
@@ -111,10 +121,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user?.passwordHash) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const isValidPassword = await verifyPassword(password, user.passwordHash);
@@ -126,11 +133,11 @@ export async function POST(request: NextRequest) {
         ipAddress,
         userAgent,
         success: false,
-        metadata: { reason: 'Invalid password' },
+        metadata: { reason: "Invalid password" },
       });
 
       return NextResponse.json(
-        { error: 'Incorrect password' },
+        { error: "Incorrect password" },
         { status: 400 }
       );
     }
@@ -160,19 +167,19 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Recovery codes regenerated successfully',
+      message: "Recovery codes regenerated successfully",
       recoveryCodes: recoveryCodes, // Only returned once!
-      warning: 'Save these new recovery codes. Your old codes are now invalid.',
+      warning: "Save these new recovery codes. Your old codes are now invalid.",
     });
   } catch (error) {
-    console.error('Regenerate recovery codes error:', error);
+    console.error("Regenerate recovery codes error:", error);
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     return NextResponse.json(
-      { error: 'Failed to regenerate recovery codes' },
+      { error: "Failed to regenerate recovery codes" },
       { status: 500 }
     );
   }

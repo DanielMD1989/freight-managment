@@ -6,7 +6,7 @@
  */
 
 // Domain models and enums (canonical source of truth)
-export * from './domain';
+export * from "./domain";
 
 // UI component types (re-export with exclusions to avoid conflicts)
 // Note: UserRole and TruckPosting are excluded - use domain.ts versions
@@ -59,8 +59,8 @@ export type {
   ExpandableRowProps,
   // Posting types (UI-specific, different from domain)
   LoadPosting,
-} from './loadboard-ui';
+} from "./loadboard-ui";
 
 // Re-export UI-specific TruckPosting with alias to avoid conflict
-export type { TruckPosting as TruckPostingUI } from './loadboard-ui';
-export type { UserRole as UIUserRole } from './loadboard-ui';
+export type { TruckPosting as TruckPostingUI } from "./loadboard-ui";
+export type { UserRole as UIUserRole } from "./loadboard-ui";

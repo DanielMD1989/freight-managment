@@ -7,7 +7,9 @@ import { Prisma } from "@prisma/client";
 
 const createDeviceSchema = z.object({
   imei: z.string().min(15).max(15),
-  status: z.enum(["ACTIVE", "INACTIVE", "SIGNAL_LOST", "MAINTENANCE"]).default("ACTIVE"),
+  status: z
+    .enum(["ACTIVE", "INACTIVE", "SIGNAL_LOST", "MAINTENANCE"])
+    .default("ACTIVE"),
 });
 
 // POST /api/gps/devices - Register GPS device (admin/ops only)

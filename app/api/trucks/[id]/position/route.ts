@@ -6,11 +6,11 @@
  * Get latest GPS position for a truck
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { getLatestPosition } from '@/lib/gpsQuery';
-import { checkRpsLimit, RPS_CONFIGS } from '@/lib/rateLimit';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { getLatestPosition } from "@/lib/gpsQuery";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 
 /**
  * GET /api/trucks/[id]/position
@@ -24,9 +24,9 @@ export async function GET(
   try {
     // Rate limiting: GPS endpoints need higher limits for real-time tracking
     const ip =
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      request.headers.get('x-real-ip') ||
-      'unknown';
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
     const rpsResult = await checkRpsLimit(
       RPS_CONFIGS.gps.endpoint,
       ip,
@@ -35,8 +35,8 @@ export async function GET(
     );
     if (!rpsResult.allowed) {
       return NextResponse.json(
-        { error: 'Rate limit exceeded', retryAfter: 1 },
-        { status: 429, headers: { 'Retry-After': '1' } }
+        { error: "Rate limit exceeded", retryAfter: 1 },
+        { status: 429, headers: { "Retry-After": "1" } }
       );
     }
 
@@ -50,10 +50,7 @@ export async function GET(
     });
 
     if (!truck) {
-      return NextResponse.json(
-        { error: 'Truck not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
     // Check ownership: carrier who owns truck, shipper with active load, or admin
@@ -63,16 +60,16 @@ export async function GET(
     });
 
     const isOwner = user?.organizationId === truck.carrierId;
-    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+    const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
 
     // Shippers can view position if truck is on their active load
     let isShipperWithActiveLoad = false;
-    if (user?.role === 'SHIPPER' && user?.organizationId) {
+    if (user?.role === "SHIPPER" && user?.organizationId) {
       const activeLoad = await db.load.findFirst({
         where: {
           assignedTruckId: truckId,
           shipperId: user.organizationId,
-          status: 'IN_TRANSIT',
+          status: "IN_TRANSIT",
         },
       });
       isShipperWithActiveLoad = !!activeLoad;
@@ -80,7 +77,7 @@ export async function GET(
 
     if (!isOwner && !isAdmin && !isShipperWithActiveLoad) {
       return NextResponse.json(
-        { error: 'You do not have permission to view this truck\'s position' },
+        { error: "You do not have permission to view this truck's position" },
         { status: 403 }
       );
     }
@@ -89,16 +86,16 @@ export async function GET(
 
     if (!position) {
       return NextResponse.json(
-        { error: 'No GPS position data found for this truck' },
+        { error: "No GPS position data found for this truck" },
         { status: 404 }
       );
     }
 
     return NextResponse.json({ position });
   } catch (error) {
-    console.error('Get truck position error:', error);
+    console.error("Get truck position error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

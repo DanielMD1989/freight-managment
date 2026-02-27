@@ -24,8 +24,8 @@
  *                  └─────────────┘
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { redis, RedisKeys, isRedisEnabled } from './redis';
+import { NextRequest, NextResponse } from "next/server";
+import { redis, RedisKeys, isRedisEnabled } from "./redis";
 
 // =============================================================================
 // TYPES & INTERFACES
@@ -42,7 +42,11 @@ export interface RateLimitConfig {
   /** Time window in milliseconds */
   windowMs: number;
   /** Custom key generator (default: uses userId) */
-  keyGenerator?: (request: NextRequest, userId?: string, orgId?: string) => string;
+  keyGenerator?: (
+    request: NextRequest,
+    userId?: string,
+    orgId?: string
+  ) => string;
   /** Custom error message */
   message?: string;
   /** Enable multi-key limiting (IP + User + Org) */
@@ -86,15 +90,18 @@ interface RateLimitRecord {
 const inMemoryStore = new Map<string, RateLimitRecord>();
 
 // Cleanup old entries every 5 minutes
-if (typeof setInterval !== 'undefined') {
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, record] of inMemoryStore.entries()) {
-      if (now - record.resetTime > 24 * 60 * 60 * 1000) {
-        inMemoryStore.delete(key);
+if (typeof setInterval !== "undefined") {
+  setInterval(
+    () => {
+      const now = Date.now();
+      for (const [key, record] of inMemoryStore.entries()) {
+        if (now - record.resetTime > 24 * 60 * 60 * 1000) {
+          inMemoryStore.delete(key);
+        }
       }
-    }
-  }, 5 * 60 * 1000);
+    },
+    5 * 60 * 1000
+  );
 }
 
 // =============================================================================
@@ -115,7 +122,7 @@ async function checkRateLimitRedis(
 
   try {
     if (!redis) {
-      throw new Error('Redis not available');
+      throw new Error("Redis not available");
     }
 
     // Use Redis sorted set for sliding window
@@ -136,7 +143,7 @@ async function checkRateLimitRedis(
     const results = await pipeline.exec();
 
     if (!results) {
-      throw new Error('Pipeline execution failed');
+      throw new Error("Pipeline execution failed");
     }
 
     // Get current count (before adding new request)
@@ -158,7 +165,7 @@ async function checkRateLimitRedis(
       retryAfter: allowed ? undefined : Math.ceil(config.windowMs / 1000),
     };
   } catch (error) {
-    console.error('[Rate Limit Redis] Error:', error);
+    console.error("[Rate Limit Redis] Error:", error);
     // Fallback to in-memory
     return checkRateLimitInMemory(config, identifier);
   }
@@ -204,7 +211,9 @@ function checkRateLimitInMemory(
     limit: config.limit,
     remaining: Math.max(0, config.limit - requestCount - (allowed ? 1 : 0)),
     resetTime: record.resetTime,
-    retryAfter: allowed ? undefined : Math.ceil((record.resetTime - now) / 1000),
+    retryAfter: allowed
+      ? undefined
+      : Math.ceil((record.resetTime - now) / 1000),
   };
 }
 
@@ -226,7 +235,7 @@ export async function checkRpsLimit(
 
   try {
     if (!redis) {
-      throw new Error('Redis not available');
+      throw new Error("Redis not available");
     }
 
     // Use a simple counter with 1-second TTL
@@ -236,7 +245,7 @@ export async function checkRpsLimit(
     const results = await pipeline.exec();
 
     if (!results) {
-      throw new Error('Pipeline execution failed');
+      throw new Error("Pipeline execution failed");
     }
 
     const currentCount = (results[0]?.[1] as number) || 0;
@@ -250,7 +259,7 @@ export async function checkRpsLimit(
       retryAfter: allowed ? undefined : 1,
     };
   } catch (error) {
-    console.error('[RPS Limit] Error:', error);
+    console.error("[RPS Limit] Error:", error);
     // Fallback: allow the request (fail open for availability)
     return {
       allowed: true,
@@ -268,26 +277,30 @@ export async function checkRpsLimit(
 /**
  * Extract multiple identifiers from request
  */
-function extractIdentifiers(request: NextRequest, userId?: string, orgId?: string): {
+function extractIdentifiers(
+  request: NextRequest,
+  userId?: string,
+  orgId?: string
+): {
   ip: string;
   userId: string;
   orgId: string;
   deviceId: string;
 } {
   const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown';
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown";
 
   const deviceId =
-    request.headers.get('x-device-id') ||
-    request.headers.get('user-agent')?.slice(0, 50) ||
-    'unknown';
+    request.headers.get("x-device-id") ||
+    request.headers.get("user-agent")?.slice(0, 50) ||
+    "unknown";
 
   return {
     ip,
-    userId: userId || 'anonymous',
-    orgId: orgId || 'none',
+    userId: userId || "anonymous",
+    orgId: orgId || "none",
     deviceId,
   };
 }
@@ -370,16 +383,16 @@ export async function enforceRateLimit(
   if (!result.allowed) {
     return NextResponse.json(
       {
-        error: config.message || 'Too many requests. Please try again later.',
+        error: config.message || "Too many requests. Please try again later.",
         retryAfter: result.retryAfter,
       },
       {
         status: 429,
         headers: {
-          'X-RateLimit-Limit': result.limit.toString(),
-          'X-RateLimit-Remaining': result.remaining.toString(),
-          'X-RateLimit-Reset': new Date(result.resetTime).toISOString(),
-          'Retry-After': result.retryAfter!.toString(),
+          "X-RateLimit-Limit": result.limit.toString(),
+          "X-RateLimit-Remaining": result.remaining.toString(),
+          "X-RateLimit-Reset": new Date(result.resetTime).toISOString(),
+          "Retry-After": result.retryAfter!.toString(),
         },
       }
     );
@@ -393,12 +406,17 @@ export async function enforceRateLimit(
  */
 export function withRateLimit<T>(
   config: RateLimitConfig,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper must accept any route arguments
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper accepts any route arguments
   handler: (request: NextRequest, ...args: any[]) => Promise<NextResponse>,
-  getUserId: (request: NextRequest) => Promise<{ userId?: string; orgId?: string }>
+  getUserId: (
+    request: NextRequest
+  ) => Promise<{ userId?: string; orgId?: string }>
 ) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper must accept any route arguments
-  return async (request: NextRequest, ...args: any[]): Promise<NextResponse> => {
+  return async (
+    request: NextRequest,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper accepts any route arguments
+    ...args: any[]
+  ): Promise<NextResponse> => {
     try {
       // Check skip condition
       if (config.skip && config.skip(request)) {
@@ -415,31 +433,32 @@ export function withRateLimit<T>(
         const identifier = config.keyGenerator
           ? config.keyGenerator(request, userId, orgId)
           : userId ||
-            request.headers.get('x-forwarded-for') ||
-            request.headers.get('x-real-ip') ||
-            'anonymous';
+            request.headers.get("x-forwarded-for") ||
+            request.headers.get("x-real-ip") ||
+            "anonymous";
 
         result = await checkRateLimit(config, identifier);
       }
 
       // Rate limit headers
       const headers = {
-        'X-RateLimit-Limit': result.limit.toString(),
-        'X-RateLimit-Remaining': result.remaining.toString(),
-        'X-RateLimit-Reset': new Date(result.resetTime).toISOString(),
+        "X-RateLimit-Limit": result.limit.toString(),
+        "X-RateLimit-Remaining": result.remaining.toString(),
+        "X-RateLimit-Reset": new Date(result.resetTime).toISOString(),
       };
 
       if (!result.allowed) {
         return NextResponse.json(
           {
-            error: config.message || 'Too many requests. Please try again later.',
+            error:
+              config.message || "Too many requests. Please try again later.",
             retryAfter: result.retryAfter,
           },
           {
             status: 429,
             headers: {
               ...headers,
-              'Retry-After': result.retryAfter!.toString(),
+              "Retry-After": result.retryAfter!.toString(),
             },
           }
         );
@@ -453,7 +472,7 @@ export function withRateLimit<T>(
 
       return response;
     } catch (error) {
-      console.error('[Rate Limit] Error:', error);
+      console.error("[Rate Limit] Error:", error);
       return handler(request, ...args);
     }
   };
@@ -464,15 +483,18 @@ export function withRateLimit<T>(
  */
 export function withRpsLimit(
   rpsConfig: RpsConfig,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper must accept any route arguments
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper accepts any route arguments
   handler: (request: NextRequest, ...args: any[]) => Promise<NextResponse>
 ) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper must accept any route arguments
-  return async (request: NextRequest, ...args: any[]): Promise<NextResponse> => {
+  return async (
+    request: NextRequest,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Handler wrapper accepts any route arguments
+    ...args: any[]
+  ): Promise<NextResponse> => {
     const ip =
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      request.headers.get('x-real-ip') ||
-      'unknown';
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
 
     const result = await checkRpsLimit(
       rpsConfig.endpoint,
@@ -484,15 +506,15 @@ export function withRpsLimit(
     if (!result.allowed) {
       return NextResponse.json(
         {
-          error: 'Rate limit exceeded. Please slow down.',
+          error: "Rate limit exceeded. Please slow down.",
           retryAfter: 1,
         },
         {
           status: 429,
           headers: {
-            'X-RateLimit-Limit': result.limit.toString(),
-            'X-RateLimit-Remaining': result.remaining.toString(),
-            'Retry-After': '1',
+            "X-RateLimit-Limit": result.limit.toString(),
+            "X-RateLimit-Remaining": result.remaining.toString(),
+            "Retry-After": "1",
           },
         }
       );
@@ -509,9 +531,12 @@ export function addRateLimitHeaders(
   response: NextResponse,
   result: RateLimitResult
 ): NextResponse {
-  response.headers.set('X-RateLimit-Limit', result.limit.toString());
-  response.headers.set('X-RateLimit-Remaining', result.remaining.toString());
-  response.headers.set('X-RateLimit-Reset', new Date(result.resetTime).toISOString());
+  response.headers.set("X-RateLimit-Limit", result.limit.toString());
+  response.headers.set("X-RateLimit-Remaining", result.remaining.toString());
+  response.headers.set(
+    "X-RateLimit-Reset",
+    new Date(result.resetTime).toISOString()
+  );
   return response;
 }
 
@@ -529,7 +554,7 @@ export async function clearRateLimit(
       await redis.del(key);
       return true;
     } catch (error) {
-      console.error('[Rate Limit] Clear error:', error);
+      console.error("[Rate Limit] Clear error:", error);
     }
   }
 
@@ -570,112 +595,112 @@ export async function getRateLimitStatus(
  * Authentication rate limit: 5 attempts per 15 minutes per IP
  */
 export const RATE_LIMIT_AUTH: RateLimitConfig = {
-  name: 'auth',
+  name: "auth",
   limit: 5,
   windowMs: 15 * 60 * 1000,
   keyGenerator: (req) =>
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    req.headers.get('x-real-ip') ||
-    'unknown',
-  message: 'Too many login attempts. Please try again in 15 minutes.',
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    "unknown",
+  message: "Too many login attempts. Please try again in 15 minutes.",
 };
 
 /**
  * Password reset: 3 attempts per hour per email/IP
  */
 export const RATE_LIMIT_PASSWORD_RESET: RateLimitConfig = {
-  name: 'password_reset',
+  name: "password_reset",
   limit: 3,
   windowMs: 60 * 60 * 1000,
-  message: 'Too many password reset attempts. Please try again later.',
+  message: "Too many password reset attempts. Please try again later.",
 };
 
 /**
  * API general: 1000 requests per hour per user
  */
 export const RATE_LIMIT_API_GENERAL: RateLimitConfig = {
-  name: 'api_general',
+  name: "api_general",
   limit: 1000,
   windowMs: 60 * 60 * 1000,
   multiKey: true,
-  message: 'API rate limit exceeded. Maximum 1000 requests per hour.',
+  message: "API rate limit exceeded. Maximum 1000 requests per hour.",
 };
 
 /**
  * Load posting: 100 per day per shipper
  */
 export const RATE_LIMIT_LOAD_POSTING: RateLimitConfig = {
-  name: 'load_posting',
+  name: "load_posting",
   limit: 100,
   windowMs: 24 * 60 * 60 * 1000,
-  keyGenerator: (req, userId, orgId) => orgId || userId || 'anonymous',
-  message: 'Load posting limit exceeded. Maximum 100 postings per day.',
+  keyGenerator: (req, userId, orgId) => orgId || userId || "anonymous",
+  message: "Load posting limit exceeded. Maximum 100 postings per day.",
 };
 
 /**
  * Truck posting: 100 per day per carrier
  */
 export const RATE_LIMIT_TRUCK_POSTING: RateLimitConfig = {
-  name: 'truck_posting',
+  name: "truck_posting",
   limit: 100,
   windowMs: 24 * 60 * 60 * 1000,
-  keyGenerator: (req, userId, orgId) => orgId || userId || 'anonymous',
-  message: 'Truck posting limit exceeded. Maximum 100 postings per day.',
+  keyGenerator: (req, userId, orgId) => orgId || userId || "anonymous",
+  message: "Truck posting limit exceeded. Maximum 100 postings per day.",
 };
 
 /**
  * Document upload: 10 per hour per user
  */
 export const RATE_LIMIT_DOCUMENT_UPLOAD: RateLimitConfig = {
-  name: 'document_upload',
+  name: "document_upload",
   limit: 10,
   windowMs: 60 * 60 * 1000,
-  message: 'Document upload limit exceeded. Maximum 10 uploads per hour.',
+  message: "Document upload limit exceeded. Maximum 10 uploads per hour.",
 };
 
 /**
  * File download: 100 per hour per user
  */
 export const RATE_LIMIT_FILE_DOWNLOAD: RateLimitConfig = {
-  name: 'file_download',
+  name: "file_download",
   limit: 100,
   windowMs: 60 * 60 * 1000,
-  message: 'File download limit exceeded. Maximum 100 downloads per hour.',
+  message: "File download limit exceeded. Maximum 100 downloads per hour.",
 };
 
 /**
  * GPS update: 12 per hour per truck (1 every 5 minutes)
  */
 export const RATE_LIMIT_GPS_UPDATE: RateLimitConfig = {
-  name: 'gps_update',
+  name: "gps_update",
   limit: 12,
   windowMs: 60 * 60 * 1000,
   keyGenerator: (req) => {
-    const truckId = req.headers.get('x-truck-id') || 'unknown';
+    const truckId = req.headers.get("x-truck-id") || "unknown";
     return `truck:${truckId}`;
   },
-  message: 'GPS update rate limited. Maximum 1 update per 5 minutes per truck.',
+  message: "GPS update rate limited. Maximum 1 update per 5 minutes per truck.",
 };
 
 /**
  * Notifications: 60 per minute per user
  */
 export const RATE_LIMIT_NOTIFICATIONS: RateLimitConfig = {
-  name: 'notifications',
+  name: "notifications",
   limit: 60,
   windowMs: 60 * 1000,
-  message: 'Notification fetch rate limited. Please slow down.',
+  message: "Notification fetch rate limited. Please slow down.",
 };
 
 /**
  * Search: 30 per minute per user (expensive queries)
  */
 export const RATE_LIMIT_SEARCH: RateLimitConfig = {
-  name: 'search',
+  name: "search",
   limit: 30,
   windowMs: 60 * 1000,
   multiKey: true,
-  message: 'Search rate limited. Please slow down.',
+  message: "Search rate limited. Please slow down.",
 };
 
 // =============================================================================
@@ -688,61 +713,61 @@ export const RATE_LIMIT_SEARCH: RateLimitConfig = {
 export const RPS_CONFIGS: Record<string, RpsConfig> = {
   // Health check - very high limit
   health: {
-    endpoint: '/api/health',
+    endpoint: "/api/health",
     rps: 100,
     burst: 50,
   },
   // Loads listing - moderate limit
   loads: {
-    endpoint: '/api/loads',
+    endpoint: "/api/loads",
     rps: 50,
     burst: 20,
   },
   // Used for GET /api/loads, GET /api/loads/{id}, POST /api/loads, PATCH /api/loads/{id}
   marketplace: {
-    endpoint: '/api/loads',
+    endpoint: "/api/loads",
     rps: 50,
     burst: 20,
   },
   // Trucks listing - moderate limit
   trucks: {
-    endpoint: '/api/trucks',
+    endpoint: "/api/trucks",
     rps: 50,
     burst: 20,
   },
   // Used for GET /api/trucks, GET /api/trucks/{id}, POST /api/trucks, PATCH /api/trucks/{id}, DELETE /api/trucks/{id}
   fleet: {
-    endpoint: '/api/trucks',
+    endpoint: "/api/trucks",
     rps: 50,
     burst: 20,
   },
   // GPS updates - high throughput for fleet tracking
   gps: {
-    endpoint: '/api/gps',
+    endpoint: "/api/gps",
     rps: 100,
     burst: 20,
   },
   // Notifications - moderate limit
   notifications: {
-    endpoint: '/api/notifications',
+    endpoint: "/api/notifications",
     rps: 30,
     burst: 10,
   },
   // Auth endpoints - strict limit
   auth: {
-    endpoint: '/api/auth',
+    endpoint: "/api/auth",
     rps: 10,
     burst: 5,
   },
   // Dashboard endpoints - moderate limit (60/min = 1/sec)
   dashboard: {
-    endpoint: '/api/*/dashboard',
+    endpoint: "/api/*/dashboard",
     rps: 1,
     burst: 5,
   },
   // Write operations (POST/PATCH/DELETE) - strict limit
   write: {
-    endpoint: '/api/*',
+    endpoint: "/api/*",
     rps: 0.5, // 30 per minute = 0.5 per second
     burst: 5,
   },
@@ -760,8 +785,8 @@ export async function getRateLimitIdentifier(request: NextRequest): Promise<{
   orgId?: string;
 }> {
   try {
-    const userId = request.headers.get('x-user-id');
-    const orgId = request.headers.get('x-org-id');
+    const userId = request.headers.get("x-user-id");
+    const orgId = request.headers.get("x-org-id");
 
     if (userId) {
       return { userId, orgId: orgId || undefined };
@@ -769,13 +794,13 @@ export async function getRateLimitIdentifier(request: NextRequest): Promise<{
 
     return {
       userId:
-        request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-        request.headers.get('x-real-ip') ||
-        'anonymous',
+        request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+        request.headers.get("x-real-ip") ||
+        "anonymous",
     };
   } catch (error) {
-    console.error('[Rate Limit] Error getting identifier:', error);
-    return { userId: 'anonymous' };
+    console.error("[Rate Limit] Error getting identifier:", error);
+    return { userId: "anonymous" };
   }
 }
 
@@ -787,7 +812,7 @@ export async function getRateLimitMetrics(): Promise<{
   redisConnected: boolean;
   inMemoryKeys: number;
 }> {
-  const { isRedisConnected } = await import('./redis');
+  const { isRedisConnected } = await import("./redis");
 
   return {
     redisEnabled: isRedisEnabled(),

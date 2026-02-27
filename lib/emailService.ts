@@ -12,29 +12,29 @@
  * Supports multiple email providers: SendGrid, AWS SES, Resend
  */
 
-import { db } from './db';
-import { addJob, registerProcessor, isQueueReadySync } from './queue';
-import { logger } from './logger';
+import { db } from "./db";
+import { addJob, registerProcessor, isQueueReadySync } from "./queue";
+import { logger } from "./logger";
 
 /**
  * Email provider configuration
  */
-export type EmailProvider = 'SENDGRID' | 'AWS_SES' | 'RESEND' | 'CONSOLE';
+export type EmailProvider = "SENDGRID" | "AWS_SES" | "RESEND" | "CONSOLE";
 
 /**
  * Email template types
  */
 export enum EmailTemplate {
-  GPS_OFFLINE = 'GPS_OFFLINE',
-  GPS_BACK_ONLINE = 'GPS_BACK_ONLINE',
-  TRUCK_AT_PICKUP = 'TRUCK_AT_PICKUP',
-  TRUCK_AT_DELIVERY = 'TRUCK_AT_DELIVERY',
-  POD_SUBMITTED = 'POD_SUBMITTED',
-  POD_VERIFIED = 'POD_VERIFIED',
-  SERVICE_FEE_DEDUCTED = 'SERVICE_FEE_DEDUCTED',
-  SETTLEMENT_COMPLETE = 'SETTLEMENT_COMPLETE',
-  BYPASS_WARNING = 'BYPASS_WARNING',
-  ACCOUNT_FLAGGED = 'ACCOUNT_FLAGGED',
+  GPS_OFFLINE = "GPS_OFFLINE",
+  GPS_BACK_ONLINE = "GPS_BACK_ONLINE",
+  TRUCK_AT_PICKUP = "TRUCK_AT_PICKUP",
+  TRUCK_AT_DELIVERY = "TRUCK_AT_DELIVERY",
+  POD_SUBMITTED = "POD_SUBMITTED",
+  POD_VERIFIED = "POD_VERIFIED",
+  SERVICE_FEE_DEDUCTED = "SERVICE_FEE_DEDUCTED",
+  SETTLEMENT_COMPLETE = "SETTLEMENT_COMPLETE",
+  BYPASS_WARNING = "BYPASS_WARNING",
+  ACCOUNT_FLAGGED = "ACCOUNT_FLAGGED",
 }
 
 /**
@@ -67,8 +67,8 @@ export interface EmailTemplateData {
 function getEmailProvider(): EmailProvider {
   const provider = process.env.EMAIL_PROVIDER;
 
-  if (!provider || provider === 'CONSOLE') {
-    return 'CONSOLE'; // Development/testing mode
+  if (!provider || provider === "CONSOLE") {
+    return "CONSOLE"; // Development/testing mode
   }
 
   return provider as EmailProvider;
@@ -81,8 +81,8 @@ function getEmailTemplate(
   template: EmailTemplate,
   data: EmailTemplateData
 ): { subject: string; html: string; text: string } {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  const recipientName = data.recipientName || 'User';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const recipientName = data.recipientName || "User";
 
   switch (template) {
     case EmailTemplate.GPS_OFFLINE:
@@ -93,7 +93,7 @@ function getEmailTemplate(
             <h2 style="color: #dc2626;">GPS Signal Lost</h2>
             <p>Hello ${recipientName},</p>
             <p>The GPS signal for truck <strong>${data.truckPlate}</strong> on Load #${data.loadId} has been lost for more than 30 minutes.</p>
-            <p><strong>Last Known Location:</strong> ${data.lastLocation || 'Unknown'}</p>
+            <p><strong>Last Known Location:</strong> ${data.lastLocation || "Unknown"}</p>
             <p>Please check with the driver to ensure everything is okay.</p>
             <p style="margin-top: 30px;">
               <a href="${baseUrl}/loads/${data.loadId}/tracking"
@@ -106,7 +106,7 @@ function getEmailTemplate(
             </p>
           </div>
         `,
-        text: `GPS Signal Lost\n\nHello ${recipientName},\n\nThe GPS signal for truck ${data.truckPlate} on Load #${data.loadId} has been lost for more than 30 minutes.\n\nLast Known Location: ${data.lastLocation || 'Unknown'}\n\nPlease check with the driver to ensure everything is okay.\n\nView Tracking: ${baseUrl}/loads/${data.loadId}/tracking\n\nFreightET Platform`,
+        text: `GPS Signal Lost\n\nHello ${recipientName},\n\nThe GPS signal for truck ${data.truckPlate} on Load #${data.loadId} has been lost for more than 30 minutes.\n\nLast Known Location: ${data.lastLocation || "Unknown"}\n\nPlease check with the driver to ensure everything is okay.\n\nView Tracking: ${baseUrl}/loads/${data.loadId}/tracking\n\nFreightET Platform`,
       };
 
     case EmailTemplate.GPS_BACK_ONLINE:
@@ -140,7 +140,7 @@ function getEmailTemplate(
             <h2 style="color: #2563eb;">Truck Arrived at Pickup</h2>
             <p>Hello ${recipientName},</p>
             <p>Truck <strong>${data.truckPlate}</strong> has arrived at the pickup location for Load #${data.loadId?.slice(-8)}.</p>
-            <p><strong>Estimated Loading Time:</strong> ${data.estimatedTime || '30-60 minutes'}</p>
+            <p><strong>Estimated Loading Time:</strong> ${data.estimatedTime || "30-60 minutes"}</p>
             <p style="margin-top: 30px;">
               <a href="${baseUrl}/loads/${data.loadId}"
                  style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
@@ -152,7 +152,7 @@ function getEmailTemplate(
             </p>
           </div>
         `,
-        text: `Truck Arrived at Pickup\n\nHello ${recipientName},\n\nTruck ${data.truckPlate} has arrived at the pickup location for Load #${data.loadId?.slice(-8)}.\n\nEstimated Loading Time: ${data.estimatedTime || '30-60 minutes'}\n\nView Load Details: ${baseUrl}/loads/${data.loadId}\n\nFreightET Platform`,
+        text: `Truck Arrived at Pickup\n\nHello ${recipientName},\n\nTruck ${data.truckPlate} has arrived at the pickup location for Load #${data.loadId?.slice(-8)}.\n\nEstimated Loading Time: ${data.estimatedTime || "30-60 minutes"}\n\nView Load Details: ${baseUrl}/loads/${data.loadId}\n\nFreightET Platform`,
       };
 
     case EmailTemplate.TRUCK_AT_DELIVERY:
@@ -278,13 +278,13 @@ function getEmailTemplate(
 
     case EmailTemplate.ACCOUNT_FLAGGED:
       return {
-        subject: '⚠️ URGENT: Account Flagged for Review',
+        subject: "⚠️ URGENT: Account Flagged for Review",
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #dc2626;">⚠️ Account Flagged for Review</h2>
             <p>Hello ${recipientName},</p>
             <p>Your account has been flagged for suspicious activity and is under review.</p>
-            <p><strong>Reason:</strong> ${data.reason || 'Pattern of suspicious cancellations'}</p>
+            <p><strong>Reason:</strong> ${data.reason || "Pattern of suspicious cancellations"}</p>
             <p>Please contact our support team immediately to resolve this issue.</p>
             <p style="margin-top: 30px;">
               <a href="${baseUrl}/support"
@@ -297,12 +297,12 @@ function getEmailTemplate(
             </p>
           </div>
         `,
-        text: `⚠️ Account Flagged for Review\n\nHello ${recipientName},\n\nYour account has been flagged for suspicious activity and is under review.\n\nReason: ${data.reason || 'Pattern of suspicious cancellations'}\n\nPlease contact our support team immediately to resolve this issue.\n\nContact Support: ${baseUrl}/support\n\nFreightET Platform`,
+        text: `⚠️ Account Flagged for Review\n\nHello ${recipientName},\n\nYour account has been flagged for suspicious activity and is under review.\n\nReason: ${data.reason || "Pattern of suspicious cancellations"}\n\nPlease contact our support team immediately to resolve this issue.\n\nContact Support: ${baseUrl}/support\n\nFreightET Platform`,
       };
 
     default:
       return {
-        subject: 'FreightET Notification',
+        subject: "FreightET Notification",
         html: `<p>Hello ${recipientName},</p><p>${data.message}</p>`,
         text: `Hello ${recipientName},\n\n${data.message}`,
       };
@@ -312,8 +312,7 @@ function getEmailTemplate(
 /**
  * Send email via console (development/testing)
  */
-async function sendViaConsole(message: EmailMessage): Promise<void> {
-  }
+async function sendViaConsole(message: EmailMessage): Promise<void> {}
 
 /**
  * Send email via SendGrid
@@ -322,7 +321,7 @@ async function sendViaSendGrid(message: EmailMessage): Promise<void> {
   const apiKey = process.env.SENDGRID_API_KEY;
 
   if (!apiKey) {
-    console.warn('SENDGRID_API_KEY not configured, falling back to console');
+    console.warn("SENDGRID_API_KEY not configured, falling back to console");
     return sendViaConsole(message);
   }
 
@@ -334,9 +333,8 @@ async function sendViaSendGrid(message: EmailMessage): Promise<void> {
     //   subject: message.subject,
     //   text: message.text,
     //   html: message.html,
-
-    } catch (error) {
-    console.error('SendGrid email failed:', error);
+  } catch (error) {
+    console.error("SendGrid email failed:", error);
     throw error;
   }
 }
@@ -348,7 +346,7 @@ async function sendViaAwsSes(message: EmailMessage): Promise<void> {
   const region = process.env.AWS_REGION;
 
   if (!region) {
-    console.warn('AWS_REGION not configured, falling back to console');
+    console.warn("AWS_REGION not configured, falling back to console");
     return sendViaConsole(message);
   }
 
@@ -361,9 +359,8 @@ async function sendViaAwsSes(message: EmailMessage): Promise<void> {
     //     Body: {
     //       Text: { Data: message.text },
     //       Html: { Data: message.html },
-
-    } catch (error) {
-    console.error('AWS SES email failed:', error);
+  } catch (error) {
+    console.error("AWS SES email failed:", error);
     throw error;
   }
 }
@@ -375,7 +372,7 @@ async function sendViaResend(message: EmailMessage): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
 
   if (!apiKey) {
-    console.warn('RESEND_API_KEY not configured, falling back to console');
+    console.warn("RESEND_API_KEY not configured, falling back to console");
     return sendViaConsole(message);
   }
 
@@ -386,9 +383,8 @@ async function sendViaResend(message: EmailMessage): Promise<void> {
     //   subject: message.subject,
     //   text: message.text,
     //   html: message.html,
-
-    } catch (error) {
-    console.error('Resend email failed:', error);
+  } catch (error) {
+    console.error("Resend email failed:", error);
     throw error;
   }
 }
@@ -415,23 +411,23 @@ export async function sendEmailDirect(
       subject: templateContent.subject,
       html: templateContent.html,
       text: templateContent.text,
-      from: process.env.EMAIL_FROM || 'noreply@freightet.com',
+      from: process.env.EMAIL_FROM || "noreply@freightet.com",
     };
 
     // Send via configured provider
     const provider = getEmailProvider();
 
     switch (provider) {
-      case 'SENDGRID':
+      case "SENDGRID":
         await sendViaSendGrid(message);
         break;
-      case 'AWS_SES':
+      case "AWS_SES":
         await sendViaAwsSes(message);
         break;
-      case 'RESEND':
+      case "RESEND":
         await sendViaResend(message);
         break;
-      case 'CONSOLE':
+      case "CONSOLE":
       default:
         await sendViaConsole(message);
         break;
@@ -439,7 +435,7 @@ export async function sendEmailDirect(
 
     logger.info(`[EMAIL SERVICE] Sent: ${template} to ${to}`);
   } catch (error) {
-    logger.error('[EMAIL SERVICE] Failed to send email', error);
+    logger.error("[EMAIL SERVICE] Failed to send email", error);
     throw error; // Re-throw for queue retry
   }
 }
@@ -472,21 +468,26 @@ export async function sendEmail(
   // Try to use queue if available
   if (isQueueReadySync()) {
     try {
-      const jobId = await addJob('email', 'send-template-email', {
-        to,
-        template,
-        data,
-      } as TemplateEmailJobData, {
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 2000, // Start with 2s, then 4s, then 8s
-        },
-        removeOnComplete: 100,
-        removeOnFail: 500,
-      });
+      const jobId = await addJob(
+        "email",
+        "send-template-email",
+        {
+          to,
+          template,
+          data,
+        } as TemplateEmailJobData,
+        {
+          attempts: 3,
+          backoff: {
+            type: "exponential",
+            delay: 2000, // Start with 2s, then 4s, then 8s
+          },
+          removeOnComplete: 100,
+          removeOnFail: 500,
+        }
+      );
 
-      logger.debug('[EMAIL SERVICE] Queued', {
+      logger.debug("[EMAIL SERVICE] Queued", {
         jobId,
         to,
         template,
@@ -494,7 +495,9 @@ export async function sendEmail(
 
       return;
     } catch (queueError) {
-      logger.warn('[EMAIL SERVICE] Queue failed, falling back to direct send', { error: queueError });
+      logger.warn("[EMAIL SERVICE] Queue failed, falling back to direct send", {
+        error: queueError,
+      });
       // Fall through to direct send
     }
   }
@@ -503,7 +506,7 @@ export async function sendEmail(
   try {
     await sendEmailDirect(to, template, data);
   } catch (error) {
-    logger.error('[EMAIL SERVICE] Failed to send email', error);
+    logger.error("[EMAIL SERVICE] Failed to send email", error);
     // Don't throw - emails are non-critical, just log the error
   }
 }
@@ -535,8 +538,8 @@ export async function sendEmailToUser(
   }
 
   const recipientName = user.firstName
-    ? `${user.firstName} ${user.lastName || ''}`.trim()
-    : 'User';
+    ? `${user.firstName} ${user.lastName || ""}`.trim()
+    : "User";
 
   await sendEmail(user.email, template, {
     ...data,
@@ -560,7 +563,7 @@ export async function processTemplateEmailJob(
 ): Promise<void> {
   const { to, template, data } = job.data;
 
-  logger.info('[EMAIL SERVICE WORKER] Processing job', {
+  logger.info("[EMAIL SERVICE WORKER] Processing job", {
     jobId: job.id,
     to,
     template,
@@ -572,7 +575,7 @@ export async function processTemplateEmailJob(
 
   await updateProgress(100);
 
-  logger.info('[EMAIL SERVICE WORKER] Job completed', {
+  logger.info("[EMAIL SERVICE WORKER] Job completed", {
     jobId: job.id,
   });
 }
@@ -583,6 +586,8 @@ export async function processTemplateEmailJob(
  * Call this during application startup to enable template email queue processing.
  */
 export function registerTemplateEmailProcessor(): void {
-  registerProcessor('email', 'send-template-email', processTemplateEmailJob);
-  logger.info('[EMAIL SERVICE] Processor registered for queue: email (template)');
+  registerProcessor("email", "send-template-email", processTemplateEmailJob);
+  logger.info(
+    "[EMAIL SERVICE] Processor registered for queue: email (template)"
+  );
 }

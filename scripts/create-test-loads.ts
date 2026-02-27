@@ -61,7 +61,7 @@ async function main() {
       tripKm: 515,
       dhToOriginKm: 25,
       dhAfterDeliveryKm: 30,
-      originLat: 9.0320,
+      originLat: 9.032,
       originLon: 38.7469,
       destinationLat: 9.6009,
       destinationLon: 41.8663,
@@ -69,7 +69,8 @@ async function main() {
       truckType: TruckType.FLATBED,
       weight: 15000,
       volume: 45,
-      cargoDescription: "Construction materials - Steel beams and concrete blocks",
+      cargoDescription:
+        "Construction materials - Steel beams and concrete blocks",
       isFullLoad: true,
       fullPartial: LoadType.FULL,
       isFragile: false,
@@ -83,15 +84,19 @@ async function main() {
       isAnonymous: false,
       shipperContactName: "Ahmed Hassan",
       shipperContactPhone: "+251911234567",
-      safetyNotes: "Heavy load - requires proper securing. Route via main highway.",
-      specialInstructions: "Call 30 minutes before arrival at delivery location",
+      safetyNotes:
+        "Heavy load - requires proper securing. Route via main highway.",
+      specialInstructions:
+        "Call 30 minutes before arrival at delivery location",
       // Relations
       shipperId: shipperOrg.id,
       createdById: shipperUser.id,
     },
   });
 
-  console.log(`✓ Created Load 1: ${load1.pickupCity} → ${load1.deliveryCity} (${load1.tripKm} km)`);
+  console.log(
+    `✓ Created Load 1: ${load1.pickupCity} → ${load1.deliveryCity} (${load1.tripKm} km)`
+  );
 
   // Test Load 2: Long haul refrigerated
   const load2 = await prisma.load.create({
@@ -125,14 +130,17 @@ async function main() {
       isAnonymous: false,
       shipperContactName: "Tsegaye Abebe",
       shipperContactPhone: "+251922345678",
-      safetyNotes: "CRITICAL: Maintain -18°C throughout journey. Check temperature every 2 hours.",
+      safetyNotes:
+        "CRITICAL: Maintain -18°C throughout journey. Check temperature every 2 hours.",
       specialInstructions: "Must arrive before 6 AM for unloading",
       shipperId: shipperOrg.id,
       createdById: shipperUser.id,
     },
   });
 
-  console.log(`✓ Created Load 2: ${load2.pickupCity} → ${load2.deliveryCity} (${load2.tripKm} km)`);
+  console.log(
+    `✓ Created Load 2: ${load2.pickupCity} → ${load2.deliveryCity} (${load2.tripKm} km)`
+  );
 
   // Test Load 3: Partial load
   const load3 = await prisma.load.create({
@@ -172,7 +180,9 @@ async function main() {
     },
   });
 
-  console.log(`✓ Created Load 3: ${load3.pickupCity} → ${load3.deliveryCity} (${load3.tripKm} km) - PARTIAL`);
+  console.log(
+    `✓ Created Load 3: ${load3.pickupCity} → ${load3.deliveryCity} (${load3.tripKm} km) - PARTIAL`
+  );
 
   // Test Load 4: Tanker load
   const load4 = await prisma.load.create({
@@ -205,14 +215,17 @@ async function main() {
       isAnonymous: false,
       shipperContactName: "Mulugeta Tesfaye",
       shipperContactPhone: "+251944567890",
-      safetyNotes: "HAZMAT: Diesel fuel transport. Driver must have hazmat certification. No smoking.",
+      safetyNotes:
+        "HAZMAT: Diesel fuel transport. Driver must have hazmat certification. No smoking.",
       specialInstructions: "Follow designated fuel transport routes only",
       shipperId: shipperOrg.id,
       createdById: shipperUser.id,
     },
   });
 
-  console.log(`✓ Created Load 4: ${load4.pickupCity} → ${load4.deliveryCity} (${load4.tripKm} km) - TANKER`);
+  console.log(
+    `✓ Created Load 4: ${load4.pickupCity} → ${load4.deliveryCity} (${load4.tripKm} km) - TANKER`
+  );
 
   // Test Load 5: Container load
   const load5 = await prisma.load.create({
@@ -232,7 +245,8 @@ async function main() {
       truckType: TruckType.CONTAINER,
       weight: 18000,
       volume: 55,
-      cargoDescription: "Import goods - Mixed retail merchandise in 40ft container",
+      cargoDescription:
+        "Import goods - Mixed retail merchandise in 40ft container",
       isFullLoad: true,
       fullPartial: LoadType.FULL,
       isFragile: false,
@@ -250,7 +264,9 @@ async function main() {
     },
   });
 
-  console.log(`✓ Created Load 5: ${load5.pickupCity} → ${load5.deliveryCity} (${load5.tripKm} km) - CONTAINER`);
+  console.log(
+    `✓ Created Load 5: ${load5.pickupCity} → ${load5.deliveryCity} (${load5.tripKm} km) - CONTAINER`
+  );
 
   // Create load events for all loads
   const loads = [load1, load2, load3, load4, load5];
@@ -278,7 +294,9 @@ async function main() {
   console.log("   - Carrier: /carrier/loadboard (Find Loads)");
   console.log("\n🧪 Test Features:");
   console.log("   ✓ Sort by: Age, Pickup Date, Trip Distance, Rate, RPM, tRPM");
-  console.log("   ✓ Filter by: City, Truck Type, Load Type, Book Mode, Distance, Rate");
+  console.log(
+    "   ✓ Filter by: City, Truck Type, Load Type, Book Mode, Distance, Rate"
+  );
   console.log("   ✓ All 20 DAT-style columns visible");
   console.log("   ✓ Pagination (20 per page)");
 }

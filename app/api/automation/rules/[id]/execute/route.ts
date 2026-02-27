@@ -3,16 +3,16 @@
  * Manually trigger an automation rule for testing or immediate action
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { requirePermission, Permission } from '@/lib/rbac';
-import { evaluateRule } from '@/lib/automationRules';
-import { executeAndRecordRuleActions } from '@/lib/automationActions';
-import { z } from 'zod';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { requirePermission, Permission } from "@/lib/rbac";
+import { evaluateRule } from "@/lib/automationRules";
+import { executeAndRecordRuleActions } from "@/lib/automationActions";
+import { z } from "zod";
 
 const executeRuleSchema = z.object({
-  loadId: z.string().min(1, 'loadId is required'),
+  loadId: z.string().min(1, "loadId is required"),
 });
 
 // POST /api/automation/rules/[id]/execute - Manually execute rule
@@ -28,7 +28,7 @@ export async function POST(
     const result = executeRuleSchema.safeParse(body);
     if (!result.success) {
       // FIX: Use zodErrorResponse to avoid schema leak
-      const { zodErrorResponse } = await import('@/lib/validation');
+      const { zodErrorResponse } = await import("@/lib/validation");
       return zodErrorResponse(result.error);
     }
 
@@ -42,17 +42,17 @@ export async function POST(
 
     if (!rule) {
       return NextResponse.json(
-        { error: 'Automation rule not found' },
+        { error: "Automation rule not found" },
         { status: 404 }
       );
     }
 
     // Evaluate rule (even if disabled, for testing)
-    const evaluation = await evaluateRule(ruleId, loadId, 'ON_MANUAL');
+    const evaluation = await evaluateRule(ruleId, loadId, "ON_MANUAL");
 
     if (!evaluation.matched) {
       return NextResponse.json({
-        message: 'Rule evaluated but did not match',
+        message: "Rule evaluated but did not match",
         evaluation: {
           ruleId,
           ruleName: rule.name,
@@ -70,7 +70,7 @@ export async function POST(
     );
 
     return NextResponse.json({
-      message: 'Rule executed successfully',
+      message: "Rule executed successfully",
       evaluation: {
         ruleId,
         ruleName: rule.name,
@@ -87,9 +87,9 @@ export async function POST(
       results: executionResult.results,
     });
   } catch (error) {
-    console.error('Execute automation rule error:', error);
+    console.error("Execute automation rule error:", error);
     return NextResponse.json(
-      { error: 'Failed to execute automation rule' },
+      { error: "Failed to execute automation rule" },
       { status: 500 }
     );
   }

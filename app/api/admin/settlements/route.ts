@@ -7,10 +7,10 @@
  * Provides detailed settlement data for SuperAdmin review
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requirePermission, Permission } from '@/lib/rbac';
-import { db } from '@/lib/db';
-import { Prisma } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { requirePermission, Permission } from "@/lib/rbac";
+import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 
 /**
  * GET /api/admin/settlements
@@ -27,38 +27,38 @@ export async function GET(request: NextRequest) {
     await requirePermission(Permission.MANAGE_SETTLEMENTS);
 
     const { searchParams } = request.nextUrl;
-    const status = searchParams.get('status') || 'PENDING';
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const status = searchParams.get("status") || "PENDING";
+    const limit = parseInt(searchParams.get("limit") || "50");
+    const offset = parseInt(searchParams.get("offset") || "0");
 
     // Build where clause based on status
     let where: Prisma.LoadWhereInput = {};
 
     switch (status) {
-      case 'PENDING':
+      case "PENDING":
         where = {
-          status: 'DELIVERED',
+          status: "DELIVERED",
           podVerified: true,
-          settlementStatus: 'PENDING',
+          settlementStatus: "PENDING",
         };
         break;
 
-      case 'PAID':
+      case "PAID":
         where = {
-          settlementStatus: 'PAID',
+          settlementStatus: "PAID",
         };
         break;
 
-      case 'DISPUTE':
+      case "DISPUTE":
         where = {
-          settlementStatus: 'DISPUTE',
+          settlementStatus: "DISPUTE",
         };
         break;
 
-      case 'all':
+      case "all":
         where = {
           settlementStatus: {
-            in: ['PENDING', 'PAID', 'DISPUTE'],
+            in: ["PENDING", "PAID", "DISPUTE"],
           },
         };
         break;
@@ -89,8 +89,8 @@ export async function GET(request: NextRequest) {
           },
         },
         orderBy: [
-          { podVerifiedAt: 'asc' }, // Oldest verified first
-          { createdAt: 'desc' },
+          { podVerifiedAt: "asc" }, // Oldest verified first
+          { createdAt: "desc" },
         ],
         take: limit,
         skip: offset,
@@ -106,14 +106,14 @@ export async function GET(request: NextRequest) {
       hasMore: offset + loads.length < totalCount,
     });
   } catch (error) {
-    console.error('Get settlements error:', error);
+    console.error("Get settlements error:", error);
 
-    if (error instanceof Error && error.name === 'ForbiddenError') {
+    if (error instanceof Error && error.name === "ForbiddenError") {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

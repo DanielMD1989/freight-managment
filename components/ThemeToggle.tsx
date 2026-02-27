@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Theme Toggle Component
@@ -6,8 +6,8 @@
  * Allows users to switch between light and dark mode
  */
 
-import { useTheme } from 'next-themes';
-import { useEffect, useState } from 'react';
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -21,25 +21,25 @@ export function ThemeToggle() {
   if (!mounted) {
     return (
       <button
-        className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800"
+        className="rounded-lg bg-gray-100 p-2 dark:bg-gray-800"
         aria-label="Toggle theme"
       >
-        <div className="w-5 h-5" />
+        <div className="h-5 w-5" />
       </button>
     );
   }
 
   return (
     <button
-      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
-      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-      title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      className="rounded-lg bg-gray-100 p-2 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+      aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+      title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
     >
-      {theme === 'dark' ? (
+      {theme === "dark" ? (
         // Sun icon for dark mode (click to go light)
         <svg
-          className="w-5 h-5 text-yellow-500"
+          className="h-5 w-5 text-yellow-500"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -54,7 +54,7 @@ export function ThemeToggle() {
       ) : (
         // Moon icon for light mode (click to go dark)
         <svg
-          className="w-5 h-5 text-gray-700"
+          className="h-5 w-5 text-gray-700"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"

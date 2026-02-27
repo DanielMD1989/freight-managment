@@ -3,11 +3,11 @@
  * Insights and reporting on exception patterns
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { canViewSystemDashboard } from '@/lib/dispatcherPermissions';
-import { UserRole } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { canViewSystemDashboard } from "@/lib/dispatcherPermissions";
+import { UserRole } from "@prisma/client";
 
 // GET /api/exceptions/analytics - Get exception analytics and insights
 export async function GET(request: NextRequest) {
@@ -24,33 +24,33 @@ export async function GET(request: NextRequest) {
 
     if (!canView) {
       return NextResponse.json(
-        { error: 'You do not have permission to view exception analytics' },
+        { error: "You do not have permission to view exception analytics" },
         { status: 403 }
       );
     }
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
-    const days = parseInt(searchParams.get('days') || '30', 10); // Default 30 days
+    const days = parseInt(searchParams.get("days") || "30", 10); // Default 30 days
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
     // 1. Exception frequency by type
     const byType = await db.loadEscalation.groupBy({
-      by: ['escalationType'],
+      by: ["escalationType"],
       where: {
         createdAt: { gte: startDate },
       },
       _count: true,
       orderBy: {
         _count: {
-          escalationType: 'desc',
+          escalationType: "desc",
         },
       },
     });
 
     // 2. Exception frequency by priority
     const byPriority = await db.loadEscalation.groupBy({
-      by: ['priority'],
+      by: ["priority"],
       where: {
         createdAt: { gte: startDate },
       },
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     const resolvedEscalations = await db.loadEscalation.findMany({
       where: {
         status: {
-          in: ['RESOLVED', 'CLOSED'],
+          in: ["RESOLVED", "CLOSED"],
         },
         resolvedAt: { not: null },
         createdAt: { gte: startDate },
@@ -86,16 +86,22 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    const averageMTTR = resolutionTimes.length > 0
-      ? resolutionTimes.reduce((sum, r) => sum + r.hours, 0) / resolutionTimes.length
-      : 0;
+    const averageMTTR =
+      resolutionTimes.length > 0
+        ? resolutionTimes.reduce((sum, r) => sum + r.hours, 0) /
+          resolutionTimes.length
+        : 0;
 
     // MTTR by type
     const mttrByType: Record<string, number> = {};
     byType.forEach((type) => {
-      const typeResolutions = resolutionTimes.filter((r) => r.escalationType === type.escalationType);
+      const typeResolutions = resolutionTimes.filter(
+        (r) => r.escalationType === type.escalationType
+      );
       if (typeResolutions.length > 0) {
-        mttrByType[type.escalationType] = typeResolutions.reduce((sum, r) => sum + r.hours, 0) / typeResolutions.length;
+        mttrByType[type.escalationType] =
+          typeResolutions.reduce((sum, r) => sum + r.hours, 0) /
+          typeResolutions.length;
       }
     });
 
@@ -139,7 +145,9 @@ export async function GET(request: NextRequest) {
       .slice(0, 10);
 
     // 5. Exception trends over time (daily)
-    const dailyTrends = await db.$queryRaw<Array<{ date: Date; count: bigint }>>`
+    const dailyTrends = await db.$queryRaw<
+      Array<{ date: Date; count: bigint }>
+    >`
       SELECT
         DATE(created_at) as date,
         COUNT(*) as count
@@ -153,7 +161,7 @@ export async function GET(request: NextRequest) {
     const openEscalations = await db.loadEscalation.findMany({
       where: {
         status: {
-          in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'],
+          in: ["OPEN", "ASSIGNED", "IN_PROGRESS"],
         },
       },
       select: {
@@ -166,7 +174,9 @@ export async function GET(request: NextRequest) {
 
     const now = Date.now();
     const exceptionsByAge = {
-      under1Hour: openEscalations.filter((e) => now - new Date(e.createdAt).getTime() < 60 * 60 * 1000).length,
+      under1Hour: openEscalations.filter(
+        (e) => now - new Date(e.createdAt).getTime() < 60 * 60 * 1000
+      ).length,
       under4Hours: openEscalations.filter((e) => {
         const age = now - new Date(e.createdAt).getTime();
         return age >= 60 * 60 * 1000 && age < 4 * 60 * 60 * 1000;
@@ -175,20 +185,25 @@ export async function GET(request: NextRequest) {
         const age = now - new Date(e.createdAt).getTime();
         return age >= 4 * 60 * 60 * 1000 && age < 24 * 60 * 60 * 1000;
       }).length,
-      over24Hours: openEscalations.filter((e) => now - new Date(e.createdAt).getTime() >= 24 * 60 * 60 * 1000).length,
+      over24Hours: openEscalations.filter(
+        (e) => now - new Date(e.createdAt).getTime() >= 24 * 60 * 60 * 1000
+      ).length,
     };
 
     // 7. Auto-detected vs manual exceptions
     const autoVsManual = await db.loadEscalation.groupBy({
-      by: ['createdBy'],
+      by: ["createdBy"],
       where: {
         createdAt: { gte: startDate },
       },
       _count: true,
     });
 
-    const autoDetected = autoVsManual.find((g) => g.createdBy === 'SYSTEM')?._count || 0;
-    const manual = autoVsManual.filter((g) => g.createdBy !== 'SYSTEM').reduce((sum, g) => sum + g._count, 0);
+    const autoDetected =
+      autoVsManual.find((g) => g.createdBy === "SYSTEM")?._count || 0;
+    const manual = autoVsManual
+      .filter((g) => g.createdBy !== "SYSTEM")
+      .reduce((sum, g) => sum + g._count, 0);
 
     return NextResponse.json({
       period: {
@@ -207,7 +222,9 @@ export async function GET(request: NextRequest) {
       byType: byType.map((t) => ({
         type: t.escalationType,
         count: t._count,
-        mttr: mttrByType[t.escalationType] ? Math.round(mttrByType[t.escalationType] * 10) / 10 : null,
+        mttr: mttrByType[t.escalationType]
+          ? Math.round(mttrByType[t.escalationType] * 10) / 10
+          : null,
       })),
       byPriority: byPriority.map((p) => ({
         priority: p.priority,
@@ -221,33 +238,50 @@ export async function GET(request: NextRequest) {
       openExceptionsByAge: exceptionsByAge,
       resolutionMetrics: {
         averageHours: Math.round(averageMTTR * 10) / 10,
-        fastest: resolutionTimes.length > 0 ? Math.min(...resolutionTimes.map((r) => r.hours)) : null,
-        slowest: resolutionTimes.length > 0 ? Math.max(...resolutionTimes.map((r) => r.hours)) : null,
+        fastest:
+          resolutionTimes.length > 0
+            ? Math.min(...resolutionTimes.map((r) => r.hours))
+            : null,
+        slowest:
+          resolutionTimes.length > 0
+            ? Math.max(...resolutionTimes.map((r) => r.hours))
+            : null,
         byPriority: {
-          CRITICAL: resolutionTimes.filter((r) => r.priority === 'CRITICAL').length > 0
-            ? resolutionTimes.filter((r) => r.priority === 'CRITICAL').reduce((sum, r) => sum + r.hours, 0) /
-              resolutionTimes.filter((r) => r.priority === 'CRITICAL').length
-            : null,
-          HIGH: resolutionTimes.filter((r) => r.priority === 'HIGH').length > 0
-            ? resolutionTimes.filter((r) => r.priority === 'HIGH').reduce((sum, r) => sum + r.hours, 0) /
-              resolutionTimes.filter((r) => r.priority === 'HIGH').length
-            : null,
-          MEDIUM: resolutionTimes.filter((r) => r.priority === 'MEDIUM').length > 0
-            ? resolutionTimes.filter((r) => r.priority === 'MEDIUM').reduce((sum, r) => sum + r.hours, 0) /
-              resolutionTimes.filter((r) => r.priority === 'MEDIUM').length
-            : null,
-          LOW: resolutionTimes.filter((r) => r.priority === 'LOW').length > 0
-            ? resolutionTimes.filter((r) => r.priority === 'LOW').reduce((sum, r) => sum + r.hours, 0) /
-              resolutionTimes.filter((r) => r.priority === 'LOW').length
-            : null,
+          CRITICAL:
+            resolutionTimes.filter((r) => r.priority === "CRITICAL").length > 0
+              ? resolutionTimes
+                  .filter((r) => r.priority === "CRITICAL")
+                  .reduce((sum, r) => sum + r.hours, 0) /
+                resolutionTimes.filter((r) => r.priority === "CRITICAL").length
+              : null,
+          HIGH:
+            resolutionTimes.filter((r) => r.priority === "HIGH").length > 0
+              ? resolutionTimes
+                  .filter((r) => r.priority === "HIGH")
+                  .reduce((sum, r) => sum + r.hours, 0) /
+                resolutionTimes.filter((r) => r.priority === "HIGH").length
+              : null,
+          MEDIUM:
+            resolutionTimes.filter((r) => r.priority === "MEDIUM").length > 0
+              ? resolutionTimes
+                  .filter((r) => r.priority === "MEDIUM")
+                  .reduce((sum, r) => sum + r.hours, 0) /
+                resolutionTimes.filter((r) => r.priority === "MEDIUM").length
+              : null,
+          LOW:
+            resolutionTimes.filter((r) => r.priority === "LOW").length > 0
+              ? resolutionTimes
+                  .filter((r) => r.priority === "LOW")
+                  .reduce((sum, r) => sum + r.hours, 0) /
+                resolutionTimes.filter((r) => r.priority === "LOW").length
+              : null,
         },
       },
     });
-
   } catch (error) {
-    console.error('Exception analytics error:', error);
+    console.error("Exception analytics error:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch exception analytics' },
+      { error: "Failed to fetch exception analytics" },
       { status: 500 }
     );
   }

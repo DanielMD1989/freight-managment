@@ -5,10 +5,10 @@
  * Sprint 18 - Truck Approval Workflow
  */
 
-import { cookies } from 'next/headers';
-import { verifyToken } from '@/lib/auth';
-import { redirect } from 'next/navigation';
-import TruckApprovalClient from './TruckApprovalClient';
+import { cookies } from "next/headers";
+import { verifyToken } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import TruckApprovalClient from "./TruckApprovalClient";
 
 interface Truck {
   id: string;
@@ -18,7 +18,7 @@ interface Truck {
   volume: number | null;
   currentCity: string | null;
   currentRegion: string | null;
-  approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
+  approvalStatus: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
   rejectionReason: string | null;
   createdAt: string;
   updatedAt: string;
@@ -46,20 +46,20 @@ interface TrucksResponse {
  */
 async function getPendingTrucks(
   page: number = 1,
-  approvalStatus: string = 'PENDING'
+  approvalStatus: string = "PENDING"
 ): Promise<TrucksResponse | null> {
   try {
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('session');
+    const sessionCookie = cookieStore.get("session");
 
     if (!sessionCookie) {
       return null;
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
     const params = new URLSearchParams({
       page: page.toString(),
-      limit: '20',
+      limit: "20",
       approvalStatus,
     });
 
@@ -67,17 +67,17 @@ async function getPendingTrucks(
       headers: {
         Cookie: `session=${sessionCookie.value}`,
       },
-      cache: 'no-store',
+      cache: "no-store",
     });
 
     if (!response.ok) {
-      console.error('Failed to fetch trucks:', response.status);
+      console.error("Failed to fetch trucks:", response.status);
       return null;
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Error fetching trucks:', error);
+    console.error("Error fetching trucks:", error);
     return null;
   }
 }
@@ -92,26 +92,26 @@ async function getApprovalStats(): Promise<{
 } | null> {
   try {
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('session');
+    const sessionCookie = cookieStore.get("session");
 
     if (!sessionCookie) {
       return null;
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
     const [pendingRes, approvedRes, rejectedRes] = await Promise.all([
       fetch(`${baseUrl}/api/trucks?approvalStatus=PENDING&limit=1`, {
         headers: { Cookie: `session=${sessionCookie.value}` },
-        cache: 'no-store',
+        cache: "no-store",
       }),
       fetch(`${baseUrl}/api/trucks?approvalStatus=APPROVED&limit=1`, {
         headers: { Cookie: `session=${sessionCookie.value}` },
-        cache: 'no-store',
+        cache: "no-store",
       }),
       fetch(`${baseUrl}/api/trucks?approvalStatus=REJECTED&limit=1`, {
         headers: { Cookie: `session=${sessionCookie.value}` },
-        cache: 'no-store',
+        cache: "no-store",
       }),
     ]);
 
@@ -125,7 +125,7 @@ async function getApprovalStats(): Promise<{
       rejected: rejectedData.pagination?.total || 0,
     };
   } catch (error) {
-    console.error('Error fetching stats:', error);
+    console.error("Error fetching stats:", error);
     return null;
   }
 }
@@ -143,21 +143,24 @@ export default async function AdminTruckApprovalPage({
 }) {
   // Verify authentication
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get('session');
+  const sessionCookie = cookieStore.get("session");
 
   if (!sessionCookie) {
-    redirect('/login?redirect=/admin/trucks/pending');
+    redirect("/login?redirect=/admin/trucks/pending");
   }
 
   const session = await verifyToken(sessionCookie.value);
 
-  if (!session || (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN')) {
-    redirect('/unauthorized');
+  if (
+    !session ||
+    (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN")
+  ) {
+    redirect("/unauthorized");
   }
 
   // Get query parameters
-  const page = parseInt(searchParams.page || '1');
-  const approvalStatus = searchParams.status || 'PENDING';
+  const page = parseInt(searchParams.page || "1");
+  const approvalStatus = searchParams.status || "PENDING";
 
   // Fetch trucks and stats
   const [data, stats] = await Promise.all([
@@ -167,16 +170,16 @@ export default async function AdminTruckApprovalPage({
 
   if (!data) {
     return (
-      <div className="max-w-7xl mx-auto">
+      <div className="mx-auto max-w-7xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
             Truck Approval Queue
           </h1>
-          <p className="text-gray-600 mt-2">
+          <p className="mt-2 text-gray-600">
             Review and approve trucks submitted by carriers
           </p>
         </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
           <p className="text-red-800">
             Failed to load trucks. Please try refreshing the page.
           </p>
@@ -186,14 +189,15 @@ export default async function AdminTruckApprovalPage({
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="mx-auto max-w-7xl">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">
           Truck Approval Queue
         </h1>
-        <p className="text-gray-600 mt-2">
-          Review and approve trucks submitted by carriers ({stats?.pending || 0} pending)
+        <p className="mt-2 text-gray-600">
+          Review and approve trucks submitted by carriers ({stats?.pending || 0}{" "}
+          pending)
         </p>
       </div>
 

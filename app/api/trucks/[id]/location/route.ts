@@ -3,13 +3,13 @@
  * Update and retrieve truck current location for DH-O calculations
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { validateCSRFWithMobile } from '@/lib/csrf';
-import { z } from 'zod';
-import { getTruckCurrentLocation } from '@/lib/deadheadOptimization';
-import { checkRpsLimit, RPS_CONFIGS } from '@/lib/rateLimit';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { z } from "zod";
+import { getTruckCurrentLocation } from "@/lib/deadheadOptimization";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 
 const updateLocationSchema = z.object({
   latitude: z.number().min(-90).max(90),
@@ -26,9 +26,9 @@ export async function PATCH(
   try {
     // Rate limiting: GPS endpoints need higher limits for real-time tracking
     const ip =
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      request.headers.get('x-real-ip') ||
-      'unknown';
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
     const rpsResult = await checkRpsLimit(
       RPS_CONFIGS.gps.endpoint,
       ip,
@@ -37,8 +37,8 @@ export async function PATCH(
     );
     if (!rpsResult.allowed) {
       return NextResponse.json(
-        { error: 'Rate limit exceeded', retryAfter: 1 },
-        { status: 429, headers: { 'Retry-After': '1' } }
+        { error: "Rate limit exceeded", retryAfter: 1 },
+        { status: 429, headers: { "Retry-After": "1" } }
       );
     }
 
@@ -51,7 +51,8 @@ export async function PATCH(
     const { id: truckId } = await params;
 
     const body = await request.json();
-    const { latitude, longitude, currentCity, currentRegion } = updateLocationSchema.parse(body);
+    const { latitude, longitude, currentCity, currentRegion } =
+      updateLocationSchema.parse(body);
 
     // Get truck to check ownership
     const truck = await db.truck.findUnique({
@@ -63,10 +64,7 @@ export async function PATCH(
     });
 
     if (!truck) {
-      return NextResponse.json(
-        { error: 'Truck not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
     // Permission check: Only carrier who owns truck or admin
@@ -76,11 +74,11 @@ export async function PATCH(
     });
 
     const isOwner = user?.organizationId === truck.carrierId;
-    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+    const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
 
     if (!isOwner && !isAdmin) {
       return NextResponse.json(
-        { error: 'You do not have permission to update this truck location' },
+        { error: "You do not have permission to update this truck location" },
         { status: 403 }
       );
     }
@@ -107,20 +105,19 @@ export async function PATCH(
     });
 
     return NextResponse.json({
-      message: 'Truck location updated successfully',
+      message: "Truck location updated successfully",
       truck: updatedTruck,
     });
-
   } catch (error) {
     if (error instanceof z.ZodError) {
       // FIX: Use zodErrorResponse for consistent sanitization
-      const { zodErrorResponse } = await import('@/lib/validation');
+      const { zodErrorResponse } = await import("@/lib/validation");
       return zodErrorResponse(error);
     }
 
-    console.error('Update truck location error:', error);
+    console.error("Update truck location error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
@@ -134,9 +131,9 @@ export async function GET(
   try {
     // Rate limiting: GPS endpoints need higher limits for real-time tracking
     const ip =
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      request.headers.get('x-real-ip') ||
-      'unknown';
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
     const rpsResult = await checkRpsLimit(
       RPS_CONFIGS.gps.endpoint,
       ip,
@@ -145,8 +142,8 @@ export async function GET(
     );
     if (!rpsResult.allowed) {
       return NextResponse.json(
-        { error: 'Rate limit exceeded', retryAfter: 1 },
-        { status: 429, headers: { 'Retry-After': '1' } }
+        { error: "Rate limit exceeded", retryAfter: 1 },
+        { status: 429, headers: { "Retry-After": "1" } }
       );
     }
 
@@ -167,10 +164,7 @@ export async function GET(
     });
 
     if (!truck) {
-      return NextResponse.json(
-        { error: 'Truck not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
     // Check ownership: carrier who owns truck, shipper with active load, or admin
@@ -180,16 +174,16 @@ export async function GET(
     });
 
     const isOwner = user?.organizationId === truck.carrierId;
-    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+    const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
 
     // Shippers can view location if truck is on their active load
     let isShipperWithActiveLoad = false;
-    if (user?.role === 'SHIPPER' && user?.organizationId) {
+    if (user?.role === "SHIPPER" && user?.organizationId) {
       const activeLoad = await db.load.findFirst({
         where: {
           assignedTruckId: truckId,
           shipperId: user.organizationId,
-          status: 'IN_TRANSIT',
+          status: "IN_TRANSIT",
         },
       });
       isShipperWithActiveLoad = !!activeLoad;
@@ -197,7 +191,7 @@ export async function GET(
 
     if (!isOwner && !isAdmin && !isShipperWithActiveLoad) {
       return NextResponse.json(
-        { error: 'You do not have permission to view this truck\'s location' },
+        { error: "You do not have permission to view this truck's location" },
         { status: 403 }
       );
     }
@@ -207,7 +201,7 @@ export async function GET(
 
     if (!location) {
       return NextResponse.json(
-        { error: 'Truck location not available' },
+        { error: "Truck location not available" },
         { status: 404 }
       );
     }
@@ -223,11 +217,10 @@ export async function GET(
         region: truck?.currentRegion,
       },
     });
-
   } catch (error) {
-    console.error('Get truck location error:', error);
+    console.error("Get truck location error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

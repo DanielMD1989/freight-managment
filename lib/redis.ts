@@ -29,8 +29,9 @@
 
 // Edge Runtime detection - ioredis is not compatible with Edge
 // Check for Edge Runtime using Next.js environment variable
-const isEdgeRuntime = (typeof process !== 'undefined' && process.env.NEXT_RUNTIME === 'edge') ||
-  (typeof globalThis !== 'undefined' && 'EdgeRuntime' in globalThis);
+const isEdgeRuntime =
+  (typeof process !== "undefined" && process.env.NEXT_RUNTIME === "edge") ||
+  (typeof globalThis !== "undefined" && "EdgeRuntime" in globalThis);
 
 // Conditional import for Node.js runtime only
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ioredis is a dynamic external library with varying types
@@ -38,11 +39,12 @@ let Redis: any = null;
 
 if (!isEdgeRuntime) {
   try {
-    // Dynamic require to avoid bundling ioredis for Edge
-    const ioredis = require('ioredis');
+    // Dynamic import to avoid bundling ioredis for Edge
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const ioredis = require("ioredis");
     Redis = ioredis.default || ioredis;
   } catch (error) {
-    console.warn('[Redis] ioredis not available, using in-memory fallback');
+    console.warn("[Redis] ioredis not available, using in-memory fallback");
   }
 }
 
@@ -75,14 +77,14 @@ function getRedisConfig(): RedisConfigOptions {
       maxRetriesPerRequest: 3,
       retryStrategy: (times: number) => {
         if (times > 3) {
-          console.error('[Redis] Max retries exceeded, giving up');
+          console.error("[Redis] Max retries exceeded, giving up");
           return null; // Stop retrying
         }
         const delay = Math.min(times * 200, 2000);
         return delay;
       },
       reconnectOnError: (err: Error) => {
-        const targetErrors = ['READONLY', 'ECONNRESET', 'ETIMEDOUT'];
+        const targetErrors = ["READONLY", "ECONNRESET", "ETIMEDOUT"];
         return targetErrors.some((e) => err.message.includes(e));
       },
     };
@@ -90,15 +92,15 @@ function getRedisConfig(): RedisConfigOptions {
 
   // Default local Redis configuration
   return {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
+    host: process.env.REDIS_HOST || "localhost",
+    port: parseInt(process.env.REDIS_PORT || "6379"),
     password: process.env.REDIS_PASSWORD || undefined,
-    db: parseInt(process.env.REDIS_DB || '0'),
+    db: parseInt(process.env.REDIS_DB || "0"),
     lazyConnect: true,
     maxRetriesPerRequest: 3,
     retryStrategy: (times: number) => {
       if (times > 3) {
-        console.error('[Redis] Max retries exceeded, giving up');
+        console.error("[Redis] Max retries exceeded, giving up");
         return null;
       }
       const delay = Math.min(times * 200, 2000);
@@ -128,7 +130,7 @@ export function isRedisEnabled(): boolean {
   if (isEdgeRuntime || !Redis) {
     return false;
   }
-  return process.env.REDIS_ENABLED === 'true' || !!process.env.REDIS_URL;
+  return process.env.REDIS_ENABLED === "true" || !!process.env.REDIS_URL;
 }
 
 /**
@@ -154,24 +156,22 @@ function createRedisClient(): RedisClient | null {
     : new Redis(config);
 
   // Event handlers
-  client.on('connect', () => {
+  client.on("connect", () => {
     globalForRedis.redisConnected = true;
   });
 
-  client.on('ready', () => {
-    });
+  client.on("ready", () => {});
 
-  client.on('error', (err: Error) => {
-    console.error('[Redis] Error:', err.message);
+  client.on("error", (err: Error) => {
+    console.error("[Redis] Error:", err.message);
     globalForRedis.redisConnected = false;
   });
 
-  client.on('close', () => {
+  client.on("close", () => {
     globalForRedis.redisConnected = false;
   });
 
-  client.on('reconnecting', () => {
-    });
+  client.on("reconnecting", () => {});
 
   globalForRedis.redis = client;
 
@@ -202,7 +202,7 @@ export async function connectRedis(): Promise<boolean> {
     await redis.connect();
     return true;
   } catch (error) {
-    console.error('[Redis] Connection failed:', error);
+    console.error("[Redis] Connection failed:", error);
     return false;
   }
 }
@@ -225,7 +225,7 @@ export async function checkRedisHealth(): Promise<{
   error?: string;
 }> {
   if (!redis) {
-    return { connected: false, latencyMs: 0, error: 'Redis not enabled' };
+    return { connected: false, latencyMs: 0, error: "Redis not enabled" };
   }
 
   const start = Date.now();
@@ -240,7 +240,7 @@ export async function checkRedisHealth(): Promise<{
     return {
       connected: false,
       latencyMs: Date.now() - start,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -255,7 +255,8 @@ export async function checkRedisHealth(): Promise<{
 export const RedisKeys = {
   // Rate limiting
   rateLimit: (name: string, identifier: string) => `rl:${name}:${identifier}`,
-  rateLimitRps: (endpoint: string, identifier: string) => `rps:${endpoint}:${identifier}`,
+  rateLimitRps: (endpoint: string, identifier: string) =>
+    `rps:${endpoint}:${identifier}`,
 
   // Brute force protection
   bruteForce: (type: string, identifier: string) => `bf:${type}:${identifier}`,
@@ -290,7 +291,7 @@ export async function setWithTTL(
     await redis.setex(key, ttlSeconds, value);
     return true;
   } catch (error) {
-    console.error('[Redis] setWithTTL error:', error);
+    console.error("[Redis] setWithTTL error:", error);
     return false;
   }
 }
@@ -304,7 +305,7 @@ export async function get(key: string): Promise<string | null> {
   try {
     return await redis.get(key);
   } catch (error) {
-    console.error('[Redis] get error:', error);
+    console.error("[Redis] get error:", error);
     return null;
   }
 }
@@ -319,7 +320,7 @@ export async function del(key: string): Promise<boolean> {
     await redis.del(key);
     return true;
   } catch (error) {
-    console.error('[Redis] del error:', error);
+    console.error("[Redis] del error:", error);
     return false;
   }
 }
@@ -344,7 +345,7 @@ export async function incrWithTTL(
     }
     return null;
   } catch (error) {
-    console.error('[Redis] incrWithTTL error:', error);
+    console.error("[Redis] incrWithTTL error:", error);
     return null;
   }
 }
@@ -358,7 +359,7 @@ export async function getTTL(key: string): Promise<number> {
   try {
     return await redis.ttl(key);
   } catch (error) {
-    console.error('[Redis] getTTL error:', error);
+    console.error("[Redis] getTTL error:", error);
     return -1;
   }
 }
@@ -373,7 +374,7 @@ export async function exists(key: string): Promise<boolean> {
     const result = await redis.exists(key);
     return result === 1;
   } catch (error) {
-    console.error('[Redis] exists error:', error);
+    console.error("[Redis] exists error:", error);
     return false;
   }
 }
@@ -391,7 +392,7 @@ export async function deletePattern(pattern: string): Promise<number> {
     const result = await redis.del(...keys);
     return result;
   } catch (error) {
-    console.error('[Redis] deletePattern error:', error);
+    console.error("[Redis] deletePattern error:", error);
     return 0;
   }
 }

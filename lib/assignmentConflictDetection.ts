@@ -5,7 +5,7 @@
  * before assigning trucks to loads
  */
 
-import { db } from '@/lib/db';
+import { db } from "@/lib/db";
 
 export interface ConflictCheck {
   hasConflict: boolean;
@@ -14,13 +14,20 @@ export interface ConflictCheck {
 }
 
 export interface AssignmentConflict {
-  type: 'TRUCK_ALREADY_ASSIGNED' | 'LOAD_ALREADY_ASSIGNED' | 'SCHEDULE_CONFLICT';
+  type:
+    | "TRUCK_ALREADY_ASSIGNED"
+    | "LOAD_ALREADY_ASSIGNED"
+    | "SCHEDULE_CONFLICT";
   message: string;
   details?: Record<string, unknown>;
 }
 
 export interface AssignmentWarning {
-  type: 'TRUCK_UNAVAILABLE' | 'GPS_NOT_VERIFIED' | 'TRUCK_TYPE_MISMATCH' | 'SCHEDULE_TIGHT';
+  type:
+    | "TRUCK_UNAVAILABLE"
+    | "GPS_NOT_VERIFIED"
+    | "TRUCK_TYPE_MISMATCH"
+    | "SCHEDULE_TIGHT";
   message: string;
   details?: Record<string, unknown>;
 }
@@ -48,7 +55,7 @@ export async function checkAssignmentConflicts(
     where: {
       assignedTruckId: truckId,
       status: {
-        in: ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT'],
+        in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"],
       },
       id: {
         not: loadId, // Exclude current load if re-assigning
@@ -67,7 +74,7 @@ export async function checkAssignmentConflicts(
   if (truckAssignments.length > 0) {
     const activeLoad = truckAssignments[0];
     conflicts.push({
-      type: 'TRUCK_ALREADY_ASSIGNED',
+      type: "TRUCK_ALREADY_ASSIGNED",
       message: `Truck is already assigned to load ${activeLoad.id} (${activeLoad.status})`,
       details: {
         existingLoadId: activeLoad.id,
@@ -93,9 +100,12 @@ export async function checkAssignmentConflicts(
     },
   });
 
-  if (loadAssignment?.assignedTruckId && loadAssignment.assignedTruckId !== truckId) {
+  if (
+    loadAssignment?.assignedTruckId &&
+    loadAssignment.assignedTruckId !== truckId
+  ) {
     conflicts.push({
-      type: 'LOAD_ALREADY_ASSIGNED',
+      type: "LOAD_ALREADY_ASSIGNED",
       message: `Load is already assigned to truck ${loadAssignment.assignedTruck?.licensePlate}`,
       details: {
         existingTruckId: loadAssignment.assignedTruckId,
@@ -136,7 +146,7 @@ export async function checkAssignmentConflicts(
         },
       ],
       status: {
-        in: ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT'],
+        in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"],
       },
     },
     select: {
@@ -151,7 +161,7 @@ export async function checkAssignmentConflicts(
   if (scheduleConflicts.length > 0) {
     scheduleConflicts.forEach((conflictLoad) => {
       conflicts.push({
-        type: 'SCHEDULE_CONFLICT',
+        type: "SCHEDULE_CONFLICT",
         message: `Schedule overlaps with load ${conflictLoad.id}`,
         details: {
           conflictLoadId: conflictLoad.id,
@@ -177,8 +187,8 @@ export async function checkAssignmentConflicts(
 
   if (truck && !truck.isAvailable) {
     warnings.push({
-      type: 'TRUCK_UNAVAILABLE',
-      message: 'Truck is marked as unavailable',
+      type: "TRUCK_UNAVAILABLE",
+      message: "Truck is marked as unavailable",
       details: { isAvailable: false },
     });
   }
@@ -186,8 +196,8 @@ export async function checkAssignmentConflicts(
   // 5. Check GPS verification
   if (truck && (!truck.imei || !truck.gpsVerifiedAt)) {
     warnings.push({
-      type: 'GPS_NOT_VERIFIED',
-      message: 'Truck does not have verified GPS device',
+      type: "GPS_NOT_VERIFIED",
+      message: "Truck does not have verified GPS device",
       details: {
         hasImei: !!truck.imei,
         isVerified: !!truck.gpsVerifiedAt,
@@ -203,7 +213,7 @@ export async function checkAssignmentConflicts(
 
   if (truck && load && truck.truckType !== load.truckType) {
     warnings.push({
-      type: 'TRUCK_TYPE_MISMATCH',
+      type: "TRUCK_TYPE_MISMATCH",
       message: `Truck type ${truck.truckType} does not match required type ${load.truckType}`,
       details: {
         truckType: truck.truckType,
@@ -218,7 +228,7 @@ export async function checkAssignmentConflicts(
       assignedTruckId: truckId,
       id: { not: loadId },
       status: {
-        in: ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT'],
+        in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"],
       },
       OR: [
         // Ends shortly before new load starts
@@ -246,8 +256,8 @@ export async function checkAssignmentConflicts(
 
   if (nearbyLoads.length > 0) {
     warnings.push({
-      type: 'SCHEDULE_TIGHT',
-      message: 'Schedule has tight timing with adjacent loads',
+      type: "SCHEDULE_TIGHT",
+      message: "Schedule has tight timing with adjacent loads",
       details: {
         adjacentLoads: nearbyLoads.length,
       },
@@ -272,7 +282,7 @@ export async function getTruckActiveAssignments(truckId: string) {
     where: {
       assignedTruckId: truckId,
       status: {
-        in: ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT'],
+        in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"],
       },
     },
     select: {
@@ -285,7 +295,7 @@ export async function getTruckActiveAssignments(truckId: string) {
       createdAt: true,
     },
     orderBy: {
-      pickupDate: 'asc',
+      pickupDate: "asc",
     },
   });
 }
@@ -298,11 +308,11 @@ export async function getTruckActiveAssignments(truckId: string) {
 export async function getConflictSummary() {
   // Find all trucks with multiple active assignments (potential conflicts)
   const trucksWithMultipleLoads = await db.load.groupBy({
-    by: ['assignedTruckId'],
+    by: ["assignedTruckId"],
     where: {
       assignedTruckId: { not: null },
       status: {
-        in: ['ASSIGNED', 'PICKUP_PENDING', 'IN_TRANSIT'],
+        in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"],
       },
     },
     _count: true,
@@ -317,6 +327,9 @@ export async function getConflictSummary() {
 
   return {
     trucksWithConflicts: trucksWithMultipleLoads.length,
-    totalConflicts: trucksWithMultipleLoads.reduce((sum, t) => sum + t._count - 1, 0),
+    totalConflicts: trucksWithMultipleLoads.reduce(
+      (sum, t) => sum + t._count - 1,
+      0
+    ),
   };
 }

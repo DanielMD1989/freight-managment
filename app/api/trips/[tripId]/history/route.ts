@@ -6,12 +6,12 @@
  * Used for historical trip playback on the map.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { calculateDistanceKm } from '@/lib/geo';
-import { roundToDecimals, roundDistance1 } from '@/lib/rounding';
-import { Prisma } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
+import { calculateDistanceKm } from "@/lib/geo";
+import { roundToDecimals, roundDistance1 } from "@/lib/rounding";
+import { Prisma } from "@prisma/client";
 
 /**
  * GET /api/trips/[tripId]/history
@@ -27,9 +27,9 @@ export async function GET(
     const { tripId } = await params;
     const { searchParams } = new URL(request.url);
 
-    const startTime = searchParams.get('start'); // ISO timestamp
-    const endTime = searchParams.get('end'); // ISO timestamp
-    const resolution = searchParams.get('resolution') || 'full'; // 'full' | 'simplified'
+    const startTime = searchParams.get("start"); // ISO timestamp
+    const endTime = searchParams.get("end"); // ISO timestamp
+    const resolution = searchParams.get("resolution") || "full"; // 'full' | 'simplified'
 
     // Get trip
     const trip = await db.trip.findUnique({
@@ -68,21 +68,20 @@ export async function GET(
     });
 
     if (!trip) {
-      return NextResponse.json(
-        { error: 'Trip not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
     // Check permissions
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
-    const isDispatcher = session.role === 'DISPATCHER';
-    const isCarrier = session.role === 'CARRIER' && trip.carrierId === session.organizationId;
-    const isShipper = session.role === 'SHIPPER' && trip.shipperId === session.organizationId;
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
+    const isDispatcher = session.role === "DISPATCHER";
+    const isCarrier =
+      session.role === "CARRIER" && trip.carrierId === session.organizationId;
+    const isShipper =
+      session.role === "SHIPPER" && trip.shipperId === session.organizationId;
 
     if (!isAdmin && !isDispatcher && !isCarrier && !isShipper) {
       return NextResponse.json(
-        { error: 'You do not have permission to view this trip history' },
+        { error: "You do not have permission to view this trip history" },
         { status: 403 }
       );
     }
@@ -92,10 +91,16 @@ export async function GET(
     const whereClause: Record<string, any> = { tripId };
 
     if (startTime) {
-      whereClause.timestamp = { ...whereClause.timestamp, gte: new Date(startTime) };
+      whereClause.timestamp = {
+        ...whereClause.timestamp,
+        gte: new Date(startTime),
+      };
     }
     if (endTime) {
-      whereClause.timestamp = { ...whereClause.timestamp, lte: new Date(endTime) };
+      whereClause.timestamp = {
+        ...whereClause.timestamp,
+        lte: new Date(endTime),
+      };
     }
 
     // Get all GPS positions for the trip
@@ -110,7 +115,7 @@ export async function GET(
         altitude: true,
         timestamp: true,
       },
-      orderBy: { timestamp: 'asc' },
+      orderBy: { timestamp: "asc" },
     });
 
     // Calculate total distance traveled (delegated to lib/geo.ts)
@@ -127,7 +132,7 @@ export async function GET(
     }
 
     // Simplify route if requested (reduce number of points)
-    let route = positions.map(p => ({
+    let route = positions.map((p) => ({
       id: p.id,
       latitude: Number(p.latitude),
       longitude: Number(p.longitude),
@@ -137,7 +142,7 @@ export async function GET(
       timestamp: p.timestamp.toISOString(),
     }));
 
-    if (resolution === 'simplified' && route.length > 100) {
+    if (resolution === "simplified" && route.length > 100) {
       // Reduce to ~100 points using Douglas-Peucker or simple sampling
       route = simplifyRoute(route, 100);
     }
@@ -145,7 +150,9 @@ export async function GET(
     // Calculate average speed
     let avgSpeedKmh: number | null = null;
     if (positions.length > 0) {
-      const speeds = positions.filter(p => p.speed !== null).map(p => Number(p.speed));
+      const speeds = positions
+        .filter((p) => p.speed !== null)
+        .map((p) => Number(p.speed));
       if (speeds.length > 0) {
         avgSpeedKmh = speeds.reduce((a, b) => a + b, 0) / speeds.length;
       }
@@ -155,7 +162,9 @@ export async function GET(
     let durationMinutes: number | null = null;
     if (trip.startedAt && (trip.completedAt || trip.deliveredAt)) {
       const endDate = trip.completedAt || trip.deliveredAt;
-      durationMinutes = Math.round((endDate!.getTime() - trip.startedAt.getTime()) / (1000 * 60));
+      durationMinutes = Math.round(
+        (endDate!.getTime() - trip.startedAt.getTime()) / (1000 * 60)
+      );
     }
 
     return NextResponse.json({
@@ -187,7 +196,9 @@ export async function GET(
       },
       // Rounding delegated to lib/rounding.ts
       distance: {
-        estimatedKm: trip.estimatedDistanceKm ? Number(trip.estimatedDistanceKm) : null,
+        estimatedKm: trip.estimatedDistanceKm
+          ? Number(trip.estimatedDistanceKm)
+          : null,
         actualKm: roundToDecimals(totalDistanceKm, 2),
       },
       stats: {
@@ -199,9 +210,9 @@ export async function GET(
       positions: route,
     });
   } catch (error) {
-    console.error('Get trip history error:', error);
+    console.error("Get trip history error:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch trip history' },
+      { error: "Failed to fetch trip history" },
       { status: 500 }
     );
   }
@@ -209,7 +220,15 @@ export async function GET(
 
 // Simple route simplification by sampling
 function simplifyRoute(
-  route: Array<{ id: string; latitude: number; longitude: number; speed: number | null; heading: number | null; altitude: number | null; timestamp: string }>,
+  route: Array<{
+    id: string;
+    latitude: number;
+    longitude: number;
+    speed: number | null;
+    heading: number | null;
+    altitude: number | null;
+    timestamp: string;
+  }>,
   targetPoints: number
 ): typeof route {
   if (route.length <= targetPoints) return route;

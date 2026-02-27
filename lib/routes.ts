@@ -24,24 +24,24 @@
 // =============================================================================
 
 export const CARRIER_ROUTES = {
-  dashboard: '/carrier/dashboard',
+  dashboard: "/carrier/dashboard",
   trucks: {
-    list: '/carrier/trucks',
+    list: "/carrier/trucks",
     detail: (id: string) => `/carrier/trucks/${id}` as const,
-    add: '/carrier/trucks/add',
+    add: "/carrier/trucks/add",
     edit: (id: string) => `/carrier/trucks/${id}/edit` as const,
   },
-  loadboard: '/carrier/loadboard',
+  loadboard: "/carrier/loadboard",
   trips: {
-    list: '/carrier/trips',
+    list: "/carrier/trips",
     detail: (id: string) => `/carrier/trips/${id}` as const,
   },
-  wallet: '/carrier/wallet',
-  map: '/carrier/map',
-  gps: '/carrier/gps',
-  matches: '/carrier/matches',
-  requests: '/carrier/requests',
-  settings: '/carrier/settings',
+  wallet: "/carrier/wallet",
+  map: "/carrier/map",
+  gps: "/carrier/gps",
+  matches: "/carrier/matches",
+  requests: "/carrier/requests",
+  settings: "/carrier/settings",
 } as const;
 
 // =============================================================================
@@ -49,20 +49,20 @@ export const CARRIER_ROUTES = {
 // =============================================================================
 
 export const SHIPPER_ROUTES = {
-  dashboard: '/shipper/dashboard',
+  dashboard: "/shipper/dashboard",
   loads: {
-    list: '/shipper/loads',
+    list: "/shipper/loads",
     detail: (id: string) => `/shipper/loads/${id}` as const,
-    create: '/shipper/loads/create',
+    create: "/shipper/loads/create",
     edit: (id: string) => `/shipper/loads/${id}/edit` as const,
   },
   tracking: {
-    list: '/shipper/tracking',
+    list: "/shipper/tracking",
     detail: (tripId: string) => `/shipper/tracking/${tripId}` as const,
   },
-  wallet: '/shipper/wallet',
-  history: '/shipper/history',
-  settings: '/shipper/settings',
+  wallet: "/shipper/wallet",
+  history: "/shipper/history",
+  settings: "/shipper/settings",
 } as const;
 
 // =============================================================================
@@ -70,16 +70,16 @@ export const SHIPPER_ROUTES = {
 // =============================================================================
 
 export const DISPATCHER_ROUTES = {
-  dashboard: '/dispatcher/dashboard',
-  map: '/dispatcher/map',
+  dashboard: "/dispatcher/dashboard",
+  map: "/dispatcher/map",
   trips: {
-    list: '/dispatcher/trips',
+    list: "/dispatcher/trips",
     detail: (id: string) => `/dispatcher/trips/${id}` as const,
   },
-  fleet: '/dispatcher/fleet',
-  loads: '/dispatcher/loads',
-  alerts: '/dispatcher/alerts',
-  settings: '/dispatcher/settings',
+  fleet: "/dispatcher/fleet",
+  loads: "/dispatcher/loads",
+  alerts: "/dispatcher/alerts",
+  settings: "/dispatcher/settings",
 } as const;
 
 // =============================================================================
@@ -87,34 +87,34 @@ export const DISPATCHER_ROUTES = {
 // =============================================================================
 
 export const ADMIN_ROUTES = {
-  dashboard: '/admin/dashboard',
+  dashboard: "/admin/dashboard",
   users: {
-    list: '/admin/users',
+    list: "/admin/users",
     detail: (id: string) => `/admin/users/${id}` as const,
-    create: '/admin/users/create',
+    create: "/admin/users/create",
   },
   organizations: {
-    list: '/admin/organizations',
+    list: "/admin/organizations",
     detail: (id: string) => `/admin/organizations/${id}` as const,
   },
   loads: {
-    list: '/admin/loads',
+    list: "/admin/loads",
     detail: (id: string) => `/admin/loads/${id}` as const,
   },
   trucks: {
-    list: '/admin/trucks',
+    list: "/admin/trucks",
     detail: (id: string) => `/admin/trucks/${id}` as const,
-    pending: '/admin/trucks/pending',
+    pending: "/admin/trucks/pending",
   },
   gps: {
-    devices: '/admin/gps/devices',
-    tracking: '/admin/gps/tracking',
+    devices: "/admin/gps/devices",
+    tracking: "/admin/gps/tracking",
   },
-  corridors: '/admin/corridors',
-  serviceFees: '/admin/service-fees',
-  wallet: '/admin/wallet',
-  reports: '/admin/reports',
-  settings: '/admin/settings',
+  corridors: "/admin/corridors",
+  serviceFees: "/admin/service-fees",
+  wallet: "/admin/wallet",
+  reports: "/admin/reports",
+  settings: "/admin/settings",
 } as const;
 
 // =============================================================================
@@ -122,12 +122,12 @@ export const ADMIN_ROUTES = {
 // =============================================================================
 
 export const AUTH_ROUTES = {
-  login: '/login',
-  register: '/register',
-  logout: '/logout',
-  forgotPassword: '/forgot-password',
-  resetPassword: '/reset-password',
-  verify: '/verify',
+  login: "/login",
+  register: "/register",
+  logout: "/logout",
+  forgotPassword: "/forgot-password",
+  resetPassword: "/reset-password",
+  verify: "/verify",
 } as const;
 
 // =============================================================================
@@ -136,22 +136,22 @@ export const AUTH_ROUTES = {
 
 export const API_ROUTES = {
   carrier: {
-    dashboard: '/api/carrier/dashboard',
-    trucks: '/api/trucks',
+    dashboard: "/api/carrier/dashboard",
+    trucks: "/api/trucks",
     truckDetail: (id: string) => `/api/trucks/${id}` as const,
-    postings: '/api/truck-postings',
+    postings: "/api/truck-postings",
     postingDetail: (id: string) => `/api/truck-postings/${id}` as const,
-    trips: '/api/trips',
+    trips: "/api/trips",
     tripDetail: (id: string) => `/api/trips/${id}` as const,
   },
   shipper: {
-    dashboard: '/api/shipper/dashboard',
-    loads: '/api/loads',
+    dashboard: "/api/shipper/dashboard",
+    loads: "/api/loads",
     loadDetail: (id: string) => `/api/loads/${id}` as const,
   },
   admin: {
-    dashboard: '/api/admin/dashboard',
-    users: '/api/admin/users',
+    dashboard: "/api/admin/dashboard",
+    users: "/api/admin/users",
     userDetail: (id: string) => `/api/admin/users/${id}` as const,
   },
   gps: {
@@ -160,7 +160,7 @@ export const API_ROUTES = {
     location: (truckId: string) => `/api/trucks/${truckId}/location` as const,
   },
   wallet: {
-    transactions: '/api/wallet/transactions',
+    transactions: "/api/wallet/transactions",
   },
 } as const;
 
@@ -193,7 +193,7 @@ export type AppRoutes = typeof ROUTES;
  * Helper to get route with base URL for external links
  */
 export function getFullUrl(route: string, baseUrl?: string): string {
-  const base = baseUrl || process.env.NEXT_PUBLIC_APP_URL || '';
+  const base = baseUrl || process.env.NEXT_PUBLIC_APP_URL || "";
   return `${base}${route}`;
 }
 

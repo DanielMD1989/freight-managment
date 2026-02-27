@@ -212,7 +212,7 @@ export function formatCoordinate6(value: number): string {
  */
 export function roundToDecimals(value: number, decimals: number): number {
   if (decimals < 0 || decimals > 10) {
-    throw new Error('Decimals must be between 0 and 10');
+    throw new Error("Decimals must be between 0 and 10");
   }
   const factor = Math.pow(10, decimals);
   return Math.round(value * factor) / factor;
@@ -223,13 +223,13 @@ export function roundToDecimals(value: number, decimals: number): number {
 // ============================================================================
 
 export type RoundingType =
-  | 'money'        // 2 decimals
-  | 'percentage'   // 1 decimal
-  | 'percentage2'  // 2 decimals
-  | 'distance'     // 0 decimals
-  | 'distance1'    // 1 decimal
-  | 'coordinate'   // 4 decimals
-  | 'coordinate6'; // 6 decimals
+  | "money" // 2 decimals
+  | "percentage" // 1 decimal
+  | "percentage2" // 2 decimals
+  | "distance" // 0 decimals
+  | "distance1" // 1 decimal
+  | "coordinate" // 4 decimals
+  | "coordinate6"; // 6 decimals
 
 /**
  * Apply rounding based on type
@@ -242,19 +242,19 @@ export type RoundingType =
  */
 export function round(value: number, type: RoundingType): number {
   switch (type) {
-    case 'money':
+    case "money":
       return roundMoney(value);
-    case 'percentage':
+    case "percentage":
       return roundPercentage(value);
-    case 'percentage2':
+    case "percentage2":
       return roundPercentage2(value);
-    case 'distance':
+    case "distance":
       return roundDistance(value);
-    case 'distance1':
+    case "distance1":
       return roundDistance1(value);
-    case 'coordinate':
+    case "coordinate":
       return roundCoordinate(value);
-    case 'coordinate6':
+    case "coordinate6":
       return roundCoordinate6(value);
     default:
       return value;

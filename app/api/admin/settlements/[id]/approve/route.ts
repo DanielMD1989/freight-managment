@@ -7,11 +7,11 @@
  * Allows admins to manually approve and process settlements
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requirePermission, Permission } from '@/lib/rbac';
-import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { requirePermission, Permission } from "@/lib/rbac";
+import { db } from "@/lib/db";
 // M5 FIX: Add CSRF validation
-import { validateCSRFWithMobile } from '@/lib/csrf';
+import { validateCSRFWithMobile } from "@/lib/csrf";
 
 /**
  * POST /api/admin/settlements/[id]/approve
@@ -67,29 +67,26 @@ export async function POST(
     });
 
     if (!load) {
-      return NextResponse.json(
-        { error: 'Load not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
-    if (load.status !== 'DELIVERED') {
+    if (load.status !== "DELIVERED") {
       return NextResponse.json(
-        { error: 'Load must be in DELIVERED status to settle' },
+        { error: "Load must be in DELIVERED status to settle" },
         { status: 400 }
       );
     }
 
     if (!load.podVerified) {
       return NextResponse.json(
-        { error: 'POD must be verified before settlement' },
+        { error: "POD must be verified before settlement" },
         { status: 400 }
       );
     }
 
-    if (load.settlementStatus === 'PAID') {
+    if (load.settlementStatus === "PAID") {
       return NextResponse.json(
-        { error: 'Settlement has already been processed' },
+        { error: "Settlement has already been processed" },
         { status: 400 }
       );
     }
@@ -99,7 +96,7 @@ export async function POST(
     await db.load.update({
       where: { id: loadId },
       data: {
-        settlementStatus: 'PAID',
+        settlementStatus: "PAID",
         settledAt: new Date(),
       },
     });
@@ -119,14 +116,14 @@ export async function POST(
     await db.loadEvent.create({
       data: {
         loadId,
-        eventType: 'SETTLEMENT_APPROVED',
-        description: 'Settlement manually approved by administrator',
+        eventType: "SETTLEMENT_APPROVED",
+        description: "Settlement manually approved by administrator",
       },
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Settlement approved and processed successfully',
+      message: "Settlement approved and processed successfully",
       settlement: {
         loadId: updatedLoad?.id,
         status: updatedLoad?.settlementStatus,
@@ -135,30 +132,27 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('Settlement approval error:', error);
+    console.error("Settlement approval error:", error);
 
-    if (error instanceof Error && error.name === 'ForbiddenError') {
+    if (error instanceof Error && error.name === "ForbiddenError") {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
 
     // Handle specific settlement errors
     if (error instanceof Error) {
-      if (error.message.includes('Insufficient balance')) {
-        return NextResponse.json(
-          { error: error.message },
-          { status: 400 }
-        );
+      if (error.message.includes("Insufficient balance")) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
       }
-      if (error.message.includes('Wallet not found')) {
+      if (error.message.includes("Wallet not found")) {
         return NextResponse.json(
-          { error: 'Financial account not configured for organization' },
+          { error: "Financial account not configured for organization" },
           { status: 400 }
         );
       }
     }
 
     return NextResponse.json(
-      { error: 'Failed to process settlement. Please try again.' },
+      { error: "Failed to process settlement. Please try again." },
       { status: 500 }
     );
   }

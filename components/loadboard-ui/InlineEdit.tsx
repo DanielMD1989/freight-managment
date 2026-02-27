@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Inline Edit Component
@@ -7,10 +7,10 @@
  * Load Board UI Component Library
  */
 
-import React, { useState } from 'react';
-import { InlineEditProps } from '@/types/loadboard-ui';
-import ActionButton from './ActionButton';
-import CharacterCounter from './CharacterCounter';
+import React, { useState } from "react";
+import { InlineEditProps } from "@/types/loadboard-ui";
+import ActionButton from "./ActionButton";
+import CharacterCounter from "./CharacterCounter";
 
 export default function InlineEdit({
   data,
@@ -29,7 +29,7 @@ export default function InlineEdit({
     setFormData({ ...formData, [key]: value });
     // Clear error for this field
     if (errors[key]) {
-      setErrors({ ...errors, [key]: '' });
+      setErrors({ ...errors, [key]: "" });
     }
   };
 
@@ -58,19 +58,19 @@ export default function InlineEdit({
     try {
       await onSave(formData);
     } catch (error) {
-      console.error('Save failed:', error);
+      console.error("Save failed:", error);
     }
   };
 
   /**
    * Render field
    */
-  const renderField = (field: typeof fields[number]) => {
-    const value = formData[field.key] || '';
+  const renderField = (field: (typeof fields)[number]) => {
+    const value = formData[field.key] || "";
     const error = errors[field.key];
 
     switch (field.type) {
-      case 'text':
+      case "text":
         return (
           <div>
             <input
@@ -79,7 +79,7 @@ export default function InlineEdit({
               onChange={(e) => handleChange(field.key, e.target.value)}
               placeholder={field.placeholder}
               maxLength={field.maxLength}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1e9c99] focus:border-transparent"
+              className="w-full rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-white placeholder-gray-400 focus:border-transparent focus:ring-2 focus:ring-[#1e9c99]"
             />
             {field.maxLength && (
               <CharacterCounter value={value} maxLength={field.maxLength} />
@@ -87,23 +87,23 @@ export default function InlineEdit({
           </div>
         );
 
-      case 'number':
+      case "number":
         return (
           <input
             type="number"
             value={value}
             onChange={(e) => handleChange(field.key, e.target.value)}
             placeholder={field.placeholder}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1e9c99] focus:border-transparent"
+            className="w-full rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-white placeholder-gray-400 focus:border-transparent focus:ring-2 focus:ring-[#1e9c99]"
           />
         );
 
-      case 'select':
+      case "select":
         return (
           <select
             value={value}
             onChange={(e) => handleChange(field.key, e.target.value)}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:ring-2 focus:ring-[#1e9c99] focus:border-transparent"
+            className="w-full rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-white focus:border-transparent focus:ring-2 focus:ring-[#1e9c99]"
           >
             <option value="">Select...</option>
             {field.options?.map((option: { value: string; label: string }) => (
@@ -114,17 +114,17 @@ export default function InlineEdit({
           </select>
         );
 
-      case 'date':
+      case "date":
         return (
           <input
             type="date"
             value={value}
             onChange={(e) => handleChange(field.key, e.target.value)}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:ring-2 focus:ring-[#1e9c99] focus:border-transparent"
+            className="w-full rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-white focus:border-transparent focus:ring-2 focus:ring-[#1e9c99]"
           />
         );
 
-      case 'textarea':
+      case "textarea":
         return (
           <div>
             <textarea
@@ -133,7 +133,7 @@ export default function InlineEdit({
               placeholder={field.placeholder}
               maxLength={field.maxLength}
               rows={4}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:ring-2 focus:ring-[#1e9c99] focus:border-transparent"
+              className="w-full rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-white placeholder-gray-400 focus:border-transparent focus:ring-2 focus:ring-[#1e9c99]"
             />
             {field.maxLength && (
               <CharacterCounter value={value} maxLength={field.maxLength} />
@@ -147,39 +147,39 @@ export default function InlineEdit({
   };
 
   return (
-    <div className="bg-gray-700 rounded-lg p-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="rounded-lg bg-gray-700 p-6">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {fields.map((field) => (
           <div
             key={field.key}
-            className={field.type === 'textarea' ? 'md:col-span-2' : ''}
+            className={field.type === "textarea" ? "md:col-span-2" : ""}
           >
-            <label className="block text-sm font-medium text-gray-200 mb-1">
+            <label className="mb-1 block text-sm font-medium text-gray-200">
               {field.label}
-              {field.required && <span className="text-red-400 ml-1">*</span>}
+              {field.required && <span className="ml-1 text-red-400">*</span>}
             </label>
             {renderField(field)}
             {errors[field.key] && (
-              <p className="text-red-400 text-xs mt-1">{errors[field.key]}</p>
+              <p className="mt-1 text-xs text-red-400">{errors[field.key]}</p>
             )}
           </div>
         ))}
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3 mt-6 pt-4 border-t border-gray-600">
+      <div className="mt-6 flex gap-3 border-t border-gray-600 pt-4">
         <ActionButton
           variant="secondary"
           size="md"
           onClick={handleSave}
           disabled={saving}
         >
-          {saving ? 'Saving...' : 'Save Changes'}
+          {saving ? "Saving..." : "Save Changes"}
         </ActionButton>
         <button
           onClick={onCancel}
           disabled={saving}
-          className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors disabled:opacity-50"
+          className="px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:text-white disabled:opacity-50"
         >
           Cancel
         </button>

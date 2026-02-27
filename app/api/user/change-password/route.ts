@@ -15,17 +15,23 @@
  * - Session revocation (excludes current session)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import { requireAuth, validatePasswordPolicy, verifyPassword, hashPassword, revokeAllSessions } from '@/lib/auth';
-import { db } from '@/lib/db';
-import { logSecurityEvent, SecurityEventType } from '@/lib/security-events';
-import { requireCSRF } from '@/lib/csrf';
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import {
+  requireAuth,
+  validatePasswordPolicy,
+  verifyPassword,
+  hashPassword,
+  revokeAllSessions,
+} from "@/lib/auth";
+import { db } from "@/lib/db";
+import { logSecurityEvent, SecurityEventType } from "@/lib/security-events";
+import { requireCSRF } from "@/lib/csrf";
 
 // Request body schema
 const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required'),
-  newPassword: z.string().min(8, 'New password must be at least 8 characters'),
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(8, "New password must be at least 8 characters"),
   logoutOtherSessions: z.boolean().optional().default(true),
 });
 
@@ -38,8 +44,10 @@ export async function POST(request: NextRequest) {
     }
 
     const session = await requireAuth();
-    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip');
-    const userAgent = request.headers.get('user-agent');
+    const ipAddress =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip");
+    const userAgent = request.headers.get("user-agent");
 
     const body = await request.json();
 
@@ -47,11 +55,12 @@ export async function POST(request: NextRequest) {
     const parseResult = changePasswordSchema.safeParse(body);
     if (!parseResult.success) {
       // FIX: Use zodErrorResponse to avoid schema leak
-      const { zodErrorResponse } = await import('@/lib/validation');
+      const { zodErrorResponse } = await import("@/lib/validation");
       return zodErrorResponse(parseResult.error);
     }
 
-    const { currentPassword, newPassword, logoutOtherSessions } = parseResult.data;
+    const { currentPassword, newPassword, logoutOtherSessions } =
+      parseResult.data;
 
     // Get user with password hash
     const user = await db.user.findUnique({
@@ -63,14 +72,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user || !user.passwordHash) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Verify current password
-    const isCurrentPasswordValid = await verifyPassword(currentPassword, user.passwordHash);
+    const isCurrentPasswordValid = await verifyPassword(
+      currentPassword,
+      user.passwordHash
+    );
 
     if (!isCurrentPasswordValid) {
       // Log failed attempt
@@ -80,11 +89,11 @@ export async function POST(request: NextRequest) {
         ipAddress,
         userAgent,
         success: false,
-        metadata: { reason: 'Invalid current password' },
+        metadata: { reason: "Invalid current password" },
       });
 
       return NextResponse.json(
-        { error: 'Current password is incorrect' },
+        { error: "Current password is incorrect" },
         { status: 400 }
       );
     }
@@ -93,7 +102,10 @@ export async function POST(request: NextRequest) {
     const validation = validatePasswordPolicy(newPassword);
     if (!validation.valid) {
       return NextResponse.json(
-        { error: 'Password does not meet requirements', details: validation.errors },
+        {
+          error: "Password does not meet requirements",
+          details: validation.errors,
+        },
         { status: 400 }
       );
     }
@@ -102,7 +114,7 @@ export async function POST(request: NextRequest) {
     const isSamePassword = await verifyPassword(newPassword, user.passwordHash);
     if (isSamePassword) {
       return NextResponse.json(
-        { error: 'New password must be different from current password' },
+        { error: "New password must be different from current password" },
         { status: 400 }
       );
     }
@@ -123,7 +135,10 @@ export async function POST(request: NextRequest) {
     let revokedSessionCount = 0;
     if (logoutOtherSessions) {
       // Exclude current session from revocation so user doesn't get logged out
-      revokedSessionCount = await revokeAllSessions(session.userId, session.sessionId);
+      revokedSessionCount = await revokeAllSessions(
+        session.userId,
+        session.sessionId
+      );
     }
 
     // Log successful password change
@@ -138,21 +153,18 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Password changed successfully',
+      message: "Password changed successfully",
       revokedSessions: revokedSessionCount,
     });
   } catch (error) {
-    console.error('Failed to change password:', error);
+    console.error("Failed to change password:", error);
 
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     return NextResponse.json(
-      { error: 'Failed to change password' },
+      { error: "Failed to change password" },
       { status: 500 }
     );
   }

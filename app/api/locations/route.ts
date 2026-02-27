@@ -13,9 +13,9 @@
  * Sprint 8 - Story 8.2: Ethiopian Location Management
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { Prisma, LocationType } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { Prisma, LocationType } from "@prisma/client";
 
 /**
  * GET /api/locations
@@ -54,23 +54,23 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
 
     // Extract and sanitize query parameters
-    const searchQuery = searchParams.get('q')?.trim() || '';
-    const region = searchParams.get('region')?.trim();
-    const type = searchParams.get('type')?.trim();
-    const limitParam = searchParams.get('limit');
-    const offsetParam = searchParams.get('offset');
+    const searchQuery = searchParams.get("q")?.trim() || "";
+    const region = searchParams.get("region")?.trim();
+    const type = searchParams.get("type")?.trim();
+    const limitParam = searchParams.get("limit");
+    const offsetParam = searchParams.get("offset");
 
     // Validate and set pagination
     const limit = Math.min(
-      parseInt(limitParam || '50', 10),
+      parseInt(limitParam || "50", 10),
       100 // Max 100 results per request
     );
-    const offset = Math.max(parseInt(offsetParam || '0', 10), 0);
+    const offset = Math.max(parseInt(offsetParam || "0", 10), 0);
 
     // Validate limit and offset are valid numbers
     if (isNaN(limit) || isNaN(offset)) {
       return NextResponse.json(
-        { error: 'Invalid pagination parameters' },
+        { error: "Invalid pagination parameters" },
         { status: 400 }
       );
     }
@@ -83,19 +83,19 @@ export async function GET(request: NextRequest) {
     // Search filter: name, nameEthiopic, or aliases (case-insensitive)
     if (searchQuery) {
       // Sanitize search query to prevent injection
-      const sanitizedQuery = searchQuery.replace(/[^\w\s\u1200-\u137F-]/g, '');
+      const sanitizedQuery = searchQuery.replace(/[^\w\s\u1200-\u137F-]/g, "");
 
       where.OR = [
         {
           name: {
             contains: sanitizedQuery,
-            mode: 'insensitive',
+            mode: "insensitive",
           },
         },
         {
           nameEthiopic: {
             contains: sanitizedQuery,
-            mode: 'insensitive',
+            mode: "insensitive",
           },
         },
         {
@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
     if (region) {
       where.region = {
         equals: region,
-        mode: 'insensitive',
+        mode: "insensitive",
       };
     }
 
@@ -123,7 +123,10 @@ export async function GET(request: NextRequest) {
         where.type = upperType;
       } else {
         return NextResponse.json(
-          { error: 'Invalid location type. Must be one of: CITY, TOWN, VILLAGE, LANDMARK' },
+          {
+            error:
+              "Invalid location type. Must be one of: CITY, TOWN, VILLAGE, LANDMARK",
+          },
           { status: 400 }
         );
       }
@@ -145,9 +148,9 @@ export async function GET(request: NextRequest) {
           population: true,
         },
         orderBy: [
-          { type: 'asc' }, // Cities first, then towns
-          { population: 'desc' }, // Larger cities first
-          { name: 'asc' }, // Alphabetical
+          { type: "asc" }, // Cities first, then towns
+          { population: "desc" }, // Larger cities first
+          { name: "asc" }, // Alphabetical
         ],
         skip: offset,
         take: limit,
@@ -169,11 +172,11 @@ export async function GET(request: NextRequest) {
       offset,
     });
   } catch (error) {
-    console.error('Error fetching locations:', error);
+    console.error("Error fetching locations:", error);
 
     // Don't expose internal errors to client
     return NextResponse.json(
-      { error: 'Failed to fetch locations' },
+      { error: "Failed to fetch locations" },
       { status: 500 }
     );
   }

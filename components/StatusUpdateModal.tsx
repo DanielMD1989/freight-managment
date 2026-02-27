@@ -6,10 +6,10 @@
  * Quick modal for dispatcher to update load status
  */
 
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { getCSRFToken } from '@/lib/csrfFetch';
+import { useState } from "react";
+import { getCSRFToken } from "@/lib/csrfFetch";
 
 interface StatusUpdateModalProps {
   isOpen: boolean;
@@ -25,12 +25,28 @@ interface StatusUpdateModalProps {
 
 // Status colors from StatusBadge.tsx (source of truth)
 const STATUS_OPTIONS = [
-  { value: 'DRAFT', label: 'Draft', color: 'bg-slate-500/10 text-slate-600' },
-  { value: 'POSTED', label: 'Posted', color: 'bg-blue-500/10 text-blue-600' },
-  { value: 'ASSIGNED', label: 'Assigned', color: 'bg-amber-500/10 text-amber-600' },
-  { value: 'IN_TRANSIT', label: 'In Transit', color: 'bg-indigo-500/10 text-indigo-600' },
-  { value: 'DELIVERED', label: 'Delivered', color: 'bg-emerald-500/10 text-emerald-600' },
-  { value: 'CANCELLED', label: 'Cancelled', color: 'bg-rose-500/10 text-rose-600' },
+  { value: "DRAFT", label: "Draft", color: "bg-slate-500/10 text-slate-600" },
+  { value: "POSTED", label: "Posted", color: "bg-blue-500/10 text-blue-600" },
+  {
+    value: "ASSIGNED",
+    label: "Assigned",
+    color: "bg-amber-500/10 text-amber-600",
+  },
+  {
+    value: "IN_TRANSIT",
+    label: "In Transit",
+    color: "bg-indigo-500/10 text-indigo-600",
+  },
+  {
+    value: "DELIVERED",
+    label: "Delivered",
+    color: "bg-emerald-500/10 text-emerald-600",
+  },
+  {
+    value: "CANCELLED",
+    label: "Cancelled",
+    color: "bg-rose-500/10 text-rose-600",
+  },
 ];
 
 export default function StatusUpdateModal({
@@ -47,7 +63,7 @@ export default function StatusUpdateModal({
 
   const handleUpdate = async () => {
     if (selectedStatus === currentStatus) {
-      setError('Please select a different status');
+      setError("Please select a different status");
       return;
     }
 
@@ -57,10 +73,10 @@ export default function StatusUpdateModal({
     try {
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/loads/${loadId}/status`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
         body: JSON.stringify({
           status: selectedStatus,
@@ -69,15 +85,15 @@ export default function StatusUpdateModal({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update status');
+        throw new Error(errorData.error || "Failed to update status");
       }
 
       // Success
       onUpdateSuccess();
       onClose();
     } catch (err: unknown) {
-      console.error('Error updating status:', err);
-      setError(err instanceof Error ? err.message : 'Failed to update status');
+      console.error("Error updating status:", err);
+      setError(err instanceof Error ? err.message : "Failed to update status");
     } finally {
       setUpdating(false);
     }
@@ -89,15 +105,15 @@ export default function StatusUpdateModal({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+        className="bg-opacity-50 fixed inset-0 bg-black transition-opacity"
         onClick={onClose}
       />
 
       {/* Modal */}
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div className="relative w-full max-w-md rounded-lg bg-white shadow-xl">
           {/* Header */}
-          <div className="px-6 py-4 border-b border-[#064d51]/15">
+          <div className="border-b border-[#064d51]/15 px-6 py-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-[#064d51]">
                 Update Load Status
@@ -106,8 +122,18 @@ export default function StatusUpdateModal({
                 onClick={onClose}
                 className="text-[#064d51]/50 hover:text-[#064d51]"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -116,8 +142,10 @@ export default function StatusUpdateModal({
           {/* Body */}
           <div className="px-6 py-4">
             {/* Load Details */}
-            <div className="mb-6 p-4 bg-[#f0fdfa] rounded-lg">
-              <h4 className="text-sm font-medium text-[#064d51]/80 mb-2">Load</h4>
+            <div className="mb-6 rounded-lg bg-[#f0fdfa] p-4">
+              <h4 className="mb-2 text-sm font-medium text-[#064d51]/80">
+                Load
+              </h4>
               <div className="text-sm">
                 <span className="font-medium text-[#064d51]">
                   {loadDetails.pickupCity} → {loadDetails.deliveryCity}
@@ -127,42 +155,45 @@ export default function StatusUpdateModal({
 
             {/* Current Status */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-[#064d51]/80 mb-2">
+              <label className="mb-2 block text-sm font-medium text-[#064d51]/80">
                 Current Status
               </label>
               <div className="flex items-center">
                 <span
-                  className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+                  className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${
                     STATUS_OPTIONS.find((s) => s.value === currentStatus)?.color
                   }`}
                 >
-                  {STATUS_OPTIONS.find((s) => s.value === currentStatus)?.label || currentStatus}
+                  {STATUS_OPTIONS.find((s) => s.value === currentStatus)
+                    ?.label || currentStatus}
                 </span>
               </div>
             </div>
 
             {/* Error Message */}
             {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded-md text-sm">
+              <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
                 {error}
               </div>
             )}
 
             {/* New Status Selection */}
             <div>
-              <label className="block text-sm font-medium text-[#064d51]/80 mb-2">
+              <label className="mb-2 block text-sm font-medium text-[#064d51]/80">
                 New Status
               </label>
               <div className="space-y-2">
                 {STATUS_OPTIONS.map((status) => (
                   <label
                     key={status.value}
-                    className={`flex items-center p-3 border rounded-lg cursor-pointer hover:bg-[#f0fdfa] ${
+                    className={`flex cursor-pointer items-center rounded-lg border p-3 hover:bg-[#f0fdfa] ${
                       selectedStatus === status.value
-                        ? 'border-[#1e9c99] bg-[#1e9c99]/10'
-                        : 'border-[#064d51]/15'
+                        ? "border-[#1e9c99] bg-[#1e9c99]/10"
+                        : "border-[#064d51]/15"
                     } ${
-                      status.value === currentStatus ? 'opacity-50 cursor-not-allowed' : ''
+                      status.value === currentStatus
+                        ? "cursor-not-allowed opacity-50"
+                        : ""
                     }`}
                   >
                     <input
@@ -175,7 +206,7 @@ export default function StatusUpdateModal({
                       className="mr-3 accent-[#1e9c99]"
                     />
                     <span
-                      className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${status.color}`}
+                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${status.color}`}
                     >
                       {status.label}
                     </span>
@@ -185,30 +216,32 @@ export default function StatusUpdateModal({
             </div>
 
             {/* Warning for certain status changes */}
-            {selectedStatus === 'CANCELLED' && currentStatus !== 'CANCELLED' && (
-              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                <p className="text-sm text-yellow-800">
-                  <strong>Warning:</strong> Cancelling this load may affect completion rates and trust scores.
-                </p>
-              </div>
-            )}
+            {selectedStatus === "CANCELLED" &&
+              currentStatus !== "CANCELLED" && (
+                <div className="mt-4 rounded-md border border-yellow-200 bg-yellow-50 p-3">
+                  <p className="text-sm text-yellow-800">
+                    <strong>Warning:</strong> Cancelling this load may affect
+                    completion rates and trust scores.
+                  </p>
+                </div>
+              )}
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-[#064d51]/15 flex justify-end gap-3">
+          <div className="flex justify-end gap-3 border-t border-[#064d51]/15 px-6 py-4">
             <button
               onClick={onClose}
               disabled={updating}
-              className="px-4 py-2 border border-[#064d51]/20 text-[#064d51]/80 rounded-md hover:bg-[#f0fdfa] disabled:opacity-50"
+              className="rounded-md border border-[#064d51]/20 px-4 py-2 text-[#064d51]/80 hover:bg-[#f0fdfa] disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={handleUpdate}
               disabled={updating || selectedStatus === currentStatus}
-              className="px-4 py-2 bg-[#1e9c99] text-white rounded-md hover:bg-[#064d51] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-md bg-[#1e9c99] px-4 py-2 text-white hover:bg-[#064d51] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {updating ? 'Updating...' : 'Update Status'}
+              {updating ? "Updating..." : "Update Status"}
             </button>
           </div>
         </div>

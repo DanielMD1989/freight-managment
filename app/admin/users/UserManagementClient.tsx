@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * User Management Client Component
@@ -7,8 +7,8 @@
  * Sprint 10 - Story 10.2: User Management
  */
 
-import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface User {
   id: string;
@@ -39,37 +39,37 @@ interface Pagination {
 }
 
 const ROLES = [
-  { value: '', label: 'All Roles' },
-  { value: 'SHIPPER', label: 'Shipper' },
-  { value: 'CARRIER', label: 'Carrier' },
-  { value: 'LOGISTICS_AGENT', label: 'Logistics Agent' },
-  { value: 'DRIVER', label: 'Driver' },
-  { value: 'SUPER_ADMIN', label: 'Platform Ops' },
-  { value: 'ADMIN', label: 'Admin' },
+  { value: "", label: "All Roles" },
+  { value: "SHIPPER", label: "Shipper" },
+  { value: "CARRIER", label: "Carrier" },
+  { value: "LOGISTICS_AGENT", label: "Logistics Agent" },
+  { value: "DRIVER", label: "Driver" },
+  { value: "SUPER_ADMIN", label: "Platform Ops" },
+  { value: "ADMIN", label: "Admin" },
 ];
 
 function formatDate(dateString: string | null): string {
-  if (!dateString) return 'Never';
+  if (!dateString) return "Never";
   const date = new Date(dateString);
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(date);
 }
 
 function getRoleBadgeColor(role: string): string {
   const colors: Record<string, string> = {
-    ADMIN: 'bg-purple-100 text-purple-800',
-    PLATFORM_OPS: 'bg-blue-100 text-blue-800',
-    SHIPPER: 'bg-green-100 text-green-800',
-    CARRIER: 'bg-yellow-100 text-yellow-800',
-    LOGISTICS_AGENT: 'bg-pink-100 text-pink-800',
-    DRIVER: 'bg-gray-100 text-gray-800',
+    ADMIN: "bg-purple-100 text-purple-800",
+    PLATFORM_OPS: "bg-blue-100 text-blue-800",
+    SHIPPER: "bg-green-100 text-green-800",
+    CARRIER: "bg-yellow-100 text-yellow-800",
+    LOGISTICS_AGENT: "bg-pink-100 text-pink-800",
+    DRIVER: "bg-gray-100 text-gray-800",
   };
-  return colors[role] || 'bg-gray-100 text-gray-800';
+  return colors[role] || "bg-gray-100 text-gray-800";
 }
 
 export default function UserManagementClient({
@@ -86,8 +86,8 @@ export default function UserManagementClient({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [searchInput, setSearchInput] = useState(initialSearch || '');
-  const [roleFilter, setRoleFilter] = useState(initialRole || '');
+  const [searchInput, setSearchInput] = useState(initialSearch || "");
+  const [roleFilter, setRoleFilter] = useState(initialRole || "");
 
   /**
    * Handle search submit
@@ -97,12 +97,12 @@ export default function UserManagementClient({
     const params = new URLSearchParams(searchParams.toString());
 
     if (searchInput) {
-      params.set('search', searchInput);
+      params.set("search", searchInput);
     } else {
-      params.delete('search');
+      params.delete("search");
     }
 
-    params.delete('page'); // Reset to page 1 on new search
+    params.delete("page"); // Reset to page 1 on new search
     router.push(`/admin/users?${params.toString()}`);
   };
 
@@ -114,12 +114,12 @@ export default function UserManagementClient({
     const params = new URLSearchParams(searchParams.toString());
 
     if (role) {
-      params.set('role', role);
+      params.set("role", role);
     } else {
-      params.delete('role');
+      params.delete("role");
     }
 
-    params.delete('page'); // Reset to page 1 on filter change
+    params.delete("page"); // Reset to page 1 on filter change
     router.push(`/admin/users?${params.toString()}`);
   };
 
@@ -128,7 +128,7 @@ export default function UserManagementClient({
    */
   const handlePageChange = (newPage: number) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set('page', newPage.toString());
+    params.set("page", newPage.toString());
     router.push(`/admin/users?${params.toString()}`);
   };
 
@@ -136,19 +136,22 @@ export default function UserManagementClient({
    * Clear all filters
    */
   const handleClearFilters = () => {
-    setSearchInput('');
-    setRoleFilter('');
-    router.push('/admin/users');
+    setSearchInput("");
+    setRoleFilter("");
+    router.push("/admin/users");
   };
 
   return (
     <div className="space-y-6">
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="rounded-lg bg-white p-6 shadow">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {/* Search */}
           <form onSubmit={handleSearch} className="lg:col-span-2">
-            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="search"
+              className="mb-2 block text-sm font-medium text-gray-700"
+            >
               Search Users
             </label>
             <div className="flex gap-2">
@@ -158,11 +161,11 @@ export default function UserManagementClient({
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search by email, name..."
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
               />
               <button
                 type="submit"
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                className="rounded-lg bg-blue-600 px-6 py-2 font-medium text-white transition-colors hover:bg-blue-700"
               >
                 Search
               </button>
@@ -171,14 +174,17 @@ export default function UserManagementClient({
 
           {/* Role Filter */}
           <div>
-            <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="role"
+              className="mb-2 block text-sm font-medium text-gray-700"
+            >
               Filter by Role
             </label>
             <select
               id="role"
               value={roleFilter}
               onChange={(e) => handleRoleChange(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
             >
               {ROLES.map((role) => (
                 <option key={role.value} value={role.value}>
@@ -194,18 +200,18 @@ export default function UserManagementClient({
           <div className="mt-4 flex items-center gap-2">
             <span className="text-sm text-gray-600">Active filters:</span>
             {searchInput && (
-              <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                Search: "{searchInput}"
+              <span className="rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-800">
+                Search: &quot;{searchInput}&quot;
               </span>
             )}
             {roleFilter && (
-              <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
+              <span className="rounded-full bg-purple-100 px-3 py-1 text-sm text-purple-800">
                 Role: {ROLES.find((r) => r.value === roleFilter)?.label}
               </span>
             )}
             <button
               onClick={handleClearFilters}
-              className="text-sm text-red-600 hover:text-red-700 font-medium"
+              className="text-sm font-medium text-red-600 hover:text-red-700"
             >
               Clear all
             </button>
@@ -214,35 +220,35 @@ export default function UserManagementClient({
       </div>
 
       {/* Users Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="overflow-hidden rounded-lg bg-white shadow">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                   User
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                   Contact
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                   Role
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                   Organization
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                   Last Login
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 bg-white">
               {initialUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50">
                   {/* User */}
@@ -254,7 +260,9 @@ export default function UserManagementClient({
                           : user.email}
                       </div>
                       {user.firstName && user.lastName && (
-                        <div className="text-xs text-gray-500">{user.email}</div>
+                        <div className="text-xs text-gray-500">
+                          {user.email}
+                        </div>
                       )}
                     </div>
                   </td>
@@ -265,7 +273,10 @@ export default function UserManagementClient({
                       <div className="flex items-center gap-1">
                         <span className="text-gray-900">{user.email}</span>
                         {user.isEmailVerified && (
-                          <span className="text-green-600" title="Email verified">
+                          <span
+                            className="text-green-600"
+                            title="Email verified"
+                          >
                             ✓
                           </span>
                         )}
@@ -274,7 +285,10 @@ export default function UserManagementClient({
                         <div className="flex items-center gap-1 text-gray-500">
                           <span>{user.phone}</span>
                           {user.isPhoneVerified && (
-                            <span className="text-green-600" title="Phone verified">
+                            <span
+                              className="text-green-600"
+                              title="Phone verified"
+                            >
                               ✓
                             </span>
                           )}
@@ -286,11 +300,11 @@ export default function UserManagementClient({
                   {/* Role */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(
+                      className={`inline-flex rounded-full px-3 py-1 text-xs leading-5 font-semibold ${getRoleBadgeColor(
                         user.role
                       )}`}
                     >
-                      {user.role.replace(/_/g, ' ')}
+                      {user.role.replace(/_/g, " ")}
                     </span>
                   </td>
 
@@ -299,9 +313,14 @@ export default function UserManagementClient({
                     {user.organization ? (
                       <div className="flex flex-col text-sm">
                         <div className="flex items-center gap-1">
-                          <span className="text-gray-900">{user.organization.name}</span>
+                          <span className="text-gray-900">
+                            {user.organization.name}
+                          </span>
                           {user.organization.isVerified && (
-                            <span className="text-blue-600" title="Verified organization">
+                            <span
+                              className="text-blue-600"
+                              title="Verified organization"
+                            >
                               ✓
                             </span>
                           )}
@@ -311,38 +330,42 @@ export default function UserManagementClient({
                         </span>
                       </div>
                     ) : (
-                      <span className="text-sm text-gray-400">No organization</span>
+                      <span className="text-sm text-gray-400">
+                        No organization
+                      </span>
                     )}
                   </td>
 
                   {/* Status */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      className={`inline-flex rounded-full px-2 py-1 text-xs leading-5 font-semibold ${
                         user.isActive
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
                       }`}
                     >
-                      {user.isActive ? 'Active' : 'Inactive'}
+                      {user.isActive ? "Active" : "Inactive"}
                     </span>
                   </td>
 
                   {/* Last Login */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
                     {formatDate(user.lastLoginAt)}
                   </td>
 
                   {/* Actions */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <td className="px-6 py-4 text-sm font-medium whitespace-nowrap">
                     <button
                       onClick={() => router.push(`/admin/users/${user.id}`)}
-                      className="text-blue-600 hover:text-blue-900 mr-3"
+                      className="mr-3 text-blue-600 hover:text-blue-900"
                     >
                       View
                     </button>
                     <button
-                      onClick={() => router.push(`/admin/users/${user.id}?edit=true`)}
+                      onClick={() =>
+                        router.push(`/admin/users/${user.id}?edit=true`)
+                      }
                       className="text-gray-600 hover:text-gray-900"
                     >
                       Edit
@@ -353,7 +376,10 @@ export default function UserManagementClient({
 
               {initialUsers.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                  <td
+                    colSpan={7}
+                    className="px-6 py-12 text-center text-gray-500"
+                  >
                     No users found. Try adjusting your filters.
                   </td>
                 </tr>
@@ -364,23 +390,23 @@ export default function UserManagementClient({
 
         {/* Pagination */}
         {pagination.pages > 1 && (
-          <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
+          <div className="flex items-center justify-between border-t border-gray-200 bg-gray-50 px-6 py-4">
             <div className="text-sm text-gray-700">
-              Showing{' '}
+              Showing{" "}
               <span className="font-medium">
                 {(pagination.page - 1) * pagination.limit + 1}
-              </span>{' '}
-              to{' '}
+              </span>{" "}
+              to{" "}
               <span className="font-medium">
                 {Math.min(pagination.page * pagination.limit, pagination.total)}
-              </span>{' '}
+              </span>{" "}
               of <span className="font-medium">{pagination.total}</span> users
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => handlePageChange(pagination.page - 1)}
                 disabled={pagination.page === 1}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Previous
               </button>
@@ -390,7 +416,7 @@ export default function UserManagementClient({
               <button
                 onClick={() => handlePageChange(pagination.page + 1)}
                 disabled={pagination.page === pagination.pages}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Next
               </button>

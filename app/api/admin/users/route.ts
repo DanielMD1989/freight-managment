@@ -94,13 +94,7 @@ export async function GET(request: NextRequest) {
 
 const updateUserSchema = z.object({
   userId: z.string(),
-  role: z.enum([
-    "SHIPPER",
-    "CARRIER",
-    "DISPATCHER",
-    "ADMIN",
-    "SUPER_ADMIN",
-  ]),
+  role: z.enum(["SHIPPER", "CARRIER", "DISPATCHER", "ADMIN", "SUPER_ADMIN"]),
 });
 
 // PATCH /api/admin/users - Update user role

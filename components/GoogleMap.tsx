@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Google Maps Component
@@ -13,16 +13,16 @@
  * - Role-based data filtering
  */
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import { Loader } from "@googlemaps/js-api-loader";
 
 // Types for map data
 export interface MapMarker {
   id: string;
-  type: 'truck' | 'pickup' | 'delivery' | 'load';
+  type: "truck" | "pickup" | "delivery" | "load";
   position: { lat: number; lng: number };
   title: string;
-  status?: 'active' | 'available' | 'offline' | 'in_transit';
+  status?: "active" | "available" | "offline" | "in_transit";
   info?: {
     label?: string;
     description?: string;
@@ -62,9 +62,14 @@ export interface GoogleMapProps {
 }
 
 // Marker icons by type
-const markerIcons: Record<string, { url: string; scaledSize: { width: number; height: number } }> = {
+const markerIcons: Record<
+  string,
+  { url: string; scaledSize: { width: number; height: number } }
+> = {
   truck_active: {
-    url: 'data:image/svg+xml;base64,' + btoa(`
+    url:
+      "data:image/svg+xml;base64," +
+      btoa(`
       <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="1" y="3" width="15" height="13" fill="#10B981" opacity="0.2"></rect>
         <rect x="1" y="3" width="15" height="13"></rect>
@@ -77,7 +82,9 @@ const markerIcons: Record<string, { url: string; scaledSize: { width: number; he
     scaledSize: { width: 40, height: 40 },
   },
   truck_available: {
-    url: 'data:image/svg+xml;base64,' + btoa(`
+    url:
+      "data:image/svg+xml;base64," +
+      btoa(`
       <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="1" y="3" width="15" height="13" fill="#3B82F6" opacity="0.2"></rect>
         <rect x="1" y="3" width="15" height="13"></rect>
@@ -90,7 +97,9 @@ const markerIcons: Record<string, { url: string; scaledSize: { width: number; he
     scaledSize: { width: 40, height: 40 },
   },
   truck_offline: {
-    url: 'data:image/svg+xml;base64,' + btoa(`
+    url:
+      "data:image/svg+xml;base64," +
+      btoa(`
       <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="1" y="3" width="15" height="13" fill="#6B7280" opacity="0.2"></rect>
         <rect x="1" y="3" width="15" height="13"></rect>
@@ -103,7 +112,9 @@ const markerIcons: Record<string, { url: string; scaledSize: { width: number; he
     scaledSize: { width: 40, height: 40 },
   },
   truck_in_transit: {
-    url: 'data:image/svg+xml;base64,' + btoa(`
+    url:
+      "data:image/svg+xml;base64," +
+      btoa(`
       <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="1" y="3" width="15" height="13" fill="#F59E0B" opacity="0.2"></rect>
         <rect x="1" y="3" width="15" height="13"></rect>
@@ -116,7 +127,9 @@ const markerIcons: Record<string, { url: string; scaledSize: { width: number; he
     scaledSize: { width: 40, height: 40 },
   },
   pickup: {
-    url: 'data:image/svg+xml;base64,' + btoa(`
+    url:
+      "data:image/svg+xml;base64," +
+      btoa(`
       <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="#10B981">
         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
       </svg>
@@ -124,7 +137,9 @@ const markerIcons: Record<string, { url: string; scaledSize: { width: number; he
     scaledSize: { width: 32, height: 32 },
   },
   delivery: {
-    url: 'data:image/svg+xml;base64,' + btoa(`
+    url:
+      "data:image/svg+xml;base64," +
+      btoa(`
       <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="#EF4444">
         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
       </svg>
@@ -132,7 +147,9 @@ const markerIcons: Record<string, { url: string; scaledSize: { width: number; he
     scaledSize: { width: 32, height: 32 },
   },
   load: {
-    url: 'data:image/svg+xml;base64,' + btoa(`
+    url:
+      "data:image/svg+xml;base64," +
+      btoa(`
       <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="#8B5CF6">
         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
       </svg>
@@ -150,7 +167,7 @@ export default function GoogleMap({
   routes = [],
   center,
   zoom = DEFAULT_ZOOM,
-  height = '500px',
+  height = "500px",
   showTraffic = false,
   onMarkerClick,
   onMapClick,
@@ -169,6 +186,13 @@ export default function GoogleMap({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [now, setNow] = useState(() => Date.now());
+
+  // Update `now` every second for status overlay
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Initialize Google Maps
   useEffect(() => {
@@ -177,15 +201,15 @@ export default function GoogleMap({
         const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
         if (!apiKey) {
-          setError('Google Maps API key not configured');
+          setError("Google Maps API key not configured");
           setIsLoading(false);
           return;
         }
 
         const loader = new Loader({
           apiKey,
-          version: 'weekly',
-          libraries: ['places', 'geometry'],
+          version: "weekly",
+          libraries: ["places", "geometry"],
         });
 
         await loader.load();
@@ -203,9 +227,9 @@ export default function GoogleMap({
           zoomControl: true,
           styles: [
             {
-              featureType: 'poi',
-              elementType: 'labels',
-              stylers: [{ visibility: 'off' }],
+              featureType: "poi",
+              elementType: "labels",
+              stylers: [{ visibility: "off" }],
             },
           ],
         });
@@ -215,17 +239,20 @@ export default function GoogleMap({
 
         // Add click listener
         if (onMapClick) {
-          googleMapRef.current.addListener('click', (e: google.maps.MapMouseEvent) => {
-            if (e.latLng) {
-              onMapClick({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+          googleMapRef.current.addListener(
+            "click",
+            (e: google.maps.MapMouseEvent) => {
+              if (e.latLng) {
+                onMapClick({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+              }
             }
-          });
+          );
         }
 
         setIsLoading(false);
       } catch (err) {
-        console.error('Failed to load Google Maps:', err);
-        setError('Failed to load map');
+        console.error("Failed to load Google Maps:", err);
+        setError("Failed to load map");
         setIsLoading(false);
       }
     };
@@ -256,16 +283,24 @@ export default function GoogleMap({
   // Get marker icon based on type and status
   const getMarkerIcon = useCallback((marker: MapMarker): google.maps.Icon => {
     let iconKey: string = marker.type;
-    if (marker.type === 'truck' && marker.status) {
+    if (marker.type === "truck" && marker.status) {
       iconKey = `truck_${marker.status}`;
     }
 
-    const iconConfig = markerIcons[iconKey as keyof typeof markerIcons] || markerIcons.truck_available;
+    const iconConfig =
+      markerIcons[iconKey as keyof typeof markerIcons] ||
+      markerIcons.truck_available;
 
     return {
       url: iconConfig.url,
-      scaledSize: new google.maps.Size(iconConfig.scaledSize.width, iconConfig.scaledSize.height),
-      anchor: new google.maps.Point(iconConfig.scaledSize.width / 2, iconConfig.scaledSize.height / 2),
+      scaledSize: new google.maps.Size(
+        iconConfig.scaledSize.width,
+        iconConfig.scaledSize.height
+      ),
+      anchor: new google.maps.Point(
+        iconConfig.scaledSize.width / 2,
+        iconConfig.scaledSize.height / 2
+      ),
     };
   }, []);
 
@@ -300,20 +335,23 @@ export default function GoogleMap({
           map,
           title: markerData.title,
           icon: getMarkerIcon(markerData),
-          animation: markerData.id === selectedMarkerId ? google.maps.Animation.BOUNCE : undefined,
+          animation:
+            markerData.id === selectedMarkerId
+              ? google.maps.Animation.BOUNCE
+              : undefined,
         });
 
         // Add click listener
-        marker.addListener('click', () => {
+        marker.addListener("click", () => {
           if (infoWindowRef.current && marker) {
             const content = `
               <div style="padding: 8px; max-width: 250px;">
                 <h3 style="margin: 0 0 8px; font-weight: 600; color: #1F2937;">${markerData.title}</h3>
-                ${markerData.info?.description ? `<p style="margin: 0 0 4px; color: #6B7280; font-size: 14px;">${markerData.info.description}</p>` : ''}
-                ${markerData.info?.plateNumber ? `<p style="margin: 0 0 4px; color: #374151; font-size: 14px;"><strong>Plate:</strong> ${markerData.info.plateNumber}</p>` : ''}
-                ${markerData.info?.speed !== undefined ? `<p style="margin: 0 0 4px; color: #374151; font-size: 14px;"><strong>Speed:</strong> ${Math.round(markerData.info.speed)} km/h</p>` : ''}
-                ${markerData.info?.timestamp ? `<p style="margin: 0; color: #9CA3AF; font-size: 12px;">Updated: ${new Date(markerData.info.timestamp).toLocaleTimeString()}</p>` : ''}
-                ${markerData.status ? `<span style="display: inline-block; margin-top: 8px; padding: 2px 8px; border-radius: 4px; font-size: 12px; background: ${markerData.status === 'active' || markerData.status === 'in_transit' ? '#10B981' : markerData.status === 'available' ? '#3B82F6' : '#6B7280'}; color: white;">${markerData.status.replace('_', ' ').toUpperCase()}</span>` : ''}
+                ${markerData.info?.description ? `<p style="margin: 0 0 4px; color: #6B7280; font-size: 14px;">${markerData.info.description}</p>` : ""}
+                ${markerData.info?.plateNumber ? `<p style="margin: 0 0 4px; color: #374151; font-size: 14px;"><strong>Plate:</strong> ${markerData.info.plateNumber}</p>` : ""}
+                ${markerData.info?.speed !== undefined ? `<p style="margin: 0 0 4px; color: #374151; font-size: 14px;"><strong>Speed:</strong> ${Math.round(markerData.info.speed)} km/h</p>` : ""}
+                ${markerData.info?.timestamp ? `<p style="margin: 0; color: #9CA3AF; font-size: 12px;">Updated: ${new Date(markerData.info.timestamp).toLocaleTimeString()}</p>` : ""}
+                ${markerData.status ? `<span style="display: inline-block; margin-top: 8px; padding: 2px 8px; border-radius: 4px; font-size: 12px; background: ${markerData.status === "active" || markerData.status === "in_transit" ? "#10B981" : markerData.status === "available" ? "#3B82F6" : "#6B7280"}; color: white;">${markerData.status.replace("_", " ").toUpperCase()}</span>` : ""}
               </div>
             `;
             infoWindowRef.current.setContent(content);
@@ -331,7 +369,9 @@ export default function GoogleMap({
       // Update animation for selected marker
       if (marker) {
         marker.setAnimation(
-          markerData.id === selectedMarkerId ? google.maps.Animation.BOUNCE : null
+          markerData.id === selectedMarkerId
+            ? google.maps.Animation.BOUNCE
+            : null
         );
       }
     });
@@ -351,7 +391,7 @@ export default function GoogleMap({
       map.fitBounds(bounds);
 
       // Don't zoom in too far for single marker
-      const listener = google.maps.event.addListener(map, 'idle', () => {
+      const listener = google.maps.event.addListener(map, "idle", () => {
         const currentZoom = map.getZoom();
         if (currentZoom && currentZoom > 15) {
           map.setZoom(15);
@@ -361,7 +401,14 @@ export default function GoogleMap({
     }
 
     setLastUpdate(new Date());
-  }, [markers, selectedMarkerId, isLoading, autoFitBounds, getMarkerIcon, onMarkerClick]);
+  }, [
+    markers,
+    selectedMarkerId,
+    isLoading,
+    autoFitBounds,
+    getMarkerIcon,
+    onMarkerClick,
+  ]);
 
   // Update routes/polylines
   useEffect(() => {
@@ -396,7 +443,7 @@ export default function GoogleMap({
         polyline = new google.maps.Polyline({
           path,
           map,
-          strokeColor: route.color || '#3B82F6',
+          strokeColor: route.color || "#3B82F6",
           strokeOpacity: 0.8,
           strokeWeight: 4,
         });
@@ -421,11 +468,11 @@ export default function GoogleMap({
   if (isLoading) {
     return (
       <div
-        className="flex items-center justify-center bg-[#f0fdfa] dark:bg-slate-800 rounded-lg"
+        className="flex items-center justify-center rounded-lg bg-[#f0fdfa] dark:bg-slate-800"
         style={{ height }}
       >
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1e9c99] mx-auto mb-4"></div>
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-[#1e9c99]"></div>
           <p className="text-[#064d51]/70 dark:text-gray-300">Loading map...</p>
         </div>
       </div>
@@ -436,12 +483,12 @@ export default function GoogleMap({
   if (error) {
     return (
       <div
-        className="flex items-center justify-center bg-[#f0fdfa] dark:bg-slate-800 rounded-lg"
+        className="flex items-center justify-center rounded-lg bg-[#f0fdfa] dark:bg-slate-800"
         style={{ height }}
       >
         <div className="text-center">
-          <p className="text-red-500 mb-4">{error}</p>
-          <p className="text-[#064d51]/60 text-sm">
+          <p className="mb-4 text-red-500">{error}</p>
+          <p className="text-sm text-[#064d51]/60">
             Please check that NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is configured.
           </p>
         </div>
@@ -451,38 +498,48 @@ export default function GoogleMap({
 
   return (
     <div className="relative" style={{ height }}>
-      <div ref={mapRef} className="w-full h-full rounded-lg" />
+      <div ref={mapRef} className="h-full w-full rounded-lg" />
 
       {/* Status overlay */}
-      <div className="absolute top-4 right-4 bg-white dark:bg-slate-800 px-4 py-2 rounded-lg shadow-lg border border-[#064d51]/15 dark:border-slate-700">
+      <div className="absolute top-4 right-4 rounded-lg border border-[#064d51]/15 bg-white px-4 py-2 shadow-lg dark:border-slate-700 dark:bg-slate-800">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <div className="h-2 w-2 animate-pulse rounded-full bg-green-500"></div>
           <span className="text-xs text-[#064d51]/70 dark:text-gray-300">
-            {markers.length} marker{markers.length !== 1 ? 's' : ''} |
-            Updated {Math.round((Date.now() - lastUpdate.getTime()) / 1000)}s ago
+            {markers.length} marker{markers.length !== 1 ? "s" : ""} | Updated{" "}
+            {Math.round((now - lastUpdate.getTime()) / 1000)}s ago
           </span>
         </div>
       </div>
 
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 bg-white dark:bg-slate-800 px-4 py-3 rounded-lg shadow-lg border border-[#064d51]/15 dark:border-slate-700">
-        <div className="text-xs font-semibold text-[#064d51] dark:text-gray-200 mb-2">Legend</div>
+      <div className="absolute bottom-4 left-4 rounded-lg border border-[#064d51]/15 bg-white px-4 py-3 shadow-lg dark:border-slate-700 dark:bg-slate-800">
+        <div className="mb-2 text-xs font-semibold text-[#064d51] dark:text-gray-200">
+          Legend
+        </div>
         <div className="space-y-1 text-xs">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-green-500"></div>
-            <span className="text-[#064d51]/70 dark:text-gray-300">Active / In Transit</span>
+            <div className="h-3 w-3 rounded-full bg-green-500"></div>
+            <span className="text-[#064d51]/70 dark:text-gray-300">
+              Active / In Transit
+            </span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#1e9c99]"></div>
-            <span className="text-[#064d51]/70 dark:text-gray-300">Available</span>
+            <div className="h-3 w-3 rounded-full bg-[#1e9c99]"></div>
+            <span className="text-[#064d51]/70 dark:text-gray-300">
+              Available
+            </span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-            <span className="text-[#064d51]/70 dark:text-gray-300">On Trip</span>
+            <div className="h-3 w-3 rounded-full bg-yellow-500"></div>
+            <span className="text-[#064d51]/70 dark:text-gray-300">
+              On Trip
+            </span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-gray-500"></div>
-            <span className="text-[#064d51]/70 dark:text-gray-300">Offline</span>
+            <div className="h-3 w-3 rounded-full bg-gray-500"></div>
+            <span className="text-[#064d51]/70 dark:text-gray-300">
+              Offline
+            </span>
           </div>
         </div>
       </div>

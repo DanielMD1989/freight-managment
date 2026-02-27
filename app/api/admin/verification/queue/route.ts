@@ -56,8 +56,38 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch documents based on entity type
-    let companyDocuments: Prisma.CompanyDocumentGetPayload<{ include: { organization: { select: { id: true; name: true; contactEmail: true; contactPhone: true; isVerified: true } } } }>[] = [];
-    let truckDocuments: Prisma.TruckDocumentGetPayload<{ include: { truck: { select: { id: true; licensePlate: true; carrier: { select: { id: true; name: true; contactEmail: true; contactPhone: true; isVerified: true } } } } } }>[] = [];
+    let companyDocuments: Prisma.CompanyDocumentGetPayload<{
+      include: {
+        organization: {
+          select: {
+            id: true;
+            name: true;
+            contactEmail: true;
+            contactPhone: true;
+            isVerified: true;
+          };
+        };
+      };
+    }>[] = [];
+    let truckDocuments: Prisma.TruckDocumentGetPayload<{
+      include: {
+        truck: {
+          select: {
+            id: true;
+            licensePlate: true;
+            carrier: {
+              select: {
+                id: true;
+                name: true;
+                contactEmail: true;
+                contactPhone: true;
+                isVerified: true;
+              };
+            };
+          };
+        };
+      };
+    }>[] = [];
 
     if (entityType === "company" || entityType === "all") {
       companyDocuments = await db.companyDocument.findMany({
@@ -152,7 +182,8 @@ export async function GET(request: NextRequest) {
 
     // Combine and sort by upload date (newest first)
     const allDocuments = [...formattedCompanyDocs, ...formattedTruckDocs].sort(
-      (a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+      (a, b) =>
+        new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
     );
 
     // Get total counts for pagination

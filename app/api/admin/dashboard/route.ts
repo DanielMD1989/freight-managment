@@ -38,10 +38,12 @@ export async function GET() {
       openDisputes: metrics.disputes.open + metrics.disputes.underReview,
 
       // Load breakdown by status
-      loadsByStatus: Object.entries(metrics.loads.byStatus).map(([status, count]) => ({
-        status,
-        _count: count,
-      })),
+      loadsByStatus: Object.entries(metrics.loads.byStatus).map(
+        ([status, count]) => ({
+          status,
+          _count: count,
+        })
+      ),
 
       // Recent activity
       recentUsers: metrics.recentActivity.usersLast7Days,
