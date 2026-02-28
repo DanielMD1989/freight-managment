@@ -291,6 +291,7 @@ model User {
   requestsResponded  TruckRequest[]  @relation("RespondedByCarrier")
 
   // SPRINT 18: Truck approval and load requests
+  trucksCreated         Truck[]       @relation("TruckCreatedBy")
   trucksApproved        Truck[]       @relation("TruckApprovedBy")
   loadRequestsCreated   LoadRequest[] @relation("LoadRequestedBy")
   loadRequestsResponded LoadRequest[] @relation("LoadRequestRespondedBy")
@@ -875,6 +876,9 @@ model Truck {
   carrierId String
   carrier   Organization @relation(fields: [carrierId], references: [id])
 
+  createdById String?
+  createdBy   User?  @relation("TruckCreatedBy", fields: [createdById], references: [id])
+
   gpsDeviceId String?    @unique
   gpsDevice   GpsDevice? @relation(fields: [gpsDeviceId], references: [id])
 
@@ -899,6 +903,7 @@ model Truck {
   @@index([isAvailable])
   @@index([imei])
   @@index([gpsStatus])
+  @@index([createdById]) // FIX F4: Index for audit queries on truck creator
   // PHASE 4: Composite indexes for common query patterns
   @@index([carrierId, isAvailable]) // Available trucks per carrier
   @@index([truckType, isAvailable]) // Available trucks by type

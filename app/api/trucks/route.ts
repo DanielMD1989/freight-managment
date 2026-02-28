@@ -146,6 +146,7 @@ export async function POST(request: NextRequest) {
         ...validatedData,
         ...gpsData,
         carrierId: user.organizationId,
+        createdById: session.userId,
       },
       include: {
         carrier: {

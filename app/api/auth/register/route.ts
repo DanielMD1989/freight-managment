@@ -10,7 +10,7 @@ import {
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { zodErrorResponse, sanitizeText } from "@/lib/validation";
-import { OrganizationType, AccountType } from "@prisma/client";
+import { OrganizationType, AccountType, Prisma } from "@prisma/client";
 
 const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -66,6 +66,9 @@ export async function POST(request: NextRequest) {
     validatedData.lastName = sanitizeText(validatedData.lastName, 100);
     if (validatedData.companyName)
       validatedData.companyName = sanitizeText(validatedData.companyName, 200);
+
+    // FIX F2: Normalize email to lowercase for case-insensitive matching
+    validatedData.email = validatedData.email.toLowerCase().trim();
 
     // Validate password policy (uppercase, lowercase, numeric requirements)
     const passwordValidation = validatePasswordPolicy(validatedData.password);
@@ -137,10 +140,73 @@ export async function POST(request: NextRequest) {
     const passwordHash = await hashPassword(validatedData.password);
 
     // Determine if we need to create an organization
-    let organizationId = validatedData.organizationId;
+    const organizationId = validatedData.organizationId;
+    let invitationId: string | null = null; // FIX F1: Track invitation for ACCEPTED update
+
+    // FIX C1: Validate organizationId — only dispatchers can join an existing org, and only with an invitation
+    if (organizationId) {
+      if (validatedData.role !== "DISPATCHER") {
+        return NextResponse.json(
+          {
+            error:
+              "Only dispatchers can join an existing organization during registration",
+          },
+          { status: 400 }
+        );
+      }
+
+      const targetOrg = await db.organization.findUnique({
+        where: { id: organizationId },
+        select: { id: true },
+      });
+      if (!targetOrg) {
+        return NextResponse.json(
+          { error: "Organization not found" },
+          { status: 404 }
+        );
+      }
+
+      const invitation = await db.invitation.findFirst({
+        where: {
+          organizationId,
+          email: validatedData.email,
+          status: "PENDING",
+          expiresAt: { gt: new Date() },
+        },
+        select: { id: true },
+      });
+      if (!invitation) {
+        return NextResponse.json(
+          { error: "No valid invitation found for this organization" },
+          { status: 403 }
+        );
+      }
+      invitationId = invitation.id;
+    }
+
+    // User variable — set by transaction or standalone path
+    let user: {
+      id: string;
+      email: string;
+      firstName: string | null;
+      lastName: string | null;
+      role: string;
+      status: string;
+      organizationId: string | null;
+    };
+
+    const userSelect = {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      role: true,
+      status: true,
+      organizationId: true,
+    } as const;
 
     // CRITICAL FIX (ISSUE #1): Create organization AND wallet atomically in a transaction
-    // This ensures that every organization has a wallet from the start
+    // FIX H1: User creation is now INSIDE the transaction to prevent orphan orgs/wallets
     if (
       (validatedData.role === "SHIPPER" || validatedData.role === "CARRIER") &&
       validatedData.companyName
@@ -151,13 +217,12 @@ export async function POST(request: NextRequest) {
       );
 
       // Determine wallet type based on organization type
-      // FIX: Use proper enum type
       const walletType: AccountType =
         orgType === OrganizationType.SHIPPER
           ? AccountType.SHIPPER_WALLET
           : AccountType.CARRIER_WALLET;
 
-      const { organization } = await db.$transaction(async (tx) => {
+      const result = await db.$transaction(async (tx) => {
         // 1. Create organization
         const organization = await tx.organization.create({
           data: {
@@ -185,34 +250,49 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        return { organization };
+        // 3. Create user atomically — prevents orphan org+wallet on user creation failure
+        const user = await tx.user.create({
+          data: {
+            email: validatedData.email,
+            phone: validatedData.phone,
+            passwordHash,
+            firstName: validatedData.firstName,
+            lastName: validatedData.lastName,
+            role: validatedData.role,
+            status: "REGISTERED",
+            organizationId: organization.id,
+          },
+          select: userSelect,
+        });
+
+        return { organization, user };
       });
 
-      organizationId = organization.id;
-    }
+      user = result.user;
+    } else {
+      // No org creation needed (dispatcher joining existing org, or carrier without company)
+      user = await db.user.create({
+        data: {
+          email: validatedData.email,
+          phone: validatedData.phone,
+          passwordHash,
+          firstName: validatedData.firstName,
+          lastName: validatedData.lastName,
+          role: validatedData.role,
+          status: "REGISTERED",
+          organizationId,
+        },
+        select: userSelect,
+      });
 
-    // Create user
-    const user = await db.user.create({
-      data: {
-        email: validatedData.email,
-        phone: validatedData.phone,
-        passwordHash,
-        firstName: validatedData.firstName,
-        lastName: validatedData.lastName,
-        role: validatedData.role,
-        status: "REGISTERED", // Sprint 2: User verification workflow
-        organizationId,
-      },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        status: true, // Sprint 2: Include status in response
-        organizationId: true,
-      },
-    });
+      // FIX F1: Mark invitation as ACCEPTED after successful user creation
+      if (invitationId) {
+        await db.invitation.update({
+          where: { id: invitationId },
+          data: { status: "ACCEPTED", acceptedAt: new Date() },
+        });
+      }
+    }
 
     // Create server-side session record (reuse clientIp from rate limiting above)
     const userAgent = request.headers.get("user-agent");
@@ -282,6 +362,17 @@ export async function POST(request: NextRequest) {
 
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
+    }
+
+    // FIX F3: Handle race condition — concurrent registration with same email
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return NextResponse.json(
+        { error: "User with this email or phone already exists" },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json(
