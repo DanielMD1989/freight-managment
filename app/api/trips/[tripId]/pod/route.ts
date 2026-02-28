@@ -173,46 +173,49 @@ export async function POST(
 
     const podUrl = uploadResult.url!;
 
-    // Create TripPod record
-    const tripPod = await db.tripPod.create({
-      data: {
-        tripId,
-        fileUrl: podUrl,
-        fileName: file.name,
-        fileType,
-        fileSize: file.size,
-        mimeType: file.type,
-        notes: notes || null,
-        uploadedBy: session.userId,
-      },
-    });
-
-    // Update Load model for backward compatibility
-    // Always update to the most recent POD URL
-    await db.load.update({
-      where: { id: trip.loadId },
-      data: {
-        podUrl, // Always use latest POD
-        podSubmitted: true,
-        podSubmittedAt: new Date(),
-        // Store POD count in metadata for reference
-      },
-    });
-
-    // Create load event
-    await db.loadEvent.create({
-      data: {
-        loadId: trip.loadId,
-        eventType: "POD_SUBMITTED",
-        description: `Proof of Delivery uploaded: ${file.name}`,
-        userId: session.userId,
-        metadata: {
+    // B1 FIX: Wrap all three DB writes in a transaction for atomicity
+    const tripPod = await db.$transaction(async (tx) => {
+      const tripPod = await tx.tripPod.create({
+        data: {
           tripId,
-          tripPodId: tripPod.id,
+          fileUrl: podUrl,
           fileName: file.name,
           fileType,
+          fileSize: file.size,
+          mimeType: file.type,
+          notes: notes || null,
+          uploadedBy: session.userId,
         },
-      },
+      });
+
+      // Update Load model for backward compatibility
+      // Always update to the most recent POD URL
+      await tx.load.update({
+        where: { id: trip.loadId },
+        data: {
+          podUrl, // Always use latest POD
+          podSubmitted: true,
+          podSubmittedAt: new Date(),
+        },
+      });
+
+      // Create load event
+      await tx.loadEvent.create({
+        data: {
+          loadId: trip.loadId,
+          eventType: "POD_SUBMITTED",
+          description: `Proof of Delivery uploaded: ${file.name}`,
+          userId: session.userId,
+          metadata: {
+            tripId,
+            tripPodId: tripPod.id,
+            fileName: file.name,
+            fileType,
+          },
+        },
+      });
+
+      return tripPod;
     });
 
     // TD-008 FIX: Invalidate cache after POD upload

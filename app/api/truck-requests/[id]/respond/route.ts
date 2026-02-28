@@ -453,6 +453,12 @@ export async function POST(
         return updatedRequest;
       });
 
+      // B5 FIX: Invalidate cache on REJECT (APPROVE path already does this)
+      await CacheInvalidation.load(
+        truckRequest.loadId,
+        truckRequest.load?.shipperId
+      );
+
       // Non-critical: Send notification to shipper (fire-and-forget, outside transaction)
       if (truckRequest.shipper?.id) {
         notifyTruckRequestResponse({

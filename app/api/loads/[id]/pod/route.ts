@@ -12,6 +12,8 @@ import { CacheInvalidation } from "@/lib/cache";
 import { createNotification, NotificationType } from "@/lib/notifications";
 import { uploadPOD } from "@/lib/storage";
 import { deductServiceFee } from "@/lib/serviceFeeManagement";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * POST /api/loads/[id]/pod
@@ -32,6 +34,23 @@ export async function POST(
 
     const { id: loadId } = await params;
     const session = await requireAuth();
+
+    // B2 FIX: Rate limit POD uploads: 10 per hour per load
+    const rateResult = await checkRateLimit(
+      {
+        name: "pod-upload",
+        limit: 10,
+        windowMs: 60 * 60 * 1000,
+        message: "Too many POD uploads",
+      },
+      `pod:${loadId}`
+    );
+    if (!rateResult.allowed) {
+      return NextResponse.json(
+        { error: "Too many POD uploads. Try again later." },
+        { status: 429 }
+      );
+    }
 
     // Get load details
     const load = await db.load.findUnique({
@@ -111,6 +130,25 @@ export async function POST(
       );
     }
 
+    // B2 FIX: Server-side magic byte validation to prevent MIME type spoofing
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const magicBytes = buffer.subarray(0, 4);
+    const isJpeg = magicBytes[0] === 0xff && magicBytes[1] === 0xd8;
+    const isPng =
+      magicBytes[0] === 0x89 &&
+      magicBytes[1] === 0x50 &&
+      magicBytes[2] === 0x4e &&
+      magicBytes[3] === 0x47;
+    const isPdf = magicBytes.toString("ascii").startsWith("%PDF");
+    if (!isJpeg && !isPng && !isPdf) {
+      return NextResponse.json(
+        {
+          error: "File content does not match an allowed type (JPEG, PNG, PDF)",
+        },
+        { status: 400 }
+      );
+    }
+
     // Validate file size (max 10MB)
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
@@ -133,24 +171,27 @@ export async function POST(
 
     const podUrl = uploadResult.url!;
 
-    // Update load with POD information
-    const updatedLoad = await db.load.update({
-      where: { id: loadId },
-      data: {
-        podUrl,
-        podSubmitted: true,
-        podSubmittedAt: new Date(),
-      },
-    });
+    // B2 FIX: Wrap load update + load event in transaction for atomicity
+    const updatedLoad = await db.$transaction(async (tx) => {
+      const updatedLoad = await tx.load.update({
+        where: { id: loadId },
+        data: {
+          podUrl,
+          podSubmitted: true,
+          podSubmittedAt: new Date(),
+        },
+      });
 
-    // Create load event
-    await db.loadEvent.create({
-      data: {
-        loadId,
-        eventType: "POD_SUBMITTED",
-        description: "Proof of Delivery submitted by carrier",
-        userId: session.userId,
-      },
+      await tx.loadEvent.create({
+        data: {
+          loadId,
+          eventType: "POD_SUBMITTED",
+          description: "Proof of Delivery submitted by carrier",
+          userId: session.userId,
+        },
+      });
+
+      return updatedLoad;
     });
 
     // TD-007 FIX: Invalidate cache after POD submission
@@ -186,11 +227,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error("Upload POD error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Upload POD error");
   }
 }
 
@@ -259,23 +296,26 @@ export async function PUT(
       );
     }
 
-    // Verify POD
-    const updatedLoad = await db.load.update({
-      where: { id: loadId },
-      data: {
-        podVerified: true,
-        podVerifiedAt: new Date(),
-      },
-    });
+    // B3 FIX: Wrap verification writes in transaction for atomicity
+    const updatedLoad = await db.$transaction(async (tx) => {
+      const updatedLoad = await tx.load.update({
+        where: { id: loadId },
+        data: {
+          podVerified: true,
+          podVerifiedAt: new Date(),
+        },
+      });
 
-    // Create load event
-    await db.loadEvent.create({
-      data: {
-        loadId,
-        eventType: "POD_VERIFIED",
-        description: "Proof of Delivery verified by shipper",
-        userId: session.userId,
-      },
+      await tx.loadEvent.create({
+        data: {
+          loadId,
+          eventType: "POD_VERIFIED",
+          description: "Proof of Delivery verified by shipper",
+          userId: session.userId,
+        },
+      });
+
+      return updatedLoad;
     });
 
     // TD-007 FIX: Invalidate cache after POD verification
@@ -325,30 +365,31 @@ export async function PUT(
       const feeResult = await deductServiceFee(loadId);
 
       if (feeResult.success && feeResult.totalPlatformFee > 0) {
-        // Mark settlement as PAID
-        await db.load.update({
-          where: { id: loadId },
-          data: {
-            settlementStatus: "PAID",
-            settledAt: new Date(),
-          },
-        });
-
-        // Create settlement load event
-        await db.loadEvent.create({
-          data: {
-            loadId,
-            eventType: "SETTLEMENT_COMPLETED",
-            description: `Auto-settlement: Shipper fee ${feeResult.shipperFee.toFixed(2)} ETB, Carrier fee ${feeResult.carrierFee.toFixed(2)} ETB`,
-            userId: session.userId,
-            metadata: {
-              shipperFee: feeResult.shipperFee,
-              carrierFee: feeResult.carrierFee,
-              totalPlatformFee: feeResult.totalPlatformFee,
-              transactionId: feeResult.transactionId,
-              trigger: "pod_verification",
+        // B3 FIX: Wrap settlement DB writes in transaction for atomicity
+        await db.$transaction(async (tx) => {
+          await tx.load.update({
+            where: { id: loadId },
+            data: {
+              settlementStatus: "PAID",
+              settledAt: new Date(),
             },
-          },
+          });
+
+          await tx.loadEvent.create({
+            data: {
+              loadId,
+              eventType: "SETTLEMENT_COMPLETED",
+              description: `Auto-settlement: Shipper fee ${feeResult.shipperFee.toFixed(2)} ETB, Carrier fee ${feeResult.carrierFee.toFixed(2)} ETB`,
+              userId: session.userId,
+              metadata: {
+                shipperFee: feeResult.shipperFee,
+                carrierFee: feeResult.carrierFee,
+                totalPlatformFee: feeResult.totalPlatformFee,
+                transactionId: feeResult.transactionId,
+                trigger: "pod_verification",
+              },
+            },
+          });
         });
 
         // Notify shipper about fee deduction

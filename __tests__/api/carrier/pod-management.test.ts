@@ -137,11 +137,28 @@ describe("POD Management", () => {
     const mockFormData = {
       get: jest.fn((key: string) => {
         if (key === "file" && file) {
+          // Create small buffer with correct magic bytes (size is reported via .size)
+          const buf = new ArrayBuffer(64);
+          const view = new Uint8Array(buf);
+          if (file.type === "image/jpeg" || file.type === "image/jpg") {
+            view[0] = 0xff;
+            view[1] = 0xd8;
+          } else if (file.type === "image/png") {
+            view[0] = 0x89;
+            view[1] = 0x50;
+            view[2] = 0x4e;
+            view[3] = 0x47;
+          } else if (file.type === "application/pdf") {
+            view[0] = 0x25; // %
+            view[1] = 0x50; // P
+            view[2] = 0x44; // D
+            view[3] = 0x46; // F
+          }
           return {
             name: file.name,
             type: file.type,
             size: file.size,
-            arrayBuffer: async () => new ArrayBuffer(file.size),
+            arrayBuffer: async () => buf,
           };
         }
         return null;

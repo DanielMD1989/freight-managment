@@ -126,39 +126,44 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
     }
 
-    // Create journal entry (double-entry: debit wallet, credit external)
-    const journalEntry = await db.journalEntry.create({
-      data: {
-        transactionType: "DEPOSIT",
-        description: `Deposit via ${paymentMethod}`,
-        reference: externalTransactionId,
-        lines: {
-          create: [
-            {
-              accountId: wallet.id,
-              amount,
-              isDebit: true,
+    // B4 FIX: Wrap journal entry + balance update in transaction for atomicity
+    const { journalEntry, updatedWallet } = await db.$transaction(
+      async (tx) => {
+        const journalEntry = await tx.journalEntry.create({
+          data: {
+            transactionType: "DEPOSIT",
+            description: `Deposit via ${paymentMethod}`,
+            reference: externalTransactionId,
+            lines: {
+              create: [
+                {
+                  accountId: wallet.id,
+                  amount,
+                  isDebit: true,
+                },
+                // Credit would be to an external liability account (simplified for MVP)
+              ],
             },
-            // Credit would be to an external liability account (simplified for MVP)
-          ],
-        },
-      },
-    });
+          },
+        });
 
-    // Update wallet balance
-    await db.financialAccount.update({
-      where: { id: wallet.id },
-      data: {
-        balance: {
-          increment: amount,
-        },
-      },
-    });
+        const updatedWallet = await tx.financialAccount.update({
+          where: { id: wallet.id },
+          data: {
+            balance: {
+              increment: amount,
+            },
+          },
+        });
+
+        return { journalEntry, updatedWallet };
+      }
+    );
 
     return NextResponse.json({
       message: "Deposit successful",
       journalEntry,
-      newBalance: (parseFloat(wallet.balance.toString()) + amount).toFixed(2),
+      newBalance: parseFloat(updatedWallet.balance.toString()).toFixed(2),
     });
   } catch (error) {
     console.error("Deposit error:", error);

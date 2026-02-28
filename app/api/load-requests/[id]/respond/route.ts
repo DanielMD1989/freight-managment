@@ -449,6 +449,12 @@ export async function POST(
         return updatedRequest;
       });
 
+      // B6 FIX: Invalidate cache on REJECT (APPROVE path already does this)
+      await CacheInvalidation.load(
+        loadRequest.loadId,
+        loadRequest.load?.shipperId
+      );
+
       // Non-critical: Notify carrier users (fire-and-forget, outside transaction)
       const carrierUsers = await db.user.findMany({
         where: {

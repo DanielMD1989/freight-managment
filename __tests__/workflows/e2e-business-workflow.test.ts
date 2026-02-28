@@ -1480,7 +1480,9 @@ describe("E2E Business Workflow (User Stories)", () => {
       asCarrier(seed);
 
       const formData = new FormData();
-      const file = new File(["fake-image-data"], "pod.jpg", {
+      // Use valid JPEG magic bytes so server-side magic byte validation passes
+      const jpegBytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+      const file = new File([jpegBytes], "pod.jpg", {
         type: "image/jpeg",
       });
       formData.append("file", file);
