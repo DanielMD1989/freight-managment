@@ -148,9 +148,153 @@ jest.mock("@/lib/db", () => {
     },
   };
 
+  // ── Unified include resolution ──
+  const RELATION_MAP = {
+    // BelongsTo (FK on this record -> single object in target store)
+    load:            { fk: 'loadId',            store: 'loads' },
+    truck:           { fk: 'truckId',           store: 'trucks' },
+    carrier:         { fk: 'carrierId',         store: 'organizations' },
+    shipper:         { fk: 'shipperId',         store: 'organizations' },
+    organization:    { fk: 'organizationId',    store: 'organizations' },
+    createdBy:       { fk: 'createdById',       store: 'users' },
+    requestedBy:     { fk: 'requestedById',     store: 'users' },
+    proposedBy:      { fk: 'proposedById',      store: 'users' },
+    respondedBy:     { fk: 'respondedById',     store: 'users' },
+    assignedTo:      { fk: 'assignedToId',      store: 'users' },
+    disputedOrg:     { fk: 'disputedOrgId',     store: 'organizations' },
+    corridor:        { fk: 'corridorId',        store: 'corridors' },
+    assignedTruck:   { fk: 'assignedTruckId',   store: 'trucks' },
+    gpsDevice:       { fk: 'gpsDeviceId',       store: 'gpsDevices' },
+    trip:            { fk: 'tripId',            store: 'trips' },
+    originCity:      { fk: 'originCityId',      store: 'ethiopianLocations' },
+    destinationCity: { fk: 'destinationCityId', store: 'ethiopianLocations' },
+    // HasMany (FK on related record matches this record's id)
+    users:        { type: 'hasMany', store: 'users',        matchFk: 'organizationId' },
+    loads:        { type: 'hasMany', store: 'loads',        matchFks: ['shipperId', 'corridorId'] },
+    events:       { type: 'hasMany', store: 'loadEvents',   matchFk: 'loadId',
+                    sort: (a, b) => (b.createdAt || 0) - (a.createdAt || 0) },
+    documents:    { type: 'hasMany', default: [] },
+    routeHistory: { type: 'hasMany', store: 'gpsPositions', matchFk: 'tripId',
+                    sort: (a, b) => (b.timestamp || 0) - (a.timestamp || 0) },
+  };
+
+  function resolveCount(record, countSpec) {
+    const result = {};
+    const countFields = countSpec.select ? Object.keys(countSpec.select) : [];
+    for (const field of countFields) {
+      result[field] = 0;
+      if (field === 'loads' && stores.loads) {
+        result[field] = Array.from(stores.loads.values()).filter(
+          (l) => l.corridorId === record.id || l.shipperId === record.id
+        ).length;
+      } else if (field === 'users' && stores.users) {
+        result[field] = Array.from(stores.users.values()).filter(
+          (u) => u.organizationId === record.id
+        ).length;
+      } else if (field === 'trucks' && stores.trucks) {
+        result[field] = Array.from(stores.trucks.values()).filter(
+          (t) => t.carrierId === record.id
+        ).length;
+      } else if (field === 'disputesAgainst' && stores.disputes) {
+        result[field] = Array.from(stores.disputes.values()).filter(
+          (d) => d.disputedOrgId === record.id
+        ).length;
+      }
+    }
+    return result;
+  }
+
+  // Resolve nested select: returns only selected fields, resolving relations within
+  function resolveSelect(record, select) {
+    if (!record || !select) return record;
+    const result = {};
+    for (const [key, spec] of Object.entries(select)) {
+      if (!spec) continue;
+      const map = RELATION_MAP[key];
+      if (map && !map.type) {
+        // BelongsTo relation within select
+        const fkValue = record[map.fk];
+        if (fkValue && stores[map.store]) {
+          const related = stores[map.store].get(fkValue);
+          if (related) {
+            if (spec && typeof spec === 'object' && spec.select) {
+              result[key] = resolveSelect(related, spec.select);
+            } else {
+              result[key] = { ...related };
+            }
+          } else {
+            result[key] = null;
+          }
+        } else {
+          result[key] = null;
+        }
+      } else {
+        // Regular field
+        result[key] = record[key];
+      }
+    }
+    return result;
+  }
+
+  function resolveIncludes(record, include) {
+    if (!record || !include) return record;
+    const result = { ...record };
+    for (const [key, spec] of Object.entries(include)) {
+      if (!spec) continue;
+      if (key === '_count') {
+        result._count = resolveCount(record, spec);
+        continue;
+      }
+      const map = RELATION_MAP[key];
+      if (!map) continue;
+      if (map.type === 'hasMany') {
+        if (map.default !== undefined) {
+          result[key] = [...map.default];
+        } else if (map.store && stores[map.store]) {
+          let related;
+          if (map.matchFks) {
+            related = Array.from(stores[map.store].values()).filter((r) =>
+              map.matchFks.some((fk) => r[fk] === record.id)
+            );
+          } else {
+            related = Array.from(stores[map.store].values()).filter(
+              (r) => r[map.matchFk] === record.id
+            );
+          }
+          if (map.sort) related.sort(map.sort);
+          if (spec && typeof spec === 'object' && spec.take) {
+            related = related.slice(0, spec.take);
+          }
+          result[key] = related;
+        }
+      } else {
+        const fkValue = record[map.fk];
+        if (fkValue && stores[map.store]) {
+          const related = stores[map.store].get(fkValue);
+          if (related) {
+            if (spec && typeof spec === 'object' && spec.select) {
+              // Nested select within include (e.g., include: { truck: { select: { carrier: ... } } })
+              result[key] = resolveSelect(related, spec.select);
+            } else {
+              result[key] = { ...related };
+              if (spec && typeof spec === 'object' && spec.include) {
+                result[key] = resolveIncludes(result[key], spec.include);
+              }
+            }
+          } else {
+            result[key] = null;
+          }
+        } else {
+          result[key] = null;
+        }
+      }
+    }
+    return result;
+  }
+
   // Helper to create model methods with in-memory storage
   const createModelMethods = (store, idPrefix, idCounter) => ({
-    create: jest.fn(({ data }) => {
+    create: jest.fn(({ data, include }) => {
       const id = data.id || `${idPrefix}-${idCounter.value++}`;
       // When an explicit id is provided, advance counter past it to avoid future collisions
       if (data.id) {
@@ -169,6 +313,9 @@ jest.mock("@/lib/db", () => {
         updatedAt: new Date(),
       };
       store.set(id, record);
+
+      if (include) return Promise.resolve(resolveIncludes(record, include));
+
       return Promise.resolve(record);
     }),
     findUnique: jest.fn(({ where, include, select }) => {
@@ -195,65 +342,7 @@ jest.mock("@/lib/db", () => {
 
       // Handle includes for relationships
       if (include && record) {
-        const result = { ...record };
-        if (include.users && stores.users) {
-          result.users = Array.from(stores.users.values()).filter(
-            (u) => u.organizationId === record.id
-          );
-        }
-        if (include.loads && stores.loads) {
-          result.loads = Array.from(stores.loads.values()).filter(
-            (l) => l.shipperId === record.id || l.corridorId === record.id
-          );
-        }
-        if (include.corridor && stores.corridors && record.corridorId) {
-          result.corridor = stores.corridors.get(record.corridorId);
-        }
-        if (include.createdBy && record.createdById && stores.users) {
-          const user = stores.users.get(record.createdById);
-          result.createdBy = user
-            ? {
-                id: user.id,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                email: user.email,
-              }
-            : null;
-        }
-        if (
-          include.organization &&
-          record.organizationId &&
-          stores.organizations
-        ) {
-          result.organization = stores.organizations.get(record.organizationId);
-        }
-        if (include.truck && record.truckId && stores.trucks) {
-          result.truck = stores.trucks.get(record.truckId) || null;
-        }
-        // Handle _count
-        if (include._count) {
-          result._count = {};
-          const countFields = include._count.select
-            ? Object.keys(include._count.select)
-            : [];
-          for (const field of countFields) {
-            result._count[field] = 0;
-            if (field === "loads" && stores.loads) {
-              result._count[field] = Array.from(stores.loads.values()).filter(
-                (l) => l.corridorId === record.id || l.shipperId === record.id
-              ).length;
-            } else if (field === "users" && stores.users) {
-              result._count[field] = Array.from(stores.users.values()).filter(
-                (u) => u.organizationId === record.id
-              ).length;
-            } else if (field === "trucks" && stores.trucks) {
-              result._count[field] = Array.from(stores.trucks.values()).filter(
-                (t) => t.carrierId === record.id
-              ).length;
-            }
-          }
-        }
-        return Promise.resolve(result);
+        return Promise.resolve(resolveIncludes(record, include));
       }
       // Handle select with nested relations (e.g., select: { organization: { select: {...} } })
       if (select && !include && record) {
@@ -372,17 +461,7 @@ jest.mock("@/lib/db", () => {
       }
       const record = records[0] || null;
       if (record && include) {
-        // Handle includes for relationships
-        if (include.corridor && stores.corridors && record.corridorId) {
-          record.corridor = stores.corridors.get(record.corridorId);
-        }
-        if (include.assignedTruck && record.assignedTruckId && stores.trucks) {
-          const truck = stores.trucks.get(record.assignedTruckId);
-          record.assignedTruck = truck ? { ...truck } : null;
-        }
-        if (include.shipper && record.shipperId && stores.organizations) {
-          record.shipper = stores.organizations.get(record.shipperId) || null;
-        }
+        return Promise.resolve(resolveIncludes(record, include));
       }
       return Promise.resolve(record);
     }),
@@ -474,89 +553,12 @@ jest.mock("@/lib/db", () => {
         if (take) records = records.slice(0, take);
 
         // Handle include relationships and _count
-        const incl = include || {};
-        const countSpec = incl._count || (select && select._count);
-        if (include || (select && select._count)) {
+        const countSpec = (include && include._count) || (select && select._count);
+        if (include || countSpec) {
           records = records.map((record) => {
-            const result = { ...record };
-            // Handle _count
-            if (countSpec) {
-              result._count = {};
-              const countFields = countSpec.select
-                ? Object.keys(countSpec.select)
-                : [];
-              for (const field of countFields) {
-                result._count[field] = 0;
-                if (field === "loads" && stores.loads) {
-                  result._count[field] = Array.from(
-                    stores.loads.values()
-                  ).filter(
-                    (l) =>
-                      l.corridorId === record.id || l.shipperId === record.id
-                  ).length;
-                } else if (field === "users" && stores.users) {
-                  result._count[field] = Array.from(
-                    stores.users.values()
-                  ).filter((u) => u.organizationId === record.id).length;
-                } else if (field === "trucks" && stores.trucks) {
-                  result._count[field] = Array.from(
-                    stores.trucks.values()
-                  ).filter((t) => t.carrierId === record.id).length;
-                } else if (field === "disputesAgainst" && stores.disputes) {
-                  result._count[field] = Array.from(
-                    stores.disputes.values()
-                  ).filter((d) => d.disputedOrgId === record.id).length;
-                }
-              }
-            }
-            // Handle include.createdBy
-            if (incl.createdBy && record.createdById && stores.users) {
-              const user = stores.users.get(record.createdById);
-              result.createdBy = user
-                ? {
-                    id: user.id,
-                    firstName: user.firstName,
-                    lastName: user.lastName,
-                    email: user.email,
-                  }
-                : null;
-            }
-            // Handle include.organization
-            if (
-              incl.organization &&
-              record.organizationId &&
-              stores.organizations
-            ) {
-              const org = stores.organizations.get(record.organizationId);
-              result.organization = org
-                ? { id: org.id, name: org.name, type: org.type }
-                : null;
-            }
-            // Handle include.truck (with nested carrier)
-            if (incl.truck && record.truckId && stores.trucks) {
-              const truck = stores.trucks.get(record.truckId);
-              if (truck) {
-                result.truck = {
-                  ...truck,
-                  id: truck.id,
-                  licensePlate: truck.licensePlate,
-                };
-                if (truck.carrierId && stores.organizations) {
-                  const carrier = stores.organizations.get(truck.carrierId);
-                  result.truck.carrier = carrier
-                    ? { id: carrier.id, name: carrier.name, type: carrier.type }
-                    : null;
-                }
-              } else {
-                result.truck = null;
-              }
-            }
-            // Handle include.shipper
-            if (incl.shipper && record.shipperId && stores.organizations) {
-              const shipper = stores.organizations.get(record.shipperId);
-              result.shipper = shipper
-                ? { id: shipper.id, name: shipper.name, type: shipper.type }
-                : null;
+            let result = include ? resolveIncludes(record, include) : { ...record };
+            if (countSpec && !result._count) {
+              result._count = resolveCount(record, countSpec);
             }
             return result;
           });
@@ -586,7 +588,7 @@ jest.mock("@/lib/db", () => {
         return Promise.resolve(records);
       }
     ),
-    update: jest.fn(({ where, data }) => {
+    update: jest.fn(({ where, data, include }) => {
       const record = store.get(where.id);
       if (!record) return Promise.resolve(null);
       // Handle Prisma operators in data (e.g., { balance: { increment: 500 } })
@@ -613,6 +615,9 @@ jest.mock("@/lib/db", () => {
       }
       const updated = { ...record, ...resolvedData, updatedAt: new Date() };
       store.set(where.id, updated);
+
+      if (include) return Promise.resolve(resolveIncludes(updated, include));
+
       return Promise.resolve(updated);
     }),
     updateMany: jest.fn(({ where, data } = {}) => {
@@ -706,7 +711,7 @@ jest.mock("@/lib/db", () => {
     groupBy: jest.fn(() => {
       return Promise.resolve([]);
     }),
-    upsert: jest.fn(({ where, create, update }) => {
+    upsert: jest.fn(({ where, create, update, include }) => {
       let record = store.get(where.id);
       if (!record && where) {
         const entries = Object.entries(where).filter(([k]) => k !== "id");
@@ -719,6 +724,7 @@ jest.mock("@/lib/db", () => {
       if (record) {
         const updated = { ...record, ...update, updatedAt: new Date() };
         store.set(record.id, updated);
+        if (include) return Promise.resolve(resolveIncludes(updated, include));
         return Promise.resolve(updated);
       }
       const id = create.id || `${idPrefix}-${idCounter.value++}`;
@@ -731,6 +737,7 @@ jest.mock("@/lib/db", () => {
         updatedAt: new Date(),
       };
       store.set(id, newRecord);
+      if (include) return Promise.resolve(resolveIncludes(newRecord, include));
       return Promise.resolve(newRecord);
     }),
   });
@@ -873,25 +880,6 @@ jest.mock("@/lib/db", () => {
           "loadRequest",
           counters.loadRequest
         ),
-        findUnique: jest.fn(({ where, include }) => {
-          const record = stores.loadRequests.get(where.id);
-          if (!record) return Promise.resolve(null);
-          if (include) {
-            const result = { ...record };
-            if (include.load && record.loadId) {
-              result.load = stores.loads.get(record.loadId) || null;
-            }
-            if (include.truck && record.truckId) {
-              result.truck = stores.trucks.get(record.truckId) || null;
-            }
-            if (include.carrier && record.carrierId) {
-              result.carrier =
-                stores.organizations.get(record.carrierId) || null;
-            }
-            return Promise.resolve(result);
-          }
-          return Promise.resolve(record);
-        }),
         updateMany: jest.fn(({ where, data }) => {
           let count = 0;
           stores.loadRequests.forEach((record, id) => {
@@ -920,24 +908,6 @@ jest.mock("@/lib/db", () => {
           "truckRequest",
           counters.truckRequest
         ),
-        findUnique: jest.fn(({ where, include }) => {
-          const record = stores.truckRequests.get(where.id);
-          if (!record) return Promise.resolve(null);
-          if (include) {
-            const result = { ...record };
-            if (include.load && record.loadId) {
-              result.load = stores.loads.get(record.loadId) || null;
-            }
-            if (include.truck && record.truckId) {
-              const truck = stores.trucks.get(record.truckId);
-              result.truck = truck
-                ? { ...truck, carrierId: truck.carrierId }
-                : null;
-            }
-            return Promise.resolve(result);
-          }
-          return Promise.resolve(record);
-        }),
         updateMany: jest.fn(({ where, data }) => {
           let count = 0;
           stores.truckRequests.forEach((record, id) => {

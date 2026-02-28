@@ -187,9 +187,6 @@ describe("E2E Business Workflow (User Stories)", () => {
   beforeAll(async () => {
     seed = await seedTestData();
 
-    // Access internal stores for custom include resolution
-    const stores = (db as any).__stores;
-
     // Create ethiopianLocation records for truck-postings tests
     await db.ethiopianLocation.create({
       data: {
@@ -251,105 +248,6 @@ describe("E2E Business Workflow (User Stories)", () => {
         { error: error.message || "Internal Server Error" },
         { status }
       );
-    });
-
-    // Override truck.findUnique to resolve include.carrier
-    db.truck.findUnique.mockImplementation(({ where, include }: any) => {
-      let record: any = null;
-      if (where?.id) record = stores.trucks.get(where.id);
-      if (!record && where?.licensePlate) {
-        for (const r of stores.trucks.values()) {
-          if ((r as any).licensePlate === where.licensePlate) {
-            record = r;
-            break;
-          }
-        }
-      }
-      if (!record) return Promise.resolve(null);
-      if (include) {
-        const result = { ...record };
-        if (include.carrier && record.carrierId) {
-          result.carrier = stores.organizations.get(record.carrierId) || null;
-        }
-        return Promise.resolve(result);
-      }
-      return Promise.resolve(record);
-    });
-
-    // Override truckRequest.findUnique to resolve include.shipper + include.truck.carrier
-    db.truckRequest.findUnique.mockImplementation(({ where, include }: any) => {
-      const record = stores.truckRequests.get(where?.id);
-      if (!record) return Promise.resolve(null);
-      if (include) {
-        const result = { ...record };
-        if (include.load && record.loadId) {
-          result.load = stores.loads.get(record.loadId) || null;
-        }
-        if (include.truck && record.truckId) {
-          const truck = stores.trucks.get(record.truckId);
-          if (truck) {
-            result.truck = { ...truck };
-            if (truck.carrierId) {
-              const carrier = stores.organizations.get(truck.carrierId);
-              result.truck.carrier = carrier
-                ? { id: carrier.id, name: carrier.name }
-                : null;
-            }
-          } else {
-            result.truck = null;
-          }
-        }
-        if (include.shipper && record.shipperId) {
-          result.shipper = stores.organizations.get(record.shipperId) || null;
-        }
-        return Promise.resolve(result);
-      }
-      return Promise.resolve(record);
-    });
-
-    // Override matchProposal.findUnique to resolve include.load and include.truck
-    db.matchProposal.findUnique.mockImplementation(
-      ({ where, include }: any) => {
-        const record = stores.matchProposals.get(where?.id);
-        if (!record) return Promise.resolve(null);
-        if (include) {
-          const result = { ...record };
-          if (include.truck && record.truckId) {
-            result.truck = stores.trucks.get(record.truckId) || null;
-          }
-          if (include.load && record.loadId) {
-            result.load = stores.loads.get(record.loadId) || null;
-          }
-          return Promise.resolve(result);
-        }
-        return Promise.resolve(record);
-      }
-    );
-
-    // Override trip.findUnique to resolve include.load/truck/carrier/shipper/routeHistory
-    db.trip.findUnique.mockImplementation(({ where, include }: any) => {
-      const record = stores.trips.get(where?.id);
-      if (!record) return Promise.resolve(null);
-      if (include) {
-        const result = { ...record };
-        if (include.load && record.loadId) {
-          result.load = stores.loads.get(record.loadId) || null;
-        }
-        if (include.truck && record.truckId) {
-          result.truck = stores.trucks.get(record.truckId) || null;
-        }
-        if (include.carrier && record.carrierId) {
-          result.carrier = stores.organizations.get(record.carrierId) || null;
-        }
-        if (include.shipper && record.shipperId) {
-          result.shipper = stores.organizations.get(record.shipperId) || null;
-        }
-        if (include.routeHistory) {
-          result.routeHistory = [];
-        }
-        return Promise.resolve(result);
-      }
-      return Promise.resolve(record);
     });
   });
 
