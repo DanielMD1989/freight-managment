@@ -166,8 +166,10 @@ jest.mock("@/lib/db", () => {
     assignedTruck:   { fk: 'assignedTruckId',   store: 'trucks' },
     gpsDevice:       { fk: 'gpsDeviceId',       store: 'gpsDevices' },
     trip:            { fk: 'tripId',            store: 'trips' },
-    originCity:      { fk: 'originCityId',      store: 'ethiopianLocations' },
-    destinationCity: { fk: 'destinationCityId', store: 'ethiopianLocations' },
+    originCity:        { fk: 'originCityId',        store: 'ethiopianLocations' },
+    destinationCity:   { fk: 'destinationCityId',   store: 'ethiopianLocations' },
+    pickupLocation:    { fk: 'pickupLocationId',     store: 'ethiopianLocations' },
+    deliveryLocation:  { fk: 'deliveryLocationId',   store: 'ethiopianLocations' },
     // HasMany (FK on related record matches this record's id)
     users:        { type: 'hasMany', store: 'users',        matchFk: 'organizationId' },
     loads:        { type: 'hasMany', store: 'loads',        matchFks: ['shipperId', 'corridorId'] },
@@ -231,6 +233,38 @@ jest.mock("@/lib/db", () => {
       } else {
         // Regular field
         result[key] = record[key];
+      }
+    }
+    return result;
+  }
+
+  // Resolve select on a record: keeps all fields (backward compatible) + resolves relations generically
+  function resolveSelectOnRecord(record, select) {
+    if (!record || !select) return record;
+    const result = { ...record };
+    for (const [key, spec] of Object.entries(select)) {
+      if (!spec) continue;
+      if (key === '_count') {
+        result._count = resolveCount(record, spec);
+        continue;
+      }
+      const map = RELATION_MAP[key];
+      if (map && !map.type) {
+        const fkValue = record[map.fk];
+        if (fkValue && stores[map.store]) {
+          const related = stores[map.store].get(fkValue);
+          if (related) {
+            result[key] = (spec && typeof spec === 'object' && spec.select)
+              ? resolveSelect(related, spec.select)
+              : { ...related };
+          } else {
+            result[key] = null;
+          }
+        } else if (map.fk in record) {
+          // FK field exists on record but is null/undefined — relation is null
+          result[key] = null;
+        }
+        // If FK field doesn't exist on record, don't overwrite (may be embedded or reverse relation)
       }
     }
     return result;
@@ -360,85 +394,13 @@ jest.mock("@/lib/db", () => {
       if (include && record) {
         return Promise.resolve(resolveIncludes(record, include));
       }
-      // Handle select with nested relations (e.g., select: { organization: { select: {...} } })
+      // Handle select with nested relations generically via RELATION_MAP
       if (select && !include && record) {
-        const result = { ...record };
-        if (
-          select.organization &&
-          record.organizationId &&
-          stores.organizations
-        ) {
-          const org = stores.organizations.get(record.organizationId);
-          result.organization = org
-            ? {
-                id: org.id,
-                name: org.name,
-                type: org.type,
-                isVerified: org.isVerified,
-              }
-            : null;
-        }
-        if (select.corridor && record.corridorId && stores.corridors) {
-          result.corridor = stores.corridors.get(record.corridorId) || null;
-        } else if (select.corridor && !record.corridorId) {
-          result.corridor = null;
-        }
-        if (select.assignedTruck && record.assignedTruckId && stores.trucks) {
-          const truck = stores.trucks.get(record.assignedTruckId);
-          if (truck) {
-            result.assignedTruck = { ...truck };
-            if (select.assignedTruck.select?.carrierId !== undefined) {
-              result.assignedTruck.carrierId = truck.carrierId;
-            }
-            if (
-              select.assignedTruck.select?.carrier &&
-              truck.carrierId &&
-              stores.organizations
-            ) {
-              const carrier = stores.organizations.get(truck.carrierId);
-              result.assignedTruck.carrier = carrier
-                ? { id: carrier.id, name: carrier.name }
-                : null;
-            }
-          } else {
-            result.assignedTruck = null;
-          }
-        } else if (select.assignedTruck && !record.assignedTruckId) {
-          result.assignedTruck = null;
-        }
-        if (select.shipper && record.shipperId && stores.organizations) {
-          const shipper = stores.organizations.get(record.shipperId);
-          result.shipper = shipper
-            ? { id: shipper.id, name: shipper.name }
-            : null;
-        } else if (select.shipper && !record.shipperId) {
-          result.shipper = null;
-        }
-        if (
-          select.pickupLocation &&
-          record.pickupLocationId &&
-          stores.ethiopianLocations
-        ) {
-          result.pickupLocation =
-            stores.ethiopianLocations.get(record.pickupLocationId) || null;
-        } else if (select.pickupLocation) {
-          result.pickupLocation = null;
-        }
-        if (
-          select.deliveryLocation &&
-          record.deliveryLocationId &&
-          stores.ethiopianLocations
-        ) {
-          result.deliveryLocation =
-            stores.ethiopianLocations.get(record.deliveryLocationId) || null;
-        } else if (select.deliveryLocation) {
-          result.deliveryLocation = null;
-        }
-        return Promise.resolve(result);
+        return Promise.resolve(resolveSelectOnRecord(record, select));
       }
       return Promise.resolve(record);
     }),
-    findFirst: jest.fn(({ where, include } = {}) => {
+    findFirst: jest.fn(({ where, include, select } = {}) => {
       let records = Array.from(store.values());
       if (where) {
         records = records.filter((r) => {
@@ -478,6 +440,9 @@ jest.mock("@/lib/db", () => {
       const record = records[0] || null;
       if (record && include) {
         return Promise.resolve(resolveIncludes(record, include));
+      }
+      if (record && select && !include) {
+        return Promise.resolve(resolveSelectOnRecord(record, select));
       }
       return Promise.resolve(record);
     }),
@@ -579,27 +544,9 @@ jest.mock("@/lib/db", () => {
             return result;
           });
         }
-        // Handle select with nested relations (e.g., select: { organization: { select: {...} } })
+        // Handle select with nested relations generically via RELATION_MAP
         if (select && !include) {
-          records = records.map((record) => {
-            const result = { ...record };
-            if (
-              select.organization &&
-              record.organizationId &&
-              stores.organizations
-            ) {
-              const org = stores.organizations.get(record.organizationId);
-              result.organization = org
-                ? {
-                    id: org.id,
-                    name: org.name,
-                    type: org.type,
-                    isVerified: org.isVerified,
-                  }
-                : null;
-            }
-            return result;
-          });
+          records = records.map((record) => resolveSelectOnRecord(record, select));
         }
         return Promise.resolve(records);
       }
