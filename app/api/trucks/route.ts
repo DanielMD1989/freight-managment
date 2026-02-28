@@ -13,6 +13,7 @@ import {
 import { RULE_SHIPPER_DEMAND_FOCUS } from "@/lib/foundation-rules";
 import { TruckCache, CacheInvalidation } from "@/lib/cache";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { Prisma } from "@prisma/client";
 import { handleApiError } from "@/lib/apiErrors";
 import { sanitizeText } from "@/lib/validation";
 
@@ -168,6 +169,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ truck }, { status: 201 });
   } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return NextResponse.json(
+        { error: "Truck with this license plate already exists" },
+        { status: 400 }
+      );
+    }
     return handleApiError(error, "Create truck error");
   }
 }

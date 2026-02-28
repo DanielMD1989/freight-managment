@@ -342,10 +342,21 @@ export async function PATCH(
         validatedData.status === "COMPLETED" ||
         validatedData.status === "CANCELLED"
       ) {
-        await tx.truck.update({
-          where: { id: trip.truckId },
-          data: { isAvailable: true },
+        // Only restore availability if no other active trips exist for this truck
+        const otherActiveTrips = await tx.trip.count({
+          where: {
+            truckId: trip.truckId,
+            id: { not: tripId },
+            status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+          },
         });
+        if (otherActiveTrips === 0) {
+          await tx.truck.update({
+            where: { id: trip.truckId },
+            data: { isAvailable: true },
+          });
+        }
+        // Always revert MATCHED postings regardless
         await tx.truckPosting.updateMany({
           where: { truckId: trip.truckId, status: "MATCHED" },
           data: { status: "ACTIVE", updatedAt: new Date() },

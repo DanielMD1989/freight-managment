@@ -586,14 +586,14 @@ describe("Data Privacy & Isolation Tests", () => {
       expect(res.status).toBe(403);
     });
 
-    it("shipper CAN view truck detail by ID (via posting link) → 200", async () => {
+    it("shipper CANNOT view truck detail by ID (must use /api/truck-postings) → 404", async () => {
       setAuthSession(shipperASession);
       const req = createRequest(
         "GET",
         "http://localhost:3000/api/trucks/priv-truckA"
       );
       const res = await callHandler(getTruck, req, { id: "priv-truckA" });
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(404);
     });
 
     it("dispatcher CAN view any truck by ID → 200", async () => {

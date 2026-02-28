@@ -101,9 +101,8 @@ export async function POST(
     const isCarrier = user?.organizationId === trip.carrierId;
     const isShipper = user?.organizationId === trip.shipperId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
-    const isDispatcher = session.role === "DISPATCHER";
 
-    if (!isCarrier && !isShipper && !isAdmin && !isDispatcher) {
+    if (!isCarrier && !isShipper && !isAdmin) {
       return NextResponse.json(
         { error: "You do not have permission to cancel this trip" },
         { status: 403 }

@@ -5,7 +5,7 @@ import { requireCSRF } from "@/lib/csrf";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
-import { TripStatus } from "@prisma/client";
+import { TripStatus, Prisma } from "@prisma/client";
 // P1-001-B FIX: Import CacheInvalidation for update/delete operations
 import { CacheInvalidation } from "@/lib/cache";
 import { logger } from "@/lib/logger";
@@ -110,17 +110,27 @@ export async function GET(
       select: { organizationId: true, role: true },
     });
 
-    // Truck visibility: owner, admin, shipper (via postings link), dispatcher
+    // Truck visibility: owner, admin, dispatcher
     // Carriers can only see their OWN trucks — not other carriers' fleet
+    // Shippers must use /api/truck-postings (RULE_SHIPPER_DEMAND_FOCUS)
     const canView =
       user?.role === "SUPER_ADMIN" ||
       user?.role === "ADMIN" ||
       truck.carrierId === user?.organizationId ||
-      user?.role === "SHIPPER" ||
       user?.role === "DISPATCHER";
 
     if (!canView) {
       return NextResponse.json({ error: "Truck not found" }, { status: 404 });
+    }
+
+    // Strip GPS device info for non-owner roles (dispatcher shouldn't see IMEI)
+    if (
+      truck.carrierId !== user?.organizationId &&
+      user?.role !== "ADMIN" &&
+      user?.role !== "SUPER_ADMIN"
+    ) {
+      const { gpsDevice: _, ...truckWithoutGps } = truck;
+      return NextResponse.json(truckWithoutGps);
     }
 
     return NextResponse.json(truck);
@@ -243,6 +253,15 @@ export async function PATCH(
 
     return NextResponse.json(updatedTruck);
   } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return NextResponse.json(
+        { error: "Truck with this license plate already exists" },
+        { status: 400 }
+      );
+    }
     return handleApiError(error, "PATCH /api/trucks/[id] error");
   }
 }

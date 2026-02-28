@@ -286,14 +286,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate user's organization owns this truck
-    // Sprint 16: Allow dispatcher, platform ops, and admin to post any truck
-    const hasElevatedPerms = hasElevatedPermissions({
-      role: session.role as UserRole,
-      organizationId: session.organizationId,
-      userId: session.userId,
-    });
+    // Only admin/super_admin can post trucks for other organizations
+    // Dispatchers can only coordinate, not create postings (DISPATCHER_COORDINATION_ONLY)
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
-    if (truck.carrierId !== session.organizationId && !hasElevatedPerms) {
+    if (truck.carrierId !== session.organizationId && !isAdmin) {
       return NextResponse.json(
         { error: "You can only post trucks owned by your organization" },
         { status: 403 }

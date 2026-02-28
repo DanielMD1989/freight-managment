@@ -246,15 +246,12 @@ export async function PATCH(
       );
     }
 
-    // Sprint 16: Allow dispatcher, platform ops, and admin to update any posting
-    const hasElevatedPerms = hasElevatedPermissions({
-      role: session.role as UserRole,
-      organizationId: session.organizationId,
-      userId: session.userId,
-    });
+    // Only admin/super_admin can update postings for other organizations
+    // Dispatchers can only coordinate, not modify postings (DISPATCHER_COORDINATION_ONLY)
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     // Verify ownership (user's organization owns this posting)
-    if (existing.carrierId !== session.organizationId && !hasElevatedPerms) {
+    if (existing.carrierId !== session.organizationId && !isAdmin) {
       return NextResponse.json(
         { error: "Truck posting not found" },
         { status: 404 }
@@ -441,15 +438,12 @@ export async function DELETE(
       );
     }
 
-    // Sprint 16: Allow dispatcher, platform ops, and admin to cancel any posting
-    const hasElevatedPerms = hasElevatedPermissions({
-      role: session.role as UserRole,
-      organizationId: session.organizationId,
-      userId: session.userId,
-    });
+    // Only admin/super_admin can cancel postings for other organizations
+    // Dispatchers can only coordinate, not cancel postings (DISPATCHER_COORDINATION_ONLY)
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     // Verify ownership (user's organization owns this posting)
-    if (existing.carrierId !== session.organizationId && !hasElevatedPerms) {
+    if (existing.carrierId !== session.organizationId && !isAdmin) {
       return NextResponse.json(
         { error: "Truck posting not found" },
         { status: 404 }

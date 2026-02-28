@@ -176,6 +176,15 @@ export async function POST(
 
       try {
         result = await db.$transaction(async (tx) => {
+          // Re-check proposal status inside transaction to prevent double-accept
+          const freshProposal = await tx.matchProposal.findUnique({
+            where: { id: proposalId },
+            select: { status: true },
+          });
+          if (!freshProposal || freshProposal.status !== "PENDING") {
+            throw new Error("PROPOSAL_ALREADY_PROCESSED");
+          }
+
           // P0-007 FIX: Fresh re-fetch load inside transaction to prevent race condition
           const freshLoad = await tx.load.findUnique({
             where: { id: proposal.loadId },
@@ -343,6 +352,12 @@ export async function POST(
       } catch (error: unknown) {
         // Handle specific transaction errors
         const errorMessage = error instanceof Error ? error.message : "";
+        if (errorMessage === "PROPOSAL_ALREADY_PROCESSED") {
+          return NextResponse.json(
+            { error: "This proposal has already been processed" },
+            { status: 409 }
+          );
+        }
         if (errorMessage === "LOAD_NOT_FOUND") {
           return NextResponse.json(
             { error: "Load not found" },

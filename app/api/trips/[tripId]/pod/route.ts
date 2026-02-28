@@ -13,6 +13,7 @@ import { requireAuth } from "@/lib/auth";
 import { CacheInvalidation } from "@/lib/cache";
 import { createNotification, NotificationType } from "@/lib/notifications";
 import { uploadPOD } from "@/lib/storage";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { handleApiError } from "@/lib/apiErrors";
 
 /**
@@ -27,6 +28,23 @@ export async function POST(
   try {
     const { tripId } = await params;
     const session = await requireAuth();
+
+    // Rate limit POD uploads: 10 per hour per trip
+    const rateResult = await checkRateLimit(
+      {
+        name: "pod-upload",
+        limit: 10,
+        windowMs: 60 * 60 * 1000,
+        message: "Too many POD uploads",
+      },
+      `pod:${tripId}`
+    );
+    if (!rateResult.allowed) {
+      return NextResponse.json(
+        { error: "Too many POD uploads. Try again later." },
+        { status: 429 }
+      );
+    }
 
     // Get trip details
     const trip = await db.trip.findUnique({
@@ -107,6 +125,25 @@ export async function POST(
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
         { error: "File must be an image (JPEG, PNG) or PDF" },
+        { status: 400 }
+      );
+    }
+
+    // Server-side magic byte validation to prevent MIME type spoofing
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const magicBytes = buffer.subarray(0, 4);
+    const isJpeg = magicBytes[0] === 0xff && magicBytes[1] === 0xd8;
+    const isPng =
+      magicBytes[0] === 0x89 &&
+      magicBytes[1] === 0x50 &&
+      magicBytes[2] === 0x4e &&
+      magicBytes[3] === 0x47;
+    const isPdf = magicBytes.toString("ascii").startsWith("%PDF");
+    if (!isJpeg && !isPng && !isPdf) {
+      return NextResponse.json(
+        {
+          error: "File content does not match an allowed type (JPEG, PNG, PDF)",
+        },
         { status: 400 }
       );
     }

@@ -452,6 +452,14 @@ describe("Carrier Trip Edge Cases", () => {
   // ─── Truck Availability Restore ────────────────────────────────────────
 
   describe("Truck availability restore", () => {
+    beforeEach(async () => {
+      // Clear leftover active trips from previous tests so the guard count is correct
+      await db.trip.updateMany({
+        where: { truckId: seed.truck.id },
+        data: { status: "COMPLETED" },
+      });
+    });
+
     it("restores truck availability after COMPLETED", async () => {
       // Set truck as unavailable
       await db.truck.update({

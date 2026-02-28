@@ -76,6 +76,19 @@ async function postHandler(
     const body = await request.json();
     const validatedData = gpsUpdateSchema.parse(body);
 
+    // Validate GPS timestamp is within 5 minutes of server time
+    if (validatedData.timestamp) {
+      const submitted = new Date(validatedData.timestamp);
+      const now = new Date();
+      const drift = Math.abs(now.getTime() - submitted.getTime());
+      if (drift > 5 * 60 * 1000) {
+        return NextResponse.json(
+          { error: "GPS timestamp must be within 5 minutes of current time" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Get trip with truck info
     const trip = await db.trip.findUnique({
       where: { id: tripId },
