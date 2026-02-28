@@ -318,6 +318,22 @@ jest.mock("@/lib/db", () => {
 
       return Promise.resolve(record);
     }),
+    createMany: jest.fn(({ data: records }) => {
+      if (!Array.isArray(records)) return Promise.resolve({ count: 0 });
+      const defaults = modelDefaults[idPrefix] || {};
+      for (const rec of records) {
+        const id = rec.id || `${idPrefix}-${idCounter.value++}`;
+        const record = {
+          id,
+          ...defaults,
+          ...rec,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        store.set(id, record);
+      }
+      return Promise.resolve({ count: records.length });
+    }),
     findUnique: jest.fn(({ where, include, select }) => {
       // Support lookup by id or any unique field (email, etc.)
       let record = store.get(where.id);
