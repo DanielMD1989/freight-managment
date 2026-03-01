@@ -51,57 +51,70 @@ async function applyRpsLimit(
   return null;
 }
 
-const updateLoadSchema = z.object({
-  status: z
-    .enum([
-      "DRAFT",
-      "POSTED",
-      "UNPOSTED",
-      "ASSIGNED",
-      "PICKUP_PENDING",
-      "IN_TRANSIT",
-      "DELIVERED",
-      "COMPLETED",
-      "CANCELLED",
-      "EXPIRED",
-    ])
-    .optional(),
-  pickupCity: z.string().min(2).max(200).optional(),
-  pickupAddress: z.string().max(500).optional().nullable(),
-  deliveryCity: z.string().min(2).max(200).optional(),
-  deliveryAddress: z.string().max(500).optional().nullable(),
-  pickupDockHours: z.string().max(100).optional().nullable(),
-  deliveryDockHours: z.string().max(100).optional().nullable(),
-  pickupDate: z.string().optional(),
-  deliveryDate: z.string().optional().nullable(),
-  truckType: z
-    .enum([
-      "FLATBED",
-      "REFRIGERATED",
-      "TANKER",
-      "CONTAINER",
-      "DRY_VAN",
-      "LOWBOY",
-      "DUMP_TRUCK",
-      "BOX_TRUCK",
-    ])
-    .optional(),
-  weight: z.number().positive().optional(),
-  lengthM: z.number().positive().optional(),
-  fullPartial: z.enum(["FULL", "PARTIAL"]).optional(),
-  tripKm: z.number().positive().optional(),
-  estimatedTripKm: z.number().positive().optional(),
-  currency: z.string().max(10).optional(),
-  cargoDescription: z.string().max(2000).optional().nullable(),
-  specialInstructions: z.string().max(2000).optional().nullable(),
-  safetyNotes: z.string().max(1000).optional().nullable(),
-  bookMode: z.enum(["REQUEST", "INSTANT"]).optional(),
-  shipperContactPhone: z.string().max(20).optional().nullable(),
-  shipperContactName: z.string().max(100).optional().nullable(),
-  isKept: z.boolean().optional(),
-  hasAlerts: z.boolean().optional(),
-  groupId: z.string().max(50).optional().nullable(),
-});
+const updateLoadSchema = z
+  .object({
+    status: z
+      .enum([
+        "DRAFT",
+        "POSTED",
+        "UNPOSTED",
+        "ASSIGNED",
+        "PICKUP_PENDING",
+        "IN_TRANSIT",
+        "DELIVERED",
+        "COMPLETED",
+        "CANCELLED",
+        "EXPIRED",
+      ])
+      .optional(),
+    pickupCity: z.string().min(2).max(200).optional(),
+    pickupAddress: z.string().max(500).optional().nullable(),
+    deliveryCity: z.string().min(2).max(200).optional(),
+    deliveryAddress: z.string().max(500).optional().nullable(),
+    pickupDockHours: z.string().max(100).optional().nullable(),
+    deliveryDockHours: z.string().max(100).optional().nullable(),
+    pickupDate: z.string().optional(),
+    deliveryDate: z.string().optional().nullable(),
+    truckType: z
+      .enum([
+        "FLATBED",
+        "REFRIGERATED",
+        "TANKER",
+        "CONTAINER",
+        "DRY_VAN",
+        "LOWBOY",
+        "DUMP_TRUCK",
+        "BOX_TRUCK",
+      ])
+      .optional(),
+    weight: z.number().positive().max(50000).optional(),
+    lengthM: z.number().positive().optional(),
+    fullPartial: z.enum(["FULL", "PARTIAL"]).optional(),
+    tripKm: z.number().positive().optional(),
+    estimatedTripKm: z.number().positive().optional(),
+    currency: z.string().max(10).optional(),
+    cargoDescription: z.string().max(2000).optional().nullable(),
+    specialInstructions: z.string().max(2000).optional().nullable(),
+    safetyNotes: z.string().max(1000).optional().nullable(),
+    bookMode: z.enum(["REQUEST", "INSTANT"]).optional(),
+    shipperContactPhone: z.string().max(20).optional().nullable(),
+    shipperContactName: z.string().max(100).optional().nullable(),
+    isKept: z.boolean().optional(),
+    hasAlerts: z.boolean().optional(),
+    groupId: z.string().max(50).optional().nullable(),
+  })
+  .refine(
+    (data) => {
+      if (data.pickupDate && data.deliveryDate) {
+        return new Date(data.pickupDate) <= new Date(data.deliveryDate);
+      }
+      return true;
+    },
+    {
+      message: "Pickup date must be on or before delivery date",
+      path: ["deliveryDate"],
+    }
+  );
 
 // GET /api/loads/[id]
 export async function GET(

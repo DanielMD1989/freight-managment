@@ -10,9 +10,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireActiveUser } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { CacheInvalidation } from "@/lib/cache";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * POST /api/loads/[id]/duplicate
@@ -33,9 +36,35 @@ export async function POST(
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
+    // Rate limiting
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const rpsResult = await checkRpsLimit(
+      "load-duplicate",
+      ip,
+      RPS_CONFIGS.write.rps,
+      RPS_CONFIGS.write.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please slow down.", retryAfter: 1 },
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": rpsResult.limit.toString(),
+            "X-RateLimit-Remaining": rpsResult.remaining.toString(),
+            "Retry-After": "1",
+          },
+        }
+      );
+    }
+
     const { id } = await params;
 
-    // Require permission to post loads
+    // Require ACTIVE user status and permission to post loads
+    await requireActiveUser();
     const session = await requirePermission(Permission.POST_LOADS);
 
     // Find original load
@@ -146,13 +175,7 @@ export async function POST(
       message: "Load duplicated successfully",
       load: duplicateLoad,
     });
-    // FIX: Use unknown type
   } catch (error: unknown) {
-    console.error("Error duplicating load:", error);
-
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Duplicate load error");
   }
 }

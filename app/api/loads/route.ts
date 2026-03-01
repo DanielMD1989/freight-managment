@@ -10,70 +10,82 @@ import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { handleApiError } from "@/lib/apiErrors";
 import { sanitizeText } from "@/lib/validation";
 
-const createLoadSchema = z.object({
-  // Location & Schedule
-  pickupCity: z.string().min(2).max(200),
-  pickupAddress: z.string().max(500).optional(),
-  pickupDockHours: z.string().max(100).optional(), // Changed to single field (string)
-  pickupDate: z.string(),
-  appointmentRequired: z.boolean().default(false),
-  deliveryCity: z.string().min(2).max(200),
-  deliveryAddress: z.string().max(500).optional(),
-  deliveryDockHours: z.string().max(100).optional(), // Changed to single field (string)
-  deliveryDate: z.string(),
+const createLoadSchema = z
+  .object({
+    // Location & Schedule
+    pickupCity: z.string().min(2).max(200),
+    pickupAddress: z.string().max(500).optional(),
+    pickupDockHours: z.string().max(100).optional(), // Changed to single field (string)
+    pickupDate: z.string(),
+    appointmentRequired: z.boolean().default(false),
+    deliveryCity: z.string().min(2).max(200),
+    deliveryAddress: z.string().max(500).optional(),
+    deliveryDockHours: z.string().max(100).optional(), // Changed to single field (string)
+    deliveryDate: z.string(),
 
-  tripKm: z.number().positive().optional(), // Required for POSTED status
-  dhToOriginKm: z.number().positive().optional(),
-  dhAfterDeliveryKm: z.number().positive().optional(),
-  originLat: z.number().optional(),
-  originLon: z.number().optional(),
-  destinationLat: z.number().optional(),
-  destinationLon: z.number().optional(),
+    tripKm: z.number().positive().optional(), // Required for POSTED status
+    dhToOriginKm: z.number().positive().optional(),
+    dhAfterDeliveryKm: z.number().positive().optional(),
+    originLat: z.number().optional(),
+    originLon: z.number().optional(),
+    destinationLat: z.number().optional(),
+    destinationLon: z.number().optional(),
 
-  // Load Details
-  truckType: z.enum([
-    "FLATBED",
-    "REFRIGERATED",
-    "TANKER",
-    "CONTAINER",
-    "DRY_VAN",
-    "LOWBOY",
-    "DUMP_TRUCK",
-    "BOX_TRUCK",
-  ]),
-  weight: z.number().positive(),
-  volume: z.number().positive().optional(),
-  cargoDescription: z.string().min(5).max(2000),
-  isFullLoad: z.boolean().default(true), // Keep for backward compatibility
-  fullPartial: z.enum(["FULL", "PARTIAL"]).default("FULL"), // [NEW]
-  isFragile: z.boolean().default(false),
-  requiresRefrigeration: z.boolean().default(false),
+    // Load Details
+    truckType: z.enum([
+      "FLATBED",
+      "REFRIGERATED",
+      "TANKER",
+      "CONTAINER",
+      "DRY_VAN",
+      "LOWBOY",
+      "DUMP_TRUCK",
+      "BOX_TRUCK",
+    ]),
+    weight: z.number().positive().max(50000),
+    volume: z.number().positive().optional(),
+    cargoDescription: z.string().min(5).max(2000),
+    isFullLoad: z.boolean().default(true), // Keep for backward compatibility
+    fullPartial: z.enum(["FULL", "PARTIAL"]).default("FULL"), // [NEW]
+    isFragile: z.boolean().default(false),
+    requiresRefrigeration: z.boolean().default(false),
 
-  // Insurance
-  isInsured: z.boolean().default(false),
-  insuranceProvider: z.string().max(200).optional(),
-  insurancePolicyNumber: z.string().max(100).optional(),
-  insuranceCoverageAmount: z.number().positive().optional(),
+    // Insurance
+    isInsured: z.boolean().default(false),
+    insuranceProvider: z.string().max(200).optional(),
+    insurancePolicyNumber: z.string().max(100).optional(),
+    insuranceCoverageAmount: z.number().positive().optional(),
 
-  lengthM: z.number().positive().optional(),
-  casesCount: z.number().int().positive().optional(),
+    lengthM: z.number().positive().optional(),
+    casesCount: z.number().int().positive().optional(),
 
-  // Pricing is negotiated off-platform
-  bookMode: z.enum(["REQUEST", "INSTANT"]).default("REQUEST"), // [NEW]
+    // Pricing is negotiated off-platform
+    bookMode: z.enum(["REQUEST", "INSTANT"]).default("REQUEST"), // [NEW]
 
-  dtpReference: z.string().max(100).optional(),
-  factorRating: z.string().max(100).optional(),
+    dtpReference: z.string().max(100).optional(),
+    factorRating: z.string().max(100).optional(),
 
-  // Privacy & Safety
-  isAnonymous: z.boolean().default(false),
-  shipperContactName: z.string().max(100).optional(), // [NEW]
-  shipperContactPhone: z.string().max(20).optional(), // [NEW]
-  safetyNotes: z.string().max(1000).optional(),
-  specialInstructions: z.string().max(2000).optional(),
+    // Privacy & Safety
+    isAnonymous: z.boolean().default(false),
+    shipperContactName: z.string().max(100).optional(), // [NEW]
+    shipperContactPhone: z.string().max(20).optional(), // [NEW]
+    safetyNotes: z.string().max(1000).optional(),
+    specialInstructions: z.string().max(2000).optional(),
 
-  // Status
-  status: z.enum(["DRAFT", "POSTED"]).default("DRAFT"),
-});
+    // Status
+    status: z.enum(["DRAFT", "POSTED"]).default("DRAFT"),
+  })
+  .refine(
+    (data) => {
+      const pickup = new Date(data.pickupDate);
+      const delivery = new Date(data.deliveryDate);
+      return pickup <= delivery;
+    },
+    {
+      message: "Pickup date must be on or before delivery date",
+      path: ["deliveryDate"],
+    }
+  );
 
 // POST /api/loads - Create load
 export async function POST(request: NextRequest) {
