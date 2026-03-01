@@ -94,7 +94,8 @@ export async function POST(request: NextRequest) {
         windowMs: 60 * 60 * 1000, // 1 hour
         message: "Too many registration attempts. Please try again later.",
       },
-      clientIp
+      clientIp,
+      request
     );
 
     if (!rateLimit.allowed) {

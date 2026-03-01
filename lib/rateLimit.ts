@@ -26,6 +26,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { redis, RedisKeys, isRedisEnabled } from "./redis";
+import { config as appConfig } from "./config";
 
 // =============================================================================
 // TYPES & INTERFACES
@@ -363,8 +364,32 @@ async function checkMultiKeyRateLimit(
  */
 export async function checkRateLimit(
   config: RateLimitConfig,
-  identifier: string
+  identifier: string,
+  request?: NextRequest
 ): Promise<RateLimitResult> {
+  // Check global kill switch
+  if (!appConfig.rateLimit.enabled) {
+    return {
+      allowed: true,
+      limit: config.limit,
+      remaining: config.limit,
+      resetTime: Date.now() + config.windowMs,
+    };
+  }
+
+  // Check bypass key (requires both server config and matching header)
+  if (request && appConfig.rateLimit.bypassKey) {
+    const bypassHeader = request.headers.get("X-RateLimit-Bypass");
+    if (bypassHeader === appConfig.rateLimit.bypassKey) {
+      return {
+        allowed: true,
+        limit: config.limit,
+        remaining: config.limit,
+        resetTime: Date.now() + config.windowMs,
+      };
+    }
+  }
+
   if (isRedisEnabled() && redis) {
     return checkRateLimitRedis(config, identifier);
   }
@@ -376,9 +401,10 @@ export async function checkRateLimit(
  */
 export async function enforceRateLimit(
   config: RateLimitConfig,
-  identifier: string
+  identifier: string,
+  request?: NextRequest
 ): Promise<NextResponse | null> {
-  const result = await checkRateLimit(config, identifier);
+  const result = await checkRateLimit(config, identifier, request);
 
   if (!result.allowed) {
     return NextResponse.json(

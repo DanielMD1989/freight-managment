@@ -143,7 +143,8 @@ export async function POST(request: NextRequest) {
         windowMs: 15 * 60 * 1000, // 15 minutes
         message: "Too many login attempts. Please try again later.",
       },
-      rateLimitKey
+      rateLimitKey,
+      request
     );
 
     if (!rateLimit.allowed) {

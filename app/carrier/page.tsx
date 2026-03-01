@@ -1,28 +1,25 @@
 /**
- * Carrier Main Page - FreightET Power Interface
+ * Carrier Main Page - Redirects to Dashboard
  *
- * Main entry point for carrier portal with professional load board
- * Sprint 14 - Professional UI Transformation
+ * Preserves auth checks so /carrier remains a valid URL (bookmarks, error redirects),
+ * then forwards to the dashboard landing page.
  */
 
-import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
-import CarrierLoadboardClient from "./loadboard/CarrierLoadboardClient";
 
 export const metadata = {
   title: "FreightET - Carrier Portal",
-  description: "Professional freight load board for carriers",
+  description: "Carrier portal — redirects to dashboard",
 };
 
 export default async function CarrierPage() {
-  // Verify authentication
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("session");
 
   if (!sessionCookie) {
-    redirect("/login?redirect=/carrier");
+    redirect("/login?redirect=/carrier/dashboard");
   }
 
   const session = await verifyToken(sessionCookie.value);
@@ -31,12 +28,5 @@ export default async function CarrierPage() {
     redirect("/unauthorized");
   }
 
-  // Return load board interface wrapped in Suspense for useSearchParams
-  return (
-    <Suspense
-      fallback={<div className="min-h-screen animate-pulse bg-gray-100" />}
-    >
-      <CarrierLoadboardClient user={session} />
-    </Suspense>
-  );
+  redirect("/carrier/dashboard");
 }
