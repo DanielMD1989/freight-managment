@@ -13,6 +13,7 @@ import { z } from "zod";
 import { zodErrorResponse, sanitizeText } from "@/lib/validation";
 import { Prisma } from "@prisma/client";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { CacheInvalidation } from "@/lib/cache";
 
 const createDisputeSchema = z.object({
   loadId: z.string().max(50),
@@ -77,6 +78,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
+    // Only allow disputes for loads in a disputable state
+    // DRAFT/POSTED/UNPOSTED loads have no carrier party to dispute against
+    const disputableStatuses = [
+      "ASSIGNED",
+      "PICKUP_PENDING",
+      "IN_TRANSIT",
+      "DELIVERED",
+      "COMPLETED",
+      "CANCELLED",
+    ];
+    if (!disputableStatuses.includes(load.status)) {
+      return NextResponse.json(
+        {
+          error: `Cannot create dispute for load in ${load.status} status`,
+          hint: "Disputes can only be filed for loads that have been assigned to a carrier",
+        },
+        { status: 400 }
+      );
+    }
+
     // Check if user is shipper or carrier for this load
     const isShipper = load.shipper?.id === session.organizationId;
     const isCarrier =
@@ -130,6 +151,9 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // Invalidate load cache after dispute creation
+    await CacheInvalidation.load(validatedData.loadId);
 
     return NextResponse.json({
       message: "Dispute created successfully",

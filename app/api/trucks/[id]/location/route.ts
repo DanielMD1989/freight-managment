@@ -25,14 +25,12 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Rate limiting: GPS endpoints need higher limits for real-time tracking
-    const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      request.headers.get("x-real-ip") ||
-      "unknown";
+    const { id: truckId } = await params;
+
+    // Rate limiting: Per-truck scoping prevents one carrier's fleet from exhausting limits
     const rpsResult = await checkRpsLimit(
-      RPS_CONFIGS.gps.endpoint,
-      ip,
+      `${RPS_CONFIGS.gps.endpoint}:${truckId}`,
+      truckId,
       RPS_CONFIGS.gps.rps,
       RPS_CONFIGS.gps.burst
     );
@@ -48,8 +46,6 @@ export async function PATCH(
     // CSRF protection with mobile client handling
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
-
-    const { id: truckId } = await params;
 
     const body = await request.json();
     const { latitude, longitude, currentCity, currentRegion } =
@@ -133,14 +129,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Rate limiting: GPS endpoints need higher limits for real-time tracking
-    const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      request.headers.get("x-real-ip") ||
-      "unknown";
+    const session = await requireAuth();
+    const { id: truckId } = await params;
+
+    // Rate limiting: Per-truck scoping prevents one carrier's fleet from exhausting limits
     const rpsResult = await checkRpsLimit(
-      RPS_CONFIGS.gps.endpoint,
-      ip,
+      `${RPS_CONFIGS.gps.endpoint}:${truckId}`,
+      truckId,
       RPS_CONFIGS.gps.rps,
       RPS_CONFIGS.gps.burst
     );
@@ -150,9 +145,6 @@ export async function GET(
         { status: 429, headers: { "Retry-After": "1" } }
       );
     }
-
-    const session = await requireAuth();
-    const { id: truckId } = await params;
 
     // Get truck details and verify ownership
     const truck = await db.truck.findUnique({

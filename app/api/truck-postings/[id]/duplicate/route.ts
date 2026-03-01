@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { requireCSRF } from "@/lib/csrf";
+import { CacheInvalidation } from "@/lib/cache";
 
 export async function POST(
   request: NextRequest,
@@ -109,6 +110,12 @@ export async function POST(
         postedAt: new Date(),
       },
     });
+
+    // Invalidate cache so new posting is immediately visible
+    await CacheInvalidation.truck(
+      duplicatePosting.truckId,
+      originalPosting.carrierId
+    );
 
     return NextResponse.json(duplicatePosting, { status: 201 });
     // FIX: Use unknown type

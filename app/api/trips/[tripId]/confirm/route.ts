@@ -127,7 +127,39 @@ export async function POST(
       );
     }
 
-    // CRITICAL FIX: Wrap all state changes in a transaction for atomicity
+    // CRITICAL FIX: Deduct service fee BEFORE transaction (blocking pattern)
+    // Matches loads/[id]/status/route.ts which blocks completion on fee failure
+    let serviceFeeResult: Awaited<ReturnType<typeof deductServiceFee>> | null =
+      null;
+    try {
+      serviceFeeResult = await deductServiceFee(trip.loadId);
+      if (!serviceFeeResult.success) {
+        // "Service fees already deducted" is treated as success (idempotency)
+        if (serviceFeeResult.error !== "Service fees already deducted") {
+          return NextResponse.json(
+            {
+              error: "Cannot confirm delivery: fee deduction failed",
+              details: serviceFeeResult.error || "Unknown fee deduction error",
+            },
+            { status: 400 }
+          );
+        }
+      }
+    } catch (feeError: unknown) {
+      console.error("Service fee deduction exception on confirm:", feeError);
+      return NextResponse.json(
+        {
+          error: "Cannot confirm delivery: fee deduction failed",
+          details:
+            feeError instanceof Error
+              ? feeError.message
+              : "Fee deduction exception",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Wrap all state changes in a transaction for atomicity
     const updatedTrip = await db.$transaction(async (tx) => {
       // H18 FIX: Re-check trip state inside transaction to prevent double-confirm
       const freshTrip = await tx.trip.findUnique({
@@ -203,41 +235,38 @@ export async function POST(
         });
       }
 
-      return updatedTrip;
-    });
-
-    // C1 FIX: Deduct service fee after trip confirmation (same pattern as POD handler)
-    try {
-      const feeResult = await deductServiceFee(trip.loadId);
-      if (feeResult.success && feeResult.totalPlatformFee > 0) {
-        await db.load.update({
-          where: { id: trip.loadId },
-          data: { settlementStatus: "PAID", settledAt: new Date() },
-        });
-        await db.loadEvent.create({
-          data: {
-            loadId: trip.loadId,
-            eventType: "SERVICE_FEE_DEDUCTED",
-            description: `Service fee deducted on delivery confirmation: Shipper ${feeResult.shipperFee.toFixed(2)} ETB, Carrier ${feeResult.carrierFee.toFixed(2)} ETB`,
-            userId: session.userId,
-            metadata: {
-              shipperFee: feeResult.shipperFee,
-              carrierFee: feeResult.carrierFee,
-              totalPlatformFee: feeResult.totalPlatformFee,
-              transactionId: feeResult.transactionId,
-              trigger: "delivery_confirmation",
-            },
-          },
-        });
-      } else if (feeResult.success && feeResult.totalPlatformFee === 0) {
-        await db.load.update({
+      // Update settlement status inside transaction (fee already deducted above)
+      if (serviceFeeResult?.success && serviceFeeResult.totalPlatformFee >= 0) {
+        await tx.load.update({
           where: { id: trip.loadId },
           data: { settlementStatus: "PAID", settledAt: new Date() },
         });
       }
-    } catch (feeError) {
-      console.error("Service fee deduction failed on confirm:", feeError);
-      // Non-blocking: settlement can be retried via cron
+
+      return updatedTrip;
+    });
+
+    // Fire-and-forget: Log fee event after transaction commits
+    if (serviceFeeResult?.success && serviceFeeResult.totalPlatformFee > 0) {
+      db.loadEvent
+        .create({
+          data: {
+            loadId: trip.loadId,
+            eventType: "SERVICE_FEE_DEDUCTED",
+            description: `Service fee deducted on delivery confirmation: Shipper ${serviceFeeResult.shipperFee.toFixed(2)} ETB, Carrier ${serviceFeeResult.carrierFee.toFixed(2)} ETB`,
+            userId: session.userId,
+            metadata: {
+              shipperFee: serviceFeeResult.shipperFee,
+              carrierFee: serviceFeeResult.carrierFee,
+              totalPlatformFee: serviceFeeResult.totalPlatformFee,
+              transactionId: serviceFeeResult.transactionId,
+              trigger: "delivery_confirmation",
+            },
+          },
+        })
+        .catch((err: unknown) =>
+          console.error("Failed to log fee event:", err)
+        );
     }
 
     // Cache invalidation after transaction commits

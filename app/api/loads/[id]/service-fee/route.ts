@@ -30,11 +30,19 @@ export async function GET(
       select: {
         id: true,
         shipperId: true,
+        // Legacy fields (kept for backward compatibility)
         serviceFeeEtb: true,
         serviceFeeStatus: true,
         serviceFeeReservedAt: true,
         serviceFeeDeductedAt: true,
         serviceFeeRefundedAt: true,
+        // Authoritative dual-party fields (LEGACY FIELD POLICY)
+        shipperServiceFee: true,
+        shipperFeeStatus: true,
+        shipperFeeDeductedAt: true,
+        carrierServiceFee: true,
+        carrierFeeStatus: true,
+        carrierFeeDeductedAt: true,
         corridorId: true,
         corridor: {
           select: {
@@ -93,11 +101,23 @@ export async function GET(
     return NextResponse.json({
       loadId: load.id,
       serviceFee: {
+        // Legacy fields (backward compatibility)
         amount: load.serviceFeeEtb ? Number(load.serviceFeeEtb) : null,
         status: load.serviceFeeStatus,
         reservedAt: load.serviceFeeReservedAt,
         deductedAt: load.serviceFeeDeductedAt,
         refundedAt: load.serviceFeeRefundedAt,
+        // Authoritative dual-party breakdown (LEGACY FIELD POLICY)
+        shipper: {
+          fee: load.shipperServiceFee ? Number(load.shipperServiceFee) : null,
+          status: load.shipperFeeStatus,
+          deductedAt: load.shipperFeeDeductedAt,
+        },
+        carrier: {
+          fee: load.carrierServiceFee ? Number(load.carrierServiceFee) : null,
+          status: load.carrierFeeStatus,
+          deductedAt: load.carrierFeeDeductedAt,
+        },
       },
       corridor: load.corridor
         ? {

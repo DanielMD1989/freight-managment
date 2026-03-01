@@ -143,6 +143,7 @@ export async function POST(request: NextRequest) {
         carrierId: true,
         isAvailable: true,
         licensePlate: true,
+        approvalStatus: true,
         postings: {
           where: { status: "ACTIVE" },
           select: { id: true },
@@ -153,6 +154,14 @@ export async function POST(request: NextRequest) {
 
     if (!truck) {
       return NextResponse.json({ error: "Truck not found" }, { status: 404 });
+    }
+
+    // Only approved trucks can be requested (matches truck-postings approval check)
+    if (truck.approvalStatus !== "APPROVED") {
+      return NextResponse.json(
+        { error: "Only approved trucks can be requested" },
+        { status: 400 }
+      );
     }
 
     // Check if truck has an active posting (is available)

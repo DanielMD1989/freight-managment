@@ -144,13 +144,17 @@ export async function GET(request: NextRequest) {
       }),
 
       // Total service fees paid: sum of carrierServiceFee from completed loads (fees paid TO platform)
+      // Legacy fallback: old records have serviceFeeStatus=DEDUCTED but carrierFeeStatus=PENDING
       db.load.aggregate({
         where: {
           assignedTruck: { carrierId: session.organizationId },
           status: { in: ["DELIVERED", "COMPLETED"] },
-          carrierFeeStatus: "DEDUCTED",
+          OR: [
+            { carrierFeeStatus: "DEDUCTED" },
+            { carrierFeeStatus: "PENDING", serviceFeeStatus: "DEDUCTED" },
+          ],
         },
-        _sum: { carrierServiceFee: true },
+        _sum: { carrierServiceFee: true, serviceFeeEtb: true },
       }),
 
       // Wallet account
@@ -191,10 +195,14 @@ export async function GET(request: NextRequest) {
         0
     );
     // Preserve 2 decimal precision for financial values
-    const rawFees = revenueResult._sum?.carrierServiceFee;
-    const totalServiceFeesPaid = rawFees
-      ? parseFloat(Number(rawFees).toFixed(2))
-      : 0;
+    // Use carrierServiceFee when available, fall back to legacy serviceFeeEtb for old records
+    const rawCarrierFees = revenueResult._sum?.carrierServiceFee;
+    const rawLegacyFees = revenueResult._sum?.serviceFeeEtb;
+    const carrierFeeTotal = rawCarrierFees ? Number(rawCarrierFees) : 0;
+    const legacyFallback = rawLegacyFees ? Number(rawLegacyFees) : 0;
+    const totalServiceFeesPaid = parseFloat(
+      Math.max(carrierFeeTotal, legacyFallback).toFixed(2)
+    );
 
     return NextResponse.json({
       totalTrucks,

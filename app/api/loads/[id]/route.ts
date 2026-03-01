@@ -663,6 +663,22 @@ export async function DELETE(
         });
       }
 
+      // Find and reject all pending MatchProposals for this load
+      const pendingMatchProposals = await tx.matchProposal.findMany({
+        where: { loadId: id, status: "PENDING" },
+        select: { id: true, carrierId: true },
+      });
+
+      if (pendingMatchProposals.length > 0) {
+        await tx.matchProposal.updateMany({
+          where: { loadId: id, status: "PENDING" },
+          data: {
+            status: "REJECTED",
+            respondedAt: new Date(),
+          },
+        });
+      }
+
       // Delete the load
       await tx.load.delete({ where: { id } });
 
@@ -670,6 +686,7 @@ export async function DELETE(
         deletedLoadId: id,
         rejectedLoadRequests: pendingLoadRequests,
         rejectedTruckRequests: pendingTruckRequests,
+        rejectedMatchProposals: pendingMatchProposals,
       };
     });
 
@@ -685,6 +702,7 @@ export async function DELETE(
       ...deletionResult.rejectedTruckRequests
         .filter((r) => r.truck?.carrierId)
         .map((r) => r.truck!.carrierId),
+      ...deletionResult.rejectedMatchProposals.map((r) => r.carrierId),
     ];
     const uniqueCarrierOrgIds = [...new Set(allCarrierOrgIds)];
 
@@ -750,6 +768,27 @@ export async function DELETE(
       }
     }
 
+    // Notify carriers whose MatchProposals were rejected
+    for (const proposal of deletionResult.rejectedMatchProposals) {
+      const userIds = usersByOrgId.get(proposal.carrierId) || [];
+      for (const userId of userIds) {
+        notificationPromises.push(
+          createNotification({
+            userId,
+            type: "REQUEST_REJECTED",
+            title: "Match Proposal Cancelled",
+            message:
+              "A load matching your truck has been deleted by the shipper.",
+            metadata: {
+              matchProposalId: proposal.id,
+              loadId: id,
+              reason: "Load deleted",
+            },
+          }).catch(console.error)
+        );
+      }
+    }
+
     // Fire-and-forget notifications
     Promise.all(notificationPromises).catch(console.error);
 
@@ -759,6 +798,7 @@ export async function DELETE(
       userId: session.userId,
       rejectedLoadRequests: deletionResult.rejectedLoadRequests.length,
       rejectedTruckRequests: deletionResult.rejectedTruckRequests.length,
+      rejectedMatchProposals: deletionResult.rejectedMatchProposals.length,
     });
 
     return NextResponse.json({ message: "Load deleted successfully" });

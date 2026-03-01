@@ -328,6 +328,7 @@ describe("Carrier Disputes API", () => {
       // Mock a load that belongs to a different carrier
       (db.load.findUnique as jest.Mock).mockResolvedValueOnce({
         id: "other-load-001",
+        status: "IN_TRANSIT",
         shipperId: "other-shipper-org",
         shipper: { id: "other-shipper-org" },
         assignedTruck: {
