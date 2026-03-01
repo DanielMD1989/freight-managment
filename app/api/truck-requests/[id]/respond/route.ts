@@ -24,6 +24,7 @@ import crypto from "crypto";
 import { CacheInvalidation } from "@/lib/cache";
 import { handleApiError } from "@/lib/apiErrors";
 import { validateWalletBalancesForTrip } from "@/lib/serviceFeeManagement";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 
 // Validation schema for request response
 const RequestResponseSchema = z.object({
@@ -50,6 +51,23 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const rpsResult = await checkRpsLimit(
+      "truck-request-respond",
+      ip,
+      RPS_CONFIGS.write.rps,
+      RPS_CONFIGS.write.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please slow down." },
+        { status: 429 }
+      );
+    }
+
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 

@@ -4,26 +4,40 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionAny } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 import { markAsRead } from "@/lib/notifications";
 import { db } from "@/lib/db";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { handleApiError } from "@/lib/apiErrors";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const rpsResult = await checkRpsLimit(
+      "notifications",
+      ip,
+      RPS_CONFIGS.notifications.rps,
+      RPS_CONFIGS.notifications.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please slow down." },
+        { status: 429 }
+      );
+    }
+
     // CSRF protection
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await getSessionAny();
-
-    if (!session?.userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const session = await requireAuth();
 
     // Await params (Next.js 15+)
     const { id } = await params;

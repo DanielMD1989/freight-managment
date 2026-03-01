@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { CacheInvalidation } from "@/lib/cache";
 import { createNotification, NotificationType } from "@/lib/notifications";
@@ -33,7 +33,7 @@ export async function POST(
     if (csrfError) return csrfError;
 
     const { id: loadId } = await params;
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // B2 FIX: Rate limit POD uploads: 10 per hour per load
     const rateResult = await checkRateLimit(
@@ -246,7 +246,7 @@ export async function PUT(
     if (csrfError) return csrfError;
 
     const { id: loadId } = await params;
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Get load details
     const load = await db.load.findUnique({

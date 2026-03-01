@@ -8,12 +8,13 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { createNotification, NotificationType } from "@/lib/notifications";
 import { z } from "zod";
 import { CacheInvalidation } from "@/lib/cache";
 import { handleApiError } from "@/lib/apiErrors";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 
 const cancelTripSchema = z.object({
   reason: z.string().min(1, "Cancellation reason is required").max(500),
@@ -29,11 +30,28 @@ export async function POST(
   { params }: { params: Promise<{ tripId: string }> }
 ) {
   try {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const rpsResult = await checkRpsLimit(
+      "trip-cancel",
+      ip,
+      RPS_CONFIGS.write.rps,
+      RPS_CONFIGS.write.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please slow down." },
+        { status: 429 }
+      );
+    }
+
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
     const { tripId } = await params;
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Parse and validate request body
     const body = await request.json();

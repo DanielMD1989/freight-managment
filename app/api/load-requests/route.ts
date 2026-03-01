@@ -18,6 +18,8 @@ import { validateCSRFWithMobile } from "@/lib/csrf";
 import { createNotification } from "@/lib/notifications";
 import { Prisma } from "@prisma/client";
 import { handleApiError } from "@/lib/apiErrors";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { CacheInvalidation } from "@/lib/cache";
 
 // Validation schema for load request
 // Note: No proposedRate field - price negotiation happens outside platform
@@ -42,6 +44,23 @@ const LoadRequestSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const rpsResult = await checkRpsLimit(
+      "load-requests",
+      ip,
+      RPS_CONFIGS.write.rps,
+      RPS_CONFIGS.write.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please slow down." },
+        { status: 429 }
+      );
+    }
+
     // H7 FIX: Add CSRF protection; M19 FIX: Use requireActiveUser
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
@@ -263,6 +282,9 @@ export async function POST(request: NextRequest) {
         })
       )
     );
+
+    // Invalidate load cache after request creation
+    await CacheInvalidation.load(data.loadId);
 
     return NextResponse.json(
       {

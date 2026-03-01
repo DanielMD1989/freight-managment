@@ -20,7 +20,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, generateOTP, hashPassword } from "@/lib/auth";
+import { requireActiveUser, generateOTP, hashPassword } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { requireCSRF } from "@/lib/csrf";
 import {
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     const csrfError = requireCSRF(request);
     if (csrfError) return csrfError;
 
-    const session = await requireAuth();
+    const session = await requireActiveUser();
     const ipAddress =
       request.headers.get("x-forwarded-for") ||
       request.headers.get("x-real-ip");

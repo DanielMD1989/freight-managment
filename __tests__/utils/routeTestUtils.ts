@@ -157,6 +157,12 @@ export function mockRateLimit() {
       fleet: { endpoint: "trucks", rps: 30, burst: 60 },
       dashboard: { endpoint: "dashboard", rps: 5, burst: 10 },
       gps: { endpoint: "gps", rps: 30, burst: 60 },
+      write: { endpoint: "api", rps: 0.5, burst: 5 },
+      notifications: { endpoint: "notifications", rps: 30, burst: 10 },
+      auth: { endpoint: "auth", rps: 10, burst: 5 },
+      health: { endpoint: "health", rps: 100, burst: 50 },
+      loads: { endpoint: "loads", rps: 50, burst: 20 },
+      trucks: { endpoint: "trucks", rps: 50, burst: 20 },
     },
     RATE_LIMIT_TRUCK_POSTING: { maxRequests: 100, windowMs: 86400000 },
   }));
@@ -217,6 +223,9 @@ export function mockCache() {
       load: jest.fn(async () => {}),
       trip: jest.fn(async () => {}),
       allListings: jest.fn(async () => {}),
+      user: jest.fn(async () => {}),
+      organization: jest.fn(async () => {}),
+      session: jest.fn(async () => {}),
     },
     CacheTTL: { SHORT: 60, MEDIUM: 300, LONG: 3600 },
     cacheAside: jest.fn(async (_key: string, fn: () => any) => fn()),
@@ -536,7 +545,8 @@ export function mockApiErrors() {
       const status =
         error.name === "ForbiddenError"
           ? 403
-          : error.name === "UnauthorizedError"
+          : error.name === "UnauthorizedError" ||
+              error.message === "Unauthorized"
             ? 401
             : 500;
       const { NextResponse } = require("next/server");

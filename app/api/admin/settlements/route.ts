@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 
 /**
  * GET /api/admin/settlements
@@ -24,6 +25,23 @@ import { Prisma } from "@prisma/client";
  */
 export async function GET(request: NextRequest) {
   try {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const rpsResult = await checkRpsLimit(
+      "admin-settlements",
+      ip,
+      RPS_CONFIGS.write.rps,
+      RPS_CONFIGS.write.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please slow down." },
+        { status: 429 }
+      );
+    }
+
     await requirePermission(Permission.MANAGE_SETTLEMENTS);
 
     const { searchParams } = request.nextUrl;

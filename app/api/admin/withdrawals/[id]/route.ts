@@ -7,8 +7,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { CacheInvalidation } from "@/lib/cache";
+import { handleApiError } from "@/lib/apiErrors";
 
 const updateSchema = z.object({
   action: z.enum(["APPROVED", "REJECTED"]),
@@ -21,10 +24,27 @@ interface RouteParams {
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const rpsResult = await checkRpsLimit(
+      "admin-withdrawals",
+      ip,
+      RPS_CONFIGS.write.rps,
+      RPS_CONFIGS.write.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please slow down." },
+        { status: 429 }
+      );
+    }
+
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -43,42 +63,51 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     const { action, rejectionReason } = parsed.data;
 
-    // Get current withdrawal request
-    const existing = await db.withdrawalRequest.findUnique({ where: { id } });
-    if (!existing) {
-      return NextResponse.json(
-        { error: "Withdrawal request not found" },
-        { status: 404 }
-      );
-    }
+    // Use transaction with re-fetch to guard against race conditions
+    const updated = await db.$transaction(async (tx) => {
+      const existing = await tx.withdrawalRequest.findUnique({
+        where: { id },
+      });
+      if (!existing) {
+        throw Object.assign(new Error("Withdrawal request not found"), {
+          statusCode: 404,
+        });
+      }
 
-    if (existing.status !== "PENDING") {
-      return NextResponse.json(
-        { error: `Cannot update a ${existing.status} withdrawal request` },
-        { status: 400 }
-      );
-    }
+      if (existing.status !== "PENDING") {
+        throw Object.assign(
+          new Error(`Cannot update a ${existing.status} withdrawal request`),
+          { statusCode: 400 }
+        );
+      }
 
-    const updated = await db.withdrawalRequest.update({
-      where: { id },
-      data: {
-        status: action,
-        approvedById: session.userId,
-        approvedAt: new Date(),
-        rejectionReason: action === "REJECTED" ? rejectionReason : null,
-        completedAt: action === "APPROVED" ? new Date() : null,
-      },
+      return tx.withdrawalRequest.update({
+        where: { id },
+        data: {
+          status: action,
+          approvedById: session.userId,
+          approvedAt: new Date(),
+          rejectionReason: action === "REJECTED" ? rejectionReason : null,
+          completedAt: action === "APPROVED" ? new Date() : null,
+        },
+      });
     });
+
+    // Invalidate user cache so wallet/status reflects immediately
+    await CacheInvalidation.user(session.userId);
 
     return NextResponse.json({
       message: `Withdrawal request ${action.toLowerCase()}`,
       withdrawalRequest: updated,
     });
-  } catch (error) {
-    console.error("Admin withdrawal update error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    const err = error as { statusCode?: number; message?: string };
+    if (err?.statusCode === 404) {
+      return NextResponse.json({ error: err.message }, { status: 404 });
+    }
+    if (err?.statusCode === 400) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
+    return handleApiError(error, "Admin withdrawal update error");
   }
 }

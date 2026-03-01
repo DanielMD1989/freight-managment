@@ -10,12 +10,13 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { z } from "zod";
 import { sendEmail, createEmailHTML } from "@/lib/email";
 import { handleApiError } from "@/lib/apiErrors";
 import { UserRole } from "@prisma/client";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 
 const createInvitationSchema = z.object({
   email: z.string().email(),
@@ -29,11 +30,28 @@ const createInvitationSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const rpsResult = await checkRpsLimit(
+      "org-invitations",
+      ip,
+      RPS_CONFIGS.write.rps,
+      RPS_CONFIGS.write.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please slow down." },
+        { status: 429 }
+      );
+    }
+
     // H26 FIX: Add CSRF protection
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     const body = await request.json();
     const data = createInvitationSchema.parse(body);
@@ -150,7 +168,7 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Get user's organization
     const user = await db.user.findUnique({

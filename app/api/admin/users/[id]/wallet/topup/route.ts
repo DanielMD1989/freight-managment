@@ -6,9 +6,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { checkRpsLimit } from "@/lib/rateLimit";
+import { CacheInvalidation } from "@/lib/cache";
 import { z } from "zod";
 import { handleApiError } from "@/lib/apiErrors";
 // H15 FIX: Import max topup constant
@@ -64,7 +65,7 @@ export async function POST(
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Only admins can access this endpoint
     if (!["ADMIN", "SUPER_ADMIN"].includes(session.role)) {
@@ -153,6 +154,9 @@ export async function POST(
         updatedWallet,
       };
     });
+
+    // Invalidate user cache so wallet balance reflects immediately
+    await CacheInvalidation.user(id);
 
     return NextResponse.json({
       success: true,

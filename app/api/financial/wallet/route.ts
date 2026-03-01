@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth, requireActiveUser } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 
 const depositSchema = z.object({
   amount: z.number().positive(),
@@ -13,9 +14,26 @@ const depositSchema = z.object({
 });
 
 // GET /api/financial/wallet - Get wallet balance
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const rpsResult = await checkRpsLimit(
+      "financial-wallet",
+      ip,
+      RPS_CONFIGS.write.rps,
+      RPS_CONFIGS.write.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please slow down." },
+        { status: 429 }
+      );
+    }
+
+    const session = await requireActiveUser();
     await requirePermission(Permission.VIEW_WALLET);
 
     const user = await db.user.findUnique({

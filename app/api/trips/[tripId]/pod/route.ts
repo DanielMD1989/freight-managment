@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { CacheInvalidation } from "@/lib/cache";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { createNotification, NotificationType } from "@/lib/notifications";
@@ -32,7 +32,7 @@ export async function POST(
     if (csrfError) return csrfError;
 
     const { tripId } = await params;
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Rate limit POD uploads: 10 per hour per trip
     const rateResult = await checkRateLimit(
@@ -265,7 +265,7 @@ export async function GET(
 ) {
   try {
     const { tripId } = await params;
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Get trip details
     const trip = await db.trip.findUnique({

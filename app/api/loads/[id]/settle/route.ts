@@ -8,8 +8,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { requireCSRF } from "@/lib/csrf";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { CacheInvalidation } from "@/lib/cache";
 
 /**
  * POST /api/loads/[id]/settle
@@ -30,8 +32,25 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const rpsResult = await checkRpsLimit(
+      "load-settle",
+      ip,
+      RPS_CONFIGS.write.rps,
+      RPS_CONFIGS.write.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please slow down." },
+        { status: 429 }
+      );
+    }
+
     const { id: loadId } = await params;
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // CSRF protection for state-changing operation
     const csrfError = await requireCSRF(request);
@@ -201,6 +220,9 @@ export async function POST(
         },
       });
 
+      // Invalidate load cache after settlement
+      await CacheInvalidation.load(loadId);
+
       return NextResponse.json({
         message: "Settlement processed successfully",
         settlement: {
@@ -251,7 +273,7 @@ export async function GET(
 ) {
   try {
     const { id: loadId } = await params;
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Get load with settlement details
     const load = await db.load.findUnique({

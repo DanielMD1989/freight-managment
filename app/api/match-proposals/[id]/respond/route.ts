@@ -22,6 +22,7 @@ import { validateWalletBalancesForTrip } from "@/lib/serviceFeeManagement"; // S
 // P0-007 FIX: Import CacheInvalidation for post-acceptance cache clearing
 import { CacheInvalidation } from "@/lib/cache";
 import crypto from "crypto";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 
 // Validation schema for proposal response
 const ProposalResponseSchema = z.object({
@@ -48,6 +49,23 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const rpsResult = await checkRpsLimit(
+      "match-proposal-respond",
+      ip,
+      RPS_CONFIGS.write.rps,
+      RPS_CONFIGS.write.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please slow down." },
+        { status: 429 }
+      );
+    }
+
     // C13 FIX: Add CSRF protection
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;

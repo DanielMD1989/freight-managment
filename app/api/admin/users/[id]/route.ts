@@ -29,6 +29,8 @@ import { UserRole, UserStatus } from "@prisma/client";
 import { handleApiError } from "@/lib/apiErrors";
 // CSRF FIX: Add CSRF validation
 import { validateCSRFWithMobile } from "@/lib/csrf";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { CacheInvalidation } from "@/lib/cache";
 // H2-H6, M12 FIX: Import types for proper typing
 import type { UserUpdateData } from "@/lib/types/admin";
 
@@ -91,6 +93,23 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const rpsResult = await checkRpsLimit(
+      "admin-users",
+      ip,
+      RPS_CONFIGS.write.rps,
+      RPS_CONFIGS.write.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please slow down." },
+        { status: 429 }
+      );
+    }
+
     const session = await requireActiveUser();
     const { id: userId } = await params;
 
@@ -171,6 +190,23 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const rpsResult = await checkRpsLimit(
+      "admin-users",
+      ip,
+      RPS_CONFIGS.write.rps,
+      RPS_CONFIGS.write.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please slow down." },
+        { status: 429 }
+      );
+    }
+
     // CSRF FIX: Validate CSRF token
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
@@ -290,7 +326,9 @@ export async function PATCH(
       },
     });
 
-    // Log the action
+    // Invalidate user cache so status changes take effect immediately
+    await CacheInvalidation.user(userId);
+
     return NextResponse.json({
       message: "User updated successfully",
       user: updatedUser,
@@ -315,6 +353,23 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const rpsResult = await checkRpsLimit(
+      "admin-users",
+      ip,
+      RPS_CONFIGS.write.rps,
+      RPS_CONFIGS.write.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please slow down." },
+        { status: 429 }
+      );
+    }
+
     // CSRF FIX: Validate CSRF token
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
@@ -392,7 +447,9 @@ export async function DELETE(
       },
     });
 
-    // Log the deletion
+    // Invalidate user cache so suspension takes effect immediately
+    await CacheInvalidation.user(userId);
+
     return NextResponse.json({
       message: "User deleted successfully",
       user: deletedUser,

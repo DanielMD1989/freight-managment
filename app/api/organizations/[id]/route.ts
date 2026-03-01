@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { canManageOrganization } from "@/lib/rbac";
 import { z } from "zod";
 import { handleApiError } from "@/lib/apiErrors";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { CacheInvalidation } from "@/lib/cache";
 
 const updateOrganizationSchema = z.object({
   name: z.string().min(2).optional(),
@@ -24,10 +26,27 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const rpsResult = await checkRpsLimit(
+      "organizations",
+      ip,
+      RPS_CONFIGS.write.rps,
+      RPS_CONFIGS.write.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please slow down." },
+        { status: 429 }
+      );
+    }
+
     const { id } = await params;
 
     // C1 FIX: Require authentication to prevent unauthenticated enumeration
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Authorization: user must be member of org, or admin
     const user = await db.user.findUnique({
@@ -86,12 +105,29 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const rpsResult = await checkRpsLimit(
+      "organizations",
+      ip,
+      RPS_CONFIGS.write.rps,
+      RPS_CONFIGS.write.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please slow down." },
+        { status: 429 }
+      );
+    }
+
     // H23 FIX: Add CSRF protection
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
     const { id } = await params;
-    await requireAuth();
+    await requireActiveUser();
 
     // Check if user can manage this organization
     const canManage = await canManageOrganization(id);
@@ -120,6 +156,9 @@ export async function PATCH(
         },
       },
     });
+
+    // Invalidate organization cache after update
+    await CacheInvalidation.organization(id);
 
     return NextResponse.json({
       message: "Organization updated successfully",

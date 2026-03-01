@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { z } from "zod";
 import { calculateAge, canSeeContact, maskCompany } from "@/lib/loadUtils";
@@ -247,7 +247,7 @@ export async function PATCH(
     if (rateLimitError) return rateLimitError;
 
     const { id } = await params;
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Check if load exists and belongs to user's organization
     // PHASE 4: Optimized query - include pricing fields and carrier info to avoid N+1 queries
@@ -562,7 +562,7 @@ export async function DELETE(
     if (csrfError) return csrfError;
 
     const { id } = await params;
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     const load = await db.load.findUnique({
       where: { id },
