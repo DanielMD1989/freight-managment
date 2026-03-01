@@ -9,7 +9,7 @@
  * - Active Trips: Uses Trip model (represents actual assignments)
  * - Active Loads: Uses Load model with status filters
  * - Revenue: Uses PLATFORM_REVENUE account balance
- * - Service Fees: Uses serviceFeeEtb from Load model (legacy but consistent)
+ * - Service Fees: Uses shipperServiceFee + carrierServiceFee from Load model
  */
 
 import { db } from "@/lib/db";
@@ -58,7 +58,10 @@ export interface TruckMetrics {
 
 export interface RevenueMetrics {
   platformBalance: number; // PLATFORM_REVENUE account balance
-  serviceFeeCollected: number; // Sum of serviceFeeEtb for period
+  serviceFeeCollected: number; // Total service fees (shipper + carrier)
+  shipperFeeCollected: number; // Shipper service fees for period
+  carrierFeeCollected: number; // Carrier service fees for period
+  transactionVolume: number; // Total journal line amounts for period
   pendingWithdrawals: number;
 }
 
@@ -267,13 +270,23 @@ export async function getTruckMetrics(): Promise<TruckMetrics> {
  * Get revenue metrics from platform accounts
  *
  * IMPORTANT: Uses PLATFORM_REVENUE account for the authoritative
- * revenue balance. Service fees are calculated from Load.serviceFeeEtb
- * for historical compatibility.
+ * revenue balance. Service fees are calculated from shipperServiceFee
+ * and carrierServiceFee fields on the Load model.
  */
 export async function getRevenueMetrics(
   dateRange?: DateRange
 ): Promise<RevenueMetrics> {
-  const [platformAccount, pendingWithdrawals, serviceFees] = await Promise.all([
+  const dateFilter = dateRange
+    ? { serviceFeeDeductedAt: { gte: dateRange.start, lte: dateRange.end } }
+    : {};
+
+  const [
+    platformAccount,
+    pendingWithdrawals,
+    shipperFees,
+    carrierFees,
+    transactionVolume,
+  ] = await Promise.all([
     db.financialAccount.findFirst({
       where: { accountType: "PLATFORM_REVENUE" },
       select: { balance: true },
@@ -281,23 +294,37 @@ export async function getRevenueMetrics(
     db.withdrawalRequest.count({
       where: { status: "PENDING" },
     }),
-    dateRange
-      ? db.load.aggregate({
-          where: {
-            serviceFeeStatus: "DEDUCTED",
-            serviceFeeDeductedAt: { gte: dateRange.start, lte: dateRange.end },
-          },
-          _sum: { serviceFeeEtb: true },
-        })
-      : db.load.aggregate({
-          where: { serviceFeeStatus: "DEDUCTED" },
-          _sum: { serviceFeeEtb: true },
-        }),
+    db.load.aggregate({
+      where: {
+        shipperFeeStatus: "DEDUCTED",
+        ...dateFilter,
+      },
+      _sum: { shipperServiceFee: true },
+    }),
+    db.load.aggregate({
+      where: {
+        carrierFeeStatus: "DEDUCTED",
+        ...dateFilter,
+      },
+      _sum: { carrierServiceFee: true },
+    }),
+    db.journalLine.aggregate({
+      where: dateRange
+        ? { createdAt: { gte: dateRange.start, lte: dateRange.end } }
+        : {},
+      _sum: { amount: true },
+    }),
   ]);
+
+  const shipperFeeCollected = Number(shipperFees._sum.shipperServiceFee || 0);
+  const carrierFeeCollected = Number(carrierFees._sum.carrierServiceFee || 0);
 
   return {
     platformBalance: Number(platformAccount?.balance || 0),
-    serviceFeeCollected: Number(serviceFees._sum.serviceFeeEtb || 0),
+    serviceFeeCollected: shipperFeeCollected + carrierFeeCollected,
+    shipperFeeCollected,
+    carrierFeeCollected,
+    transactionVolume: Number(transactionVolume._sum.amount || 0),
     pendingWithdrawals,
   };
 }
@@ -457,9 +484,9 @@ export async function getChartData(dateRange: DateRange) {
     `,
     db.$queryRaw<{ date: Date; total: number }[]>`
       SELECT DATE_TRUNC('day', "serviceFeeDeductedAt") as date,
-             COALESCE(SUM("serviceFeeEtb"), 0) as total
+             COALESCE(SUM("shipperServiceFee"), 0) + COALESCE(SUM("carrierServiceFee"), 0) as total
       FROM loads
-      WHERE "serviceFeeStatus" = 'DEDUCTED'
+      WHERE ("shipperFeeStatus" = 'DEDUCTED' OR "carrierFeeStatus" = 'DEDUCTED')
         AND "serviceFeeDeductedAt" >= ${dateRange.start}
         AND "serviceFeeDeductedAt" <= ${dateRange.end}
       GROUP BY DATE_TRUNC('day', "serviceFeeDeductedAt")

@@ -141,8 +141,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return result;
     });
 
-    // Invalidate user cache so wallet/status reflects immediately
-    await CacheInvalidation.user(session.userId);
+    // Invalidate requesting user's cache so their wallet reflects immediately
+    await CacheInvalidation.user(updated.requestedById);
 
     return NextResponse.json({
       message: `Withdrawal request ${action.toLowerCase()}`,

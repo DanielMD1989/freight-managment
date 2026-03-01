@@ -55,53 +55,73 @@ export default async function WalletPage() {
   const pendingTrips = await db.load.aggregate({
     where: {
       shipperId: session.organizationId,
-      status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
-      serviceFeeStatus: "RESERVED",
+      status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT", "DELIVERED"] },
+      shipperServiceFee: { gt: 0 },
+      shipperFeeStatus: { not: "DEDUCTED" },
     },
     _sum: {
-      serviceFeeEtb: true,
+      shipperServiceFee: true,
     },
     _count: true,
   });
 
   // Get financial summary from journal entries
-  const [totalDeposits, totalServiceFees] = await Promise.all([
-    // Total deposits
-    db.journalLine.aggregate({
-      where: {
-        account: {
-          organizationId: session.organizationId,
-          accountType: "SHIPPER_WALLET",
-        },
-        isDebit: false, // Credits to wallet = deposits
-        journalEntry: {
-          transactionType: "DEPOSIT",
-        },
-      },
-      _sum: {
-        amount: true,
-      },
-    }),
-
-    // Total service fees paid (debits from wallet for service fees)
-    db.journalLine.aggregate({
-      where: {
-        account: {
-          organizationId: session.organizationId,
-          accountType: "SHIPPER_WALLET",
-        },
-        isDebit: true, // Debits from wallet = payments
-        journalEntry: {
-          transactionType: {
-            in: ["SERVICE_FEE_RESERVE", "SERVICE_FEE_DEDUCT"],
+  const [totalDeposits, totalServiceFees, totalWithdrawals] = await Promise.all(
+    [
+      // Total deposits
+      db.journalLine.aggregate({
+        where: {
+          account: {
+            organizationId: session.organizationId,
+            accountType: "SHIPPER_WALLET",
+          },
+          isDebit: false, // Credits to wallet = deposits
+          journalEntry: {
+            transactionType: "DEPOSIT",
           },
         },
-      },
-      _sum: {
-        amount: true,
-      },
-    }),
-  ]);
+        _sum: {
+          amount: true,
+        },
+      }),
+
+      // Total service fees paid (debits from wallet for service fees)
+      db.journalLine.aggregate({
+        where: {
+          account: {
+            organizationId: session.organizationId,
+            accountType: "SHIPPER_WALLET",
+          },
+          isDebit: true, // Debits from wallet = payments
+          journalEntry: {
+            transactionType: {
+              in: ["SERVICE_FEE_RESERVE", "SERVICE_FEE_DEDUCT"],
+            },
+          },
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
+
+      // Total withdrawals (debits from wallet for withdrawals)
+      db.journalLine.aggregate({
+        where: {
+          account: {
+            organizationId: session.organizationId,
+            accountType: "SHIPPER_WALLET",
+          },
+          isDebit: true,
+          journalEntry: {
+            transactionType: "WITHDRAWAL",
+          },
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
+    ]
+  );
 
   // Get recent transactions with details
   const recentTransactions = await db.journalLine.findMany({
@@ -155,11 +175,13 @@ export default async function WalletPage() {
     currency: walletAccount?.currency || "ETB",
     availableBalance:
       Number(walletAccount?.balance || 0) -
-      Number(pendingTrips._sum.serviceFeeEtb || 0),
-    pendingAmount: Number(pendingTrips._sum.serviceFeeEtb || 0),
+      Number(pendingTrips._sum.shipperServiceFee || 0),
+    pendingAmount: Number(pendingTrips._sum.shipperServiceFee || 0),
     pendingTripsCount: pendingTrips._count,
     totalDeposited: Number(totalDeposits._sum.amount || 0),
-    totalSpent: Number(totalServiceFees._sum.amount || 0),
+    totalSpent:
+      Number(totalServiceFees._sum.amount || 0) +
+      Number(totalWithdrawals._sum.amount || 0),
     transactions,
   };
 

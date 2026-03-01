@@ -11,6 +11,8 @@ interface AnalyticsData {
     revenue: {
       platformBalance: number;
       serviceFeeCollected: number;
+      shipperFeeCollected: number;
+      carrierFeeCollected: number;
       pendingWithdrawals: number;
       transactionsInPeriod: number;
       transactionVolume: number;
