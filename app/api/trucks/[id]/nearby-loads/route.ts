@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { findLoadsWithMinimalDHO } from "@/lib/deadheadOptimization";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 
 // GET /api/trucks/[id]/nearby-loads - Find loads with minimal DH-O
 export async function GET(
@@ -15,6 +16,22 @@ export async function GET(
 ) {
   try {
     const session = await requireAuth();
+
+    // M10 FIX: Rate limit nearby-loads queries
+    const ip = request.headers.get("x-forwarded-for") || "unknown";
+    const config = RPS_CONFIGS.gps;
+    const rpsResult = await checkRpsLimit(
+      config.endpoint,
+      ip,
+      config.rps,
+      config.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      );
+    }
     const { id: truckId } = await params;
 
     // Verify truck exists and user has permission

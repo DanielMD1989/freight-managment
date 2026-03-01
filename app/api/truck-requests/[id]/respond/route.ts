@@ -23,6 +23,7 @@ import crypto from "crypto";
 // P0-003 FIX: Import CacheInvalidation for post-approval cache clearing
 import { CacheInvalidation } from "@/lib/cache";
 import { handleApiError } from "@/lib/apiErrors";
+import { validateWalletBalancesForTrip } from "@/lib/serviceFeeManagement";
 
 // Validation schema for request response
 const RequestResponseSchema = z.object({
@@ -162,10 +163,35 @@ export async function POST(
     }
 
     if (data.action === "APPROVE") {
+      // H15 FIX: Validate wallet balances before assignment
+      const walletValidation = await validateWalletBalancesForTrip(
+        truckRequest.loadId,
+        truckRequest.truck.carrierId
+      );
+      if (!walletValidation.valid) {
+        return NextResponse.json(
+          {
+            error:
+              walletValidation.errors?.[0] ||
+              "Insufficient wallet balance for this trip",
+          },
+          { status: 400 }
+        );
+      }
+
       // P0-002 & P0-003 FIX: All checks and operations now inside atomic transaction
       // This prevents race conditions and ensures trip creation is atomic
       try {
         const result = await db.$transaction(async (tx) => {
+          // H13 FIX: Re-check request status inside transaction
+          const freshRequest = await tx.truckRequest.findUnique({
+            where: { id: requestId },
+            select: { status: true },
+          });
+          if (!freshRequest || freshRequest.status !== "PENDING") {
+            throw new Error("REQUEST_ALREADY_PROCESSED");
+          }
+
           // P0-002 FIX: Re-fetch load inside transaction to prevent race condition
           const freshLoad = await tx.load.findUnique({
             where: { id: truckRequest.loadId },
@@ -393,6 +419,12 @@ export async function POST(
       } catch (error: unknown) {
         // Handle specific transaction errors
         const errorMessage = error instanceof Error ? error.message : "";
+        if (errorMessage === "REQUEST_ALREADY_PROCESSED") {
+          return NextResponse.json(
+            { error: "Request has already been processed" },
+            { status: 409 }
+          );
+        }
         if (errorMessage === "LOAD_NOT_FOUND") {
           return NextResponse.json(
             { error: "Load not found" },

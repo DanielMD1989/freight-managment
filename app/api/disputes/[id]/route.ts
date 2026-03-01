@@ -16,8 +16,15 @@ import { zodErrorResponse } from "@/lib/validation";
 const updateDisputeSchema = z.object({
   status: z.enum(["OPEN", "UNDER_REVIEW", "RESOLVED", "CLOSED"]).optional(),
   resolution: z.string().optional(),
-  resolutionNotes: z.string().optional(),
 });
+
+// H19 FIX: Valid dispute status transitions
+const VALID_DISPUTE_TRANSITIONS: Record<string, string[]> = {
+  OPEN: ["UNDER_REVIEW", "CLOSED"],
+  UNDER_REVIEW: ["RESOLVED", "CLOSED"],
+  RESOLVED: ["CLOSED"],
+  CLOSED: [], // terminal state
+};
 
 /**
  * GET /api/disputes/[id]
@@ -125,6 +132,20 @@ export async function PATCH(
 
     if (!dispute) {
       return NextResponse.json({ error: "Dispute not found" }, { status: 404 });
+    }
+
+    // H19 FIX: Validate status transition
+    if (validatedData.status) {
+      const allowed = VALID_DISPUTE_TRANSITIONS[dispute.status] || [];
+      if (!allowed.includes(validatedData.status)) {
+        return NextResponse.json(
+          {
+            error: `Cannot transition from ${dispute.status} to ${validatedData.status}`,
+            allowedTransitions: allowed,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Update dispute

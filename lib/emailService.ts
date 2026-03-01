@@ -16,6 +16,17 @@ import { db } from "./db";
 import { addJob, registerProcessor, isQueueReadySync } from "./queue";
 import { logger } from "./logger";
 
+// M9 FIX: HTML escaping to prevent injection in email templates
+function escapeHtml(str: string | null | undefined): string {
+  if (!str) return "";
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 /**
  * Email provider configuration
  */
@@ -82,18 +93,23 @@ function getEmailTemplate(
   data: EmailTemplateData
 ): { subject: string; html: string; text: string } {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const recipientName = data.recipientName || "User";
+  // M9 FIX: Escape all user-supplied data for HTML context
+  const recipientName = escapeHtml((data.recipientName as string) || "User");
+  const truckPlate = escapeHtml(data.truckPlate as string);
+  const lastLocation = escapeHtml(data.lastLocation as string);
+  const reason = escapeHtml(data.reason as string);
+  const estimatedTime = escapeHtml(data.estimatedTime as string);
 
   switch (template) {
     case EmailTemplate.GPS_OFFLINE:
       return {
-        subject: `GPS Alert: Truck ${data.truckPlate} Offline`,
+        subject: `GPS Alert: Truck ${truckPlate} Offline`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #dc2626;">GPS Signal Lost</h2>
             <p>Hello ${recipientName},</p>
-            <p>The GPS signal for truck <strong>${data.truckPlate}</strong> on Load #${data.loadId} has been lost for more than 30 minutes.</p>
-            <p><strong>Last Known Location:</strong> ${data.lastLocation || "Unknown"}</p>
+            <p>The GPS signal for truck <strong>${truckPlate}</strong> on Load #${data.loadId} has been lost for more than 30 minutes.</p>
+            <p><strong>Last Known Location:</strong> ${lastLocation || "Unknown"}</p>
             <p>Please check with the driver to ensure everything is okay.</p>
             <p style="margin-top: 30px;">
               <a href="${baseUrl}/loads/${data.loadId}/tracking"
@@ -106,17 +122,17 @@ function getEmailTemplate(
             </p>
           </div>
         `,
-        text: `GPS Signal Lost\n\nHello ${recipientName},\n\nThe GPS signal for truck ${data.truckPlate} on Load #${data.loadId} has been lost for more than 30 minutes.\n\nLast Known Location: ${data.lastLocation || "Unknown"}\n\nPlease check with the driver to ensure everything is okay.\n\nView Tracking: ${baseUrl}/loads/${data.loadId}/tracking\n\nFreightET Platform`,
+        text: `GPS Signal Lost\n\nHello ${recipientName},\n\nThe GPS signal for truck ${truckPlate} on Load #${data.loadId} has been lost for more than 30 minutes.\n\nLast Known Location: ${lastLocation || "Unknown"}\n\nPlease check with the driver to ensure everything is okay.\n\nView Tracking: ${baseUrl}/loads/${data.loadId}/tracking\n\nFreightET Platform`,
       };
 
     case EmailTemplate.GPS_BACK_ONLINE:
       return {
-        subject: `GPS Restored: Truck ${data.truckPlate}`,
+        subject: `GPS Restored: Truck ${truckPlate}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #059669;">GPS Signal Restored</h2>
             <p>Hello ${recipientName},</p>
-            <p>Good news! The GPS signal for truck <strong>${data.truckPlate}</strong> has been restored.</p>
+            <p>Good news! The GPS signal for truck <strong>${truckPlate}</strong> has been restored.</p>
             <p>You can now continue tracking the load in real-time.</p>
             <p style="margin-top: 30px;">
               <a href="${baseUrl}/loads/${data.loadId}/tracking"
@@ -129,7 +145,7 @@ function getEmailTemplate(
             </p>
           </div>
         `,
-        text: `GPS Signal Restored\n\nHello ${recipientName},\n\nGood news! The GPS signal for truck ${data.truckPlate} has been restored.\n\nYou can now continue tracking the load in real-time.\n\nView Live Tracking: ${baseUrl}/loads/${data.loadId}/tracking\n\nFreightET Platform`,
+        text: `GPS Signal Restored\n\nHello ${recipientName},\n\nGood news! The GPS signal for truck ${truckPlate} has been restored.\n\nYou can now continue tracking the load in real-time.\n\nView Live Tracking: ${baseUrl}/loads/${data.loadId}/tracking\n\nFreightET Platform`,
       };
 
     case EmailTemplate.TRUCK_AT_PICKUP:
@@ -139,8 +155,8 @@ function getEmailTemplate(
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #2563eb;">Truck Arrived at Pickup</h2>
             <p>Hello ${recipientName},</p>
-            <p>Truck <strong>${data.truckPlate}</strong> has arrived at the pickup location for Load #${data.loadId?.slice(-8)}.</p>
-            <p><strong>Estimated Loading Time:</strong> ${data.estimatedTime || "30-60 minutes"}</p>
+            <p>Truck <strong>${truckPlate}</strong> has arrived at the pickup location for Load #${data.loadId?.slice(-8)}.</p>
+            <p><strong>Estimated Loading Time:</strong> ${estimatedTime || "30-60 minutes"}</p>
             <p style="margin-top: 30px;">
               <a href="${baseUrl}/loads/${data.loadId}"
                  style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
@@ -152,7 +168,7 @@ function getEmailTemplate(
             </p>
           </div>
         `,
-        text: `Truck Arrived at Pickup\n\nHello ${recipientName},\n\nTruck ${data.truckPlate} has arrived at the pickup location for Load #${data.loadId?.slice(-8)}.\n\nEstimated Loading Time: ${data.estimatedTime || "30-60 minutes"}\n\nView Load Details: ${baseUrl}/loads/${data.loadId}\n\nFreightET Platform`,
+        text: `Truck Arrived at Pickup\n\nHello ${recipientName},\n\nTruck ${truckPlate} has arrived at the pickup location for Load #${data.loadId?.slice(-8)}.\n\nEstimated Loading Time: ${estimatedTime || "30-60 minutes"}\n\nView Load Details: ${baseUrl}/loads/${data.loadId}\n\nFreightET Platform`,
       };
 
     case EmailTemplate.TRUCK_AT_DELIVERY:
@@ -162,7 +178,7 @@ function getEmailTemplate(
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #059669;">Truck Arrived for Delivery</h2>
             <p>Hello ${recipientName},</p>
-            <p>Truck <strong>${data.truckPlate}</strong> has arrived at the delivery location for Load #${data.loadId?.slice(-8)}.</p>
+            <p>Truck <strong>${truckPlate}</strong> has arrived at the delivery location for Load #${data.loadId?.slice(-8)}.</p>
             <p>Please prepare to receive the shipment.</p>
             <p style="margin-top: 30px;">
               <a href="${baseUrl}/loads/${data.loadId}"
@@ -175,7 +191,7 @@ function getEmailTemplate(
             </p>
           </div>
         `,
-        text: `Truck Arrived for Delivery\n\nHello ${recipientName},\n\nTruck ${data.truckPlate} has arrived at the delivery location for Load #${data.loadId?.slice(-8)}.\n\nPlease prepare to receive the shipment.\n\nView Load Details: ${baseUrl}/loads/${data.loadId}\n\nFreightET Platform`,
+        text: `Truck Arrived for Delivery\n\nHello ${recipientName},\n\nTruck ${truckPlate} has arrived at the delivery location for Load #${data.loadId?.slice(-8)}.\n\nPlease prepare to receive the shipment.\n\nView Load Details: ${baseUrl}/loads/${data.loadId}\n\nFreightET Platform`,
       };
 
     case EmailTemplate.POD_SUBMITTED:
@@ -284,7 +300,7 @@ function getEmailTemplate(
             <h2 style="color: #dc2626;">⚠️ Account Flagged for Review</h2>
             <p>Hello ${recipientName},</p>
             <p>Your account has been flagged for suspicious activity and is under review.</p>
-            <p><strong>Reason:</strong> ${data.reason || "Pattern of suspicious cancellations"}</p>
+            <p><strong>Reason:</strong> ${reason || "Pattern of suspicious cancellations"}</p>
             <p>Please contact our support team immediately to resolve this issue.</p>
             <p style="margin-top: 30px;">
               <a href="${baseUrl}/support"
@@ -297,7 +313,7 @@ function getEmailTemplate(
             </p>
           </div>
         `,
-        text: `⚠️ Account Flagged for Review\n\nHello ${recipientName},\n\nYour account has been flagged for suspicious activity and is under review.\n\nReason: ${data.reason || "Pattern of suspicious cancellations"}\n\nPlease contact our support team immediately to resolve this issue.\n\nContact Support: ${baseUrl}/support\n\nFreightET Platform`,
+        text: `⚠️ Account Flagged for Review\n\nHello ${recipientName},\n\nYour account has been flagged for suspicious activity and is under review.\n\nReason: ${reason || "Pattern of suspicious cancellations"}\n\nPlease contact our support team immediately to resolve this issue.\n\nContact Support: ${baseUrl}/support\n\nFreightET Platform`,
       };
 
     default:

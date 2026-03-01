@@ -29,6 +29,17 @@
 import { addJob, registerProcessor, isQueueReadySync } from "./queue";
 import { logger } from "./logger";
 
+// M9 FIX: HTML escaping to prevent injection in email templates
+function escapeHtml(str: string | null | undefined): string {
+  if (!str) return "";
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 /**
  * Email message structure
  */
@@ -589,16 +600,16 @@ export function createDocumentApprovalEmail(params: {
   const content = `
     <h1>✅ Document Approved</h1>
 
-    <p>Dear ${params.recipientName},</p>
+    <p>Dear ${escapeHtml(params.recipientName)},</p>
 
     <p>Great news! Your document has been reviewed and approved.</p>
 
     <div class="status-badge status-approved">APPROVED</div>
 
     <div class="info-section">
-      <p><strong>Document Type:</strong> ${params.documentType}</p>
-      <p><strong>File Name:</strong> ${params.documentName}</p>
-      <p><strong>Organization:</strong> ${params.organizationName}</p>
+      <p><strong>Document Type:</strong> ${escapeHtml(params.documentType)}</p>
+      <p><strong>File Name:</strong> ${escapeHtml(params.documentName)}</p>
+      <p><strong>Organization:</strong> ${escapeHtml(params.organizationName)}</p>
       <p><strong>Verified On:</strong> ${params.verifiedAt.toLocaleDateString(
         "en-US",
         {
@@ -651,7 +662,7 @@ export function createDocumentRejectionEmail(params: {
   const content = `
     <h1>❌ Document Rejected</h1>
 
-    <p>Dear ${params.recipientName},</p>
+    <p>Dear ${escapeHtml(params.recipientName)},</p>
 
     <p>
       We've reviewed your submitted document and unfortunately cannot approve it
@@ -661,9 +672,9 @@ export function createDocumentRejectionEmail(params: {
     <div class="status-badge status-rejected">REJECTED</div>
 
     <div class="info-section">
-      <p><strong>Document Type:</strong> ${params.documentType}</p>
-      <p><strong>File Name:</strong> ${params.documentName}</p>
-      <p><strong>Organization:</strong> ${params.organizationName}</p>
+      <p><strong>Document Type:</strong> ${escapeHtml(params.documentType)}</p>
+      <p><strong>File Name:</strong> ${escapeHtml(params.documentName)}</p>
+      <p><strong>Organization:</strong> ${escapeHtml(params.organizationName)}</p>
       <p><strong>Reviewed On:</strong> ${params.rejectedAt.toLocaleDateString(
         "en-US",
         {
@@ -678,7 +689,7 @@ export function createDocumentRejectionEmail(params: {
 
     <div class="info-section" style="border-left-color: #ef4444;">
       <p><strong>Reason for Rejection:</strong></p>
-      <p>${params.rejectionReason}</p>
+      <p>${escapeHtml(params.rejectionReason)}</p>
     </div>
 
     <p>
@@ -726,7 +737,7 @@ export function createPasswordResetEmail(params: {
   const content = `
     <h1>🔒 Password Reset Request</h1>
 
-    <p>Dear ${params.recipientName},</p>
+    <p>Dear ${escapeHtml(params.recipientName)},</p>
 
     <p>
       We received a request to reset your password for your Freight Management Platform account.

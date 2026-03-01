@@ -378,10 +378,19 @@ export async function DELETE(
       );
     }
 
-    // Try to delete the truck
+    // M7 FIX: Wrap GPS device disconnect + truck delete in transaction
     try {
-      await db.truck.delete({
-        where: { id },
+      await db.$transaction(async (tx) => {
+        // M7 FIX: Disconnect GPS device and delete truck atomically
+        if (truck.gpsDeviceId) {
+          await tx.truck.update({
+            where: { id },
+            data: { gpsDeviceId: null },
+          });
+        }
+        await tx.truck.delete({
+          where: { id },
+        });
       });
       // FIX: Use unknown type with type guards
     } catch (deleteError: unknown) {

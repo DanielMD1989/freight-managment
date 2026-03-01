@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requireActiveUser } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
 
@@ -93,7 +94,11 @@ export async function GET() {
 // POST /api/financial/wallet - Deposit funds
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    // H4 FIX: Add CSRF protection; M32 FIX: Use requireActiveUser
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
+    const session = await requireActiveUser();
     await requirePermission(Permission.DEPOSIT_FUNDS);
 
     const user = await db.user.findUnique({

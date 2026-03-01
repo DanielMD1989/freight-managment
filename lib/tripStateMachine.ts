@@ -46,6 +46,8 @@ export const TRIP_ROLE_PERMISSIONS: Record<string, TripStatus[]> = {
     TripStatus.PICKUP_PENDING,
     TripStatus.IN_TRANSIT,
     TripStatus.DELIVERED,
+    TripStatus.COMPLETED, // Carrier marks complete (POD gate enforced separately)
+    TripStatus.CANCELLED, // Carrier can cancel their own trips
   ],
 
   DISPATCHER: [TripStatus.ASSIGNED, TripStatus.CANCELLED],

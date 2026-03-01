@@ -320,11 +320,11 @@ export async function GET(
 
     const matches = sortedMatches;
 
-    // Mask anonymous shipper information
+    // M6 FIX: Always mask shipper contact info in matching results
+    // Contact info should only be revealed after load assignment, not during browsing
     const maskedMatches = matches.map((match) => {
       const { load } = match;
 
-      // If load is anonymous, hide shipper details
       if (load.isAnonymous) {
         return {
           ...match,
@@ -341,7 +341,15 @@ export async function GET(
         };
       }
 
-      return match;
+      // Non-anonymous: still hide direct contact info (revealed only after assignment)
+      return {
+        ...match,
+        load: {
+          ...load,
+          shipperContactName: null,
+          shipperContactPhone: null,
+        },
+      };
     });
 
     return NextResponse.json({

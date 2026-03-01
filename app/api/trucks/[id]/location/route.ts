@@ -10,6 +10,7 @@ import { validateCSRFWithMobile } from "@/lib/csrf";
 import { z } from "zod";
 import { getTruckCurrentLocation } from "@/lib/deadheadOptimization";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { CacheInvalidation } from "@/lib/cache";
 
 const updateLocationSchema = z.object({
   latitude: z.number().min(-90).max(90),
@@ -103,6 +104,9 @@ export async function PATCH(
         locationUpdatedAt: true,
       },
     });
+
+    // M8 FIX: Invalidate cache after location update
+    await CacheInvalidation.truck(truckId, truck.carrierId);
 
     return NextResponse.json({
       message: "Truck location updated successfully",

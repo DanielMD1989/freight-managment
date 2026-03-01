@@ -128,6 +128,19 @@ export async function POST(
 
     // CRITICAL FIX: Wrap all state changes in a transaction for atomicity
     const updatedTrip = await db.$transaction(async (tx) => {
+      // H18 FIX: Re-check trip state inside transaction to prevent double-confirm
+      const freshTrip = await tx.trip.findUnique({
+        where: { id: tripId },
+        select: { status: true, shipperConfirmed: true },
+      });
+      if (
+        !freshTrip ||
+        freshTrip.status !== "DELIVERED" ||
+        freshTrip.shipperConfirmed
+      ) {
+        throw new Error("CONFIRM_CONFLICT");
+      }
+
       // Update trip with confirmation
       const updatedTrip = await tx.trip.update({
         where: { id: tripId },
@@ -167,6 +180,28 @@ export async function POST(
         },
       });
 
+      // M12 FIX: Restore truck availability after trip completion
+      if (trip.truckId) {
+        const otherActiveTrips = await tx.trip.count({
+          where: {
+            truckId: trip.truckId,
+            id: { not: tripId },
+            status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+          },
+        });
+        if (otherActiveTrips === 0) {
+          await tx.truck.update({
+            where: { id: trip.truckId },
+            data: { isAvailable: true },
+          });
+        }
+        // Revert MATCHED postings to ACTIVE
+        await tx.truckPosting.updateMany({
+          where: { truckId: trip.truckId, status: "MATCHED" },
+          data: { status: "ACTIVE", updatedAt: new Date() },
+        });
+      }
+
       return updatedTrip;
     });
 
@@ -201,6 +236,15 @@ export async function POST(
       },
     });
   } catch (error) {
+    if (error instanceof Error && error.message === "CONFIRM_CONFLICT") {
+      return NextResponse.json(
+        {
+          error:
+            "Trip has already been confirmed or is no longer in DELIVERED status",
+        },
+        { status: 409 }
+      );
+    }
     console.error("Confirm delivery error:", error);
     return NextResponse.json(
       { error: "Internal server error" },

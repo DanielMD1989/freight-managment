@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { CacheInvalidation } from "@/lib/cache";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import { createNotification, NotificationType } from "@/lib/notifications";
 import { uploadPOD } from "@/lib/storage";
 import { checkRateLimit } from "@/lib/rateLimit";
@@ -26,6 +27,10 @@ export async function POST(
   { params }: { params: Promise<{ tripId: string }> }
 ) {
   try {
+    // H6 FIX: Add CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const { tripId } = await params;
     const session = await requireAuth();
 

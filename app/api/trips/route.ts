@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import { TripStatus, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { CacheInvalidation, CacheTTL, cache } from "@/lib/cache";
@@ -214,6 +215,10 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    // H5 FIX: Add CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     const session = await requireAuth();
 
     // Only dispatchers and admins should create trips directly
@@ -238,18 +243,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
-    // Check if trip already exists for this load
-    const existingTrip = await db.trip.findUnique({
-      where: { loadId: validatedData.loadId },
-    });
-
-    if (existingTrip) {
-      return NextResponse.json(
-        { error: "Trip already exists for this load", trip: existingTrip },
-        { status: 400 }
-      );
-    }
-
     // Get the truck details
     const truck = await db.truck.findUnique({
       where: { id: validatedData.truckId },
@@ -260,55 +253,58 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
-    // Create the trip
-    const trip = await db.trip.create({
-      data: {
-        loadId: validatedData.loadId,
-        truckId: validatedData.truckId,
-        carrierId: truck.carrierId,
-        shipperId: load.shipperId,
-        status: "ASSIGNED",
+    // H17 FIX: Wrap trip creation in transaction to prevent duplicates
+    const trip = await db.$transaction(async (tx) => {
+      // Check for existing trip inside transaction
+      const existingTrip = await tx.trip.findUnique({
+        where: { loadId: validatedData.loadId },
+      });
+      if (existingTrip) {
+        throw new Error("TRIP_ALREADY_EXISTS");
+      }
 
-        // Pickup location
-        pickupLat: load.originLat || load.pickupLocation?.latitude,
-        pickupLng: load.originLon || load.pickupLocation?.longitude,
-        pickupAddress: load.pickupAddress,
-        pickupCity: load.pickupCity || load.pickupLocation?.name,
-
-        // Delivery location
-        deliveryLat: load.destinationLat || load.deliveryLocation?.latitude,
-        deliveryLng: load.destinationLon || load.deliveryLocation?.longitude,
-        deliveryAddress: load.deliveryAddress,
-        deliveryCity: load.deliveryCity || load.deliveryLocation?.name,
-
-        // Distance
-        estimatedDistanceKm: load.estimatedTripKm || load.tripKm,
-
-        // Generate tracking URL
-        trackingUrl: `trip-${validatedData.loadId.slice(-8)}-${Date.now().toString(36)}`,
-        trackingEnabled: true,
-      },
-      include: {
-        load: true,
-        truck: true,
-        carrier: true,
-        shipper: true,
-      },
-    });
-
-    // Create load event
-    await db.loadEvent.create({
-      data: {
-        loadId: validatedData.loadId,
-        eventType: "TRIP_CREATED",
-        description: `Trip created for load ${load.pickupCity} → ${load.deliveryCity}`,
-        userId: session.userId,
-        metadata: {
-          tripId: trip.id,
+      const trip = await tx.trip.create({
+        data: {
+          loadId: validatedData.loadId,
           truckId: validatedData.truckId,
           carrierId: truck.carrierId,
+          shipperId: load.shipperId,
+          status: "ASSIGNED",
+          pickupLat: load.originLat || load.pickupLocation?.latitude,
+          pickupLng: load.originLon || load.pickupLocation?.longitude,
+          pickupAddress: load.pickupAddress,
+          pickupCity: load.pickupCity || load.pickupLocation?.name,
+          deliveryLat: load.destinationLat || load.deliveryLocation?.latitude,
+          deliveryLng: load.destinationLon || load.deliveryLocation?.longitude,
+          deliveryAddress: load.deliveryAddress,
+          deliveryCity: load.deliveryCity || load.deliveryLocation?.name,
+          estimatedDistanceKm: load.estimatedTripKm || load.tripKm,
+          trackingUrl: `trip-${validatedData.loadId.slice(-8)}-${Date.now().toString(36)}`,
+          trackingEnabled: true,
         },
-      },
+        include: {
+          load: true,
+          truck: true,
+          carrier: true,
+          shipper: true,
+        },
+      });
+
+      await tx.loadEvent.create({
+        data: {
+          loadId: validatedData.loadId,
+          eventType: "TRIP_CREATED",
+          description: `Trip created for load ${load.pickupCity} → ${load.deliveryCity}`,
+          userId: session.userId,
+          metadata: {
+            tripId: trip.id,
+            truckId: validatedData.truckId,
+            carrierId: truck.carrierId,
+          },
+        },
+      });
+
+      return trip;
     });
 
     // PHASE 4: Invalidate trip and load caches when new trip is created
@@ -327,6 +323,12 @@ export async function POST(request: NextRequest) {
 
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
+    }
+    if (error instanceof Error && error.message === "TRIP_ALREADY_EXISTS") {
+      return NextResponse.json(
+        { error: "Trip already exists for this load" },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json(

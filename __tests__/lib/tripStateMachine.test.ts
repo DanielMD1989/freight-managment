@@ -157,9 +157,9 @@ describe("lib/tripStateMachine", () => {
         );
       });
 
-      it("CARRIER cannot set CANCELLED", () => {
+      it("CARRIER can set CANCELLED", () => {
         expect(canRoleSetTripStatus("CARRIER", TripStatus.CANCELLED)).toBe(
-          false
+          true
         );
       });
     });
@@ -279,13 +279,14 @@ describe("lib/tripStateMachine", () => {
     });
 
     it("should return invalid when role cannot set status", () => {
+      // SHIPPER cannot set IN_TRANSIT (only carrier/admin can)
       const result = validateTripStateTransition(
         "PICKUP_PENDING",
-        "CANCELLED",
-        "CARRIER"
+        "IN_TRANSIT",
+        "SHIPPER"
       );
       expect(result.valid).toBe(false);
-      expect(result.error).toContain("CARRIER cannot set trip status");
+      expect(result.error).toContain("SHIPPER cannot set trip status");
     });
 
     it("should include terminal state info in error", () => {

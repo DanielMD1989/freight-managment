@@ -107,6 +107,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // M1 FIX: Only CARRIER (or admin) can create truck postings
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
+    if (session.role !== "CARRIER" && !isAdmin) {
+      return NextResponse.json(
+        { error: "Only carriers can create truck postings" },
+        { status: 403 }
+      );
+    }
+
     // Require organization
     if (!session.organizationId) {
       return NextResponse.json(
@@ -288,8 +297,6 @@ export async function POST(request: NextRequest) {
     // Validate user's organization owns this truck
     // Only admin/super_admin can post trucks for other organizations
     // Dispatchers can only coordinate, not create postings (DISPATCHER_COORDINATION_ONLY)
-    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
-
     if (truck.carrierId !== session.organizationId && !isAdmin) {
       return NextResponse.json(
         { error: "You can only post trucks owned by your organization" },
@@ -299,53 +306,63 @@ export async function POST(request: NextRequest) {
 
     const carrierId = truck.carrierId;
 
-    // Create truck posting
-    const posting = await db.truckPosting.create({
-      data: {
-        truckId: data.truckId,
-        carrierId,
-        createdById: session.userId,
-        originCityId: data.originCityId,
-        destinationCityId: data.destinationCityId || null,
-        availableFrom: new Date(data.availableFrom),
-        availableTo: data.availableTo ? new Date(data.availableTo) : null,
-        fullPartial: data.fullPartial,
-        availableLength: data.availableLength || null,
-        availableWeight: data.availableWeight || null,
-        preferredDhToOriginKm: data.preferredDhToOriginKm || null,
-        preferredDhAfterDeliveryKm: data.preferredDhAfterDeliveryKm || null,
-        contactName: data.contactName,
-        contactPhone: data.contactPhone,
-        ownerName: data.ownerName || null,
-        notes: data.notes || null,
-        expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
-        status: "ACTIVE",
-      },
-      include: {
-        truck: {
-          select: {
-            id: true,
-            licensePlate: true,
-            truckType: true,
-            capacity: true,
-            approvalStatus: true,
+    // H11 FIX: Re-check active posting inside transaction to prevent race condition
+    const posting = await db.$transaction(async (tx) => {
+      const activePost = await tx.truckPosting.findFirst({
+        where: { truckId: data.truckId, status: "ACTIVE" },
+        select: { id: true },
+      });
+      if (activePost) {
+        throw new Error("ONE_ACTIVE_POST_PER_TRUCK");
+      }
+
+      return tx.truckPosting.create({
+        data: {
+          truckId: data.truckId,
+          carrierId,
+          createdById: session.userId,
+          originCityId: data.originCityId,
+          destinationCityId: data.destinationCityId || null,
+          availableFrom: new Date(data.availableFrom),
+          availableTo: data.availableTo ? new Date(data.availableTo) : null,
+          fullPartial: data.fullPartial,
+          availableLength: data.availableLength || null,
+          availableWeight: data.availableWeight || null,
+          preferredDhToOriginKm: data.preferredDhToOriginKm || null,
+          preferredDhAfterDeliveryKm: data.preferredDhAfterDeliveryKm || null,
+          contactName: data.contactName,
+          contactPhone: data.contactPhone,
+          ownerName: data.ownerName || null,
+          notes: data.notes || null,
+          expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+          status: "ACTIVE",
+        },
+        include: {
+          truck: {
+            select: {
+              id: true,
+              licensePlate: true,
+              truckType: true,
+              capacity: true,
+              approvalStatus: true,
+            },
+          },
+          originCity: {
+            select: {
+              name: true,
+              nameEthiopic: true,
+              region: true,
+            },
+          },
+          destinationCity: {
+            select: {
+              name: true,
+              nameEthiopic: true,
+              region: true,
+            },
           },
         },
-        originCity: {
-          select: {
-            name: true,
-            nameEthiopic: true,
-            region: true,
-          },
-        },
-        destinationCity: {
-          select: {
-            name: true,
-            nameEthiopic: true,
-            region: true,
-          },
-        },
-      },
+      });
     });
 
     // P1-001 FIX: Cache invalidation after posting creation
@@ -367,6 +384,15 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "ONE_ACTIVE_POST_PER_TRUCK"
+    ) {
+      return NextResponse.json(
+        { error: "This truck already has an active posting" },
+        { status: 409 }
+      );
+    }
     return handleApiError(error, "Error creating truck posting");
   }
 }

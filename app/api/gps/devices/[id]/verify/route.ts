@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requirePermission, Permission } from "@/lib/rbac";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import { GpsDeviceStatus } from "@prisma/client";
 
 // POST /api/gps/devices/[id]/verify - Manually verify GPS device
@@ -9,6 +10,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // H9 FIX: Add CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     await requirePermission(Permission.MANAGE_GPS_DEVICES);
 
     const { id } = await params;

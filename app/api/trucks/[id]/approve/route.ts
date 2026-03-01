@@ -91,6 +91,19 @@ export async function POST(
 
     const data = validationResult.data;
 
+    // H10 FIX: Guard against approving/rejecting non-PENDING trucks
+    // Default to PENDING if approvalStatus is not set (Prisma @default)
+    const currentApprovalStatus = truck.approvalStatus || "PENDING";
+    if (currentApprovalStatus !== "PENDING") {
+      return NextResponse.json(
+        {
+          error: `Truck is already ${currentApprovalStatus.toLowerCase()}. Only PENDING trucks can be approved or rejected.`,
+          currentStatus: currentApprovalStatus,
+        },
+        { status: 400 }
+      );
+    }
+
     // Require reason for rejection
     if (data.action === "REJECT" && !data.reason) {
       return NextResponse.json(

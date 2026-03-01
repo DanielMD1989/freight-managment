@@ -4,6 +4,7 @@ import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
 import { Prisma } from "@prisma/client";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 
 const createDeviceSchema = z.object({
   imei: z.string().min(15).max(15),
@@ -15,6 +16,10 @@ const createDeviceSchema = z.object({
 // POST /api/gps/devices - Register GPS device (admin/ops only)
 export async function POST(request: NextRequest) {
   try {
+    // H8 FIX: Add CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     await requirePermission(Permission.MANAGE_GPS_DEVICES);
 
     const body = await request.json();

@@ -168,6 +168,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.VIEW_DOCUMENTS,
 
     Permission.VIEW_WALLET,
+    Permission.DEPOSIT_FUNDS,
+    Permission.WITHDRAW_FUNDS,
 
     // Disputes
     Permission.CREATE_DISPUTE,
@@ -219,6 +221,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.VIEW_DOCUMENTS,
 
     Permission.VIEW_WALLET,
+    Permission.DEPOSIT_FUNDS,
+    Permission.WITHDRAW_FUNDS,
 
     // Disputes
     Permission.CREATE_DISPUTE,

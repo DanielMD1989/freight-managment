@@ -19,7 +19,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requireActiveUser } from "@/lib/auth";
 import { requireCSRF } from "@/lib/csrf";
 import { hasElevatedPermissions } from "@/lib/dispatcherPermissions";
 import { UserRole } from "@prisma/client";
@@ -227,8 +227,8 @@ export async function PATCH(
       }
     }
 
-    // Require authentication
-    const session = await requireAuth();
+    // M2 FIX: Require ACTIVE user (not just valid token)
+    const session = await requireActiveUser();
 
     // Fetch existing posting
     const existing = await db.truckPosting.findUnique({
@@ -236,6 +236,7 @@ export async function PATCH(
       select: {
         carrierId: true,
         status: true,
+        truckId: true,
       },
     });
 
@@ -310,6 +311,32 @@ export async function PATCH(
         return NextResponse.json(
           { error: "Invalid destination city ID" },
           { status: 400 }
+        );
+      }
+    }
+
+    // H12 FIX: Check ONE_ACTIVE_POST_PER_TRUCK when re-activating
+    if (data.status === "ACTIVE" && existing.status !== "ACTIVE") {
+      // M18 FIX: Re-check truck approval status before re-activating posting
+      const truck = await db.truck.findUnique({
+        where: { id: existing.truckId },
+        select: { approvalStatus: true },
+      });
+      if (truck?.approvalStatus !== "APPROVED") {
+        return NextResponse.json(
+          { error: "Only approved trucks can have active postings" },
+          { status: 403 }
+        );
+      }
+
+      const otherActive = await db.truckPosting.findFirst({
+        where: { truckId: existing.truckId, status: "ACTIVE", id: { not: id } },
+        select: { id: true },
+      });
+      if (otherActive) {
+        return NextResponse.json(
+          { error: "This truck already has an active posting" },
+          { status: 409 }
         );
       }
     }
@@ -419,8 +446,8 @@ export async function DELETE(
       }
     }
 
-    // Require authentication
-    const session = await requireAuth();
+    // M2 FIX: Require ACTIVE user (not just valid token)
+    const session = await requireActiveUser();
 
     // Fetch existing posting
     const existing = await db.truckPosting.findUnique({
@@ -450,16 +477,29 @@ export async function DELETE(
       );
     }
 
-    // Soft delete: set status to CANCELLED
-    const cancelled = await db.truckPosting.update({
-      where: { id },
-      data: { status: "CANCELLED" },
-      select: {
-        id: true,
-        status: true,
-        truckId: true,
-        carrierId: true,
-      },
+    // M14 FIX: Wrap ownership check + soft delete in transaction
+    const cancelled = await db.$transaction(async (tx) => {
+      // Re-check ownership inside transaction
+      const fresh = await tx.truckPosting.findUnique({
+        where: { id },
+        select: { carrierId: true, status: true },
+      });
+      if (!fresh || (fresh.carrierId !== session.organizationId && !isAdmin)) {
+        throw new Error("POSTING_NOT_FOUND");
+      }
+      if (fresh.status === "CANCELLED") {
+        throw new Error("ALREADY_CANCELLED");
+      }
+      return tx.truckPosting.update({
+        where: { id },
+        data: { status: "CANCELLED" },
+        select: {
+          id: true,
+          status: true,
+          truckId: true,
+          carrierId: true,
+        },
+      });
     });
 
     // P1-001-B FIX: Invalidate cache after posting cancellation to remove stale data
@@ -474,6 +514,17 @@ export async function DELETE(
       posting: cancelled,
     });
   } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === "POSTING_NOT_FOUND") {
+        return NextResponse.json(
+          { error: "Truck posting not found" },
+          { status: 404 }
+        );
+      }
+      if (error.message === "ALREADY_CANCELLED") {
+        return NextResponse.json({ message: "Posting already cancelled" });
+      }
+    }
     return handleApiError(error, "Error cancelling truck posting");
   }
 }

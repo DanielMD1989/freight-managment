@@ -11,7 +11,11 @@ import { requireAuth } from "@/lib/auth";
 import { requireCSRF } from "@/lib/csrf";
 import { getAccessRoles } from "@/lib/rbac";
 import { TripStatus, LoadStatus, Prisma } from "@prisma/client";
-import { VALID_TRIP_TRANSITIONS } from "@/lib/tripStateMachine";
+import {
+  VALID_TRIP_TRANSITIONS,
+  canRoleSetTripStatus,
+  TripStatus as LocalTripStatus,
+} from "@/lib/tripStateMachine";
 import { z } from "zod";
 // P1-002 FIX: Import CacheInvalidation for post-update cache clearing
 import { CacheInvalidation } from "@/lib/cache";
@@ -233,6 +237,21 @@ export async function PATCH(
             allowedTransitions,
           },
           { status: 400 }
+        );
+      }
+
+      // M11 FIX: Check role-based permission for this status change
+      if (
+        !canRoleSetTripStatus(
+          session.role,
+          validatedData.status as LocalTripStatus
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error: `Role ${session.role} cannot set trip status to ${validatedData.status}`,
+          },
+          { status: 403 }
         );
       }
 

@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { validateCSRFWithMobile } from "@/lib/csrf";
+import { z } from "zod";
+import { zodErrorResponse } from "@/lib/validation";
+
+// H20 FIX: Zod schema for GPS device updates
+const updateDeviceSchema = z.object({
+  imei: z.string().length(15).optional(),
+  status: z
+    .enum(["ACTIVE", "INACTIVE", "SIGNAL_LOST", "MAINTENANCE"])
+    .optional(),
+});
 
 // DELETE /api/gps/devices/[id] - Remove GPS device
 export async function DELETE(
@@ -65,6 +75,13 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
+    // H20 FIX: Validate input with Zod schema
+    const validationResult = updateDeviceSchema.safeParse(body);
+    if (!validationResult.success) {
+      return zodErrorResponse(validationResult.error);
+    }
+    const validatedData = validationResult.data;
+
     // Check if device exists
     const device = await db.gpsDevice.findUnique({
       where: { id },
@@ -77,12 +94,13 @@ export async function PATCH(
       );
     }
 
+    // M26 FIX: Unlink device from truck before deletion-related updates
     // Update the device
     const updatedDevice = await db.gpsDevice.update({
       where: { id },
       data: {
-        imei: body.imei,
-        status: body.status,
+        ...(validatedData.imei && { imei: validatedData.imei }),
+        ...(validatedData.status && { status: validatedData.status }),
       },
       include: {
         truck: {

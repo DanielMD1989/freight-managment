@@ -57,7 +57,21 @@ export async function POST(request: NextRequest) {
           throw new Error("WALLET_NOT_FOUND");
         }
 
-        if (parseFloat(wallet.balance.toString()) < validatedData.amount) {
+        // H3 FIX: Subtract pending withdrawal amounts from available balance
+        const pendingWithdrawals = await tx.withdrawalRequest.aggregate({
+          where: {
+            requestedById: session.userId,
+            status: "PENDING",
+          },
+          _sum: { amount: true },
+        });
+        const pendingAmount = pendingWithdrawals._sum.amount
+          ? parseFloat(pendingWithdrawals._sum.amount.toString())
+          : 0;
+        const availableBalance =
+          parseFloat(wallet.balance.toString()) - pendingAmount;
+
+        if (availableBalance < validatedData.amount) {
           throw new Error("INSUFFICIENT_BALANCE");
         }
 
@@ -119,7 +133,7 @@ export async function GET(request: NextRequest) {
     const where: Prisma.WithdrawalRequestWhereInput = {};
 
     // Admin/Ops can see all withdrawals, others see only their own
-    if (session.role !== "ADMIN" && session.role !== "PLATFORM_OPS") {
+    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       where.requestedById = session.userId;
     }
 
