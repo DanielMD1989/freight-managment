@@ -389,116 +389,144 @@ export async function deductServiceFee(
   if (journalLines.length > 0 && totalDeducted > 0) {
     // Verify balances one more time inside transaction (double-check)
     // This prevents race conditions where balance changed between check and deduct
-    const result = await db.$transaction(async (tx) => {
-      // Re-verify shipper balance inside transaction
-      if (shipperDeducted && shipperWallet && shipperFeeCalc.finalFee > 0) {
-        const currentShipperWallet = await tx.financialAccount.findUnique({
-          where: { id: shipperWallet.id },
-          select: { balance: true },
+    let result: string;
+    try {
+      result = await db.$transaction(async (tx) => {
+        // Re-check fee status inside transaction to prevent double-deduction race condition
+        const freshLoad = await tx.load.findUnique({
+          where: { id: loadId },
+          select: { shipperFeeStatus: true, carrierFeeStatus: true },
         });
         if (
-          !currentShipperWallet ||
-          new Decimal(currentShipperWallet.balance).lessThan(
-            shipperFeeCalc.finalFee
-          )
+          freshLoad?.shipperFeeStatus === "DEDUCTED" &&
+          freshLoad?.carrierFeeStatus === "DEDUCTED"
         ) {
-          throw new Error(`Insufficient shipper balance for fee deduction`);
+          throw new Error("FEES_ALREADY_DEDUCTED");
         }
-      }
 
-      // Re-verify carrier balance inside transaction
-      if (carrierDeducted && carrierWallet && carrierFeeCalc.finalFee > 0) {
-        const currentCarrierWallet = await tx.financialAccount.findUnique({
-          where: { id: carrierWallet.id },
-          select: { balance: true },
+        // Re-verify shipper balance inside transaction
+        if (shipperDeducted && shipperWallet && shipperFeeCalc.finalFee > 0) {
+          const currentShipperWallet = await tx.financialAccount.findUnique({
+            where: { id: shipperWallet.id },
+            select: { balance: true },
+          });
+          if (
+            !currentShipperWallet ||
+            new Decimal(currentShipperWallet.balance).lessThan(
+              shipperFeeCalc.finalFee
+            )
+          ) {
+            throw new Error(`Insufficient shipper balance for fee deduction`);
+          }
+        }
+
+        // Re-verify carrier balance inside transaction
+        if (carrierDeducted && carrierWallet && carrierFeeCalc.finalFee > 0) {
+          const currentCarrierWallet = await tx.financialAccount.findUnique({
+            where: { id: carrierWallet.id },
+            select: { balance: true },
+          });
+          if (
+            !currentCarrierWallet ||
+            new Decimal(currentCarrierWallet.balance).lessThan(
+              carrierFeeCalc.finalFee
+            )
+          ) {
+            throw new Error(`Insufficient carrier balance for fee deduction`);
+          }
+        }
+
+        // 1. Create journal entry with all lines
+        const journalEntry = await tx.journalEntry.create({
+          data: {
+            transactionType: "SERVICE_FEE_DEDUCT",
+            description: `Service fees for load ${loadId}: Shipper ${load.shipper.name} (${shipperFeeCalc.finalFee.toFixed(2)} ETB), Carrier ${load.assignedTruck?.carrier?.name || "N/A"} (${carrierFeeCalc.finalFee.toFixed(2)} ETB)`,
+            reference: loadId,
+            loadId,
+            metadata: {
+              shipperFee: shipperFeeCalc.finalFee.toFixed(2),
+              carrierFee: carrierFeeCalc.finalFee.toFixed(2),
+              totalPlatformFee: totalPlatformFee.toFixed(2),
+              corridorId,
+              distanceKm,
+              distanceSource,
+              corridorDistanceKm: Number(corridor.distanceKm),
+              shipperPricePerKm,
+              carrierPricePerKm,
+            },
+            lines: {
+              create: journalLines.map((line) => ({
+                amount: line.amount,
+                isDebit: line.isDebit,
+                accountId: line.accountId,
+              })),
+            },
+          },
+          select: { id: true },
         });
-        if (
-          !currentCarrierWallet ||
-          new Decimal(currentCarrierWallet.balance).lessThan(
-            carrierFeeCalc.finalFee
-          )
-        ) {
-          throw new Error(`Insufficient carrier balance for fee deduction`);
-        }
-      }
 
-      // 1. Create journal entry with all lines
-      const journalEntry = await tx.journalEntry.create({
-        data: {
-          transactionType: "SERVICE_FEE_DEDUCT",
-          description: `Service fees for load ${loadId}: Shipper ${load.shipper.name} (${shipperFeeCalc.finalFee.toFixed(2)} ETB), Carrier ${load.assignedTruck?.carrier?.name || "N/A"} (${carrierFeeCalc.finalFee.toFixed(2)} ETB)`,
-          reference: loadId,
-          loadId,
-          metadata: {
-            shipperFee: shipperFeeCalc.finalFee.toFixed(2),
-            carrierFee: carrierFeeCalc.finalFee.toFixed(2),
-            totalPlatformFee: totalPlatformFee.toFixed(2),
+        // 2. Update shipper wallet balance (atomic with journal)
+        if (shipperDeducted && shipperWallet && shipperFeeCalc.finalFee > 0) {
+          await tx.financialAccount.update({
+            where: { id: shipperWallet.id },
+            data: { balance: { decrement: shipperFeeCalc.finalFee } },
+          });
+        }
+
+        // 3. Update carrier wallet balance (atomic with journal)
+        if (carrierDeducted && carrierWallet && carrierFeeCalc.finalFee > 0) {
+          await tx.financialAccount.update({
+            where: { id: carrierWallet.id },
+            data: { balance: { decrement: carrierFeeCalc.finalFee } },
+          });
+        }
+
+        // 4. Credit platform revenue (atomic with journal)
+        if (totalDeducted > 0) {
+          await tx.financialAccount.update({
+            where: { id: platformAccountId },
+            data: { balance: { increment: totalDeducted } },
+          });
+        }
+
+        // 5. Update load with fee information (atomic with journal)
+        await tx.load.update({
+          where: { id: loadId },
+          data: {
             corridorId,
-            distanceKm,
-            distanceSource,
-            corridorDistanceKm: Number(corridor.distanceKm),
-            shipperPricePerKm,
-            carrierPricePerKm,
+            // Shipper fee
+            shipperServiceFee: shipperFeeCalc.finalFee,
+            shipperFeeStatus: shipperDeducted ? "DEDUCTED" : "PENDING",
+            shipperFeeDeductedAt: shipperDeducted ? new Date() : null,
+            // Carrier fee
+            carrierServiceFee: carrierFeeCalc.finalFee,
+            carrierFeeStatus: carrierDeducted ? "DEDUCTED" : "PENDING",
+            carrierFeeDeductedAt: carrierDeducted ? new Date() : null,
+            // Legacy fields
+            serviceFeeEtb: totalPlatformFee,
+            serviceFeeStatus:
+              shipperDeducted && carrierDeducted ? "DEDUCTED" : "PENDING",
+            serviceFeeDeductedAt:
+              shipperDeducted && carrierDeducted ? new Date() : null,
           },
-          lines: {
-            create: journalLines.map((line) => ({
-              amount: line.amount,
-              isDebit: line.isDebit,
-              accountId: line.accountId,
-            })),
-          },
-        },
-        select: { id: true },
+        });
+
+        return journalEntry.id;
       });
-
-      // 2. Update shipper wallet balance (atomic with journal)
-      if (shipperDeducted && shipperWallet && shipperFeeCalc.finalFee > 0) {
-        await tx.financialAccount.update({
-          where: { id: shipperWallet.id },
-          data: { balance: { decrement: shipperFeeCalc.finalFee } },
-        });
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message === "FEES_ALREADY_DEDUCTED") {
+        return {
+          success: false,
+          serviceFee: 0,
+          shipperFee: 0,
+          carrierFee: 0,
+          totalPlatformFee: 0,
+          platformRevenue: new Decimal(0),
+          error: "Service fees already deducted",
+        };
       }
-
-      // 3. Update carrier wallet balance (atomic with journal)
-      if (carrierDeducted && carrierWallet && carrierFeeCalc.finalFee > 0) {
-        await tx.financialAccount.update({
-          where: { id: carrierWallet.id },
-          data: { balance: { decrement: carrierFeeCalc.finalFee } },
-        });
-      }
-
-      // 4. Credit platform revenue (atomic with journal)
-      if (totalDeducted > 0) {
-        await tx.financialAccount.update({
-          where: { id: platformAccountId },
-          data: { balance: { increment: totalDeducted } },
-        });
-      }
-
-      // 5. Update load with fee information (atomic with journal)
-      await tx.load.update({
-        where: { id: loadId },
-        data: {
-          corridorId,
-          // Shipper fee
-          shipperServiceFee: shipperFeeCalc.finalFee,
-          shipperFeeStatus: shipperDeducted ? "DEDUCTED" : "PENDING",
-          shipperFeeDeductedAt: shipperDeducted ? new Date() : null,
-          // Carrier fee
-          carrierServiceFee: carrierFeeCalc.finalFee,
-          carrierFeeStatus: carrierDeducted ? "DEDUCTED" : "PENDING",
-          carrierFeeDeductedAt: carrierDeducted ? new Date() : null,
-          // Legacy fields
-          serviceFeeEtb: totalPlatformFee,
-          serviceFeeStatus:
-            shipperDeducted && carrierDeducted ? "DEDUCTED" : "PENDING",
-          serviceFeeDeductedAt:
-            shipperDeducted && carrierDeducted ? new Date() : null,
-        },
-      });
-
-      return journalEntry.id;
-    });
+      throw error;
+    }
 
     transactionId = result;
   } else {

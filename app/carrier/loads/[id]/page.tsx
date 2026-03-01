@@ -68,6 +68,12 @@ export default async function CarrierLoadDetailsPage({
           },
         },
       },
+      trip: {
+        select: {
+          id: true,
+          status: true,
+        },
+      },
       events: {
         orderBy: {
           createdAt: "desc",
@@ -383,15 +389,17 @@ export default async function CarrierLoadDetailsPage({
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Status</span>
                   <span
-                    className={`rounded px-2 py-1 text-xs font-medium ${getServiceFeeStatusColor(load.serviceFeeStatus)}`}
+                    className={`rounded px-2 py-1 text-xs font-medium ${getServiceFeeStatusColor(load.carrierFeeStatus || load.serviceFeeStatus)}`}
                   >
-                    {load.serviceFeeStatus}
+                    {load.carrierFeeStatus || load.serviceFeeStatus}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Fee Amount</span>
+                  <span className="text-gray-600">Carrier Fee</span>
                   <span className="font-bold">
-                    {formatCurrency(Number(load.serviceFeeEtb || 0))}
+                    {formatCurrency(
+                      Number(load.carrierServiceFee ?? load.serviceFeeEtb ?? 0)
+                    )}
                   </span>
                 </div>
                 <div className="border-t border-gray-200 pt-3">
@@ -461,16 +469,26 @@ export default async function CarrierLoadDetailsPage({
                   Request This Load
                 </Link>
               )}
-              {isAssignedCarrier && load.status === "ASSIGNED" && (
-                <button className="block w-full rounded-lg bg-blue-600 px-4 py-2 text-center text-white transition-colors hover:bg-blue-700">
-                  Start Trip
-                </button>
-              )}
-              {isAssignedCarrier && load.status === "IN_TRANSIT" && (
-                <button className="block w-full rounded-lg bg-purple-600 px-4 py-2 text-center text-white transition-colors hover:bg-purple-700">
-                  Mark Delivered
-                </button>
-              )}
+              {isAssignedCarrier &&
+                load.status === "ASSIGNED" &&
+                load.trip?.id && (
+                  <Link
+                    href={`/carrier/trips/${load.trip.id}`}
+                    className="block w-full rounded-lg bg-blue-600 px-4 py-2 text-center text-white transition-colors hover:bg-blue-700"
+                  >
+                    Start Trip
+                  </Link>
+                )}
+              {isAssignedCarrier &&
+                load.status === "IN_TRANSIT" &&
+                load.trip?.id && (
+                  <Link
+                    href={`/carrier/trips/${load.trip.id}`}
+                    className="block w-full rounded-lg bg-purple-600 px-4 py-2 text-center text-white transition-colors hover:bg-purple-700"
+                  >
+                    Mark Delivered
+                  </Link>
+                )}
               <Link
                 href="/carrier/matches"
                 className="block w-full rounded-lg border border-gray-300 px-4 py-2 text-center text-gray-700 transition-colors hover:bg-gray-50"

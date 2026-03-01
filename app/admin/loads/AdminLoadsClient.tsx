@@ -35,6 +35,9 @@ interface Load {
   weight: number;
   status: string;
   shipperServiceFee: number | null;
+  carrierServiceFee: number | null;
+  shipperFeeStatus: string | null;
+  carrierFeeStatus: string | null;
   createdAt: string;
   shipper: {
     id: string;
@@ -201,7 +204,13 @@ export default function AdminLoadsClient() {
                   Corridor
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
-                  Rate
+                  Shipper Fee
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
+                  Carrier Fee
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
+                  Fee Status
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
                   Created
@@ -212,7 +221,7 @@ export default function AdminLoadsClient() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={11}
                     className="px-4 py-8 text-center text-slate-500 dark:text-slate-400"
                   >
                     Loading...
@@ -221,7 +230,7 @@ export default function AdminLoadsClient() {
               ) : loads.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={11}
                     className="px-4 py-8 text-center text-slate-500 dark:text-slate-400"
                   >
                     No loads found
@@ -267,6 +276,41 @@ export default function AdminLoadsClient() {
                       {load.shipperServiceFee != null
                         ? formatCurrency(load.shipperServiceFee)
                         : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
+                      {load.carrierServiceFee != null
+                        ? formatCurrency(load.carrierServiceFee)
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      {load.shipperFeeStatus || load.carrierFeeStatus ? (
+                        <div className="flex flex-col gap-1">
+                          {load.shipperFeeStatus && (
+                            <span
+                              className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                                load.shipperFeeStatus === "DEDUCTED"
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-amber-100 text-amber-800"
+                              }`}
+                            >
+                              S: {load.shipperFeeStatus}
+                            </span>
+                          )}
+                          {load.carrierFeeStatus && (
+                            <span
+                              className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                                load.carrierFeeStatus === "DEDUCTED"
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-amber-100 text-amber-800"
+                              }`}
+                            >
+                              C: {load.carrierFeeStatus}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-slate-400">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm whitespace-nowrap text-slate-500 dark:text-slate-400">
                       {formatDate(load.createdAt)}

@@ -57,7 +57,10 @@ export default function TripHistoryPage() {
       setError(null);
 
       // Fetch completed and delivered trips
-      const response = await fetch("/api/trips?status=DELIVERED,COMPLETED");
+      // M1 FIX: Include CANCELLED trips in history
+      const response = await fetch(
+        "/api/trips?status=DELIVERED,COMPLETED,CANCELLED"
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch trip history");
@@ -167,10 +170,18 @@ export default function TripHistoryPage() {
                   {/* Route Info */}
                   <div className="flex-1">
                     <div className="mb-2 flex items-center gap-3">
-                      <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
+                      <span
+                        className={`rounded-full px-2 py-1 text-xs font-medium ${
+                          trip.status === "CANCELLED"
+                            ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                            : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                        }`}
+                      >
                         {trip.status === "COMPLETED"
                           ? "Completed"
-                          : "Delivered"}
+                          : trip.status === "CANCELLED"
+                            ? "Cancelled"
+                            : "Delivered"}
                       </span>
                       {trip.truck && (
                         <span className="text-sm text-gray-500 dark:text-gray-400">

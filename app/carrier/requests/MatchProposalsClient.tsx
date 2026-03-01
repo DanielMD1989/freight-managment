@@ -46,7 +46,7 @@ interface Props {
   proposals: MatchProposal[];
 }
 
-type StatusFilter = "all" | "PENDING" | "ACCEPTED" | "REJECTED";
+type StatusFilter = "all" | "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED";
 
 export default function MatchProposalsClient({
   proposals: initialProposals,
@@ -161,6 +161,8 @@ export default function MatchProposalsClient({
     PENDING: pendingCount,
     ACCEPTED: proposals.filter((p) => p.status === "ACCEPTED").length,
     REJECTED: proposals.filter((p) => p.status === "REJECTED").length,
+    // M10 FIX: Add EXPIRED count
+    EXPIRED: proposals.filter((p) => p.status === "EXPIRED").length,
   };
 
   return (
@@ -203,21 +205,27 @@ export default function MatchProposalsClient({
 
       {/* Status Filter Tabs */}
       <div className="flex flex-wrap gap-2">
-        {(["PENDING", "ACCEPTED", "REJECTED", "all"] as StatusFilter[]).map(
-          (status) => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`rounded-xl px-4 py-2 text-sm font-medium transition-all ${
-                statusFilter === status
-                  ? "bg-gradient-to-r from-teal-600 to-teal-500 text-white shadow-md shadow-teal-500/25"
-                  : "border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
-              }`}
-            >
-              {status === "all" ? "All" : status} ({statusCounts[status]})
-            </button>
-          )
-        )}
+        {(
+          [
+            "PENDING",
+            "ACCEPTED",
+            "REJECTED",
+            "EXPIRED",
+            "all",
+          ] as StatusFilter[]
+        ).map((status) => (
+          <button
+            key={status}
+            onClick={() => setStatusFilter(status)}
+            className={`rounded-xl px-4 py-2 text-sm font-medium transition-all ${
+              statusFilter === status
+                ? "bg-gradient-to-r from-teal-600 to-teal-500 text-white shadow-md shadow-teal-500/25"
+                : "border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            {status === "all" ? "All" : status} ({statusCounts[status]})
+          </button>
+        ))}
       </div>
 
       {/* Proposals List */}

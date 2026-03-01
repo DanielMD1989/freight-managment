@@ -307,8 +307,8 @@ export default function TruckManagementClient({
         </button>
       </div>
 
-      {/* Filters and Actions - Only show for approved tab */}
-      {activeTab === "approved" && (
+      {/* Filters and Actions - M9 FIX: Show filters in all tabs */}
+      {
         <div className="rounded-2xl border border-slate-200/60 bg-white p-6 shadow-sm">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div className="flex flex-col gap-4 sm:flex-row">
@@ -371,7 +371,7 @@ export default function TruckManagementClient({
             </Link>
           </div>
         </div>
-      )}
+      }
 
       {/* Add Truck Button for pending/rejected tabs */}
       {activeTab !== "approved" && (

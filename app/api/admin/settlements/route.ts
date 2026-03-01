@@ -73,10 +73,22 @@ export async function GET(request: NextRequest) {
         };
         break;
 
+      case "FAILED":
+        where = {
+          settlementStatus: "FAILED",
+        };
+        break;
+
+      case "IN_PROGRESS":
+        where = {
+          settlementStatus: "IN_PROGRESS",
+        };
+        break;
+
       case "all":
         where = {
           settlementStatus: {
-            in: ["PENDING", "PAID", "DISPUTE"],
+            in: ["PENDING", "PAID", "DISPUTE", "FAILED", "IN_PROGRESS"],
           },
         };
         break;

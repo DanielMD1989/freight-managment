@@ -473,6 +473,9 @@ export async function POST(
         },
       });
 
+      // H3 FIX: Cache invalidation on reject (accept path already has it)
+      await CacheInvalidation.load(proposal.loadId, proposal.load.shipperId);
+
       return NextResponse.json({
         proposal: updatedProposal,
         message: "Proposal rejected.",

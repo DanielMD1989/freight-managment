@@ -193,7 +193,9 @@ export async function POST(
     }
 
     // C6 FIX: Deduct service fee before marking as PAID
+    // H2 FIX: Don't mark PAID if fee deduction fails
     try {
+      let feeDeductionSucceeded = false;
       try {
         const feeResult = await deductServiceFee(loadId);
         if (!feeResult.success) {
@@ -201,13 +203,30 @@ export async function POST(
             "Service fee deduction failed during settlement:",
             feeResult.error
           );
+        } else {
+          feeDeductionSucceeded = true;
         }
       } catch (feeError) {
         console.error(
           "Service fee deduction exception during settlement:",
           feeError
         );
-        // Continue to mark as PAID — admin can retry or handle manually
+      }
+
+      if (!feeDeductionSucceeded) {
+        // H2 FIX: Mark as FAILED instead of PAID when fee deduction fails
+        await db.load.update({
+          where: { id: loadId },
+          data: { settlementStatus: "FAILED" },
+        });
+
+        return NextResponse.json(
+          {
+            error: "Settlement failed: service fee deduction unsuccessful",
+            retryable: true,
+          },
+          { status: 400 }
+        );
       }
 
       await db.load.update({

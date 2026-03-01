@@ -4,6 +4,9 @@
  * Carrier Disputes List Page
  *
  * Shows disputes where the carrier is a party (either created by them or involving their loads).
+ * H4 FIX: Added disputedOrg display
+ * M4 FIX: Added error state handling
+ * M5 FIX: Added File Dispute button and create form
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -17,6 +20,7 @@ interface Dispute {
   createdAt: string;
   load?: { id: string; referenceNumber?: string };
   createdBy?: { firstName?: string; lastName?: string };
+  disputedOrg?: { id: string; name: string };
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -34,21 +38,42 @@ const TYPE_LABELS: Record<string, string> = {
   OTHER: "Other",
 };
 
+async function fetchCsrfToken(): Promise<string> {
+  const res = await fetch("/api/csrf-token");
+  const data = await res.json();
+  return data.csrfToken;
+}
+
 export default function CarrierDisputesPage() {
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("");
+  // M4 FIX: Add error state
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  // M5 FIX: File Dispute form state
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    type: "PAYMENT_ISSUE",
+    description: "",
+    loadId: "",
+  });
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
 
   const loadDisputes = useCallback(async () => {
     try {
+      setFetchError(null);
       const params = new URLSearchParams();
       if (filterStatus) params.set("status", filterStatus);
       const res = await fetch(`/api/disputes?${params}`);
-      if (!res.ok) throw new Error("Failed to fetch");
+      if (!res.ok) throw new Error("Failed to fetch disputes");
       const data = await res.json();
       setDisputes(data.disputes || []);
-    } catch {
-      // ignore
+    } catch (err) {
+      // M4 FIX: Surface error instead of silently swallowing
+      setFetchError(
+        err instanceof Error ? err.message : "Failed to load disputes"
+      );
     } finally {
       setLoading(false);
     }
@@ -58,6 +83,39 @@ export default function CarrierDisputesPage() {
     loadDisputes();
   }, [loadDisputes]);
 
+  // M5 FIX: Handle create dispute
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createForm.loadId || !createForm.description) {
+      setCreateError("Load ID and description are required");
+      return;
+    }
+    setCreating(true);
+    setCreateError("");
+    try {
+      const csrfToken = await fetchCsrfToken();
+      const res = await fetch("/api/disputes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+        },
+        body: JSON.stringify(createForm),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to create dispute");
+      }
+      setShowCreate(false);
+      setCreateForm({ type: "PAYMENT_ISSUE", description: "", loadId: "" });
+      await loadDisputes();
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : "Failed to create");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -66,10 +124,92 @@ export default function CarrierDisputesPage() {
             Disputes
           </h1>
           <p className="mt-1 text-gray-600 dark:text-gray-400">
-            View and track your disputes
+            Manage and track your disputes
           </p>
         </div>
+        {/* M5 FIX: Add File Dispute button */}
+        <button
+          onClick={() => setShowCreate(!showCreate)}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          File Dispute
+        </button>
       </div>
+
+      {/* M5 FIX: Create Form */}
+      {showCreate && (
+        <form
+          onSubmit={handleCreate}
+          className="space-y-4 rounded-lg bg-white p-6 shadow dark:bg-slate-800"
+        >
+          <h3 className="font-semibold text-gray-900 dark:text-white">
+            File a New Dispute
+          </h3>
+          {createError && <p className="text-sm text-red-600">{createError}</p>}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Load ID
+            </label>
+            <input
+              type="text"
+              value={createForm.loadId}
+              onChange={(e) =>
+                setCreateForm((f) => ({ ...f, loadId: e.target.value }))
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              placeholder="Enter Load ID"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Type
+            </label>
+            <select
+              value={createForm.type}
+              onChange={(e) =>
+                setCreateForm((f) => ({ ...f, type: e.target.value }))
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+            >
+              <option value="PAYMENT_ISSUE">Payment Issue</option>
+              <option value="DAMAGE">Damage</option>
+              <option value="LATE_DELIVERY">Late Delivery</option>
+              <option value="QUALITY_ISSUE">Quality Issue</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Description
+            </label>
+            <textarea
+              value={createForm.description}
+              onChange={(e) =>
+                setCreateForm((f) => ({ ...f, description: e.target.value }))
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              rows={4}
+              placeholder="Describe the issue (min 10 characters)"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowCreate(false)}
+              className="rounded-lg bg-gray-100 px-4 py-2 text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={creating}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50"
+            >
+              {creating ? "Submitting..." : "Submit Dispute"}
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* Filters */}
       <div className="flex gap-2">
@@ -91,13 +231,30 @@ export default function CarrierDisputesPage() {
         ))}
       </div>
 
+      {/* M4 FIX: Error state */}
+      {fetchError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-800">{fetchError}</p>
+          <button
+            onClick={() => {
+              setFetchError(null);
+              setLoading(true);
+              loadDisputes();
+            }}
+            className="mt-2 text-sm text-red-600 underline"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* List */}
       <div className="space-y-4">
         {loading ? (
           <div className="rounded-lg bg-white p-8 text-center text-gray-500 shadow dark:bg-slate-800">
             Loading...
           </div>
-        ) : disputes.length === 0 ? (
+        ) : !fetchError && disputes.length === 0 ? (
           <div className="rounded-lg bg-white p-8 text-center text-gray-500 shadow dark:bg-slate-800">
             No disputes found
           </div>
@@ -125,6 +282,12 @@ export default function CarrierDisputesPage() {
                     {d.description.length > 120 ? "..." : ""}
                   </p>
                   <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                    {/* H4 FIX: Display disputedOrg */}
+                    {d.disputedOrg?.name && (
+                      <span className="font-medium text-gray-700 dark:text-gray-300">
+                        Against: {d.disputedOrg.name}
+                      </span>
+                    )}
                     {d.load?.referenceNumber && (
                       <span>Load: {d.load.referenceNumber}</span>
                     )}

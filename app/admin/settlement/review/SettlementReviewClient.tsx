@@ -31,7 +31,12 @@ function getTimeAgo(date: Date): string {
   return `${diffYears} year${diffYears > 1 ? "s" : ""} ago`;
 }
 
-type SettlementStatus = "PENDING" | "PAID" | "DISPUTE";
+type SettlementStatus =
+  | "PENDING"
+  | "PAID"
+  | "DISPUTE"
+  | "FAILED"
+  | "IN_PROGRESS";
 
 interface Load {
   id: string;
@@ -43,6 +48,14 @@ interface Load {
   podSubmittedAt: Date | null;
   podVerifiedAt: Date | null;
   createdAt: Date;
+  // Actual fee fields (authoritative)
+  shipperServiceFee: number | null;
+  carrierServiceFee: number | null;
+  shipperFeeStatus: string | null;
+  carrierFeeStatus: string | null;
+  // Legacy fee fields
+  serviceFeeEtb: number | null;
+  settledAt: Date | null;
   shipper: {
     id: string;
     name: string;
@@ -56,14 +69,6 @@ interface Load {
       name: string;
       isVerified: boolean;
     };
-  } | null;
-  settlementRecord: {
-    id: string;
-    grossAmount: number;
-    serviceFeeAmount: number;
-    netAmount: number;
-    paymentStatus: string;
-    processedAt: Date;
   } | null;
 }
 
@@ -117,25 +122,26 @@ export default function SettlementReviewClient() {
     fetchSettlements();
   }, [fetchSettlements]);
 
+  // C2 FIX: Use actual load fee fields instead of fictional settlementRecord
   const getSettlementAmount = (load: Load) => {
-    if (load.settlementRecord) {
-      return load.settlementRecord.grossAmount;
-    }
-    return 0; // Freight price negotiated off-platform
+    const shipperFee = load.shipperServiceFee ?? 0;
+    const carrierFee = load.carrierServiceFee ?? 0;
+    return shipperFee + carrierFee;
   };
 
   const getServiceFeeAmount = (load: Load) => {
-    if (load.settlementRecord) {
-      return load.settlementRecord.serviceFeeAmount;
-    }
-    return 0;
+    return load.shipperServiceFee ?? load.serviceFeeEtb ?? 0;
   };
 
-  const getNetAmount = (load: Load) => {
-    if (load.settlementRecord) {
-      return load.settlementRecord.netAmount;
-    }
-    return 0; // Will be calculated when settlement record is created
+  const getCarrierFeeAmount = (load: Load) => {
+    return load.carrierServiceFee ?? 0;
+  };
+
+  const getFeesDeducted = (load: Load) => {
+    return (
+      load.shipperFeeStatus === "DEDUCTED" &&
+      load.carrierFeeStatus === "DEDUCTED"
+    );
   };
 
   const handleApproveSettlement = async (loadId: string) => {
@@ -254,6 +260,38 @@ export default function SettlementReviewClient() {
                 </span>
               )}
             </button>
+
+            <button
+              onClick={() => setActiveTab("FAILED")}
+              className={`border-b-2 px-6 py-3 text-sm font-medium ${
+                activeTab === "FAILED"
+                  ? "border-[#1e9c99] text-[#064d51]"
+                  : "border-transparent text-[#064d51]/60 hover:border-[#064d51]/30 hover:text-[#064d51]"
+              }`}
+            >
+              Failed
+              {activeTab === "FAILED" && totalCount > 0 && (
+                <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-800">
+                  {totalCount}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab("IN_PROGRESS")}
+              className={`border-b-2 px-6 py-3 text-sm font-medium ${
+                activeTab === "IN_PROGRESS"
+                  ? "border-[#1e9c99] text-[#064d51]"
+                  : "border-transparent text-[#064d51]/60 hover:border-[#064d51]/30 hover:text-[#064d51]"
+              }`}
+            >
+              In Progress
+              {activeTab === "IN_PROGRESS" && totalCount > 0 && (
+                <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-800">
+                  {totalCount}
+                </span>
+              )}
+            </button>
           </nav>
         </div>
       </div>
@@ -309,7 +347,11 @@ export default function SettlementReviewClient() {
                 ? "All settlements have been processed"
                 : activeTab === "PAID"
                   ? "No settlements have been completed yet"
-                  : "No disputes at this time"}
+                  : activeTab === "FAILED"
+                    ? "No failed settlements"
+                    : activeTab === "IN_PROGRESS"
+                      ? "No settlements in progress"
+                      : "No disputes at this time"}
             </p>
           </div>
         ) : (
@@ -330,10 +372,13 @@ export default function SettlementReviewClient() {
                     Gross Amount
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-[#064d51]/70 uppercase">
-                    Service Fee
+                    Shipper Fee
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-[#064d51]/70 uppercase">
-                    Net to Carrier
+                    Carrier Fee
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-[#064d51]/70 uppercase">
+                    Fee Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-[#064d51]/70 uppercase">
                     POD Status
@@ -385,14 +430,22 @@ export default function SettlementReviewClient() {
                       <div className="text-sm font-medium text-[#1e9c99]">
                         {getServiceFeeAmount(load).toLocaleString()} ETB
                       </div>
-                      <div className="text-xs text-[#064d51]/60">
-                        Corridor fee
-                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-[#064d51]">
-                        {getNetAmount(load).toLocaleString()} ETB
+                        {getCarrierFeeAmount(load).toLocaleString()} ETB
                       </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getFeesDeducted(load) ? (
+                        <span className="inline-flex items-center rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                          Deducted
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                          {load.shipperFeeStatus || "Pending"}
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {load.podVerifiedAt ? (
@@ -539,32 +592,80 @@ export default function SettlementReviewClient() {
               {/* Settlement Breakdown */}
               <div>
                 <h3 className="mb-3 text-sm font-semibold text-[#064d51]">
-                  Settlement Breakdown
+                  Fee Breakdown
                 </h3>
                 <div className="space-y-3 rounded-xl border border-[#064d51]/10 bg-[#f0fdfa] p-4">
                   <div className="flex justify-between text-sm">
-                    <span className="text-[#064d51]/70">Gross Amount:</span>
+                    <span className="text-[#064d51]/70">
+                      Shipper Service Fee:
+                    </span>
                     <span className="font-bold text-[#064d51]">
-                      {getSettlementAmount(selectedLoad).toLocaleString()} ETB
+                      {getServiceFeeAmount(selectedLoad).toLocaleString()} ETB
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-[#064d51]/70">
-                      Platform Service Fee (Corridor-based):
+                      Carrier Service Fee:
                     </span>
-                    <span className="font-medium text-rose-600">
-                      -{getServiceFeeAmount(selectedLoad).toLocaleString()} ETB
+                    <span className="font-bold text-[#064d51]">
+                      {getCarrierFeeAmount(selectedLoad).toLocaleString()} ETB
                     </span>
                   </div>
                   <div className="flex justify-between border-t border-[#064d51]/20 pt-2 text-sm">
                     <span className="font-semibold text-[#064d51]">
-                      Net to Carrier:
+                      Total Platform Revenue:
                     </span>
                     <span className="font-bold text-[#1e9c99]">
-                      {getNetAmount(selectedLoad).toLocaleString()} ETB
+                      {getSettlementAmount(selectedLoad).toLocaleString()} ETB
                     </span>
                   </div>
                 </div>
+              </div>
+
+              {/* Fee Deduction Status */}
+              <div>
+                <h3 className="mb-3 text-sm font-semibold text-[#064d51]">
+                  Fee Deduction Status
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-[#064d51]/70">
+                      Shipper Fee Status:
+                    </span>
+                    <span
+                      className={`rounded px-2 py-0.5 text-xs font-medium ${
+                        selectedLoad.shipperFeeStatus === "DEDUCTED"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-amber-100 text-amber-800"
+                      }`}
+                    >
+                      {selectedLoad.shipperFeeStatus || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#064d51]/70">
+                      Carrier Fee Status:
+                    </span>
+                    <span
+                      className={`rounded px-2 py-0.5 text-xs font-medium ${
+                        selectedLoad.carrierFeeStatus === "DEDUCTED"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-amber-100 text-amber-800"
+                      }`}
+                    >
+                      {selectedLoad.carrierFeeStatus || "N/A"}
+                    </span>
+                  </div>
+                </div>
+                {/* M8 FIX: Warning if fees not deducted */}
+                {!getFeesDeducted(selectedLoad) &&
+                  selectedLoad.settlementStatus === "PENDING" && (
+                    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                      Warning: Service fees have not been fully deducted.
+                      Approving settlement without fee deduction may result in
+                      revenue loss.
+                    </div>
+                  )}
               </div>
 
               {/* POD Status */}
@@ -596,31 +697,17 @@ export default function SettlementReviewClient() {
                 </div>
               </div>
 
-              {/* Settlement Record */}
-              {selectedLoad.settlementRecord && (
+              {/* Settlement Timing */}
+              {selectedLoad.settledAt && (
                 <div>
                   <h3 className="mb-3 text-sm font-semibold text-[#064d51]">
-                    Settlement Record
+                    Settlement Timing
                   </h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-[#064d51]/70">Settlement ID:</span>
+                      <span className="text-[#064d51]/70">Settled At:</span>
                       <span className="font-medium text-[#064d51]">
-                        {selectedLoad.settlementRecord.id}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#064d51]/70">Payment Status:</span>
-                      <span className="font-medium text-[#064d51]">
-                        {selectedLoad.settlementRecord.paymentStatus}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#064d51]/70">Processed:</span>
-                      <span className="font-medium text-[#064d51]">
-                        {new Date(
-                          selectedLoad.settlementRecord.processedAt
-                        ).toLocaleString()}
+                        {new Date(selectedLoad.settledAt).toLocaleString()}
                       </span>
                     </div>
                   </div>
@@ -644,7 +731,12 @@ export default function SettlementReviewClient() {
                 {selectedLoad.settlementStatus === "PENDING" && (
                   <button
                     onClick={() => handleApproveSettlement(selectedLoad.id)}
-                    disabled={approving}
+                    disabled={approving || !getFeesDeducted(selectedLoad)}
+                    title={
+                      !getFeesDeducted(selectedLoad)
+                        ? "Cannot approve: fees not fully deducted"
+                        : ""
+                    }
                     className="rounded-lg bg-[#064d51] px-4 py-2 text-white hover:bg-[#053d40] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {approving ? (

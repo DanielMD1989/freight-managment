@@ -207,6 +207,12 @@ describe("lib/serviceFeeManagement", () => {
               create: jest.fn().mockResolvedValue({ id: "journal-1" }),
             },
             load: {
+              findUnique: jest
+                .fn()
+                .mockResolvedValue({
+                  shipperFeeStatus: "PENDING",
+                  carrierFeeStatus: "PENDING",
+                }),
               update: jest.fn().mockResolvedValue({}),
             },
           };
@@ -264,6 +270,12 @@ describe("lib/serviceFeeManagement", () => {
               create: jest.fn().mockResolvedValue({ id: "journal-1" }),
             },
             load: {
+              findUnique: jest
+                .fn()
+                .mockResolvedValue({
+                  shipperFeeStatus: "PENDING",
+                  carrierFeeStatus: "PENDING",
+                }),
               update: jest.fn().mockResolvedValue({}),
             },
           };
@@ -308,7 +320,30 @@ describe("lib/serviceFeeManagement", () => {
         .mockResolvedValueOnce({ id: "carrier-wallet", balance: 1000 })
         .mockResolvedValueOnce({ id: "platform-account" });
 
-      // No transaction since shipper can't pay
+      // Carrier fee still deducted via transaction (totalDeducted > 0)
+      mockDb.$transaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => {
+          const tx = {
+            financialAccount: {
+              findUnique: jest.fn().mockResolvedValue({ balance: 1000 }),
+              update: jest.fn().mockResolvedValue({ balance: 700 }),
+            },
+            journalEntry: {
+              create: jest.fn().mockResolvedValue({ id: "journal-1" }),
+            },
+            load: {
+              findUnique: jest
+                .fn()
+                .mockResolvedValue({
+                  shipperFeeStatus: "PENDING",
+                  carrierFeeStatus: "PENDING",
+                }),
+              update: jest.fn().mockResolvedValue({}),
+            },
+          };
+          return fn(tx);
+        }
+      );
       mockDb.load.update.mockResolvedValue({});
 
       const result = await deductServiceFee("load-1");
@@ -394,6 +429,12 @@ describe("lib/serviceFeeManagement", () => {
               create: jest.fn().mockResolvedValue({ id: "journal-1" }),
             },
             load: {
+              findUnique: jest
+                .fn()
+                .mockResolvedValue({
+                  shipperFeeStatus: "PENDING",
+                  carrierFeeStatus: "PENDING",
+                }),
               update: jest.fn().mockResolvedValue({}),
             },
           };
@@ -431,6 +472,12 @@ describe("lib/serviceFeeManagement", () => {
               create: jest.fn().mockResolvedValue({ id: "journal-1" }),
             },
             load: {
+              findUnique: jest
+                .fn()
+                .mockResolvedValue({
+                  shipperFeeStatus: "PENDING",
+                  carrierFeeStatus: "PENDING",
+                }),
               update: jest.fn().mockResolvedValue({}),
             },
           };
@@ -809,6 +856,12 @@ describe("lib/serviceFeeManagement", () => {
               create: jest.fn().mockResolvedValue({ id: "journal-1" }),
             },
             load: {
+              findUnique: jest
+                .fn()
+                .mockResolvedValue({
+                  shipperFeeStatus: "PENDING",
+                  carrierFeeStatus: "PENDING",
+                }),
               update: jest.fn().mockResolvedValue({}),
             },
           };
@@ -847,6 +900,12 @@ describe("lib/serviceFeeManagement", () => {
               create: jest.fn().mockResolvedValue({ id: "journal-refund" }),
             },
             load: {
+              findUnique: jest
+                .fn()
+                .mockResolvedValue({
+                  shipperFeeStatus: "PENDING",
+                  carrierFeeStatus: "PENDING",
+                }),
               update: jest.fn().mockResolvedValue({}),
             },
           };

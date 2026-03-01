@@ -222,6 +222,11 @@ export default function CarrierTripsPage() {
         classes: "bg-slate-50 text-slate-600 border border-slate-200",
         label: "Completed",
       },
+      // M2 FIX: Add CANCELLED status styling
+      CANCELLED: {
+        classes: "bg-red-50 text-red-700 border border-red-200",
+        label: "Cancelled",
+      },
     };
 
     const config = statusConfig[status] || {

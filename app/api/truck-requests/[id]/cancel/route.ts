@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
+import { CacheInvalidation } from "@/lib/cache";
 import { z } from "zod";
 
 // Validation schema for cancel request
@@ -147,6 +148,9 @@ export async function POST(
         },
       },
     });
+
+    // M3 FIX: Cache invalidation after truck request cancellation
+    await CacheInvalidation.load(truckRequest.loadId);
 
     // Create load event for cancellation
     await db.loadEvent.create({

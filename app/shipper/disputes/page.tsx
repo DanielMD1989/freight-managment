@@ -17,6 +17,7 @@ interface Dispute {
   createdAt: string;
   load?: { id: string; referenceNumber?: string };
   createdBy?: { firstName?: string; lastName?: string };
+  disputedOrg?: { id: string; name: string };
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -52,17 +53,23 @@ export default function ShipperDisputesPage() {
   });
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
+  // M4 FIX: Add fetch error state
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const loadDisputes = useCallback(async () => {
     try {
+      setFetchError(null);
       const params = new URLSearchParams();
       if (filterStatus) params.set("status", filterStatus);
       const res = await fetch(`/api/disputes?${params}`);
-      if (!res.ok) throw new Error("Failed to fetch");
+      if (!res.ok) throw new Error("Failed to fetch disputes");
       const data = await res.json();
       setDisputes(data.disputes || []);
-    } catch {
-      // ignore
+    } catch (err) {
+      // M4 FIX: Surface error instead of silently swallowing
+      setFetchError(
+        err instanceof Error ? err.message : "Failed to load disputes"
+      );
     } finally {
       setLoading(false);
     }
@@ -218,13 +225,30 @@ export default function ShipperDisputesPage() {
         ))}
       </div>
 
+      {/* M4 FIX: Error state */}
+      {fetchError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-800">{fetchError}</p>
+          <button
+            onClick={() => {
+              setFetchError(null);
+              setLoading(true);
+              loadDisputes();
+            }}
+            className="mt-2 text-sm text-red-600 underline"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* List */}
       <div className="space-y-4">
         {loading ? (
           <div className="rounded-lg bg-white p-8 text-center text-gray-500 shadow dark:bg-slate-800">
             Loading...
           </div>
-        ) : disputes.length === 0 ? (
+        ) : !fetchError && disputes.length === 0 ? (
           <div className="rounded-lg bg-white p-8 text-center text-gray-500 shadow dark:bg-slate-800">
             No disputes found
           </div>
@@ -252,6 +276,12 @@ export default function ShipperDisputesPage() {
                     {d.description.length > 120 ? "..." : ""}
                   </p>
                   <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                    {/* H4 FIX: Display disputedOrg */}
+                    {d.disputedOrg?.name && (
+                      <span className="font-medium text-gray-700 dark:text-gray-300">
+                        Against: {d.disputedOrg.name}
+                      </span>
+                    )}
                     {d.load?.referenceNumber && (
                       <span>Load: {d.load.referenceNumber}</span>
                     )}
