@@ -16,6 +16,8 @@ import { existsSync } from "fs";
 import { DocumentType } from "@prisma/client";
 // CSRF FIX: Add CSRF validation
 import { validateCSRFWithMobile } from "@/lib/csrf";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/loads/[id]/documents
@@ -72,14 +74,8 @@ export async function GET(
     return NextResponse.json({
       documents: load.documents,
     });
-    // FIX: Use unknown type
   } catch (error: unknown) {
-    console.error("Error fetching load documents:", error);
-
-    return NextResponse.json(
-      { error: "Failed to fetch documents" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Load documents error");
   }
 }
 
@@ -103,6 +99,23 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const rpsResult = await checkRpsLimit(
+      "load-document-upload",
+      ip,
+      RPS_CONFIGS.write.rps,
+      RPS_CONFIGS.write.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please slow down." },
+        { status: 429 }
+      );
+    }
+
     // CSRF FIX: Validate CSRF token
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
@@ -234,13 +247,7 @@ export async function POST(
       message: "Document uploaded successfully",
       document,
     });
-    // FIX: Use unknown type
   } catch (error: unknown) {
-    console.error("Error uploading load document:", error);
-
-    return NextResponse.json(
-      { error: "Failed to upload document" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Document upload error");
   }
 }

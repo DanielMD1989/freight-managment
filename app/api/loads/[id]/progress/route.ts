@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { calculateTripProgress } from "@/lib/tripProgress";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/loads/[id]/progress
@@ -86,10 +87,6 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Get trip progress error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Trip progress error");
   }
 }

@@ -14,6 +14,7 @@ import { requireAuth } from "@/lib/auth";
 import { readFile } from "fs/promises";
 import { join, resolve } from "path";
 import { existsSync } from "fs";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/loads/[id]/documents/[documentId]/download
@@ -115,13 +116,7 @@ export async function GET(
         "Content-Length": document.fileSize.toString(),
       },
     });
-    // FIX: Use unknown type
   } catch (error: unknown) {
-    console.error("Error downloading document:", error);
-
-    return NextResponse.json(
-      { error: "Failed to download document" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Document download error");
   }
 }

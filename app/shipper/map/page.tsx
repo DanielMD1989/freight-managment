@@ -15,7 +15,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import GoogleMap, { MapMarker, MapRoute } from "@/components/GoogleMap";
 import { useGpsRealtime, GpsPosition } from "@/hooks/useGpsRealtime";
@@ -77,69 +77,82 @@ export default function ShipperMapPage() {
   const [progressLoading, setProgressLoading] = useState(false);
   const [showHistoryPlayback, setShowHistoryPlayback] = useState(showHistory);
 
+  // Ref to track selected truck ID for GPS callback (avoids re-creating callback on every GPS update)
+  const selectedTruckIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    selectedTruckIdRef.current = selectedTrip?.truck.id ?? null;
+  }, [selectedTrip?.truck.id]);
+
   // Real-time GPS updates
   const { isConnected, subscribeToTrip, unsubscribeFromTrip } = useGpsRealtime({
     autoConnect: true,
-    onPositionUpdate: useCallback(
-      (position: GpsPosition) => {
-        // Update the selected trip's current location if it matches
-        if (selectedTrip && position.truckId === selectedTrip.truck.id) {
-          setSelectedTrip((prev) => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              currentLocation: {
-                lat: position.lat,
-                lng: position.lng,
-                updatedAt: position.timestamp,
-              },
-            };
-          });
-          // Also update in the activeTrips list
-          setActiveTrips((prev) =>
-            prev.map((trip) => {
-              if (trip.truck.id === position.truckId) {
-                return {
-                  ...trip,
-                  currentLocation: {
-                    lat: position.lat,
-                    lng: position.lng,
-                    updatedAt: position.timestamp,
-                  },
-                };
-              }
-              return trip;
-            })
-          );
-        }
-      },
-      [selectedTrip]
-    ),
+    onPositionUpdate: useCallback((position: GpsPosition) => {
+      // Update the selected trip's current location if it matches
+      if (
+        selectedTruckIdRef.current &&
+        position.truckId === selectedTruckIdRef.current
+      ) {
+        setSelectedTrip((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            currentLocation: {
+              lat: position.lat,
+              lng: position.lng,
+              updatedAt: position.timestamp,
+            },
+          };
+        });
+        // Also update in the activeTrips list
+        setActiveTrips((prev) =>
+          prev.map((trip) => {
+            if (trip.truck.id === position.truckId) {
+              return {
+                ...trip,
+                currentLocation: {
+                  lat: position.lat,
+                  lng: position.lng,
+                  updatedAt: position.timestamp,
+                },
+              };
+            }
+            return trip;
+          })
+        );
+      }
+    }, []),
   });
 
   // Subscribe to selected trip's GPS updates
   useEffect(() => {
-    if (selectedTrip && selectedTrip.status === "IN_TRANSIT") {
+    if (selectedTrip?.loadId && selectedTrip.status === "IN_TRANSIT") {
       subscribeToTrip(selectedTrip.loadId);
       return () => {
         unsubscribeFromTrip(selectedTrip.loadId);
       };
     }
-  }, [selectedTrip, subscribeToTrip, unsubscribeFromTrip]);
+  }, [
+    selectedTrip?.loadId,
+    selectedTrip?.status,
+    subscribeToTrip,
+    unsubscribeFromTrip,
+  ]);
 
   // Fetch trip progress when selected trip changes
   useEffect(() => {
-    if (selectedTrip && selectedTrip.status === "IN_TRANSIT") {
+    if (selectedTrip?.loadId && selectedTrip.status === "IN_TRANSIT") {
       fetchTripProgress(selectedTrip.loadId);
       // Refresh progress every 30 seconds
       const interval = setInterval(() => {
-        fetchTripProgress(selectedTrip.loadId);
+        if (selectedTrip?.loadId) {
+          fetchTripProgress(selectedTrip.loadId);
+        }
       }, 30000);
       return () => clearInterval(interval);
     } else {
       setTripProgress(null);
     }
-  }, [selectedTrip]);
+  }, [selectedTrip?.loadId, selectedTrip?.status]);
 
   const fetchMyTrips = useCallback(async () => {
     try {

@@ -458,10 +458,6 @@ export async function PUT(
       settlement: settlementResult,
     });
   } catch (error) {
-    console.error("Verify POD error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Verify POD error");
   }
 }

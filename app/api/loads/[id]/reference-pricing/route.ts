@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * Calculate reference pricing based on route and load characteristics
@@ -163,13 +164,7 @@ export async function GET(
         calculatedAt: new Date().toISOString(),
       },
     });
-    // FIX: Use unknown type
   } catch (error: unknown) {
-    console.error("Error calculating reference pricing:", error);
-
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Reference pricing error");
   }
 }

@@ -12,6 +12,7 @@ import { requireActiveUser } from "@/lib/auth";
 import { requireCSRF } from "@/lib/csrf";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { CacheInvalidation } from "@/lib/cache";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * POST /api/loads/[id]/settle
@@ -254,11 +255,7 @@ export async function POST(
       );
     }
   } catch (error) {
-    console.error("Settlement API error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Settlement error");
   }
 }
 
@@ -342,10 +339,6 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Get settlement status error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Settlement status error");
   }
 }

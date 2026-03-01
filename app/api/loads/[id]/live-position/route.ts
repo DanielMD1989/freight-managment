@@ -5,6 +5,7 @@ import {
   canAccessTracking,
   isTrackingActive,
 } from "@/lib/gpsTracking";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/loads/[id]/live-position
@@ -57,10 +58,6 @@ export async function GET(
       position,
     });
   } catch (error) {
-    console.error("Get live position error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Live position error");
   }
 }

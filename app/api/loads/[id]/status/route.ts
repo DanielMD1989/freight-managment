@@ -26,7 +26,8 @@ import {
 } from "@/lib/trustMetrics";
 // CRITICAL FIX: Import bypass detection for suspicious cancellations
 import { checkSuspiciousCancellation } from "@/lib/bypassDetection";
-import { zodErrorResponse } from "@/lib/validation";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { handleApiError } from "@/lib/apiErrors";
 
 const updateStatusSchema = z.object({
   status: z.enum([
@@ -54,6 +55,23 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const rpsResult = await checkRpsLimit(
+      "load-status-update",
+      ip,
+      RPS_CONFIGS.write.rps,
+      RPS_CONFIGS.write.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please slow down." },
+        { status: 429 }
+      );
+    }
+
     // C5 FIX: Add CSRF protection
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
@@ -503,15 +521,7 @@ export async function PATCH(
       tripSynced: tripUpdated,
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return zodErrorResponse(error);
-    }
-
-    console.error("Load status update error:", error);
-    return NextResponse.json(
-      { error: "Failed to update load status" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Load status update error");
   }
 }
 
@@ -545,10 +555,6 @@ export async function GET(
       validNextStates,
     });
   } catch (error) {
-    console.error("Load status fetch error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch load status" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Load status fetch error");
   }
 }

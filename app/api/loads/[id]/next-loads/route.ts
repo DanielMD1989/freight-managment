@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { findNextLoadsWithMinimalDHD } from "@/lib/deadheadOptimization";
+import { handleApiError } from "@/lib/apiErrors";
 
 // GET /api/loads/[id]/next-loads - Find next loads with minimal DH-D
 export async function GET(
@@ -89,10 +90,6 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Next loads error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Next loads error");
   }
 }

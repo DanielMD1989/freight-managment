@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { getLoadPositions, calculateTripDistance } from "@/lib/gpsQuery";
 import { db } from "@/lib/db";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/loads/[id]/gps-history
@@ -87,10 +88,6 @@ export async function GET(
       trackingEnabled: load.trackingEnabled,
     });
   } catch (error) {
-    console.error("Get load GPS history error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "GPS history error");
   }
 }

@@ -5,6 +5,7 @@ import {
   canAccessTracking,
   checkGeofenceEvents,
 } from "@/lib/gpsTracking";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/loads/[id]/tracking
@@ -48,10 +49,6 @@ export async function GET(
       events,
     });
   } catch (error) {
-    console.error("Get tracking status error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Tracking status error");
   }
 }

@@ -342,7 +342,7 @@ export default async function LoadDetailsPage({ params }: LoadDetailsProps) {
                   <span
                     className={`rounded px-2 py-1 text-xs font-medium ${getServiceFeeStatusColor(load.serviceFeeStatus)}`}
                   >
-                    {load.serviceFeeStatus}
+                    {load.serviceFeeStatus || "N/A"}
                   </span>
                 </div>
                 <div className="flex justify-between">

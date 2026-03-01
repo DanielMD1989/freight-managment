@@ -12,6 +12,7 @@ import { validateCSRFWithMobile } from "@/lib/csrf";
 import { recordBypassReport } from "@/lib/bypassDetection";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
+import { handleApiError } from "@/lib/apiErrors";
 
 const reportBypassSchema = z.object({
   reason: z.string().optional(),
@@ -67,9 +68,6 @@ export async function POST(
       return zodErrorResponse(error);
     }
 
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Report bypass error");
   }
 }

@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { findMatchingTrucks } from "@/lib/matchingEngine";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/loads/[id]/matching-trucks
@@ -167,13 +168,7 @@ export async function GET(
       total: matchedTrucks.length,
       exactMatches: matchedTrucks.filter((t) => t.isExactMatch).length,
     });
-    // FIX: Use unknown type
   } catch (error: unknown) {
-    console.error("Matching trucks error:", error);
-    // M7 FIX: Don't leak error details
-    return NextResponse.json(
-      { error: "Failed to find matching trucks" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Matching trucks error");
   }
 }

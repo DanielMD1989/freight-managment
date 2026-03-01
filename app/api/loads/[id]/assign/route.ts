@@ -12,6 +12,8 @@ import { validateWalletBalancesForTrip } from "@/lib/serviceFeeManagement"; // S
 import { CacheInvalidation } from "@/lib/cache";
 import crypto from "crypto";
 import { zodErrorResponse } from "@/lib/validation";
+import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { handleApiError } from "@/lib/apiErrors";
 
 const assignLoadSchema = z.object({
   truckId: z.string(),
@@ -34,6 +36,23 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const rpsResult = await checkRpsLimit(
+      "load-assign",
+      ip,
+      RPS_CONFIGS.write.rps,
+      RPS_CONFIGS.write.burst
+    );
+    if (!rpsResult.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please slow down." },
+        { status: 429 }
+      );
+    }
+
     // C6 FIX: Add CSRF protection
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
@@ -424,10 +443,7 @@ export async function POST(
       );
     }
 
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Assign load error");
   }
 }
 
@@ -578,10 +594,6 @@ export async function DELETE(
       message: "Load unassigned successfully. GPS tracking disabled.",
     });
   } catch (error) {
-    console.error("Unassign load error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Unassign load error");
   }
 }

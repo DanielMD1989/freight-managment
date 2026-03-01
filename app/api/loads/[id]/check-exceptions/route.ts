@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { checkAllRules, autoCreateEscalations } from "@/lib/exceptionDetection";
+import { handleApiError } from "@/lib/apiErrors";
 
 // POST /api/loads/[id]/check-exceptions - Manually trigger exception detection
 export async function POST(
@@ -46,11 +47,7 @@ export async function POST(
       totalChecked: 4, // Number of rules checked
     });
   } catch (error) {
-    console.error("Exception check error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Exception check error");
   }
 }
 
@@ -84,10 +81,6 @@ export async function GET(
       totalChecked: 4,
     });
   } catch (error) {
-    console.error("Exception preview error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Exception preview error");
   }
 }

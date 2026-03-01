@@ -97,7 +97,7 @@ function formatCurrency(amount: number, currency: string = "ETB"): string {
   return new Intl.NumberFormat("en-ET", {
     style: "currency",
     currency,
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 2,
   }).format(amount);
 }
 

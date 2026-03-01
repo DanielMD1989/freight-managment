@@ -11,6 +11,7 @@ import { CacheInvalidation } from "@/lib/cache";
 import { z } from "zod";
 import { validateStateTransition, LoadStatus } from "@/lib/loadStateMachine";
 import { zodErrorResponse } from "@/lib/validation";
+import { handleApiError } from "@/lib/apiErrors";
 import {
   notifyExceptionAssigned,
   createNotificationForRole,
@@ -304,10 +305,6 @@ export async function GET(
       count: escalations.length,
     });
   } catch (error) {
-    console.error("Escalation fetch error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch escalations" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Escalation fetch error");
   }
 }

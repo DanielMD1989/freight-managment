@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { calculateFeePreview } from "@/lib/serviceFeeCalculation";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/loads/[id]/service-fee
@@ -115,10 +116,6 @@ export async function GET(
       feeBreakdown,
     });
   } catch (error) {
-    console.error("Get service fee error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Service fee error");
   }
 }
