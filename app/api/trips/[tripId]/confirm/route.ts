@@ -15,6 +15,7 @@ import { createNotification, NotificationType } from "@/lib/notifications";
 import { CacheInvalidation } from "@/lib/cache";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
+import { deductServiceFee } from "@/lib/serviceFeeManagement";
 
 const confirmSchema = z.object({
   notes: z.string().max(1000).optional(),
@@ -204,6 +205,40 @@ export async function POST(
 
       return updatedTrip;
     });
+
+    // C1 FIX: Deduct service fee after trip confirmation (same pattern as POD handler)
+    try {
+      const feeResult = await deductServiceFee(trip.loadId);
+      if (feeResult.success && feeResult.totalPlatformFee > 0) {
+        await db.load.update({
+          where: { id: trip.loadId },
+          data: { settlementStatus: "PAID", settledAt: new Date() },
+        });
+        await db.loadEvent.create({
+          data: {
+            loadId: trip.loadId,
+            eventType: "SERVICE_FEE_DEDUCTED",
+            description: `Service fee deducted on delivery confirmation: Shipper ${feeResult.shipperFee.toFixed(2)} ETB, Carrier ${feeResult.carrierFee.toFixed(2)} ETB`,
+            userId: session.userId,
+            metadata: {
+              shipperFee: feeResult.shipperFee,
+              carrierFee: feeResult.carrierFee,
+              totalPlatformFee: feeResult.totalPlatformFee,
+              transactionId: feeResult.transactionId,
+              trigger: "delivery_confirmation",
+            },
+          },
+        });
+      } else if (feeResult.success && feeResult.totalPlatformFee === 0) {
+        await db.load.update({
+          where: { id: trip.loadId },
+          data: { settlementStatus: "PAID", settledAt: new Date() },
+        });
+      }
+    } catch (feeError) {
+      console.error("Service fee deduction failed on confirm:", feeError);
+      // Non-blocking: settlement can be retried via cron
+    }
 
     // Cache invalidation after transaction commits
     await CacheInvalidation.trip(

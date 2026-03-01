@@ -344,15 +344,17 @@ export default async function LoadDetailsPage({ params }: LoadDetailsProps) {
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Status</span>
                   <span
-                    className={`rounded px-2 py-1 text-xs font-medium ${getServiceFeeStatusColor(load.serviceFeeStatus)}`}
+                    className={`rounded px-2 py-1 text-xs font-medium ${getServiceFeeStatusColor(load.shipperFeeStatus || load.serviceFeeStatus)}`}
                   >
-                    {load.serviceFeeStatus || "N/A"}
+                    {load.shipperFeeStatus || load.serviceFeeStatus || "N/A"}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Amount</span>
                   <span className="text-lg font-bold">
-                    {formatCurrency(Number(load.serviceFeeEtb || 0))}
+                    {formatCurrency(
+                      Number(load.shipperServiceFee || load.serviceFeeEtb || 0)
+                    )}
                   </span>
                 </div>
                 <div className="border-t border-gray-200 pt-3">

@@ -197,19 +197,28 @@ export async function POST(
     // TD-007 FIX: Invalidate cache after POD submission
     await CacheInvalidation.load(loadId);
 
-    // Notify shipper that POD has been submitted for verification
+    // C4 FIX: Notify shipper user (not org ID) that POD has been submitted
     const loadWithShipper = await db.load.findUnique({
       where: { id: loadId },
       select: {
         shipperId: true,
         pickupCity: true,
         deliveryCity: true,
+        shipper: {
+          select: {
+            users: {
+              select: { id: true },
+              take: 1,
+            },
+          },
+        },
       },
     });
 
-    if (loadWithShipper?.shipperId) {
+    const shipperUserId = loadWithShipper?.shipper?.users?.[0]?.id;
+    if (shipperUserId) {
       await createNotification({
-        userId: loadWithShipper.shipperId,
+        userId: shipperUserId,
         type: NotificationType.POD_SUBMITTED,
         title: "Proof of Delivery Submitted",
         message: `Carrier has submitted POD for load ${loadWithShipper.pickupCity} → ${loadWithShipper.deliveryCity}. Please verify.`,

@@ -89,12 +89,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // C3 FIX: Set disputedOrgId to the OTHER party, not the filer
+    const disputedOrgId = isShipper
+      ? load.assignedTruck?.carrier?.id // Shipper filing → dispute against carrier
+      : load.shipper?.id; // Carrier filing → dispute against shipper
+
+    if (!disputedOrgId) {
+      return NextResponse.json(
+        { error: "Cannot determine the other party for this dispute" },
+        { status: 400 }
+      );
+    }
+
     // Create dispute
     const dispute = await db.dispute.create({
       data: {
         loadId: validatedData.loadId,
         createdById: session.userId,
-        disputedOrgId: session.organizationId!,
+        disputedOrgId,
         type: validatedData.type,
         description: validatedData.description,
         evidenceUrls: validatedData.evidence ? [validatedData.evidence] : [],

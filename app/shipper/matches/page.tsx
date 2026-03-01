@@ -68,7 +68,7 @@ async function getPostedLoads(organizationId: string): Promise<Load[]> {
 export default async function TruckMatchesPage({
   searchParams,
 }: {
-  searchParams: { loadId?: string };
+  searchParams: Promise<{ loadId?: string }>;
 }) {
   // Verify authentication
   const cookieStore = await cookies();
@@ -91,8 +91,9 @@ export default async function TruckMatchesPage({
   // Fetch posted loads
   const postedLoads = await getPostedLoads(session.organizationId);
 
-  // Get selected load ID from query param or use first posted load
-  const selectedLoadId = searchParams.loadId || postedLoads[0]?.id;
+  // M2 FIX: Await searchParams (Next.js 15 requires Promise)
+  const resolvedParams = await searchParams;
+  const selectedLoadId = resolvedParams.loadId || postedLoads[0]?.id;
 
   return (
     <div className="mx-auto max-w-7xl">

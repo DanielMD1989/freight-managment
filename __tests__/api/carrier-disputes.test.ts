@@ -254,7 +254,8 @@ describe("Carrier Disputes API", () => {
       expect(data.dispute.status).toBe("OPEN");
       expect(data.dispute.loadId).toBe(seed.load.id);
       expect(data.dispute.createdById).toBe("carrier-user-1");
-      expect(data.dispute.disputedOrgId).toBe("carrier-org-1");
+      // C3 FIX: disputedOrgId should be the OTHER party (shipper), not the filer (carrier)
+      expect(data.dispute.disputedOrgId).toBe("shipper-org-1");
     });
 
     it("should create a DAMAGE dispute with evidence", async () => {
@@ -669,7 +670,8 @@ describe("Carrier Disputes API", () => {
       const data = await parseResponse(res);
       expect(data.dispute).toBeDefined();
       expect(data.dispute.createdById).toBe("shipper-user-1");
-      expect(data.dispute.disputedOrgId).toBe("shipper-org-1");
+      // C3 FIX: disputedOrgId should be the OTHER party (carrier), not the filer (shipper)
+      expect(data.dispute.disputedOrgId).toBe("carrier-org-1");
     });
   });
 });

@@ -51,10 +51,14 @@ export async function GET(request: NextRequest) {
     );
     const typeParam = searchParams.get("type");
     const validTypes = [
+      "DEPOSIT",
+      "WITHDRAWAL",
       "COMMISSION",
-      "PAYMENT",
+      "SETTLEMENT",
       "REFUND",
-      "ADJUSTMENT",
+      "SERVICE_FEE_RESERVE",
+      "SERVICE_FEE_DEDUCT",
+      "SERVICE_FEE_REFUND",
     ] as const;
     // FIX: Use proper type narrowing
     type ValidType = (typeof validTypes)[number];

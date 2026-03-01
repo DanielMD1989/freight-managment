@@ -81,7 +81,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         );
       }
 
-      return tx.withdrawalRequest.update({
+      const result = await tx.withdrawalRequest.update({
         where: { id },
         data: {
           status: action,
@@ -91,6 +91,54 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           completedAt: action === "APPROVED" ? new Date() : null,
         },
       });
+
+      // C2 FIX: On approval, deduct wallet balance and create journal entry
+      if (action === "APPROVED") {
+        // Find the requesting user's organization
+        const requestingUser = await tx.user.findUnique({
+          where: { id: existing.requestedById },
+          select: { organizationId: true },
+        });
+
+        if (requestingUser?.organizationId) {
+          // Find their wallet
+          const wallet = await tx.financialAccount.findFirst({
+            where: {
+              organizationId: requestingUser.organizationId,
+              accountType: { in: ["SHIPPER_WALLET", "CARRIER_WALLET"] },
+              isActive: true,
+            },
+          });
+
+          if (wallet) {
+            // Decrement wallet balance
+            await tx.financialAccount.update({
+              where: { id: wallet.id },
+              data: { balance: { decrement: existing.amount } },
+            });
+
+            // Create WITHDRAWAL journal entry
+            await tx.journalEntry.create({
+              data: {
+                transactionType: "WITHDRAWAL",
+                description: `Withdrawal approved: ${Number(existing.amount).toFixed(2)} ETB to ${existing.bankName} (${existing.bankAccount})`,
+                reference: id,
+                lines: {
+                  create: [
+                    {
+                      accountId: wallet.id,
+                      amount: existing.amount,
+                      isDebit: true,
+                    },
+                  ],
+                },
+              },
+            });
+          }
+        }
+      }
+
+      return result;
     });
 
     // Invalidate user cache so wallet/status reflects immediately

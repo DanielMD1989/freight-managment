@@ -95,7 +95,7 @@ export async function POST(
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
-    // Cannot cancel COMPLETED or already CANCELLED trips
+    // Cannot cancel COMPLETED, CANCELLED, or IN_TRANSIT trips
     if (trip.status === "COMPLETED") {
       return NextResponse.json(
         { error: "Cannot cancel a completed trip" },
@@ -106,6 +106,17 @@ export async function POST(
     if (trip.status === "CANCELLED") {
       return NextResponse.json(
         { error: "Trip is already cancelled" },
+        { status: 400 }
+      );
+    }
+
+    // H4 FIX: Block IN_TRANSIT cancellation — must go through EXCEPTION workflow
+    if (trip.status === "IN_TRANSIT") {
+      return NextResponse.json(
+        {
+          error:
+            "Cannot cancel a trip that is in transit. Use the exception workflow instead.",
+        },
         { status: 400 }
       );
     }
@@ -134,6 +145,10 @@ export async function POST(
         ? "Shipper"
         : "Admin";
 
+    // H2 FIX: If carrier/admin cancels, set load back to POSTED so shipper can find new carrier.
+    // Only set to CANCELLED if shipper initiated the cancellation.
+    const loadStatusAfterCancel = isShipper ? "CANCELLED" : "POSTED";
+
     // CRITICAL FIX: Wrap all state changes in a transaction for atomicity
     const updatedTrip = await db.$transaction(async (tx) => {
       // Update trip status to CANCELLED
@@ -148,28 +163,52 @@ export async function POST(
         },
       });
 
-      // Update Load status back to CANCELLED
+      // H2 FIX: Update Load status based on who cancelled
       await tx.load.update({
         where: { id: trip.loadId },
         data: {
-          status: "CANCELLED",
+          status: loadStatusAfterCancel,
           assignedTruckId: null,
           assignedAt: null,
+          ...(loadStatusAfterCancel === "POSTED" && { postedAt: new Date() }),
         },
       });
+
+      // H3 FIX: Restore truck availability after cancellation
+      if (trip.truckId) {
+        const otherActiveTrips = await tx.trip.count({
+          where: {
+            truckId: trip.truckId,
+            id: { not: tripId },
+            status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+          },
+        });
+        if (otherActiveTrips === 0) {
+          await tx.truck.update({
+            where: { id: trip.truckId },
+            data: { isAvailable: true },
+          });
+        }
+        // Revert MATCHED postings to ACTIVE so truck appears in searches again
+        await tx.truckPosting.updateMany({
+          where: { truckId: trip.truckId, status: "MATCHED" },
+          data: { status: "ACTIVE", updatedAt: new Date() },
+        });
+      }
 
       // Create load event inside transaction
       await tx.loadEvent.create({
         data: {
           loadId: trip.loadId,
           eventType: "TRIP_CANCELLED",
-          description: `Trip cancelled by ${cancelledByRole}. Reason: ${validatedData.reason}`,
+          description: `Trip cancelled by ${cancelledByRole}. Load set to ${loadStatusAfterCancel}. Reason: ${validatedData.reason}`,
           userId: session.userId,
           metadata: {
             tripId,
             cancelledBy: cancelledByRole,
             reason: validatedData.reason,
             previousStatus: trip.status,
+            loadStatusAfterCancel,
           },
         },
       });

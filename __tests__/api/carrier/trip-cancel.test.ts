@@ -496,7 +496,7 @@ describe("Trip Cancellation", () => {
       expect(data.trip.cancelledAt).toBeDefined();
     });
 
-    it("load → CANCELLED with assignedTruckId nulled", async () => {
+    it("load → POSTED (not CANCELLED) when carrier cancels, assignedTruckId nulled", async () => {
       const { tripId, loadId } = await createCancellableTrip();
 
       const req = createRequest(
@@ -507,9 +507,9 @@ describe("Trip Cancellation", () => {
       const res = await callHandler(cancelTrip, req, { tripId });
       expect(res.status).toBe(200);
 
-      // Verify load was updated
+      // Verify load was set back to POSTED (so shipper can find a new carrier)
       const load = await db.load.findUnique({ where: { id: loadId } });
-      expect(load.status).toBe("CANCELLED");
+      expect(load.status).toBe("POSTED");
       expect(load.assignedTruckId).toBeNull();
     });
   });
@@ -575,7 +575,8 @@ describe("Trip Cancellation", () => {
 
   describe("Side Effects", () => {
     it("TRIP_CANCELLED load event created with metadata", async () => {
-      const { tripId, loadId } = await createCancellableTrip("IN_TRANSIT");
+      // Use ASSIGNED status (IN_TRANSIT is now blocked from cancellation)
+      const { tripId, loadId } = await createCancellableTrip("ASSIGNED");
 
       const req = createRequest(
         "POST",
@@ -591,12 +592,27 @@ describe("Trip Cancellation", () => {
             loadId,
             eventType: "TRIP_CANCELLED",
             metadata: expect.objectContaining({
-              previousStatus: "IN_TRANSIT",
+              previousStatus: "ASSIGNED",
               reason: "Route blocked",
             }),
           }),
         })
       );
+    });
+
+    it("IN_TRANSIT trips cannot be cancelled (must use exception workflow)", async () => {
+      const { tripId } = await createCancellableTrip("IN_TRANSIT");
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/trips/${tripId}/cancel`,
+        { body: { reason: "Route blocked" } }
+      );
+      const res = await callHandler(cancelTrip, req, { tripId });
+      expect(res.status).toBe(400);
+
+      const data = await parseResponse(res);
+      expect(data.error).toContain("in transit");
     });
 
     it("trackingEnabled set to false on cancellation", async () => {

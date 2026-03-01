@@ -170,6 +170,10 @@ export default function EditLoadForm({ load }: EditLoadFormProps) {
         bookMode: formData.bookMode,
         shipperContactName: formData.shipperContactName || null,
         shipperContactPhone: formData.shipperContactPhone || null,
+        // M1 FIX: Include boolean fields that were loaded but not sent on save
+        isFragile: formData.isFragile,
+        requiresRefrigeration: formData.requiresRefrigeration,
+        isAnonymous: formData.isAnonymous,
       };
 
       const response = await fetch(`/api/loads/${load.id}`, {

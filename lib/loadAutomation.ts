@@ -88,6 +88,8 @@ export async function autoSettleCompletedLoads() {
     const loadsToSettle = await db.load.findMany({
       where: {
         status: { in: ["DELIVERED", "COMPLETED"] },
+        podVerified: true,
+        settlementStatus: "PENDING",
       },
       include: {
         shipper: {

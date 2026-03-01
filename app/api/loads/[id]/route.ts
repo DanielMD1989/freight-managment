@@ -99,6 +99,9 @@ const updateLoadSchema = z
     bookMode: z.enum(["REQUEST", "INSTANT"]).optional(),
     shipperContactPhone: z.string().max(20).optional().nullable(),
     shipperContactName: z.string().max(100).optional().nullable(),
+    isFragile: z.boolean().optional(),
+    requiresRefrigeration: z.boolean().optional(),
+    isAnonymous: z.boolean().optional(),
     isKept: z.boolean().optional(),
     hasAlerts: z.boolean().optional(),
     groupId: z.string().max(50).optional().nullable(),
@@ -296,7 +299,7 @@ export async function PATCH(
       user?.organizationId === existingLoad.shipperId ||
       session.userId === existingLoad.createdById ||
       session.role === "ADMIN" ||
-      session.role === "PLATFORM_OPS";
+      session.role === "SUPER_ADMIN";
 
     if (!canEdit) {
       console.error("Permission denied:", {
@@ -389,12 +392,8 @@ export async function PATCH(
       }
 
       // Auto-unassign truck when status changes to terminal states
-      const terminalStatuses = [
-        "DELIVERED",
-        "COMPLETED",
-        "CANCELLED",
-        "EXPIRED",
-      ];
+      // H1 FIX: DELIVERED is not terminal — truck must stay assigned for POD upload
+      const terminalStatuses = ["COMPLETED", "CANCELLED", "EXPIRED"];
       if (
         terminalStatuses.includes(validatedData.status) &&
         existingLoad.assignedTruckId
@@ -477,7 +476,7 @@ export async function PATCH(
     }
 
     // Log truck unassignment if it happened
-    const terminalStatuses = ["DELIVERED", "COMPLETED", "CANCELLED", "EXPIRED"];
+    const terminalStatuses = ["COMPLETED", "CANCELLED", "EXPIRED"];
     if (
       validatedData.status &&
       terminalStatuses.includes(validatedData.status) &&
@@ -596,7 +595,7 @@ export async function DELETE(
       user?.organizationId === load.shipperId ||
       session.userId === load.createdById ||
       session.role === "ADMIN" ||
-      session.role === "PLATFORM_OPS";
+      session.role === "SUPER_ADMIN";
 
     if (!canDelete) {
       return NextResponse.json(
@@ -605,16 +604,17 @@ export async function DELETE(
       );
     }
 
-    // Can only delete draft, unposted, or posted loads (not assigned/in-transit/delivered)
+    // Can only delete draft, unposted, or posted loads (not assigned/pickup-pending/in-transit/delivered)
     if (
       load.status === "ASSIGNED" ||
+      load.status === "PICKUP_PENDING" ||
       load.status === "IN_TRANSIT" ||
       load.status === "DELIVERED"
     ) {
       return NextResponse.json(
         {
           error:
-            "Cannot delete loads that are assigned, in transit, or delivered",
+            "Cannot delete loads that are assigned, awaiting pickup, in transit, or delivered",
         },
         { status: 400 }
       );

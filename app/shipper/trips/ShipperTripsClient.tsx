@@ -57,9 +57,14 @@ interface StatusOption {
 }
 
 const STATUS_OPTIONS: StatusOption[] = [
-  { value: "all", label: "All", statuses: ["DELIVERED", "COMPLETED"] },
+  {
+    value: "all",
+    label: "All",
+    statuses: ["DELIVERED", "COMPLETED", "CANCELLED"],
+  },
   { value: "DELIVERED", label: "Delivered" },
   { value: "COMPLETED", label: "Completed" },
+  { value: "CANCELLED", label: "Cancelled" },
 ];
 
 function formatDate(dateString: string): string {
@@ -93,6 +98,7 @@ function getStatusColor(status: string, trip?: Trip): string {
     IN_TRANSIT: "bg-amber-50 text-amber-700 border border-amber-200",
     DELIVERED: "bg-emerald-50 text-emerald-700 border border-emerald-200",
     COMPLETED: "bg-slate-50 text-slate-600 border border-slate-200",
+    CANCELLED: "bg-red-50 text-red-700 border border-red-200",
   };
   return colors[status] || "bg-slate-50 text-slate-600 border border-slate-200";
 }
@@ -108,6 +114,7 @@ function getStatusLabel(status: string, trip?: Trip): string {
     IN_TRANSIT: "In Transit",
     DELIVERED: "Delivered",
     COMPLETED: "Completed",
+    CANCELLED: "Cancelled",
   };
   return labels[status] || status;
 }

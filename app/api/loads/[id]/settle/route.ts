@@ -13,6 +13,7 @@ import { requireCSRF } from "@/lib/csrf";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { CacheInvalidation } from "@/lib/cache";
 import { handleApiError } from "@/lib/apiErrors";
+import { deductServiceFee } from "@/lib/serviceFeeManagement";
 
 /**
  * POST /api/loads/[id]/settle
@@ -191,8 +192,24 @@ export async function POST(
       );
     }
 
-    // Process settlement - mark as settled and service fees are handled separately
+    // C6 FIX: Deduct service fee before marking as PAID
     try {
+      try {
+        const feeResult = await deductServiceFee(loadId);
+        if (!feeResult.success) {
+          console.error(
+            "Service fee deduction failed during settlement:",
+            feeResult.error
+          );
+        }
+      } catch (feeError) {
+        console.error(
+          "Service fee deduction exception during settlement:",
+          feeError
+        );
+        // Continue to mark as PAID — admin can retry or handle manually
+      }
+
       await db.load.update({
         where: { id: loadId },
         data: {

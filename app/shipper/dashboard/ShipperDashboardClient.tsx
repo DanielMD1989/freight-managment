@@ -47,6 +47,7 @@ interface Load {
   shipperServiceFee?: number;
   status: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 interface Trip {
@@ -630,7 +631,7 @@ export default function ShipperDashboardClient({
                           <span>•</span>
                           <span>
                             Delivered{" "}
-                            {new Date(load.createdAt).toLocaleDateString()}
+                            {new Date(load.updatedAt).toLocaleDateString()}
                           </span>
                         </div>
                       </div>

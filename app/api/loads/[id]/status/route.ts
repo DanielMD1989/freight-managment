@@ -188,7 +188,7 @@ export async function PATCH(
     }
 
     // Determine if truck should be unassigned (terminal states)
-    const terminalStatuses = ["COMPLETED", "DELIVERED", "CANCELLED", "EXPIRED"];
+    const terminalStatuses = ["COMPLETED", "CANCELLED", "EXPIRED"];
     const shouldUnassignTruck =
       terminalStatuses.includes(newStatus) && load.assignedTruckId;
 
