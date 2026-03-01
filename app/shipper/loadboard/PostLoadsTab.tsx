@@ -137,6 +137,11 @@ export default function PostLoadsTab({
   const [requestNotes, setRequestNotes] = useState("");
   const [requestProposedRate, setRequestProposedRate] = useState("");
   const [submittingRequest, setSubmittingRequest] = useState(false);
+  const [serviceFeePreview, setServiceFeePreview] = useState<{
+    amount: number | null;
+    corridorName: string | null;
+    loading: boolean;
+  }>({ amount: null, corridorName: null, loading: false });
 
   // Track which trucks have already been requested
   const [requestedTruckIds, setRequestedTruckIds] = useState<Set<string>>(
@@ -611,7 +616,34 @@ export default function PostLoadsTab({
     setSelectedLoadForRequest(loadId);
     setRequestNotes("");
     setRequestProposedRate("");
+    setServiceFeePreview({ amount: null, corridorName: null, loading: true });
     setRequestModalOpen(true);
+
+    // Fetch service fee preview
+    fetch(`/api/loads/${loadId}/service-fee`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          setServiceFeePreview({
+            amount: data.serviceFee?.amount ?? null,
+            corridorName: data.corridor?.name ?? null,
+            loading: false,
+          });
+        } else {
+          setServiceFeePreview({
+            amount: null,
+            corridorName: null,
+            loading: false,
+          });
+        }
+      })
+      .catch(() => {
+        setServiceFeePreview({
+          amount: null,
+          corridorName: null,
+          loading: false,
+        });
+      });
   };
 
   const handleSubmitTruckRequest = async () => {
@@ -656,6 +688,11 @@ export default function PostLoadsTab({
         setRequestedTruckIds((prev) => new Set([...prev, truckId]));
       }
       setRequestModalOpen(false);
+      setServiceFeePreview({
+        amount: null,
+        corridorName: null,
+        loading: false,
+      });
     } catch (error) {
       // L20 FIX: Proper error handling without any
       const message =
@@ -1539,7 +1576,14 @@ export default function PostLoadsTab({
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div
             className="fixed inset-0 bg-black/50"
-            onClick={() => setRequestModalOpen(false)}
+            onClick={() => {
+              setRequestModalOpen(false);
+              setServiceFeePreview({
+                amount: null,
+                corridorName: null,
+                loading: false,
+              });
+            }}
           />
           <div className="flex min-h-screen items-center justify-center p-4">
             <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
@@ -1556,6 +1600,43 @@ export default function PostLoadsTab({
                   • {selectedTruckForRequest.carrier?.name || "Unknown Carrier"}
                 </div>
               </div>
+
+              {/* Service Fee Preview */}
+              {serviceFeePreview.loading ? (
+                <div className="mb-4 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-teal-500"></div>
+                  <span className="text-sm text-slate-500">
+                    Calculating service fee...
+                  </span>
+                </div>
+              ) : serviceFeePreview.amount !== null ? (
+                <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-amber-800">
+                      Estimated Service Fee
+                    </span>
+                    <span className="text-lg font-bold text-amber-700">
+                      ETB{" "}
+                      {serviceFeePreview.amount.toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+                  {serviceFeePreview.corridorName && (
+                    <div className="mt-1 text-xs text-amber-600">
+                      Corridor: {serviceFeePreview.corridorName}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <span className="text-sm text-slate-500">
+                    Service fee will be calculated when the load matches a
+                    corridor.
+                  </span>
+                </div>
+              )}
 
               <div className="space-y-4">
                 <div>
@@ -1587,7 +1668,14 @@ export default function PostLoadsTab({
 
               <div className="mt-6 flex justify-end gap-3">
                 <button
-                  onClick={() => setRequestModalOpen(false)}
+                  onClick={() => {
+                    setRequestModalOpen(false);
+                    setServiceFeePreview({
+                      amount: null,
+                      corridorName: null,
+                      loading: false,
+                    });
+                  }}
                   className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800"
                 >
                   Cancel

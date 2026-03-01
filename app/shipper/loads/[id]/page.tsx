@@ -10,6 +10,7 @@ import { verifyToken } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import Link from "next/link";
+import LoadDetailActions from "./LoadDetailActions";
 
 interface LoadDetailsProps {
   params: Promise<{ id: string }>;
@@ -64,6 +65,9 @@ export default async function LoadDetailsPage({ params }: LoadDetailsProps) {
             },
           },
         },
+      },
+      trip: {
+        select: { id: true, status: true },
       },
       events: {
         orderBy: {
@@ -410,35 +414,17 @@ export default async function LoadDetailsPage({ params }: LoadDetailsProps) {
           </div>
 
           {/* Actions */}
-          <div className="rounded-lg bg-white p-6 shadow">
-            <h2 className="mb-4 text-xl font-semibold text-gray-900">
-              Actions
-            </h2>
-            <div className="space-y-3">
-              {load.status === "POSTED" && (
-                <Link
-                  href={`/shipper/loadboard?tab=SEARCH_TRUCKS&origin=${encodeURIComponent(load.pickupCity || "")}&destination=${encodeURIComponent(load.deliveryCity || "")}`}
-                  className="block w-full rounded-lg bg-blue-600 px-4 py-2 text-center text-white transition-colors hover:bg-blue-700"
-                >
-                  Find Trucks
-                </Link>
-              )}
-              {(load.status === "DRAFT" || load.status === "POSTED") && (
-                <Link
-                  href={`/shipper/loads/${load.id}/edit`}
-                  className="block w-full rounded-lg bg-gray-100 px-4 py-2 text-center text-gray-700 transition-colors hover:bg-gray-200"
-                >
-                  Edit Load
-                </Link>
-              )}
-              <Link
-                href="/shipper/loads"
-                className="block w-full rounded-lg border border-gray-300 px-4 py-2 text-center text-gray-700 transition-colors hover:bg-gray-50"
-              >
-                Back to List
-              </Link>
-            </div>
-          </div>
+          <LoadDetailActions
+            loadId={load.id}
+            status={load.status}
+            podUrl={load.podUrl}
+            podSubmitted={load.podSubmitted}
+            podVerified={load.podVerified}
+            podVerifiedAt={load.podVerifiedAt}
+            tripId={load.trip?.id ?? null}
+            pickupCity={load.pickupCity}
+            deliveryCity={load.deliveryCity}
+          />
         </div>
       </div>
     </div>

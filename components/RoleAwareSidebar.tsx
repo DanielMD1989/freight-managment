@@ -675,6 +675,12 @@ const navigationSections: Record<string, NavSection[]> = {
           icon: "📋",
           roles: ["SHIPPER", "ADMIN", "SUPER_ADMIN"],
         },
+        {
+          label: "Proposals",
+          href: "/shipper/proposals",
+          icon: "🎯",
+          roles: ["SHIPPER", "ADMIN", "SUPER_ADMIN"],
+        },
       ],
     },
     {
@@ -690,6 +696,12 @@ const navigationSections: Record<string, NavSection[]> = {
           label: "Trips",
           href: "/shipper/trips",
           icon: "🚚",
+          roles: ["SHIPPER", "ADMIN", "SUPER_ADMIN"],
+        },
+        {
+          label: "Disputes",
+          href: "/shipper/disputes",
+          icon: "⚠️",
           roles: ["SHIPPER", "ADMIN", "SUPER_ADMIN"],
         },
       ],
