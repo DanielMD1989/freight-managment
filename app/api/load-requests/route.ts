@@ -20,6 +20,7 @@ import { Prisma } from "@prisma/client";
 import { handleApiError } from "@/lib/apiErrors";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { CacheInvalidation } from "@/lib/cache";
+import { validateWalletBalancesForTrip } from "@/lib/serviceFeeManagement";
 
 // Validation schema for load request
 // Note: No proposedRate field - price negotiation happens outside platform
@@ -190,6 +191,27 @@ export async function POST(request: NextRequest) {
         {
           error:
             "A pending request already exists for this load-truck combination",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate wallet balances before creating the request
+    const walletValidation = await validateWalletBalancesForTrip(
+      data.loadId,
+      session.organizationId!
+    );
+    if (!walletValidation.valid) {
+      return NextResponse.json(
+        {
+          error: "Insufficient wallet balance to request this load",
+          details: walletValidation.errors,
+          fees: {
+            shipperFee: walletValidation.shipperFee,
+            carrierFee: walletValidation.carrierFee,
+            shipperBalance: walletValidation.shipperBalance,
+            carrierBalance: walletValidation.carrierBalance,
+          },
         },
         { status: 400 }
       );

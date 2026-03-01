@@ -273,6 +273,7 @@
 - [ ] Carrier sends a load request via `POST /api/load-requests` specifying loadId and truckId
 - [ ] Load request is created with status `PENDING` and an expiration time
 - [ ] Shipper is notified of the incoming request
+- [ ] Wallet balances are validated before request creation (validation only, no deduction)
 - [ ] Shipper reviews and responds via `POST /api/load-requests/[id]/respond`
 - [ ] Shipper can `APPROVE` or `REJECT` the request
 
@@ -292,6 +293,7 @@
 - [ ] Shipper sends a truck request via `POST /api/truck-requests` specifying truckPostingId and loadId
 - [ ] Truck request is created with status `PENDING` and an expiration time
 - [ ] Carrier is notified of the incoming request
+- [ ] Wallet balances are validated before request creation (validation only, no deduction)
 - [ ] **CARRIER_FINAL_AUTHORITY**: only the carrier who owns the truck can approve or reject
 - [ ] Carrier responds via `POST /api/truck-requests/[id]/respond` with APPROVE or REJECT
 
@@ -315,7 +317,7 @@
 - [ ] **CARRIER_FINAL_AUTHORITY**: only the carrier who owns the truck can accept or reject the proposal
 - [ ] Carrier responds via `POST /api/match-proposals/[id]/respond` with ACCEPT or REJECT
 - [ ] Dispatcher CANNOT directly assign loads (RULE: DISPATCHER_COORDINATION_ONLY)
-- [ ] Wallet balances are validated before acceptance (validation only, no deduction)
+- [ ] Wallet balances are validated at proposal creation AND again at acceptance time as a safety net
 
 **API:** `POST /api/match-proposals`, `POST /api/match-proposals/[id]/respond` (`app/api/match-proposals/[id]/respond/route.ts`)
 
@@ -538,7 +540,7 @@
 
 **Acceptance Criteria:**
 
-- [ ] `validateWalletBalancesForTrip(loadId, carrierId)` is called during match proposal acceptance
+- [ ] `validateWalletBalancesForTrip(loadId, carrierId)` is called at request/proposal **creation** time (truck requests, load requests, match proposals) AND again at acceptance time as a safety net
 - [ ] Checks shipper wallet has sufficient balance for shipper fee
 - [ ] Checks carrier wallet has sufficient balance for carrier fee
 - [ ] If either balance is insufficient, returns 400 with details of required vs. available amounts

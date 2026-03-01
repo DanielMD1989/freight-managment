@@ -263,6 +263,16 @@ export async function POST(request: NextRequest) {
         throw new Error("TRIP_ALREADY_EXISTS");
       }
 
+      // Validate load is assignable
+      if (!["POSTED", "SEARCHING", "OFFERED"].includes(load.status)) {
+        throw new Error("LOAD_NOT_ASSIGNABLE");
+      }
+
+      // Validate truck is available and approved
+      if (!truck.isAvailable || truck.approvalStatus !== "APPROVED") {
+        throw new Error("TRUCK_NOT_AVAILABLE");
+      }
+
       const trip = await tx.trip.create({
         data: {
           loadId: validatedData.loadId,
@@ -304,6 +314,20 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // US-4.5: Update load, truck, and posting state atomically
+      await tx.load.update({
+        where: { id: validatedData.loadId },
+        data: { status: "ASSIGNED", assignedTruckId: validatedData.truckId },
+      });
+      await tx.truck.update({
+        where: { id: validatedData.truckId },
+        data: { isAvailable: false },
+      });
+      await tx.truckPosting.updateMany({
+        where: { truckId: validatedData.truckId, status: "ACTIVE" },
+        data: { status: "MATCHED", updatedAt: new Date() },
+      });
+
       return trip;
     });
 
@@ -327,6 +351,21 @@ export async function POST(request: NextRequest) {
     if (error instanceof Error && error.message === "TRIP_ALREADY_EXISTS") {
       return NextResponse.json(
         { error: "Trip already exists for this load" },
+        { status: 400 }
+      );
+    }
+    if (error instanceof Error && error.message === "LOAD_NOT_ASSIGNABLE") {
+      return NextResponse.json(
+        {
+          error:
+            "Load is not in an assignable state (must be POSTED, SEARCHING, or OFFERED)",
+        },
+        { status: 400 }
+      );
+    }
+    if (error instanceof Error && error.message === "TRUCK_NOT_AVAILABLE") {
+      return NextResponse.json(
+        { error: "Truck is not available or not approved" },
         { status: 400 }
       );
     }

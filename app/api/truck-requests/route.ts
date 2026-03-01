@@ -23,6 +23,7 @@ import {
 import { UserRole } from "@prisma/client";
 import { notifyTruckRequest } from "@/lib/notifications";
 import { handleApiError } from "@/lib/apiErrors";
+import { validateWalletBalancesForTrip } from "@/lib/serviceFeeManagement";
 
 // Validation schema for truck request
 // Note: No offeredRate field - price negotiation happens outside platform
@@ -191,6 +192,27 @@ export async function POST(request: NextRequest) {
           existingRequestId: existingRequest.id,
         },
         { status: 409 }
+      );
+    }
+
+    // Validate wallet balances before creating the request
+    const walletValidation = await validateWalletBalancesForTrip(
+      data.loadId,
+      truck.carrierId
+    );
+    if (!walletValidation.valid) {
+      return NextResponse.json(
+        {
+          error: "Insufficient wallet balance to request this truck",
+          details: walletValidation.errors,
+          fees: {
+            shipperFee: walletValidation.shipperFee,
+            carrierFee: walletValidation.carrierFee,
+            shipperBalance: walletValidation.shipperBalance,
+            carrierBalance: walletValidation.carrierBalance,
+          },
+        },
+        { status: 400 }
       );
     }
 

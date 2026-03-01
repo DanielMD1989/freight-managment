@@ -281,11 +281,11 @@ describe("Audit Fixes", () => {
         })
       );
 
-      // Create a load for trip creation
+      // Create a load for trip creation (must be in assignable state)
       const tripLoad = await db.load.create({
         data: {
           id: "trip-role-test-load",
-          status: "ASSIGNED",
+          status: "POSTED",
           pickupCity: "Addis Ababa",
           pickupDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
           deliveryCity: "Dire Dawa",
@@ -368,7 +368,7 @@ describe("Audit Fixes", () => {
       const adminTripLoad = await db.load.create({
         data: {
           id: "admin-trip-test-load",
-          status: "ASSIGNED",
+          status: "POSTED",
           pickupCity: "Mekelle",
           pickupDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
           deliveryCity: "Jimma",
@@ -382,10 +382,23 @@ describe("Audit Fixes", () => {
         },
       });
 
+      // Create a separate available truck (seed.truck may be unavailable from prior test)
+      const adminTruck = await db.truck.create({
+        data: {
+          id: "admin-trip-test-truck",
+          truckType: "DRY_VAN",
+          licensePlate: "ADMIN-TRIP-TST",
+          capacity: 5000,
+          carrierId: seed.carrierOrg.id,
+          isAvailable: true,
+          approvalStatus: "APPROVED",
+        },
+      });
+
       const req = createRequest("POST", "http://localhost:3000/api/trips", {
         body: {
           loadId: adminTripLoad.id,
-          truckId: seed.truck.id,
+          truckId: adminTruck.id,
         },
       });
 
