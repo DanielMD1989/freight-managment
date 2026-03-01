@@ -323,20 +323,23 @@ async function checkMultiKeyRateLimit(
     // IP-based limit (most restrictive for anonymous)
     checkRateLimit(
       { ...config, name: `${config.name}:ip`, limit: config.limit },
-      ids.ip
+      ids.ip,
+      request
     ),
     // User-based limit (if authenticated)
     userId
       ? checkRateLimit(
           { ...config, name: `${config.name}:user`, limit: config.limit * 2 },
-          ids.userId
+          ids.userId,
+          request
         )
       : null,
     // Org-based limit (shared across org members)
     orgId
       ? checkRateLimit(
           { ...config, name: `${config.name}:org`, limit: config.limit * 10 },
-          ids.orgId
+          ids.orgId,
+          request
         )
       : null,
   ]);
@@ -463,7 +466,7 @@ export function withRateLimit(
             request.headers.get("x-real-ip") ||
             "anonymous";
 
-        result = await checkRateLimit(config, identifier);
+        result = await checkRateLimit(config, identifier, request);
       }
 
       // Rate limit headers

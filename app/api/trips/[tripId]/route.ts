@@ -314,76 +314,98 @@ export async function PATCH(
 
     // P1-002 FIX: Wrap trip update and load sync in single transaction
     // to ensure atomic status synchronization
-    const { updatedTrip, loadSynced } = await db.$transaction(async (tx) => {
-      // Update trip
-      const updatedTrip = await tx.trip.update({
-        where: { id: tripId },
-        data: updateData,
-        include: {
-          load: true,
-          truck: true,
-          carrier: true,
-          shipper: true,
-        },
-      });
-
-      // Sync trip status with load status (inside transaction)
-      let loadSynced = false;
-      if (validatedData.status) {
-        const loadStatus = mapTripStatusToLoadStatus(validatedData.status);
-        if (loadStatus) {
-          await tx.load.update({
-            where: { id: trip.loadId },
-            data: { status: loadStatus },
-          });
-          loadSynced = true;
-        }
-      }
-
-      // Create load event inside transaction
-      await tx.loadEvent.create({
-        data: {
-          loadId: trip.loadId,
-          eventType: "TRIP_STATUS_UPDATED",
-          description: `Trip status changed to ${validatedData.status}`,
-          userId: session.userId,
-          metadata: {
-            tripId,
-            previousStatus: trip.status,
-            newStatus: validatedData.status,
-            loadStatusSynced: loadSynced,
-          },
-        },
-      });
-
-      // Restore truck availability on trip completion or cancellation
-      if (
-        validatedData.status === "COMPLETED" ||
-        validatedData.status === "CANCELLED"
-      ) {
-        // Only restore availability if no other active trips exist for this truck
-        const otherActiveTrips = await tx.trip.count({
+    let updatedTrip;
+    let loadSynced: boolean;
+    try {
+      ({ updatedTrip, loadSynced } = await db.$transaction(async (tx) => {
+        // Update trip with optimistic concurrency control:
+        // Include current status in WHERE clause so Prisma throws P2025
+        // if another request changed the status between our read and write.
+        const updatedTrip = await tx.trip.update({
           where: {
-            truckId: trip.truckId,
-            id: { not: tripId },
-            status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+            id: tripId,
+            status: trip.status, // Optimistic lock — fails if status changed concurrently
+          },
+          data: updateData,
+          include: {
+            load: true,
+            truck: true,
+            carrier: true,
+            shipper: true,
           },
         });
-        if (otherActiveTrips === 0) {
-          await tx.truck.update({
-            where: { id: trip.truckId },
-            data: { isAvailable: true },
+
+        // Sync trip status with load status (inside transaction)
+        let loadSynced = false;
+        if (validatedData.status) {
+          const loadStatus = mapTripStatusToLoadStatus(validatedData.status);
+          if (loadStatus) {
+            await tx.load.update({
+              where: { id: trip.loadId },
+              data: { status: loadStatus },
+            });
+            loadSynced = true;
+          }
+        }
+
+        // Create load event inside transaction
+        await tx.loadEvent.create({
+          data: {
+            loadId: trip.loadId,
+            eventType: "TRIP_STATUS_UPDATED",
+            description: `Trip status changed to ${validatedData.status}`,
+            userId: session.userId,
+            metadata: {
+              tripId,
+              previousStatus: trip.status,
+              newStatus: validatedData.status,
+              loadStatusSynced: loadSynced,
+            },
+          },
+        });
+
+        // Restore truck availability on trip completion or cancellation
+        if (
+          validatedData.status === "COMPLETED" ||
+          validatedData.status === "CANCELLED"
+        ) {
+          // Only restore availability if no other active trips exist for this truck
+          const otherActiveTrips = await tx.trip.count({
+            where: {
+              truckId: trip.truckId,
+              id: { not: tripId },
+              status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+            },
+          });
+          if (otherActiveTrips === 0) {
+            await tx.truck.update({
+              where: { id: trip.truckId },
+              data: { isAvailable: true },
+            });
+          }
+          // Always revert MATCHED postings regardless
+          await tx.truckPosting.updateMany({
+            where: { truckId: trip.truckId, status: "MATCHED" },
+            data: { status: "ACTIVE", updatedAt: new Date() },
           });
         }
-        // Always revert MATCHED postings regardless
-        await tx.truckPosting.updateMany({
-          where: { truckId: trip.truckId, status: "MATCHED" },
-          data: { status: "ACTIVE", updatedAt: new Date() },
-        });
-      }
 
-      return { updatedTrip, loadSynced };
-    });
+        return { updatedTrip, loadSynced };
+      }));
+    } catch (error) {
+      // P2025: "Record to update not found" — means another request changed
+      // the trip status between our read and the transactional write
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2025"
+      ) {
+        return NextResponse.json(
+          { error: "Trip status was modified concurrently. Please retry." },
+          { status: 409 }
+        );
+      }
+      throw error;
+    }
 
     // Cache invalidation MUST happen after transaction commits (not inside tx)
     // Reason: If tx rolls back, we don't want to invalidate cache for uncommitted data
