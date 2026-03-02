@@ -42,7 +42,6 @@ import {
   mockApiErrors,
   mockLogger,
   mockLoadUtils,
-  SeedData,
 } from "../../utils/routeTestUtils";
 
 // Setup mocks
@@ -93,8 +92,6 @@ const {
 } = require("@/app/api/financial/withdraw/route");
 
 describe("Financial Withdrawal API", () => {
-  let seed: SeedData;
-
   const carrierSession = createMockSession({
     userId: "carrier-user-1",
     email: "carrier@test.com",
@@ -127,7 +124,7 @@ describe("Financial Withdrawal API", () => {
   };
 
   beforeAll(async () => {
-    seed = await seedTestData();
+    await seedTestData();
 
     // Admin org + user
     await db.organization.create({

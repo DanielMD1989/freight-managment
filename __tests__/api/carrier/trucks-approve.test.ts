@@ -59,7 +59,7 @@ mockLogger();
 jest.mock("@/lib/validation", () => ({
   ...jest.requireActual("@/lib/validation"),
   sanitizeText: jest.fn((text: string) => text),
-  zodErrorResponse: jest.fn((error: any) => {
+  zodErrorResponse: jest.fn((_error: any) => {
     const { NextResponse } = require("next/server");
     return NextResponse.json({ error: "Validation error" }, { status: 400 });
   }),
@@ -107,13 +107,6 @@ describe("Carrier Truck Approval", () => {
     userId: "admin-user-1",
     email: "admin@test.com",
     role: "ADMIN",
-    organizationId: "admin-org-1",
-  });
-
-  const superAdminSession = createMockSession({
-    userId: "superadmin-user-1",
-    email: "superadmin@test.com",
-    role: "SUPER_ADMIN",
     organizationId: "admin-org-1",
   });
 

@@ -37,7 +37,6 @@ import {
   mockApiErrors,
   mockLogger,
   mockLoadUtils,
-  SeedData,
 } from "../../utils/routeTestUtils";
 
 // Setup mocks
@@ -106,8 +105,6 @@ const {
 } = require("@/lib/notifications");
 
 describe("Notifications API", () => {
-  let seed: SeedData;
-
   const carrierSession = createMockSession({
     userId: "carrier-user-1",
     email: "carrier@test.com",
@@ -115,15 +112,8 @@ describe("Notifications API", () => {
     organizationId: "carrier-org-1",
   });
 
-  const otherSession = createMockSession({
-    userId: "other-user-1",
-    email: "other@test.com",
-    role: "CARRIER",
-    organizationId: "other-org-1",
-  });
-
   beforeAll(async () => {
-    seed = await seedTestData();
+    await seedTestData();
 
     // Create notifications for the carrier user
     await db.notification.create({

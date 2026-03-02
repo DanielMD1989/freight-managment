@@ -27,7 +27,6 @@ import {
   mockCors,
   mockAuditLog,
   mockGps,
-  mockFoundationRules,
   mockSms,
   mockMatchingEngine,
   mockDispatcherPermissions,
@@ -114,7 +113,6 @@ const {
   GET: listPostings,
 } = require("@/app/api/truck-postings/route");
 const {
-  GET: getPosting,
   PATCH: updatePosting,
   DELETE: deletePosting,
 } = require("@/app/api/truck-postings/[id]/route");

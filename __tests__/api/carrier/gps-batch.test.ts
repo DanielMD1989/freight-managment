@@ -39,7 +39,6 @@ import {
   mockApiErrors,
   mockLogger,
   mockLoadUtils,
-  SeedData,
 } from "../../utils/routeTestUtils";
 
 // Setup mocks
@@ -105,8 +104,6 @@ const { POST: batchUpload } = require("@/app/api/gps/batch/route");
 const { broadcastGpsPosition } = require("@/lib/websocket-server");
 
 describe("GPS Batch API", () => {
-  let seed: SeedData;
-
   const carrierSession = createMockSession({
     userId: "carrier-user-1",
     email: "carrier@test.com",
@@ -137,7 +134,7 @@ describe("GPS Batch API", () => {
     }));
 
   beforeAll(async () => {
-    seed = await seedTestData();
+    await seedTestData();
 
     // Other carrier org + user
     await db.organization.create({

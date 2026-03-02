@@ -360,7 +360,7 @@ describe("Matching Loads", () => {
       const res = await callHandler(GET, req, { id: seed.truckPosting.id });
       expect(res.status).toBe(200);
 
-      const data = await parseResponse(res);
+      await parseResponse(res);
       // findMatchingLoads is called with the minScore param
       expect(mockFindMatchingLoads).toHaveBeenCalledWith(
         expect.anything(),

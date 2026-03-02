@@ -33,7 +33,6 @@ import {
   mockMatchingEngine,
   mockDispatcherPermissions,
   mockRbac,
-  mockApiErrors,
   mockLogger,
   SeedData,
 } from "../../utils/routeTestUtils";
@@ -85,7 +84,6 @@ jest.mock("@/lib/validation", () => ({
 }));
 
 // Import handlers AFTER mocks
-const { GET: listTrucks } = require("@/app/api/trucks/route");
 const {
   GET: getTruck,
   PATCH: updateTruck,
@@ -107,13 +105,6 @@ describe("Carrier Truck Edge Cases", () => {
     email: "admin@test.com",
     role: "ADMIN",
     organizationId: "admin-org-1",
-  });
-
-  const otherCarrierSession = createMockSession({
-    userId: "other-carrier-user",
-    email: "other-carrier@test.com",
-    role: "CARRIER",
-    organizationId: "other-carrier-org",
   });
 
   beforeAll(async () => {

@@ -84,25 +84,11 @@ describe("Carrier Disputes Edge Cases", () => {
     organizationId: "carrier-org-1",
   });
 
-  const shipperSession = createMockSession({
-    userId: "shipper-user-1",
-    email: "shipper@test.com",
-    role: "SHIPPER",
-    organizationId: "shipper-org-1",
-  });
-
   const otherCarrierSession = createMockSession({
     userId: "other-carrier-user-1",
     email: "other-carrier@test.com",
     role: "CARRIER",
     organizationId: "other-carrier-org-1",
-  });
-
-  const adminSession = createMockSession({
-    userId: "admin-user-1",
-    email: "admin@test.com",
-    role: "ADMIN",
-    organizationId: "admin-org-1",
   });
 
   beforeAll(async () => {

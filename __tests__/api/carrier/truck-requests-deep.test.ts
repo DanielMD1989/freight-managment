@@ -23,7 +23,6 @@ import {
   mockRateLimit,
   mockSecurity,
   mockCache,
-  mockNotifications,
   mockCors,
   mockAuditLog,
   mockGps,
@@ -67,7 +66,7 @@ jest.mock("@/lib/notifications", () => ({
 jest.mock("@/lib/validation", () => ({
   ...jest.requireActual("@/lib/validation"),
   sanitizeText: jest.fn((text: string) => text),
-  zodErrorResponse: jest.fn((error: any) => {
+  zodErrorResponse: jest.fn((_error: any) => {
     const { NextResponse } = require("next/server");
     return NextResponse.json({ error: "Validation error" }, { status: 400 });
   }),

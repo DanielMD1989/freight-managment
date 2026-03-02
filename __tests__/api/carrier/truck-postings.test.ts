@@ -142,13 +142,6 @@ describe("Carrier Truck Postings", () => {
     organizationId: "carrier-org-1",
   });
 
-  const shipperSession = createMockSession({
-    userId: "shipper-user-1",
-    email: "shipper@test.com",
-    role: "SHIPPER",
-    organizationId: "shipper-org-1",
-  });
-
   const otherCarrierSession = createMockSession({
     userId: "other-carrier-user",
     email: "other@test.com",

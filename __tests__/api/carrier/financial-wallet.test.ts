@@ -39,7 +39,6 @@ import {
   mockApiErrors,
   mockLogger,
   mockLoadUtils,
-  SeedData,
 } from "../../utils/routeTestUtils";
 
 // Setup mocks
@@ -80,8 +79,6 @@ const {
 } = require("@/app/api/financial/wallet/route");
 
 describe("Financial Wallet API", () => {
-  let seed: SeedData;
-
   const carrierSession = createMockSession({
     userId: "carrier-user-1",
     email: "carrier@test.com",
@@ -90,7 +87,7 @@ describe("Financial Wallet API", () => {
   });
 
   beforeAll(async () => {
-    seed = await seedTestData();
+    await seedTestData();
   });
 
   afterAll(() => clearAllStores());

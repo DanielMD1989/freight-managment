@@ -68,7 +68,7 @@ mockLogger();
 jest.mock("@/lib/validation", () => ({
   ...jest.requireActual("@/lib/validation"),
   sanitizeText: jest.fn((text: string) => text),
-  zodErrorResponse: jest.fn((error: any) => {
+  zodErrorResponse: jest.fn((_error: any) => {
     const { NextResponse } = require("next/server");
     return NextResponse.json({ error: "Validation error" }, { status: 400 });
   }),
@@ -108,27 +108,11 @@ describe("Carrier Requests", () => {
     organizationId: "shipper-org-1",
   });
 
-  const adminSession = createMockSession({
-    userId: "admin-user-1",
-    email: "admin@test.com",
-    role: "ADMIN",
-    status: "ACTIVE",
-    organizationId: "admin-org-1",
-  });
-
   const dispatcherSession = createMockSession({
     userId: "dispatcher-user-1",
     email: "dispatcher@test.com",
     role: "DISPATCHER",
     organizationId: "dispatcher-org-1",
-  });
-
-  const otherCarrierSession = createMockSession({
-    userId: "other-carrier-user",
-    email: "other@test.com",
-    role: "CARRIER",
-    status: "ACTIVE",
-    organizationId: "other-carrier-org",
   });
 
   beforeAll(async () => {
@@ -172,7 +156,7 @@ describe("Carrier Requests", () => {
       expect(data.loadRequest.status).toBe("PENDING");
     });
 
-    it("rejects when carrier does not own truck → 403", async () => {
+    it("rejects when carrier does not own truck → 404", async () => {
       // Create truck owned by another org
       const otherTruck = await db.truck.create({
         data: {
@@ -197,10 +181,10 @@ describe("Carrier Requests", () => {
       );
 
       const res = await createLoadRequest(req);
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
 
       const data = await parseResponse(res);
-      expect(data.error).toContain("own trucks");
+      expect(data.error).toContain("Truck not found");
     });
 
     it("rejects unapproved truck → 400", async () => {

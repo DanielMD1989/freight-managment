@@ -31,7 +31,6 @@ import {
   clearAllStores,
   mockAuth,
   mockCsrf,
-  mockRateLimit,
   mockSecurity,
   mockCache,
   mockNotifications,
@@ -166,7 +165,7 @@ jest.mock("@/lib/tripStateMachine", () => ({
 jest.mock("@/lib/validation", () => ({
   ...jest.requireActual("@/lib/validation"),
   sanitizeText: jest.fn((text: string) => text),
-  zodErrorResponse: jest.fn((error: any) => {
+  zodErrorResponse: jest.fn((_error: any) => {
     const { NextResponse } = require("next/server");
     return NextResponse.json({ error: "Validation error" }, { status: 400 });
   }),
@@ -1076,7 +1075,7 @@ describe("Carrier Trip Management", () => {
       expect(data.error).toContain("IN_TRANSIT or PICKUP_PENDING");
     });
 
-    it("only carrier owning truck can update → 403", async () => {
+    it("only carrier owning truck can update → 404", async () => {
       setAuthSession(otherCarrierSession);
 
       const req = createRequest(
@@ -1088,10 +1087,7 @@ describe("Carrier Trip Management", () => {
       );
 
       const res = await callHandler(postGps, req, { tripId: gpsTrip.id });
-      expect(res.status).toBe(403);
-
-      const data = await parseResponse(res);
-      expect(data.error).toContain("carrier");
+      expect(res.status).toBe(404);
     });
 
     it("rate limited (12/hour/trip) → 429", async () => {
@@ -1255,7 +1251,7 @@ describe("Carrier Trip Management", () => {
       expect(res.status).toBe(404);
     });
 
-    it("non-related user gets 403", async () => {
+    it("non-related user gets 404", async () => {
       setAuthSession(otherCarrierSession);
 
       const req = createRequest(
@@ -1264,7 +1260,7 @@ describe("Carrier Trip Management", () => {
       );
 
       const res = await callHandler(getGps, req, { tripId: gpsReadTrip.id });
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
   });
 });

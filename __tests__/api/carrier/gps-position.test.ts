@@ -38,7 +38,6 @@ import {
   mockApiErrors,
   mockLogger,
   mockLoadUtils,
-  SeedData,
 } from "../../utils/routeTestUtils";
 
 // Setup mocks
@@ -107,8 +106,6 @@ const {
 const { broadcastGpsPosition } = require("@/lib/websocket-server");
 
 describe("GPS Position API", () => {
-  let seed: SeedData;
-
   const carrierSession = createMockSession({
     userId: "carrier-user-1",
     email: "carrier@test.com",
@@ -138,7 +135,7 @@ describe("GPS Position API", () => {
   });
 
   beforeAll(async () => {
-    seed = await seedTestData();
+    await seedTestData();
 
     // Create other carrier org and user
     await db.organization.create({

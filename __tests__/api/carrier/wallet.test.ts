@@ -74,13 +74,6 @@ describe("Carrier Wallet", () => {
     organizationId: "carrier-org-1",
   });
 
-  const shipperSession = createMockSession({
-    userId: "shipper-user-1",
-    email: "shipper@test.com",
-    role: "SHIPPER",
-    organizationId: "shipper-org-1",
-  });
-
   const noOrgSession = createMockSession({
     userId: "no-org-user",
     email: "noorg@test.com",

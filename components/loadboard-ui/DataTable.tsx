@@ -320,7 +320,6 @@ export default function DataTable<T extends object = Record<string, unknown>>({
   /**
    * Render default card view for a row
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const renderDefaultCard = (row: T, _index?: number) => {
     const rowId = getRowId(row);
     const isSelected = selectedRows.includes(rowId);

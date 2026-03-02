@@ -657,7 +657,7 @@ describe("Carrier Truck Management", () => {
       setAuthSession(otherCarrierSession);
 
       // Create another carrier's truck
-      const otherOrg = await db.organization.create({
+      await db.organization.create({
         data: {
           id: "other-carrier-org",
           name: "Other Carrier",

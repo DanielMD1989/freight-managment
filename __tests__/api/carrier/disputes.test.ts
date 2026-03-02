@@ -104,13 +104,6 @@ describe("Carrier Disputes", () => {
     organizationId: "other-carrier-org-1",
   });
 
-  const adminSession = createMockSession({
-    userId: "admin-user-1",
-    email: "admin@test.com",
-    role: "ADMIN",
-    organizationId: "admin-org-1",
-  });
-
   beforeAll(async () => {
     seed = await seedTestData();
 

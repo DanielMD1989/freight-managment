@@ -59,7 +59,7 @@ mockLogger();
 jest.mock("@/lib/validation", () => ({
   ...jest.requireActual("@/lib/validation"),
   sanitizeText: jest.fn((text: string) => text),
-  zodErrorResponse: jest.fn((error: any) => {
+  zodErrorResponse: jest.fn((_error: any) => {
     const { NextResponse } = require("next/server");
     return NextResponse.json({ error: "Validation error" }, { status: 400 });
   }),
@@ -72,7 +72,9 @@ jest.mock("@/lib/rbac", () => ({
     const session = getAuthSession();
     if (!session) throw new Error("Unauthorized");
     if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
-      throw new Error("Permission denied: MANAGE_DISPUTES required");
+      const error = new Error("Forbidden: MANAGE_DISPUTES required");
+      (error as any).name = "ForbiddenError";
+      throw error;
     }
     return session;
   }),

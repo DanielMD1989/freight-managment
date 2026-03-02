@@ -41,7 +41,6 @@ import {
   mockApiErrors,
   mockLogger,
   mockLoadUtils,
-  SeedData,
 } from "../../utils/routeTestUtils";
 
 // Setup mocks
@@ -67,8 +66,6 @@ mockLoadUtils();
 const { GET: getLive } = require("@/app/api/gps/live/route");
 
 describe("GPS Live API", () => {
-  let seed: SeedData;
-
   const carrierSession = createMockSession({
     userId: "carrier-user-1",
     email: "carrier@test.com",
@@ -98,7 +95,7 @@ describe("GPS Live API", () => {
   });
 
   beforeAll(async () => {
-    seed = await seedTestData();
+    await seedTestData();
 
     // Other carrier
     await db.organization.create({
