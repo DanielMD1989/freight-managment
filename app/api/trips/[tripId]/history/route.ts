@@ -8,8 +8,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { calculateDistanceKm } from "@/lib/geo";
+import { handleApiError } from "@/lib/apiErrors";
 import { roundToDecimals, roundDistance1 } from "@/lib/rounding";
 
 /**
@@ -22,7 +23,7 @@ export async function GET(
   { params }: { params: Promise<{ tripId: string }> }
 ) {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
     const { tripId } = await params;
     const { searchParams } = new URL(request.url);
 
@@ -72,17 +73,19 @@ export async function GET(
 
     // Check permissions
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
-    const isDispatcher = session.role === "DISPATCHER";
     const isCarrier =
       session.role === "CARRIER" && trip.carrierId === session.organizationId;
     const isShipper =
       session.role === "SHIPPER" && trip.shipperId === session.organizationId;
 
-    if (!isAdmin && !isDispatcher && !isCarrier && !isShipper) {
-      return NextResponse.json(
-        { error: "You do not have permission to view this trip history" },
-        { status: 403 }
-      );
+    // Fix 11: Scope dispatcher access to their organization's trips
+    const isScopedDispatcher =
+      session.role === "DISPATCHER" &&
+      (trip.carrierId === session.organizationId ||
+        trip.shipperId === session.organizationId);
+
+    if (!isAdmin && !isScopedDispatcher && !isCarrier && !isShipper) {
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
     // Build query for GPS positions
@@ -209,11 +212,7 @@ export async function GET(
       positions: route,
     });
   } catch (error) {
-    console.error("Get trip history error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch trip history" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Get trip history error");
   }
 }
 

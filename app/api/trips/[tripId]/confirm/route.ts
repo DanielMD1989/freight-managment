@@ -9,12 +9,13 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { createNotification, NotificationType } from "@/lib/notifications";
 import { CacheInvalidation } from "@/lib/cache";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
+import { handleApiError } from "@/lib/apiErrors";
 import { deductServiceFee } from "@/lib/serviceFeeManagement";
 
 const confirmSchema = z.object({
@@ -36,7 +37,7 @@ export async function POST(
     if (csrfError) return csrfError;
 
     const { tripId } = await params;
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Parse request body for optional notes
     let confirmationNotes: string | null = null;
@@ -121,10 +122,7 @@ export async function POST(
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isShipper && !isAdmin) {
-      return NextResponse.json(
-        { error: "Only the shipper can confirm delivery" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
     // CRITICAL FIX: Deduct service fee BEFORE transaction (blocking pattern)
@@ -309,10 +307,6 @@ export async function POST(
         { status: 409 }
       );
     }
-    console.error("Confirm delivery error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Confirm delivery error");
   }
 }

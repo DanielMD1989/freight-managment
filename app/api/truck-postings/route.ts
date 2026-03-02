@@ -23,7 +23,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { requireAuth, requireActiveUser } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import {
   weightSchema,
   lengthSchema,
@@ -246,6 +246,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
+    // Validate user's organization owns this truck FIRST
+    // Only admin/super_admin can post trucks for other organizations
+    // Dispatchers can only coordinate, not create postings (DISPATCHER_COORDINATION_ONLY)
+    // Check ownership before approval status to prevent leaking approval info to non-owners
+    if (truck.carrierId !== session.organizationId && !isAdmin) {
+      return NextResponse.json(
+        { error: "You can only post trucks owned by your organization" },
+        { status: 403 }
+      );
+    }
+
     // P0-002 FIX: Validate truck approval status before allowing posting
     // Only approved trucks can be posted to the loadboard
     if (truck.approvalStatus !== "APPROVED") {
@@ -273,16 +284,6 @@ export async function POST(request: NextRequest) {
           rule: RULE_ONE_ACTIVE_POST_PER_TRUCK.id,
         },
         { status: 409 } // 409 Conflict
-      );
-    }
-
-    // Validate user's organization owns this truck
-    // Only admin/super_admin can post trucks for other organizations
-    // Dispatchers can only coordinate, not create postings (DISPATCHER_COORDINATION_ONLY)
-    if (truck.carrierId !== session.organizationId && !isAdmin) {
-      return NextResponse.json(
-        { error: "You can only post trucks owned by your organization" },
-        { status: 403 }
       );
     }
 
@@ -440,7 +441,7 @@ export async function GET(request: NextRequest) {
 
     // If filtering by specific organization (for "my postings"), verify user has access
     if (organizationId) {
-      const session = await requireAuth();
+      const session = await requireActiveUser();
 
       // Sprint 16: Allow dispatcher, platform ops, and admin to view all trucks
       const hasElevatedPerms = hasElevatedPermissions({
@@ -563,18 +564,13 @@ export async function GET(request: NextRequest) {
               approvalStatus: true,
               // H6 FIX: GPS/IMEI fields removed from public response - sensitive operational data
               // Use /api/carrier/trucks for authenticated access to GPS info
-              // Check if truck is assigned to any load
+              // Check if truck has an active load (boolean only — no tracking URLs or route info)
               assignedLoad: {
                 where: {
                   OR: [{ status: "ASSIGNED" }, { status: "IN_TRANSIT" }],
                 },
                 select: {
                   id: true,
-                  trackingEnabled: true,
-                  trackingUrl: true,
-                  trackingStartedAt: true,
-                  pickupCity: true,
-                  deliveryCity: true,
                 },
               },
             },

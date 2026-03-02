@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { findMatchingLoads } from "@/lib/matchingEngine";
 import { db } from "@/lib/db";
 import { calculateDistanceKm } from "@/lib/geo";
@@ -48,7 +48,7 @@ export async function GET(
     const { id } = await params;
 
     // Require authentication
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Get truck posting with coordinates
     const truckPosting = await db.truckPosting.findUnique({
@@ -348,6 +348,15 @@ export async function GET(
           ...load,
           shipperContactName: null,
           shipperContactPhone: null,
+          shipper: load.shipper
+            ? {
+                id: load.shipper.id,
+                name: load.shipper.name,
+                isVerified: load.shipper.isVerified,
+                contactPhone: null,
+                contactEmail: null,
+              }
+            : load.shipper,
         },
       };
     });

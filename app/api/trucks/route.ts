@@ -386,12 +386,32 @@ export async function GET(request: NextRequest) {
       db.truck.count({ where }),
     ]);
 
-    // Add hasActivePosting flag
-    const trucksWithPostingStatus = trucks.map((truck) => ({
-      ...truck,
-      hasActivePosting: truck.postings.length > 0,
-      activePostingId: truck.postings[0]?.id || null,
-    }));
+    // Add hasActivePosting flag and strip sensitive GPS data for non-owners
+    const isCarrierRole = session.role === "CARRIER";
+    const trucksWithPostingStatus = trucks.map((truck) => {
+      // Strip gpsDevice IMEI for dispatchers (non-owners)
+      const isOwner =
+        isCarrierRole && truck.carrierId === session.organizationId;
+      const isAdminUser =
+        session.role === "ADMIN" || session.role === "SUPER_ADMIN";
+      const safeGpsDevice =
+        isOwner || isAdminUser
+          ? truck.gpsDevice
+          : truck.gpsDevice
+            ? {
+                id: truck.gpsDevice.id,
+                status: truck.gpsDevice.status,
+                lastSeenAt: truck.gpsDevice.lastSeenAt,
+              }
+            : null;
+
+      return {
+        ...truck,
+        gpsDevice: safeGpsDevice,
+        hasActivePosting: truck.postings.length > 0,
+        activePostingId: truck.postings[0]?.id || null,
+      };
+    });
 
     const response = {
       trucks: trucksWithPostingStatus,

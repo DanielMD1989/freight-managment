@@ -10,6 +10,7 @@ import { db } from "@/lib/db";
 import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { handleApiError } from "@/lib/apiErrors";
+import { Prisma } from "@prisma/client";
 
 /**
  * GET /api/truck-requests/[id]
@@ -144,13 +145,30 @@ export async function DELETE(
       );
     }
 
-    // Update status to CANCELLED
-    const updatedRequest = await db.truckRequest.update({
-      where: { id },
-      data: {
-        status: "CANCELLED",
-      },
-    });
+    // Update status to CANCELLED — include status guard to prevent race condition
+    // If concurrent approve changes status from PENDING, P2025 will fire
+    let updatedRequest;
+    try {
+      updatedRequest = await db.truckRequest.update({
+        where: { id, status: "PENDING" },
+        data: {
+          status: "CANCELLED",
+        },
+      });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2025"
+      ) {
+        return NextResponse.json(
+          {
+            error: "Request status was modified concurrently. Please refresh.",
+          },
+          { status: 409 }
+        );
+      }
+      throw err;
+    }
 
     return NextResponse.json({
       success: true,

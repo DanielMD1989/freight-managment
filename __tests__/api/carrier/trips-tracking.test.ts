@@ -238,7 +238,7 @@ describe("Trip Tracking — History & Live", () => {
       expect(res.status).toBe(200);
     });
 
-    it("should deny other carrier → 403", async () => {
+    it("should deny other carrier → 404", async () => {
       setAuthSession(otherCarrierSession);
 
       const req = createRequest(
@@ -247,7 +247,7 @@ describe("Trip Tracking — History & Live", () => {
       );
       const res = await callHandler(getTripHistory, req, { tripId });
 
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
   });
 

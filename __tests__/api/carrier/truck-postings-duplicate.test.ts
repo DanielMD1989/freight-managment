@@ -258,25 +258,9 @@ describe("Truck Posting Duplicate", () => {
       expect(res.status).toBe(403);
     });
 
-    it("should deny mobile client without Bearer auth → 401", async () => {
-      const req = createRequest(
-        "POST",
-        `http://localhost:3000/api/truck-postings/${seed.truckPosting.id}/duplicate`,
-        {
-          headers: {
-            "x-client-type": "mobile",
-            Authorization: "", // No Bearer token
-          },
-        }
-      );
-      const res = await callHandler(duplicatePosting, req, {
-        id: seed.truckPosting.id,
-      });
-
-      expect(res.status).toBe(401);
-      const body = await parseResponse(res);
-      expect(body.error).toContain("Bearer");
-    });
+    // Note: The duplicate endpoint now uses validateCSRFWithMobile (standard CSRF)
+    // instead of a hand-rolled mobile Bearer check, so the mobile-without-Bearer
+    // scenario is handled by the standard CSRF middleware (tested elsewhere).
   });
 
   // ─── Business rules ───────────────────────────────────────────────

@@ -317,10 +317,48 @@ export async function PATCH(
           },
           data: updateData,
           include: {
-            load: true,
-            truck: true,
-            carrier: true,
-            shipper: true,
+            load: {
+              select: {
+                id: true,
+                status: true,
+                pickupCity: true,
+                pickupAddress: true,
+                pickupDate: true,
+                deliveryCity: true,
+                deliveryAddress: true,
+                deliveryDate: true,
+                cargoDescription: true,
+                weight: true,
+                truckType: true,
+                podUrl: true,
+                podSubmitted: true,
+                podVerified: true,
+              },
+            },
+            truck: {
+              select: {
+                id: true,
+                licensePlate: true,
+                truckType: true,
+                contactName: true,
+                contactPhone: true,
+              },
+            },
+            carrier: {
+              select: {
+                id: true,
+                name: true,
+                contactPhone: true,
+                isVerified: true,
+              },
+            },
+            shipper: {
+              select: {
+                id: true,
+                name: true,
+                contactPhone: true,
+              },
+            },
           },
         });
 

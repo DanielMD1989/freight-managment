@@ -11,7 +11,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import {
@@ -42,7 +43,11 @@ async function postHandler(
   { params }: { params: Promise<{ tripId: string }> }
 ) {
   try {
-    const session = await requireAuth();
+    // CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
+    const session = await requireActiveUser();
     const { tripId } = await params;
 
     // PHASE 4: Enforce GPS rate limiting to prevent DoS
@@ -111,10 +116,7 @@ async function postHandler(
     const isCarrier =
       session.role === "CARRIER" && trip.carrierId === session.organizationId;
     if (!isCarrier) {
-      return NextResponse.json(
-        { error: "Only the carrier can update GPS position" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
     // Check if GPS tracking is enabled for this trip
@@ -249,7 +251,7 @@ async function getHandler(
   { params }: { params: Promise<{ tripId: string }> }
 ) {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
     const { tripId } = await params;
     const { searchParams } = new URL(request.url);
 
@@ -267,17 +269,18 @@ async function getHandler(
 
     // Check permissions
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
-    const isDispatcher = session.role === "DISPATCHER";
     const isCarrier =
       session.role === "CARRIER" && trip.carrierId === session.organizationId;
     const isShipper =
       session.role === "SHIPPER" && trip.shipperId === session.organizationId;
+    // Fix 11: Scope dispatcher access to their organization's trips
+    const isScopedDispatcher =
+      session.role === "DISPATCHER" &&
+      (trip.carrierId === session.organizationId ||
+        trip.shipperId === session.organizationId);
 
-    if (!isAdmin && !isDispatcher && !isCarrier && !isShipper) {
-      return NextResponse.json(
-        { error: "You do not have permission to view this trip" },
-        { status: 403 }
-      );
+    if (!isAdmin && !isScopedDispatcher && !isCarrier && !isShipper) {
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
     // For shippers, only allow access when trip is IN_TRANSIT or later

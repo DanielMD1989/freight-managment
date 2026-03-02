@@ -7,7 +7,7 @@
 
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { handleApiError } from "@/lib/apiErrors";
 
 /**
@@ -17,10 +17,14 @@ import { handleApiError } from "@/lib/apiErrors";
  */
 export async function GET() {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Only carriers and admins can access GPS data
-    if (session.role !== "CARRIER" && session.role !== "ADMIN") {
+    if (
+      session.role !== "CARRIER" &&
+      session.role !== "ADMIN" &&
+      session.role !== "SUPER_ADMIN"
+    ) {
       return NextResponse.json(
         { error: "Unauthorized - Carrier access required" },
         { status: 403 }

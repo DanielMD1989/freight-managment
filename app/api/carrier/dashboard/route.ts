@@ -13,7 +13,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { handleApiError } from "@/lib/apiErrors";
@@ -60,10 +60,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Check if user is a carrier or admin
-    if (session.role !== "CARRIER" && session.role !== "ADMIN") {
+    if (
+      session.role !== "CARRIER" &&
+      session.role !== "ADMIN" &&
+      session.role !== "SUPER_ADMIN"
+    ) {
       return NextResponse.json(
         { error: "Access denied. Carrier role required." },
         { status: 403 }

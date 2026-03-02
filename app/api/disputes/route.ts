@@ -10,9 +10,10 @@ import { db } from "@/lib/db";
 import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { z } from "zod";
-import { zodErrorResponse, sanitizeText } from "@/lib/validation";
+import { sanitizeText } from "@/lib/validation";
 import { Prisma } from "@prisma/client";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { handleApiError } from "@/lib/apiErrors";
 import { CacheInvalidation } from "@/lib/cache";
 
 const createDisputeSchema = z.object({
@@ -159,22 +160,8 @@ export async function POST(request: NextRequest) {
       message: "Dispute created successfully",
       dispute,
     });
-    // FIX: Use unknown type with type guards
   } catch (error: unknown) {
-    console.error("Error creating dispute:", error);
-
-    if (error instanceof z.ZodError) {
-      return zodErrorResponse(error);
-    }
-
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: "Failed to create dispute" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Error creating dispute");
   }
 }
 
@@ -266,17 +253,7 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(total / limit),
       },
     });
-    // FIX: Use unknown type with type guard
   } catch (error: unknown) {
-    console.error("Error fetching disputes:", error);
-
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: "Failed to fetch disputes" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Error fetching disputes");
   }
 }

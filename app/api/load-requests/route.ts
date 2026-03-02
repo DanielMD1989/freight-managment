@@ -13,7 +13,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { requireActiveUser, requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { createNotification } from "@/lib/notifications";
 import { Prisma } from "@prisma/client";
@@ -148,10 +148,7 @@ export async function POST(request: NextRequest) {
 
     // Verify carrier owns the truck
     if (truck.carrierId !== session.organizationId) {
-      return NextResponse.json(
-        { error: "You can only request loads for your own trucks" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
     // Verify truck is approved
@@ -338,7 +335,7 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
     const { searchParams } = new URL(request.url);
 
     const status = searchParams.get("status");
@@ -357,7 +354,11 @@ export async function GET(request: NextRequest) {
       // Shippers see requests for their loads
       where.shipperId = session.organizationId;
     } else if (session.role === "DISPATCHER") {
-      // Dispatchers see all load requests (for follow-up)
+      // Dispatchers see load requests for their organization
+      where.OR = [
+        { carrierId: session.organizationId },
+        { shipperId: session.organizationId },
+      ];
     } else if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }

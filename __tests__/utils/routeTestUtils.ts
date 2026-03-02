@@ -542,17 +542,35 @@ export function mockLogger() {
 export function mockApiErrors() {
   jest.mock("@/lib/apiErrors", () => ({
     handleApiError: jest.fn((error: any) => {
-      const status =
-        error.name === "ForbiddenError"
-          ? 403
-          : error.name === "UnauthorizedError" ||
-              error.message === "Unauthorized"
-            ? 401
-            : 500;
       const { NextResponse } = require("next/server");
+      // Match the real handleApiError behavior from lib/apiErrors.ts
+      // 1. ZodError → 400 via zodErrorResponse
+      const { z } = require("zod");
+      if (error instanceof z.ZodError) {
+        const { zodErrorResponse } = require("@/lib/validation");
+        return zodErrorResponse(error);
+      }
+      // 2. Auth errors → 401
+      if (error instanceof Error) {
+        if (
+          error.message === "Unauthorized" ||
+          error.message === "Unauthorized: User not found" ||
+          error.name === "UnauthorizedError"
+        ) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        // 3. Forbidden errors → 403
+        if (
+          error.name === "ForbiddenError" ||
+          error.message.startsWith("Forbidden")
+        ) {
+          return NextResponse.json({ error: error.message }, { status: 403 });
+        }
+      }
+      // 4. Everything else → 500
       return NextResponse.json(
-        { error: error.message || "Internal server error" },
-        { status }
+        { error: "Internal server error" },
+        { status: 500 }
       );
     }),
   }));

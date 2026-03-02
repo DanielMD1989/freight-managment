@@ -6,11 +6,12 @@
 
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
+import { handleApiError } from "@/lib/apiErrors";
 
 export async function GET() {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -38,10 +39,6 @@ export async function GET() {
       totalCarrierEarnings: Number(carrierEarnings._sum.balance || 0),
     });
   } catch (error) {
-    console.error("Admin wallets summary error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Admin wallets summary error");
   }
 }

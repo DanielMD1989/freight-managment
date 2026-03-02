@@ -3,7 +3,7 @@
  *
  * Tests for POST /api/trips/[tripId]/cancel:
  * - Carrier or shipper can cancel before COMPLETED
- * - Admin and dispatcher can cancel any trip
+ * - Admin can cancel any trip
  * - Trip set to CANCELLED, load set to CANCELLED with assignedTruckId nulled
  * - TRIP_CANCELLED load event with metadata
  * - Cache invalidation and notifications
@@ -11,7 +11,7 @@
  * Business rules:
  * - Reason is required (min 1, max 500 chars)
  * - Cannot cancel COMPLETED or already CANCELLED trips
- * - Unrelated users get 403
+ * - Unrelated users get 404 (resource cloaking)
  * - Other party notified on cancellation
  */
 
@@ -352,7 +352,7 @@ describe("Trip Cancellation", () => {
       expect([401, 500]).toContain(res.status);
     });
 
-    it("unrelated user → 403", async () => {
+    it("unrelated user → 404", async () => {
       setAuthSession(otherCarrierSession);
       const { tripId } = await createCancellableTrip();
 
@@ -362,10 +362,10 @@ describe("Trip Cancellation", () => {
         { body: { reason: "I want to cancel" } }
       );
       const res = await callHandler(cancelTrip, req, { tripId });
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
 
       const data = await parseResponse(res);
-      expect(data.error).toContain("permission");
+      expect(data.error).toContain("Trip not found");
     });
 
     it("carrier can cancel own trip → 200", async () => {
@@ -557,7 +557,7 @@ describe("Trip Cancellation", () => {
       expect(data.trip.status).toBe("CANCELLED");
     });
 
-    it("dispatcher cannot cancel (coordination only)", async () => {
+    it("dispatcher cannot cancel (coordination only) → 404", async () => {
       setAuthSession(dispatcherSession);
       const { tripId } = await createCancellableTrip();
 
@@ -567,7 +567,7 @@ describe("Trip Cancellation", () => {
         { body: { reason: "Dispatch override" } }
       );
       const res = await callHandler(cancelTrip, req, { tripId });
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
   });
 

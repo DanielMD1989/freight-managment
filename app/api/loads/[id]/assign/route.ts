@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { z } from "zod";
 import { enableTrackingForLoad } from "@/lib/gpsTracking";
@@ -58,7 +59,7 @@ export async function POST(
     if (csrfError) return csrfError;
 
     const { id: loadId } = await params;
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Get load
     const load = await db.load.findUnique({
@@ -191,8 +192,6 @@ export async function POST(
           fees: {
             shipperFee: walletValidation.shipperFee,
             carrierFee: walletValidation.carrierFee,
-            shipperBalance: walletValidation.shipperBalance,
-            carrierBalance: walletValidation.carrierBalance,
           },
         },
         { status: 400 }
@@ -413,21 +412,17 @@ export async function POST(
         ? "Load assigned successfully. GPS tracking enabled."
         : "Load assigned successfully. GPS tracking not available for this truck.",
     });
-    // FIX: Use unknown type with type guard
   } catch (error: unknown) {
-    console.error("Assign load error:", error);
-
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
 
     // Handle unique constraint violation (race condition) - Prisma error
-    const prismaError = error as {
-      code?: string;
-      meta?: { target?: string[] };
-    };
-    if (prismaError?.code === "P2002") {
-      const field = prismaError?.meta?.target?.[0] || "field";
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      const field = (error.meta?.target as string[])?.[0] || "field";
       if (field === "assignedTruckId") {
         return NextResponse.json(
           {
@@ -462,7 +457,7 @@ export async function DELETE(
     if (csrfError) return csrfError;
 
     const { id: loadId } = await params;
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Get load
     const load = await db.load.findUnique({

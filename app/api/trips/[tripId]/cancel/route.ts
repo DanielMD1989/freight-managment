@@ -15,6 +15,7 @@ import { z } from "zod";
 import { CacheInvalidation } from "@/lib/cache";
 import { handleApiError } from "@/lib/apiErrors";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { Prisma } from "@prisma/client";
 
 const cancelTripSchema = z.object({
   reason: z.string().min(1, "Cancellation reason is required").max(500),
@@ -132,10 +133,7 @@ export async function POST(
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isCarrier && !isShipper && !isAdmin) {
-      return NextResponse.json(
-        { error: "You do not have permission to cancel this trip" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
     // Determine who is cancelling for notification purposes
@@ -151,9 +149,9 @@ export async function POST(
 
     // CRITICAL FIX: Wrap all state changes in a transaction for atomicity
     const updatedTrip = await db.$transaction(async (tx) => {
-      // Update trip status to CANCELLED
+      // Update trip status to CANCELLED — include status guard to prevent race condition
       const updatedTrip = await tx.trip.update({
-        where: { id: tripId },
+        where: { id: tripId, status: { notIn: ["COMPLETED", "CANCELLED"] } },
         data: {
           status: "CANCELLED",
           cancelledAt: new Date(),
@@ -259,6 +257,19 @@ export async function POST(
       },
     });
   } catch (error) {
+    // P2025: Trip status changed concurrently (e.g., completed while cancelling)
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Trip status was modified concurrently. Please refresh and retry.",
+        },
+        { status: 409 }
+      );
+    }
     return handleApiError(error, "Cancel trip error");
   }
 }

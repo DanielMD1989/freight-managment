@@ -5,9 +5,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { findLoadsWithMinimalDHO } from "@/lib/deadheadOptimization";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { handleApiError } from "@/lib/apiErrors";
 
 // GET /api/trucks/[id]/nearby-loads - Find loads with minimal DH-O
 export async function GET(
@@ -15,7 +16,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // M10 FIX: Rate limit nearby-loads queries
     const ip = request.headers.get("x-forwarded-for") || "unknown";
@@ -137,10 +138,6 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Nearby loads error:", error);
-    return NextResponse.json(
-      { error: "Failed to find nearby loads" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Nearby loads error");
   }
 }

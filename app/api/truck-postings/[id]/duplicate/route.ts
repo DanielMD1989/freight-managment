@@ -8,39 +8,22 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
-import { requireCSRF } from "@/lib/csrf";
+import { requireActiveUser } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import { CacheInvalidation } from "@/lib/cache";
+import { handleApiError } from "@/lib/apiErrors";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // CSRF protection
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
     // Authenticate user
-    const user = await requireAuth();
-
-    // CSRF protection for state-changing operation
-    // Mobile clients MUST use Bearer token authentication (inherently CSRF-safe)
-    // Web clients MUST provide CSRF token
-    const isMobileClient = request.headers.get("x-client-type") === "mobile";
-    const hasBearerAuth = request.headers
-      .get("authorization")
-      ?.startsWith("Bearer ");
-
-    if (isMobileClient && !hasBearerAuth) {
-      return NextResponse.json(
-        { error: "Mobile clients require Bearer authentication" },
-        { status: 401 }
-      );
-    }
-
-    if (!isMobileClient && !hasBearerAuth) {
-      const csrfError = await requireCSRF(request);
-      if (csrfError) {
-        return csrfError;
-      }
-    }
+    const user = await requireActiveUser();
 
     const { id } = await params;
 
@@ -72,25 +55,6 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // ONE_ACTIVE_POST_PER_TRUCK rule: Check if truck already has an active posting
-    const existingActivePosting = await db.truckPosting.findFirst({
-      where: {
-        truckId: originalPosting.truckId,
-        status: "ACTIVE",
-      },
-      select: { id: true },
-    });
-
-    if (existingActivePosting) {
-      return NextResponse.json(
-        {
-          error: "This truck already has an active posting",
-          existingPostingId: existingActivePosting.id,
-        },
-        { status: 409 }
-      );
-    }
-
     // Create duplicate truck posting
     /* eslint-disable @typescript-eslint/no-unused-vars */
     const {
@@ -103,12 +67,27 @@ export async function POST(
     } = originalPosting;
     /* eslint-enable @typescript-eslint/no-unused-vars */
 
-    const duplicatePosting = await db.truckPosting.create({
-      data: {
-        ...postingData,
-        status: "ACTIVE", // New posting starts as ACTIVE
-        postedAt: new Date(),
-      },
+    // Fix 10c: Wrap active posting check + create in transaction to prevent race condition
+    const duplicatePosting = await db.$transaction(async (tx) => {
+      const existingActivePosting = await tx.truckPosting.findFirst({
+        where: {
+          truckId: originalPosting.truckId,
+          status: "ACTIVE",
+        },
+        select: { id: true },
+      });
+
+      if (existingActivePosting) {
+        throw new Error("ACTIVE_POSTING_EXISTS:" + existingActivePosting.id);
+      }
+
+      return tx.truckPosting.create({
+        data: {
+          ...postingData,
+          status: "ACTIVE",
+          postedAt: new Date(),
+        },
+      });
     });
 
     // Invalidate cache so new posting is immediately visible
@@ -118,13 +97,20 @@ export async function POST(
     );
 
     return NextResponse.json(duplicatePosting, { status: 201 });
-    // FIX: Use unknown type
   } catch (error: unknown) {
-    // Log detailed error server-side, return generic message to client
-    console.error("Duplicate truck posting error:", error);
-    return NextResponse.json(
-      { error: "Failed to duplicate truck posting" },
-      { status: 500 }
-    );
+    if (
+      error instanceof Error &&
+      error.message.startsWith("ACTIVE_POSTING_EXISTS:")
+    ) {
+      const existingId = error.message.split(":")[1];
+      return NextResponse.json(
+        {
+          error: "This truck already has an active posting",
+          existingPostingId: existingId,
+        },
+        { status: 409 }
+      );
+    }
+    return handleApiError(error, "Duplicate truck posting error");
   }
 }

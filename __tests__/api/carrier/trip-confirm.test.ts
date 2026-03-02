@@ -307,7 +307,7 @@ describe("Trip Delivery Confirmation", () => {
       expect([401, 500]).toContain(res.status);
     });
 
-    it("carrier cannot confirm delivery → 403", async () => {
+    it("carrier cannot confirm delivery → 404", async () => {
       setAuthSession(carrierSession);
 
       const req = createRequest(
@@ -317,10 +317,10 @@ describe("Trip Delivery Confirmation", () => {
       const res = await callHandler(confirmDelivery, req, {
         tripId: "delivered-trip-1",
       });
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
 
       const data = await parseResponse(res);
-      expect(data.error).toContain("shipper");
+      expect(data.error).toContain("Trip not found");
     });
 
     it("admin can confirm delivery → 200", async () => {

@@ -100,10 +100,7 @@ export async function POST(
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isCarrier && !isAdmin) {
-      return NextResponse.json(
-        { error: "Only the carrier can upload POD" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
     // Parse form data for file upload
@@ -290,10 +287,13 @@ export async function GET(
     const isCarrier = user?.organizationId === trip.carrierId;
     const isShipper = user?.organizationId === trip.shipperId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
-    const isDispatcher = session.role === "DISPATCHER";
+    // Fix 11: Scope dispatcher access to their organization's trips
+    const isScopedDispatcher =
+      session.role === "DISPATCHER" &&
+      (trip.carrierId === session.organizationId ||
+        trip.shipperId === session.organizationId);
 
-    // Fix 6d: Return 404 instead of 403 to prevent resource existence leakage
-    if (!isCarrier && !isShipper && !isAdmin && !isDispatcher) {
+    if (!isCarrier && !isShipper && !isAdmin && !isScopedDispatcher) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 

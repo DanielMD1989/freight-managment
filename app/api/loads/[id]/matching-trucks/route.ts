@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { findMatchingTrucks } from "@/lib/matchingEngine";
 import { handleApiError } from "@/lib/apiErrors";
 
@@ -22,7 +22,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth();
+    const user = await requireActiveUser();
     const { id } = await params;
     const { searchParams } = new URL(request.url);
 
@@ -96,8 +96,6 @@ export async function GET(
             id: true,
             name: true,
             isVerified: true,
-            contactPhone: true,
-            contactEmail: true,
           },
         },
         originCity: {

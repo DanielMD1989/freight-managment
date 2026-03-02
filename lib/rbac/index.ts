@@ -1,4 +1,4 @@
-import { getSession, requireAuth, SessionPayload } from "@/lib/auth";
+import { getSession, requireActiveUser, SessionPayload } from "@/lib/auth";
 import {
   Permission,
   type Role,
@@ -51,7 +51,7 @@ export async function hasAnyRole(roles: Role[]): Promise<boolean> {
 export async function requireRole(
   allowedRoles: Role[]
 ): Promise<SessionPayload> {
-  const session = await requireAuth();
+  const session = await requireActiveUser();
 
   if (!allowedRoles.includes(session.role as Role)) {
     throw new ForbiddenError(
@@ -90,7 +90,7 @@ export async function hasAllPermissions(
 export async function requirePermission(
   permission: Permission
 ): Promise<SessionPayload> {
-  const session = await requireAuth();
+  const session = await requireActiveUser();
 
   if (!checkPermission(session.role as Role, permission)) {
     throw new ForbiddenError(
@@ -104,7 +104,7 @@ export async function requirePermission(
 export async function requireAnyPermission(
   permissions: Permission[]
 ): Promise<SessionPayload> {
-  const session = await requireAuth();
+  const session = await requireActiveUser();
 
   if (!checkAnyPermission(session.role as Role, permissions)) {
     throw new ForbiddenError(
@@ -118,7 +118,7 @@ export async function requireAnyPermission(
 export async function requireAllPermissions(
   permissions: Permission[]
 ): Promise<SessionPayload> {
-  const session = await requireAuth();
+  const session = await requireActiveUser();
 
   if (!checkAllPermissions(session.role as Role, permissions)) {
     throw new ForbiddenError(

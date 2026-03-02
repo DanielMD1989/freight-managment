@@ -19,7 +19,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { requireAuth, requireActiveUser } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { hasElevatedPermissions } from "@/lib/dispatcherPermissions";
 import { UserRole } from "@prisma/client";
@@ -122,7 +122,7 @@ export async function GET(
     // Show ACTIVE postings to everyone
     // Show non-ACTIVE postings only to owner or elevated roles
     if (posting.status !== "ACTIVE") {
-      const session = await requireAuth();
+      const session = await requireActiveUser();
 
       // Sprint 16: Allow dispatcher, platform ops, and admin to view all postings
       const hasElevatedPerms = hasElevatedPermissions({
@@ -336,9 +336,35 @@ export async function PATCH(
     };
 
     const includeClause = {
-      truck: true as const,
-      originCity: true as const,
-      destinationCity: true as const,
+      truck: {
+        select: {
+          id: true,
+          licensePlate: true,
+          truckType: true,
+          capacity: true,
+          lengthM: true,
+        },
+      },
+      originCity: {
+        select: {
+          id: true,
+          name: true,
+          nameEthiopic: true,
+          region: true,
+          latitude: true,
+          longitude: true,
+        },
+      },
+      destinationCity: {
+        select: {
+          id: true,
+          name: true,
+          nameEthiopic: true,
+          region: true,
+          latitude: true,
+          longitude: true,
+        },
+      },
     };
 
     // H12 FIX: Wrap re-activation check + update in transaction to prevent race condition

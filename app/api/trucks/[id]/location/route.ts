@@ -5,10 +5,11 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { z } from "zod";
 import { getTruckCurrentLocation } from "@/lib/deadheadOptimization";
+import { handleApiError } from "@/lib/apiErrors";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { CacheInvalidation } from "@/lib/cache";
 
@@ -41,7 +42,7 @@ export async function PATCH(
       );
     }
 
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // CSRF protection with mobile client handling
     const csrfError = await validateCSRFWithMobile(request);
@@ -109,17 +110,7 @@ export async function PATCH(
       truck: updatedTruck,
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      // FIX: Use zodErrorResponse for consistent sanitization
-      const { zodErrorResponse } = await import("@/lib/validation");
-      return zodErrorResponse(error);
-    }
-
-    console.error("Update truck location error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Update truck location error");
   }
 }
 
@@ -129,7 +120,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
     const { id: truckId } = await params;
 
     // Rate limiting: Per-truck scoping prevents one carrier's fleet from exhausting limits
@@ -214,10 +205,6 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Get truck location error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Get truck location error");
   }
 }
