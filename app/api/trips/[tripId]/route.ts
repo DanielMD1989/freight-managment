@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth, requireActiveUser } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { getAccessRoles } from "@/lib/rbac";
 import { TripStatus, LoadStatus, Prisma } from "@prisma/client";
@@ -52,7 +52,7 @@ export async function GET(
   { params }: { params: Promise<{ tripId: string }> }
 ) {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
     const { tripId } = await params;
 
     const trip = await db.trip.findUnique({

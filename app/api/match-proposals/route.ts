@@ -14,7 +14,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { Prisma, UserRole, ProposalStatus } from "@prisma/client";
-import { requireAuth, requireActiveUser } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { canProposeMatch } from "@/lib/dispatcherPermissions";
 import { RULE_DISPATCHER_COORDINATION_ONLY } from "@/lib/foundation-rules";
@@ -127,11 +127,28 @@ export async function POST(request: NextRequest) {
         carrierId: true,
         isAvailable: true,
         licensePlate: true,
+        approvalStatus: true,
       },
     });
 
     if (!truck) {
       return NextResponse.json({ error: "Truck not found" }, { status: 404 });
+    }
+
+    // Only approved trucks can be proposed for matches
+    if (truck.approvalStatus !== "APPROVED") {
+      return NextResponse.json(
+        { error: "Only approved trucks can be proposed for matches" },
+        { status: 400 }
+      );
+    }
+
+    // Truck must be available
+    if (!truck.isAvailable) {
+      return NextResponse.json(
+        { error: "Truck is not currently available" },
+        { status: 400 }
+      );
     }
 
     // Check if there's already a pending proposal for this load-truck pair
@@ -164,8 +181,6 @@ export async function POST(request: NextRequest) {
           fees: {
             shipperFee: walletValidation.shipperFee,
             carrierFee: walletValidation.carrierFee,
-            shipperBalance: walletValidation.shipperBalance,
-            carrierBalance: walletValidation.carrierBalance,
           },
         },
         { status: 400 }
@@ -268,7 +283,7 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
     const { searchParams } = new URL(request.url);
 
     const status = searchParams.get("status");
@@ -278,9 +293,9 @@ export async function GET(request: NextRequest) {
     const limitParam = searchParams.get("limit");
     const offsetParam = searchParams.get("offset");
 
-    // Pagination
-    const limit = Math.min(parseInt(limitParam || "20", 10), 100);
-    const offset = Math.max(parseInt(offsetParam || "0", 10), 0);
+    // Pagination (NaN guard: parseInt("abc") returns NaN, fallback to defaults)
+    const limit = Math.min(parseInt(limitParam || "20", 10) || 20, 100);
+    const offset = Math.max(parseInt(offsetParam || "0", 10) || 0, 0);
 
     // H7 FIX: Use typed where clause instead of any
     const where: Prisma.MatchProposalWhereInput = {};

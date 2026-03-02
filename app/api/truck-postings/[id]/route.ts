@@ -297,78 +297,88 @@ export async function PATCH(
       }
     }
 
-    // H12 FIX: Check ONE_ACTIVE_POST_PER_TRUCK when re-activating
-    if (data.status === "ACTIVE" && existing.status !== "ACTIVE") {
-      // M18 FIX: Re-check truck approval status before re-activating posting
-      const truck = await db.truck.findUnique({
-        where: { id: existing.truckId },
-        select: { approvalStatus: true },
-      });
-      if (truck?.approvalStatus !== "APPROVED") {
-        return NextResponse.json(
-          { error: "Only approved trucks can have active postings" },
-          { status: 403 }
-        );
-      }
-
-      const otherActive = await db.truckPosting.findFirst({
-        where: { truckId: existing.truckId, status: "ACTIVE", id: { not: id } },
-        select: { id: true },
-      });
-      if (otherActive) {
-        return NextResponse.json(
-          { error: "This truck already has an active posting" },
-          { status: 409 }
-        );
-      }
-    }
-
     // Update postedAt when status changes to ACTIVE (posted)
-    const shouldUpdatePostedAt =
+    const isReactivation =
       data.status === "ACTIVE" && existing.status !== "ACTIVE";
 
-    // Update posting
-    const updated = await db.truckPosting.update({
-      where: { id },
-      data: {
-        ...(data.availableFrom && {
-          availableFrom: new Date(data.availableFrom),
-        }),
-        ...(data.availableTo !== undefined && {
-          availableTo: data.availableTo ? new Date(data.availableTo) : null,
-        }),
-        ...(data.availableLength !== undefined && {
-          availableLength: data.availableLength,
-        }),
-        ...(data.availableWeight !== undefined && {
-          availableWeight: data.availableWeight,
-        }),
-        ...(data.preferredDhToOriginKm !== undefined && {
-          preferredDhToOriginKm: data.preferredDhToOriginKm,
-        }),
-        ...(data.preferredDhAfterDeliveryKm !== undefined && {
-          preferredDhAfterDeliveryKm: data.preferredDhAfterDeliveryKm,
-        }),
-        ...(data.contactName && { contactName: data.contactName }),
-        ...(data.contactPhone && { contactPhone: data.contactPhone }),
-        ...(data.notes !== undefined && { notes: data.notes }),
-        ...(data.status && { status: data.status }),
-        // Update postedAt when posting (changing to ACTIVE)
-        ...(shouldUpdatePostedAt && { postedAt: new Date() }),
-        // Additional fields from frontend
-        ...(data.originCityId && { originCityId: data.originCityId }),
-        ...(data.destinationCityId !== undefined && {
-          destinationCityId: data.destinationCityId,
-        }),
-        ...(data.fullPartial && { fullPartial: data.fullPartial }),
-        ...(data.ownerName !== undefined && { ownerName: data.ownerName }),
-      },
-      include: {
-        truck: true,
-        originCity: true,
-        destinationCity: true,
-      },
-    });
+    const updatePayload = {
+      ...(data.availableFrom && {
+        availableFrom: new Date(data.availableFrom),
+      }),
+      ...(data.availableTo !== undefined && {
+        availableTo: data.availableTo ? new Date(data.availableTo) : null,
+      }),
+      ...(data.availableLength !== undefined && {
+        availableLength: data.availableLength,
+      }),
+      ...(data.availableWeight !== undefined && {
+        availableWeight: data.availableWeight,
+      }),
+      ...(data.preferredDhToOriginKm !== undefined && {
+        preferredDhToOriginKm: data.preferredDhToOriginKm,
+      }),
+      ...(data.preferredDhAfterDeliveryKm !== undefined && {
+        preferredDhAfterDeliveryKm: data.preferredDhAfterDeliveryKm,
+      }),
+      ...(data.contactName && { contactName: data.contactName }),
+      ...(data.contactPhone && { contactPhone: data.contactPhone }),
+      ...(data.notes !== undefined && { notes: data.notes }),
+      ...(data.status && { status: data.status }),
+      // Update postedAt when posting (changing to ACTIVE)
+      ...(isReactivation && { postedAt: new Date() }),
+      // Additional fields from frontend
+      ...(data.originCityId && { originCityId: data.originCityId }),
+      ...(data.destinationCityId !== undefined && {
+        destinationCityId: data.destinationCityId,
+      }),
+      ...(data.fullPartial && { fullPartial: data.fullPartial }),
+      ...(data.ownerName !== undefined && { ownerName: data.ownerName }),
+    };
+
+    const includeClause = {
+      truck: true as const,
+      originCity: true as const,
+      destinationCity: true as const,
+    };
+
+    // H12 FIX: Wrap re-activation check + update in transaction to prevent race condition
+    let updated;
+    if (isReactivation) {
+      updated = await db.$transaction(async (tx) => {
+        // M18 FIX: Re-check truck approval status before re-activating posting
+        const truck = await tx.truck.findUnique({
+          where: { id: existing.truckId },
+          select: { approvalStatus: true },
+        });
+        if (truck?.approvalStatus !== "APPROVED") {
+          throw new Error("TRUCK_NOT_APPROVED");
+        }
+
+        const otherActive = await tx.truckPosting.findFirst({
+          where: {
+            truckId: existing.truckId,
+            status: "ACTIVE",
+            id: { not: id },
+          },
+          select: { id: true },
+        });
+        if (otherActive) {
+          throw new Error("ACTIVE_POSTING_EXISTS");
+        }
+
+        return tx.truckPosting.update({
+          where: { id },
+          data: updatePayload,
+          include: includeClause,
+        });
+      });
+    } else {
+      updated = await db.truckPosting.update({
+        where: { id },
+        data: updatePayload,
+        include: includeClause,
+      });
+    }
 
     // P1-001-B FIX: Invalidate cache after posting update to ensure fresh data
     await CacheInvalidation.truck(
@@ -379,6 +389,20 @@ export async function PATCH(
 
     return NextResponse.json(updated);
   } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === "TRUCK_NOT_APPROVED") {
+        return NextResponse.json(
+          { error: "Only approved trucks can have active postings" },
+          { status: 403 }
+        );
+      }
+      if (error.message === "ACTIVE_POSTING_EXISTS") {
+        return NextResponse.json(
+          { error: "This truck already has an active posting" },
+          { status: 409 }
+        );
+      }
+    }
     return handleApiError(error, "Error updating truck posting");
   }
 }

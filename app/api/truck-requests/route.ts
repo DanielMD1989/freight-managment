@@ -13,7 +13,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { requireAuth, requireActiveUser } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { canRequestTruck } from "@/lib/dispatcherPermissions";
 import {
@@ -179,7 +179,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "A pending request already exists for this load-truck pair",
-          existingRequestId: existingRequest.id,
         },
         { status: 409 }
       );
@@ -198,8 +197,6 @@ export async function POST(request: NextRequest) {
           fees: {
             shipperFee: walletValidation.shipperFee,
             carrierFee: walletValidation.carrierFee,
-            shipperBalance: walletValidation.shipperBalance,
-            carrierBalance: walletValidation.carrierBalance,
           },
         },
         { status: 400 }
@@ -303,7 +300,7 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
     const { searchParams } = new URL(request.url);
 
     const status = searchParams.get("status");
@@ -312,9 +309,9 @@ export async function GET(request: NextRequest) {
     const limitParam = searchParams.get("limit");
     const offsetParam = searchParams.get("offset");
 
-    // Pagination
-    const limit = Math.min(parseInt(limitParam || "20", 10), 100);
-    const offset = Math.max(parseInt(offsetParam || "0", 10), 0);
+    // Pagination (NaN guard: parseInt("abc") returns NaN, fallback to defaults)
+    const limit = Math.min(parseInt(limitParam || "20", 10) || 20, 100);
+    const offset = Math.max(parseInt(offsetParam || "0", 10) || 0, 0);
 
     // Build where clause based on role
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

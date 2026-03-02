@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth, requireActiveUser } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
@@ -83,7 +83,7 @@ export async function GET(
     const rateLimitError = await applyFleetRpsLimit(request);
     if (rateLimitError) return rateLimitError;
 
-    const session = await requireAuth();
+    const session = await requireActiveUser();
     const { id } = await params;
 
     const truck = await db.truck.findUnique({

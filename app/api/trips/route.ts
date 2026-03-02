@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth, requireActiveUser } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { TripStatus, Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -35,7 +35,7 @@ const createTripSchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
     const { searchParams } = new URL(request.url);
 
     const statusParam = searchParams.get("status");
@@ -115,8 +115,6 @@ export async function GET(request: NextRequest) {
               truckType: true,
               pickupDate: true,
               deliveryDate: true,
-              shipperContactName: true,
-              shipperContactPhone: true,
               podSubmitted: true,
               podVerified: true,
             },

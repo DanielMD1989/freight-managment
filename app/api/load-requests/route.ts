@@ -209,8 +209,6 @@ export async function POST(request: NextRequest) {
           fees: {
             shipperFee: walletValidation.shipperFee,
             carrierFee: walletValidation.carrierFee,
-            shipperBalance: walletValidation.shipperBalance,
-            carrierBalance: walletValidation.carrierBalance,
           },
         },
         { status: 400 }

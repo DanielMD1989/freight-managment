@@ -164,12 +164,8 @@ export async function POST(
 
     if (!canApproveRequests(user, proposal.truck.carrierId)) {
       return NextResponse.json(
-        {
-          error: "You do not have permission to respond to this proposal",
-          rule: RULE_CARRIER_FINAL_AUTHORITY.id,
-          hint: "Only the carrier who owns the truck can respond",
-        },
-        { status: 403 }
+        { error: "Proposal not found" },
+        { status: 404 }
       );
     }
 

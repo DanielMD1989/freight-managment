@@ -7,7 +7,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/truck-requests/[id]
@@ -20,7 +22,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     const truckRequest = await db.truckRequest.findUnique({
       where: { id },
@@ -72,18 +74,14 @@ export async function GET(
 
     if (!isShipper && !isCarrier && !isAdmin) {
       return NextResponse.json(
-        { error: "Not authorized to view this request" },
-        { status: 403 }
+        { error: "Truck request not found" },
+        { status: 404 }
       );
     }
 
     return NextResponse.json({ request: truckRequest });
   } catch (error) {
-    console.error("Error fetching truck request:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch truck request" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Error fetching truck request");
   }
 }
 
@@ -100,7 +98,11 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const session = await requireAuth();
+
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
+    const session = await requireActiveUser();
 
     // Get the request
     const truckRequest = await db.truckRequest.findUnique({
@@ -127,8 +129,8 @@ export async function DELETE(
 
     if (!isShipper && !isRequester && !isAdmin) {
       return NextResponse.json(
-        { error: "Only the shipper who created this request can cancel it" },
-        { status: 403 }
+        { error: "Truck request not found" },
+        { status: 404 }
       );
     }
 
@@ -156,10 +158,6 @@ export async function DELETE(
       request: updatedRequest,
     });
   } catch (error) {
-    console.error("Error cancelling truck request:", error);
-    return NextResponse.json(
-      { error: "Failed to cancel truck request" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Error cancelling truck request");
   }
 }

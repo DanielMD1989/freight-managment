@@ -33,6 +33,9 @@ import {
   mockSms,
   mockMatchingEngine,
   mockDispatcherPermissions,
+  mockRbac,
+  mockApiErrors,
+  mockLogger,
   SeedData,
 } from "../utils/routeTestUtils";
 
@@ -49,6 +52,9 @@ mockFoundationRules();
 mockSms();
 mockMatchingEngine();
 mockDispatcherPermissions();
+mockRbac();
+mockApiErrors();
+mockLogger();
 
 // Custom notifications mock that includes notifyTruckRequestResponse
 // (not present in the default mockNotifications helper)
@@ -345,7 +351,7 @@ describe("Carrier Truck Request Management", () => {
       expect(res.status).toBe(404);
     });
 
-    it("should return 403 for carrier from different organization", async () => {
+    it("should return 404 for carrier from different organization", async () => {
       setAuthSession(
         createMockSession({
           userId: "other-carrier-user",
@@ -362,7 +368,7 @@ describe("Carrier Truck Request Management", () => {
       const res = await callHandler(getTruckRequest, req, {
         id: truckRequestId,
       });
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
   });
 
@@ -934,7 +940,7 @@ describe("Carrier Truck Request Management", () => {
       expect(data.request.status).toBe("CANCELLED");
     });
 
-    it("should not allow carrier to cancel a shipper's request", async () => {
+    it("should not allow carrier to cancel a shipper's request (returns 404)", async () => {
       // Carrier is authenticated by default
       const carrierCancelReq = await db.truckRequest.create({
         data: {
@@ -957,7 +963,8 @@ describe("Carrier Truck Request Management", () => {
       const res = await callHandler(cancelTruckRequest, req, {
         id: carrierCancelReq.id,
       });
-      expect(res.status).toBe(403);
+      // Returns 404 (not 403) to prevent resource enumeration
+      expect(res.status).toBe(404);
     });
   });
 });

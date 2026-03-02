@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth, requireActiveUser } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
@@ -221,7 +221,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const session = await requireAuth();
+    const session = await requireActiveUser();
     const { searchParams } = request.nextUrl;
 
     const page = Math.max(parseInt(searchParams.get("page") || "1") || 1, 1);
