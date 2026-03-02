@@ -99,10 +99,7 @@ export async function POST(
     );
 
     if (!userCanAssign) {
-      return NextResponse.json(
-        { error: "You do not have permission to assign this load" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // Validate request body
@@ -144,10 +141,7 @@ export async function POST(
     // Foundation Rule: CARRIER_FINAL_AUTHORITY
     if (user.role === "CARRIER") {
       if (truck.carrierId !== user.organizationId) {
-        return NextResponse.json(
-          { error: "Carriers can only assign their own trucks" },
-          { status: 403 }
-        );
+        return NextResponse.json({ error: "Truck not found" }, { status: 404 });
       }
     }
 
@@ -496,10 +490,7 @@ export async function DELETE(
     );
 
     if (!userCanUnassign) {
-      return NextResponse.json(
-        { error: "You do not have permission to unassign this load" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     if (!load.assignedTruckId) {

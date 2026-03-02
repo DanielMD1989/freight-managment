@@ -509,7 +509,7 @@ describe("Carrier Trip Edge Cases", () => {
   // ─── Role Restrictions ─────────────────────────────────────────────────
 
   describe("Role restrictions", () => {
-    it("shipper cannot transition trip → 403", async () => {
+    it("shipper cannot transition trip → 404", async () => {
       const { tripId } = await createTripAtStatus("ASSIGNED");
 
       setAuthSession(shipperSession);
@@ -519,7 +519,7 @@ describe("Carrier Trip Edge Cases", () => {
         { body: { status: "PICKUP_PENDING" } }
       );
       const res = await callHandler(updateTrip, req, { tripId });
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
 
     it("carrier can transition own trip → 200", async () => {

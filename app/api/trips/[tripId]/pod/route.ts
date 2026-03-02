@@ -82,25 +82,21 @@ export async function POST(
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
+    // Check authorization BEFORE business logic to avoid leaking trip state
+    const isCarrier =
+      session.role === "CARRIER" && session.organizationId === trip.carrierId;
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
+
+    if (!isCarrier && !isAdmin) {
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
+    }
+
     // Only DELIVERED trips can have POD uploaded
     if (trip.status !== "DELIVERED") {
       return NextResponse.json(
         { error: "Trip must be in DELIVERED status before uploading POD" },
         { status: 400 }
       );
-    }
-
-    // Check if user is the carrier
-    const user = await db.user.findUnique({
-      where: { id: session.userId },
-      select: { organizationId: true, role: true },
-    });
-
-    const isCarrier = user?.organizationId === trip.carrierId;
-    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
-
-    if (!isCarrier && !isAdmin) {
-      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
     // Parse form data for file upload
@@ -279,13 +275,10 @@ export async function GET(
     }
 
     // Check if user has access to this trip
-    const user = await db.user.findUnique({
-      where: { id: session.userId },
-      select: { organizationId: true, role: true },
-    });
-
-    const isCarrier = user?.organizationId === trip.carrierId;
-    const isShipper = user?.organizationId === trip.shipperId;
+    const isCarrier =
+      session.role === "CARRIER" && session.organizationId === trip.carrierId;
+    const isShipper =
+      session.role === "SHIPPER" && session.organizationId === trip.shipperId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
     // Fix 11: Scope dispatcher access to their organization's trips
     const isScopedDispatcher =

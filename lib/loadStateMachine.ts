@@ -125,7 +125,6 @@ export const ROLE_PERMISSIONS: Record<string, LoadStatus[]> = {
   DISPATCHER: [
     LoadStatus.SEARCHING,
     LoadStatus.OFFERED,
-    LoadStatus.ASSIGNED,
     LoadStatus.PICKUP_PENDING,
     LoadStatus.EXCEPTION,
   ],

@@ -842,14 +842,14 @@ describe("Data Privacy & Isolation Tests", () => {
       expect(data.error).toBe("Trip not found");
     });
 
-    it("dispatcher CAN view any trip → 200", async () => {
+    it("unscoped dispatcher cannot view trip → 404", async () => {
       setAuthSession(dispatcherSession);
       const req = createRequest(
         "GET",
         "http://localhost:3000/api/trips/priv-tripA"
       );
       const res = await callHandler(getTrip, req, { tripId: "priv-tripA" });
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(404);
     });
   });
 

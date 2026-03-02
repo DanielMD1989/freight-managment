@@ -244,7 +244,7 @@ describe("Truck Posting Duplicate", () => {
       expect(res.status).toBe(403);
     });
 
-    it("should deny other carrier's posting → 403", async () => {
+    it("should deny other carrier's posting → 404 (cloaked)", async () => {
       setAuthSession(otherCarrierSession);
 
       const req = createRequest(
@@ -255,7 +255,7 @@ describe("Truck Posting Duplicate", () => {
         id: seed.truckPosting.id,
       });
 
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
 
     // Note: The duplicate endpoint now uses validateCSRFWithMobile (standard CSRF)

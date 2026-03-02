@@ -4,8 +4,9 @@ import { requireActiveUser } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { z } from "zod";
-import { zodErrorResponse } from "@/lib/validation";
+
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { handleApiError } from "@/lib/apiErrors";
 
 const depositSchema = z.object({
   amount: z.number().positive(),
@@ -96,16 +97,7 @@ export async function GET(request: NextRequest) {
       recentTransactions,
     });
   } catch (error) {
-    console.error("Get wallet error:", error);
-
-    if (error instanceof Error && error.name === "ForbiddenError") {
-      return NextResponse.json({ error: error.message }, { status: 403 });
-    }
-
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Get wallet error");
   }
 }
 
@@ -189,15 +181,6 @@ export async function POST(request: NextRequest) {
       newBalance: parseFloat(updatedWallet.balance.toString()).toFixed(2),
     });
   } catch (error) {
-    console.error("Deposit error:", error);
-
-    if (error instanceof z.ZodError) {
-      return zodErrorResponse(error);
-    }
-
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Deposit error");
   }
 }

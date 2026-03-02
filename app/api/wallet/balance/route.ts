@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { handleApiError } from "@/lib/apiErrors";
 
 /**
@@ -17,7 +17,7 @@ import { handleApiError } from "@/lib/apiErrors";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Get user's organization
     const user = await db.user.findUnique({

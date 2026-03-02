@@ -227,7 +227,7 @@ describe("Truck Location, History & Nearby-Loads", () => {
       expect(res.status).toBe(200);
     });
 
-    it("should deny other carrier from updating → 403", async () => {
+    it("should deny other carrier from updating → 404 (cloaked)", async () => {
       setAuthSession(otherCarrierSession);
 
       const req = createRequest(
@@ -239,7 +239,7 @@ describe("Truck Location, History & Nearby-Loads", () => {
         id: seed.truck.id,
       });
 
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
 
     it("should return 400 for invalid latitude/longitude", async () => {
@@ -310,7 +310,7 @@ describe("Truck Location, History & Nearby-Loads", () => {
       });
     });
 
-    it("should deny shipper without active load → 403", async () => {
+    it("should deny shipper without active load → 404 (cloaked)", async () => {
       setAuthSession(shipperSession);
 
       const req = createRequest(
@@ -319,7 +319,7 @@ describe("Truck Location, History & Nearby-Loads", () => {
       );
       const res = await callHandler(getLocation, req, { id: seed.truck.id });
 
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
 
     it("should return 404 when location unavailable", async () => {
@@ -499,7 +499,7 @@ describe("Truck Location, History & Nearby-Loads", () => {
       expect(res.status).toBe(404);
     });
 
-    it("should deny other carrier → 403", async () => {
+    it("should deny other carrier → 404 (cloaked)", async () => {
       setAuthSession(otherCarrierSession);
 
       const req = createRequest(
@@ -510,7 +510,7 @@ describe("Truck Location, History & Nearby-Loads", () => {
         id: seed.truck.id,
       });
 
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
   });
 });

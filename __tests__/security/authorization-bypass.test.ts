@@ -226,7 +226,7 @@ describe("Authorization Bypass Tests", () => {
       const res = await callHandler(updateTrip, req, {
         tripId: "auth-test-trip",
       });
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
   });
 
@@ -463,7 +463,7 @@ describe("Authorization Bypass Tests", () => {
       const res = await callHandler(updateTrip, req, {
         tripId: "auth-test-trip",
       });
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
 
     it("should allow dispatcher to list trips (read-only)", async () => {

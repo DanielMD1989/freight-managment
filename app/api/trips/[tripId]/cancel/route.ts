@@ -123,13 +123,10 @@ export async function POST(
     }
 
     // Check if user has permission to cancel
-    const user = await db.user.findUnique({
-      where: { id: session.userId },
-      select: { organizationId: true, role: true },
-    });
-
-    const isCarrier = user?.organizationId === trip.carrierId;
-    const isShipper = user?.organizationId === trip.shipperId;
+    const isCarrier =
+      session.role === "CARRIER" && session.organizationId === trip.carrierId;
+    const isShipper =
+      session.role === "SHIPPER" && session.organizationId === trip.shipperId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isCarrier && !isShipper && !isAdmin) {

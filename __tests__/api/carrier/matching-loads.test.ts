@@ -172,7 +172,7 @@ describe("Matching Loads", () => {
       expect([401, 500]).toContain(res.status);
     });
 
-    it("shipper cannot view carrier's matches → 403", async () => {
+    it("shipper cannot view carrier's matches → 404 (cloaked)", async () => {
       setAuthSession(shipperSession);
 
       const req = createRequest(
@@ -181,7 +181,7 @@ describe("Matching Loads", () => {
       );
 
       const res = await callHandler(GET, req, { id: seed.truckPosting.id });
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
 
     it("posting owner can view matches → 200", async () => {

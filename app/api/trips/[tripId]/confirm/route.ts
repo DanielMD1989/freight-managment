@@ -87,6 +87,15 @@ export async function POST(
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
+    // Check authorization BEFORE business logic to avoid leaking trip state
+    const isShipper =
+      session.role === "SHIPPER" && session.organizationId === trip.shipperId;
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
+
+    if (!isShipper && !isAdmin) {
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
+    }
+
     // Only DELIVERED trips can be confirmed
     if (trip.status !== "DELIVERED") {
       return NextResponse.json(
@@ -110,19 +119,6 @@ export async function POST(
         { error: "Cannot confirm delivery - no POD has been submitted" },
         { status: 400 }
       );
-    }
-
-    // Check if user is the shipper
-    const user = await db.user.findUnique({
-      where: { id: session.userId },
-      select: { organizationId: true, role: true },
-    });
-
-    const isShipper = user?.organizationId === trip.shipperId;
-    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
-
-    if (!isShipper && !isAdmin) {
-      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
     // CRITICAL FIX: Deduct service fee BEFORE transaction (blocking pattern)

@@ -322,7 +322,7 @@ describe("Carrier Disputes API", () => {
       expect(data.error).toBe("Load not found");
     });
 
-    it("should return 403 when carrier is not assigned to the load", async () => {
+    it("should return 404 when carrier is not assigned to the load (cloaked)", async () => {
       useCarrierSession();
 
       // Mock a load that belongs to a different carrier
@@ -346,10 +346,7 @@ describe("Carrier Disputes API", () => {
       });
 
       const res = await createDispute(req);
-      expect(res.status).toBe(403);
-
-      const data = await parseResponse(res);
-      expect(data.error).toContain("Forbidden");
+      expect(res.status).toBe(404);
     });
 
     it("should return 400 for invalid dispute type", async () => {
@@ -591,7 +588,7 @@ describe("Carrier Disputes API", () => {
       expect(data.error).toBe("Dispute not found");
     });
 
-    it("should return 403 when accessing a dispute from an unrelated org", async () => {
+    it("should return 404 when accessing a dispute from an unrelated org (cloaked)", async () => {
       // Set session to an org that is neither the shipper nor the carrier
       setAuthSession(
         createMockSession({
@@ -642,10 +639,7 @@ describe("Carrier Disputes API", () => {
       const res = await callHandler(getDispute, req, {
         id: "dispute-other-org",
       });
-      expect(res.status).toBe(403);
-
-      const data = await parseResponse(res);
-      expect(data.error).toContain("Forbidden");
+      expect(res.status).toBe(404);
     });
   });
 

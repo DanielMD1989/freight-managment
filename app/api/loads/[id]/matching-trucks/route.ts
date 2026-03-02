@@ -68,13 +68,7 @@ export async function GET(
     const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
 
     if (!isShipper && !isAssignedCarrier && !isDispatcher && !isAdmin) {
-      return NextResponse.json(
-        {
-          error:
-            "You do not have permission to view matching trucks for this load",
-        },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // Verify load has required fields for matching

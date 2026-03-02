@@ -49,8 +49,13 @@ export async function PATCH(
     if (csrfError) return csrfError;
 
     const body = await request.json();
+    const parseResult = updateLocationSchema.safeParse(body);
+    if (!parseResult.success) {
+      const { zodErrorResponse } = await import("@/lib/validation");
+      return zodErrorResponse(parseResult.error);
+    }
     const { latitude, longitude, currentCity, currentRegion } =
-      updateLocationSchema.parse(body);
+      parseResult.data;
 
     // Get truck to check ownership
     const truck = await db.truck.findUnique({
@@ -66,19 +71,12 @@ export async function PATCH(
     }
 
     // Permission check: Only carrier who owns truck or admin
-    const user = await db.user.findUnique({
-      where: { id: session.userId },
-      select: { organizationId: true, role: true },
-    });
-
-    const isOwner = user?.organizationId === truck.carrierId;
-    const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+    const isOwner =
+      session.role === "CARRIER" && session.organizationId === truck.carrierId;
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isOwner && !isAdmin) {
-      return NextResponse.json(
-        { error: "You do not have permission to update this truck location" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
     // Update truck location
@@ -155,21 +153,17 @@ export async function GET(
     }
 
     // Check ownership: carrier who owns truck, shipper with active load, or admin
-    const user = await db.user.findUnique({
-      where: { id: session.userId },
-      select: { organizationId: true, role: true },
-    });
-
-    const isOwner = user?.organizationId === truck.carrierId;
-    const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+    const isOwner =
+      session.role === "CARRIER" && session.organizationId === truck.carrierId;
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     // Shippers can view location if truck is on their active load
     let isShipperWithActiveLoad = false;
-    if (user?.role === "SHIPPER" && user?.organizationId) {
+    if (session.role === "SHIPPER" && session.organizationId) {
       const activeLoad = await db.load.findFirst({
         where: {
           assignedTruckId: truckId,
-          shipperId: user.organizationId,
+          shipperId: session.organizationId,
           status: "IN_TRANSIT",
         },
       });
@@ -177,10 +171,7 @@ export async function GET(
     }
 
     if (!isOwner && !isAdmin && !isShipperWithActiveLoad) {
-      return NextResponse.json(
-        { error: "You do not have permission to view this truck's location" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
     // Get truck location (from GPS or database)

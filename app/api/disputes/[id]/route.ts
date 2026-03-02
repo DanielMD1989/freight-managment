@@ -85,10 +85,7 @@ export async function GET(
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isShipper && !isCarrier && !isAdmin) {
-      return NextResponse.json(
-        { error: "Forbidden: You do not have access to this dispute" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Dispute not found" }, { status: 404 });
     }
 
     return NextResponse.json({ dispute });

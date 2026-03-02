@@ -133,11 +133,8 @@ export async function GET(
 
     if (!hasAccess) {
       return NextResponse.json(
-        {
-          error:
-            "Forbidden: You can only view matches for your own truck postings",
-        },
-        { status: 403 }
+        { error: "Truck posting not found" },
+        { status: 404 }
       );
     }
 

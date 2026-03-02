@@ -122,12 +122,23 @@ export async function GET(
     }
 
     // Check permissions using centralized access helper
-    const { isShipper, hasAccess } = getAccessRoles(session, {
+    const {
+      isShipper,
+      isCarrier: isCarrierView,
+      isAdmin: isAdminView,
+      isDispatcher,
+    } = getAccessRoles(session, {
       shipperOrgId: trip.shipperId,
       carrierOrgId: trip.carrierId,
     });
 
-    if (!hasAccess) {
+    // Scope dispatcher access to their organization's trips
+    const isScopedDispatcher =
+      isDispatcher &&
+      (trip.carrierId === session.organizationId ||
+        trip.shipperId === session.organizationId);
+
+    if (!isShipper && !isCarrierView && !isAdminView && !isScopedDispatcher) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
@@ -204,10 +215,7 @@ export async function PATCH(
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isCarrier && !isAdmin) {
-      return NextResponse.json(
-        { error: "Only the carrier can update trip status" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
     // Build update data

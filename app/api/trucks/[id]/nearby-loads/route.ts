@@ -45,26 +45,13 @@ export async function GET(
       return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
-    // Get user's organization for access control
-    const user = await db.user.findUnique({
-      where: { id: session.userId },
-      select: { organizationId: true, role: true },
-    });
-
     // Only truck owner or admin can access nearby loads
-    const canAccess =
-      user?.role === "SUPER_ADMIN" ||
-      user?.role === "ADMIN" ||
-      truck.carrierId === user?.organizationId;
+    const isOwner =
+      session.role === "CARRIER" && session.organizationId === truck.carrierId;
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
-    if (!canAccess) {
-      return NextResponse.json(
-        {
-          error:
-            "You do not have permission to access this truck's nearby loads",
-        },
-        { status: 403 }
-      );
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
     // Parse query parameters with validation

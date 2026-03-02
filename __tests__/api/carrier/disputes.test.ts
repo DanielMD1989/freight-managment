@@ -291,7 +291,7 @@ describe("Carrier Disputes", () => {
       expect(data.dispute.evidenceUrls).toBeDefined();
     });
 
-    it("unrelated carrier cannot create dispute → 403", async () => {
+    it("unrelated carrier cannot create dispute → 404 (cloaked)", async () => {
       setAuthSession(otherCarrierSession);
 
       const req = createRequest("POST", "http://localhost:3000/api/disputes", {
@@ -303,10 +303,7 @@ describe("Carrier Disputes", () => {
       });
 
       const res = await createDispute(req);
-      expect(res.status).toBe(403);
-
-      const data = await parseResponse(res);
-      expect(data.error).toContain("Forbidden");
+      expect(res.status).toBe(404);
     });
 
     it("non-existent load → 404", async () => {

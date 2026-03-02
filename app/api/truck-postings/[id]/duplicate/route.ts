@@ -52,7 +52,10 @@ export async function POST(
 
     // Verify ownership (carrier must own the posting, admin can duplicate any)
     if (!isAdmin && originalPosting.carrierId !== user.organizationId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Truck posting not found" },
+        { status: 404 }
+      );
     }
 
     // Create duplicate truck posting

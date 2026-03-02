@@ -105,10 +105,7 @@ export async function POST(request: NextRequest) {
       load.assignedTruck?.carrier?.id === session.organizationId;
 
     if (!isShipper && !isCarrier) {
-      return NextResponse.json(
-        { error: "Forbidden: You do not have access to this load" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
     // C3 FIX: Set disputedOrgId to the OTHER party, not the filer

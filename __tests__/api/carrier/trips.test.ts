@@ -944,7 +944,7 @@ describe("Carrier Trip Management", () => {
       expect(res.status).toBe(404);
     });
 
-    it("shipper cannot update trip status → 403", async () => {
+    it("shipper cannot update trip status → 404", async () => {
       setAuthSession(shipperSession);
 
       const req = createRequest(
@@ -954,10 +954,7 @@ describe("Carrier Trip Management", () => {
       );
 
       const res = await callHandler(updateTrip, req, { tripId });
-      expect(res.status).toBe(403);
-
-      const data = await parseResponse(res);
-      expect(data.error).toContain("carrier");
+      expect(res.status).toBe(404);
     });
 
     it("returns 404 for non-existent trip", async () => {
