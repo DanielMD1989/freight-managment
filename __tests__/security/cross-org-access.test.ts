@@ -358,7 +358,7 @@ describe("Cross-Organization Access Tests", () => {
       const res = await callHandler(respondToLoadRequest, req, {
         id: "lr-iso-001",
       });
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
 
     it("should allow correct shipper org to respond", async () => {

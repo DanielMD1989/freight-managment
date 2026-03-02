@@ -23,6 +23,8 @@ import { validateWalletBalancesForTrip } from "@/lib/serviceFeeManagement"; // S
 import { CacheInvalidation } from "@/lib/cache";
 import crypto from "crypto";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { createNotification } from "@/lib/notifications";
+import { handleApiError } from "@/lib/apiErrors";
 
 // Validation schema for proposal response
 const ProposalResponseSchema = z.object({
@@ -93,6 +95,8 @@ export async function POST(
             status: true,
             assignedTruckId: true,
             shipperId: true, // P0-007 FIX: Needed for cache invalidation
+            pickupCity: true,
+            deliveryCity: true,
           },
         },
       },
@@ -105,8 +109,29 @@ export async function POST(
       );
     }
 
-    // Check if proposal is still pending
+    // Fix 1g: Parse body before status check (needed for idempotency)
+    const body = await request.json();
+    const validationResult = ProposalResponseSchema.safeParse(body);
+
+    if (!validationResult.success) {
+      const { zodErrorResponse } = await import("@/lib/validation");
+      return zodErrorResponse(validationResult.error);
+    }
+
+    const data = validationResult.data;
+
+    // Fix 1d: Idempotency — if proposal already responded with same action, return success
     if (proposal.status !== "PENDING") {
+      if (
+        (proposal.status === "ACCEPTED" && data.action === "ACCEPT") ||
+        (proposal.status === "REJECTED" && data.action === "REJECT")
+      ) {
+        return NextResponse.json({
+          proposal,
+          message: `Proposal was already ${proposal.status.toLowerCase()}`,
+          idempotent: true,
+        });
+      }
       return NextResponse.json(
         {
           error: `Proposal has already been ${proposal.status.toLowerCase()}`,
@@ -148,18 +173,6 @@ export async function POST(
       );
     }
 
-    // Validate request body
-    const body = await request.json();
-    const validationResult = ProposalResponseSchema.safeParse(body);
-
-    if (!validationResult.success) {
-      // FIX: Use zodErrorResponse to avoid schema leak
-      const { zodErrorResponse } = await import("@/lib/validation");
-      return zodErrorResponse(validationResult.error);
-    }
-
-    const data = validationResult.data;
-
     if (data.action === "ACCEPT") {
       // SERVICE FEE: Validate wallet balances before acceptance
       // This is validation only - fees are deducted on trip completion
@@ -167,17 +180,13 @@ export async function POST(
         proposal.loadId,
         proposal.truck.carrierId
       );
+      // Fix 1f: Remove financial data leak — don't expose shipper wallet details to carrier
       if (!walletValidation.valid) {
         return NextResponse.json(
           {
-            error: "Insufficient wallet balance for trip service fees",
-            details: walletValidation.errors,
-            fees: {
-              shipperFee: walletValidation.shipperFee,
-              carrierFee: walletValidation.carrierFee,
-              shipperBalance: walletValidation.shipperBalance,
-              carrierBalance: walletValidation.carrierBalance,
-            },
+            error:
+              walletValidation.errors?.[0] ||
+              "Insufficient wallet balance for this trip",
           },
           { status: 400 }
         );
@@ -398,13 +407,14 @@ export async function POST(
             { status: 400 }
           );
         }
+        // Fix 1e: Normalize to 400 to match sibling routes
         if (errorMessage.startsWith("TRUCK_BUSY:")) {
           const [, pickup, delivery] = errorMessage.split(":");
           return NextResponse.json(
             {
               error: `This truck is already assigned to an active load (${pickup} → ${delivery})`,
             },
-            { status: 409 }
+            { status: 400 }
           );
         }
         throw error;
@@ -432,60 +442,100 @@ export async function POST(
         }
       }
 
+      // Fix 1a: Notify shipper users that their load has been assigned
+      const shipperUsers = await db.user.findMany({
+        where: { organizationId: proposal.load.shipperId, status: "ACTIVE" },
+        select: { id: true },
+      });
+      for (const u of shipperUsers) {
+        createNotification({
+          userId: u.id,
+          type: "MATCH_PROPOSAL_ACCEPTED",
+          title: "Load Matched",
+          message: `Your load from ${proposal.load.pickupCity} to ${proposal.load.deliveryCity} has been matched with a truck.`,
+          metadata: {
+            proposalId,
+            loadId: proposal.loadId,
+            truckId: proposal.truckId,
+          },
+        }).catch((err) => console.error("Failed to notify shipper:", err));
+      }
+      // Notify the dispatcher who proposed the match
+      createNotification({
+        userId: proposal.proposedById,
+        type: "MATCH_PROPOSAL_ACCEPTED",
+        title: "Match Proposal Accepted",
+        message: `Carrier accepted your match proposal for load ${proposal.load.pickupCity} → ${proposal.load.deliveryCity}.`,
+        metadata: {
+          proposalId,
+          loadId: proposal.loadId,
+          truckId: proposal.truckId,
+        },
+      }).catch((err) => console.error("Failed to notify dispatcher:", err));
+
+      // Fix 1f: Remove walletValidation from response — carrier should not see fee breakdowns
       return NextResponse.json({
         proposal: result.proposal,
         load: result.load,
         trip: result.trip,
         trackingUrl,
-        // Wallet validation passed - fees will be deducted on trip completion
-        walletValidation: {
-          validated: true,
-          shipperFee: walletValidation.shipperFee.toFixed(2),
-          carrierFee: walletValidation.carrierFee.toFixed(2),
-          note: "Fees will be deducted on trip completion",
-        },
         message: "Proposal accepted. Load has been assigned to your truck.",
         rule: RULE_CARRIER_FINAL_AUTHORITY.id,
       });
     } else {
-      // REJECT
-      const updatedProposal = await db.matchProposal.update({
-        where: { id: proposalId },
-        data: {
-          status: "REJECTED",
-          respondedAt: new Date(),
-          responseNotes: data.responseNotes,
-          respondedById: session.userId,
-        },
-      });
-
-      // Create load event
-      await db.loadEvent.create({
-        data: {
-          loadId: proposal.loadId,
-          eventType: "PROPOSAL_REJECTED",
-          description: `Match proposal rejected by carrier. Truck: ${proposal.truck.licensePlate}`,
-          userId: session.userId,
-          metadata: {
-            proposalId: proposalId,
-            rejectionReason: data.responseNotes,
+      // REJECT — Fix 1b: Wrap in transaction for consistency
+      const updatedProposal = await db.$transaction(async (tx) => {
+        const rejected = await tx.matchProposal.update({
+          where: { id: proposalId },
+          data: {
+            status: "REJECTED",
+            respondedAt: new Date(),
+            responseNotes: data.responseNotes,
+            respondedById: session.userId,
           },
-        },
+        });
+
+        // Create load event
+        await tx.loadEvent.create({
+          data: {
+            loadId: proposal.loadId,
+            eventType: "PROPOSAL_REJECTED",
+            description: `Match proposal rejected by carrier. Truck: ${proposal.truck.licensePlate}`,
+            userId: session.userId,
+            metadata: {
+              proposalId: proposalId,
+              rejectionReason: data.responseNotes,
+            },
+          },
+        });
+
+        return rejected;
       });
 
       // H3 FIX: Cache invalidation on reject (accept path already has it)
       await CacheInvalidation.load(proposal.loadId, proposal.load.shipperId);
+
+      // Fix 1a: Notify dispatcher of rejection
+      createNotification({
+        userId: proposal.proposedById,
+        type: "MATCH_PROPOSAL_REJECTED",
+        title: "Match Proposal Rejected",
+        message: `Carrier rejected your match proposal for truck ${proposal.truck.licensePlate}.${data.responseNotes ? ` Reason: ${data.responseNotes}` : ""}`,
+        metadata: {
+          proposalId,
+          loadId: proposal.loadId,
+          reason: data.responseNotes,
+        },
+      }).catch((err) => console.error("Failed to notify dispatcher:", err));
 
       return NextResponse.json({
         proposal: updatedProposal,
         message: "Proposal rejected.",
       });
     }
-    // H8 FIX: Use unknown type with type guard for Prisma errors
+    // Fix 1c: Use handleApiError for consistent error handling
   } catch (error: unknown) {
-    console.error("Error responding to match proposal:", error);
-
-    // Handle unique constraint violation (race condition)
+    // Keep P2002 unique constraint handler for race conditions
     const prismaError = error as {
       code?: string;
       meta?: { target?: string[] };
@@ -507,9 +557,6 @@ export async function POST(
       );
     }
 
-    return NextResponse.json(
-      { error: "Failed to respond to match proposal" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Error responding to match proposal");
   }
 }

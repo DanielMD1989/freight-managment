@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
@@ -15,7 +15,7 @@ import { TruckCache, CacheInvalidation } from "@/lib/cache";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { Prisma } from "@prisma/client";
 import { handleApiError } from "@/lib/apiErrors";
-import { sanitizeText } from "@/lib/validation";
+import { sanitizeText, zodErrorResponse } from "@/lib/validation";
 
 const createTruckSchema = z.object({
   truckType: z.enum([
@@ -72,7 +72,8 @@ export async function POST(request: NextRequest) {
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requireAuth();
+    // Fix 3a: Require ACTIVE user for truck creation
+    const session = await requireActiveUser();
     await requirePermission(Permission.CREATE_TRUCK);
 
     const user = await db.user.findUnique({
@@ -88,7 +89,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const validatedData = createTruckSchema.parse(body);
+    // Fix 4a: Use safeParse to avoid leaking schema details
+    const parseResult = createTruckSchema.safeParse(body);
+    if (!parseResult.success) {
+      return zodErrorResponse(parseResult.error);
+    }
+    const validatedData = parseResult.data;
 
     // Sanitize user-provided text fields
     validatedData.licensePlate = sanitizeText(validatedData.licensePlate, 20);

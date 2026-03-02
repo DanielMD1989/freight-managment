@@ -129,6 +129,13 @@ describe("lib/serviceFeeCalculation", () => {
       expect(result.finalFee).toBeCloseTo(283.3, 1); // Allow minor rounding variance
     });
 
+    it("should clamp fee to zero when promo discount exceeds 100%", () => {
+      const result = calculatePartyFee(100, 5, true, 150);
+      expect(result.baseFee).toBe(500);
+      expect(result.finalFee).toBe(0); // Clamped, not -250
+      expect(result.promoApplied).toBe(true);
+    });
+
     it("should handle very large distances", () => {
       // 10,000km × 5 ETB/km = 50,000 ETB
       const result = calculatePartyFee(10000, 5, false, null);
@@ -164,6 +171,12 @@ describe("lib/serviceFeeCalculation", () => {
       expect(result.baseFee).toBe(500);
       expect(result.discount).toBe(50);
       expect(result.finalFee).toBe(450);
+    });
+
+    it("should clamp fee to zero when promo discount exceeds 100%", () => {
+      const result = calculateFeePreview(100, 5, true, 150);
+      expect(result.baseFee).toBe(500);
+      expect(result.finalFee).toBe(0); // Clamped, not negative
     });
 
     it("should return zero for invalid inputs", () => {

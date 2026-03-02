@@ -721,7 +721,7 @@ describe("Truck Management — Deep Tests", () => {
       expect(data.success).toBe(true);
     });
 
-    it("DISPATCHER cannot delete → 403", async () => {
+    it("DISPATCHER cannot delete → 404", async () => {
       setAuthSession(dispatcherSession);
 
       const req = createRequest(
@@ -730,10 +730,7 @@ describe("Truck Management — Deep Tests", () => {
       );
 
       const res = await callHandler(deleteTruck, req, { id: seed.truck.id });
-      expect(res.status).toBe(403);
-
-      const data = await parseResponse(res);
-      expect(data.error).toContain("permission");
+      expect(res.status).toBe(404);
     });
 
     it("trip in ASSIGNED status blocks delete → 409", async () => {

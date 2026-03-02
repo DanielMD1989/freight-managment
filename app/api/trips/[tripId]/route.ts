@@ -7,8 +7,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
-import { requireCSRF } from "@/lib/csrf";
+import { requireAuth, requireActiveUser } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import { getAccessRoles } from "@/lib/rbac";
 import { TripStatus, LoadStatus, Prisma } from "@prisma/client";
 import {
@@ -160,33 +160,22 @@ export async function PATCH(
   { params }: { params: Promise<{ tripId: string }> }
 ) {
   try {
-    // CSRF protection for state-changing operation
-    // Mobile clients MUST use Bearer token authentication (inherently CSRF-safe)
-    // Web clients MUST provide CSRF token
-    const isMobileClient = request.headers.get("x-client-type") === "mobile";
-    const hasBearerAuth = request.headers
-      .get("authorization")
-      ?.startsWith("Bearer ");
+    // Fix 2e: Consolidated CSRF with mobile bypass
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
 
-    if (isMobileClient && !hasBearerAuth) {
-      return NextResponse.json(
-        { error: "Mobile clients require Bearer authentication" },
-        { status: 401 }
-      );
-    }
-
-    if (!isMobileClient && !hasBearerAuth) {
-      const csrfError = await requireCSRF(request);
-      if (csrfError) {
-        return csrfError;
-      }
-    }
-
-    const session = await requireAuth();
+    // Fix 3g: Require ACTIVE user (not just authenticated)
+    const session = await requireActiveUser();
     const { tripId } = await params;
 
     const body = await request.json();
-    const validatedData = updateTripSchema.parse(body);
+    // Fix 4d: Use safeParse to avoid leaking schema details
+    const parseResult = updateTripSchema.safeParse(body);
+    if (!parseResult.success) {
+      const { zodErrorResponse } = await import("@/lib/validation");
+      return zodErrorResponse(parseResult.error);
+    }
+    const validatedData = parseResult.data;
 
     // Get current trip
     const trip = await db.trip.findUnique({

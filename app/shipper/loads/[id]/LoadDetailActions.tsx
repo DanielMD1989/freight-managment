@@ -168,6 +168,31 @@ export default function LoadDetailActions({
           </div>
         )}
 
+        {/* Awaiting POD */}
+        {status === "DELIVERED" && !podSubmitted && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+            <svg
+              className="h-5 w-5 text-amber-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <div>
+              <span className="font-medium text-amber-800">Awaiting POD</span>
+              <p className="text-sm text-amber-600">
+                Carrier needs to upload Proof of Delivery before you can verify.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Find Trucks */}
         {showFindTrucks && (
           <Link

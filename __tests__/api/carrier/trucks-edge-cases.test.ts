@@ -395,7 +395,7 @@ describe("Carrier Truck Edge Cases", () => {
   // ─── DELETE Owner Check ───────────────────────────────────────────────
 
   describe("DELETE owner check", () => {
-    it("carrier cannot delete truck (requires admin) → 403", async () => {
+    it("carrier cannot delete truck (requires admin) → 404", async () => {
       setAuthSession(carrierSession);
 
       const req = createRequest(
@@ -403,7 +403,7 @@ describe("Carrier Truck Edge Cases", () => {
         `http://localhost:3000/api/trucks/${seed.truck.id}`
       );
       const res = await callHandler(deleteTruck, req, { id: seed.truck.id });
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
   });
 });

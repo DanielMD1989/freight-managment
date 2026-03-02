@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
@@ -10,7 +10,7 @@ import { TripStatus, Prisma } from "@prisma/client";
 import { CacheInvalidation } from "@/lib/cache";
 import { logger } from "@/lib/logger";
 import { handleApiError } from "@/lib/apiErrors";
-import { sanitizeText } from "@/lib/validation";
+import { sanitizeText, zodErrorResponse } from "@/lib/validation";
 
 /**
  * Helper function to apply RPS rate limiting for fleet endpoints
@@ -154,7 +154,8 @@ export async function PATCH(
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requireAuth();
+    // Fix 3b: Require ACTIVE user for truck updates
+    const session = await requireActiveUser();
     await requirePermission(Permission.EDIT_TRUCKS);
     const { id } = await params;
 
@@ -180,7 +181,12 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const validatedData = updateTruckSchema.parse(body);
+    // Fix 4b: Use safeParse to avoid leaking schema details
+    const parseResult = updateTruckSchema.safeParse(body);
+    if (!parseResult.success) {
+      return zodErrorResponse(parseResult.error);
+    }
+    const validatedData = parseResult.data;
 
     // Sanitize user-provided text fields
     if (validatedData.licensePlate)
@@ -263,7 +269,8 @@ export async function DELETE(
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requireAuth();
+    // Fix 3c: Require ACTIVE user for truck deletion
+    const session = await requireActiveUser();
     await requirePermission(Permission.DELETE_TRUCKS);
     const { id } = await params;
 
@@ -283,11 +290,9 @@ export async function DELETE(
 
     const canDelete = user?.role === "SUPER_ADMIN" || user?.role === "ADMIN";
 
+    // Fix 6a: Return 404 instead of 403 to prevent resource existence leakage
     if (!canDelete) {
-      return NextResponse.json(
-        { error: "You don't have permission to delete this truck" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
     // =================================================================

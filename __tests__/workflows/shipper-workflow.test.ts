@@ -721,7 +721,7 @@ describe("Shipper Workflow", () => {
       const res = await callHandler(respondToLoadRequest, req, {
         id: carrierRequest.id,
       });
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
 
     it("should reject approval of already-processed request", async () => {

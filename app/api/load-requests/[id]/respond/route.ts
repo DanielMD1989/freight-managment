@@ -116,11 +116,9 @@ export async function POST(
       session.organizationId === loadRequest.shipperId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
+    // Fix 6b: Return 404 instead of 403 to prevent resource existence leakage
     if (!isShipperOwner && !isAdmin) {
-      return NextResponse.json(
-        { error: "Only the shipper who owns the load can respond" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
     // Validate request body first (needed for idempotency check)

@@ -13,8 +13,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { requireAuth } from "@/lib/auth";
-import { requireCSRF } from "@/lib/csrf";
+import { requireAuth, requireActiveUser } from "@/lib/auth";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import { canRequestTruck } from "@/lib/dispatcherPermissions";
 import {
   RULE_CARRIER_FINAL_AUTHORITY,
@@ -24,6 +24,7 @@ import { UserRole } from "@prisma/client";
 import { notifyTruckRequest } from "@/lib/notifications";
 import { handleApiError } from "@/lib/apiErrors";
 import { validateWalletBalancesForTrip } from "@/lib/serviceFeeManagement";
+import { CacheInvalidation } from "@/lib/cache";
 
 // Validation schema for truck request
 // Note: No offeredRate field - price negotiation happens outside platform
@@ -49,23 +50,12 @@ const TruckRequestSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    // Require authentication
-    const session = await requireAuth();
+    // Fix 3e: Require ACTIVE user (not just authenticated)
+    const session = await requireActiveUser();
 
-    // CSRF protection for state-changing operation
-    // Skip for mobile clients using Bearer token authentication (no cookies)
-    // Bearer tokens are inherently CSRF-safe as attackers cannot add Authorization headers cross-origin
-    const isMobileClient = request.headers.get("x-client-type") === "mobile";
-    const hasBearerAuth = request.headers
-      .get("authorization")
-      ?.startsWith("Bearer ");
-
-    if (!isMobileClient && !hasBearerAuth) {
-      const csrfError = await requireCSRF(request);
-      if (csrfError) {
-        return csrfError;
-      }
-    }
+    // Fix 2d: Consolidated CSRF with mobile bypass
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
 
     const body = await request.json();
 
@@ -271,6 +261,9 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // Fix 8a: Cache invalidation after truck request creation
+    await CacheInvalidation.load(data.loadId);
 
     // Send notification to carrier about the request
     notifyTruckRequest({

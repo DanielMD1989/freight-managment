@@ -553,7 +553,7 @@ describe("Carrier Truck Request Management", () => {
   // ─── Shipper Cannot Approve/Reject ─────────────────────────────────────
 
   describe("Shipper Cannot Approve/Reject", () => {
-    it("should return 403 when shipper tries to approve a request", async () => {
+    it("should return 404 when shipper tries to approve a request", async () => {
       setAuthSession(shipperSession);
 
       // Mock canApproveRequests to return false for shipper
@@ -615,16 +615,13 @@ describe("Carrier Truck Request Management", () => {
       const res = await callHandler(respondToTruckRequest, req, {
         id: shipperAttemptReq.id,
       });
-      expect(res.status).toBe(403);
-
-      const data = await parseResponse(res);
-      expect(data.error).toBeDefined();
+      expect(res.status).toBe(404);
 
       // Restore original mock
       (db.truckRequest as any).findUnique = originalFindUnique;
     });
 
-    it("should return 403 when shipper tries to reject a request", async () => {
+    it("should return 404 when shipper tries to reject a request", async () => {
       setAuthSession(shipperSession);
 
       const dispatcherPerms = require("@/lib/dispatcherPermissions");
@@ -684,7 +681,7 @@ describe("Carrier Truck Request Management", () => {
       const res = await callHandler(respondToTruckRequest, req, {
         id: shipperRejectReq.id,
       });
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
 
       // Restore original mock
       (db.truckRequest as any).findUnique = originalFindUnique;

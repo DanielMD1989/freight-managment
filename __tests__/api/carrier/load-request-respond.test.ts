@@ -157,7 +157,7 @@ describe("Load Request Respond", () => {
       expect([401, 500]).toContain(res.status);
     });
 
-    it("wrong shipper org → 403", async () => {
+    it("wrong shipper org → 404", async () => {
       setAuthSession(otherShipperSession);
       const lr = await createLoadRequest();
 
@@ -168,10 +168,10 @@ describe("Load Request Respond", () => {
       );
 
       const res = await callHandler(POST, req, { id: lr.id });
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
 
-    it("carrier cannot respond to load requests → 403", async () => {
+    it("carrier cannot respond to load requests → 404", async () => {
       setAuthSession(carrierSession);
       const lr = await createLoadRequest();
 
@@ -182,7 +182,7 @@ describe("Load Request Respond", () => {
       );
 
       const res = await callHandler(POST, req, { id: lr.id });
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
 
     it("admin can respond", async () => {

@@ -2098,7 +2098,7 @@ describe("E2E Business Workflow (User Stories)", () => {
       const res = await callHandler(respondTruckRequest, req, {
         id: authTr.id,
       });
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
 
     it("ONE_ACTIVE_POST_PER_TRUCK: duplicate posting returns 409", async () => {

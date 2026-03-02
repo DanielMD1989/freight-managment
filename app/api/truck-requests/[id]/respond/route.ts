@@ -169,15 +169,9 @@ export async function POST(
       userId: session.userId,
     };
 
+    // Fix 6c: Return 404 instead of 403 to prevent resource existence leakage
     if (!canApproveRequests(user, truckRequest.truck.carrierId)) {
-      return NextResponse.json(
-        {
-          error: "You do not have permission to respond to this request",
-          rule: RULE_CARRIER_FINAL_AUTHORITY.id,
-          hint: "Only the carrier who owns the truck can respond",
-        },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
     if (data.action === "APPROVE") {

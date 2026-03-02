@@ -20,7 +20,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { requireAuth, requireActiveUser } from "@/lib/auth";
-import { requireCSRF } from "@/lib/csrf";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import { hasElevatedPermissions } from "@/lib/dispatcherPermissions";
 import { UserRole } from "@prisma/client";
 // P1-001-B FIX: Import CacheInvalidation for update/delete operations
@@ -205,27 +205,9 @@ export async function PATCH(
       );
     }
 
-    // CSRF protection for state-changing operation
-    // Mobile clients MUST use Bearer token authentication (inherently CSRF-safe)
-    // Web clients MUST provide CSRF token
-    const isMobileClient = request.headers.get("x-client-type") === "mobile";
-    const hasBearerAuth = request.headers
-      .get("authorization")
-      ?.startsWith("Bearer ");
-
-    if (isMobileClient && !hasBearerAuth) {
-      return NextResponse.json(
-        { error: "Mobile clients require Bearer authentication" },
-        { status: 401 }
-      );
-    }
-
-    if (!isMobileClient && !hasBearerAuth) {
-      const csrfError = await requireCSRF(request);
-      if (csrfError) {
-        return csrfError;
-      }
-    }
+    // Fix 2b: Consolidated CSRF with mobile bypass
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
 
     // M2 FIX: Require ACTIVE user (not just valid token)
     const session = await requireActiveUser();
@@ -424,27 +406,9 @@ export async function DELETE(
       );
     }
 
-    // CSRF protection for state-changing operation
-    // Mobile clients MUST use Bearer token authentication (inherently CSRF-safe)
-    // Web clients MUST provide CSRF token
-    const isMobileClient = request.headers.get("x-client-type") === "mobile";
-    const hasBearerAuth = request.headers
-      .get("authorization")
-      ?.startsWith("Bearer ");
-
-    if (isMobileClient && !hasBearerAuth) {
-      return NextResponse.json(
-        { error: "Mobile clients require Bearer authentication" },
-        { status: 401 }
-      );
-    }
-
-    if (!isMobileClient && !hasBearerAuth) {
-      const csrfError = await requireCSRF(request);
-      if (csrfError) {
-        return csrfError;
-      }
-    }
+    // Fix 2c: Consolidated CSRF with mobile bypass
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
 
     // M2 FIX: Require ACTIVE user (not just valid token)
     const session = await requireActiveUser();

@@ -292,13 +292,9 @@ export async function GET(
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
     const isDispatcher = session.role === "DISPATCHER";
 
+    // Fix 6d: Return 404 instead of 403 to prevent resource existence leakage
     if (!isCarrier && !isShipper && !isAdmin && !isDispatcher) {
-      return NextResponse.json(
-        {
-          error: "You do not have permission to view this trip's POD documents",
-        },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
     // Get all POD documents for the trip

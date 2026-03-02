@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { hasPermission, Permission } from "@/lib/rbac/permissions";
 import { createNotification } from "@/lib/notifications";
 import { UserRole } from "@prisma/client";
@@ -21,6 +21,7 @@ import { CacheInvalidation } from "@/lib/cache";
 import { sendEmail, createEmailHTML } from "@/lib/email";
 // CSRF FIX: Add CSRF validation
 import { validateCSRFWithMobile } from "@/lib/csrf";
+import { handleApiError } from "@/lib/apiErrors";
 
 // Validation schema for truck approval
 const TruckApprovalSchema = z.object({
@@ -51,7 +52,8 @@ export async function POST(
     if (csrfError) return csrfError;
 
     const { id: truckId } = await params;
-    const session = await requireAuth();
+    // Fix 3d: Require ACTIVE user for truck approval
+    const session = await requireActiveUser();
 
     // Check admin permission
     if (!hasPermission(session.role as UserRole, Permission.VERIFY_DOCUMENTS)) {
@@ -267,11 +269,7 @@ export async function POST(
       });
     }
   } catch (error) {
-    console.error("Error approving/rejecting truck:", error);
-
-    return NextResponse.json(
-      { error: "Failed to process truck approval" },
-      { status: 500 }
-    );
+    // Fix 5a: Use handleApiError for consistent error handling
+    return handleApiError(error, "Error processing truck approval");
   }
 }

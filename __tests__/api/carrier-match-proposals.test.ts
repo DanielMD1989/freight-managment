@@ -500,7 +500,7 @@ describe("Carrier Match Proposal Management", () => {
       expect(data.error).toContain("expired");
     });
 
-    it("should return 400 for non-PENDING proposal", async () => {
+    it("should return 200 with idempotent:true for already-ACCEPTED proposal with ACCEPT", async () => {
       const req = createRequest(
         "POST",
         `http://localhost:3000/api/match-proposals/${acceptedProposalId}/respond`,
@@ -512,10 +512,10 @@ describe("Carrier Match Proposal Management", () => {
       const res = await callHandler(respondToProposal, req, {
         id: acceptedProposalId,
       });
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(200);
 
       const data = await parseResponse(res);
-      expect(data.error).toContain("already been");
+      expect(data.idempotent).toBe(true);
     });
 
     it("should return 404 for non-existent proposal", async () => {

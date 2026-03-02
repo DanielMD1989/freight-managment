@@ -230,7 +230,11 @@ export function calculatePartyFee(
     promoApplied = true;
   }
 
-  const finalFee = baseFee.sub(promoDiscount);
+  // Fix 7: Clamp to zero — promo discount cannot make fee negative
+  let finalFee = baseFee.sub(promoDiscount);
+  if (finalFee.isNegative()) {
+    finalFee = new Decimal(0);
+  }
 
   return {
     baseFee: baseFee.toDecimalPlaces(2).toNumber(),
@@ -505,11 +509,14 @@ export function calculateFeePreview(
     discount = baseFee * (promoDiscountPct / 100);
   }
 
+  // Fix 7: Clamp to zero — promo discount cannot make fee negative
+  const finalFee = Math.max(0, baseFee - discount);
+
   // Rounding delegated to lib/rounding.ts
   return {
     baseFee: roundMoney(baseFee),
     discount: roundMoney(discount),
-    finalFee: roundMoney(baseFee - discount),
+    finalFee: roundMoney(finalFee),
   };
 }
 

@@ -160,7 +160,7 @@ describe("Authorization Bypass Tests", () => {
       const res = await callHandler(respondToLoadRequest, req, {
         id: loadRequest.id,
       });
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
   });
 

@@ -15,13 +15,14 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { Prisma, UserRole, ProposalStatus } from "@prisma/client";
 import { requireAuth, requireActiveUser } from "@/lib/auth";
-import { requireCSRF } from "@/lib/csrf";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import { canProposeMatch } from "@/lib/dispatcherPermissions";
 import { RULE_DISPATCHER_COORDINATION_ONLY } from "@/lib/foundation-rules";
 import { createNotification } from "@/lib/notifications";
 import { zodErrorResponse } from "@/lib/validation";
 import { handleApiError } from "@/lib/apiErrors";
 import { validateWalletBalancesForTrip } from "@/lib/serviceFeeManagement";
+import { CacheInvalidation } from "@/lib/cache";
 
 // Validation schema for match proposal
 const MatchProposalSchema = z.object({
@@ -50,11 +51,9 @@ export async function POST(request: NextRequest) {
     // Require ACTIVE user status for creating proposals
     const session = await requireActiveUser();
 
-    // CSRF protection for state-changing operation
-    const csrfError = await requireCSRF(request);
-    if (csrfError) {
-      return csrfError;
-    }
+    // Fix 2f: Consolidated CSRF with mobile bypass (was bare requireCSRF, broke mobile dispatchers)
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
 
     // Check if user can propose matches
     const user = {
@@ -235,6 +234,9 @@ export async function POST(request: NextRequest) {
         })
       )
     );
+
+    // Fix 8b: Cache invalidation after match proposal creation
+    await CacheInvalidation.load(data.loadId);
 
     return NextResponse.json(
       {

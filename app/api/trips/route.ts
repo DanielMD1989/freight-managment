@@ -9,12 +9,13 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { TripStatus, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { CacheInvalidation, CacheTTL, cache } from "@/lib/cache";
 import { zodErrorResponse } from "@/lib/validation";
+import { handleApiError } from "@/lib/apiErrors";
 
 const createTripSchema = z.object({
   loadId: z.string().max(50),
@@ -185,25 +186,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error("List trips error:", error);
-
-    // Handle specific error types
-    if (error instanceof Error) {
-      if (
-        error.message === "Unauthorized" ||
-        error.name === "UnauthorizedError"
-      ) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-      if (error.name === "ForbiddenError") {
-        return NextResponse.json({ error: error.message }, { status: 403 });
-      }
-    }
-
-    return NextResponse.json(
-      { error: "Failed to fetch trips" },
-      { status: 500 }
-    );
+    // Fix 5b: Use handleApiError for consistent error handling
+    return handleApiError(error, "Error fetching trips");
   }
 }
 
@@ -219,7 +203,8 @@ export async function POST(request: NextRequest) {
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requireAuth();
+    // Fix 3f: Require ACTIVE user for trip creation
+    const session = await requireActiveUser();
 
     // Only dispatchers and admins should create trips directly
     if (!["ADMIN", "SUPER_ADMIN", "DISPATCHER"].includes(session.role)) {
@@ -227,7 +212,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const validatedData = createTripSchema.parse(body);
+    // Fix 4c: Use safeParse to avoid leaking schema details
+    const parseResult = createTripSchema.safeParse(body);
+    if (!parseResult.success) {
+      return zodErrorResponse(parseResult.error);
+    }
+    const validatedData = parseResult.data;
 
     // Get the load details
     const load = await db.load.findUnique({
@@ -343,11 +333,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Create trip error:", error);
-
-    if (error instanceof z.ZodError) {
-      return zodErrorResponse(error);
-    }
+    // Keep specific business error handlers
     if (error instanceof Error && error.message === "TRIP_ALREADY_EXISTS") {
       return NextResponse.json(
         { error: "Trip already exists for this load" },
@@ -370,9 +356,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(
-      { error: "Failed to create trip" },
-      { status: 500 }
-    );
+    // Fix 5c: Use handleApiError for all other errors (auth, validation, 500s)
+    return handleApiError(error, "Error creating trip");
   }
 }

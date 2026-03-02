@@ -356,7 +356,7 @@
 - [ ] Cache invalidation runs for both load and truck after transaction commits
 - [ ] A Trip record is created atomically with the assignment (status: `ASSIGNED`)
 - [ ] GPS tracking is enabled for the truck if it has a verified IMEI
-- [ ] Notifications sent to relevant parties (carrier on load request approval, shipper on truck request approval)
+- [ ] Notifications sent to relevant parties (carrier on load request approval, shipper on truck request approval, shipper and dispatcher on match proposal acceptance)
 
 ---
 
@@ -429,7 +429,7 @@
 
 **Acceptance Criteria:**
 
-- [ ] CANCELLED is a valid transition from ASSIGNED, PICKUP_PENDING, IN_TRANSIT, and DELIVERED
+- [ ] CANCELLED is a valid transition from ASSIGNED, PICKUP_PENDING, and DELIVERED. IN_TRANSIT trips cannot be cancelled directly; use the exception workflow instead.
 - [ ] CANCELLED is a terminal state (no further transitions)
 - [ ] Cancelling restores truck availability: `isAvailable = true`
 - [ ] Cancelling reactivates the truck posting: `MATCHED` &rarr; `ACTIVE`

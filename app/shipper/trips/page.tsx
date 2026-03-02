@@ -74,8 +74,8 @@ interface TripsResponse {
   };
 }
 
-// Only completed trip statuses - active trips are in My Loads
-const TRIP_STATUSES = ["DELIVERED", "COMPLETED"];
+// Terminal trip statuses - active trips are in My Loads
+const TRIP_STATUSES = ["DELIVERED", "COMPLETED", "CANCELLED"];
 
 /**
  * Fetch trips from API
@@ -196,7 +196,7 @@ export default async function ShipperTripsPage({
             Trip History
           </h1>
           <p className="mt-2 text-slate-600 dark:text-slate-400">
-            View delivered and completed trips
+            View delivered, completed, and cancelled trips
           </p>
         </div>
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-4">
@@ -216,7 +216,8 @@ export default async function ShipperTripsPage({
           Trip History
         </h1>
         <p className="mt-2 text-slate-600 dark:text-slate-400">
-          View delivered and completed trips ({data.pagination.total} total)
+          View delivered, completed, and cancelled trips (
+          {data.pagination.total} total)
         </p>
       </div>
 
