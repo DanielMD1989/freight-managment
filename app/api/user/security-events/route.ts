@@ -12,6 +12,7 @@ import {
   getUserSecurityEvents,
   formatSecurityEvent,
 } from "@/lib/security-events";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/user/security-events
@@ -50,15 +51,6 @@ export async function GET(request: NextRequest) {
       count: formattedEvents.length,
     });
   } catch (error) {
-    console.error("Failed to get security events:", error);
-
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: "Failed to retrieve security events" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Get security events error");
   }
 }

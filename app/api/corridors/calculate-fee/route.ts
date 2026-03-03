@@ -7,10 +7,11 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { calculateServiceFee } from "@/lib/serviceFeeCalculation";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
+import { handleApiError } from "@/lib/apiErrors";
 
 const calculateFeeSchema = z.object({
   loadId: z.string().cuid(),
@@ -23,7 +24,7 @@ const calculateFeeSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth();
+    await requireActiveUser();
 
     const body = await request.json();
     const validatedData = calculateFeeSchema.parse(body);
@@ -59,15 +60,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Calculate fee error:", error);
-
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
-
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Calculate fee error");
   }
 }

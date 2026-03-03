@@ -21,7 +21,8 @@ import {
   hashRecoveryCodes,
 } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { requireCSRF } from "@/lib/csrf";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { handleApiError } from "@/lib/apiErrors";
 import { logSecurityEvent, SecurityEventType } from "@/lib/security-events";
 
 const MAX_VERIFY_ATTEMPTS = 5;
@@ -29,7 +30,7 @@ const MAX_VERIFY_ATTEMPTS = 5;
 export async function POST(request: NextRequest) {
   try {
     // Validate CSRF
-    const csrfError = requireCSRF(request);
+    const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
     const session = await requireAuth();
@@ -196,15 +197,6 @@ export async function POST(request: NextRequest) {
         "Save these recovery codes in a safe place. They will not be shown again.",
     });
   } catch (error) {
-    console.error("MFA verify error:", error);
-
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: "Failed to verify MFA" },
-      { status: 500 }
-    );
+    return handleApiError(error, "MFA verify error");
   }
 }

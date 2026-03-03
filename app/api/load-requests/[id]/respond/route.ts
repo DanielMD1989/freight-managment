@@ -539,7 +539,6 @@ export async function POST(
       meta?: { target?: string[] };
     };
     if (prismaError?.code === "P2002") {
-      console.error("Error responding to load request:", error);
       const field = prismaError?.meta?.target?.[0] || "field";
       if (field === "assignedTruckId") {
         return NextResponse.json(

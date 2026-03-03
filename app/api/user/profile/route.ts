@@ -16,8 +16,9 @@ import { z } from "zod";
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logSecurityEvent, SecurityEventType } from "@/lib/security-events";
-import { requireCSRF } from "@/lib/csrf";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import { phoneSchema } from "@/lib/validation";
+import { handleApiError } from "@/lib/apiErrors";
 
 // Request body schema for profile update
 const updateProfileSchema = z
@@ -79,16 +80,7 @@ export async function GET() {
 
     return NextResponse.json({ user });
   } catch (error) {
-    console.error("Failed to get user profile:", error);
-
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: "Failed to retrieve profile" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Get user profile error");
   }
 }
 
@@ -99,7 +91,7 @@ export async function GET() {
 export async function PATCH(request: NextRequest) {
   try {
     // Validate CSRF token for state-changing operation
-    const csrfError = requireCSRF(request);
+    const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) {
       return csrfError;
     }
@@ -187,15 +179,6 @@ export async function PATCH(request: NextRequest) {
       user: updatedUser,
     });
   } catch (error) {
-    console.error("Failed to update profile:", error);
-
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: "Failed to update profile" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Update user profile error");
   }
 }

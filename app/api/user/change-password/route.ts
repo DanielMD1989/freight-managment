@@ -26,7 +26,8 @@ import {
 } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { logSecurityEvent, SecurityEventType } from "@/lib/security-events";
-import { requireCSRF } from "@/lib/csrf";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { handleApiError } from "@/lib/apiErrors";
 
 // Request body schema
 const changePasswordSchema = z.object({
@@ -38,7 +39,7 @@ const changePasswordSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     // Validate CSRF token for state-changing operation
-    const csrfError = requireCSRF(request);
+    const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) {
       return csrfError;
     }
@@ -157,15 +158,6 @@ export async function POST(request: NextRequest) {
       revokedSessions: revokedSessionCount,
     });
   } catch (error) {
-    console.error("Failed to change password:", error);
-
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: "Failed to change password" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Change password error");
   }
 }

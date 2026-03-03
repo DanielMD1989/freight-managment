@@ -64,11 +64,11 @@ async function getHandler(request: NextRequest) {
       // Access control
       if (session.role === "CARRIER") {
         if (load.assignedTruck?.carrierId !== user?.organizationId) {
-          return NextResponse.json({ error: "Access denied" }, { status: 403 });
+          return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
       } else if (session.role === "SHIPPER") {
         if (load.shipperId !== user?.organizationId) {
-          return NextResponse.json({ error: "Access denied" }, { status: 403 });
+          return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
         // Shipper can only see position when trip is IN_TRANSIT
         if (load.status !== "IN_TRANSIT") {
@@ -120,18 +120,12 @@ async function getHandler(request: NextRequest) {
 
       if (session.role === "CARRIER") {
         if (!user?.organizationId) {
-          return NextResponse.json(
-            { error: "User not associated with an organization" },
-            { status: 403 }
-          );
+          return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
         where.carrierId = user.organizationId;
       } else if (session.role === "SHIPPER") {
         if (!user?.organizationId) {
-          return NextResponse.json(
-            { error: "User not associated with an organization" },
-            { status: 403 }
-          );
+          return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
         // Shipper can only get positions for trucks on their loads
         const activeLoads = await db.load.findMany({
@@ -194,20 +188,14 @@ async function getHandler(request: NextRequest) {
 
     if (session.role === "CARRIER") {
       if (!user?.organizationId) {
-        return NextResponse.json(
-          { error: "User not associated with an organization" },
-          { status: 403 }
-        );
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
       }
       activeLoadsWhere.assignedTruck = {
         carrierId: user.organizationId,
       };
     } else if (session.role === "SHIPPER") {
       if (!user?.organizationId) {
-        return NextResponse.json(
-          { error: "User not associated with an organization" },
-          { status: 403 }
-        );
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
       }
       activeLoadsWhere.shipperId = user.organizationId;
     } else if (session.role === "DISPATCHER") {

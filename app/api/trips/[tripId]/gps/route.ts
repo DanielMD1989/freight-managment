@@ -255,7 +255,10 @@ async function getHandler(
     const { tripId } = await params;
     const { searchParams } = new URL(request.url);
 
-    const limit = parseInt(searchParams.get("limit") || "1000");
+    const limit = Math.min(
+      Math.max(parseInt(searchParams.get("limit") || "1000"), 1),
+      1000
+    );
     const since = searchParams.get("since"); // ISO timestamp
 
     // Get trip

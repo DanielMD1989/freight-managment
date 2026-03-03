@@ -32,7 +32,10 @@ async function getHandler(request: NextRequest) {
     const truckId = searchParams.get("truckId");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
-    const limit = parseInt(searchParams.get("limit") || "1000", 10);
+    const limit = Math.max(
+      1,
+      Math.min(parseInt(searchParams.get("limit") || "1000", 10), 1000)
+    );
 
     if (!loadId && !truckId) {
       return NextResponse.json(

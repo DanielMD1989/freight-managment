@@ -7,13 +7,14 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import {
   findMatchingCorridor,
   calculateFeeFromCorridor,
 } from "@/lib/serviceFeeCalculation";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
+import { handleApiError } from "@/lib/apiErrors";
 
 const matchCorridorSchema = z.object({
   originRegion: z.string().min(1),
@@ -27,7 +28,7 @@ const matchCorridorSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth();
+    await requireActiveUser();
 
     const body = await request.json();
     const validatedData = matchCorridorSchema.parse(body);
@@ -76,15 +77,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Corridor match error:", error);
-
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
-
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Corridor match error");
   }
 }

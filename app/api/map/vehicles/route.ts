@@ -20,6 +20,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { handleApiError } from "@/lib/apiErrors";
 import {
   VehicleMapData,
   VehicleMapStats,
@@ -207,10 +208,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error("Map vehicles API error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Map vehicles error");
   }
 }

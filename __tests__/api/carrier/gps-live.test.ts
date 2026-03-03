@@ -297,14 +297,14 @@ describe("GPS Live API", () => {
       expect(data.position).toBeDefined();
     });
 
-    it("unrelated carrier → 403", async () => {
+    it("unrelated carrier → 404", async () => {
       setAuthSession(otherCarrierSession);
       const req = createRequest(
         "GET",
         "http://localhost:3000/api/gps/live?loadId=live-load-1"
       );
       const res = await getLive(req);
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
 
     it("shipper on own load → 200", async () => {
@@ -480,7 +480,7 @@ describe("GPS Live API", () => {
       setAuthSession(noOrgSession);
       const req = createRequest("GET", "http://localhost:3000/api/gps/live");
       const res = await getLive(req);
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
   });
 

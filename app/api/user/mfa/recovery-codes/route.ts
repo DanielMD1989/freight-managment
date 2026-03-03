@@ -20,7 +20,8 @@ import {
   hashRecoveryCodes,
 } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { requireCSRF } from "@/lib/csrf";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { handleApiError } from "@/lib/apiErrors";
 import { logSecurityEvent, SecurityEventType } from "@/lib/security-events";
 
 /**
@@ -63,16 +64,7 @@ export async function GET() {
           : null,
     });
   } catch (error) {
-    console.error("Get recovery codes error:", error);
-
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: "Failed to get recovery codes status" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Get recovery codes error");
   }
 }
 
@@ -83,7 +75,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     // Validate CSRF
-    const csrfError = requireCSRF(request);
+    const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
     const session = await requireAuth();
@@ -172,15 +164,6 @@ export async function POST(request: NextRequest) {
       warning: "Save these new recovery codes. Your old codes are now invalid.",
     });
   } catch (error) {
-    console.error("Regenerate recovery codes error:", error);
-
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: "Failed to regenerate recovery codes" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Regenerate recovery codes error");
   }
 }

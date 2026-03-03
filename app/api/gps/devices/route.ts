@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
-import { zodErrorResponse } from "@/lib/validation";
 import { Prisma } from "@prisma/client";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { handleApiError } from "@/lib/apiErrors";

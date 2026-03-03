@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { handleApiError } from "@/lib/apiErrors";
 
 export async function GET(request: NextRequest) {
   try {
@@ -128,10 +129,6 @@ export async function GET(request: NextRequest) {
       total: mapLoads.length,
     });
   } catch (error) {
-    console.error("Map loads API error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Map loads error");
   }
 }

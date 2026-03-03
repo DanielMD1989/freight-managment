@@ -68,7 +68,8 @@ export async function GET(
     const hasAccess =
       document.load.shipperId === session.organizationId ||
       document.load.assignedTruck?.carrierId === session.organizationId ||
-      session.role === "ADMIN";
+      session.role === "ADMIN" ||
+      session.role === "SUPER_ADMIN";
 
     if (!hasAccess) {
       return NextResponse.json(

@@ -8,6 +8,7 @@
 
 import { NextResponse } from "next/server";
 import { requireAuth, getUserSessions } from "@/lib/auth";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/user/sessions
@@ -41,15 +42,6 @@ export async function GET() {
       count: formattedSessions.length,
     });
   } catch (error) {
-    console.error("Failed to get sessions:", error);
-
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: "Failed to retrieve sessions" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Get sessions error");
   }
 }

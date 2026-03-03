@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { handleApiError } from "@/lib/apiErrors";
 
 interface MapMarker {
   id: string;
@@ -413,10 +414,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(mapData);
   } catch (error) {
-    console.error("Map data error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch map data" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Map data error");
   }
 }

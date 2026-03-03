@@ -80,7 +80,7 @@ async function getHandler(request: NextRequest) {
         session.role !== "PLATFORM_OPS" &&
         session.role !== "DISPATCHER"
       ) {
-        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
       }
       // Admin/Dispatcher/PlatformOps see all
     }

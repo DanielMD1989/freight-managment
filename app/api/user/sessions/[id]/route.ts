@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, revokeSession } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
+import { handleApiError } from "@/lib/apiErrors";
 import { db } from "@/lib/db";
 import { logSecurityEvent, SecurityEventType } from "@/lib/security-events";
 
@@ -88,15 +89,6 @@ export async function DELETE(
       message: "Session revoked successfully",
     });
   } catch (error) {
-    console.error("Failed to revoke session:", error);
-
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: "Failed to revoke session" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Revoke session error");
   }
 }

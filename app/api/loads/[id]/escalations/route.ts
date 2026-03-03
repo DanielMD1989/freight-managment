@@ -222,11 +222,7 @@ export async function POST(
       return zodErrorResponse(error);
     }
 
-    console.error("Escalation creation error:", error);
-    return NextResponse.json(
-      { error: "Failed to create escalation" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Escalation creation error");
   }
 }
 

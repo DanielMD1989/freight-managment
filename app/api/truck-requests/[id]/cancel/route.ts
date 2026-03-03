@@ -83,10 +83,7 @@ export async function POST(
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isShipper && !isRequester && !isAdmin) {
-      return NextResponse.json(
-        { error: "Only the shipper who created this request can cancel it" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
     // Check if request is still pending - handle idempotency

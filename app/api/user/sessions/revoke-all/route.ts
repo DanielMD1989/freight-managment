@@ -14,7 +14,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, revokeAllSessions } from "@/lib/auth";
 import { logSecurityEvent, SecurityEventType } from "@/lib/security-events";
-import { requireCSRF } from "@/lib/csrf";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * POST /api/user/sessions/revoke-all
@@ -23,7 +24,7 @@ import { requireCSRF } from "@/lib/csrf";
 export async function POST(request: NextRequest) {
   try {
     // Validate CSRF token for state-changing operation
-    const csrfError = requireCSRF(request);
+    const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) {
       return csrfError;
     }
@@ -55,15 +56,6 @@ export async function POST(request: NextRequest) {
       revokedCount,
     });
   } catch (error) {
-    console.error("Failed to revoke all sessions:", error);
-
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      { error: "Failed to revoke sessions" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Revoke all sessions error");
   }
 }

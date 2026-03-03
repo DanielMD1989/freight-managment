@@ -83,6 +83,7 @@ export async function GET(
     const ethiopianCities = await db.ethiopianLocation.findMany({
       where: { isActive: true },
       select: { name: true, latitude: true, longitude: true },
+      take: 500,
     });
 
     // Helper to find city coordinates by name

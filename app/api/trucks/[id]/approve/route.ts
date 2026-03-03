@@ -141,6 +141,7 @@ export async function POST(
           status: "ACTIVE",
         },
         select: { id: true },
+        take: 100,
       });
 
       // Send in-app notifications
@@ -214,6 +215,7 @@ export async function POST(
           status: "ACTIVE",
         },
         select: { id: true },
+        take: 100,
       });
 
       // Send in-app notifications

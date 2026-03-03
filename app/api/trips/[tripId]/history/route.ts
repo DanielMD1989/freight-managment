@@ -118,6 +118,7 @@ export async function GET(
         timestamp: true,
       },
       orderBy: { timestamp: "asc" },
+      take: 10000,
     });
 
     // Calculate total distance traveled (delegated to lib/geo.ts)

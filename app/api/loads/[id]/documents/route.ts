@@ -62,7 +62,8 @@ export async function GET(
     const hasAccess =
       load.shipperId === session.organizationId ||
       load.assignedTruck?.carrierId === session.organizationId ||
-      session.role === "ADMIN";
+      session.role === "ADMIN" ||
+      session.role === "SUPER_ADMIN";
 
     if (!hasAccess) {
       return NextResponse.json(
@@ -145,7 +146,8 @@ export async function POST(
     const hasAccess =
       load.shipperId === session.organizationId ||
       load.assignedTruck?.carrierId === session.organizationId ||
-      session.role === "ADMIN";
+      session.role === "ADMIN" ||
+      session.role === "SUPER_ADMIN";
 
     if (!hasAccess) {
       return NextResponse.json(
