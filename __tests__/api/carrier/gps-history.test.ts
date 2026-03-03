@@ -253,14 +253,14 @@ describe("GPS History API", () => {
       expect(data.positions.length).toBeGreaterThan(0);
     });
 
-    it("unrelated carrier → 403", async () => {
+    it("unrelated carrier → 404 (resource cloaking)", async () => {
       setAuthSession(otherCarrierSession);
       const req = createRequest(
         "GET",
         "http://localhost:3000/api/gps/history?loadId=hist-load-1"
       );
       const res = await getHistory(req);
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
 
     it("shipper on own load → 200", async () => {
@@ -287,14 +287,14 @@ describe("GPS History API", () => {
       expect(res.status).toBe(200);
     });
 
-    it("other carrier's truck → 403", async () => {
+    it("other carrier's truck → 404 (resource cloaking)", async () => {
       setAuthSession(otherCarrierSession);
       const req = createRequest(
         "GET",
         "http://localhost:3000/api/gps/history?truckId=hist-truck-1"
       );
       const res = await getHistory(req);
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
 
     it("shipper cannot access truck history directly → 403", async () => {

@@ -555,14 +555,14 @@ describe("GPS Position API", () => {
         expect(res.status).toBe(200);
       });
 
-      it("shipper cannot see truck not on their load → 403", async () => {
+      it("shipper cannot see truck not on their load → 404 (resource cloaking)", async () => {
         setAuthSession(shipperSession);
         const req = createRequest(
           "GET",
           "http://localhost:3000/api/gps/position?truckId=no-gps-truck"
         );
         const res = await getPosition(req);
-        expect(res.status).toBe(403);
+        expect(res.status).toBe(404);
       });
     });
 

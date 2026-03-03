@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth, requireActiveUser } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
+import { handleApiError } from "@/lib/apiErrors";
 import { Prisma } from "@prisma/client";
 
 const withdrawSchema = z.object({
-  amount: z.number().positive(),
+  // Fix 43: Cap withdrawal at 10M to prevent unreasonably large withdrawals
+  amount: z.number().positive().max(10_000_000),
   bankAccount: z.string().min(10),
   bankName: z.string().min(2),
   accountHolder: z.string().min(2),
@@ -57,17 +59,24 @@ export async function POST(request: NextRequest) {
           throw new Error("WALLET_NOT_FOUND");
         }
 
-        // H3 FIX: Subtract pending withdrawal amounts from available balance
+        // Fix 42: Aggregate pending withdrawals at the org level, not per-user,
+        // to prevent multiple users in the same org each withdrawing the full balance
+        const orgUsers = await tx.user.findMany({
+          where: { organizationId: user.organizationId! },
+          select: { id: true },
+        });
+        const orgUserIds = orgUsers.map((u) => u.id);
         const pendingWithdrawals = await tx.withdrawalRequest.aggregate({
           where: {
-            requestedById: session.userId,
+            requestedById: { in: orgUserIds },
             status: "PENDING",
           },
           _sum: { amount: true },
         });
-        const pendingAmount = pendingWithdrawals._sum.amount
-          ? parseFloat(pendingWithdrawals._sum.amount.toString())
-          : 0;
+        const pendingAmount =
+          pendingWithdrawals._sum?.amount != null
+            ? parseFloat(pendingWithdrawals._sum.amount.toString())
+            : 0;
         const availableBalance =
           parseFloat(wallet.balance.toString()) - pendingAmount;
 
@@ -94,8 +103,6 @@ export async function POST(request: NextRequest) {
       withdrawalRequest,
     });
   } catch (error) {
-    console.error("Withdrawal request error:", error);
-
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
@@ -115,17 +122,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Withdrawal request error");
   }
 }
 
 // GET /api/financial/withdraw - List withdrawal requests
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    // Fix 45: requireActiveUser for ACTIVE status check
+    const session = await requireActiveUser();
 
     const { searchParams } = request.nextUrl;
     const status = searchParams.get("status");
@@ -146,14 +151,12 @@ export async function GET(request: NextRequest) {
       orderBy: {
         createdAt: "desc",
       },
+      // Fix 44: Cap unbounded result set
+      take: 100,
     });
 
     return NextResponse.json({ withdrawals });
   } catch (error) {
-    console.error("List withdrawals error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "List withdrawals error");
   }
 }

@@ -257,7 +257,11 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl;
 
     const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
+    // Fix 37: Cap limit to prevent unbounded queries
+    const limit = Math.min(
+      Math.max(parseInt(searchParams.get("limit") || "20"), 1),
+      100
+    );
     const status = searchParams.get("status");
     const pickupCity = searchParams.get("pickupCity");
     const deliveryCity = searchParams.get("deliveryCity");

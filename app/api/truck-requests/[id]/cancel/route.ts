@@ -9,9 +9,11 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { CacheInvalidation } from "@/lib/cache";
+import { handleApiError } from "@/lib/apiErrors";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 // Validation schema for cancel request
@@ -40,7 +42,8 @@ export async function POST(
     if (csrfError) return csrfError;
 
     const { id: requestId } = await params;
-    const session = await requireAuth();
+    // Fix 39: requireActiveUser for ACTIVE status check
+    const session = await requireActiveUser();
 
     // Get the request
     const truckRequest = await db.truckRequest.findUnique({
@@ -126,28 +129,46 @@ export async function POST(
       );
     }
 
-    // Update status to CANCELLED
-    const updatedRequest = await db.truckRequest.update({
-      where: { id: requestId },
-      data: {
-        status: "CANCELLED",
-      },
-      include: {
-        load: {
-          select: {
-            id: true,
-            pickupCity: true,
-            deliveryCity: true,
+    // Fix 38: Atomic update with status guard to prevent race condition
+    // If two requests arrive simultaneously, only one can succeed; the other gets 409
+    let updatedRequest;
+    try {
+      updatedRequest = await db.truckRequest.update({
+        where: { id: requestId, status: "PENDING" },
+        data: {
+          status: "CANCELLED",
+        },
+        include: {
+          load: {
+            select: {
+              id: true,
+              pickupCity: true,
+              deliveryCity: true,
+            },
+          },
+          truck: {
+            select: {
+              id: true,
+              licensePlate: true,
+            },
           },
         },
-        truck: {
-          select: {
-            id: true,
-            licensePlate: true,
+      });
+    } catch (updateError) {
+      if (
+        updateError instanceof Prisma.PrismaClientKnownRequestError &&
+        updateError.code === "P2025"
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Request was modified concurrently. Please refresh and try again.",
           },
-        },
-      },
-    });
+          { status: 409 }
+        );
+      }
+      throw updateError;
+    }
 
     // M3 FIX: Cache invalidation after truck request cancellation
     await CacheInvalidation.load(truckRequest.loadId);
@@ -171,10 +192,6 @@ export async function POST(
       message: "Truck request cancelled successfully",
     });
   } catch (error) {
-    console.error("Error cancelling truck request:", error);
-    return NextResponse.json(
-      { error: "Failed to cancel truck request" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Error cancelling truck request");
   }
 }

@@ -166,8 +166,13 @@ export async function GET(
             flaggedAt: true,
           },
         },
+        // Fix 36: select only needed fields — avoid exposing GPS coords, IMEI, etc.
         assignedTruck: {
-          include: {
+          select: {
+            id: true,
+            licensePlate: true,
+            truckType: true,
+            capacity: true,
             carrier: {
               select: {
                 id: true,
@@ -223,10 +228,14 @@ export async function GET(
     );
 
     // Apply company masking
+    // Fix 35: Strip bypass-detection flag fields from non-admin responses
     const maskedShipper = load.shipper
       ? {
           ...load.shipper,
           name: maskCompany(load.isAnonymous, load.shipper.name),
+          isFlagged: isAdmin ? load.shipper.isFlagged : undefined,
+          flagReason: isAdmin ? load.shipper.flagReason : undefined,
+          flaggedAt: isAdmin ? load.shipper.flaggedAt : undefined,
         }
       : null;
 

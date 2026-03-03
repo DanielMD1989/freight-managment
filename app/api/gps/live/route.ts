@@ -14,12 +14,15 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
+import { withRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { handleApiError } from "@/lib/apiErrors";
 import { Prisma } from "@prisma/client";
 
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    // Fix 17: requireActiveUser for ACTIVE status check
+    const session = await requireActiveUser();
     const { searchParams } = request.nextUrl;
 
     const loadId = searchParams.get("loadId");
@@ -207,8 +210,15 @@ export async function GET(request: NextRequest) {
         );
       }
       activeLoadsWhere.shipperId = user.organizationId;
+    } else if (session.role === "DISPATCHER") {
+      // Fix 16: Dispatcher scoped to their org — limit results
+      if (user?.organizationId) {
+        activeLoadsWhere.assignedTruck = {
+          carrierId: user.organizationId,
+        };
+      }
     }
-    // Admin/Dispatcher see all active trips
+    // Admin/SUPER_ADMIN/PLATFORM_OPS see all active trips
 
     const activeLoads = await db.load.findMany({
       where: activeLoadsWhere,
@@ -227,7 +237,8 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      take: 100, // Limit for performance
+      // Fix 16: cap dispatcher queries too (take already applies to all)
+      take: 50,
     });
 
     const liveTrips = activeLoads.map((load) => ({
@@ -258,10 +269,9 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("GPS live position error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "GPS live position error");
   }
 }
+
+// Fix 15: Apply RPS rate limiting to GET (100 RPS with 20 burst)
+export const GET = withRpsLimit(RPS_CONFIGS.gps, getHandler);

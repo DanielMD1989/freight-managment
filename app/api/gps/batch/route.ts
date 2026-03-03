@@ -13,11 +13,13 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { broadcastGpsPosition } from "@/lib/websocket-server";
 import { z } from "zod";
 import { withRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { zodErrorResponse } from "@/lib/validation";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { handleApiError } from "@/lib/apiErrors";
 
 const positionSchema = z.object({
   latitude: z.number().min(-90).max(90),
@@ -36,7 +38,12 @@ const batchUpdateSchema = z.object({
 
 async function postHandler(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    // Fix 12: CSRF protection for web clients
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
+    // Fix 13: requireActiveUser for ACTIVE status check
+    const session = await requireActiveUser();
 
     // Only carriers can update GPS positions
     if (session.role !== "CARRIER") {
@@ -167,16 +174,10 @@ async function postHandler(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("GPS batch update error:", error);
-
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
-
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "GPS batch update error");
   }
 }
 

@@ -426,7 +426,7 @@ describe("Audit Fixes", () => {
         "http://localhost:3000/api/financial/withdraw",
         {
           body: {
-            amount: 999999999,
+            amount: 50000, // Exceeds mock wallet balance of 10000 but under 10M cap
             bankAccount: "1234567890123",
             bankName: "Commercial Bank of Ethiopia",
             accountHolder: "Test User",

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { broadcastGpsPosition } from "@/lib/websocket-server";
 import {
   checkRateLimit,
@@ -8,17 +8,24 @@ import {
   RATE_LIMIT_GPS_UPDATE,
   RPS_CONFIGS,
 } from "@/lib/rateLimit";
+import { handleApiError } from "@/lib/apiErrors";
 import { Prisma } from "@prisma/client";
 
 // GET /api/gps/positions - Get latest GPS positions
 async function getHandler(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
     const { searchParams } = request.nextUrl;
 
     const truckId = searchParams.get("truckId");
     const deviceId = searchParams.get("deviceId");
-    const hours = parseInt(searchParams.get("hours") || "24");
+    // Cap hours at 168 (7 days) to prevent unbounded queries
+    const hours = Math.min(parseInt(searchParams.get("hours") || "24"), 168);
+
+    const user = await db.user.findUnique({
+      where: { id: session.userId },
+      select: { organizationId: true, role: true },
+    });
 
     const where: Prisma.GpsPositionWhereInput = {};
 
@@ -29,27 +36,71 @@ async function getHandler(request: NextRequest) {
         select: { carrierId: true },
       });
 
-      const user = await db.user.findUnique({
-        where: { id: session.userId },
-        select: { organizationId: true, role: true },
-      });
-
       const canView =
         user?.organizationId === truck?.carrierId ||
         session.role === "ADMIN" ||
+        session.role === "SUPER_ADMIN" ||
         session.role === "PLATFORM_OPS";
 
       if (!canView) {
-        return NextResponse.json(
-          { error: "You do not have permission to view this truck's GPS" },
-          { status: 403 }
-        );
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
       }
 
       where.truckId = truckId;
+    } else {
+      // No truckId provided — scope by org to prevent cross-org data leak
+      if (session.role === "CARRIER") {
+        if (!user?.organizationId) {
+          return NextResponse.json({ positions: [] });
+        }
+        where.truck = { carrierId: user.organizationId };
+      } else if (session.role === "SHIPPER") {
+        if (!user?.organizationId) {
+          return NextResponse.json({ positions: [] });
+        }
+        // Shippers can only see positions for trucks on their IN_TRANSIT loads
+        const activeLoads = await db.load.findMany({
+          where: {
+            shipperId: user.organizationId,
+            status: "IN_TRANSIT",
+            assignedTruckId: { not: null },
+          },
+          select: { assignedTruckId: true },
+        });
+        const allowedTruckIds = activeLoads
+          .map((l) => l.assignedTruckId)
+          .filter(Boolean) as string[];
+        if (allowedTruckIds.length === 0) {
+          return NextResponse.json({ positions: [] });
+        }
+        where.truckId = { in: allowedTruckIds };
+      } else if (
+        session.role !== "ADMIN" &&
+        session.role !== "SUPER_ADMIN" &&
+        session.role !== "PLATFORM_OPS" &&
+        session.role !== "DISPATCHER"
+      ) {
+        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+      }
+      // Admin/Dispatcher/PlatformOps see all
     }
 
+    // deviceId filter with ownership check
     if (deviceId) {
+      const device = await db.gpsDevice.findUnique({
+        where: { id: deviceId },
+        select: { truck: { select: { carrierId: true } } },
+      });
+      const canViewDevice =
+        session.role === "ADMIN" ||
+        session.role === "SUPER_ADMIN" ||
+        session.role === "PLATFORM_OPS" ||
+        session.role === "DISPATCHER" ||
+        (device?.truck?.carrierId &&
+          user?.organizationId === device.truck.carrierId);
+      if (!canViewDevice) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
       where.deviceId = deviceId;
     }
 
@@ -82,11 +133,7 @@ async function getHandler(request: NextRequest) {
 
     return NextResponse.json({ positions });
   } catch (error) {
-    console.error("Get GPS positions error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Get GPS positions error");
   }
 }
 
@@ -250,11 +297,7 @@ async function postHandler(request: NextRequest) {
 
     return NextResponse.json({ position }, { status: 201 });
   } catch (error) {
-    console.error("Create GPS position error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Create GPS position error");
   }
 }
 

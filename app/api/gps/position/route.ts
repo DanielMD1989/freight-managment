@@ -13,11 +13,13 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { z } from "zod";
 import { broadcastGpsPosition } from "@/lib/websocket-server";
 import { withRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { zodErrorResponse } from "@/lib/validation";
+import { validateCSRFWithMobile } from "@/lib/csrf";
+import { handleApiError } from "@/lib/apiErrors";
 import { Prisma } from "@prisma/client";
 
 const gpsUpdateSchema = z.object({
@@ -33,7 +35,12 @@ const gpsUpdateSchema = z.object({
 
 async function postHandler(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    // Fix 7: CSRF protection for web clients
+    const csrfError = await validateCSRFWithMobile(request);
+    if (csrfError) return csrfError;
+
+    // Fix 9: requireActiveUser for ACTIVE status check
+    const session = await requireActiveUser();
 
     // Only carriers can update GPS positions
     if (session.role !== "CARRIER") {
@@ -161,29 +168,10 @@ async function postHandler(request: NextRequest) {
       positionId: positionRecord?.id,
     });
   } catch (error) {
-    console.error("GPS position update error:", error);
-
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
-
-    // Handle specific error types
-    if (error instanceof Error) {
-      if (
-        error.message === "Unauthorized" ||
-        error.name === "UnauthorizedError"
-      ) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-      if (error.name === "ForbiddenError") {
-        return NextResponse.json({ error: error.message }, { status: 403 });
-      }
-    }
-
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "GPS position update error");
   }
 }
 
@@ -198,7 +186,8 @@ export const POST = withRpsLimit(RPS_CONFIGS.gps, postHandler);
  */
 async function getHandler(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    // Fix 9: requireActiveUser for ACTIVE status check
+    const session = await requireActiveUser();
     const { searchParams } = request.nextUrl;
     const truckId = searchParams.get("truckId");
 
@@ -220,19 +209,15 @@ async function getHandler(request: NextRequest) {
 
     if (session.role === "CARRIER") {
       if (!user?.organizationId) {
-        return NextResponse.json(
-          { error: "User not associated with an organization" },
-          { status: 403 }
-        );
+        // Fix 8: 403→404 resource cloaking
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
       }
       // Carrier can only see their own trucks
       truckWhere.carrierId = user.organizationId;
     } else if (session.role === "SHIPPER") {
       if (!user?.organizationId) {
-        return NextResponse.json(
-          { error: "User not associated with an organization" },
-          { status: 403 }
-        );
+        // Fix 8: 403→404 resource cloaking
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
       }
       // Shipper can only see truck if it's on their load
       const activeLoad = await db.load.findFirst({
@@ -244,13 +229,17 @@ async function getHandler(request: NextRequest) {
       });
 
       if (!activeLoad) {
-        return NextResponse.json(
-          { error: "You do not have access to this truck's position" },
-          { status: 403 }
-        );
+        // Fix 8: 403→404 resource cloaking
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
       }
+    } else if (session.role === "DISPATCHER") {
+      // Fix 11: Dispatcher scoped to their org's trucks
+      if (!user?.organizationId) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
+      truckWhere.carrierId = user.organizationId;
     }
-    // Admin/Dispatcher can see any truck
+    // Admin/SUPER_ADMIN/PLATFORM_OPS can see any truck
 
     const truck = await db.truck.findFirst({
       where: truckWhere,
@@ -289,11 +278,7 @@ async function getHandler(request: NextRequest) {
       lastSeen: truck.gpsLastSeenAt?.toISOString(),
     });
   } catch (error) {
-    console.error("GPS position get error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "GPS position get error");
   }
 }
 

@@ -15,14 +15,17 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { calculateDistanceKm } from "@/lib/geo";
 import { roundToDecimals } from "@/lib/rounding";
+import { withRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { handleApiError } from "@/lib/apiErrors";
 import { Prisma } from "@prisma/client";
 
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    // Fix 26: requireActiveUser for ACTIVE status check
+    const session = await requireActiveUser();
     const { searchParams } = request.nextUrl;
 
     const loadId = searchParams.get("loadId");
@@ -66,20 +69,14 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "Load not found" }, { status: 404 });
       }
 
-      // Access control
+      // Fix 24: 403→404 resource cloaking for access denied
       if (session.role === "CARRIER") {
         if (load.assignedTruck?.carrierId !== user?.organizationId) {
-          return NextResponse.json(
-            { error: "You do not have access to this load" },
-            { status: 403 }
-          );
+          return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
       } else if (session.role === "SHIPPER") {
         if (load.shipperId !== user?.organizationId) {
-          return NextResponse.json(
-            { error: "You do not have access to this load" },
-            { status: 403 }
-          );
+          return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
       }
       // Admin/Dispatcher can access any load
@@ -91,10 +88,8 @@ export async function GET(request: NextRequest) {
       // Verify access to truck
       if (session.role === "CARRIER") {
         if (!user?.organizationId) {
-          return NextResponse.json(
-            { error: "User not associated with an organization" },
-            { status: 403 }
-          );
+          // Fix 24: 403→404 resource cloaking
+          return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
 
         const truck = await db.truck.findFirst({
@@ -105,10 +100,8 @@ export async function GET(request: NextRequest) {
         });
 
         if (!truck) {
-          return NextResponse.json(
-            { error: "Truck not found or access denied" },
-            { status: 403 }
-          );
+          // Fix 24: 403→404 resource cloaking
+          return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
       } else if (session.role === "SHIPPER") {
         // Shipper cannot access truck history directly
@@ -151,7 +144,8 @@ export async function GET(request: NextRequest) {
       orderBy: {
         timestamp: "asc",
       },
-      take: Math.min(limit, 5000), // Hard cap at 5000
+      // Fix 25: cap at 1000 (down from 5000) to prevent expensive queries
+      take: Math.min(limit, 1000),
     });
 
     // Transform for response
@@ -210,10 +204,9 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("GPS history error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "GPS history error");
   }
 }
+
+// Fix 23: Apply RPS rate limiting — expensive query (up to 1000 positions)
+export const GET = withRpsLimit(RPS_CONFIGS.gps, getHandler);

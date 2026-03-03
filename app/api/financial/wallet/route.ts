@@ -9,7 +9,8 @@ import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { handleApiError } from "@/lib/apiErrors";
 
 const depositSchema = z.object({
-  amount: z.number().positive(),
+  // Fix 41: Cap deposit at 10M to prevent unreasonably large deposits
+  amount: z.number().positive().max(10_000_000),
   paymentMethod: z.string(),
   externalTransactionId: z.string().optional(),
 });

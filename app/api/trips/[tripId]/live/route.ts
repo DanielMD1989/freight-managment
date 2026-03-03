@@ -9,8 +9,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { calculateDistanceKm } from "@/lib/geo";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/trips/[tripId]/live
@@ -22,7 +23,8 @@ export async function GET(
   { params }: { params: Promise<{ tripId: string }> }
 ) {
   try {
-    const session = await requireAuth();
+    // Fix 30: requireActiveUser for ACTIVE status check
+    const session = await requireActiveUser();
     const { tripId } = await params;
 
     // Get trip with current location
@@ -74,17 +76,19 @@ export async function GET(
 
     // Check permissions
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
-    const isDispatcher = session.role === "DISPATCHER";
+    // Fix 28: Dispatcher scoped to their org's carrier or shipper
+    const isDispatcher =
+      session.role === "DISPATCHER" &&
+      (trip.carrierId === session.organizationId ||
+        trip.shipperId === session.organizationId);
     const isCarrier =
       session.role === "CARRIER" && trip.carrierId === session.organizationId;
     const isShipper =
       session.role === "SHIPPER" && trip.shipperId === session.organizationId;
 
+    // Fix 29: 403→404 resource cloaking
     if (!isAdmin && !isDispatcher && !isCarrier && !isShipper) {
-      return NextResponse.json(
-        { error: "You do not have permission to view this trip" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
     // For shippers, only allow access when trip is IN_TRANSIT (per spec)
@@ -205,10 +209,6 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Get live position error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch live position" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Get live position error");
   }
 }

@@ -17,8 +17,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { calculateDistanceKm } from "@/lib/geo";
+import { withRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { handleApiError } from "@/lib/apiErrors";
 
 // Cache for ETA calculations (5 minute TTL)
 const etaCache = new Map<
@@ -132,9 +134,10 @@ async function calculateETA(
   };
 }
 
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    // Fix 21: requireActiveUser for ACTIVE status check
+    const session = await requireActiveUser();
     const { searchParams } = request.nextUrl;
     const loadId = searchParams.get("loadId");
 
@@ -180,14 +183,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
-    // Access control
+    // Fix 20: 403→404 resource cloaking for access denied
     if (session.role === "CARRIER") {
       if (load.assignedTruck?.carrierId !== user?.organizationId) {
-        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
       }
     } else if (session.role === "SHIPPER") {
       if (load.shipperId !== user?.organizationId) {
-        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
       }
     }
 
@@ -295,10 +298,9 @@ export async function GET(request: NextRequest) {
       calculatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("ETA calculation error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "ETA calculation error");
   }
 }
+
+// Fix 19: Apply RPS rate limiting — critical because this calls Google Maps API (cost vector)
+export const GET = withRpsLimit(RPS_CONFIGS.gps, getHandler);

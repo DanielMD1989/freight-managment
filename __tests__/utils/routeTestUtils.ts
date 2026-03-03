@@ -165,6 +165,15 @@ export function mockRateLimit() {
       trucks: { endpoint: "trucks", rps: 50, burst: 20 },
     },
     RATE_LIMIT_TRUCK_POSTING: { maxRequests: 100, windowMs: 86400000 },
+    RATE_LIMIT_GPS_UPDATE: {
+      maxRequests: 12,
+      windowMs: 3600000,
+      keyGenerator: () => "test",
+    },
+    // withRpsLimit is a HOF that wraps a handler — in tests, just pass through
+    withRpsLimit: jest.fn(
+      (_config: unknown, handler: (req: any) => any) => handler
+    ),
   }));
 }
 

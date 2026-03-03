@@ -144,7 +144,11 @@ export function canSeeContact(
   viewerRole: string
 ): boolean {
   // Admin and Ops can always see contact
-  if (viewerRole === "ADMIN" || viewerRole === "PLATFORM_OPS") {
+  if (
+    viewerRole === "ADMIN" ||
+    viewerRole === "SUPER_ADMIN" ||
+    viewerRole === "PLATFORM_OPS"
+  ) {
     return true;
   }
 

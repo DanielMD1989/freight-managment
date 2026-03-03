@@ -17,11 +17,13 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
+import { handleApiError } from "@/lib/apiErrors";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    // Fix 33: requireActiveUser for ACTIVE status check
+    const session = await requireActiveUser();
     const { searchParams } = request.nextUrl;
 
     const status = searchParams.get("status");
@@ -86,8 +88,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // Status filter
-    if (status) {
+    // Fix 32: Only apply status filter for non-shippers — prevents overriding the shipper's
+    // hardcoded IN_TRANSIT/DELIVERED restriction set above
+    if (status && role !== "SHIPPER" && roleFilter !== "shipper") {
       where.status = status;
     }
 
@@ -210,10 +213,6 @@ export async function GET(request: NextRequest) {
       total: trips.length,
     });
   } catch (error) {
-    console.error("Map trips API error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Map trips API error");
   }
 }

@@ -393,7 +393,7 @@ describe("Trip Tracking — History & Live", () => {
       expect(body.error).toContain("in transit");
     });
 
-    it("should deny other carrier → 403", async () => {
+    it("should deny other carrier → 404 (resource cloaking)", async () => {
       setAuthSession(otherCarrierSession);
 
       const req = createRequest(
@@ -402,7 +402,7 @@ describe("Trip Tracking — History & Live", () => {
       );
       const res = await callHandler(getTripLive, req, { tripId });
 
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
   });
 
