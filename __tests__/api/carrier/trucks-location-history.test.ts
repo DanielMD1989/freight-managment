@@ -408,7 +408,7 @@ describe("Truck Location, History & Nearby-Loads", () => {
       expect(res.status).toBe(404);
     });
 
-    it("should deny other carrier → 403", async () => {
+    it("should deny other carrier → 404 (resource cloaking)", async () => {
       setAuthSession(otherCarrierSession);
 
       const req = createRequest(
@@ -417,7 +417,7 @@ describe("Truck Location, History & Nearby-Loads", () => {
       );
       const res = await callHandler(getHistory, req, { id: seed.truck.id });
 
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
 
     it("should return empty positions array when no data", async () => {

@@ -8,9 +8,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { getLatestPosition } from "@/lib/gpsQuery";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/trucks/[id]/position
@@ -41,7 +42,7 @@ export async function GET(
     }
 
     const { id: truckId } = await params;
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Verify truck exists and user has access
     const truck = await db.truck.findUnique({
@@ -76,10 +77,8 @@ export async function GET(
     }
 
     if (!isOwner && !isAdmin && !isShipperWithActiveLoad) {
-      return NextResponse.json(
-        { error: "You do not have permission to view this truck's position" },
-        { status: 403 }
-      );
+      // Resource cloaking: use 404 to avoid revealing truck existence to unauthorized viewers
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
     const position = await getLatestPosition(truckId);
@@ -93,10 +92,6 @@ export async function GET(
 
     return NextResponse.json({ position });
   } catch (error) {
-    console.error("Get truck position error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Get truck position error");
   }
 }
