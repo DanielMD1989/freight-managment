@@ -27,7 +27,8 @@ import {
   TruckDocumentType,
   Prisma,
 } from "@prisma/client";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/documents
@@ -54,7 +55,7 @@ import { requireAuth } from "@/lib/auth";
 export async function GET(request: NextRequest) {
   try {
     // Require authentication
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     const { searchParams } = new URL(request.url);
     const entityType = searchParams.get("entityType");
@@ -105,7 +106,11 @@ export async function GET(request: NextRequest) {
       }
 
       // Verify user has access to this organization
-      if (entityId !== session.organizationId && session.role !== "ADMIN") {
+      if (
+        entityId !== session.organizationId &&
+        session.role !== "ADMIN" &&
+        session.role !== "SUPER_ADMIN"
+      ) {
         return NextResponse.json(
           { error: "You can only view documents for your own organization" },
           { status: 403 }
@@ -180,7 +185,8 @@ export async function GET(request: NextRequest) {
 
       if (
         truck.carrierId !== session.organizationId &&
-        session.role !== "ADMIN"
+        session.role !== "ADMIN" &&
+        session.role !== "SUPER_ADMIN"
       ) {
         return NextResponse.json(
           {
@@ -223,13 +229,7 @@ export async function GET(request: NextRequest) {
         entityId,
       });
     }
-    // FIX: Use unknown type
-  } catch (error: unknown) {
-    console.error("Error fetching documents:", error);
-
-    return NextResponse.json(
-      { error: "Failed to fetch documents" },
-      { status: 500 }
-    );
+  } catch (error) {
+    return handleApiError(error, "Error fetching documents");
   }
 }

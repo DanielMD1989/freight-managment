@@ -157,6 +157,7 @@ export function mockRateLimit() {
       fleet: { endpoint: "trucks", rps: 30, burst: 60 },
       dashboard: { endpoint: "dashboard", rps: 5, burst: 10 },
       gps: { endpoint: "gps", rps: 30, burst: 60 },
+      read: { endpoint: "api", rps: 50, burst: 100 },
       write: { endpoint: "api", rps: 0.5, burst: 5 },
       notifications: { endpoint: "notifications", rps: 30, burst: 10 },
       auth: { endpoint: "auth", rps: 10, burst: 5 },

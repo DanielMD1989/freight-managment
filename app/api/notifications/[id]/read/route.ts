@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { markAsRead } from "@/lib/notifications";
 import { db } from "@/lib/db";
 import { validateCSRFWithMobile } from "@/lib/csrf";
@@ -37,7 +37,7 @@ export async function PUT(
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Await params (Next.js 15+)
     const { id } = await params;

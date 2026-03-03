@@ -10,9 +10,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { db } from "@/lib/db";
+import { handleApiError } from "@/lib/apiErrors";
 
 const registerSchema = z.object({
   token: z.string().min(1).max(500),
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requireAuth();
+    const session = await requireActiveUser();
     const body = await request.json();
     const parsed = registerSchema.safeParse(body);
 
@@ -64,14 +65,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    if (error instanceof Error && error.message === "Authentication required") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    console.error("FCM token registration failed:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "FCM token registration failed");
   }
 }
 
@@ -83,7 +77,7 @@ export async function DELETE(request: NextRequest) {
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // If a specific token is provided in the body, delete only that one
     try {
@@ -108,13 +102,6 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    if (error instanceof Error && error.message === "Authentication required") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    console.error("FCM token deletion failed:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "FCM token deletion failed");
   }
 }

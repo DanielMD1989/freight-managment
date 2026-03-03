@@ -27,7 +27,7 @@ export const VALID_TRIP_TRANSITIONS: Record<TripStatus, TripStatus[]> = {
 
   [TripStatus.IN_TRANSIT]: [TripStatus.DELIVERED, TripStatus.CANCELLED],
 
-  [TripStatus.DELIVERED]: [TripStatus.COMPLETED, TripStatus.CANCELLED],
+  [TripStatus.DELIVERED]: [TripStatus.COMPLETED],
 
   [TripStatus.COMPLETED]: [
     // Terminal state - no transitions allowed

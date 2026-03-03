@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { getLoadPositions, calculateTripDistance } from "@/lib/gpsQuery";
 import { db } from "@/lib/db";
 import { handleApiError } from "@/lib/apiErrors";
@@ -23,7 +23,7 @@ export async function GET(
 ) {
   try {
     const { id: loadId } = await params;
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Check if user has permission to view this load's GPS history
     const load = await db.load.findUnique({
@@ -61,10 +61,7 @@ export async function GET(
       session.role === "DISPATCHER";
 
     if (!isShipper && !isCarrier && !isAdmin) {
-      return NextResponse.json(
-        { error: "Unauthorized to view GPS history for this load" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
     if (!load.trackingEnabled) {

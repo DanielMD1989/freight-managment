@@ -20,9 +20,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { VerificationStatus } from "@prisma/client";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
-import { requireCSRF } from "@/lib/csrf";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import { handleApiError } from "@/lib/apiErrors";
 import {
   sendEmail,
@@ -77,7 +77,7 @@ export async function GET(
     }
 
     // Require authentication
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Fetch document based on entity type
     if (entityType === "company") {
@@ -103,7 +103,8 @@ export async function GET(
       // Verify user has access (owner or admin)
       if (
         document.organizationId !== session.organizationId &&
-        session.role !== "ADMIN"
+        session.role !== "ADMIN" &&
+        session.role !== "SUPER_ADMIN"
       ) {
         return NextResponse.json(
           { error: "You can only view documents for your own organization" },
@@ -139,7 +140,8 @@ export async function GET(
       // Verify user has access (owner or admin)
       if (
         document.truck.carrierId !== session.organizationId &&
-        session.role !== "ADMIN"
+        session.role !== "ADMIN" &&
+        session.role !== "SUPER_ADMIN"
       ) {
         return NextResponse.json(
           {
@@ -193,7 +195,7 @@ export async function PATCH(
     const session = await requirePermission(Permission.VERIFY_DOCUMENTS);
 
     // Check CSRF token
-    const csrfError = requireCSRF(request);
+    const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) {
       return csrfError;
     }
@@ -429,10 +431,10 @@ export async function DELETE(
     }
 
     // Require authentication
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Check CSRF token
-    const csrfError = requireCSRF(request);
+    const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) {
       return csrfError;
     }

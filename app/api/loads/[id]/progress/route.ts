@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { calculateTripProgress } from "@/lib/tripProgress";
 import { handleApiError } from "@/lib/apiErrors";
 
@@ -22,7 +22,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
     const { id } = await params;
 
     const load = await db.load.findUnique({
@@ -58,7 +58,7 @@ export async function GET(
       session.organizationId === load.assignedTruck?.carrierId;
 
     if (!hasAccess) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
     // Get live progress if tracking enabled and IN_TRANSIT

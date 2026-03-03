@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
+import { handleApiError } from "@/lib/apiErrors";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { CacheInvalidation } from "@/lib/cache";
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Check if user has permission (carrier self-dispatch or ops dispatch)
     const hasOpsPermission = await (async () => {
@@ -200,8 +201,6 @@ export async function POST(request: NextRequest) {
     });
     // FIX: Use unknown type with type guards
   } catch (error: unknown) {
-    console.error("Dispatch error:", error);
-
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
     }
@@ -228,9 +227,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Dispatch error");
   }
 }

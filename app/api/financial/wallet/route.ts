@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
     const rpsResult = await checkRpsLimit(
       "financial-wallet",
       ip,
-      RPS_CONFIGS.write.rps,
-      RPS_CONFIGS.write.burst
+      RPS_CONFIGS.read.rps,
+      RPS_CONFIGS.read.burst
     );
     if (!rpsResult.allowed) {
       return NextResponse.json(

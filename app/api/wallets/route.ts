@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     const session = await requireActiveUser();
 
     if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
     const { searchParams } = request.nextUrl;

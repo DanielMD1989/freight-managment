@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireActiveUser } from "@/lib/auth";
-import { requireCSRF } from "@/lib/csrf";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { CacheInvalidation } from "@/lib/cache";
 import { handleApiError } from "@/lib/apiErrors";
@@ -55,7 +55,7 @@ export async function POST(
     const session = await requireActiveUser();
 
     // CSRF protection for state-changing operation
-    const csrfError = await requireCSRF(request);
+    const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) {
       return csrfError;
     }

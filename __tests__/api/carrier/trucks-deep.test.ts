@@ -532,20 +532,20 @@ describe("Truck Management — Deep Tests", () => {
       expect(res.status).toBe(400);
     });
 
-    it("ADMIN cannot update other carrier's truck → 404", async () => {
+    it("ADMIN can update any carrier's truck → 200", async () => {
       setAuthSession(adminSession);
 
       const req = createRequest(
         "PATCH",
         `http://localhost:3000/api/trucks/${seed.truck.id}`,
         {
-          body: { capacity: 99999 },
+          body: { capacity: 10000 },
         }
       );
 
       const res = await callHandler(updateTruck, req, { id: seed.truck.id });
-      // canUpdate = SUPER_ADMIN or owner. ADMIN is neither → 404
-      expect(res.status).toBe(404);
+      // canUpdate now includes ADMIN role
+      expect(res.status).toBe(200);
     });
 
     it("same license plate update → no duplicate error", async () => {

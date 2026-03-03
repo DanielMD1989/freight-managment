@@ -174,7 +174,9 @@ export async function PATCH(
     });
 
     const canUpdate =
-      user?.role === "SUPER_ADMIN" || truck.carrierId === user?.organizationId;
+      user?.role === "ADMIN" ||
+      user?.role === "SUPER_ADMIN" ||
+      truck.carrierId === user?.organizationId;
 
     if (!canUpdate) {
       return NextResponse.json({ error: "Truck not found" }, { status: 404 });

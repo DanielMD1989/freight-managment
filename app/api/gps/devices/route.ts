@@ -5,6 +5,7 @@ import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
 import { Prisma } from "@prisma/client";
 import { validateCSRFWithMobile } from "@/lib/csrf";
+import { handleApiError } from "@/lib/apiErrors";
 
 const createDeviceSchema = z.object({
   imei: z.string().min(15).max(15),
@@ -42,16 +43,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ device }, { status: 201 });
   } catch (error) {
-    console.error("Create GPS device error:", error);
-
-    if (error instanceof z.ZodError) {
-      return zodErrorResponse(error);
-    }
-
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Create GPS device error");
   }
 }
 
@@ -87,14 +79,11 @@ export async function GET(request: NextRequest) {
       orderBy: {
         createdAt: "desc",
       },
+      take: 200,
     });
 
     return NextResponse.json({ devices });
   } catch (error) {
-    console.error("List GPS devices error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "List GPS devices error");
   }
 }

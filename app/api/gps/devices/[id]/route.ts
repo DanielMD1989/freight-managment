@@ -4,6 +4,7 @@ import { requirePermission, Permission } from "@/lib/rbac";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
+import { handleApiError } from "@/lib/apiErrors";
 
 // H20 FIX: Zod schema for GPS device updates
 const updateDeviceSchema = z.object({
@@ -52,11 +53,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Delete GPS device error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Delete GPS device error");
   }
 }
 
@@ -120,10 +117,6 @@ export async function PATCH(
 
     return NextResponse.json({ device: updatedDevice });
   } catch (error) {
-    console.error("Update GPS device error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Update GPS device error");
   }
 }

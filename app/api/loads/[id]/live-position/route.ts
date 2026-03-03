@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import {
   getLoadLivePosition,
   canAccessTracking,
@@ -20,18 +20,13 @@ export async function GET(
 ) {
   try {
     const { id: loadId } = await params;
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Check if user has access to tracking
     const hasAccess = await canAccessTracking(loadId, session.userId);
 
     if (!hasAccess) {
-      return NextResponse.json(
-        {
-          error: "You do not have permission to access tracking for this load",
-        },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
     // Check if tracking is enabled

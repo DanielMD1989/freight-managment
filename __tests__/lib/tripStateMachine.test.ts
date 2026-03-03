@@ -100,10 +100,10 @@ describe("lib/tripStateMachine", () => {
         ).toBe(true);
       });
 
-      it("should allow DELIVERED → CANCELLED", () => {
+      it("should NOT allow DELIVERED → CANCELLED (terminal delivery protection)", () => {
         expect(
           isValidTripTransition(TripStatus.DELIVERED, TripStatus.CANCELLED)
-        ).toBe(true);
+        ).toBe(false);
       });
     });
 
@@ -420,7 +420,7 @@ describe("lib/tripStateMachine", () => {
       ).toBe(true);
     });
 
-    it("should support cancellation at any non-terminal state", () => {
+    it("should support cancellation at non-terminal states before delivery", () => {
       expect(
         isValidTripTransition(TripStatus.ASSIGNED, TripStatus.CANCELLED)
       ).toBe(true);
@@ -430,9 +430,10 @@ describe("lib/tripStateMachine", () => {
       expect(
         isValidTripTransition(TripStatus.IN_TRANSIT, TripStatus.CANCELLED)
       ).toBe(true);
+      // DELIVERED is a terminal-protection state — cannot be cancelled after delivery
       expect(
         isValidTripTransition(TripStatus.DELIVERED, TripStatus.CANCELLED)
-      ).toBe(true);
+      ).toBe(false);
     });
 
     it("should not allow backward transitions", () => {

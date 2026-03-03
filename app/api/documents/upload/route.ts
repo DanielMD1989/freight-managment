@@ -36,7 +36,7 @@ import {
 import { requireRegistrationAccess } from "@/lib/auth";
 import { validateFileName, validateIdFormat } from "@/lib/validation";
 import { checkRateLimit, RATE_LIMIT_DOCUMENT_UPLOAD } from "@/lib/rateLimit";
-import { requireCSRF } from "@/lib/csrf";
+import { validateCSRFWithMobile } from "@/lib/csrf";
 
 // Form data schema for document upload
 const documentUploadSchema = z.object({
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     const userOrgId = session.organizationId;
 
     // Check CSRF token
-    const csrfError = requireCSRF(request);
+    const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) {
       return csrfError;
     }
@@ -217,7 +217,11 @@ export async function POST(request: NextRequest) {
       }
 
       // Verify user belongs to this organization (admins can upload for any org)
-      if (entityId !== userOrgId && session.role !== "ADMIN") {
+      if (
+        entityId !== userOrgId &&
+        session.role !== "ADMIN" &&
+        session.role !== "SUPER_ADMIN"
+      ) {
         return NextResponse.json(
           { error: "You can only upload documents for your own organization" },
           { status: 403 }
@@ -234,7 +238,11 @@ export async function POST(request: NextRequest) {
       }
 
       // Verify user's organization owns this truck (admins can upload for any truck)
-      if (truck.carrierId !== userOrgId && session.role !== "ADMIN") {
+      if (
+        truck.carrierId !== userOrgId &&
+        session.role !== "ADMIN" &&
+        session.role !== "SUPER_ADMIN"
+      ) {
         return NextResponse.json(
           {
             error:

@@ -7,9 +7,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { db } from "@/lib/db";
+import { handleApiError } from "@/lib/apiErrors";
 
 /**
  * GET /api/user/notification-preferences
@@ -18,7 +19,7 @@ import { db } from "@/lib/db";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Get user preferences
     const user = await db.user.findUnique({
@@ -32,11 +33,7 @@ export async function GET(request: NextRequest) {
       preferences: user?.notificationPreferences || {},
     });
   } catch (error) {
-    console.error("Failed to get notification preferences:", error);
-    return NextResponse.json(
-      { error: "Failed to retrieve preferences" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Failed to get notification preferences");
   }
 }
 
@@ -53,7 +50,7 @@ export async function POST(request: NextRequest) {
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     const body = await request.json();
     const { preferences } = body;
@@ -103,10 +100,6 @@ export async function POST(request: NextRequest) {
       message: "Preferences updated successfully",
     });
   } catch (error) {
-    console.error("Failed to update notification preferences:", error);
-    return NextResponse.json(
-      { error: "Failed to update preferences" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Failed to update notification preferences");
   }
 }

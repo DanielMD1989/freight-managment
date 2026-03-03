@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { GpsDeviceStatus } from "@prisma/client";
+import { handleApiError } from "@/lib/apiErrors";
 
 // POST /api/gps/devices/[id]/verify - Manually verify GPS device
 export async function POST(
@@ -63,10 +64,6 @@ export async function POST(
       device: updatedDevice,
     });
   } catch (error) {
-    console.error("Verify GPS device error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Verify GPS device error");
   }
 }

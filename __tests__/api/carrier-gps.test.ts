@@ -281,16 +281,14 @@ describe("Carrier GPS API", () => {
   // ─── GET /api/gps/devices ─────────────────────────────────────────────────
 
   describe("GET /api/gps/devices", () => {
-    it("returns 500 for unauthenticated requests", async () => {
-      // The GPS devices route does not use handleApiError;
-      // its generic catch block returns 500 for any error
+    it("returns 401 for unauthenticated requests", async () => {
       setAuthSession(null);
 
       const req = createRequest("GET", "http://localhost:3000/api/gps/devices");
       const res = await callHandler(listGPSDevices, req);
       const body = await parseResponse(res);
 
-      expect(res.status).toBe(500);
+      expect(res.status).toBe(401);
       expect(body.error).toBeDefined();
     });
 

@@ -62,6 +62,8 @@ export async function GET(
 
     const isOwner = user?.organizationId === truck.carrierId;
     const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+    const isOrgDispatcher =
+      user?.role === "DISPATCHER" && user?.organizationId === truck.carrierId;
 
     // Shippers can view history if truck is on their active load
     let isShipperWithActiveLoad = false;
@@ -76,7 +78,7 @@ export async function GET(
       isShipperWithActiveLoad = !!activeLoad;
     }
 
-    if (!isOwner && !isAdmin && !isShipperWithActiveLoad) {
+    if (!isOwner && !isAdmin && !isOrgDispatcher && !isShipperWithActiveLoad) {
       // Resource cloaking: use 404 to avoid revealing truck existence to unauthorized viewers
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
