@@ -292,6 +292,31 @@ describe("Cross-Role Access — CARRIER_FINAL_AUTHORITY (POST /api/loads/[id]/as
         passwordHash: "mock-hash",
       },
     });
+
+    // Create a truck owned by a DIFFERENT org for the cross-ownership test.
+    // After BUG-3 fix, CARRIER passes canAssignLoads; the 404 now comes from
+    // the truck ownership check (carrier-org-1 cannot use other-carrier's truck).
+    await db.organization.create({
+      data: {
+        id: "cross-other-carrier-org",
+        name: "Cross Other Carrier",
+        type: "CARRIER_COMPANY",
+        contactEmail: "crossother@example.com",
+        contactPhone: "+251911000099",
+      },
+    });
+    await db.truck.create({
+      data: {
+        id: "cross-other-carrier-truck",
+        truckType: "DRY_VAN",
+        licensePlate: "XX-CROSS-99",
+        capacity: 8000,
+        isAvailable: true,
+        carrierId: "cross-other-carrier-org",
+        createdById: "carrier-user-1",
+        approvalStatus: "APPROVED",
+      },
+    });
   });
 
   afterAll(() => clearAllStores());
@@ -301,19 +326,20 @@ describe("Cross-Role Access — CARRIER_FINAL_AUTHORITY (POST /api/loads/[id]/as
     setAuthSession(carrierSession);
   });
 
-  it("CARRIER cannot directly assign a load → 404 (canAssignLoads false → resource cloaked)", async () => {
-    // canAssignLoads mock returns false for CARRIER → route returns 404
+  it("CARRIER cannot directly assign using another org's truck → 404 (ownership check)", async () => {
+    // After BUG-3 fix: CARRIER passes canAssignLoads (CARRIER is in allowed list).
+    // The 404 now comes from truck ownership check: carrier-org-1 cannot use
+    // a truck owned by cross-other-carrier-org.
     const req = createRequest(
       "POST",
       `http://localhost:3000/api/loads/${seed.load.id}/assign`,
-      { body: { truckId: seed.truck.id } }
+      { body: { truckId: "cross-other-carrier-truck" } }
     );
     const res = await callHandler(assignLoad, req, { id: seed.load.id });
     const body = await parseResponse(res);
 
-    // Route applies resource cloaking: 404 when carrier cannot assign
     expect(res.status).toBe(404);
-    expect(body.error).toMatch(/not found|cannot/i);
+    expect(body.error).toMatch(/not found/i);
   });
 });
 

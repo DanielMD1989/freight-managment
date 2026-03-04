@@ -112,10 +112,12 @@ async function postHandler(
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
-    // GPS writes are restricted to carrier only (from spec)
+    // GPS writes are restricted to the owning carrier.
+    // ADMIN/SUPER_ADMIN may override for ops/support purposes.
     const isCarrier =
       session.role === "CARRIER" && trip.carrierId === session.organizationId;
-    if (!isCarrier) {
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
+    if (!isCarrier && !isAdmin) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 

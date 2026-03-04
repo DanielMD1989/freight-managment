@@ -272,11 +272,21 @@ export async function POST(
     } catch (settlementError: unknown) {
       console.error("Settlement processing error:", settlementError);
 
-      // IDEMPOTENCY: Reset status on failure so it can be retried
-      await db.load.update({
-        where: { id: loadId },
-        data: { settlementStatus: "PENDING" },
-      });
+      // IDEMPOTENCY: Reset status on failure so it can be retried.
+      // BUG-4 FIX: Wrap in try-catch — if DB is also flaky at this point,
+      // we log a CRITICAL alert rather than silently leaving load stuck in IN_PROGRESS.
+      try {
+        await db.load.update({
+          where: { id: loadId },
+          data: { settlementStatus: "PENDING" },
+        });
+      } catch (resetError) {
+        // CRITICAL: Load stuck in IN_PROGRESS — manual intervention required
+        console.error(
+          "[CRITICAL] Settlement status reset failed — load stuck in IN_PROGRESS",
+          { loadId, resetError }
+        );
+      }
 
       return NextResponse.json(
         {

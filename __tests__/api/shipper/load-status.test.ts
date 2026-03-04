@@ -342,6 +342,101 @@ describe("Load Status API", () => {
       expect(data.error).toMatch(/Cannot complete trip: fee deduction failed/);
     });
 
+    // GAP-3: Fee-already-deducted retry path (validates BUG-1 fix)
+
+    it("COMPLETED retry when shipperFeeStatus=DEDUCTED → 200 (not 400)", async () => {
+      setAuthSession(adminSession);
+
+      // Simulate post-crash state: fees were deducted but status transaction failed.
+      // shipperFeeStatus="DEDUCTED" but no SERVICE_FEE_DEDUCTED LoadEvent.
+      await db.load.create({
+        data: {
+          id: "load-fee-deducted-retry",
+          status: "DELIVERED",
+          pickupCity: "Addis Ababa",
+          pickupDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          deliveryCity: "Dire Dawa",
+          deliveryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+          truckType: "DRY_VAN",
+          weight: 3000,
+          cargoDescription: "Retry after crash cargo",
+          shipperId: "shipper-org-1",
+          createdById: "shipper-user-1",
+          shipperFeeStatus: "DEDUCTED",
+          postedAt: new Date(),
+        },
+      });
+
+      // deductServiceFee should NOT be called (fees already deducted at DB level),
+      // but set up mock to simulate the "already deducted" error just in case
+      jest
+        .requireMock("@/lib/serviceFeeManagement")
+        .deductServiceFee.mockResolvedValueOnce({
+          success: false,
+          error: "Service fees already deducted",
+        });
+
+      const req = createRequest(
+        "PATCH",
+        "http://localhost:3000/api/loads/load-fee-deducted-retry/status",
+        { body: { status: "COMPLETED" } }
+      );
+
+      const res = await callHandler(updateStatus, req, {
+        id: "load-fee-deducted-retry",
+      });
+
+      // BUG-1 fix: route detects fees already deducted and skips deduction → 200
+      expect(res.status).toBe(200);
+
+      const data = await parseResponse(res);
+      expect(data.load).toBeDefined();
+      expect(data.load.status).toBe("COMPLETED");
+    });
+
+    it("COMPLETED retry when deductServiceFee returns 'already deducted' error → 200", async () => {
+      setAuthSession(adminSession);
+
+      // Load is in DELIVERED state with no fee status set (PENDING by default)
+      // but deductServiceFee returns the idempotency error
+      await db.load.create({
+        data: {
+          id: "load-fee-idempotency-retry",
+          status: "DELIVERED",
+          pickupCity: "Addis Ababa",
+          pickupDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          deliveryCity: "Hawassa",
+          deliveryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+          truckType: "DRY_VAN",
+          weight: 2500,
+          cargoDescription: "Idempotency retry cargo",
+          shipperId: "shipper-org-1",
+          createdById: "shipper-user-1",
+          postedAt: new Date(),
+        },
+      });
+
+      jest
+        .requireMock("@/lib/serviceFeeManagement")
+        .deductServiceFee.mockResolvedValueOnce({
+          success: false,
+          error: "Service fees already deducted",
+        });
+
+      const req = createRequest(
+        "PATCH",
+        "http://localhost:3000/api/loads/load-fee-idempotency-retry/status",
+        { body: { status: "COMPLETED" } }
+      );
+
+      const res = await callHandler(updateStatus, req, {
+        id: "load-fee-idempotency-retry",
+      });
+
+      // BUG-1 fix: "already deducted" error is treated as success → 200
+      expect(res.status).toBe(200);
+    });
+
     it("carrier sets DELIVERED on assigned load → 200", async () => {
       setAuthSession(carrierSession);
 

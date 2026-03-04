@@ -352,6 +352,30 @@ describe("US-15 · Cross-Role Access Denial", () => {
       const res = await createTruckPosting(req);
       expect(res.status).toBe(403);
     });
+
+    // GAP-5: ADMIN/SUPER_ADMIN can post truck postings
+    it("ADMIN can POST truck posting → not 403", async () => {
+      setAuthSession(adminSession);
+      const req = createRequest(
+        "POST",
+        "http://localhost:3000/api/truck-postings",
+        { body: validPosting }
+      );
+      const res = await createTruckPosting(req);
+      // Admin is allowed; may get 400/409 due to state but NOT 403
+      expect(res.status).not.toBe(403);
+    });
+
+    it("SUPER_ADMIN can POST truck posting → not 403", async () => {
+      setAuthSession(superAdminSession);
+      const req = createRequest(
+        "POST",
+        "http://localhost:3000/api/truck-postings",
+        { body: validPosting }
+      );
+      const res = await createTruckPosting(req);
+      expect(res.status).not.toBe(403);
+    });
   });
 
   // ─── POST /api/match-proposals ────────────────────────────────────────────
@@ -471,6 +495,33 @@ describe("US-15 · Cross-Role Access Denial", () => {
         tripId: "cross-trip-1",
       });
       expect(res.status).toBe(404);
+    });
+
+    // GAP-5: ADMIN/SUPER_ADMIN can post GPS for any trip
+    it("ADMIN can POST GPS for any trip → 200/201", async () => {
+      setAuthSession(adminSession);
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/trips/cross-trip-1/gps`,
+        { body: validGps }
+      );
+      const res = await callHandler(createGpsUpdate, req, {
+        tripId: "cross-trip-1",
+      });
+      expect([200, 201]).toContain(res.status);
+    });
+
+    it("SUPER_ADMIN can POST GPS for any trip → 200/201", async () => {
+      setAuthSession(superAdminSession);
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/trips/cross-trip-1/gps`,
+        { body: validGps }
+      );
+      const res = await callHandler(createGpsUpdate, req, {
+        tripId: "cross-trip-1",
+      });
+      expect([200, 201]).toContain(res.status);
     });
   });
 

@@ -67,16 +67,17 @@ export async function POST(request: NextRequest) {
     if (csrfError) return csrfError;
 
     const session = await requireActiveUser();
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
-    // Only carriers can request loads
-    if (session.role !== "CARRIER") {
+    // BUG-2 FIX: Allow ADMIN/SUPER_ADMIN to create load requests on behalf of carriers
+    if (!isAdmin && session.role !== "CARRIER") {
       return NextResponse.json(
         { error: "Only carriers can request loads" },
         { status: 403 }
       );
     }
 
-    if (!session.organizationId) {
+    if (!isAdmin && !session.organizationId) {
       return NextResponse.json(
         { error: "Carrier must belong to an organization" },
         { status: 400 }
@@ -146,8 +147,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
-    // Verify carrier owns the truck
-    if (truck.carrierId !== session.organizationId) {
+    // BUG-2 FIX: Admins act on behalf of the truck's carrier org.
+    // For carriers, enforce that they own the truck.
+    const effectiveCarrierId = isAdmin
+      ? truck.carrierId
+      : session.organizationId!;
+
+    if (!isAdmin && truck.carrierId !== session.organizationId) {
       return NextResponse.json({ error: "Truck not found" }, { status: 404 });
     }
 
@@ -196,7 +202,7 @@ export async function POST(request: NextRequest) {
     // Validate wallet balances before creating the request
     const walletValidation = await validateWalletBalancesForTrip(
       data.loadId,
-      session.organizationId!
+      effectiveCarrierId
     );
     if (!walletValidation.valid) {
       return NextResponse.json(
@@ -221,7 +227,7 @@ export async function POST(request: NextRequest) {
       data: {
         loadId: data.loadId,
         truckId: data.truckId,
-        carrierId: session.organizationId,
+        carrierId: effectiveCarrierId,
         requestedById: session.userId,
         shipperId: load.shipperId!,
         notes: data.notes,
@@ -269,7 +275,7 @@ export async function POST(request: NextRequest) {
         metadata: {
           loadRequestId: loadRequest.id,
           truckId: data.truckId,
-          carrierId: session.organizationId,
+          carrierId: effectiveCarrierId,
         },
       },
     });

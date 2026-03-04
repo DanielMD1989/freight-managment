@@ -413,7 +413,7 @@ export async function PATCH(
     }
 
     // HIGH FIX #7: Wrap Load update + Trip sync in transaction for atomicity
-    const { load, tripSynced } = await db.$transaction(async (tx) => {
+    const { load } = await db.$transaction(async (tx) => {
       const load = await tx.load.update({
         where: { id },
         data: {
@@ -480,9 +480,6 @@ export async function PATCH(
 
       return { load, tripSynced };
     });
-
-    if (tripSynced) {
-    }
 
     // Log truck unassignment if it happened
     const terminalStatuses = ["COMPLETED", "CANCELLED", "EXPIRED"];

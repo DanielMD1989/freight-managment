@@ -277,6 +277,76 @@ describe("US-10 · Wallet / Financial Settlement", () => {
     });
   });
 
+  // ─── GAP-4: Shipper wallet tests ─────────────────────────────────────────
+
+  describe("Shipper wallet via GET /api/wallet/balance", () => {
+    it("SHIPPER can GET own wallet balance → 200 with SHIPPER_WALLET", async () => {
+      setAuthSession(shipperSession);
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/wallet/balance"
+      );
+      const res = await getBalance(req);
+      expect(res.status).toBe(200);
+      const data = await parseResponse(res);
+      expect(data.totalBalance).toBeDefined();
+      expect(data.wallets).toBeDefined();
+      expect(Array.isArray(data.wallets)).toBe(true);
+    });
+
+    it("SHIPPER wallet type is SHIPPER_WALLET (not CARRIER_WALLET)", async () => {
+      setAuthSession(shipperSession);
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/wallet/balance"
+      );
+      const res = await getBalance(req);
+      const data = await parseResponse(res);
+      const walletTypes = data.wallets.map((w: any) => w.type);
+      expect(walletTypes).toContain("SHIPPER_WALLET");
+      expect(walletTypes).not.toContain("CARRIER_WALLET");
+    });
+
+    it("SHIPPER wallet has positive balance from seed data", async () => {
+      setAuthSession(shipperSession);
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/wallet/balance"
+      );
+      const res = await getBalance(req);
+      const data = await parseResponse(res);
+      expect(data.totalBalance).toBeGreaterThan(0);
+    });
+
+    it("SHIPPER wallet currency is ETB", async () => {
+      setAuthSession(shipperSession);
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/wallet/balance"
+      );
+      const res = await getBalance(req);
+      const data = await parseResponse(res);
+      expect(data.currency).toBe("ETB");
+    });
+
+    it("SHIPPER cannot see CARRIER wallet (different org isolation)", async () => {
+      // The shipper org only has a SHIPPER_WALLET;
+      // carrier's CARRIER_WALLET belongs to a different organizationId.
+      setAuthSession(shipperSession);
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/wallet/balance"
+      );
+      const res = await getBalance(req);
+      const data = await parseResponse(res);
+      // Shipper's wallet list must not include any CARRIER_WALLET type
+      const hasCarrierWallet = data.wallets.some(
+        (w: any) => w.type === "CARRIER_WALLET"
+      );
+      expect(hasCarrierWallet).toBe(false);
+    });
+  });
+
   // ─── GET /api/wallet/transactions ───────────────────────────────────────
 
   describe("GET /api/wallet/transactions", () => {

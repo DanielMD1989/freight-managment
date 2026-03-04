@@ -97,6 +97,20 @@ const carrierSession = createMockSession({
   status: "ACTIVE",
 });
 
+const adminSession = createMockSession({
+  userId: "lr-admin-user-1",
+  role: "ADMIN",
+  organizationId: "lr-admin-org-1",
+  status: "ACTIVE",
+});
+
+const superAdminSession = createMockSession({
+  userId: "lr-superadmin-user-1",
+  role: "SUPER_ADMIN",
+  organizationId: "lr-admin-org-1",
+  status: "ACTIVE",
+});
+
 // ─── Tests ─────────────────────────────────────────────────────────────────────
 
 describe("Load Requests — POST /api/load-requests", () => {
@@ -104,6 +118,43 @@ describe("Load Requests — POST /api/load-requests", () => {
 
   beforeAll(async () => {
     seed = await seedTestData();
+
+    // GAP-1: Create admin org + users for admin load-request tests
+    await db.organization.create({
+      data: {
+        id: "lr-admin-org-1",
+        name: "Load Request Admin Org",
+        type: "PLATFORM",
+        contactEmail: "lradmin@test.com",
+        contactPhone: "+251911000091",
+      },
+    });
+    await db.user.create({
+      data: {
+        id: "lr-admin-user-1",
+        email: "lradmin@test.com",
+        passwordHash: "hashed_Test1234!",
+        firstName: "LR",
+        lastName: "Admin",
+        phone: "+251911000091",
+        role: "ADMIN",
+        status: "ACTIVE",
+        organizationId: "lr-admin-org-1",
+      },
+    });
+    await db.user.create({
+      data: {
+        id: "lr-superadmin-user-1",
+        email: "lrsuperadmin@test.com",
+        passwordHash: "hashed_Test1234!",
+        firstName: "LR",
+        lastName: "SuperAdmin",
+        phone: "+251911000092",
+        role: "SUPER_ADMIN",
+        status: "ACTIVE",
+        organizationId: "lr-admin-org-1",
+      },
+    });
   });
 
   afterAll(() => {
@@ -197,6 +248,90 @@ describe("Load Requests — POST /api/load-requests", () => {
     );
     const res = await createLoadRequest(req);
     expect(res.status).toBe(401);
+  });
+
+  // GAP-1: ADMIN/SUPER_ADMIN can create load requests on behalf of carriers (BUG-2 fix)
+
+  it("ADMIN can create load request on behalf of carrier → 201, status=PENDING", async () => {
+    setAuthSession(adminSession);
+
+    // Create a fresh POSTED load for this test
+    await db.load.create({
+      data: {
+        id: "load-admin-lr-001",
+        status: "POSTED",
+        pickupCity: "Addis Ababa",
+        pickupDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        deliveryCity: "Hawassa",
+        deliveryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        truckType: "DRY_VAN",
+        weight: 3000,
+        cargoDescription: "Admin-created load request cargo",
+        shipperId: "shipper-org-1",
+        createdById: "shipper-user-1",
+        postedAt: new Date(),
+      },
+    });
+
+    const req = createRequest(
+      "POST",
+      "http://localhost:3000/api/load-requests",
+      {
+        body: {
+          loadId: "load-admin-lr-001",
+          truckId: seed.truck.id,
+          notes: "Admin creating on behalf of carrier",
+          expiresInHours: 24,
+        },
+      }
+    );
+    const res = await createLoadRequest(req);
+    const body = await parseResponse(res);
+
+    expect([200, 201]).toContain(res.status);
+    expect(body.loadRequest).toBeDefined();
+    expect(body.loadRequest.status).toBe("PENDING");
+    // carrierId should be the truck's carrier org, not the admin's org
+    expect(body.loadRequest.carrierId).toBe("carrier-org-1");
+  });
+
+  it("SUPER_ADMIN can create load request → 201, status=PENDING", async () => {
+    setAuthSession(superAdminSession);
+
+    await db.load.create({
+      data: {
+        id: "load-superadmin-lr-001",
+        status: "POSTED",
+        pickupCity: "Addis Ababa",
+        pickupDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        deliveryCity: "Dire Dawa",
+        deliveryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        truckType: "DRY_VAN",
+        weight: 2500,
+        cargoDescription: "Super admin load request cargo",
+        shipperId: "shipper-org-1",
+        createdById: "shipper-user-1",
+        postedAt: new Date(),
+      },
+    });
+
+    const req = createRequest(
+      "POST",
+      "http://localhost:3000/api/load-requests",
+      {
+        body: {
+          loadId: "load-superadmin-lr-001",
+          truckId: seed.truck.id,
+          expiresInHours: 24,
+        },
+      }
+    );
+    const res = await createLoadRequest(req);
+    const body = await parseResponse(res);
+
+    expect([200, 201]).toContain(res.status);
+    expect(body.loadRequest).toBeDefined();
+    expect(body.loadRequest.status).toBe("PENDING");
   });
 });
 

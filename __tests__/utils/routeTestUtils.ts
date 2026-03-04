@@ -489,10 +489,9 @@ export function mockDispatcherPermissions() {
     canPropose: jest.fn((user: any) =>
       ["DISPATCHER", "ADMIN", "SUPER_ADMIN"].includes(user?.role ?? user)
     ),
+    // BUG-3 FIX: matches real dispatcherPermissions.ts — CARRIER can assign, not SHIPPER/DISPATCHER
     canAssignLoads: jest.fn((user: any) =>
-      ["ADMIN", "SUPER_ADMIN", "SHIPPER", "DISPATCHER"].includes(
-        user?.role ?? user
-      )
+      ["ADMIN", "SUPER_ADMIN", "CARRIER"].includes(user?.role ?? user)
     ),
   }));
 }

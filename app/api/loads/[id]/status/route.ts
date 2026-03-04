@@ -110,6 +110,9 @@ export async function PATCH(
             status: true,
           },
         },
+        // BUG-1 FIX: Include fee status for idempotency check on retry
+        shipperFeeStatus: true,
+        carrierFeeStatus: true,
       },
     });
 
@@ -214,24 +217,38 @@ export async function PATCH(
         where: { loadId, eventType: "SERVICE_FEE_DEDUCTED" },
       });
 
-      if (!existingFeeEvent) {
+      // BUG-1 FIX: Also check DB-level fee status for retry idempotency.
+      // If a previous attempt deducted fees but the status transaction failed,
+      // shipperFeeStatus will be "DEDUCTED" even though no LoadEvent was written.
+      const feesAlreadyDeducted =
+        load.shipperFeeStatus === "DEDUCTED" ||
+        load.carrierFeeStatus === "DEDUCTED";
+
+      if (!existingFeeEvent && !feesAlreadyDeducted) {
         try {
           serviceFeeResult = await deductServiceFee(loadId);
 
           if (!serviceFeeResult.success) {
-            // Fee deduction failed - block completion
-            return NextResponse.json(
-              {
-                error: "Cannot complete trip: fee deduction failed",
-                details:
-                  serviceFeeResult.error || "Unknown fee deduction error",
-                feeDetails: {
-                  shipperFee: serviceFeeResult.shipperFee?.toFixed(2),
-                  carrierFee: serviceFeeResult.carrierFee?.toFixed(2),
+            // IDEMPOTENCY: "already deducted" means a previous attempt succeeded
+            // but the status transaction failed — treat as success so completion
+            // can retry without re-charging.
+            if (serviceFeeResult.error === "Service fees already deducted") {
+              serviceFeeResult = null; // skip event creation; fees already handled
+            } else {
+              // Fee deduction failed for a real reason - block completion
+              return NextResponse.json(
+                {
+                  error: "Cannot complete trip: fee deduction failed",
+                  details:
+                    serviceFeeResult.error || "Unknown fee deduction error",
+                  feeDetails: {
+                    shipperFee: serviceFeeResult.shipperFee?.toFixed(2),
+                    carrierFee: serviceFeeResult.carrierFee?.toFixed(2),
+                  },
                 },
-              },
-              { status: 400 }
-            );
+                { status: 400 }
+              );
+            }
           }
           // FIX: Use unknown type with type guard
         } catch (feeError: unknown) {

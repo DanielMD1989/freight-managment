@@ -653,4 +653,48 @@ describe("Load Assignment API", () => {
       expect([401, 500]).toContain(res.status);
     });
   });
+
+  // GAP-2: SHIPPER direct-assign 404 (validates BUG-3 fix — canAssignLoads returns false for SHIPPER)
+
+  describe("POST /loads/[id]/assign (SHIPPER blocked by canAssignLoads)", () => {
+    it("SHIPPER with canAssignLoads=false → 404 (resource cloaking)", async () => {
+      setAuthSession(shipperSession);
+
+      // Force canAssignLoads to return false for this call
+      // (reflects the corrected global mock after BUG-3 fix)
+      jest
+        .requireMock("@/lib/dispatcherPermissions")
+        .canAssignLoads.mockReturnValueOnce(false);
+
+      await db.load.create({
+        data: {
+          id: "load-shipper-blocked-assign",
+          status: "POSTED",
+          pickupCity: "Addis Ababa",
+          pickupDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+          deliveryCity: "Dire Dawa",
+          deliveryDate: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000),
+          truckType: "DRY_VAN",
+          weight: 2000,
+          cargoDescription: "Blocked shipper assign attempt",
+          shipperId: "shipper-org-1",
+          createdById: "shipper-user-1",
+          postedAt: new Date(),
+        },
+      });
+
+      const req = createRequest(
+        "POST",
+        "http://localhost:3000/api/loads/load-shipper-blocked-assign/assign",
+        { body: { truckId: seed.truck.id } }
+      );
+
+      const res = await callHandler(assignLoad, req, {
+        id: "load-shipper-blocked-assign",
+      });
+
+      // Route returns 404 (resource cloaking) when canAssignLoads is false
+      expect(res.status).toBe(404);
+    });
+  });
 });
