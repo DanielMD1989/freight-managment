@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
-import { writeFile, mkdir } from "fs/promises";
+import { writeFile, mkdir, unlink } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
 import { DocumentType } from "@prisma/client";
@@ -232,18 +232,25 @@ export async function POST(
     const buffer = Buffer.from(bytes);
     await writeFile(filePath, buffer);
 
-    // Create document record
-    const document = await db.document.create({
-      data: {
-        loadId: id,
-        type: type as DocumentType,
-        fileName: file.name,
-        fileUrl: `/uploads/loads/${id}/${fileName}`,
-        fileSize: file.size,
-        mimeType: file.type,
-        description: description || undefined,
-      },
-    });
+    // Create document record — if this fails, clean up the orphaned file
+    let document;
+    try {
+      document = await db.document.create({
+        data: {
+          loadId: id,
+          type: type as DocumentType,
+          fileName: file.name,
+          fileUrl: `/uploads/loads/${id}/${fileName}`,
+          fileSize: file.size,
+          mimeType: file.type,
+          description: description || undefined,
+        },
+      });
+    } catch (dbError) {
+      // Remove orphaned file to prevent disk leaks
+      await unlink(filePath).catch(() => {});
+      throw dbError;
+    }
 
     return NextResponse.json({
       message: "Document uploaded successfully",

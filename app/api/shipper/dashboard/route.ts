@@ -13,7 +13,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { handleApiError } from "@/lib/apiErrors";
 
@@ -32,7 +32,7 @@ import { handleApiError } from "@/lib/apiErrors";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Check if user is a shipper or admin
     if (session.role !== "SHIPPER" && session.role !== "ADMIN") {
