@@ -125,6 +125,12 @@ export function mockAuth() {
     generateOTP: jest.fn(() => "123456"),
     validatePasswordPolicy: jest.fn(() => ({ valid: true, errors: [] })),
     createToken: jest.fn(async () => "mock-token"),
+    getSession: jest.fn(async () => {
+      const { getAuthSession } = require("../utils/routeTestUtils");
+      return getAuthSession();
+    }),
+    clearSession: jest.fn(async () => {}),
+    revokeAllSessions: jest.fn(async () => {}),
   }));
 }
 
@@ -133,6 +139,7 @@ export function mockCsrf() {
     validateCSRFWithMobile: jest.fn(async () => null), // null = valid
     requireCSRF: jest.fn(async () => null),
     generateCSRFToken: jest.fn(() => "mock-csrf-token"),
+    clearCSRFToken: jest.fn(() => {}),
   }));
 }
 
@@ -255,6 +262,10 @@ export function mockNotifications() {
     getRecentNotifications: jest.fn(async () => []),
     getUnreadCount: jest.fn(async () => 0),
     markAsRead: jest.fn(async () => {}),
+    markAllAsRead: jest.fn(async () => ({ count: 1 })),
+    notifyLoadStakeholders: jest.fn(async () => {}),
+    notifyExceptionAssigned: jest.fn(async () => {}),
+    createNotificationForRole: jest.fn(async () => ({ id: "notif-role-1" })),
     NotificationType: {
       LOAD_REQUEST: "LOAD_REQUEST",
       TRUCK_REQUEST: "TRUCK_REQUEST",
@@ -292,6 +303,18 @@ export function mockGps() {
   }));
   jest.mock("@/lib/gpsTracking", () => ({
     enableTrackingForLoad: jest.fn(async () => {}),
+    disableTrackingForLoad: jest.fn(async () => {}),
+    getTrackingStatus: jest.fn(async () => ({
+      enabled: true,
+      loadId: "test-load-001",
+      truckId: "test-truck-001",
+      lastUpdated: null,
+    })),
+    canAccessTracking: jest.fn(async () => true),
+    checkGeofenceEvents: jest.fn(async () => []),
+    getLoadLivePosition: jest.fn(async () => null),
+    isTrackingActive: jest.fn(async () => true),
+    generateTrackingUrl: jest.fn((loadId: string) => `tracking-${loadId}`),
   }));
 }
 
@@ -314,6 +337,10 @@ export function mockFoundationRules() {
     RULE_CARRIER_FINAL_AUTHORITY: {
       id: "CARRIER_FINAL_AUTHORITY",
       description: "Carrier must approve",
+    },
+    RULE_DISPATCHER_COORDINATION_ONLY: {
+      id: "DISPATCHER_COORDINATION_ONLY",
+      description: "Dispatchers propose matches, carriers approve",
     },
     validateOneActivePostPerTruck: jest.fn(() => true),
     canModifyTruckOwnership: jest.fn((role: string) => role === "CARRIER"),
@@ -348,6 +375,20 @@ export function mockSms() {
 export function mockMatchingEngine() {
   jest.mock("@/lib/matchingEngine", () => ({
     findMatchingLoads: jest.fn(async () => []),
+    findMatchingTrucks: jest.fn(async () => [
+      {
+        id: "test-truck-001",
+        score: 85,
+        isExactMatch: true,
+        carrier: {
+          id: "carrier-org-1",
+          name: "Test Carrier LLC",
+          isVerified: true,
+        },
+        contactName: "Test Carrier",
+        contactPhone: "+251911000002",
+      },
+    ]),
   }));
 }
 
@@ -442,6 +483,17 @@ export function mockDispatcherPermissions() {
     hasElevatedPermissions: jest.fn(() => false),
     canRequestTruck: jest.fn(() => true),
     canApproveRequests: jest.fn(() => true),
+    canProposeMatch: jest.fn((user: any) =>
+      ["DISPATCHER", "ADMIN", "SUPER_ADMIN"].includes(user?.role ?? user)
+    ),
+    canPropose: jest.fn((user: any) =>
+      ["DISPATCHER", "ADMIN", "SUPER_ADMIN"].includes(user?.role ?? user)
+    ),
+    canAssignLoads: jest.fn((user: any) =>
+      ["ADMIN", "SUPER_ADMIN", "SHIPPER", "DISPATCHER"].includes(
+        user?.role ?? user
+      )
+    ),
   }));
 }
 
@@ -489,6 +541,19 @@ export function mockServiceFee() {
       carrierFee: "50.00",
     })),
     deductServiceFees: jest.fn(async () => ({ success: true })),
+    deductServiceFee: jest.fn(async () => ({
+      success: true,
+      serviceFee: 150,
+      shipperFee: 100,
+      carrierFee: 50,
+      totalPlatformFee: 150,
+      platformRevenue: 150,
+      transactionId: "txn-mock",
+      details: {
+        shipper: { fee: 100, status: "DEDUCTED" },
+        carrier: { fee: 50, status: "DEDUCTED" },
+      },
+    })),
   }));
 }
 
@@ -509,16 +574,58 @@ export function mockLoadUtils() {
 
 export function mockLoadStateMachine() {
   jest.mock("@/lib/loadStateMachine", () => ({
-    validateStateTransition: jest.fn(() => true),
+    validateStateTransition: jest.fn(() => ({ valid: true, error: undefined })),
+    getStatusDescription: jest.fn((status: string) => `Status: ${status}`),
+    getValidNextStates: jest.fn((_status: string) => []),
+    isValidTransition: jest.fn(() => true),
+    canRoleSetStatus: jest.fn(() => true),
     LoadStatus: {
       DRAFT: "DRAFT",
       POSTED: "POSTED",
+      SEARCHING: "SEARCHING",
+      OFFERED: "OFFERED",
       ASSIGNED: "ASSIGNED",
       PICKUP_PENDING: "PICKUP_PENDING",
       IN_TRANSIT: "IN_TRANSIT",
       DELIVERED: "DELIVERED",
       COMPLETED: "COMPLETED",
+      EXCEPTION: "EXCEPTION",
       CANCELLED: "CANCELLED",
+      EXPIRED: "EXPIRED",
+      UNPOSTED: "UNPOSTED",
+    },
+    VALID_TRANSITIONS: {},
+    ROLE_PERMISSIONS: {
+      SHIPPER: ["POSTED", "UNPOSTED", "CANCELLED"],
+      CARRIER: ["PICKUP_PENDING", "IN_TRANSIT", "DELIVERED"],
+      DISPATCHER: [
+        "POSTED",
+        "UNPOSTED",
+        "CANCELLED",
+        "PICKUP_PENDING",
+        "IN_TRANSIT",
+        "DELIVERED",
+      ],
+      ADMIN: [
+        "POSTED",
+        "UNPOSTED",
+        "CANCELLED",
+        "PICKUP_PENDING",
+        "IN_TRANSIT",
+        "DELIVERED",
+        "COMPLETED",
+        "EXCEPTION",
+      ],
+      SUPER_ADMIN: [
+        "POSTED",
+        "UNPOSTED",
+        "CANCELLED",
+        "PICKUP_PENDING",
+        "IN_TRANSIT",
+        "DELIVERED",
+        "COMPLETED",
+        "EXCEPTION",
+      ],
     },
   }));
 }
@@ -534,6 +641,43 @@ export function mockBypassDetection() {
   jest.mock("@/lib/bypassDetection", () => ({
     checkSuspiciousCancellation: jest.fn(async () => ({
       suspicious: false,
+    })),
+  }));
+}
+
+export function mockAssignmentConflicts() {
+  jest.mock("@/lib/assignmentConflictDetection", () => ({
+    checkAssignmentConflicts: jest.fn(async () => ({
+      hasConflict: false,
+      conflicts: [],
+      warnings: [],
+    })),
+  }));
+}
+
+export function mockServiceFeeCalculation() {
+  jest.mock("@/lib/serviceFeeCalculation", () => ({
+    calculateFeePreview: jest.fn((distanceKm: number, pricePerKm: number) => ({
+      totalFee: distanceKm * pricePerKm,
+      promoApplied: false,
+      breakdown: { baseFee: distanceKm * pricePerKm, discount: 0 },
+    })),
+    calculateFeesFromCorridor: jest.fn(() => ({
+      shipperFee: 100,
+      carrierFee: 50,
+      platformRevenue: 150,
+    })),
+    calculateServiceFee: jest.fn(async () => ({
+      shipperFee: 100,
+      carrierFee: 50,
+      platformRevenue: 150,
+      corridor: null,
+    })),
+    findMatchingCorridor: jest.fn(async () => null),
+    calculateDualPartyFeePreview: jest.fn(() => ({
+      shipper: { fee: 100, percentage: 2 },
+      carrier: { fee: 50, percentage: 1 },
+      total: 150,
     })),
   }));
 }
@@ -603,6 +747,17 @@ export function setupAllMocks() {
   mockSms();
   mockMatchingEngine();
   mockDispatcherPermissions();
+  mockRbac();
+  mockApiErrors();
+  mockLogger();
+  mockServiceFee();
+  mockLoadStateMachine();
+  mockLoadUtils();
+  mockTrustMetrics();
+  mockBypassDetection();
+  mockStorage();
+  mockAssignmentConflicts();
+  mockServiceFeeCalculation();
 }
 
 // ─── Request Helpers ─────────────────────────────────────────────────────────

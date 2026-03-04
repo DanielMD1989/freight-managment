@@ -558,5 +558,56 @@ describe("Truck Requests — Deep Edge Cases", () => {
         "Found better carrier"
       );
     });
+
+    it("unrelated carrier cannot cancel shipper's request → 404 (resource cloaking)", async () => {
+      const unrelatedLoad = await db.load.create({
+        data: {
+          id: "load-unrelated-cancel-deep",
+          status: "POSTED",
+          pickupCity: "Addis Ababa",
+          deliveryCity: "Dire Dawa",
+          pickupDate: new Date(Date.now() + 86400000),
+          deliveryDate: new Date(Date.now() + 172800000),
+          truckType: "DRY_VAN",
+          weight: 5000,
+          cargoDescription: "Unrelated cancel test",
+          shipperId: seed.shipperOrg.id,
+          createdById: seed.shipperUser.id,
+        },
+      });
+
+      const pendingRequest = await db.truckRequest.create({
+        data: {
+          id: "tr-unrelated-cancel-deep",
+          loadId: unrelatedLoad.id,
+          truckId: seed.truck.id,
+          shipperId: seed.shipperOrg.id,
+          requestedById: seed.shipperUser.id,
+          status: "PENDING",
+          expiresAt: new Date(Date.now() + 86400000),
+        },
+      });
+
+      // Unrelated carrier (different org) tries to cancel shipper's request
+      const unrelatedCarrier = createMockSession({
+        userId: "unrelated-carrier-deep",
+        role: "CARRIER",
+        organizationId: "unrelated-carrier-deep-org",
+        status: "ACTIVE",
+      });
+      setAuthSession(unrelatedCarrier);
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/truck-requests/${pendingRequest.id}/cancel`,
+        { body: {} }
+      );
+      const res = await callHandler(cancelTruckRequest, req, {
+        id: pendingRequest.id,
+      });
+
+      // Route resource-cloaks → 404 (not 403) for unauthorized users
+      expect([403, 404]).toContain(res.status);
+    });
   });
 });

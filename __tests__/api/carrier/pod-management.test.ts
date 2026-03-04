@@ -99,6 +99,10 @@ jest.mock("@/lib/validation", () => ({
 
 // Import handlers AFTER mocks
 const { POST, PUT } = require("@/app/api/loads/[id]/pod/route");
+const {
+  POST: postTripPod,
+  GET: getTripPod,
+} = require("@/app/api/trips/[tripId]/pod/route");
 
 describe("POD Management", () => {
   let seed: SeedData;
@@ -674,6 +678,205 @@ describe("POD Management", () => {
         await callHandler(PUT, req, { id: seed.load.id });
 
         expect(CacheInvalidation.load).toHaveBeenCalled();
+      });
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // POST /api/trips/[tripId]/pod (Trip-level POD Upload — US-6.1)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe("POST /api/trips/[tripId]/pod", () => {
+    let deliveredTrip: { id: string };
+
+    beforeAll(async () => {
+      deliveredTrip = await db.trip.create({
+        data: {
+          id: "trip-pod-test",
+          loadId: seed.load.id,
+          truckId: seed.truck.id,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "DELIVERED",
+          trackingEnabled: true,
+        },
+      });
+    });
+
+    describe("Auth & Access", () => {
+      it("unauthenticated → 401 or 500", async () => {
+        setAuthSession(null);
+        const req = createFormDataRequest(
+          `http://localhost:3000/api/trips/${deliveredTrip.id}/pod`
+        );
+        const res = await callHandler(postTripPod, req, {
+          tripId: deliveredTrip.id,
+        });
+        expect([401, 500]).toContain(res.status);
+      });
+
+      it("shipper cannot upload trip POD → 404", async () => {
+        setAuthSession(shipperSession);
+        const req = createFormDataRequest(
+          `http://localhost:3000/api/trips/${deliveredTrip.id}/pod`,
+          { name: "pod.jpg", type: "image/jpeg", size: 1024 }
+        );
+        const res = await callHandler(postTripPod, req, {
+          tripId: deliveredTrip.id,
+        });
+        expect(res.status).toBe(404);
+      });
+
+      it("non-existent trip → 404", async () => {
+        setAuthSession(carrierSession);
+        const req = createFormDataRequest(
+          "http://localhost:3000/api/trips/nonexistent-trip/pod",
+          { name: "pod.jpg", type: "image/jpeg", size: 1024 }
+        );
+        const res = await callHandler(postTripPod, req, {
+          tripId: "nonexistent-trip",
+        });
+        expect(res.status).toBe(404);
+      });
+    });
+
+    describe("Status guards", () => {
+      it("trip not DELIVERED → 400", async () => {
+        setAuthSession(carrierSession);
+        const inTransitTrip = await db.trip.create({
+          data: {
+            id: "trip-pod-intransit",
+            loadId: seed.load.id,
+            truckId: seed.truck.id,
+            carrierId: seed.carrierOrg.id,
+            status: "IN_TRANSIT",
+            trackingEnabled: true,
+          },
+        });
+        const req = createFormDataRequest(
+          `http://localhost:3000/api/trips/${inTransitTrip.id}/pod`,
+          { name: "pod.jpg", type: "image/jpeg", size: 1024 }
+        );
+        const res = await callHandler(postTripPod, req, {
+          tripId: inTransitTrip.id,
+        });
+        expect(res.status).toBe(400);
+      });
+    });
+
+    describe("File validation", () => {
+      it("no file in formData → 400", async () => {
+        setAuthSession(carrierSession);
+        const req = createFormDataRequest(
+          `http://localhost:3000/api/trips/${deliveredTrip.id}/pod`,
+          null // no file
+        );
+        const res = await callHandler(postTripPod, req, {
+          tripId: deliveredTrip.id,
+        });
+        expect(res.status).toBe(400);
+      });
+
+      it("invalid file type (text/plain) → 400", async () => {
+        setAuthSession(carrierSession);
+        const req = createFormDataRequest(
+          `http://localhost:3000/api/trips/${deliveredTrip.id}/pod`,
+          { name: "doc.txt", type: "text/plain", size: 512 }
+        );
+        const res = await callHandler(postTripPod, req, {
+          tripId: deliveredTrip.id,
+        });
+        expect(res.status).toBe(400);
+      });
+
+      it("file too large (>10MB) → 400", async () => {
+        setAuthSession(carrierSession);
+        const req = createFormDataRequest(
+          `http://localhost:3000/api/trips/${deliveredTrip.id}/pod`,
+          {
+            name: "big.jpg",
+            type: "image/jpeg",
+            size: 11 * 1024 * 1024, // 11MB
+          }
+        );
+        const res = await callHandler(postTripPod, req, {
+          tripId: deliveredTrip.id,
+        });
+        expect(res.status).toBe(400);
+      });
+    });
+
+    describe("Upload success", () => {
+      it("carrier uploads JPEG POD → 200 with tripPod data", async () => {
+        setAuthSession(carrierSession);
+        const { uploadPOD } = require("@/lib/storage");
+        uploadPOD.mockResolvedValueOnce({
+          success: true,
+          url: "https://storage.example.com/trip-pod.jpg",
+        });
+        const req = createFormDataRequest(
+          `http://localhost:3000/api/trips/${deliveredTrip.id}/pod`,
+          { name: "delivery.jpg", type: "image/jpeg", size: 2048 }
+        );
+        const res = await callHandler(postTripPod, req, {
+          tripId: deliveredTrip.id,
+        });
+        expect([200, 201]).toContain(res.status);
+        const data = await parseResponse(res);
+        expect(data.tripPod ?? data.pod ?? data).toBeDefined();
+      });
+
+      it("admin can upload trip POD → success", async () => {
+        setAuthSession(adminSession);
+        const { uploadPOD } = require("@/lib/storage");
+        uploadPOD.mockResolvedValueOnce({
+          success: true,
+          url: "https://storage.example.com/admin-pod.png",
+        });
+        const adminDeliveredTrip = await db.trip.create({
+          data: {
+            id: "trip-pod-admin",
+            loadId: seed.load.id,
+            truckId: seed.truck.id,
+            carrierId: seed.carrierOrg.id,
+            status: "DELIVERED",
+            trackingEnabled: true,
+          },
+        });
+        const req = createFormDataRequest(
+          `http://localhost:3000/api/trips/${adminDeliveredTrip.id}/pod`,
+          { name: "admin-pod.png", type: "image/png", size: 1024 }
+        );
+        const res = await callHandler(postTripPod, req, {
+          tripId: adminDeliveredTrip.id,
+        });
+        expect([200, 201]).toContain(res.status);
+      });
+    });
+
+    describe("GET /api/trips/[tripId]/pod", () => {
+      it("carrier can list trip PODs → 200", async () => {
+        setAuthSession(carrierSession);
+        const req = createRequest(
+          "GET",
+          `http://localhost:3000/api/trips/${deliveredTrip.id}/pod`
+        );
+        const res = await callHandler(getTripPod, req, {
+          tripId: deliveredTrip.id,
+        });
+        expect([200, 404]).toContain(res.status);
+      });
+
+      it("non-existent trip → 404", async () => {
+        setAuthSession(carrierSession);
+        const req = createRequest(
+          "GET",
+          "http://localhost:3000/api/trips/ghost-trip/pod"
+        );
+        const res = await callHandler(getTripPod, req, {
+          tripId: "ghost-trip",
+        });
+        expect(res.status).toBe(404);
       });
     });
   });

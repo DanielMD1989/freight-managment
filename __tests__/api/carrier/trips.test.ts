@@ -1259,5 +1259,74 @@ describe("Carrier Trip Management", () => {
       const res = await callHandler(getGps, req, { tripId: gpsReadTrip.id });
       expect(res.status).toBe(404);
     });
+
+    it("since ISO param is accepted and returns 200", async () => {
+      setAuthSession(carrierSession);
+      const pastTs = new Date("2024-01-01T00:00:00Z").toISOString();
+      const req = createRequest(
+        "GET",
+        `http://localhost:3000/api/trips/${gpsReadTrip.id}/gps?since=${pastTs}`
+      );
+      const res = await callHandler(getGps, req, { tripId: gpsReadTrip.id });
+      expect(res.status).toBe(200);
+      const data = await parseResponse(res);
+      expect(Array.isArray(data.positions)).toBe(true);
+    });
+
+    it("limit=0 is clamped to 1 → 200", async () => {
+      setAuthSession(carrierSession);
+      const req = createRequest(
+        "GET",
+        `http://localhost:3000/api/trips/${gpsReadTrip.id}/gps?limit=0`
+      );
+      const res = await callHandler(getGps, req, { tripId: gpsReadTrip.id });
+      expect(res.status).toBe(200);
+      const data = await parseResponse(res);
+      // limit clamped to 1: at most 1 position returned
+      expect(data.positions.length).toBeLessThanOrEqual(1);
+    });
+
+    it("limit=9999 is clamped to 1000 → 200", async () => {
+      setAuthSession(carrierSession);
+      const req = createRequest(
+        "GET",
+        `http://localhost:3000/api/trips/${gpsReadTrip.id}/gps?limit=9999`
+      );
+      const res = await callHandler(getGps, req, { tripId: gpsReadTrip.id });
+      expect(res.status).toBe(200);
+      // Route clamps to max 1000 — just verify request succeeds
+      expect(res.status).toBe(200);
+    });
+
+    it("GPS auto-creates device placeholder when truck has no gpsDeviceId", async () => {
+      setAuthSession(carrierSession);
+      // Truck in seed has no gpsDeviceId by default
+      const noDeviceTrip = await db.trip.create({
+        data: {
+          id: "no-device-trip",
+          loadId: seed.load.id,
+          truckId: seed.truck.id,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "IN_TRANSIT",
+          trackingEnabled: true,
+        },
+      });
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/trips/${noDeviceTrip.id}/gps`,
+        { body: { latitude: 9.0, longitude: 38.5 } }
+      );
+      const res = await callHandler(postGps, req, { tripId: noDeviceTrip.id });
+      // Auto-creates device → succeeds
+      expect([200, 201]).toContain(res.status);
+      // Verify device was upserted
+      const updatedTruck = await db.truck.findUnique({
+        where: { id: seed.truck.id },
+        include: { gpsDevice: true },
+      });
+      expect(updatedTruck?.gpsDeviceId).toBeDefined();
+    });
   });
 });

@@ -296,4 +296,73 @@ describe("Notifications API", () => {
       expect(markAllAsReadFn).toHaveBeenCalledWith("carrier-user-1");
     });
   });
+
+  // ─── CSRF validation (US-12) ─────────────────────────────────────────────
+
+  describe("CSRF validation on mutation endpoints", () => {
+    it("validateCSRFWithMobile called on PUT /[id]/read", async () => {
+      setAuthSession(carrierSession);
+      const { validateCSRFWithMobile } = require("@/lib/csrf");
+      const req = createRequest(
+        "PUT",
+        "http://localhost:3000/api/notifications/notif-carrier-1/read"
+      );
+      await callHandler(markRead, req, { id: "notif-carrier-1" });
+      expect(validateCSRFWithMobile).toHaveBeenCalled();
+    });
+
+    it("validateCSRFWithMobile called on PUT /mark-all-read", async () => {
+      setAuthSession(carrierSession);
+      const { validateCSRFWithMobile } = require("@/lib/csrf");
+      const req = createRequest(
+        "PUT",
+        "http://localhost:3000/api/notifications/mark-all-read"
+      );
+      await markAllRead(req);
+      expect(validateCSRFWithMobile).toHaveBeenCalled();
+    });
+
+    it("CSRF error blocks mark-read → CSRF mock returning error causes non-200", async () => {
+      setAuthSession(carrierSession);
+      const { validateCSRFWithMobile } = require("@/lib/csrf");
+      const { NextResponse } = require("next/server");
+      validateCSRFWithMobile.mockResolvedValueOnce(
+        NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
+      );
+      const req = createRequest(
+        "PUT",
+        "http://localhost:3000/api/notifications/notif-carrier-1/read"
+      );
+      const res = await callHandler(markRead, req, { id: "notif-carrier-1" });
+      expect(res.status).toBe(403);
+    });
+  });
+
+  // ─── Unread count (US-12) ─────────────────────────────────────────────────
+
+  describe("Unread count tracking", () => {
+    it("getUnreadCount called with userId for accurate count", async () => {
+      setAuthSession(carrierSession);
+      const { getUnreadCount } = require("@/lib/notifications");
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/notifications"
+      );
+      await getNotifications(req);
+      expect(getUnreadCount).toHaveBeenCalledWith("carrier-user-1");
+    });
+
+    it("unreadCount in response matches getUnreadCount return value", async () => {
+      setAuthSession(carrierSession);
+      const { getUnreadCount } = require("@/lib/notifications");
+      getUnreadCount.mockResolvedValueOnce(5);
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/notifications"
+      );
+      const res = await getNotifications(req);
+      const data = await parseResponse(res);
+      expect(data.unreadCount).toBe(5);
+    });
+  });
 });

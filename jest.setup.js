@@ -44,6 +44,8 @@ jest.mock("@/lib/db", () => {
     companyDocuments: new Map(),
     truckDocuments: new Map(),
     auditLogs: new Map(),
+    loadEscalations: new Map(),
+    documents: new Map(),
   };
 
   let userIdCounter = 1;
@@ -72,6 +74,8 @@ jest.mock("@/lib/db", () => {
   let companyDocumentIdCounter = 1;
   let truckDocumentIdCounter = 1;
   let auditLogIdCounter = 1;
+  let loadEscalationIdCounter = 1;
+  let documentIdCounter = 1;
 
   // Default values for different model types
   const modelDefaults = {
@@ -89,7 +93,15 @@ jest.mock("@/lib/db", () => {
     },
     load: {
       serviceFeeStatus: "PENDING",
+      settlementStatus: "PENDING",
+      podSubmitted: false,
+      podVerified: false,
     },
+    loadEscalation: {
+      status: "OPEN",
+      priority: "MEDIUM",
+    },
+    document: {},
     truck: { postings: [], gpsDevice: null },
     notification: {
       read: false,
@@ -733,6 +745,8 @@ jest.mock("@/lib/db", () => {
     companyDocument: { value: companyDocumentIdCounter },
     truckDocument: { value: truckDocumentIdCounter },
     auditLog: { value: auditLogIdCounter },
+    loadEscalation: { value: loadEscalationIdCounter },
+    document: { value: documentIdCounter },
   };
 
   const result = {
@@ -834,8 +848,14 @@ jest.mock("@/lib/db", () => {
         deleteMany: jest.fn(() => Promise.resolve({ count: 0 })),
       },
       document: {
+        ...createModelMethods(stores.documents, "document", counters.document),
         deleteMany: jest.fn(() => Promise.resolve({ count: 0 })),
       },
+      loadEscalation: createModelMethods(
+        stores.loadEscalations,
+        "loadEscalation",
+        counters.loadEscalation
+      ),
       trip: createModelMethods(stores.trips, "trip", counters.trip),
       loadRequest: {
         ...createModelMethods(
