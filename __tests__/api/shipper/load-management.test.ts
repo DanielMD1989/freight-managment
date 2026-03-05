@@ -550,4 +550,54 @@ describe("Shipper Load Management", () => {
     expect(response.status).toBe(403);
     expect(body.error).toMatch(/forbidden|duplicate/i);
   });
+
+  // ── GAP-R3-L: Cross-role PATCH access control ─────────────────────────────
+
+  it("L-1: CARRIER cannot PATCH a shipper's load → 403", async () => {
+    setAuthSession(carrierSession);
+
+    const req = createRequest(
+      "PATCH",
+      "http://localhost/api/loads/test-load-001",
+      {
+        body: { cargoDescription: "Carrier unauthorized update" },
+      }
+    );
+
+    const response = await callHandler(updateLoad, req, {
+      id: "test-load-001",
+    });
+    const body = await parseResponse(response);
+
+    // Carrier org does not match shipperId → 403
+    expect(response.status).toBe(403);
+    expect(body.error).toMatch(/permission/i);
+  });
+
+  it("L-2: DISPATCHER cannot PATCH a shipper's load → 403", async () => {
+    const dispatcherSession = createMockSession({
+      userId: "lm-dispatcher-user-1",
+      role: "DISPATCHER",
+      organizationId: "carrier-org-1",
+      status: "ACTIVE",
+    });
+    setAuthSession(dispatcherSession);
+
+    const req = createRequest(
+      "PATCH",
+      "http://localhost/api/loads/test-load-001",
+      {
+        body: { cargoDescription: "Dispatcher unauthorized update" },
+      }
+    );
+
+    const response = await callHandler(updateLoad, req, {
+      id: "test-load-001",
+    });
+    const body = await parseResponse(response);
+
+    // Dispatcher org does not match shipperId (and not ADMIN/SUPER_ADMIN) → 403
+    expect(response.status).toBe(403);
+    expect(body.error).toMatch(/permission/i);
+  });
 });

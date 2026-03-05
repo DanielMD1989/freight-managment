@@ -100,11 +100,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is shipper or carrier for this load
-    const isShipper = load.shipper?.id === session.organizationId;
+    // BUG-R3-1 FIX: Add role check alongside org check to prevent DISPATCHER bypass
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
+    const isShipper =
+      session.role === "SHIPPER" && load.shipper?.id === session.organizationId;
     const isCarrier =
+      session.role === "CARRIER" &&
       load.assignedTruck?.carrier?.id === session.organizationId;
 
-    if (!isShipper && !isCarrier) {
+    if (!isShipper && !isCarrier && !isAdmin) {
       return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 

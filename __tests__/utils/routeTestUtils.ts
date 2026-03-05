@@ -259,6 +259,7 @@ export function mockNotifications() {
   jest.mock("@/lib/notifications", () => ({
     createNotification: jest.fn(async () => ({ id: "notif-1" })),
     notifyTruckRequest: jest.fn(async () => {}),
+    notifyTruckRequestResponse: jest.fn(async () => {}),
     getRecentNotifications: jest.fn(async () => []),
     getUnreadCount: jest.fn(async () => 0),
     markAsRead: jest.fn(async () => {}),
@@ -481,8 +482,23 @@ export function mockDispatcherPermissions() {
   jest.mock("@/lib/dispatcherPermissions", () => ({
     canViewAllTrucks: jest.fn(() => true),
     hasElevatedPermissions: jest.fn(() => false),
-    canRequestTruck: jest.fn(() => true),
-    canApproveRequests: jest.fn(() => true),
+    canRequestTruck: jest.fn((user: any, loadShipperId?: string) => {
+      const role = user?.role ?? user;
+      if (["ADMIN", "SUPER_ADMIN"].includes(role)) return true;
+      // SHIPPER can request only for their own loads
+      if (role === "SHIPPER" && loadShipperId) {
+        return user?.organizationId === loadShipperId;
+      }
+      return false;
+    }),
+    canApproveRequests: jest.fn((user: any, truckCarrierId?: string) => {
+      const role = user?.role ?? user;
+      if (["ADMIN", "SUPER_ADMIN"].includes(role)) return true;
+      if (role === "CARRIER" && truckCarrierId) {
+        return user?.organizationId === truckCarrierId;
+      }
+      return false;
+    }),
     canProposeMatch: jest.fn((user: any) =>
       ["DISPATCHER", "ADMIN", "SUPER_ADMIN"].includes(user?.role ?? user)
     ),

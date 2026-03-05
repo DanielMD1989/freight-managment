@@ -146,15 +146,15 @@ export async function GET(request: NextRequest) {
     const formattedTransactions = transactions
       .filter((tx) => tx.lines && tx.lines.length > 0) // Skip transactions with no lines
       .map((tx) => {
-        // Find the line that affects this organization's wallet (more robust than assuming lines[0])
+        // BUG-R3-2 FIX: Find the line for this org's wallet; skip if none found
+        // (prevents wrong sign when tx.lines[0] belongs to another party)
         const walletLine = tx.lines.find(
           (line) => line.accountId && walletAccountIds.includes(line.accountId)
         );
-        const line = walletLine || tx.lines[0]; // Fallback to first line if no wallet line found
-        const isDebit = line.accountId
-          ? walletAccountIds.includes(line.accountId)
-          : false;
-        const amount = Number(line.amount || 0);
+        if (!walletLine) return null; // filtered out below
+
+        const isDebit = walletAccountIds.includes(walletLine.accountId!);
+        const amount = Number(walletLine.amount || 0);
 
         return {
           id: tx.id,
@@ -165,7 +165,8 @@ export async function GET(request: NextRequest) {
           amount: isDebit ? amount : -amount, // Positive = money in, Negative = money out
           createdAt: tx.createdAt,
         };
-      });
+      })
+      .filter(Boolean);
 
     return NextResponse.json({
       transactions: formattedTransactions,

@@ -190,6 +190,7 @@ jest.mock("@/lib/db", () => {
     documents:    { type: 'hasMany', default: [] },
     routeHistory: { type: 'hasMany', store: 'gpsPositions', matchFk: 'tripId',
                     sort: (a, b) => (b.timestamp || 0) - (a.timestamp || 0) },
+    postings:     { type: 'hasMany', store: 'truckPostings', matchFk: 'truckId' },
   };
 
   function resolveCount(record, countSpec) {
@@ -261,7 +262,34 @@ jest.mock("@/lib/db", () => {
         continue;
       }
       const map = RELATION_MAP[key];
-      if (map && !map.type) {
+      if (map && map.type === 'hasMany') {
+        // HasMany in select: resolve from store (same as resolveIncludes)
+        if (map.default !== undefined) {
+          result[key] = [...map.default];
+        } else if (map.store && stores[map.store]) {
+          let related;
+          if (map.matchFks) {
+            related = Array.from(stores[map.store].values()).filter((r) =>
+              map.matchFks.some((fk) => r[fk] === record.id)
+            );
+          } else {
+            related = Array.from(stores[map.store].values()).filter(
+              (r) => r[map.matchFk] === record.id
+            );
+          }
+          if (map.sort) related.sort(map.sort);
+          if (spec && typeof spec === 'object' && spec.take) {
+            related = related.slice(0, spec.take);
+          }
+          // Apply where filter if present (basic status filter support)
+          if (spec && typeof spec === 'object' && spec.where) {
+            related = related.filter((r) =>
+              Object.entries(spec.where).every(([k, v]) => r[k] === v)
+            );
+          }
+          result[key] = related;
+        }
+      } else if (map && !map.type) {
         const fkValue = record[map.fk];
         if (fkValue && stores[map.store]) {
           const related = stores[map.store].get(fkValue);

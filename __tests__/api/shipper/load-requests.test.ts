@@ -428,6 +428,61 @@ describe("Load Requests — GET /api/load-requests", () => {
     expect(res.status).toBe(400);
     expect(body.error).toMatch(/organization/i);
   });
+
+  // GAP-R3-CR: Cross-carrier GET isolation
+  it("GAP-R3-CR: Carrier B cannot see Carrier A's load requests", async () => {
+    // Create Carrier B (distinct from carrier-org-1 used in seed)
+    const carrierBOrg = await db.organization.upsert({
+      where: { id: "carrier-org-b" },
+      update: {},
+      create: {
+        id: "carrier-org-b",
+        name: "Carrier B LLC",
+        type: "CARRIER_COMPANY",
+        contactEmail: "carrier-b@test.com",
+        contactPhone: "+251911000088",
+        isVerified: true,
+        verificationStatus: "APPROVED",
+      },
+    });
+    await db.user.upsert({
+      where: { id: "carrier-user-b" },
+      update: {},
+      create: {
+        id: "carrier-user-b",
+        email: "carrier-b@test.com",
+        passwordHash: "hashed_Test1234!",
+        firstName: "Carrier",
+        lastName: "B",
+        phone: "+251911000088",
+        role: "CARRIER",
+        status: "ACTIVE",
+        organizationId: carrierBOrg.id,
+      },
+    });
+
+    const carrierBSession = createMockSession({
+      userId: "carrier-user-b",
+      role: "CARRIER",
+      organizationId: "carrier-org-b",
+      status: "ACTIVE",
+    });
+    setAuthSession(carrierBSession);
+
+    const req = createRequest("GET", "http://localhost:3000/api/load-requests");
+    const res = await listLoadRequests(req);
+    const body = await parseResponse(res);
+
+    expect(res.status).toBe(200);
+    expect(body).toHaveProperty("loadRequests");
+    expect(Array.isArray(body.loadRequests)).toBe(true);
+
+    // Carrier B should see only requests where carrierId === carrier-org-b
+    // (carrier-org-1 requests should NOT appear)
+    for (const lr of body.loadRequests) {
+      expect(lr.carrierId).toBe("carrier-org-b");
+    }
+  });
 });
 
 describe("Load Requests — POST /api/load-requests/[id]/respond", () => {
