@@ -9,34 +9,34 @@
 
 ## Test Coverage Summary
 
-> Last updated: 2026-03-05 · Shipper Cross-Domain Audit (Rounds 1–3) complete
+> Last updated: 2026-03-05 · E2E Dispatcher Bypass Audit (Rounds 1–7) complete
 
 | Metric      | Value |
 | ----------- | ----- |
-| Test suites | 107   |
-| Total tests | 2,366 |
-| Passing     | 2,356 |
+| Test suites | 117   |
+| Total tests | 2,449 |
+| Passing     | 2,439 |
 | Skipped     | 10    |
 | Failures    | 0     |
 
 ### Coverage by User Story
 
-| US         | Story                       | Test File(s)                                                                                                                                                                                                                                                                             | Status      |
-| ---------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| US-1.1–1.3 | Registration & Verification | `carrier-registration.test.ts`, `auth.test.ts`                                                                                                                                                                                                                                           | ✅ Complete |
-| US-2.1–2.5 | Truck Lifecycle             | `trucks.test.ts`, `trucks-approve.test.ts`, `trucks-deep.test.ts`, `trucks-edge-cases.test.ts`, `truck-postings.test.ts`, `truck-postings-duplicate.test.ts`                                                                                                                             | ✅ Complete |
-| US-3.1–3.5 | Load Lifecycle              | `loads.test.ts`, `loads-edge-cases.test.ts`, `shipper/load-management.test.ts`                                                                                                                                                                                                           | ✅ Complete |
-| US-4.1–4.5 | Marketplace & Matching      | `carrier-match-proposals.test.ts`, `match-proposals-deep.test.ts`, `carrier-truck-requests.test.ts`, `truck-requests-deep.test.ts`, `load-request-respond.test.ts`, `requests.test.ts`, `requests-edge-cases.test.ts`, `shipper/load-requests.test.ts`, `shipper/truck-requests.test.ts` | ✅ Complete |
-| US-5.1–5.5 | Trip Lifecycle              | `trips.test.ts`, `trip-cancel.test.ts`, `trip-confirm.test.ts`, `trips-edge-cases.test.ts`, `trips-tracking.test.ts`                                                                                                                                                                     | ✅ Complete |
-| US-6.1–6.4 | Proof of Delivery           | `carrier/pod-management.test.ts`, `shipper/pod-cross-role.test.ts`                                                                                                                                                                                                                       | ✅ Complete |
-| US-7.1–7.8 | Financial Settlement        | `wallet-settlement.test.ts`, `carrier/wallet.test.ts`, `shipper/wallet.test.ts`, `financial-wallet.test.ts`, `financial-withdraw.test.ts`, `pod-management.test.ts`, `financial/fee-calculation.test.ts`, `shipper/load-settlement.test.ts`                                              | ✅ Complete |
-| US-8.1–8.3 | Post-Delivery & Return      | `trips.test.ts`, `trip-cancel.test.ts`                                                                                                                                                                                                                                                   | ✅ Complete |
-| US-9.1–9.6 | Admin & Super Admin         | `trucks-approve.test.ts`, `dashboard.test.ts`                                                                                                                                                                                                                                            | ✅ Complete |
-| US-10      | Dispute Management          | `shipper/disputes.test.ts`, `carrier/disputes.test.ts`, `carrier-disputes.test.ts`, `carrier/disputes-resolution.test.ts`, `carrier/disputes-edge-cases.test.ts`                                                                                                                         | ✅ Complete |
-| US-11      | Dispatcher Workflow         | `dispatcher-scoping.test.ts`                                                                                                                                                                                                                                                             | ✅ Complete |
-| US-13      | Cron Automation             | `carrier-automation.test.ts`                                                                                                                                                                                                                                                             | ✅ Complete |
-| US-14      | Mobile API Parity           | `mobile-parity.test.ts`                                                                                                                                                                                                                                                                  | ✅ Complete |
-| US-15      | Cross-Role Access           | `cross-role-access.test.ts`                                                                                                                                                                                                                                                              | ✅ Complete |
+| US         | Story                       | Test File(s)                                                                                                                                                                                                                                                                                                                                                                                                     | Status      |
+| ---------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| US-1.1–1.3 | Registration & Verification | `carrier-registration.test.ts`, `auth.test.ts`                                                                                                                                                                                                                                                                                                                                                                   | ✅ Complete |
+| US-2.1–2.6 | Truck Lifecycle             | `trucks.test.ts`, `trucks-approve.test.ts`, `trucks-deep.test.ts`, `trucks-edge-cases.test.ts`, `truck-postings.test.ts`, `truck-postings-duplicate.test.ts`, `carrier/truck-posting-dispatcher-bypass.test.ts`                                                                                                                                                                                                  | ✅ Complete |
+| US-3.1–3.5 | Load Lifecycle              | `loads.test.ts`, `loads-edge-cases.test.ts`, `shipper/load-management.test.ts`, `shipper/load-edit-dispatcher-bypass.test.ts`, `shipper/load-settle-dispatcher-bypass.test.ts`                                                                                                                                                                                                                                   | ✅ Complete |
+| US-4.1–4.5 | Marketplace & Matching      | `carrier-match-proposals.test.ts`, `match-proposals-deep.test.ts`, `carrier-truck-requests.test.ts`, `truck-requests-deep.test.ts`, `load-request-respond.test.ts`, `requests.test.ts`, `requests-edge-cases.test.ts`, `shipper/load-requests.test.ts`, `shipper/truck-requests.test.ts`                                                                                                                         | ✅ Complete |
+| US-5.1–5.5 | Trip Lifecycle              | `trips.test.ts`, `trip-cancel.test.ts`, `trip-confirm.test.ts`, `trips-edge-cases.test.ts`, `trips-tracking.test.ts`                                                                                                                                                                                                                                                                                             | ✅ Complete |
+| US-6.1–6.4 | Proof of Delivery           | `carrier/pod-management.test.ts`, `shipper/pod-cross-role.test.ts`                                                                                                                                                                                                                                                                                                                                               | ✅ Complete |
+| US-7.1–7.8 | Financial Settlement        | `wallet-settlement.test.ts`, `carrier/wallet.test.ts`, `shipper/wallet.test.ts`, `financial-wallet.test.ts`, `financial-withdraw.test.ts`, `pod-management.test.ts`, `financial/fee-calculation.test.ts`, `shipper/load-settlement.test.ts`                                                                                                                                                                      | ✅ Complete |
+| US-8.1–8.3 | Post-Delivery & Return      | `trips.test.ts`, `trip-cancel.test.ts`                                                                                                                                                                                                                                                                                                                                                                           | ✅ Complete |
+| US-9.1–9.6 | Admin & Super Admin         | `trucks-approve.test.ts`, `dashboard.test.ts`                                                                                                                                                                                                                                                                                                                                                                    | ✅ Complete |
+| US-10      | Dispute Management          | `shipper/disputes.test.ts`, `carrier/disputes.test.ts`, `carrier-disputes.test.ts`, `carrier/disputes-resolution.test.ts`, `carrier/disputes-edge-cases.test.ts`                                                                                                                                                                                                                                                 | ✅ Complete |
+| US-11      | Dispatcher Workflow         | `dispatcher-scoping.test.ts`, `carrier/truck-requests-dispatcher-bypass.test.ts`, `carrier/truck-posting-dispatcher-bypass.test.ts`, `shipper/load-documents-dispatcher-bypass.test.ts`, `shipper/service-fee-dispatcher-bypass.test.ts`, `shipper/load-edit-dispatcher-bypass.test.ts`, `shipper/load-settle-dispatcher-bypass.test.ts`, `dispatcher/dashboard.test.ts`, `dispatcher/access-prevention.test.ts` | ✅ Complete |
+| US-13      | Cron Automation             | `carrier-automation.test.ts`                                                                                                                                                                                                                                                                                                                                                                                     | ✅ Complete |
+| US-14      | Mobile API Parity           | `mobile-parity.test.ts`                                                                                                                                                                                                                                                                                                                                                                                          | ✅ Complete |
+| US-15      | Cross-Role Access           | `cross-role-access.test.ts`                                                                                                                                                                                                                                                                                                                                                                                      | ✅ Complete |
 
 ---
 
@@ -229,6 +229,31 @@
 
 ---
 
+### US-2.6: Truck Posting Write-Path Access Control
+
+**As a** platform operator,
+**I want** only the owning carrier to be able to edit or cancel a truck posting,
+**so that** dispatchers and other organizations cannot modify a carrier's availability listing.
+
+**Acceptance Criteria:**
+
+- [x] `PATCH /api/truck-postings/[id]` is only permitted for the carrier who owns the posting (or ADMIN/SUPER_ADMIN)
+- [x] A DISPATCHER with `organizationId === carrierId` attempting PATCH receives 404 (resource cloaking, BUG-E2E-10 fix)
+- [x] A carrier from a different organization attempting PATCH receives 404 (resource cloaking)
+- [x] Admin and SUPER_ADMIN can edit any posting for platform management
+- [x] `DELETE /api/truck-postings/[id]` (soft-cancel) is only permitted for the owning carrier (or ADMIN/SUPER_ADMIN)
+- [x] A DISPATCHER with matching carrier org attempting DELETE receives 404 (BUG-E2E-11 fix)
+- [x] The ownership re-check inside the cancellation transaction also enforces role = CARRIER (prevents TOCTOU bypass)
+- [x] Denial returns 404 (not 403) — resource cloaking prevents confirmation that the posting exists
+- [x] Unauthenticated requests receive 401
+- [x] Comment in code `DISPATCHER_COORDINATION_ONLY` is now enforced in practice, not just documented
+
+**API:** `PATCH /api/truck-postings/[id]`, `DELETE /api/truck-postings/[id]` (`app/api/truck-postings/[id]/route.ts`)
+
+**Test:** `__tests__/api/carrier/truck-posting-dispatcher-bypass.test.ts`
+
+---
+
 ## 3. Load Lifecycle
 
 ### US-3.1: Create a Load
@@ -319,23 +344,50 @@
 
 ---
 
-### US-3.5: Cross-Role Load Edit Restrictions
+### US-3.5: Cross-Role Load Edit and Delete Restrictions
 
 **As a** platform operator,
-**I want** only the owning shipper to be able to edit a load,
-**so that** carriers and dispatchers cannot modify shipper-owned resources.
+**I want** only the owning shipper to be able to edit or delete a load,
+**so that** carriers and dispatchers cannot modify or remove shipper-owned resources.
 
 **Acceptance Criteria:**
 
 - [x] `PATCH /api/loads/[id]` is only permitted for the shipper who owns the load (or ADMIN/SUPER_ADMIN)
 - [x] A CARRIER attempting to PATCH a shipper's load receives 403
-- [x] A DISPATCHER attempting to PATCH a shipper's load receives 403
-- [x] Role check is enforced before ownership check — wrong role is blocked regardless of orgId
+- [x] A DISPATCHER attempting to PATCH a shipper's load receives 403 — role check enforced alongside org check (BUG-E2E-7 fix)
+- [x] A DISPATCHER with `organizationId === shipperId` still receives 403 (org match alone is not sufficient)
 - [x] Admin and SUPER_ADMIN can edit any load for exception handling
+- [x] `DELETE /api/loads/[id]` is only permitted for the owning shipper (or ADMIN/SUPER_ADMIN)
+- [x] A DISPATCHER with matching shipper org attempting DELETE receives 403 (BUG-E2E-8 fix)
+- [x] Only loads in DRAFT or POSTED status can be deleted; ASSIGNED/IN_TRANSIT/DELIVERED returns 400
+- [x] `GET /api/loads/[id]/settle` requires the caller to be the owning shipper (role = SHIPPER) or assigned carrier (role = CARRIER) — DISPATCHER with matching org receives 403 (BUG-E2E-9 fix)
+- [x] Unauthenticated requests to all three endpoints receive 401
 
-**API:** `PATCH /api/loads/[id]` (`app/api/loads/[id]/route.ts`)
+**API:** `PATCH /api/loads/[id]`, `DELETE /api/loads/[id]`, `GET /api/loads/[id]/settle` (`app/api/loads/[id]/route.ts`, `app/api/loads/[id]/settle/route.ts`)
 
-**Test:** `__tests__/api/shipper/load-management.test.ts`
+**Test:** `__tests__/api/shipper/load-management.test.ts`, `__tests__/api/shipper/load-edit-dispatcher-bypass.test.ts`, `__tests__/api/shipper/load-settle-dispatcher-bypass.test.ts`
+
+---
+
+### US-3.6: Settlement Status Visibility
+
+**As a** shipper or carrier,
+**I want** to view the settlement status of a load (POD state, settlement readiness, `settledAt`),
+**so that** I know when payment has been processed.
+
+**Acceptance Criteria:**
+
+- [x] `GET /api/loads/[id]/settle` returns `{ loadId, status, pod, settlement }` for authorized callers
+- [x] Shipper who owns the load (role = SHIPPER, org = shipperId) can view settlement details
+- [x] Assigned carrier (role = CARRIER, org = assignedTruck.carrierId) can view settlement details
+- [x] ADMIN and SUPER_ADMIN can view any load's settlement status
+- [x] DISPATCHER with matching shipper or carrier org receives 403 — role check enforced (BUG-E2E-9 fix)
+- [x] An unrelated shipper (different org) receives 403
+- [x] `canSettle` flag indicates whether settlement is available (DELIVERED + podSubmitted + podVerified + not yet PAID)
+
+**API:** `GET /api/loads/[id]/settle` (`app/api/loads/[id]/settle/route.ts`)
+
+**Test:** `__tests__/api/shipper/load-settle-dispatcher-bypass.test.ts`
 
 ---
 
@@ -1039,13 +1091,18 @@ These rules are enforced globally across all API endpoints and business logic.
 
 ### RULE: DISPATCHER_COORDINATION_ONLY
 
-> Dispatcher coordinates availability but cannot execute assignments.
+> Dispatcher coordinates availability but cannot execute assignments or modify owned resources.
 
 - Dispatcher can see posted trucks and loads
 - Dispatcher can propose matches
 - Dispatcher CANNOT assign loads, accept requests, or start trips
 - Dispatcher has `PROPOSE_MATCH` permission, not `ASSIGN_LOADS`
-- **Tested:** `__tests__/api/carrier/dispatcher-scoping.test.ts`, `__tests__/api/carrier/cross-role-access.test.ts`
+- Dispatcher CANNOT edit or delete a shipper's load — `session.role === "SHIPPER"` is required alongside org check (BUG-E2E-7/8)
+- Dispatcher CANNOT view settlement details — `session.role === "SHIPPER"/"CARRIER"` required (BUG-E2E-9)
+- Dispatcher CANNOT edit or cancel a carrier's truck posting — `session.role === "CARRIER"` required (BUG-E2E-10/11)
+- Dispatcher CANNOT upload or verify POD — enforced separately (BUG-R2-A/B)
+- Dispatcher CANNOT file disputes — enforced separately (BUG-R3-1)
+- **Tested:** `__tests__/api/carrier/dispatcher-scoping.test.ts`, `__tests__/api/carrier/cross-role-access.test.ts`, `__tests__/api/carrier/truck-requests-dispatcher-bypass.test.ts`, `__tests__/api/carrier/truck-posting-dispatcher-bypass.test.ts`, `__tests__/api/shipper/load-edit-dispatcher-bypass.test.ts`, `__tests__/api/shipper/load-settle-dispatcher-bypass.test.ts`, `__tests__/api/shipper/load-documents-dispatcher-bypass.test.ts`, `__tests__/api/shipper/service-fee-dispatcher-bypass.test.ts`, `__tests__/api/dispatcher/access-prevention.test.ts`
 
 ### RULE: ONE_ACTIVE_POST_PER_TRUCK
 
@@ -1093,8 +1150,9 @@ These rules are enforced globally across all API endpoints and business logic.
 - This prevents information leakage (attacker cannot confirm resource existence)
 - Applies to: trucks, loads, trips, requests, proposals, disputes
 - Enforced via `getAccessRoles()` checks in all API routes
-- A DISPATCHER whose `organizationId` matches a shipper or carrier org is **not** treated as that role — role check (`session.role`) is enforced alongside the org check to prevent bypass (BUG-R3-1; confirmed by `shipper/disputes.test.ts` D-3/D-4)
-- **Tested:** `__tests__/api/carrier/cross-role-access.test.ts`, `__tests__/api/shipper/disputes.test.ts`
+- A DISPATCHER whose `organizationId` matches a shipper or carrier org is **not** treated as that role — `session.role` is enforced alongside the org check on every write and financial-read path
+- Dispatcher bypass bugs fixed across audit rounds 2–7: POD upload/verify (R2), dispute filing/detail (R3/R4), truck request GET/DELETE (R5), document access/service-fee read (R6), load edit/delete/settle + truck posting edit/cancel (R7)
+- **Tested:** `__tests__/api/carrier/cross-role-access.test.ts`, `__tests__/api/shipper/disputes.test.ts`, `__tests__/api/carrier/truck-requests-dispatcher-bypass.test.ts`, `__tests__/api/carrier/truck-posting-dispatcher-bypass.test.ts`, `__tests__/api/shipper/load-edit-dispatcher-bypass.test.ts`, `__tests__/api/shipper/load-settle-dispatcher-bypass.test.ts`, `__tests__/api/shipper/load-documents-dispatcher-bypass.test.ts`, `__tests__/api/shipper/service-fee-dispatcher-bypass.test.ts`
 
 ### RULE: Contact Info Hidden Until IN_TRANSIT
 
