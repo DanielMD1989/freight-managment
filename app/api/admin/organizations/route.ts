@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { handleApiError } from "@/lib/apiErrors";
@@ -25,7 +25,7 @@ import { handleApiError } from "@/lib/apiErrors";
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Check admin access
     if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {

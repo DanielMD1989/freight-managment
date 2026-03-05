@@ -462,6 +462,15 @@ jest.mock("@/lib/db", () => {
             if (value && typeof value === "object" && value.not !== undefined) {
               return r[key] !== value.not;
             }
+            if (value && typeof value === "object" && value.endsWith !== undefined) {
+              return String(r[key] || "").endsWith(String(value.endsWith));
+            }
+            if (value && typeof value === "object" && value.startsWith !== undefined) {
+              return String(r[key] || "").startsWith(String(value.startsWith));
+            }
+            if (value && typeof value === "object" && value.contains !== undefined) {
+              return String(r[key] || "").toLowerCase().includes(String(value.contains).toLowerCase());
+            }
             // Handle nested relation filters (e.g., { assignedTruck: { carrierId: ... } })
             if (
               value &&
@@ -561,6 +570,14 @@ jest.mock("@/lib/db", () => {
                   .toLowerCase()
                   .includes(String(value.contains).toLowerCase());
               }
+              // Handle { endsWith: ... } for string search
+              if (value && typeof value === "object" && value.endsWith !== undefined) {
+                return String(r[key] || "").endsWith(String(value.endsWith));
+              }
+              // Handle { startsWith: ... } for string search
+              if (value && typeof value === "object" && value.startsWith !== undefined) {
+                return String(r[key] || "").startsWith(String(value.startsWith));
+              }
               // Handle nested relation filters (skip in mock)
               if (value && typeof value === "object" && !Array.isArray(value)) {
                 return true;
@@ -639,6 +656,12 @@ jest.mock("@/lib/db", () => {
             return !value.notIn.includes(record[key]);
           if (value && typeof value === "object" && value.not !== undefined)
             return record[key] !== value.not;
+          if (value && typeof value === "object" && value.contains !== undefined)
+            return String(record[key] || "").toLowerCase().includes(String(value.contains).toLowerCase());
+          if (value && typeof value === "object" && value.endsWith !== undefined)
+            return String(record[key] || "").endsWith(String(value.endsWith));
+          if (value && typeof value === "object" && value.startsWith !== undefined)
+            return String(record[key] || "").startsWith(String(value.startsWith));
           return record[key] === value;
         });
         if (matches) {

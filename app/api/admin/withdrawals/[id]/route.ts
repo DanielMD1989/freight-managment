@@ -110,6 +110,16 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             },
           });
 
+          if (
+            !wallet ||
+            parseFloat(wallet.balance.toString()) <
+              parseFloat(existing.amount.toString())
+          ) {
+            throw Object.assign(new Error("INSUFFICIENT_BALANCE"), {
+              statusCode: 400,
+            });
+          }
+
           if (wallet) {
             // Decrement wallet balance
             await tx.financialAccount.update({
@@ -129,6 +139,46 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                       accountId: wallet.id,
                       amount: existing.amount,
                       isDebit: true,
+                    },
+                  ],
+                },
+              },
+            });
+          }
+        }
+      }
+
+      if (action === "REJECTED") {
+        // RC-1 FIX: Return funds to wallet on rejection
+        const requestingUser = await tx.user.findUnique({
+          where: { id: existing.requestedById },
+          select: { organizationId: true },
+        });
+
+        if (requestingUser?.organizationId) {
+          const wallet = await tx.financialAccount.findFirst({
+            where: {
+              organizationId: requestingUser.organizationId,
+              accountType: { in: ["SHIPPER_WALLET", "CARRIER_WALLET"] },
+              isActive: true,
+            },
+          });
+          if (wallet) {
+            await tx.financialAccount.update({
+              where: { id: wallet.id },
+              data: { balance: { increment: existing.amount } },
+            });
+            await tx.journalEntry.create({
+              data: {
+                transactionType: "REFUND",
+                description: "Withdrawal request rejected — funds returned",
+                reference: `WITHDRAW-REJ-${id}`,
+                lines: {
+                  create: [
+                    {
+                      amount: existing.amount,
+                      isDebit: false,
+                      accountId: wallet.id,
                     },
                   ],
                 },

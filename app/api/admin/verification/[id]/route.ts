@@ -25,6 +25,7 @@ import {
 } from "@/lib/email";
 // M6 FIX: Add CSRF validation
 import { validateCSRFWithMobile } from "@/lib/csrf";
+import { writeAuditLog, AuditEventType, AuditSeverity } from "@/lib/auditLog";
 // H9 FIX: Import types for proper typing
 import type {
   CompanyDocumentWithOrg,
@@ -124,7 +125,26 @@ export async function PATCH(
         },
       });
 
-      // Log action in audit trail (could be extended to a separate audit table)
+      await writeAuditLog({
+        eventType:
+          verificationStatus === "APPROVED"
+            ? AuditEventType.DOCUMENT_VERIFIED
+            : AuditEventType.DOCUMENT_REJECTED,
+        severity: AuditSeverity.INFO,
+        userId: session.userId,
+        organizationId: (updatedDocument as CompanyDocumentWithOrg).organization
+          ?.id,
+        resource: "company_document",
+        resourceId: id,
+        action: verificationStatus === "APPROVED" ? "VERIFY" : "REJECT",
+        result: "SUCCESS",
+        message: `Company document ${verificationStatus.toLowerCase()}: ${id}`,
+        metadata: {
+          entityType: "company",
+          verificationStatus: verificationStatus,
+        },
+        timestamp: new Date(),
+      });
     } else {
       // Truck document
       const existingDoc = await db.truckDocument.findUnique({
@@ -166,7 +186,26 @@ export async function PATCH(
         },
       });
 
-      // Log action in audit trail
+      await writeAuditLog({
+        eventType:
+          verificationStatus === "APPROVED"
+            ? AuditEventType.DOCUMENT_VERIFIED
+            : AuditEventType.DOCUMENT_REJECTED,
+        severity: AuditSeverity.INFO,
+        userId: session.userId,
+        organizationId: (updatedDocument as TruckDocumentWithCarrier).truck
+          ?.carrier?.id,
+        resource: "truck_document",
+        resourceId: id,
+        action: verificationStatus === "APPROVED" ? "VERIFY" : "REJECT",
+        result: "SUCCESS",
+        message: `Truck document ${verificationStatus.toLowerCase()}: ${id}`,
+        metadata: {
+          entityType: "truck",
+          verificationStatus: verificationStatus,
+        },
+        timestamp: new Date(),
+      });
     }
 
     // H9 FIX: Use proper type guards instead of unsafe casts

@@ -12,6 +12,7 @@ import { handleApiError } from "@/lib/apiErrors";
 import { sendEmail, createEmailHTML } from "@/lib/email";
 // CSRF FIX: Add CSRF validation
 import { validateCSRFWithMobile } from "@/lib/csrf";
+import { zodErrorResponse } from "@/lib/validation";
 
 const verifyUserSchema = z.object({
   status: z.enum(["PENDING_VERIFICATION", "ACTIVE", "SUSPENDED", "REJECTED"]),
@@ -32,7 +33,11 @@ export async function POST(
     await requirePermission(Permission.VERIFY_DOCUMENTS);
 
     const body = await request.json();
-    const { status, reason } = verifyUserSchema.parse(body);
+    const parsed = verifyUserSchema.safeParse(body);
+    if (!parsed.success) {
+      return zodErrorResponse(parsed.error);
+    }
+    const { status, reason } = parsed.data;
 
     const { id: userId } = await params;
 

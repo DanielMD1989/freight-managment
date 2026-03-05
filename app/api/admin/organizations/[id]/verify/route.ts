@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { writeAuditLog, AuditEventType, AuditSeverity } from "@/lib/auditLog";
 import { handleApiError } from "@/lib/apiErrors";
 // M7 FIX: Add CSRF validation
@@ -29,7 +29,7 @@ export async function POST(
     if (csrfError) return csrfError;
 
     const { id: orgId } = await params;
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Only admins can verify organizations
     if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
@@ -117,7 +117,7 @@ export async function DELETE(
     if (csrfError) return csrfError;
 
     const { id: orgId } = await params;
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Only admins can unverify organizations
     if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {

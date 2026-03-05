@@ -9,34 +9,34 @@
 
 ## Test Coverage Summary
 
-> Last updated: 2026-03-05 · E2E Dispatcher Bypass Audit (Rounds 1–7) complete
+> Last updated: 2026-03-05 · Admin Domain Audit (Round 8) complete
 
 | Metric      | Value |
 | ----------- | ----- |
-| Test suites | 117   |
-| Total tests | 2,449 |
-| Passing     | 2,439 |
-| Skipped     | 10    |
+| Test suites | 122   |
+| Total tests | 2,469 |
+| Passing     | 2,469 |
+| Skipped     | 0     |
 | Failures    | 0     |
 
 ### Coverage by User Story
 
-| US         | Story                       | Test File(s)                                                                                                                                                                                                                                                                                                                                                                                                     | Status      |
-| ---------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| US-1.1–1.3 | Registration & Verification | `carrier-registration.test.ts`, `auth.test.ts`                                                                                                                                                                                                                                                                                                                                                                   | ✅ Complete |
-| US-2.1–2.6 | Truck Lifecycle             | `trucks.test.ts`, `trucks-approve.test.ts`, `trucks-deep.test.ts`, `trucks-edge-cases.test.ts`, `truck-postings.test.ts`, `truck-postings-duplicate.test.ts`, `carrier/truck-posting-dispatcher-bypass.test.ts`                                                                                                                                                                                                  | ✅ Complete |
-| US-3.1–3.5 | Load Lifecycle              | `loads.test.ts`, `loads-edge-cases.test.ts`, `shipper/load-management.test.ts`, `shipper/load-edit-dispatcher-bypass.test.ts`, `shipper/load-settle-dispatcher-bypass.test.ts`                                                                                                                                                                                                                                   | ✅ Complete |
-| US-4.1–4.5 | Marketplace & Matching      | `carrier-match-proposals.test.ts`, `match-proposals-deep.test.ts`, `carrier-truck-requests.test.ts`, `truck-requests-deep.test.ts`, `load-request-respond.test.ts`, `requests.test.ts`, `requests-edge-cases.test.ts`, `shipper/load-requests.test.ts`, `shipper/truck-requests.test.ts`                                                                                                                         | ✅ Complete |
-| US-5.1–5.5 | Trip Lifecycle              | `trips.test.ts`, `trip-cancel.test.ts`, `trip-confirm.test.ts`, `trips-edge-cases.test.ts`, `trips-tracking.test.ts`                                                                                                                                                                                                                                                                                             | ✅ Complete |
-| US-6.1–6.4 | Proof of Delivery           | `carrier/pod-management.test.ts`, `shipper/pod-cross-role.test.ts`                                                                                                                                                                                                                                                                                                                                               | ✅ Complete |
-| US-7.1–7.8 | Financial Settlement        | `wallet-settlement.test.ts`, `carrier/wallet.test.ts`, `shipper/wallet.test.ts`, `financial-wallet.test.ts`, `financial-withdraw.test.ts`, `pod-management.test.ts`, `financial/fee-calculation.test.ts`, `shipper/load-settlement.test.ts`                                                                                                                                                                      | ✅ Complete |
-| US-8.1–8.3 | Post-Delivery & Return      | `trips.test.ts`, `trip-cancel.test.ts`                                                                                                                                                                                                                                                                                                                                                                           | ✅ Complete |
-| US-9.1–9.6 | Admin & Super Admin         | `trucks-approve.test.ts`, `dashboard.test.ts`                                                                                                                                                                                                                                                                                                                                                                    | ✅ Complete |
-| US-10      | Dispute Management          | `shipper/disputes.test.ts`, `carrier/disputes.test.ts`, `carrier-disputes.test.ts`, `carrier/disputes-resolution.test.ts`, `carrier/disputes-edge-cases.test.ts`                                                                                                                                                                                                                                                 | ✅ Complete |
-| US-11      | Dispatcher Workflow         | `dispatcher-scoping.test.ts`, `carrier/truck-requests-dispatcher-bypass.test.ts`, `carrier/truck-posting-dispatcher-bypass.test.ts`, `shipper/load-documents-dispatcher-bypass.test.ts`, `shipper/service-fee-dispatcher-bypass.test.ts`, `shipper/load-edit-dispatcher-bypass.test.ts`, `shipper/load-settle-dispatcher-bypass.test.ts`, `dispatcher/dashboard.test.ts`, `dispatcher/access-prevention.test.ts` | ✅ Complete |
-| US-13      | Cron Automation             | `carrier-automation.test.ts`                                                                                                                                                                                                                                                                                                                                                                                     | ✅ Complete |
-| US-14      | Mobile API Parity           | `mobile-parity.test.ts`                                                                                                                                                                                                                                                                                                                                                                                          | ✅ Complete |
-| US-15      | Cross-Role Access           | `cross-role-access.test.ts`                                                                                                                                                                                                                                                                                                                                                                                      | ✅ Complete |
+| US          | Story                       | Test File(s)                                                                                                                                                                                                                                                                                                                                                                                                                                     | Status      |
+| ----------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
+| US-1.1–1.3  | Registration & Verification | `carrier-registration.test.ts`, `auth.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                   | ✅ Complete |
+| US-2.1–2.6  | Truck Lifecycle             | `trucks.test.ts`, `trucks-approve.test.ts`, `trucks-deep.test.ts`, `trucks-edge-cases.test.ts`, `truck-postings.test.ts`, `truck-postings-duplicate.test.ts`, `carrier/truck-posting-dispatcher-bypass.test.ts`                                                                                                                                                                                                                                  | ✅ Complete |
+| US-3.1–3.5  | Load Lifecycle              | `loads.test.ts`, `loads-edge-cases.test.ts`, `shipper/load-management.test.ts`, `shipper/load-edit-dispatcher-bypass.test.ts`, `shipper/load-settle-dispatcher-bypass.test.ts`                                                                                                                                                                                                                                                                   | ✅ Complete |
+| US-4.1–4.5  | Marketplace & Matching      | `carrier-match-proposals.test.ts`, `match-proposals-deep.test.ts`, `carrier-truck-requests.test.ts`, `truck-requests-deep.test.ts`, `load-request-respond.test.ts`, `requests.test.ts`, `requests-edge-cases.test.ts`, `shipper/load-requests.test.ts`, `shipper/truck-requests.test.ts`                                                                                                                                                         | ✅ Complete |
+| US-5.1–5.5  | Trip Lifecycle              | `trips.test.ts`, `trip-cancel.test.ts`, `trip-confirm.test.ts`, `trips-edge-cases.test.ts`, `trips-tracking.test.ts`                                                                                                                                                                                                                                                                                                                             | ✅ Complete |
+| US-6.1–6.4  | Proof of Delivery           | `carrier/pod-management.test.ts`, `shipper/pod-cross-role.test.ts`                                                                                                                                                                                                                                                                                                                                                                               | ✅ Complete |
+| US-7.1–7.8  | Financial Settlement        | `wallet-settlement.test.ts`, `carrier/wallet.test.ts`, `shipper/wallet.test.ts`, `financial-wallet.test.ts`, `financial-withdraw.test.ts`, `pod-management.test.ts`, `financial/fee-calculation.test.ts`, `shipper/load-settlement.test.ts`                                                                                                                                                                                                      | ✅ Complete |
+| US-8.1–8.3  | Post-Delivery & Return      | `trips.test.ts`, `trip-cancel.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                           | ✅ Complete |
+| US-9.1–9.13 | Admin & Super Admin         | `admin/users.test.ts`, `admin/organizations.test.ts`, `admin/documents.test.ts`, `admin/settlements.test.ts`, `admin/withdrawals.test.ts`, `admin/withdrawals-rejection-refund.test.ts`, `admin/corridors.test.ts`, `admin/analytics.test.ts`, `admin/dashboard.test.ts`, `admin/platform-metrics.test.ts`, `admin/service-fees-metrics.test.ts`, `admin/settings.test.ts`, `admin/activate-test-users.test.ts`, `admin/bypass-warnings.test.ts` | ✅ Complete |
+| US-10       | Dispute Management          | `shipper/disputes.test.ts`, `carrier/disputes.test.ts`, `carrier-disputes.test.ts`, `carrier/disputes-resolution.test.ts`, `carrier/disputes-edge-cases.test.ts`                                                                                                                                                                                                                                                                                 | ✅ Complete |
+| US-11       | Dispatcher Workflow         | `dispatcher-scoping.test.ts`, `carrier/truck-requests-dispatcher-bypass.test.ts`, `carrier/truck-posting-dispatcher-bypass.test.ts`, `shipper/load-documents-dispatcher-bypass.test.ts`, `shipper/service-fee-dispatcher-bypass.test.ts`, `shipper/load-edit-dispatcher-bypass.test.ts`, `shipper/load-settle-dispatcher-bypass.test.ts`, `dispatcher/dashboard.test.ts`, `dispatcher/access-prevention.test.ts`                                 | ✅ Complete |
+| US-13       | Cron Automation             | `carrier-automation.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                     | ✅ Complete |
+| US-14       | Mobile API Parity           | `mobile-parity.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                          | ✅ Complete |
+| US-15       | Cross-Role Access           | `cross-role-access.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                      | ✅ Complete |
 
 ---
 
@@ -981,6 +981,8 @@
 - [x] Corridors can be activated or deactivated (`isActive` flag)
 - [x] Fee preview calculations available for corridor management UI
 
+**Test:** `__tests__/api/admin/corridors.test.ts`
+
 ---
 
 ### US-9.5: View Platform Analytics and Revenue
@@ -995,8 +997,13 @@
 - [x] Journal entries provide a complete financial audit trail
 - [x] Dashboard shows trip counts, completion rates, and active users
 - [x] Revenue breakdown available by corridor and time period
+- [x] `GET /api/admin/dashboard` returns aggregated metrics (trips, loads, trucks, revenue, disputes) — all roles with VIEW_DASHBOARD permission
+- [x] `GET /api/admin/analytics` provides time-series analytics — ADMIN + SUPER_ADMIN only
+- [x] `GET /api/admin/platform-metrics` provides deep system metrics — SUPER_ADMIN only (MANAGE_USERS permission)
+- [x] `GET /api/admin/service-fees/metrics` provides per-corridor fee analytics — ADMIN + SUPER_ADMIN only
+- [x] Non-admin roles (SHIPPER, CARRIER, DISPATCHER) receive 403 on platform-metrics and analytics
 
-**Test:** `__tests__/api/carrier/dashboard.test.ts`
+**Test:** `__tests__/api/admin/analytics.test.ts`, `__tests__/api/admin/dashboard.test.ts`, `__tests__/api/admin/platform-metrics.test.ts`, `__tests__/api/admin/service-fees-metrics.test.ts`
 
 ---
 
@@ -1011,9 +1018,149 @@
 - [x] Users can request withdrawals from their wallet balance
 - [x] Admin reviews and approves or rejects withdrawal requests
 - [x] Approved withdrawals deduct from user wallet and create a journal entry
-- [x] Rejected withdrawals return funds to the user's available balance
+- [x] Rejected withdrawals return funds to the user's available balance immediately (RC-1 fix — previously lost permanently)
+- [x] A `REFUND` journal entry with reference `WITHDRAW-REJ-{id}` is created on rejection for full audit trail (RC-1)
+- [x] Approval is blocked with 400 if wallet balance is insufficient at approval time (RC-2 balance guard)
+- [x] Carrier withdrawal rejections also credit the carrier wallet (cross-role refund coverage)
+- [x] Admin cannot approve an already-APPROVED withdrawal → 400 (idempotency guard)
+- [x] Only ADMIN or SUPER_ADMIN can approve or reject withdrawals — SHIPPER receives 403
 
-**Test:** `__tests__/api/financial/wallet-settlement.test.ts`
+**Test:** `__tests__/api/admin/withdrawals.test.ts`, `__tests__/api/admin/withdrawals-rejection-refund.test.ts`
+
+---
+
+### US-9.7: Verify Company and Truck Documents
+
+**As an** admin,
+**I want to** approve or reject uploaded company and truck documents,
+**so that** only verified carriers and organizations operate on the platform.
+
+**Acceptance Criteria:**
+
+- [x] `PATCH /api/admin/verification/[id]` accepts `entityType` (`company` | `truck`), `verificationStatus` (`APPROVED` | `REJECTED`), optional `rejectionReason` and `expiresAt`
+- [x] Rejection requires `rejectionReason` — missing reason returns 400
+- [x] On approval or rejection, an audit log entry is written with `DOCUMENT_VERIFIED` or `DOCUMENT_REJECTED` event type (BUG-ADM-4 fix — previously no audit log)
+- [x] Email notification sent to the org's `contactEmail` on approval or rejection
+- [x] Rejection reason is sanitized before storage (XSS prevention)
+- [x] Non-existent document ID returns 404
+- [x] Only users with `VERIFY_DOCUMENTS` permission (ADMIN, SUPER_ADMIN) can perform this action
+
+**API:** `PATCH /api/admin/verification/[id]` (`app/api/admin/verification/[id]/route.ts`)
+
+**Test:** `__tests__/api/admin/documents.test.ts`
+
+---
+
+### US-9.8: Verify and Manage Organizations
+
+**As an** admin,
+**I want to** list organizations and set their verification status,
+**so that** only legitimate businesses have access to the platform.
+
+**Acceptance Criteria:**
+
+- [x] `GET /api/admin/organizations` returns a list of all organizations — requires an ACTIVE user session (BUG-ADM-1 fix — PENDING_VERIFICATION users are blocked)
+- [x] `POST /api/admin/organizations/[id]/verify` sets the organization to verified — requires ACTIVE user with VERIFY_DOCUMENTS permission (BUG-ADM-2 fix)
+- [x] `DELETE /api/admin/organizations/[id]/verify` unverifies an organization — same permission guard (BUG-ADM-3 fix)
+- [x] Users with status `PENDING_VERIFICATION` cannot access these routes even if their role would normally permit it
+- [x] Non-existent organization ID returns 404
+
+**API:** `GET /api/admin/organizations`, `POST /api/admin/organizations/[id]/verify`, `DELETE /api/admin/organizations/[id]/verify`
+
+**Test:** `__tests__/api/admin/organizations.test.ts`
+
+---
+
+### US-9.9: Block Pending Users from Administrative Routes
+
+**As a** platform security rule,
+**I want** users with `PENDING_VERIFICATION` status blocked from admin-controlled routes,
+**so that** unverified accounts cannot access or modify platform data.
+
+**Acceptance Criteria:**
+
+- [x] `requireActiveUser()` performs a live DB check and rejects any non-ACTIVE user regardless of role
+- [x] PENDING_VERIFICATION users with ADMIN role cannot list organizations, verify orgs, or unverify orgs
+- [x] This protection applies to all routes using `requireActiveUser()` vs `requireAuth()` which only checks the JWT
+
+**API:** All routes using `requireActiveUser()` from `@/lib/auth`
+
+**Test:** `__tests__/api/admin/organizations.test.ts`
+
+---
+
+### US-9.10: Safe User Verification Input Handling
+
+**As an** admin,
+**I want** the user verification endpoint to return a clear 400 on invalid input,
+**so that** malformed requests don't produce opaque 500 errors.
+
+**Acceptance Criteria:**
+
+- [x] `PATCH /api/admin/users/[id]/verify` validates body with Zod `safeParse` — invalid body returns 400 with structured error (ISSUE-6 fix — previously `.parse()` threw and returned 500)
+- [x] Valid `status` values are `ACTIVE`, `REJECTED`, `SUSPENDED` — unknown value returns 400
+- [x] `reason` is required when `status` is `REJECTED` — missing reason returns 400
+- [x] Valid request returns 200 with updated user record
+
+**API:** `PATCH /api/admin/users/[id]/verify` (`app/api/admin/users/[id]/verify/route.ts`)
+
+**Test:** `__tests__/api/admin/users.test.ts`
+
+---
+
+### US-9.11: Bulk Activate Test Users
+
+**As an** admin,
+**I want to** bulk-activate users with `@testfreightet.com` emails,
+**so that** demo and test accounts can be reset to ACTIVE without per-user approval.
+
+**Acceptance Criteria:**
+
+- [x] `POST /api/admin/activate-test-users` sets all `@testfreightet.com` users from `PENDING_VERIFICATION` to `ACTIVE`
+- [x] Email match uses `endsWith "@testfreightet.com"` — a user whose email contains the string elsewhere (e.g. `evil@x.com+testfreightet.com`) is NOT activated (BUG-ACTIVATE-EMAIL fix — previously used substring `contains`)
+- [x] `GET /api/admin/activate-test-users` returns the current list of test users
+- [x] Only ADMIN or SUPER_ADMIN can call this endpoint — SHIPPER, CARRIER, DISPATCHER receive 403
+- [x] Unauthenticated requests receive 500
+
+**API:** `POST /api/admin/activate-test-users`, `GET /api/admin/activate-test-users` (`app/api/admin/activate-test-users/route.ts`)
+
+**Test:** `__tests__/api/admin/activate-test-users.test.ts`
+
+---
+
+### US-9.12: Platform Settings Management
+
+**As a** super admin,
+**I want to** read and update global platform configuration,
+**so that** I can adjust operational parameters without a code deployment.
+
+**Acceptance Criteria:**
+
+- [x] `GET /api/admin/settings` returns current platform settings — SUPER_ADMIN only
+- [x] `PATCH /api/admin/settings` updates one or more setting values — SUPER_ADMIN only
+- [x] ADMIN receives 403 (settings are super-admin-only)
+- [x] SHIPPER, CARRIER, DISPATCHER receive 403
+
+**API:** `GET /api/admin/settings`, `PATCH /api/admin/settings` (`app/api/admin/settings/route.ts`)
+
+**Test:** `__tests__/api/admin/settings.test.ts`
+
+---
+
+### US-9.13: Anti-Bypass Warning Dashboard
+
+**As an** admin,
+**I want to** see a summary of detected role-bypass attempts,
+**so that** I can identify and respond to suspicious cross-role access patterns.
+
+**Acceptance Criteria:**
+
+- [x] `GET /api/admin/bypass-warnings` returns aggregated bypass detection events
+- [x] Only ADMIN or SUPER_ADMIN can access this endpoint — other roles receive 403
+
+**API:** `GET /api/admin/bypass-warnings` (`app/api/admin/bypass-warnings/route.ts`)
+
+**Test:** `__tests__/api/admin/bypass-warnings.test.ts`
 
 ---
 
@@ -1154,6 +1301,16 @@ These rules are enforced globally across all API endpoints and business logic.
 - Dispatcher bypass bugs fixed across audit rounds 2–7: POD upload/verify (R2), dispute filing/detail (R3/R4), truck request GET/DELETE (R5), document access/service-fee read (R6), load edit/delete/settle + truck posting edit/cancel (R7)
 - **Tested:** `__tests__/api/carrier/cross-role-access.test.ts`, `__tests__/api/shipper/disputes.test.ts`, `__tests__/api/carrier/truck-requests-dispatcher-bypass.test.ts`, `__tests__/api/carrier/truck-posting-dispatcher-bypass.test.ts`, `__tests__/api/shipper/load-edit-dispatcher-bypass.test.ts`, `__tests__/api/shipper/load-settle-dispatcher-bypass.test.ts`, `__tests__/api/shipper/load-documents-dispatcher-bypass.test.ts`, `__tests__/api/shipper/service-fee-dispatcher-bypass.test.ts`
 
+### RULE: PENDING_USER_BYPASS_PREVENTION
+
+> Users with PENDING_VERIFICATION status cannot access administrative routes even if their role would normally permit it.
+
+- `requireActiveUser()` performs a live DB check and rejects non-ACTIVE users
+- Applies to org listing, org verification, and org unverification routes
+- Prevents partially onboarded admin accounts from accessing privileged data
+- Fixed in BUG-ADM-1 (list orgs), BUG-ADM-2 (verify org), BUG-ADM-3 (unverify org)
+- **Tested:** `__tests__/api/admin/organizations.test.ts`
+
 ### RULE: Contact Info Hidden Until IN_TRANSIT
 
 > Carrier contact details are not exposed to shippers until the trip is actively in transit.
@@ -1207,21 +1364,27 @@ These rules are enforced globally across all API endpoints and business logic.
 
 ## Key Source Files
 
-| File                                            | What It Defines                                            |
-| ----------------------------------------------- | ---------------------------------------------------------- |
-| `lib/foundation-rules.ts`                       | 7 foundation rules + enforcement helpers                   |
-| `lib/tripStateMachine.ts`                       | Trip status enum, valid transitions, role permissions      |
-| `lib/loadStateMachine.ts`                       | Load status enum, valid transitions, role permissions      |
-| `lib/serviceFeeCalculation.ts`                  | Per-km fee calculation, corridor matching, promo discounts |
-| `lib/serviceFeeManagement.ts`                   | Deduction, wallet validation, refund, corridor assignment  |
-| `app/api/auth/register/route.ts`                | User registration with org and wallet creation             |
-| `app/api/trucks/[id]/approve/route.ts`          | Admin truck approval/rejection                             |
-| `app/api/truck-postings/route.ts`               | Truck posting creation with ONE_ACTIVE_POST enforcement    |
-| `app/api/loads/route.ts`                        | Load creation (DRAFT or POSTED)                            |
-| `app/api/load-requests/[id]/respond/route.ts`   | Shipper approves/rejects carrier's load request            |
-| `app/api/truck-requests/[id]/respond/route.ts`  | Carrier approves/rejects shipper's truck request           |
-| `app/api/match-proposals/[id]/respond/route.ts` | Carrier accepts/rejects dispatcher's match proposal        |
-| `app/api/trips/[tripId]/route.ts`               | Trip status updates with state machine enforcement         |
-| `app/api/trips/[tripId]/pod/route.ts`           | POD upload (carrier)                                       |
-| `app/api/loads/[id]/pod/route.ts`               | POD verification (shipper) + auto-settlement trigger       |
-| `prisma/schema.prisma`                          | Data model and relationships                               |
+| File                                               | What It Defines                                                                   |
+| -------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `lib/foundation-rules.ts`                          | 7 foundation rules + enforcement helpers                                          |
+| `lib/tripStateMachine.ts`                          | Trip status enum, valid transitions, role permissions                             |
+| `lib/loadStateMachine.ts`                          | Load status enum, valid transitions, role permissions                             |
+| `lib/serviceFeeCalculation.ts`                     | Per-km fee calculation, corridor matching, promo discounts                        |
+| `lib/serviceFeeManagement.ts`                      | Deduction, wallet validation, refund, corridor assignment                         |
+| `app/api/auth/register/route.ts`                   | User registration with org and wallet creation                                    |
+| `app/api/trucks/[id]/approve/route.ts`             | Admin truck approval/rejection                                                    |
+| `app/api/truck-postings/route.ts`                  | Truck posting creation with ONE_ACTIVE_POST enforcement                           |
+| `app/api/loads/route.ts`                           | Load creation (DRAFT or POSTED)                                                   |
+| `app/api/load-requests/[id]/respond/route.ts`      | Shipper approves/rejects carrier's load request                                   |
+| `app/api/truck-requests/[id]/respond/route.ts`     | Carrier approves/rejects shipper's truck request                                  |
+| `app/api/match-proposals/[id]/respond/route.ts`    | Carrier accepts/rejects dispatcher's match proposal                               |
+| `app/api/trips/[tripId]/route.ts`                  | Trip status updates with state machine enforcement                                |
+| `app/api/trips/[tripId]/pod/route.ts`              | POD upload (carrier)                                                              |
+| `app/api/loads/[id]/pod/route.ts`                  | POD verification (shipper) + auto-settlement trigger                              |
+| `app/api/admin/withdrawals/[id]/route.ts`          | Withdrawal approval/rejection with balance guard (RC-2) and refund journal (RC-1) |
+| `app/api/admin/verification/[id]/route.ts`         | Company + truck document approval/rejection with audit log                        |
+| `app/api/admin/organizations/route.ts`             | Org listing (requireActiveUser guard — BUG-ADM-1)                                 |
+| `app/api/admin/organizations/[id]/verify/route.ts` | Org verification status management (requireActiveUser — BUG-ADM-2/3)              |
+| `app/api/admin/users/[id]/verify/route.ts`         | User status update with safeParse validation (ISSUE-6)                            |
+| `app/api/admin/activate-test-users/route.ts`       | Bulk test-user activation with endsWith email guard (BUG-ACTIVATE-EMAIL)          |
+| `prisma/schema.prisma`                             | Data model and relationships                                                      |

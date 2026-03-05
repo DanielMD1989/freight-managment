@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     const result = await db.user.updateMany({
       where: {
         email: {
-          contains: "testfreightet.com",
+          endsWith: "@testfreightet.com",
         },
       },
       data: {
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     const users = await db.user.findMany({
       where: {
         email: {
-          contains: "testfreightet.com",
+          endsWith: "@testfreightet.com",
         },
       },
       select: {
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
     const users = await db.user.findMany({
       where: {
         email: {
-          contains: "testfreightet.com",
+          endsWith: "@testfreightet.com",
         },
       },
       select: {
