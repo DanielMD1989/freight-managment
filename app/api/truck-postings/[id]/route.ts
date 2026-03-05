@@ -234,7 +234,10 @@ export async function PATCH(
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     // Verify ownership (user's organization owns this posting)
-    if (existing.carrierId !== session.organizationId && !isAdmin) {
+    const isCarrierOwner =
+      session.role === "CARRIER" &&
+      existing.carrierId === session.organizationId;
+    if (!isAdmin && !isCarrierOwner) {
       return NextResponse.json(
         { error: "Truck posting not found" },
         { status: 404 }
@@ -484,7 +487,10 @@ export async function DELETE(
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     // Verify ownership (user's organization owns this posting)
-    if (existing.carrierId !== session.organizationId && !isAdmin) {
+    const isCarrierOwnerDel =
+      session.role === "CARRIER" &&
+      existing.carrierId === session.organizationId;
+    if (!isAdmin && !isCarrierOwnerDel) {
       return NextResponse.json(
         { error: "Truck posting not found" },
         { status: 404 }
@@ -498,7 +504,14 @@ export async function DELETE(
         where: { id },
         select: { carrierId: true, status: true },
       });
-      if (!fresh || (fresh.carrierId !== session.organizationId && !isAdmin)) {
+      if (
+        !fresh ||
+        (!isAdmin &&
+          !(
+            session.role === "CARRIER" &&
+            fresh.carrierId === session.organizationId
+          ))
+      ) {
         throw new Error("POSTING_NOT_FOUND");
       }
       if (fresh.status === "CANCELLED") {

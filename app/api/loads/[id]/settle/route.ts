@@ -350,8 +350,11 @@ export async function GET(
       select: { organizationId: true, role: true },
     });
 
-    const isShipper = user?.organizationId === load.shipperId;
-    const isCarrier = user?.organizationId === load.assignedTruck?.carrierId;
+    const isShipper =
+      session.role === "SHIPPER" && user?.organizationId === load.shipperId;
+    const isCarrier =
+      session.role === "CARRIER" &&
+      user?.organizationId === load.assignedTruck?.carrierId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isShipper && !isCarrier && !isAdmin) {

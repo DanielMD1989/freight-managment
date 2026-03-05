@@ -305,10 +305,12 @@ export async function PATCH(
     });
 
     const canEdit =
-      user?.organizationId === existingLoad.shipperId ||
-      session.userId === existingLoad.createdById ||
       session.role === "ADMIN" ||
-      session.role === "SUPER_ADMIN";
+      session.role === "SUPER_ADMIN" ||
+      (session.role === "SHIPPER" &&
+        user?.organizationId === existingLoad.shipperId) ||
+      (session.role === "SHIPPER" &&
+        session.userId === existingLoad.createdById);
 
     if (!canEdit) {
       console.error("Permission denied:", {
@@ -598,10 +600,10 @@ export async function DELETE(
     });
 
     const canDelete =
-      user?.organizationId === load.shipperId ||
-      session.userId === load.createdById ||
       session.role === "ADMIN" ||
-      session.role === "SUPER_ADMIN";
+      session.role === "SUPER_ADMIN" ||
+      (session.role === "SHIPPER" && user?.organizationId === load.shipperId) ||
+      (session.role === "SHIPPER" && session.userId === load.createdById);
 
     if (!canDelete) {
       return NextResponse.json(
