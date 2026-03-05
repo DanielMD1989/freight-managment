@@ -440,6 +440,87 @@ describe("Load Settlement — POST /api/loads/[id]/settle", () => {
     );
   });
 
+  // GAP-H: SHIPPER POST settle → 403 with full message assertion
+  it("GAP-H: SHIPPER cannot trigger settlement — 403 with admin-only message", async () => {
+    setAuthSession(shipperSession);
+
+    const gapHLoadId = "load-gap-h-shipper-settle";
+    await db.load.create({
+      data: {
+        id: gapHLoadId,
+        status: "DELIVERED",
+        podSubmitted: true,
+        podVerified: true,
+        settlementStatus: "PENDING",
+        pickupCity: "Addis Ababa",
+        pickupDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+        deliveryCity: "Dire Dawa",
+        deliveryDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+        truckType: "DRY_VAN",
+        weight: 5000,
+        cargoDescription: "GAP-H shipper settle attempt",
+        shipperId: seed.shipperOrg.id,
+        createdById: "shipper-user-1",
+        postedAt: new Date(),
+      },
+    });
+
+    const req = createRequest(
+      "POST",
+      `http://localhost:3000/api/loads/${gapHLoadId}/settle`,
+      { body: {} }
+    );
+    const res = await callHandler(postSettle, req, { id: gapHLoadId });
+    const body = await parseResponse(res);
+
+    expect(res.status).toBe(403);
+    expect(body.error).toMatch(/admin/i);
+    expect(body.error).toMatch(/unauthorized/i);
+  });
+
+  // GAP-I: DISPATCHER POST settle → 403
+  it("GAP-I: DISPATCHER cannot trigger settlement → 403 (admin-only action)", async () => {
+    const dispatcherSession = createMockSession({
+      userId: "dispatcher-settle-user",
+      role: "DISPATCHER",
+      organizationId: "carrier-org-1",
+      status: "ACTIVE",
+    });
+    setAuthSession(dispatcherSession);
+
+    const gapILoadId = "load-gap-i-dispatcher-settle";
+    await db.load.create({
+      data: {
+        id: gapILoadId,
+        status: "DELIVERED",
+        podSubmitted: true,
+        podVerified: true,
+        settlementStatus: "PENDING",
+        pickupCity: "Addis Ababa",
+        pickupDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+        deliveryCity: "Dire Dawa",
+        deliveryDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+        truckType: "DRY_VAN",
+        weight: 4000,
+        cargoDescription: "GAP-I dispatcher settle attempt",
+        shipperId: seed.shipperOrg.id,
+        createdById: "shipper-user-1",
+        postedAt: new Date(),
+      },
+    });
+
+    const req = createRequest(
+      "POST",
+      `http://localhost:3000/api/loads/${gapILoadId}/settle`,
+      { body: {} }
+    );
+    const res = await callHandler(postSettle, req, { id: gapILoadId });
+    const body = await parseResponse(res);
+
+    expect(res.status).toBe(403);
+    expect(body.error).toMatch(/admin/i);
+  });
+
   it("returns 409 on double-settlement attempt (already PAID)", async () => {
     setAuthSession(adminSession);
 

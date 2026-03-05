@@ -295,6 +295,30 @@ describe("Load Requests — POST /api/load-requests", () => {
     expect(body.loadRequest.carrierId).toBe("carrier-org-1");
   });
 
+  // GAP-D: DISPATCHER cannot create a load request → 403
+  it("GAP-D: DISPATCHER cannot create load request → 403", async () => {
+    const dispatcherSession = createMockSession({
+      userId: "dispatcher-lr-user-1",
+      role: "DISPATCHER",
+      organizationId: "carrier-org-1",
+      status: "ACTIVE",
+    });
+    setAuthSession(dispatcherSession);
+
+    const req = createRequest(
+      "POST",
+      "http://localhost:3000/api/load-requests",
+      {
+        body: { loadId: seed.load.id, truckId: seed.truck.id },
+      }
+    );
+    const res = await createLoadRequest(req);
+    const body = await parseResponse(res);
+
+    expect(res.status).toBe(403);
+    expect(body.error).toMatch(/carrier/i);
+  });
+
   it("SUPER_ADMIN can create load request → 201, status=PENDING", async () => {
     setAuthSession(superAdminSession);
 
@@ -365,6 +389,44 @@ describe("Load Requests — GET /api/load-requests", () => {
     const req = createRequest("GET", "http://localhost:3000/api/load-requests");
     const res = await listLoadRequests(req);
     expect(res.status).toBe(401);
+  });
+
+  // GAP-E: DISPATCHER with org lists load requests → 200
+  it("GAP-E: DISPATCHER with organizationId gets load requests → 200", async () => {
+    const dispatcherWithOrg = createMockSession({
+      userId: "dispatcher-with-org-user",
+      role: "DISPATCHER",
+      organizationId: "carrier-org-1",
+      status: "ACTIVE",
+    });
+    setAuthSession(dispatcherWithOrg);
+
+    const req = createRequest("GET", "http://localhost:3000/api/load-requests");
+    const res = await listLoadRequests(req);
+    const body = await parseResponse(res);
+
+    expect(res.status).toBe(200);
+    expect(body).toHaveProperty("loadRequests");
+    expect(Array.isArray(body.loadRequests)).toBe(true);
+  });
+
+  // GAP-F: DISPATCHER without org → 400 (validates BUG-D fix)
+  it("GAP-F: DISPATCHER with null organizationId → 400 (BUG-D fix)", async () => {
+    const dispatcherNoOrg = createMockSession({
+      userId: "dispatcher-no-org-user",
+      role: "DISPATCHER",
+      organizationId: undefined,
+      status: "ACTIVE",
+    });
+    setAuthSession(dispatcherNoOrg);
+
+    const req = createRequest("GET", "http://localhost:3000/api/load-requests");
+    const res = await listLoadRequests(req);
+    const body = await parseResponse(res);
+
+    // BUG-D fix: null-org dispatcher must not leak orphaned records
+    expect(res.status).toBe(400);
+    expect(body.error).toMatch(/organization/i);
   });
 });
 
@@ -526,5 +588,40 @@ describe("Load Requests — POST /api/load-requests/[id]/respond", () => {
     );
     const res = await callHandler(respondToLoadRequest, req, { id: "any-id" });
     expect(res.status).toBe(401);
+  });
+
+  // GAP-G: DISPATCHER respond to load request → 404 (resource cloaking)
+  it("GAP-G: DISPATCHER cannot respond to load request → 404", async () => {
+    // Create a PENDING load request
+    const lr = await db.loadRequest.create({
+      data: {
+        id: "lr-dispatcher-respond-test",
+        loadId: seed.load.id,
+        truckId: seed.truck.id,
+        carrierId: "carrier-org-1",
+        shipperId: "shipper-org-1",
+        requestedById: "carrier-user-1",
+        status: "PENDING",
+        expiresAt: new Date(Date.now() + 86400000),
+      },
+    });
+
+    const dispatcherSession = createMockSession({
+      userId: "dispatcher-respond-user",
+      role: "DISPATCHER",
+      organizationId: "carrier-org-1",
+      status: "ACTIVE",
+    });
+    setAuthSession(dispatcherSession);
+
+    const req = createRequest(
+      "POST",
+      `http://localhost:3000/api/load-requests/${lr.id}/respond`,
+      { body: { action: "APPROVE" } }
+    );
+    const res = await callHandler(respondToLoadRequest, req, { id: lr.id });
+
+    // Respond is SHIPPER-only. DISPATCHER gets 404 (resource cloaking, not 403)
+    expect(res.status).toBe(404);
   });
 });

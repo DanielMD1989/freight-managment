@@ -635,7 +635,10 @@ describe("POD Management", () => {
     // ─── Auto-settlement (failed) ─────────────────────────────────────────
 
     describe("Auto-settlement (failed)", () => {
-      it("deductServiceFee throws → settlementStatus DISPUTE", async () => {
+      it("deductServiceFee throws → 500, podVerified stays false (BUG-C fix)", async () => {
+        // BUG-C fix: fee deduction now happens BEFORE the POD verification transaction.
+        // If deductServiceFee throws (e.g. payment gateway down), the exception
+        // propagates to the outer handler → 500. podVerified is never committed.
         setAuthSession(shipperSession);
         await setupDeliveredLoad(seed.load.id, { podSubmitted: true });
 
@@ -649,15 +652,15 @@ describe("POD Management", () => {
         );
 
         const res = await callHandler(PUT, req, { id: seed.load.id });
-        expect(res.status).toBe(200);
+        // Old behavior: 200 with settlement.status="failed" (inner catch → DISPUTE)
+        // New behavior: 500 from outer handleApiError (fee throw before transaction)
+        expect(res.status).toBe(500);
 
-        const data = await parseResponse(res);
-        expect(data.settlement.status).toBe("failed");
-
+        // Critical: podVerified must still be false — no partial commit
         const updatedLoad = await db.load.findUnique({
           where: { id: seed.load.id },
         });
-        expect(updatedLoad.settlementStatus).toBe("DISPUTE");
+        expect(updatedLoad.podVerified).toBe(false);
       });
     });
 

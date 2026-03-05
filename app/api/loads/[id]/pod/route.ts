@@ -85,7 +85,9 @@ export async function POST(
       select: { organizationId: true, role: true },
     });
 
-    const isCarrier = user?.organizationId === load.assignedTruck?.carrierId;
+    const isCarrier =
+      session.role === "CARRIER" &&
+      user?.organizationId === load.assignedTruck?.carrierId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isCarrier && !isAdmin) {
@@ -279,7 +281,8 @@ export async function PUT(
       select: { organizationId: true, role: true },
     });
 
-    const isShipper = user?.organizationId === load.shipperId;
+    const isShipper =
+      session.role === "SHIPPER" && user?.organizationId === load.shipperId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     if (!isShipper && !isAdmin) {
@@ -301,6 +304,23 @@ export async function PUT(
     if (load.podVerified) {
       return NextResponse.json(
         { error: "POD already verified" },
+        { status: 400 }
+      );
+    }
+
+    // BUG-C FIX: Deduct service fee BEFORE committing POD verification.
+    // If fee deduction fails (and fees not already deducted), block verification
+    // to prevent unguarded debt: podVerified=true with no fee charged.
+    const feeResult = await deductServiceFee(loadId);
+    if (
+      !feeResult.success &&
+      feeResult.error !== "Service fees already deducted"
+    ) {
+      return NextResponse.json(
+        {
+          error: "Cannot verify POD: fee deduction failed",
+          details: feeResult.error,
+        },
         { status: 400 }
       );
     }
@@ -364,94 +384,85 @@ export async function PUT(
       });
     }
 
-    // === AUTO-SETTLEMENT: Deduct service fees immediately on POD verification ===
+    // === SETTLEMENT: Record fee result after successful deduction ===
     let settlementResult: {
       status: string;
       shipperFee?: number;
       carrierFee?: number;
     } = { status: "skipped" };
-    try {
-      const feeResult = await deductServiceFee(loadId);
 
-      if (feeResult.success && feeResult.totalPlatformFee > 0) {
-        // B3 FIX: Wrap settlement DB writes in transaction for atomicity
-        await db.$transaction(async (tx) => {
-          await tx.load.update({
-            where: { id: loadId },
-            data: {
-              settlementStatus: "PAID",
-              settledAt: new Date(),
-            },
-          });
-
-          await tx.loadEvent.create({
-            data: {
-              loadId,
-              eventType: "SETTLEMENT_COMPLETED",
-              description: `Auto-settlement: Shipper fee ${feeResult.shipperFee.toFixed(2)} ETB, Carrier fee ${feeResult.carrierFee.toFixed(2)} ETB`,
-              userId: session.userId,
-              metadata: {
-                shipperFee: feeResult.shipperFee,
-                carrierFee: feeResult.carrierFee,
-                totalPlatformFee: feeResult.totalPlatformFee,
-                transactionId: feeResult.transactionId,
-                trigger: "pod_verification",
-              },
-            },
-          });
+    if (feeResult.success && feeResult.totalPlatformFee > 0) {
+      // B3 FIX: Wrap settlement DB writes in transaction for atomicity
+      await db.$transaction(async (tx) => {
+        await tx.load.update({
+          where: { id: loadId },
+          data: {
+            settlementStatus: "PAID",
+            settledAt: new Date(),
+          },
         });
 
-        // Notify shipper about fee deduction
-        if (load.shipperId) {
-          // Find shipper user
-          const shipperOrg = await db.organization.findUnique({
-            where: { id: load.shipperId },
-            select: { users: { select: { id: true }, take: 1 } },
-          });
-          const shipperUserId = shipperOrg?.users?.[0]?.id;
-          if (shipperUserId) {
-            await createNotification({
-              userId: shipperUserId,
-              type: NotificationType.SETTLEMENT_COMPLETE,
-              title: "Settlement Completed",
-              message: `Service fee of ${feeResult.shipperFee.toFixed(2)} ETB deducted for load ${loadWithCarrier?.pickupCity} → ${loadWithCarrier?.deliveryCity}.`,
-              metadata: { loadId, fee: feeResult.shipperFee },
-            });
-          }
-        }
+        await tx.loadEvent.create({
+          data: {
+            loadId,
+            eventType: "SETTLEMENT_COMPLETED",
+            description: `Auto-settlement: Shipper fee ${feeResult.shipperFee.toFixed(2)} ETB, Carrier fee ${feeResult.carrierFee.toFixed(2)} ETB`,
+            userId: session.userId,
+            metadata: {
+              shipperFee: feeResult.shipperFee,
+              carrierFee: feeResult.carrierFee,
+              totalPlatformFee: feeResult.totalPlatformFee,
+              transactionId: feeResult.transactionId,
+              trigger: "pod_verification",
+            },
+          },
+        });
+      });
 
-        // Notify carrier about fee deduction
-        if (carrierUserId) {
+      // Notify shipper about fee deduction
+      if (load.shipperId) {
+        const shipperOrg = await db.organization.findUnique({
+          where: { id: load.shipperId },
+          select: { users: { select: { id: true }, take: 1 } },
+        });
+        const shipperUserId = shipperOrg?.users?.[0]?.id;
+        if (shipperUserId) {
           await createNotification({
-            userId: carrierUserId,
+            userId: shipperUserId,
             type: NotificationType.SETTLEMENT_COMPLETE,
             title: "Settlement Completed",
-            message: `Service fee of ${feeResult.carrierFee.toFixed(2)} ETB deducted for load ${loadWithCarrier?.pickupCity} → ${loadWithCarrier?.deliveryCity}.`,
-            metadata: { loadId, fee: feeResult.carrierFee },
+            message: `Service fee of ${feeResult.shipperFee.toFixed(2)} ETB deducted for load ${loadWithCarrier?.pickupCity} → ${loadWithCarrier?.deliveryCity}.`,
+            metadata: { loadId, fee: feeResult.shipperFee },
           });
         }
-
-        settlementResult = {
-          status: "paid",
-          shipperFee: feeResult.shipperFee,
-          carrierFee: feeResult.carrierFee,
-        };
-      } else if (feeResult.success && feeResult.totalPlatformFee === 0) {
-        // Fees waived (no corridor match) — still mark settled
-        await db.load.update({
-          where: { id: loadId },
-          data: { settlementStatus: "PAID", settledAt: new Date() },
-        });
-        settlementResult = { status: "paid_waived" };
       }
-      // If !feeResult.success — leave as PENDING for cron fallback
-    } catch (settlementError) {
-      console.error("Auto-settlement failed for load", loadId, settlementError);
+
+      // Notify carrier about fee deduction
+      if (carrierUserId) {
+        await createNotification({
+          userId: carrierUserId,
+          type: NotificationType.SETTLEMENT_COMPLETE,
+          title: "Settlement Completed",
+          message: `Service fee of ${feeResult.carrierFee.toFixed(2)} ETB deducted for load ${loadWithCarrier?.pickupCity} → ${loadWithCarrier?.deliveryCity}.`,
+          metadata: { loadId, fee: feeResult.carrierFee },
+        });
+      }
+
+      settlementResult = {
+        status: "paid",
+        shipperFee: feeResult.shipperFee,
+        carrierFee: feeResult.carrierFee,
+      };
+    } else if (feeResult.success && feeResult.totalPlatformFee === 0) {
+      // Fees waived (no corridor match) — still mark settled
       await db.load.update({
         where: { id: loadId },
-        data: { settlementStatus: "DISPUTE" },
+        data: { settlementStatus: "PAID", settledAt: new Date() },
       });
-      settlementResult = { status: "failed" };
+      settlementResult = { status: "paid_waived" };
+    } else {
+      // Fee already deducted — leave settlement status as-is
+      settlementResult = { status: "skipped" };
     }
 
     // Invalidate cache again after settlement updates
