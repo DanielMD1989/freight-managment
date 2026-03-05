@@ -64,12 +64,14 @@ export async function GET(
       );
     }
 
-    // Check access (owner or assigned carrier or admin)
+    // Check access (owner or assigned carrier or admin) — role guard prevents DISPATCHER bypass
     const hasAccess =
-      document.load.shipperId === session.organizationId ||
-      document.load.assignedTruck?.carrierId === session.organizationId ||
       session.role === "ADMIN" ||
-      session.role === "SUPER_ADMIN";
+      session.role === "SUPER_ADMIN" ||
+      (session.role === "SHIPPER" &&
+        document.load.shipperId === session.organizationId) ||
+      (session.role === "CARRIER" &&
+        document.load.assignedTruck?.carrierId === session.organizationId);
 
     if (!hasAccess) {
       return NextResponse.json(

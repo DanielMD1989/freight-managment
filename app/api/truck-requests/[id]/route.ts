@@ -69,9 +69,13 @@ export async function GET(
     }
 
     // Check if user has access (shipper who created or carrier who received)
-    const isShipper = truckRequest.shipperId === session.organizationId;
-    const isCarrier = truckRequest.carrierId === session.organizationId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
+    const isShipper =
+      session.role === "SHIPPER" &&
+      truckRequest.shipperId === session.organizationId;
+    const isCarrier =
+      session.role === "CARRIER" &&
+      truckRequest.carrierId === session.organizationId;
 
     if (!isShipper && !isCarrier && !isAdmin) {
       return NextResponse.json(
@@ -124,9 +128,11 @@ export async function DELETE(
     }
 
     // Only the shipper who created the request can cancel it
-    const isShipper = truckRequest.shipperId === session.organizationId;
-    const isRequester = truckRequest.requestedById === session.userId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
+    const isShipper =
+      session.role === "SHIPPER" &&
+      truckRequest.shipperId === session.organizationId;
+    const isRequester = truckRequest.requestedById === session.userId;
 
     if (!isShipper && !isRequester && !isAdmin) {
       return NextResponse.json(

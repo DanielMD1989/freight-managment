@@ -78,11 +78,14 @@ export async function GET(
       return NextResponse.json({ error: "Dispute not found" }, { status: 404 });
     }
 
-    // Check access
-    const isShipper = dispute.load.shipper?.id === session.organizationId;
-    const isCarrier =
-      dispute.load.assignedTruck?.carrier?.id === session.organizationId;
+    // Check access — role check prevents DISPATCHER bypass (BUG-R3-3)
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
+    const isShipper =
+      session.role === "SHIPPER" &&
+      dispute.load.shipper?.id === session.organizationId;
+    const isCarrier =
+      session.role === "CARRIER" &&
+      dispute.load.assignedTruck?.carrier?.id === session.organizationId;
 
     if (!isShipper && !isCarrier && !isAdmin) {
       return NextResponse.json({ error: "Dispute not found" }, { status: 404 });

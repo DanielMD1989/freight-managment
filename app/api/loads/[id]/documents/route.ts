@@ -58,12 +58,14 @@ export async function GET(
       return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
-    // Check access (owner or assigned carrier or admin)
+    // Check access (owner or assigned carrier or admin) — role guard prevents DISPATCHER bypass
     const hasAccess =
-      load.shipperId === session.organizationId ||
-      load.assignedTruck?.carrierId === session.organizationId ||
       session.role === "ADMIN" ||
-      session.role === "SUPER_ADMIN";
+      session.role === "SUPER_ADMIN" ||
+      (session.role === "SHIPPER" &&
+        load.shipperId === session.organizationId) ||
+      (session.role === "CARRIER" &&
+        load.assignedTruck?.carrierId === session.organizationId);
 
     if (!hasAccess) {
       return NextResponse.json(
@@ -142,12 +144,14 @@ export async function POST(
       return NextResponse.json({ error: "Load not found" }, { status: 404 });
     }
 
-    // Check ownership or carrier assignment
+    // Check ownership or carrier assignment — role guard prevents DISPATCHER bypass
     const hasAccess =
-      load.shipperId === session.organizationId ||
-      load.assignedTruck?.carrierId === session.organizationId ||
       session.role === "ADMIN" ||
-      session.role === "SUPER_ADMIN";
+      session.role === "SUPER_ADMIN" ||
+      (session.role === "SHIPPER" &&
+        load.shipperId === session.organizationId) ||
+      (session.role === "CARRIER" &&
+        load.assignedTruck?.carrierId === session.organizationId);
 
     if (!hasAccess) {
       return NextResponse.json(
