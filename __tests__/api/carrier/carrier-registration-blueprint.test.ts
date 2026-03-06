@@ -480,6 +480,8 @@ describe("Carrier Registration Blueprint — full lifecycle (Round S3)", () => {
     expect(doc.uploadedBy).not.toBeNull();
     expect(doc.uploadedBy.firstName).toBe("C7");
     expect(doc.uploadedBy.lastName).toBe("Uploader");
+    expect(doc).not.toHaveProperty("uploadedById");
+    expect(doc).not.toHaveProperty("verifiedById");
   });
 
   // ── C8: Admin verification queue returns uploadedBy object (S3-1/S3-2) ───────
@@ -649,5 +651,38 @@ describe("Carrier Registration Blueprint — full lifecycle (Round S3)", () => {
 
     expect(res.status).toBe(400);
     expect(body.error).toMatch(/already approved/i);
+  });
+
+  // ── C11: Unverifying an org clears rejectionReason and rejectedAt (S2-FIX-1) ─
+  it("C11: unverifying an org clears rejectionReason and rejectedAt", async () => {
+    const org = await db.organization.create({
+      data: {
+        id: "cbp-org-c11",
+        name: "CBP Carrier C11",
+        type: "CARRIER_COMPANY",
+        contactEmail: "c11@example.com",
+        contactPhone: "+251922888111",
+        isVerified: true,
+        verificationStatus: "APPROVED",
+        verifiedAt: new Date(),
+        documentsLockedAt: new Date(),
+        // Simulate leftover rejection fields (e.g. from a previous cycle)
+        rejectionReason: "Stale rejection reason",
+        rejectedAt: new Date(),
+      },
+    });
+
+    useAdminSession();
+    const req = createRequest(
+      "DELETE",
+      `http://localhost/api/admin/organizations/${org.id}/verify`
+    );
+    const res = await callHandler(unverifyOrg, req, { id: org.id });
+    expect(res.status).toBe(200);
+
+    const updated = await db.organization.findUnique({ where: { id: org.id } });
+    expect(updated.verificationStatus).toBe("PENDING");
+    expect(updated.rejectionReason).toBeNull();
+    expect(updated.rejectedAt).toBeNull();
   });
 });

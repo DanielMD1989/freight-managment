@@ -29,6 +29,7 @@ describe("lib/tripStateMachine", () => {
       expect(isValidTripStatus("DELIVERED")).toBe(true);
       expect(isValidTripStatus("COMPLETED")).toBe(true);
       expect(isValidTripStatus("CANCELLED")).toBe(true);
+      expect(isValidTripStatus("EXCEPTION")).toBe(true);
     });
 
     it("should return false for invalid statuses", () => {
@@ -107,6 +108,50 @@ describe("lib/tripStateMachine", () => {
       });
     });
 
+    describe("EXCEPTION transitions", () => {
+      it("should allow IN_TRANSIT → EXCEPTION", () => {
+        expect(
+          isValidTripTransition(TripStatus.IN_TRANSIT, TripStatus.EXCEPTION)
+        ).toBe(true);
+      });
+
+      it("should allow EXCEPTION → ASSIGNED (re-dispatch)", () => {
+        expect(
+          isValidTripTransition(TripStatus.EXCEPTION, TripStatus.ASSIGNED)
+        ).toBe(true);
+      });
+
+      it("should allow EXCEPTION → IN_TRANSIT (resume)", () => {
+        expect(
+          isValidTripTransition(TripStatus.EXCEPTION, TripStatus.IN_TRANSIT)
+        ).toBe(true);
+      });
+
+      it("should allow EXCEPTION → CANCELLED", () => {
+        expect(
+          isValidTripTransition(TripStatus.EXCEPTION, TripStatus.CANCELLED)
+        ).toBe(true);
+      });
+
+      it("should allow EXCEPTION → COMPLETED", () => {
+        expect(
+          isValidTripTransition(TripStatus.EXCEPTION, TripStatus.COMPLETED)
+        ).toBe(true);
+      });
+
+      it("should NOT allow ASSIGNED → EXCEPTION (must reach IN_TRANSIT first)", () => {
+        expect(
+          isValidTripTransition(TripStatus.ASSIGNED, TripStatus.EXCEPTION)
+        ).toBe(false);
+      });
+
+      it("should NOT allow DELIVERED → EXCEPTION", () => {
+        expect(
+          isValidTripTransition(TripStatus.DELIVERED, TripStatus.EXCEPTION)
+        ).toBe(false);
+      });
+    });
+
     describe("terminal states", () => {
       it("COMPLETED should have no valid transitions", () => {
         expect(
@@ -173,6 +218,12 @@ describe("lib/tripStateMachine", () => {
 
       it("DISPATCHER can set CANCELLED", () => {
         expect(canRoleSetTripStatus("DISPATCHER", TripStatus.CANCELLED)).toBe(
+          true
+        );
+      });
+
+      it("DISPATCHER can set EXCEPTION", () => {
+        expect(canRoleSetTripStatus("DISPATCHER", TripStatus.EXCEPTION)).toBe(
           true
         );
       });
@@ -298,6 +349,26 @@ describe("lib/tripStateMachine", () => {
       expect(result.valid).toBe(false);
       expect(result.error).toContain("terminal state");
     });
+
+    it("DISPATCHER can transition IN_TRANSIT → EXCEPTION via validateTripStateTransition", () => {
+      const result = validateTripStateTransition(
+        "IN_TRANSIT",
+        "EXCEPTION",
+        "DISPATCHER"
+      );
+      expect(result.valid).toBe(true);
+      expect(result.error).toBeUndefined();
+    });
+
+    it("CARRIER cannot set EXCEPTION (DISPATCHER/ADMIN only)", () => {
+      const result = validateTripStateTransition(
+        "IN_TRANSIT",
+        "EXCEPTION",
+        "CARRIER"
+      );
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain("CARRIER cannot set trip status");
+    });
   });
 
   // ============================================================================
@@ -378,6 +449,10 @@ describe("lib/tripStateMachine", () => {
       expect(isActiveTripStatus(TripStatus.CANCELLED)).toBe(false);
     });
 
+    it("should return true for EXCEPTION", () => {
+      expect(isActiveTripStatus(TripStatus.EXCEPTION)).toBe(true);
+    });
+
     it("should work with string input", () => {
       expect(isActiveTripStatus("ASSIGNED")).toBe(true);
       expect(isActiveTripStatus("COMPLETED")).toBe(false);
@@ -392,6 +467,10 @@ describe("lib/tripStateMachine", () => {
       expect(ACTIVE_TRIP_STATUSES).toContain(TripStatus.ASSIGNED);
       expect(ACTIVE_TRIP_STATUSES).toContain(TripStatus.PICKUP_PENDING);
       expect(ACTIVE_TRIP_STATUSES).toContain(TripStatus.IN_TRANSIT);
+    });
+
+    it("should contain EXCEPTION", () => {
+      expect(ACTIVE_TRIP_STATUSES).toContain(TripStatus.EXCEPTION);
     });
 
     it("should not contain terminal statuses", () => {

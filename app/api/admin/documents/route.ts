@@ -106,12 +106,14 @@ export async function GET(request: NextRequest) {
       ]);
 
       // Add entityType and computed fields to each document
-      companyDocuments = companyDocuments.map((doc) => ({
-        ...doc,
-        entityType: "company",
-        entityName: doc.organization.name,
-        fileSize: Number(doc.fileSize),
-      }));
+      companyDocuments = companyDocuments.map(
+        ({ uploadedById: _u, verifiedById: _v, ...doc }) => ({
+          ...doc,
+          entityType: "company",
+          entityName: doc.organization.name,
+          fileSize: Number(doc.fileSize),
+        })
+      );
     }
 
     // Fetch truck documents
@@ -169,13 +171,15 @@ export async function GET(request: NextRequest) {
       ]);
 
       // Add entityType and computed fields to each document
-      truckDocuments = truckDocuments.map((doc) => ({
-        ...doc,
-        entityType: "truck",
-        entityName: `${doc.truck.carrier.name} - ${doc.truck.licensePlate}`,
-        organization: doc.truck.carrier,
-        fileSize: Number(doc.fileSize),
-      }));
+      truckDocuments = truckDocuments.map(
+        ({ uploadedById: _u, verifiedById: _v, ...doc }) => ({
+          ...doc,
+          entityType: "truck",
+          entityName: `${doc.truck.carrier.name} - ${doc.truck.licensePlate}`,
+          organization: doc.truck.carrier,
+          fileSize: Number(doc.fileSize),
+        })
+      );
     }
 
     // Combine and paginate if showing all

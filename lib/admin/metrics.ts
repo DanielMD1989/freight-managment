@@ -131,6 +131,7 @@ export const ACTIVE_TRIP_STATUSES = [
   "ASSIGNED",
   "PICKUP_PENDING",
   "IN_TRANSIT",
+  "EXCEPTION",
 ] as const;
 
 // ============================================================================

@@ -62,7 +62,7 @@ export const TRIP_ROLE_PERMISSIONS: Record<string, TripStatus[]> = {
     TripStatus.CANCELLED, // Carrier can cancel their own trips
   ],
 
-  DISPATCHER: [TripStatus.ASSIGNED, TripStatus.CANCELLED],
+  DISPATCHER: [TripStatus.ASSIGNED, TripStatus.EXCEPTION, TripStatus.CANCELLED],
 
   ADMIN: [
     // Admin can set any status (for exception handling)
@@ -191,6 +191,7 @@ export function isActiveTripStatus(status: TripStatus | string): boolean {
     TripStatus.ASSIGNED,
     TripStatus.PICKUP_PENDING,
     TripStatus.IN_TRANSIT,
+    TripStatus.EXCEPTION,
   ].includes(status as TripStatus);
 }
 
@@ -202,4 +203,5 @@ export const ACTIVE_TRIP_STATUSES: TripStatus[] = [
   TripStatus.ASSIGNED,
   TripStatus.PICKUP_PENDING,
   TripStatus.IN_TRANSIT,
+  TripStatus.EXCEPTION,
 ];

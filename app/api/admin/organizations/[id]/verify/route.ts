@@ -165,9 +165,11 @@ export async function DELETE(
       data: {
         isVerified: false,
         verifiedAt: null,
-        // Round S2: reset to PENDING, clear lock
+        // Round S2: reset to PENDING, clear lock and rejection fields
         verificationStatus: "PENDING",
         documentsLockedAt: null,
+        rejectionReason: null,
+        rejectedAt: null,
       },
     });
 

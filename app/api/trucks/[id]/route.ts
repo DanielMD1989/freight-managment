@@ -305,6 +305,7 @@ export async function DELETE(
       "ASSIGNED",
       "PICKUP_PENDING",
       "IN_TRANSIT",
+      "EXCEPTION",
       "DELIVERED",
     ];
 

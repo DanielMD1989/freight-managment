@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireActiveUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { Prisma } from "@prisma/client";
+import { Prisma, VerificationStatus } from "@prisma/client";
 import { handleApiError } from "@/lib/apiErrors";
 
 /**
@@ -58,6 +58,11 @@ export async function GET(request: NextRequest) {
 
     if (isVerified !== null && isVerified !== undefined) {
       where.isVerified = isVerified === "true";
+    }
+
+    const verificationStatusParam = searchParams.get("verificationStatus");
+    if (verificationStatusParam) {
+      where.verificationStatus = verificationStatusParam as VerificationStatus;
     }
 
     // Get organizations with aggregated counts
