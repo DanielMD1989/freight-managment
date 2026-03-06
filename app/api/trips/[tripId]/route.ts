@@ -29,6 +29,7 @@ const updateTripSchema = z.object({
       "IN_TRANSIT",
       "DELIVERED",
       "COMPLETED",
+      "EXCEPTION",
       "CANCELLED",
     ])
     .optional(),
@@ -473,6 +474,8 @@ function mapTripStatusToLoadStatus(tripStatus: TripStatus): LoadStatus | null {
       return LoadStatus.DELIVERED;
     case "COMPLETED":
       return LoadStatus.COMPLETED;
+    case "EXCEPTION":
+      return LoadStatus.EXCEPTION;
     case "CANCELLED":
       return LoadStatus.CANCELLED;
     default:

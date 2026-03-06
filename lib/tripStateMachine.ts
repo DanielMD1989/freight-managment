@@ -13,6 +13,7 @@ export enum TripStatus {
   IN_TRANSIT = "IN_TRANSIT",
   DELIVERED = "DELIVERED",
   COMPLETED = "COMPLETED",
+  EXCEPTION = "EXCEPTION",
   CANCELLED = "CANCELLED",
 }
 
@@ -25,9 +26,20 @@ export const VALID_TRIP_TRANSITIONS: Record<TripStatus, TripStatus[]> = {
 
   [TripStatus.PICKUP_PENDING]: [TripStatus.IN_TRANSIT, TripStatus.CANCELLED],
 
-  [TripStatus.IN_TRANSIT]: [TripStatus.DELIVERED, TripStatus.CANCELLED],
+  [TripStatus.IN_TRANSIT]: [
+    TripStatus.DELIVERED,
+    TripStatus.EXCEPTION,
+    TripStatus.CANCELLED,
+  ],
 
   [TripStatus.DELIVERED]: [TripStatus.COMPLETED],
+
+  [TripStatus.EXCEPTION]: [
+    TripStatus.ASSIGNED,
+    TripStatus.IN_TRANSIT,
+    TripStatus.CANCELLED,
+    TripStatus.COMPLETED,
+  ],
 
   [TripStatus.COMPLETED]: [
     // Terminal state - no transitions allowed
@@ -157,6 +169,7 @@ export function getTripStatusDescription(status: TripStatus): string {
     [TripStatus.IN_TRANSIT]: "Load picked up, in transit to destination",
     [TripStatus.DELIVERED]: "Load delivered, awaiting POD verification",
     [TripStatus.COMPLETED]: "Trip completed, POD verified, payment processed",
+    [TripStatus.EXCEPTION]: "Exception reported, awaiting admin resolution",
     [TripStatus.CANCELLED]: "Trip cancelled",
   };
 

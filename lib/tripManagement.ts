@@ -238,9 +238,10 @@ function isValidStatusTransition(
   const validTransitions: Record<TripStatus, TripStatus[]> = {
     ASSIGNED: ["PICKUP_PENDING", "CANCELLED"],
     PICKUP_PENDING: ["IN_TRANSIT", "CANCELLED"],
-    IN_TRANSIT: ["DELIVERED", "CANCELLED"],
+    IN_TRANSIT: ["DELIVERED", "EXCEPTION", "CANCELLED"],
     DELIVERED: ["COMPLETED", "CANCELLED"],
     COMPLETED: [], // Terminal state
+    EXCEPTION: ["ASSIGNED", "IN_TRANSIT", "CANCELLED", "COMPLETED"],
     CANCELLED: [], // Terminal state
   };
 
@@ -260,6 +261,7 @@ async function syncLoadStatus(
     IN_TRANSIT: "IN_TRANSIT",
     DELIVERED: "DELIVERED",
     COMPLETED: "COMPLETED",
+    EXCEPTION: "EXCEPTION",
     CANCELLED: "CANCELLED",
   };
 

@@ -169,6 +169,7 @@ enum TripStatus {
   IN_TRANSIT // Load picked up, in transit to destination
   DELIVERED // Load delivered to destination
   COMPLETED // POD confirmed, payment processed
+  EXCEPTION // Round S7: blueprint Section 7 exception path (IN_TRANSIT → EXCEPTION → Admin resolves)
   CANCELLED // Trip cancelled
 }
 
