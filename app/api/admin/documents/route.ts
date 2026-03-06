@@ -57,21 +57,6 @@ export async function GET(request: NextRequest) {
 
     const skip = (page - 1) * limit;
 
-    // Helper to fetch user details
-    const fetchUserDetails = async (userIds: string[]) => {
-      if (userIds.length === 0) return new Map();
-      const users = await db.user.findMany({
-        where: { id: { in: userIds } },
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-        },
-      });
-      return new Map(users.map((u) => [u.id, u]));
-    };
-
     // Fetch company documents
     let companyDocuments: TransformedDocument[] = [];
     let companyCount = 0;
@@ -90,6 +75,22 @@ export async function GET(request: NextRequest) {
                 type: true,
               },
             },
+            uploadedBy: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+            verifiedBy: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
           },
           orderBy: {
             uploadedAt: "desc",
@@ -104,27 +105,12 @@ export async function GET(request: NextRequest) {
         }),
       ]);
 
-      // Fetch user details for uploadedBy and verifiedBy
-      const companyUserIds = companyDocuments.flatMap((doc) =>
-        [doc.uploadedById, doc.verifiedById].filter(Boolean)
-      );
-      const companyUserMap = await fetchUserDetails(companyUserIds);
-
-      // Add entityType and user details to each document
+      // Add entityType and computed fields to each document
       companyDocuments = companyDocuments.map((doc) => ({
         ...doc,
         entityType: "company",
         entityName: doc.organization.name,
         fileSize: Number(doc.fileSize),
-        uploadedBy: companyUserMap.get(doc.uploadedById) || {
-          id: doc.uploadedById,
-          email: "Unknown",
-          firstName: null,
-          lastName: null,
-        },
-        verifiedBy: doc.verifiedById
-          ? companyUserMap.get(doc.verifiedById) || null
-          : null,
       }));
     }
 
@@ -152,6 +138,22 @@ export async function GET(request: NextRequest) {
                 },
               },
             },
+            uploadedBy: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+            verifiedBy: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
           },
           orderBy: {
             uploadedAt: "desc",
@@ -166,28 +168,13 @@ export async function GET(request: NextRequest) {
         }),
       ]);
 
-      // Fetch user details for uploadedBy and verifiedBy
-      const truckUserIds = truckDocuments.flatMap((doc) =>
-        [doc.uploadedById, doc.verifiedById].filter(Boolean)
-      );
-      const truckUserMap = await fetchUserDetails(truckUserIds);
-
-      // Add entityType and user details to each document
+      // Add entityType and computed fields to each document
       truckDocuments = truckDocuments.map((doc) => ({
         ...doc,
         entityType: "truck",
         entityName: `${doc.truck.carrier.name} - ${doc.truck.licensePlate}`,
         organization: doc.truck.carrier,
         fileSize: Number(doc.fileSize),
-        uploadedBy: truckUserMap.get(doc.uploadedById) || {
-          id: doc.uploadedById,
-          email: "Unknown",
-          firstName: null,
-          lastName: null,
-        },
-        verifiedBy: doc.verifiedById
-          ? truckUserMap.get(doc.verifiedById) || null
-          : null,
       }));
     }
 

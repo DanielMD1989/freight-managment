@@ -56,38 +56,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch documents based on entity type
-    let companyDocuments: Prisma.CompanyDocumentGetPayload<{
-      include: {
-        organization: {
-          select: {
-            id: true;
-            name: true;
-            contactEmail: true;
-            contactPhone: true;
-            isVerified: true;
-          };
-        };
-      };
-    }>[] = [];
-    let truckDocuments: Prisma.TruckDocumentGetPayload<{
-      include: {
-        truck: {
-          select: {
-            id: true;
-            licensePlate: true;
-            carrier: {
-              select: {
-                id: true;
-                name: true;
-                contactEmail: true;
-                contactPhone: true;
-                isVerified: true;
-              };
-            };
-          };
-        };
-      };
-    }>[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let companyDocuments: any[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let truckDocuments: any[] = [];
 
     if (entityType === "company" || entityType === "all") {
       companyDocuments = await db.companyDocument.findMany({
@@ -100,6 +72,22 @@ export async function GET(request: NextRequest) {
               contactEmail: true,
               contactPhone: true,
               isVerified: true,
+            },
+          },
+          uploadedBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          verifiedBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
             },
           },
         },
@@ -128,6 +116,22 @@ export async function GET(request: NextRequest) {
               },
             },
           },
+          uploadedBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          verifiedBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
         },
         orderBy: { uploadedAt: "desc" },
         take: limit,
@@ -149,8 +153,8 @@ export async function GET(request: NextRequest) {
       verifiedAt: doc.verifiedAt,
       expiresAt: doc.expiresAt,
       rejectionReason: doc.rejectionReason,
-      uploadedById: doc.uploadedById,
-      verifiedById: doc.verifiedById,
+      uploadedBy: doc.uploadedBy ?? null,
+      verifiedBy: doc.verifiedBy ?? null,
       organization: doc.organization,
       entity: {
         id: doc.organization.id,
@@ -171,8 +175,8 @@ export async function GET(request: NextRequest) {
       verifiedAt: doc.verifiedAt,
       expiresAt: doc.expiresAt,
       rejectionReason: doc.rejectionReason,
-      uploadedById: doc.uploadedById,
-      verifiedById: doc.verifiedById,
+      uploadedBy: doc.uploadedBy ?? null,
+      verifiedBy: doc.verifiedBy ?? null,
       organization: doc.truck.carrier,
       entity: {
         id: doc.truck.id,

@@ -301,6 +301,12 @@ model User {
   loadRequestsCreated   LoadRequest[] @relation("LoadRequestedBy")
   loadRequestsResponded LoadRequest[] @relation("LoadRequestRespondedBy")
 
+  // Round S3: Document relation back-references
+  companyDocumentsUploaded CompanyDocument[] @relation("CompanyDocumentUploadedBy")
+  truckDocumentsUploaded   TruckDocument[]   @relation("TruckDocumentUploadedBy")
+  companyDocumentsVerified CompanyDocument[] @relation("CompanyDocumentVerifiedBy")
+  truckDocumentsVerified   TruckDocument[]   @relation("TruckDocumentVerifiedBy")
+
   // Service Fee Implementation: Corridors created by admin
   corridorsCreated Corridor[] @relation("CorridorCreatedBy")
 
@@ -876,11 +882,12 @@ model Truck {
   gpsVerifiedAt DateTime? // When GPS was verified working
 
   // SPRINT 18: Admin Truck Approval
-  approvalStatus  VerificationStatus @default(PENDING)
-  approvedAt      DateTime?
-  approvedById    String?
-  approvedBy      User?              @relation("TruckApprovedBy", fields: [approvedById], references: [id])
-  rejectionReason String?
+  approvalStatus    VerificationStatus @default(PENDING)
+  approvedAt        DateTime?
+  approvedById      String?
+  approvedBy        User?              @relation("TruckApprovedBy", fields: [approvedById], references: [id])
+  rejectionReason   String?
+  documentsLockedAt DateTime? // Round S3: set on approval; enforcement deferred to Round A3
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1571,6 +1578,8 @@ model CompanyDocument {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   uploadedById   String
+  uploadedBy     User         @relation("CompanyDocumentUploadedBy", fields: [uploadedById], references: [id])
+  verifiedBy     User?        @relation("CompanyDocumentVerifiedBy", fields: [verifiedById], references: [id])
 
   @@index([organizationId])
   @@index([verificationStatus])
@@ -1605,6 +1614,8 @@ model TruckDocument {
   truckId      String
   truck        Truck  @relation(fields: [truckId], references: [id], onDelete: Cascade)
   uploadedById String
+  uploadedBy   User   @relation("TruckDocumentUploadedBy", fields: [uploadedById], references: [id])
+  verifiedBy   User?  @relation("TruckDocumentVerifiedBy", fields: [verifiedById], references: [id])
 
   @@index([truckId])
   @@index([verificationStatus])

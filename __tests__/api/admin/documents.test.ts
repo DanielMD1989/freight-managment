@@ -388,6 +388,40 @@ describe("Admin Documents API", () => {
         expect(doc.entityType).toBe("truck");
       }
     });
+
+    it("queue returns uploadedBy as object with email (S3-1/S3-2 fix — no raw uploadedById)", async () => {
+      useAdminSession();
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/admin/verification/queue"
+      );
+      const res = await getVerificationQueue(req);
+      const body = await parseResponse(res);
+      expect(res.status).toBe(200);
+      for (const doc of body.documents) {
+        // uploadedBy must be an object, not a raw string ID
+        expect(typeof doc.uploadedBy).toBe("object");
+        expect(doc.uploadedBy).not.toBeNull();
+        expect(typeof doc.uploadedBy.email).toBe("string");
+        // raw uploadedById field must NOT be present in response
+        expect(doc).not.toHaveProperty("uploadedById");
+      }
+    });
+
+    it("documents list returns uploadedBy as object (S3 regression)", async () => {
+      useAdminSession();
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/admin/documents"
+      );
+      const res = await listDocuments(req);
+      const body = await parseResponse(res);
+      expect(res.status).toBe(200);
+      for (const doc of body.documents) {
+        expect(typeof doc.uploadedBy).toBe("object");
+        expect(doc.uploadedBy).not.toBeNull();
+      }
+    });
   });
 
   // ─── PATCH /api/admin/verification/[id] ─────────────────────────────────────

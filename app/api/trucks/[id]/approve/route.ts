@@ -123,6 +123,7 @@ export async function POST(
           approvedAt: new Date(),
           approvedById: session.userId,
           rejectionReason: null,
+          documentsLockedAt: new Date(), // Round S3
         },
         include: {
           carrier: {
@@ -187,7 +188,10 @@ export async function POST(
       );
 
       return NextResponse.json({
-        truck: updatedTruck,
+        truck: {
+          ...updatedTruck,
+          documentsLockedAt: updatedTruck.documentsLockedAt,
+        },
         message: "Truck approved successfully",
       });
     } else {

@@ -104,7 +104,7 @@ jest.mock("@/lib/db", () => {
       priority: "MEDIUM",
     },
     document: {},
-    truck: { postings: [], gpsDevice: null },
+    truck: { postings: [], gpsDevice: null, documentsLockedAt: null },
     notification: {
       read: false,
     },
@@ -174,6 +174,8 @@ jest.mock("@/lib/db", () => {
     shipper:         { fk: 'shipperId',         store: 'organizations' },
     organization:    { fk: 'organizationId',    store: 'organizations' },
     createdBy:       { fk: 'createdById',       store: 'users' },
+    uploadedBy:      { fk: 'uploadedById',      store: 'users' },
+    verifiedBy:      { fk: 'verifiedById',      store: 'users' },
     requestedBy:     { fk: 'requestedById',     store: 'users' },
     proposedBy:      { fk: 'proposedById',      store: 'users' },
     respondedBy:     { fk: 'respondedById',     store: 'users' },
