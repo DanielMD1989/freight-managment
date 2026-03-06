@@ -487,4 +487,87 @@ describe("US-1 · Carrier Registration & Onboarding", () => {
       await expect(requireActiveUser()).rejects.toThrow();
     });
   });
+
+  describe("Dispatcher registration — createdById traceability (GAP S1-1)", () => {
+    it("sets createdById when dispatcher registers via invitation with invitedById", async () => {
+      const adminUserId = "admin-user-s1";
+      const dispatcherOrgId = "dispatcher-org-s1";
+
+      await db.organization.create({
+        data: {
+          id: dispatcherOrgId,
+          name: "Dispatch Co",
+          type: "SHIPPER",
+          contactEmail: "d@co.com",
+          contactPhone: "+251911000099",
+        },
+      });
+      await db.user.create({
+        data: {
+          id: adminUserId,
+          email: "admin-s1@test.com",
+          passwordHash: "x",
+          role: "ADMIN",
+          status: "ACTIVE",
+        },
+      });
+      await db.invitation.create({
+        data: {
+          email: "dispatcher-s1@test.com",
+          role: "DISPATCHER",
+          organizationId: dispatcherOrgId,
+          invitedById: adminUserId,
+          expiresAt: new Date(Date.now() + 86400000),
+        },
+      });
+
+      const req = createRequest(
+        "POST",
+        "http://localhost:3000/api/auth/register",
+        {
+          body: {
+            email: "dispatcher-s1@test.com",
+            password: "Test1234!",
+            firstName: "Disp",
+            lastName: "User",
+            role: "DISPATCHER",
+            organizationId: dispatcherOrgId,
+          },
+        }
+      );
+
+      const res = await register(req);
+      expect(res.status).toBe(201);
+
+      const created = await db.user.findFirst({
+        where: { email: "dispatcher-s1@test.com" },
+      });
+      expect(created?.createdById).toBe(adminUserId);
+    });
+
+    it("leaves createdById null when shipper self-registers (no invitation)", async () => {
+      const req = createRequest(
+        "POST",
+        "http://localhost:3000/api/auth/register",
+        {
+          body: {
+            email: "shipper-s1@test.com",
+            password: "Test1234!",
+            firstName: "Ship",
+            lastName: "Per",
+            role: "SHIPPER",
+            companyName: "Ship Co",
+          },
+        }
+      );
+
+      const res = await register(req);
+      expect(res.status).toBe(201);
+
+      const created = await db.user.findFirst({
+        where: { email: "shipper-s1@test.com" },
+      });
+      expect(created?.createdById ?? null).toBeNull();
+    });
+  });
 });

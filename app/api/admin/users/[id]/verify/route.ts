@@ -14,10 +14,20 @@ import { sendEmail, createEmailHTML } from "@/lib/email";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { zodErrorResponse } from "@/lib/validation";
 
-const verifyUserSchema = z.object({
-  status: z.enum(["PENDING_VERIFICATION", "ACTIVE", "SUSPENDED", "REJECTED"]),
-  reason: z.string().optional(), // Optional reason for suspension/rejection
-});
+const verifyUserSchema = z
+  .object({
+    status: z.enum(["PENDING_VERIFICATION", "ACTIVE", "SUSPENDED", "REJECTED"]),
+    reason: z.string().optional(), // Required for REJECTED; optional otherwise
+  })
+  .superRefine((data, ctx) => {
+    if (data.status === "REJECTED" && !data.reason) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Reason is required when rejecting a user",
+        path: ["reason"],
+      });
+    }
+  });
 
 // POST /api/admin/users/[id]/verify - Update user verification status
 export async function POST(

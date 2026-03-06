@@ -46,6 +46,7 @@ jest.mock("@/lib/db", () => {
     auditLogs: new Map(),
     loadEscalations: new Map(),
     documents: new Map(),
+    invitations: new Map(),
   };
 
   let userIdCounter = 1;
@@ -76,6 +77,7 @@ jest.mock("@/lib/db", () => {
   let auditLogIdCounter = 1;
   let loadEscalationIdCounter = 1;
   let documentIdCounter = 1;
+  let invitationIdCounter = 1;
 
   // Default values for different model types
   const modelDefaults = {
@@ -157,6 +159,9 @@ jest.mock("@/lib/db", () => {
     },
     auditLog: {
       severity: "INFO",
+    },
+    invitation: {
+      status: "PENDING",
     },
   };
 
@@ -798,6 +803,7 @@ jest.mock("@/lib/db", () => {
     auditLog: { value: auditLogIdCounter },
     loadEscalation: { value: loadEscalationIdCounter },
     document: { value: documentIdCounter },
+    invitation: { value: invitationIdCounter },
   };
 
   const result = {
@@ -1037,6 +1043,11 @@ jest.mock("@/lib/db", () => {
         stores.auditLogs,
         "auditLog",
         counters.auditLog
+      ),
+      invitation: createModelMethods(
+        stores.invitations,
+        "invitation",
+        counters.invitation
       ),
       $transaction: jest.fn(),
       // Expose stores for test access

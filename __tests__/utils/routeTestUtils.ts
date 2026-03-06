@@ -596,6 +596,12 @@ export function mockServiceFee() {
         carrier: { fee: 50, status: "DEDUCTED" },
       },
     })),
+    refundServiceFee: jest.fn(async () => ({
+      success: true,
+      serviceFee: 100,
+      shipperBalance: 900,
+      transactionId: "refund-mock",
+    })),
   }));
 }
 

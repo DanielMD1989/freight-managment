@@ -143,6 +143,7 @@ export async function POST(request: NextRequest) {
     // Determine if we need to create an organization
     const organizationId = validatedData.organizationId;
     let invitationId: string | null = null; // FIX F1: Track invitation for ACCEPTED update
+    let inviterUserId: string | null = null; // GAP S1-1: Admin who sent this invitation
 
     // FIX C1: Validate organizationId — only dispatchers can join an existing org, and only with an invitation
     if (organizationId) {
@@ -174,7 +175,7 @@ export async function POST(request: NextRequest) {
           status: "PENDING",
           expiresAt: { gt: new Date() },
         },
-        select: { id: true },
+        select: { id: true, invitedById: true },
       });
       if (!invitation) {
         return NextResponse.json(
@@ -183,6 +184,7 @@ export async function POST(request: NextRequest) {
         );
       }
       invitationId = invitation.id;
+      inviterUserId = invitation.invitedById ?? null;
     }
 
     // User variable — set by transaction or standalone path
@@ -282,6 +284,7 @@ export async function POST(request: NextRequest) {
           role: validatedData.role,
           status: "REGISTERED",
           organizationId,
+          ...(inviterUserId && { createdById: inviterUserId }),
         },
         select: userSelect,
       });

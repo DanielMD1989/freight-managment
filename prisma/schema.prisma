@@ -272,10 +272,15 @@ model User {
   notificationPreferences Json? // PHASE 2: Story 15.13 - User notification preferences
   createdAt               DateTime   @default(now())
   updatedAt               DateTime   @updatedAt
+  createdById             String?    // Account hierarchy: SuperAdmin→Admin, Admin→Dispatcher
 
   // Relations
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  // Account hierarchy traceability (GAP S1-1)
+  createdBy    User?   @relation("UserCreatedBy", fields: [createdById], references: [id])
+  createdUsers User[]  @relation("UserCreatedBy")
 
   loadsCreated        Load[]               @relation("LoadCreator")
   disputes            Dispute[]
@@ -309,6 +314,7 @@ model User {
 
   @@index([email])
   @@index([organizationId])
+  @@index([createdById])
   // PHASE 4: Scalability indexes for 10K+ DAU
   @@index([phone]) // Phone lookups for authentication
   @@index([status]) // Filter users by status

@@ -531,18 +531,21 @@ export async function deductServiceFee(
     transactionId = result;
   } else {
     // No fees to process - just update load with calculated fees
-    await db.load.update({
-      where: { id: loadId },
-      data: {
-        corridorId,
-        shipperServiceFee: shipperFeeCalc.finalFee,
-        shipperFeeStatus: shipperDeducted ? "DEDUCTED" : "PENDING",
-        carrierServiceFee: carrierFeeCalc.finalFee,
-        carrierFeeStatus: carrierDeducted ? "DEDUCTED" : "PENDING",
-        serviceFeeEtb: totalPlatformFee,
-        serviceFeeStatus:
-          shipperDeducted && carrierDeducted ? "DEDUCTED" : "PENDING",
-      },
+    // BUG-R9-1 FIX: Wrap in $transaction to prevent partial write race window
+    await db.$transaction(async (tx) => {
+      await tx.load.update({
+        where: { id: loadId },
+        data: {
+          corridorId,
+          shipperServiceFee: shipperFeeCalc.finalFee,
+          shipperFeeStatus: shipperDeducted ? "DEDUCTED" : "PENDING",
+          carrierServiceFee: carrierFeeCalc.finalFee,
+          carrierFeeStatus: carrierDeducted ? "DEDUCTED" : "PENDING",
+          serviceFeeEtb: totalPlatformFee,
+          serviceFeeStatus:
+            shipperDeducted && carrierDeducted ? "DEDUCTED" : "PENDING",
+        },
+      });
     });
   }
 

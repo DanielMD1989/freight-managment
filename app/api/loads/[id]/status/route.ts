@@ -14,7 +14,7 @@ import {
   getStatusDescription,
 } from "@/lib/loadStateMachine";
 import { TripStatus } from "@prisma/client"; // P0-001 FIX: Import TripStatus enum
-import { deductServiceFee } from "@/lib/serviceFeeManagement"; // Service Fee Implementation
+import { deductServiceFee, refundServiceFee } from "@/lib/serviceFeeManagement"; // Service Fee Implementation
 // CRITICAL FIX: Import CacheInvalidation for status changes
 import { CacheInvalidation } from "@/lib/cache";
 // CRITICAL FIX: Import notification helper for status change notifications
@@ -433,12 +433,22 @@ export async function PATCH(
       }
     }
 
-    // SERVICE FEE NOTE: No refund needed on CANCELLED.
-    // Fees are only deducted on COMPLETED, so if we reach CANCELLED,
-    // no money was ever taken from wallets. The current flow is:
-    // - Trip acceptance: Validate wallet balances (no deduction)
-    // - Trip completion: Deduct fees from both wallets (blocks if fails)
-    // - Trip cancellation: No action needed (nothing was taken)
+    // BUG-R9-2 FIX: Refund service fee if load is CANCELLED after fees were already
+    // deducted (e.g. DELIVERED → EXCEPTION → CANCELLED path where POD verify deducted fees)
+    if (newStatus === "CANCELLED") {
+      const loadFeeStatus = await db.load.findUnique({
+        where: { id: loadId },
+        select: { shipperFeeStatus: true },
+      });
+      if (loadFeeStatus?.shipperFeeStatus === "DEDUCTED") {
+        try {
+          await refundServiceFee(loadId);
+        } catch (refundError) {
+          // Non-blocking: trip is already cancelled; ops team handles via audit log
+          console.error("Refund failed after load cancellation:", refundError);
+        }
+      }
+    }
 
     // CRITICAL FIX: Invalidate cache after status change
     await CacheInvalidation.load(loadId, load.shipperId);

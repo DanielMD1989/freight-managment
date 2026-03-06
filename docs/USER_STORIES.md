@@ -9,14 +9,14 @@
 
 ## Test Coverage Summary
 
-> Last updated: 2026-03-05 · Admin Domain Audit (Round 8) complete
+> Last updated: 2026-03-05 · Financial Atomicity Hardening (Round 9) complete
 
 | Metric      | Value |
 | ----------- | ----- |
-| Test suites | 122   |
-| Total tests | 2,469 |
-| Passing     | 2,469 |
-| Skipped     | 0     |
+| Test suites | 125   |
+| Total tests | 2,517 |
+| Passing     | 2,507 |
+| Skipped     | 10    |
 | Failures    | 0     |
 
 ### Coverage by User Story
@@ -97,9 +97,9 @@
 - [x] `PENDING_VERIFICATION`: documents uploaded, awaiting admin review
 - [x] `ACTIVE`: admin-approved, full platform access granted
 - [x] Only an ADMIN or SUPER_ADMIN can transition a user to `ACTIVE`
-- [ ] Rejected users receive a `REJECTED` status with a reason
+- [x] Rejected users receive a `REJECTED` status with a reason
 
-**Test:** `__tests__/api/auth/carrier-registration.test.ts`
+**Test:** `__tests__/api/auth/carrier-registration.test.ts`, `__tests__/api/admin/users.test.ts`
 
 ---
 
@@ -746,15 +746,15 @@
 - [x] Shipper wallet is debited by shipper fee amount
 - [x] Carrier wallet is debited by carrier fee amount
 - [x] Platform revenue account is credited by total deducted amount
-- [ ] All operations (journal entry, balance updates, load updates) are in a single database transaction
-- [ ] Balance is re-verified inside the transaction to prevent race conditions
+- [x] All operations (journal entry, balance updates, load updates) are in a single database transaction
+- [x] Balance is re-verified inside the transaction to prevent race conditions
 - [x] Load records updated: `shipperFeeStatus = 'DEDUCTED'`, `carrierFeeStatus = 'DEDUCTED'`
 - [x] Journal entry created with `transactionType: 'SERVICE_FEE_DEDUCT'` for audit trail
 - [x] Notifications sent to both shipper and carrier about fee amounts
 
 **Source of truth:** `lib/serviceFeeManagement.ts`
 
-**Test:** `__tests__/api/carrier/pod-management.test.ts`
+**Test:** `__tests__/api/carrier/pod-management.test.ts`, `__tests__/api/financial/financial-atomicity.test.ts`
 
 ---
 
@@ -768,9 +768,9 @@
 
 - [x] If `shipperFeeStatus === 'DEDUCTED'` AND `carrierFeeStatus === 'DEDUCTED'`, deduction returns early with error "Service fees already deducted"
 - [x] Idempotent: calling `deductServiceFee` again on a fully-deducted load is a no-op
-- [ ] Balance re-verification inside the transaction prevents concurrent deduction attempts
+- [x] Balance re-verification inside the transaction prevents concurrent deduction attempts
 
-**Test:** `__tests__/api/carrier/pod-management.test.ts`
+**Test:** `__tests__/api/carrier/pod-management.test.ts`, `__tests__/api/financial/financial-atomicity.test.ts`
 
 ---
 
@@ -786,15 +786,15 @@
 - [x] Only the shipper's fee is refunded (carrier fee is only deducted on completion, so nothing to refund)
 - [x] Platform revenue account is debited by the refund amount
 - [x] Shipper wallet is credited by the refund amount
-- [ ] All operations are in a single database transaction
-- [ ] Platform balance is verified before refund (must have sufficient balance)
+- [x] All operations are in a single database transaction
+- [x] Platform balance is verified before refund (must have sufficient balance)
 - [x] Load is updated: `shipperFeeStatus = 'REFUNDED'`, `serviceFeeRefundedAt` set
 - [x] Journal entry created with `transactionType: 'SERVICE_FEE_REFUND'`
 - [x] If fee was zero, status is still marked as REFUNDED (no money moves)
 
 **Source of truth:** `lib/serviceFeeManagement.ts`
 
-**Test:** `__tests__/api/carrier/trip-cancel.test.ts`
+**Test:** `__tests__/api/carrier/trip-cancel.test.ts`, `__tests__/api/financial/refund-on-cancellation.test.ts`, `__tests__/api/financial/financial-atomicity.test.ts`
 
 ---
 
@@ -829,9 +829,9 @@
 - [x] Each journal entry has line items: debit lines (wallet decrements) and credit lines (wallet/platform increments)
 - [x] Journal entry metadata includes: fee amounts, corridor ID, distance, price per km, distance source
 - [x] Journal entry references the loadId for traceability
-- [ ] All journal operations are atomic with balance updates (same transaction)
+- [x] All journal operations are atomic with balance updates (same transaction)
 
-**Test:** `__tests__/api/carrier/pod-management.test.ts`
+**Test:** `__tests__/api/carrier/pod-management.test.ts`, `__tests__/api/financial/financial-atomicity.test.ts`
 
 ---
 
@@ -871,9 +871,9 @@
 
 - [x] On trip COMPLETED: `truck.isAvailable` set to `true` (truck returns to marketplace for next job)
 - [x] On trip CANCELLED: `truck.isAvailable` set to `true` (truck returns to marketplace for next job)
-- [ ] Both happen inside the trip update transaction (atomic with status change)
+- [x] Both happen inside the trip update transaction (atomic with status change)
 
-**Test:** `__tests__/api/carrier/trips.test.ts`, `__tests__/api/carrier/trip-cancel.test.ts`
+**Test:** `__tests__/api/carrier/trips.test.ts`, `__tests__/api/carrier/trip-cancel.test.ts`, `__tests__/api/carrier/trip-completion-atomicity.test.ts`
 
 ---
 
@@ -888,9 +888,9 @@
 - [x] On trip COMPLETED or CANCELLED: truck postings with status `MATCHED` are set back to `ACTIVE` (automatic re-listing)
 - [x] The posting's `updatedAt` timestamp is refreshed
 - [x] The truck becomes visible on the marketplace again immediately — no manual re-listing required
-- [ ] This is atomic with the trip status change (same transaction)
+- [x] This is atomic with the trip status change (same transaction)
 
-**Test:** `__tests__/api/carrier/trip-cancel.test.ts`
+**Test:** `__tests__/api/carrier/trip-cancel.test.ts`, `__tests__/api/carrier/trip-completion-atomicity.test.ts`
 
 ---
 

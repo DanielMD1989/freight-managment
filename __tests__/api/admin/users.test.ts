@@ -861,6 +861,57 @@ describe("Admin Users API", () => {
       expect(data.user).toBeDefined();
       expect(data.user.id).toBe(seed.shipperUser.id);
     });
+
+    // ── US-1.2 — Rejected users receive REJECTED status with a reason ──────────
+
+    it("US-1.2: REJECTED status with reason sets user to REJECTED (200)", async () => {
+      useAdminSession();
+      // Create a PENDING_VERIFICATION user (typical rejection source)
+      await db.user.create({
+        data: {
+          id: "pending-user-us12",
+          email: "pending-us12@test.com",
+          passwordHash: "hashed_Test1234!",
+          firstName: "Pending",
+          lastName: "User",
+          phone: "+251911012012",
+          role: "SHIPPER",
+          status: "PENDING_VERIFICATION",
+          organizationId: seed.shipperOrg.id,
+        },
+      });
+
+      const req = createRequest(
+        "POST",
+        "http://localhost:3000/api/admin/users/pending-user-us12/verify",
+        { body: { status: "REJECTED", reason: "Documents invalid" } }
+      );
+      const res = await callHandler(verifyUser, req, {
+        id: "pending-user-us12",
+      });
+      expect(res.status).toBe(200);
+      const data = await parseResponse(res);
+      expect(data.user.status).toBe("REJECTED");
+
+      // Restore for other tests
+      await db.user.update({
+        where: { id: "pending-user-us12" },
+        data: { status: "ACTIVE" },
+      });
+    });
+
+    it("US-1.2: REJECTED without reason returns 400 (safeParse blocks it)", async () => {
+      useAdminSession();
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/admin/users/${seed.carrierUser.id}/verify`,
+        { body: { status: "REJECTED" } } // no reason
+      );
+      const res = await callHandler(verifyUser, req, {
+        id: seed.carrierUser.id,
+      });
+      expect(res.status).toBe(400);
+    });
   });
 
   // ─── GET /api/admin/users/[id]/wallet ───────────────────────────────────────
