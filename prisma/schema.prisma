@@ -500,6 +500,12 @@ model Organization {
   flaggedAt                   DateTime? // When flagged
   flagReason                  String? // Reason for flagging
 
+  // Round S2: Registration approval status (replaces Boolean tri-state ambiguity)
+  verificationStatus VerificationStatus @default(PENDING)
+  rejectionReason    String?            // Reason shown to user on org rejection
+  rejectedAt         DateTime?          // When the org registration was rejected
+  documentsLockedAt  DateTime?          // Set on approval; guards block doc edits after this
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -532,6 +538,7 @@ model Organization {
 
   @@index([type])
   @@index([isVerified])
+  @@index([verificationStatus]) // Round S2: Admin queue filtering
   @@index([associationId]) // For filtering carriers by association
   // PHASE 4: Scalability compound indexes
   @@index([isVerified, type]) // Verified carriers/shippers query

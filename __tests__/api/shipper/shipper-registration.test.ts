@@ -16,6 +16,7 @@
  * - Rate limit: 3 per hour per IP, 4th → 429 with retryAfter
  */
 
+import { db } from "@/lib/db";
 import {
   createRequest,
   callHandler,
@@ -249,5 +250,26 @@ describe("Shipper Registration — POST /api/auth/register", () => {
     expect(response.status).toBe(429);
     expect(body.error).toMatch(/too many/i);
     expect(body.retryAfter).toBeDefined();
+  });
+
+  // Round S2: org created with verificationStatus=PENDING
+  it("S2: register creates organization with verificationStatus=PENDING and documentsLockedAt=null", async () => {
+    const req = createRequest("POST", "http://localhost/api/auth/register", {
+      body: {
+        ...validShipperPayload,
+        email: "s2test@example.com",
+        phone: "+251911222333",
+      },
+    });
+
+    const response = await callHandler(register, req);
+    expect(response.status).toBe(201);
+
+    const org = await db.organization.findFirst({
+      where: { name: validShipperPayload.companyName },
+    });
+    expect(org).toBeTruthy();
+    expect(org.verificationStatus).toBe("PENDING");
+    expect(org.documentsLockedAt ?? null).toBeNull();
   });
 });

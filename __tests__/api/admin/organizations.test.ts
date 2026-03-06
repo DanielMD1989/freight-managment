@@ -110,6 +110,9 @@ const {
   POST: verifyOrg,
   DELETE: unverifyOrg,
 } = require("@/app/api/admin/organizations/[id]/verify/route");
+const {
+  GET: getVerificationStatus,
+} = require("@/app/api/user/verification-status/route");
 
 describe("Admin Organizations API", () => {
   let seed: AdminSeedData;
@@ -406,6 +409,42 @@ describe("Admin Organizations API", () => {
         })
       );
     });
+
+    // Round S2: new fields set on approval
+    it("S2: approve sets verificationStatus=APPROVED, documentsLockedAt non-null, rejectionReason=null", async () => {
+      useAdminSession();
+      await db.organization.update({
+        where: { id: seed.dispatcherOrg.id },
+        data: {
+          isVerified: false,
+          verifiedAt: null,
+          verificationStatus: "PENDING",
+          rejectionReason: "Prior rejection reason",
+        },
+      });
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/admin/organizations/${seed.dispatcherOrg.id}/verify`
+      );
+      const res = await callHandler(verifyOrg, req, {
+        id: seed.dispatcherOrg.id,
+      });
+      const body = await parseResponse(res);
+
+      expect(res.status).toBe(200);
+      expect(body.organization.verificationStatus).toBe("APPROVED");
+      expect(body.organization.documentsLockedAt).toBeTruthy();
+      expect(body.organization.isVerified).toBe(true); // two-field sync check
+
+      const org = await db.organization.findUnique({
+        where: { id: seed.dispatcherOrg.id },
+      });
+      expect(org.verificationStatus).toBe("APPROVED");
+      expect(org.documentsLockedAt).toBeTruthy();
+      expect(org.rejectionReason).toBeNull();
+      expect(org.isVerified).toBe(true);
+    });
   });
 
   // ─── DELETE /api/admin/organizations/[id]/verify ───────────────────────────
@@ -488,6 +527,73 @@ describe("Admin Organizations API", () => {
         id: seed.dispatcherOrg.id,
       });
       expect(res.status).toBe(403);
+    });
+
+    // Round S2: new fields reset on unverify
+    it("S2: unverify resets verificationStatus=PENDING and clears documentsLockedAt", async () => {
+      useAdminSession();
+      await db.organization.update({
+        where: { id: seed.dispatcherOrg.id },
+        data: {
+          isVerified: true,
+          verifiedAt: new Date(),
+          verificationStatus: "APPROVED",
+          documentsLockedAt: new Date(),
+        },
+      });
+
+      const req = createRequest(
+        "DELETE",
+        `http://localhost:3000/api/admin/organizations/${seed.dispatcherOrg.id}/verify`
+      );
+      const res = await callHandler(unverifyOrg, req, {
+        id: seed.dispatcherOrg.id,
+      });
+      const body = await parseResponse(res);
+
+      expect(res.status).toBe(200);
+      expect(body.organization.verificationStatus).toBe("PENDING");
+      expect(body.organization.documentsLockedAt).toBeNull();
+      expect(body.organization.isVerified).toBe(false); // two-field sync check
+
+      const org = await db.organization.findUnique({
+        where: { id: seed.dispatcherOrg.id },
+      });
+      expect(org.verificationStatus).toBe("PENDING");
+      expect(org.documentsLockedAt).toBeNull();
+      expect(org.isVerified).toBe(false);
+    });
+  });
+
+  // ─── Round S2: verification-status returns new fields ──────────────────────
+
+  describe("verification-status endpoint (Round S2)", () => {
+    it("returns verificationStatus and rejectionReason from organization", async () => {
+      await db.organization.update({
+        where: { id: seed.shipperOrg.id },
+        data: {
+          verificationStatus: "REJECTED",
+          rejectionReason: "Missing TIN certificate",
+        },
+      });
+      useShipperSession();
+
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/user/verification-status"
+      );
+      const res = await getVerificationStatus(req);
+      const body = await parseResponse(res);
+
+      expect(res.status).toBe(200);
+      expect(body.organization.verificationStatus).toBe("REJECTED");
+      expect(body.organization.rejectionReason).toBe("Missing TIN certificate");
+
+      // Restore org state
+      await db.organization.update({
+        where: { id: seed.shipperOrg.id },
+        data: { verificationStatus: "APPROVED", rejectionReason: null },
+      });
     });
   });
 });

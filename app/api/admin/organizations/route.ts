@@ -76,6 +76,9 @@ export async function GET(request: NextRequest) {
           city: true,
           isFlagged: true,
           flagReason: true,
+          verificationStatus: true, // Round S2
+          rejectionReason: true, // Round S2
+          documentsLockedAt: true, // Round S2
           createdAt: true,
           updatedAt: true,
           _count: {
@@ -106,6 +109,9 @@ export async function GET(request: NextRequest) {
       city: org.city,
       isFlagged: org.isFlagged,
       flagReason: org.flagReason,
+      verificationStatus: org.verificationStatus,
+      rejectionReason: org.rejectionReason,
+      documentsLockedAt: org.documentsLockedAt,
       createdAt: org.createdAt,
       updatedAt: org.updatedAt,
       // Include both formats for flexibility

@@ -235,6 +235,7 @@ export async function POST(request: NextRequest) {
             contactPhone: validatedData.phone || "N/A",
             taxId: validatedData.taxId || null,
             isVerified: false,
+            verificationStatus: "PENDING", // Round S2: explicit initial state
             associationId:
               validatedData.carrierType === "CARRIER_INDIVIDUAL"
                 ? validatedData.associationId || null

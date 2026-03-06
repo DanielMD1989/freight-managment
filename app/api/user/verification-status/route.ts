@@ -44,6 +44,8 @@ export async function GET() {
             type: true,
             isVerified: true,
             verifiedAt: true,
+            verificationStatus: true, // Round S2
+            rejectionReason: true, // Round S2
           },
         },
       },
@@ -147,6 +149,8 @@ export async function GET() {
             name: user.organization.name,
             type: user.organization.type,
             isVerified: user.organization.isVerified,
+            verificationStatus: user.organization.verificationStatus, // Round S2
+            rejectionReason: user.organization.rejectionReason ?? null, // Round S2
           }
         : null,
       verification: {

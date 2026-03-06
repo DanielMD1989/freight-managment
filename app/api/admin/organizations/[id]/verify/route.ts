@@ -70,6 +70,11 @@ export async function POST(
       data: {
         isVerified: true,
         verifiedAt: new Date(),
+        // Round S2: new fields
+        verificationStatus: "APPROVED",
+        documentsLockedAt: new Date(),
+        rejectionReason: null,
+        rejectedAt: null,
       },
     });
 
@@ -95,6 +100,8 @@ export async function POST(
         name: updatedOrg.name,
         isVerified: updatedOrg.isVerified,
         verifiedAt: updatedOrg.verifiedAt,
+        verificationStatus: updatedOrg.verificationStatus,
+        documentsLockedAt: updatedOrg.documentsLockedAt,
       },
     });
   } catch (error) {
@@ -152,12 +159,15 @@ export async function DELETE(
       );
     }
 
-    // Remove verification
+    // Remove verification (reset to PENDING; admin override)
     const updatedOrg = await db.organization.update({
       where: { id: orgId },
       data: {
         isVerified: false,
         verifiedAt: null,
+        // Round S2: reset to PENDING, clear lock
+        verificationStatus: "PENDING",
+        documentsLockedAt: null,
       },
     });
 
@@ -183,6 +193,8 @@ export async function DELETE(
         name: updatedOrg.name,
         isVerified: updatedOrg.isVerified,
         verifiedAt: updatedOrg.verifiedAt,
+        verificationStatus: updatedOrg.verificationStatus,
+        documentsLockedAt: updatedOrg.documentsLockedAt,
       },
     });
   } catch (error) {
