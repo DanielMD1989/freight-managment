@@ -177,6 +177,7 @@ describe("Carrier Truck Approval", () => {
       expect(res.status).toBe(200);
       expect(body.truck.approvalStatus).toBe("APPROVED");
       expect(body.truck.approvedAt).toBeTruthy();
+      expect(body.truck.rejectedAt).toBeNull(); // Round S4: cleared on approval
       expect(body.message).toContain("approved");
     });
 
@@ -237,6 +238,7 @@ describe("Carrier Truck Approval", () => {
       expect(res.status).toBe(200);
       expect(body.truck.approvalStatus).toBe("REJECTED");
       expect(body.truck.rejectionReason).toBe("Documents expired");
+      expect(body.truck.rejectedAt).toBeTruthy(); // Round S4: rejection timestamp stored
       expect(body.message).toContain("rejected");
     });
 

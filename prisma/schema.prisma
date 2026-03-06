@@ -887,6 +887,7 @@ model Truck {
   approvedById      String?
   approvedBy        User?              @relation("TruckApprovedBy", fields: [approvedById], references: [id])
   rejectionReason   String?
+  rejectedAt        DateTime?          // Round S4: set on rejection; symmetry with Organization.rejectedAt
   documentsLockedAt DateTime? // Round S3: set on approval; enforcement deferred to Round A3
 
   createdAt DateTime @default(now())

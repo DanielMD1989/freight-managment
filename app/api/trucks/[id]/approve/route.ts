@@ -123,6 +123,7 @@ export async function POST(
           approvedAt: new Date(),
           approvedById: session.userId,
           rejectionReason: null,
+          rejectedAt: null,
           documentsLockedAt: new Date(), // Round S3
         },
         include: {
@@ -201,6 +202,7 @@ export async function POST(
         data: {
           approvalStatus: "REJECTED",
           rejectionReason: data.reason,
+          rejectedAt: new Date(),
         },
         include: {
           carrier: {
