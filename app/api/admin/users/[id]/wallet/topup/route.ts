@@ -12,6 +12,7 @@ import { checkRpsLimit } from "@/lib/rateLimit";
 import { CacheInvalidation } from "@/lib/cache";
 import { z } from "zod";
 import { handleApiError } from "@/lib/apiErrors";
+import { DepositMethod } from "@prisma/client";
 // H15 FIX: Import max topup constant
 import {
   MAX_WALLET_TOPUP_AMOUNT,
@@ -28,7 +29,10 @@ const topUpSchema = z.object({
       MAX_WALLET_TOPUP_AMOUNT,
       `Maximum topup is ${MAX_WALLET_TOPUP_AMOUNT.toLocaleString()} ETB`
     ),
-  paymentMethod: z.string().optional().default("MANUAL"),
+  paymentMethod: z
+    .enum(["BANK_TRANSFER_SLIP", "TELEBIRR", "MPESA", "MANUAL"])
+    .optional()
+    .default("MANUAL"),
   reference: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -139,6 +143,23 @@ export async function POST(
         },
       });
 
+      // Round S8: Create WalletDeposit record so admin top-ups appear in deposit history
+      const deposit = await tx.walletDeposit.create({
+        data: {
+          amount,
+          currency: "ETB",
+          paymentMethod: paymentMethod as DepositMethod,
+          status: "CONFIRMED", // Admin-initiated = immediately confirmed
+          externalReference: reference || null,
+          notes: description,
+          financialAccountId: wallet.id,
+          requestedById: session.userId, // Admin is both requester and approver
+          approvedById: session.userId,
+          approvedAt: new Date(),
+          journalEntryId: journalEntry.id,
+        },
+      });
+
       // Update wallet balance
       const updatedWallet = await tx.financialAccount.update({
         where: { id: wallet.id },
@@ -151,6 +172,7 @@ export async function POST(
 
       return {
         journalEntry,
+        deposit,
         updatedWallet,
       };
     });
@@ -162,6 +184,7 @@ export async function POST(
       success: true,
       newBalance: Number(result.updatedWallet.balance),
       transactionId: result.journalEntry.id,
+      depositId: result.deposit.id,
       message: `Successfully added ${amount} ETB to wallet`,
     });
   } catch (error) {

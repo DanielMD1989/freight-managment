@@ -122,6 +122,9 @@ export async function deductServiceFee(
             select: {
               id: true,
               name: true,
+              carrierRatePerKm: true,
+              carrierPromoFlag: true,
+              carrierPromoPct: true,
             },
           },
         },
@@ -130,6 +133,9 @@ export async function deductServiceFee(
         select: {
           id: true,
           name: true,
+          shipperRatePerKm: true,
+          shipperPromoFlag: true,
+          shipperPromoPct: true,
         },
       },
       pickupLocation: {
@@ -241,17 +247,24 @@ export async function deductServiceFee(
           ? "tripKm"
           : "corridor.distanceKm (fallback)";
 
-  // Shipper fee calculation
-  const shipperPricePerKm = corridor.shipperPricePerKm
-    ? Number(corridor.shipperPricePerKm)
-    : Number(corridor.pricePerKm);
+  // Shipper fee calculation — org override → corridor.shipperPricePerKm → corridor.pricePerKm
+  const shipperPricePerKm = load.shipper.shipperRatePerKm
+    ? Number(load.shipper.shipperRatePerKm)
+    : corridor.shipperPricePerKm
+      ? Number(corridor.shipperPricePerKm)
+      : Number(corridor.pricePerKm);
   const shipperPromoFlag =
-    corridor.shipperPromoFlag || corridor.promoFlag || false;
-  const shipperPromoPct = corridor.shipperPromoPct
-    ? Number(corridor.shipperPromoPct)
-    : corridor.promoDiscountPct
-      ? Number(corridor.promoDiscountPct)
-      : null;
+    load.shipper.shipperPromoFlag ||
+    corridor.shipperPromoFlag ||
+    corridor.promoFlag ||
+    false;
+  const shipperPromoPct = load.shipper.shipperPromoPct
+    ? Number(load.shipper.shipperPromoPct)
+    : corridor.shipperPromoPct
+      ? Number(corridor.shipperPromoPct)
+      : corridor.promoDiscountPct
+        ? Number(corridor.promoDiscountPct)
+        : null;
 
   const shipperFeeCalc = calculatePartyFee(
     distanceKm,
@@ -260,14 +273,21 @@ export async function deductServiceFee(
     shipperPromoPct
   );
 
-  // Carrier fee calculation
-  const carrierPricePerKm = corridor.carrierPricePerKm
-    ? Number(corridor.carrierPricePerKm)
-    : 0;
-  const carrierPromoFlag = corridor.carrierPromoFlag || false;
-  const carrierPromoPct = corridor.carrierPromoPct
-    ? Number(corridor.carrierPromoPct)
-    : null;
+  // Carrier fee calculation — org override → corridor.carrierPricePerKm → 0
+  const carrierPricePerKm = load.assignedTruck?.carrier?.carrierRatePerKm
+    ? Number(load.assignedTruck.carrier.carrierRatePerKm)
+    : corridor.carrierPricePerKm
+      ? Number(corridor.carrierPricePerKm)
+      : 0;
+  const carrierPromoFlag =
+    load.assignedTruck?.carrier?.carrierPromoFlag ||
+    corridor.carrierPromoFlag ||
+    false;
+  const carrierPromoPct = load.assignedTruck?.carrier?.carrierPromoPct
+    ? Number(load.assignedTruck.carrier.carrierPromoPct)
+    : corridor.carrierPromoPct
+      ? Number(corridor.carrierPromoPct)
+      : null;
 
   const carrierFeeCalc = calculatePartyFee(
     distanceKm,
@@ -800,6 +820,13 @@ export async function validateWalletBalancesForTrip(
           promoDiscountPct: true,
         },
       },
+      shipper: {
+        select: {
+          shipperRatePerKm: true,
+          shipperPromoFlag: true,
+          shipperPromoPct: true,
+        },
+      },
     },
   });
 
@@ -813,6 +840,16 @@ export async function validateWalletBalancesForTrip(
       errors: ["Load not found"],
     };
   }
+
+  // Carrier org lookup for per-org rate overrides (Round S8)
+  const carrierOrg = await db.organization.findUnique({
+    where: { id: carrierId },
+    select: {
+      carrierRatePerKm: true,
+      carrierPromoFlag: true,
+      carrierPromoPct: true,
+    },
+  });
 
   // If no corridor, fees will be waived - validation passes
   if (!load.corridor) {
@@ -833,24 +870,38 @@ export async function validateWalletBalancesForTrip(
       ? Number(load.tripKm)
       : Number(load.corridor.distanceKm);
 
-  const shipperPricePerKm = load.corridor.shipperPricePerKm
-    ? Number(load.corridor.shipperPricePerKm)
-    : Number(load.corridor.pricePerKm);
+  // Shipper: org override → corridor.shipperPricePerKm → corridor.pricePerKm
+  const shipperPricePerKm = load.shipper?.shipperRatePerKm
+    ? Number(load.shipper.shipperRatePerKm)
+    : load.corridor.shipperPricePerKm
+      ? Number(load.corridor.shipperPricePerKm)
+      : Number(load.corridor.pricePerKm);
   const shipperPromoFlag =
-    load.corridor.shipperPromoFlag || load.corridor.promoFlag || false;
-  const shipperPromoPct = load.corridor.shipperPromoPct
-    ? Number(load.corridor.shipperPromoPct)
-    : load.corridor.promoDiscountPct
-      ? Number(load.corridor.promoDiscountPct)
-      : null;
+    load.shipper?.shipperPromoFlag ||
+    load.corridor.shipperPromoFlag ||
+    load.corridor.promoFlag ||
+    false;
+  const shipperPromoPct = load.shipper?.shipperPromoPct
+    ? Number(load.shipper.shipperPromoPct)
+    : load.corridor.shipperPromoPct
+      ? Number(load.corridor.shipperPromoPct)
+      : load.corridor.promoDiscountPct
+        ? Number(load.corridor.promoDiscountPct)
+        : null;
 
-  const carrierPricePerKm = load.corridor.carrierPricePerKm
-    ? Number(load.corridor.carrierPricePerKm)
-    : 0;
-  const carrierPromoFlag = load.corridor.carrierPromoFlag || false;
-  const carrierPromoPct = load.corridor.carrierPromoPct
-    ? Number(load.corridor.carrierPromoPct)
-    : null;
+  // Carrier: org override → corridor.carrierPricePerKm → 0
+  const carrierPricePerKm = carrierOrg?.carrierRatePerKm
+    ? Number(carrierOrg.carrierRatePerKm)
+    : load.corridor.carrierPricePerKm
+      ? Number(load.corridor.carrierPricePerKm)
+      : 0;
+  const carrierPromoFlag =
+    carrierOrg?.carrierPromoFlag || load.corridor.carrierPromoFlag || false;
+  const carrierPromoPct = carrierOrg?.carrierPromoPct
+    ? Number(carrierOrg.carrierPromoPct)
+    : load.corridor.carrierPromoPct
+      ? Number(load.corridor.carrierPromoPct)
+      : null;
 
   const shipperFeeCalc = calculatePartyFee(
     distanceKm,

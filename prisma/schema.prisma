@@ -104,6 +104,21 @@ enum CorridorDirection {
   BIDIRECTIONAL // Both directions priced separately
 }
 
+// Round S8: Wallet deposit payment methods
+enum DepositMethod {
+  BANK_TRANSFER_SLIP
+  TELEBIRR
+  MPESA
+  MANUAL // Admin-initiated credit with no external slip
+}
+
+// Round S8: Wallet deposit lifecycle status
+enum DepositStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
 enum ServiceFeeStatus {
   PENDING // Not yet calculated/reserved
   RESERVED // Held from wallet when trip starts
@@ -311,6 +326,10 @@ model User {
   // Service Fee Implementation: Corridors created by admin
   corridorsCreated Corridor[] @relation("CorridorCreatedBy")
 
+  // Round S8: Wallet deposit reverse relations
+  walletDepositsRequested WalletDeposit[] @relation("WalletDepositRequestedBy")
+  walletDepositsApproved  WalletDeposit[] @relation("WalletDepositApprovedBy")
+
   // SPRINT 19: Session Management & Security
   sessions       Session[]
   mfa            UserMFA?
@@ -512,6 +531,14 @@ model Organization {
   rejectionReason    String?            // Reason shown to user on org rejection
   rejectedAt         DateTime?          // When the org registration was rejected
   documentsLockedAt  DateTime?          // Set on approval; guards block doc edits after this
+
+  // Round S8: per-account rate/km overrides (null = use corridor rate)
+  shipperRatePerKm Decimal? @db.Decimal(10, 4)
+  carrierRatePerKm Decimal? @db.Decimal(10, 4)
+  shipperPromoFlag Boolean  @default(false)
+  shipperPromoPct  Decimal? @db.Decimal(5, 2)
+  carrierPromoFlag Boolean  @default(false)
+  carrierPromoPct  Decimal? @db.Decimal(5, 2)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1114,13 +1141,14 @@ model TripPod {
 // ============================================================================
 
 model FinancialAccount {
-  id          String      @id @default(cuid())
-  accountType AccountType
-  balance     Decimal     @default(0) @db.Decimal(12, 2)
-  currency    String      @default("ETB")
-  isActive    Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id             String      @id @default(cuid())
+  accountType    AccountType
+  balance        Decimal     @default(0) @db.Decimal(12, 2)
+  currency       String      @default("ETB")
+  isActive       Boolean     @default(true)
+  minimumBalance Decimal     @default(0) @db.Decimal(12, 2) // Round S8: minimum balance threshold
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
   // Relations
   organizationId String?
@@ -1128,6 +1156,7 @@ model FinancialAccount {
 
   debitLines  JournalLine[] @relation("DebitAccount")
   creditLines JournalLine[] @relation("CreditAccount")
+  deposits    WalletDeposit[] // Round S8: deposit history
 
   @@index([accountType])
   @@index([organizationId])
@@ -1146,7 +1175,8 @@ model JournalEntry {
   loadId String?
   load   Load?   @relation(fields: [loadId], references: [id])
 
-  lines JournalLine[]
+  lines         JournalLine[]
+  walletDeposit WalletDeposit? // Round S8: reverse relation (FK lives on WalletDeposit)
 
   @@index([transactionType])
   @@index([loadId])
@@ -1192,6 +1222,46 @@ model WithdrawalRequest {
   @@index([status])
   @@index([requestedById])
   @@map("withdrawal_requests")
+}
+
+// ============================================================================
+// WALLET DEPOSIT MODEL (Round S8)
+// Tracks all top-up requests: bank slip, Telebirr, M-Pesa, admin manual.
+// Bank slips require Admin confirmation (PENDING → CONFIRMED/REJECTED).
+// Telebirr/M-Pesa are confirmed automatically (status starts as CONFIRMED).
+// ============================================================================
+
+model WalletDeposit {
+  id                String        @id @default(cuid())
+  amount            Decimal       @db.Decimal(12, 2)
+  currency          String        @default("ETB")
+  paymentMethod     DepositMethod
+  status            DepositStatus @default(PENDING)
+  slipFileUrl       String?       // Bank transfer slip document URL
+  externalReference String?       // Telebirr / M-Pesa transaction ID
+  notes             String?
+  rejectionReason   String?
+  approvedAt        DateTime?
+  rejectedAt        DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  financialAccountId String
+  financialAccount   FinancialAccount @relation(fields: [financialAccountId], references: [id])
+
+  requestedById String
+  requestedBy   User   @relation("WalletDepositRequestedBy", fields: [requestedById], references: [id])
+
+  approvedById String?
+  approvedBy   User?  @relation("WalletDepositApprovedBy", fields: [approvedById], references: [id])
+
+  journalEntryId String?       @unique
+  journalEntry   JournalEntry? @relation(fields: [journalEntryId], references: [id])
+
+  @@index([financialAccountId])
+  @@index([status])
+  @@index([requestedById])
+  @@map("wallet_deposits")
 }
 
 // ============================================================================

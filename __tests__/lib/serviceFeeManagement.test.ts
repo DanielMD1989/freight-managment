@@ -37,6 +37,9 @@ jest.mock("@/lib/db", () => ({
     journalEntry: {
       create: jest.fn(),
     },
+    organization: {
+      findUnique: jest.fn(),
+    },
     $transaction: jest.fn(),
   },
 }));
@@ -207,12 +210,10 @@ describe("lib/serviceFeeManagement", () => {
               create: jest.fn().mockResolvedValue({ id: "journal-1" }),
             },
             load: {
-              findUnique: jest
-                .fn()
-                .mockResolvedValue({
-                  shipperFeeStatus: "PENDING",
-                  carrierFeeStatus: "PENDING",
-                }),
+              findUnique: jest.fn().mockResolvedValue({
+                shipperFeeStatus: "PENDING",
+                carrierFeeStatus: "PENDING",
+              }),
               update: jest.fn().mockResolvedValue({}),
             },
           };
@@ -270,12 +271,10 @@ describe("lib/serviceFeeManagement", () => {
               create: jest.fn().mockResolvedValue({ id: "journal-1" }),
             },
             load: {
-              findUnique: jest
-                .fn()
-                .mockResolvedValue({
-                  shipperFeeStatus: "PENDING",
-                  carrierFeeStatus: "PENDING",
-                }),
+              findUnique: jest.fn().mockResolvedValue({
+                shipperFeeStatus: "PENDING",
+                carrierFeeStatus: "PENDING",
+              }),
               update: jest.fn().mockResolvedValue({}),
             },
           };
@@ -332,12 +331,10 @@ describe("lib/serviceFeeManagement", () => {
               create: jest.fn().mockResolvedValue({ id: "journal-1" }),
             },
             load: {
-              findUnique: jest
-                .fn()
-                .mockResolvedValue({
-                  shipperFeeStatus: "PENDING",
-                  carrierFeeStatus: "PENDING",
-                }),
+              findUnique: jest.fn().mockResolvedValue({
+                shipperFeeStatus: "PENDING",
+                carrierFeeStatus: "PENDING",
+              }),
               update: jest.fn().mockResolvedValue({}),
             },
           };
@@ -429,12 +426,10 @@ describe("lib/serviceFeeManagement", () => {
               create: jest.fn().mockResolvedValue({ id: "journal-1" }),
             },
             load: {
-              findUnique: jest
-                .fn()
-                .mockResolvedValue({
-                  shipperFeeStatus: "PENDING",
-                  carrierFeeStatus: "PENDING",
-                }),
+              findUnique: jest.fn().mockResolvedValue({
+                shipperFeeStatus: "PENDING",
+                carrierFeeStatus: "PENDING",
+              }),
               update: jest.fn().mockResolvedValue({}),
             },
           };
@@ -472,12 +467,10 @@ describe("lib/serviceFeeManagement", () => {
               create: jest.fn().mockResolvedValue({ id: "journal-1" }),
             },
             load: {
-              findUnique: jest
-                .fn()
-                .mockResolvedValue({
-                  shipperFeeStatus: "PENDING",
-                  carrierFeeStatus: "PENDING",
-                }),
+              findUnique: jest.fn().mockResolvedValue({
+                shipperFeeStatus: "PENDING",
+                carrierFeeStatus: "PENDING",
+              }),
               update: jest.fn().mockResolvedValue({}),
             },
           };
@@ -856,12 +849,10 @@ describe("lib/serviceFeeManagement", () => {
               create: jest.fn().mockResolvedValue({ id: "journal-1" }),
             },
             load: {
-              findUnique: jest
-                .fn()
-                .mockResolvedValue({
-                  shipperFeeStatus: "PENDING",
-                  carrierFeeStatus: "PENDING",
-                }),
+              findUnique: jest.fn().mockResolvedValue({
+                shipperFeeStatus: "PENDING",
+                carrierFeeStatus: "PENDING",
+              }),
               update: jest.fn().mockResolvedValue({}),
             },
           };
@@ -900,12 +891,10 @@ describe("lib/serviceFeeManagement", () => {
               create: jest.fn().mockResolvedValue({ id: "journal-refund" }),
             },
             load: {
-              findUnique: jest
-                .fn()
-                .mockResolvedValue({
-                  shipperFeeStatus: "PENDING",
-                  carrierFeeStatus: "PENDING",
-                }),
+              findUnique: jest.fn().mockResolvedValue({
+                shipperFeeStatus: "PENDING",
+                carrierFeeStatus: "PENDING",
+              }),
               update: jest.fn().mockResolvedValue({}),
             },
           };

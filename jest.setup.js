@@ -47,6 +47,7 @@ jest.mock("@/lib/db", () => {
     loadEscalations: new Map(),
     documents: new Map(),
     invitations: new Map(),
+    walletDeposits: new Map(),
   };
 
   let userIdCounter = 1;
@@ -78,6 +79,7 @@ jest.mock("@/lib/db", () => {
   let loadEscalationIdCounter = 1;
   let documentIdCounter = 1;
   let invitationIdCounter = 1;
+  let walletDepositIdCounter = 1;
 
   // Default values for different model types
   const modelDefaults = {
@@ -88,6 +90,13 @@ jest.mock("@/lib/db", () => {
       verificationStatus: "PENDING",
       isFlagged: false,
       flagReason: null,
+      // Round S8: per-account rate/km overrides
+      shipperRatePerKm: null,
+      carrierRatePerKm: null,
+      shipperPromoFlag: false,
+      shipperPromoPct: null,
+      carrierPromoFlag: false,
+      carrierPromoPct: null,
     },
     user: {
       isActive: true,
@@ -117,6 +126,7 @@ jest.mock("@/lib/db", () => {
     financialAccount: {
       isActive: true,
       currency: "ETB",
+      minimumBalance: 0, // Round S8
     },
     journalEntry: {},
     userMFA: {
@@ -163,6 +173,18 @@ jest.mock("@/lib/db", () => {
     invitation: {
       status: "PENDING",
     },
+    walletDeposit: {
+      currency: "ETB",
+      status: "PENDING",
+      slipFileUrl: null,
+      externalReference: null,
+      notes: null,
+      rejectionReason: null,
+      approvedAt: null,
+      rejectedAt: null,
+      approvedById: null,
+      journalEntryId: null,
+    },
   };
 
   // ── Unified include resolution ──
@@ -198,6 +220,10 @@ jest.mock("@/lib/db", () => {
     routeHistory: { type: 'hasMany', store: 'gpsPositions', matchFk: 'tripId',
                     sort: (a, b) => (b.timestamp || 0) - (a.timestamp || 0) },
     postings:     { type: 'hasMany', store: 'truckPostings', matchFk: 'truckId' },
+    // Round S8: WalletDeposit reverse relations
+    deposits:                { type: 'hasMany', store: 'walletDeposits', matchFk: 'financialAccountId' },
+    walletDepositsRequested: { type: 'hasMany', store: 'walletDeposits', matchFk: 'requestedById' },
+    walletDepositsApproved:  { type: 'hasMany', store: 'walletDeposits', matchFk: 'approvedById' },
   };
 
   function resolveCount(record, countSpec) {
@@ -806,6 +832,7 @@ jest.mock("@/lib/db", () => {
     loadEscalation: { value: loadEscalationIdCounter },
     document: { value: documentIdCounter },
     invitation: { value: invitationIdCounter },
+    walletDeposit: { value: walletDepositIdCounter },
   };
 
   const result = {
@@ -1025,6 +1052,11 @@ jest.mock("@/lib/db", () => {
         stores.withdrawalRequests,
         "withdrawalRequest",
         counters.withdrawalRequest
+      ),
+      walletDeposit: createModelMethods(
+        stores.walletDeposits,
+        "walletDeposit",
+        counters.walletDeposit
       ),
       systemSettings: createModelMethods(
         stores.systemSettings,
