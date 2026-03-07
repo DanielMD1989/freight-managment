@@ -13,6 +13,7 @@ import { writeAuditLog, AuditEventType, AuditSeverity } from "@/lib/auditLog";
 import { handleApiError } from "@/lib/apiErrors";
 // M7 FIX: Add CSRF validation
 import { validateCSRFWithMobile } from "@/lib/csrf";
+import { createNotification } from "@/lib/notifications";
 
 /**
  * POST /api/admin/organizations/[id]/verify
@@ -64,19 +65,28 @@ export async function POST(
       );
     }
 
-    // Verify the organization
-    const updatedOrg = await db.organization.update({
-      where: { id: orgId },
-      data: {
-        isVerified: true,
-        verifiedAt: new Date(),
-        // Round S2: new fields
-        verificationStatus: "APPROVED",
-        documentsLockedAt: new Date(),
-        rejectionReason: null,
-        rejectedAt: null,
-      },
-    });
+    // G-A2-1: Atomically verify the org and activate all PENDING_VERIFICATION users
+    const [updatedOrg, { count: activatedCount }] = await db.$transaction(
+      async (tx) => {
+        const org = await tx.organization.update({
+          where: { id: orgId },
+          data: {
+            isVerified: true,
+            verifiedAt: new Date(),
+            // Round S2: new fields
+            verificationStatus: "APPROVED",
+            documentsLockedAt: new Date(),
+            rejectionReason: null,
+            rejectedAt: null,
+          },
+        });
+        const result = await tx.user.updateMany({
+          where: { organizationId: orgId, status: "PENDING_VERIFICATION" },
+          data: { status: "ACTIVE" },
+        });
+        return [org, result];
+      }
+    );
 
     // Create audit log entry
     await writeAuditLog({
@@ -93,6 +103,26 @@ export async function POST(
       timestamp: new Date(),
     });
 
+    // G-A2-3: Notify all active org members of approval
+    const orgUsers = await db.user.findMany({
+      where: { organizationId: orgId, status: "ACTIVE" },
+      select: { id: true },
+    });
+
+    await Promise.all(
+      orgUsers.map((u) =>
+        createNotification({
+          userId: u.id,
+          type: "ACCOUNT_APPROVED",
+          title: "Registration Approved",
+          message:
+            "Your organization has been approved. You now have full marketplace access.",
+          metadata: { orgId },
+          skipPreferenceCheck: true,
+        })
+      )
+    );
+
     return NextResponse.json({
       message: "Organization verified successfully",
       organization: {
@@ -103,6 +133,7 @@ export async function POST(
         verificationStatus: updatedOrg.verificationStatus,
         documentsLockedAt: updatedOrg.documentsLockedAt,
       },
+      activatedCount,
     });
   } catch (error) {
     return handleApiError(error, "Verify organization error");

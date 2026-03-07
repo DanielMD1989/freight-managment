@@ -84,6 +84,31 @@ export async function POST(
       },
     });
 
+    // G-A2-4: When rejecting a user, sync org to REJECTED if not already APPROVED
+    if (status === "REJECTED") {
+      const userWithOrg = await db.user.findUnique({
+        where: { id: userId },
+        select: {
+          organization: { select: { id: true, verificationStatus: true } },
+        },
+      });
+      if (
+        userWithOrg?.organization &&
+        userWithOrg.organization.verificationStatus !== "APPROVED"
+      ) {
+        await db.organization.update({
+          where: { id: userWithOrg.organization.id },
+          data: {
+            verificationStatus: "REJECTED",
+            rejectionReason: reason || "Account rejected by admin",
+            rejectedAt: new Date(),
+            isVerified: false,
+            documentsLockedAt: null,
+          },
+        });
+      }
+    }
+
     // Send in-app notification about status change
     const isApproved = status === "ACTIVE";
     await notifyUserVerification({

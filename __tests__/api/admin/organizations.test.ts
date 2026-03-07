@@ -450,6 +450,197 @@ describe("Admin Organizations API", () => {
     });
   });
 
+  // G-A2-1: Org approve atomically activates PENDING_VERIFICATION users
+  it("T-A1-1: org with 2 PENDING_VERIFICATION users → both promoted to ACTIVE, activatedCount=2", async () => {
+    useAdminSession();
+
+    // Create a fresh unverified org with 2 PENDING_VERIFICATION users
+    const newOrg = await db.organization.create({
+      data: {
+        id: "activate-org-1",
+        name: "Activation Test Org",
+        type: "CARRIER",
+        contactEmail: "activate@test.com",
+        contactPhone: "+251911009800",
+        isVerified: false,
+        verificationStatus: "PENDING",
+      },
+    });
+
+    await db.user.create({
+      data: {
+        id: "activate-user-1a",
+        email: "activate1a@test.com",
+        passwordHash: "hash",
+        firstName: "Activate",
+        lastName: "UserA",
+        phone: "+251911009801",
+        role: "CARRIER",
+        status: "PENDING_VERIFICATION",
+        organizationId: newOrg.id,
+      },
+    });
+    await db.user.create({
+      data: {
+        id: "activate-user-1b",
+        email: "activate1b@test.com",
+        passwordHash: "hash",
+        firstName: "Activate",
+        lastName: "UserB",
+        phone: "+251911009802",
+        role: "CARRIER",
+        status: "PENDING_VERIFICATION",
+        organizationId: newOrg.id,
+      },
+    });
+
+    const req = createRequest(
+      "POST",
+      `http://localhost:3000/api/admin/organizations/${newOrg.id}/verify`
+    );
+    const res = await callHandler(verifyOrg, req, { id: newOrg.id });
+    const body = await parseResponse(res);
+
+    expect(res.status).toBe(200);
+    expect(body.activatedCount).toBe(2);
+
+    // Both users should now be ACTIVE
+    const u1 = await db.user.findUnique({ where: { id: "activate-user-1a" } });
+    const u2 = await db.user.findUnique({ where: { id: "activate-user-1b" } });
+    expect(u1.status).toBe("ACTIVE");
+    expect(u2.status).toBe("ACTIVE");
+  });
+
+  it("T-A1-2: org with mix of PENDING_VERIFICATION + REGISTERED → only PENDING_VERIFICATION promoted", async () => {
+    useAdminSession();
+
+    const mixOrg = await db.organization.create({
+      data: {
+        id: "activate-org-2",
+        name: "Mix Status Org",
+        type: "CARRIER",
+        contactEmail: "mix@test.com",
+        contactPhone: "+251911009810",
+        isVerified: false,
+        verificationStatus: "PENDING",
+      },
+    });
+
+    await db.user.create({
+      data: {
+        id: "activate-user-2a",
+        email: "activate2a@test.com",
+        passwordHash: "hash",
+        firstName: "Mix",
+        lastName: "PendVerif",
+        phone: "+251911009811",
+        role: "CARRIER",
+        status: "PENDING_VERIFICATION",
+        organizationId: mixOrg.id,
+      },
+    });
+    await db.user.create({
+      data: {
+        id: "activate-user-2b",
+        email: "activate2b@test.com",
+        passwordHash: "hash",
+        firstName: "Mix",
+        lastName: "Registered",
+        phone: "+251911009812",
+        role: "CARRIER",
+        status: "REGISTERED",
+        organizationId: mixOrg.id,
+      },
+    });
+
+    const req = createRequest(
+      "POST",
+      `http://localhost:3000/api/admin/organizations/${mixOrg.id}/verify`
+    );
+    const res = await callHandler(verifyOrg, req, { id: mixOrg.id });
+    const body = await parseResponse(res);
+
+    expect(res.status).toBe(200);
+    expect(body.activatedCount).toBe(1);
+
+    // Only PENDING_VERIFICATION user promoted
+    const u1 = await db.user.findUnique({ where: { id: "activate-user-2a" } });
+    const u2 = await db.user.findUnique({ where: { id: "activate-user-2b" } });
+    expect(u1.status).toBe("ACTIVE");
+    expect(u2.status).toBe("REGISTERED"); // unchanged
+  });
+
+  it("T-A1-3: org with no pending users → activatedCount=0, no error", async () => {
+    useAdminSession();
+    // dispatcherOrg has only ACTIVE users
+    await db.organization.update({
+      where: { id: seed.dispatcherOrg.id },
+      data: {
+        isVerified: false,
+        verifiedAt: null,
+        verificationStatus: "PENDING",
+      },
+    });
+
+    const req = createRequest(
+      "POST",
+      `http://localhost:3000/api/admin/organizations/${seed.dispatcherOrg.id}/verify`
+    );
+    const res = await callHandler(verifyOrg, req, {
+      id: seed.dispatcherOrg.id,
+    });
+    const body = await parseResponse(res);
+
+    expect(res.status).toBe(200);
+    expect(body.activatedCount).toBe(0);
+  });
+
+  // G-A2-3: Org approve notifies ACTIVE org members
+  it("T-A3-1: after org verify → createNotification called for each ACTIVE user", async () => {
+    useAdminSession();
+
+    const notifOrg = await db.organization.create({
+      data: {
+        id: "notif-org-1",
+        name: "Notification Test Org",
+        type: "CARRIER",
+        contactEmail: "notif@test.com",
+        contactPhone: "+251911009820",
+        isVerified: false,
+        verificationStatus: "PENDING",
+      },
+    });
+
+    // Create 2 PENDING_VERIFICATION users (they'll be activated inside the transaction)
+    await db.user.create({
+      data: {
+        id: "notif-user-1a",
+        email: "notif1a@test.com",
+        passwordHash: "hash",
+        firstName: "Notif",
+        lastName: "UserA",
+        phone: "+251911009821",
+        role: "CARRIER",
+        status: "PENDING_VERIFICATION",
+        organizationId: notifOrg.id,
+      },
+    });
+
+    const { createNotification } = require("@/lib/notifications");
+    createNotification.mockClear();
+
+    const req = createRequest(
+      "POST",
+      `http://localhost:3000/api/admin/organizations/${notifOrg.id}/verify`
+    );
+    await callHandler(verifyOrg, req, { id: notifOrg.id });
+
+    expect(createNotification).toHaveBeenCalled();
+    const call = createNotification.mock.calls[0][0];
+    expect(call.type).toBe("ACCOUNT_APPROVED");
+    expect(call.metadata.orgId).toBe(notifOrg.id);
+  });
+
   // ─── DELETE /api/admin/organizations/[id]/verify ───────────────────────────
 
   describe("DELETE /api/admin/organizations/[id]/verify", () => {

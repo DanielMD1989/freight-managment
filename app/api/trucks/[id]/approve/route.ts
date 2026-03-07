@@ -22,6 +22,7 @@ import { sendEmail, createEmailHTML } from "@/lib/email";
 // CSRF FIX: Add CSRF validation
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { handleApiError } from "@/lib/apiErrors";
+import { writeAuditLog, AuditEventType, AuditSeverity } from "@/lib/auditLog";
 
 // Validation schema for truck approval
 const TruckApprovalSchema = z.object({
@@ -106,10 +107,13 @@ export async function POST(
       );
     }
 
-    // Require reason for rejection
-    if (data.action === "REJECT" && !data.reason) {
+    // Require reason for rejection (min 10 chars after trim)
+    if (
+      data.action === "REJECT" &&
+      (!data.reason || data.reason.trim().length < 10)
+    ) {
       return NextResponse.json(
-        { error: "Rejection reason is required" },
+        { error: "Rejection reason must be at least 10 characters" },
         { status: 400 }
       );
     }
@@ -187,6 +191,24 @@ export async function POST(
         updatedTruck.carrierId,
         updatedTruck.carrierId
       );
+
+      // G-A2-6: Audit log for truck approval
+      await writeAuditLog({
+        eventType: AuditEventType.DOCUMENT_VERIFIED,
+        severity: AuditSeverity.INFO,
+        userId: session.userId,
+        organizationId: truck.carrierId,
+        resource: "truck",
+        resourceId: truckId,
+        action: "APPROVE",
+        result: "SUCCESS",
+        message: `Truck approved: ${truck.licensePlate}`,
+        metadata: {
+          licensePlate: truck.licensePlate,
+          carrierId: truck.carrierId,
+        },
+        timestamp: new Date(),
+      });
 
       return NextResponse.json({
         truck: {
@@ -270,6 +292,21 @@ export async function POST(
         updatedTruck.carrierId,
         updatedTruck.carrierId
       );
+
+      // G-A2-6: Audit log for truck rejection
+      await writeAuditLog({
+        eventType: AuditEventType.DOCUMENT_REJECTED,
+        severity: AuditSeverity.INFO,
+        userId: session.userId,
+        organizationId: truck.carrierId,
+        resource: "truck",
+        resourceId: truckId,
+        action: "REJECT",
+        result: "SUCCESS",
+        message: `Truck rejected: ${truck.licensePlate} — ${data.reason}`,
+        metadata: { licensePlate: truck.licensePlate, reason: data.reason },
+        timestamp: new Date(),
+      });
 
       return NextResponse.json({
         truck: updatedTruck,

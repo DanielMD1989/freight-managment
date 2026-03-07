@@ -912,6 +912,138 @@ describe("Admin Users API", () => {
       });
       expect(res.status).toBe(400);
     });
+
+    // ── G-A2-4 — User rejection syncs org verification state ──────────────────
+
+    it("T-A4-1: reject user whose org is PENDING → org also set to REJECTED", async () => {
+      useAdminSession();
+
+      // Create a PENDING org and a user in it
+      const pendingOrg = await db.organization.create({
+        data: {
+          id: "reject-sync-org-1",
+          name: "Pending Org For Sync",
+          type: "CARRIER",
+          contactEmail: "pending-sync@test.com",
+          contactPhone: "+251911009700",
+          isVerified: false,
+          verificationStatus: "PENDING",
+        },
+      });
+
+      await db.user.create({
+        data: {
+          id: "reject-sync-user-1",
+          email: "reject-sync1@test.com",
+          passwordHash: "hash",
+          firstName: "Reject",
+          lastName: "Sync",
+          phone: "+251911009701",
+          role: "CARRIER",
+          status: "PENDING_VERIFICATION",
+          organizationId: pendingOrg.id,
+        },
+      });
+
+      const req = createRequest(
+        "POST",
+        "http://localhost:3000/api/admin/users/reject-sync-user-1/verify",
+        { body: { status: "REJECTED", reason: "Documents are invalid" } }
+      );
+      const res = await callHandler(verifyUser, req, {
+        id: "reject-sync-user-1",
+      });
+      expect(res.status).toBe(200);
+
+      // Org should now be REJECTED
+      const org = await db.organization.findUnique({
+        where: { id: pendingOrg.id },
+      });
+      expect(org.verificationStatus).toBe("REJECTED");
+      expect(org.isVerified).toBe(false);
+      expect(org.rejectedAt).toBeTruthy();
+    });
+
+    it("T-A4-2: reject user whose org is APPROVED → org NOT touched", async () => {
+      useAdminSession();
+
+      // Create a fresh org explicitly set to APPROVED, then reject a user in it
+      const approvedOrg = await db.organization.create({
+        data: {
+          id: "reject-sync-org-approved",
+          name: "Already Approved Org",
+          type: "CARRIER",
+          contactEmail: "approved-sync@test.com",
+          contactPhone: "+251911009720",
+          isVerified: true,
+          verificationStatus: "APPROVED",
+        },
+      });
+
+      await db.user.create({
+        data: {
+          id: "reject-sync-user-approved",
+          email: "reject-sync-approved@test.com",
+          passwordHash: "hash",
+          firstName: "ApprovedOrg",
+          lastName: "User",
+          phone: "+251911009721",
+          role: "CARRIER",
+          status: "PENDING_VERIFICATION",
+          organizationId: approvedOrg.id,
+        },
+      });
+
+      const req = createRequest(
+        "POST",
+        "http://localhost:3000/api/admin/users/reject-sync-user-approved/verify",
+        { body: { status: "REJECTED", reason: "Documents are invalid here" } }
+      );
+      const res = await callHandler(verifyUser, req, {
+        id: "reject-sync-user-approved",
+      });
+      expect(res.status).toBe(200);
+
+      // Org should still be APPROVED (guard skipped it)
+      const org = await db.organization.findUnique({
+        where: { id: approvedOrg.id },
+      });
+      expect(org.verificationStatus).toBe("APPROVED");
+      expect(org.isVerified).toBe(true);
+    });
+
+    it("T-A4-3: reject user with no org → no error, only user.status updated", async () => {
+      useAdminSession();
+
+      // Create a user with no organization
+      await db.user.create({
+        data: {
+          id: "reject-no-org-user",
+          email: "reject-no-org@test.com",
+          passwordHash: "hash",
+          firstName: "NoOrg",
+          lastName: "User",
+          phone: "+251911009710",
+          role: "CARRIER",
+          status: "PENDING_VERIFICATION",
+        },
+      });
+
+      const req = createRequest(
+        "POST",
+        "http://localhost:3000/api/admin/users/reject-no-org-user/verify",
+        { body: { status: "REJECTED", reason: "No organization found" } }
+      );
+      const res = await callHandler(verifyUser, req, {
+        id: "reject-no-org-user",
+      });
+      expect(res.status).toBe(200);
+
+      const u = await db.user.findUnique({
+        where: { id: "reject-no-org-user" },
+      });
+      expect(u.status).toBe("REJECTED");
+    });
   });
 
   // ─── GET /api/admin/users/[id]/wallet ───────────────────────────────────────

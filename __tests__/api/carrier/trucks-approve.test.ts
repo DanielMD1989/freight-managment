@@ -268,6 +268,34 @@ describe("Carrier Truck Approval", () => {
       const body = await parseResponse(res);
       expect(body.error).toContain("reason");
     });
+
+    // TA-G5-1: G-A2-5 — min-length enforcement (10 chars)
+    it("TA-G5-1: REJECT with too-short reason → 400, error mentions 10 characters", async () => {
+      const truckShortReason = await db.truck.create({
+        data: {
+          id: "truck-short-reason",
+          truckType: "DRY_VAN",
+          licensePlate: "SHORT-01",
+          capacity: 10000,
+          carrierId: seed.carrierOrg.id,
+          createdById: seed.carrierUser.id,
+          approvalStatus: "PENDING",
+        },
+      });
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/trucks/${truckShortReason.id}/approve`,
+        { body: { action: "REJECT", reason: "Bad" } }
+      );
+      const res = await callHandler(approveTruck, req, {
+        id: truckShortReason.id,
+      });
+
+      expect(res.status).toBe(400);
+      const body = await parseResponse(res);
+      expect(body.error).toContain("10 characters");
+    });
   });
 
   // ─── Authorization ───────────────────────────────────────────────────
@@ -418,6 +446,67 @@ describe("Carrier Truck Approval", () => {
           to: seed.carrierOrg.contactEmail,
           subject: expect.stringContaining("Rejected"),
         })
+      );
+    });
+  });
+
+  // ─── Audit log (G-A2-6) ──────────────────────────────────────────────────────
+
+  describe("Audit log (G-A2-6)", () => {
+    it("TA-G6-1: APPROVE writes audit log with action=APPROVE", async () => {
+      const truckAuditApprove = await db.truck.create({
+        data: {
+          id: "truck-audit-approve",
+          truckType: "DRY_VAN",
+          licensePlate: "AUDIT-01",
+          capacity: 10000,
+          carrierId: seed.carrierOrg.id,
+          createdById: seed.carrierUser.id,
+          approvalStatus: "PENDING",
+        },
+      });
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/trucks/${truckAuditApprove.id}/approve`,
+        { body: { action: "APPROVE" } }
+      );
+      await callHandler(approveTruck, req, { id: truckAuditApprove.id });
+
+      const { writeAuditLog } = require("@/lib/auditLog");
+      expect(writeAuditLog).toHaveBeenCalledWith(
+        expect.objectContaining({ action: "APPROVE" })
+      );
+    });
+
+    it("TA-G6-2: REJECT writes audit log with action=REJECT", async () => {
+      const truckAuditReject = await db.truck.create({
+        data: {
+          id: "truck-audit-reject",
+          truckType: "DRY_VAN",
+          licensePlate: "AUDIT-02",
+          capacity: 10000,
+          carrierId: seed.carrierOrg.id,
+          createdById: seed.carrierUser.id,
+          approvalStatus: "PENDING",
+        },
+      });
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/trucks/${truckAuditReject.id}/approve`,
+        {
+          body: {
+            action: "REJECT",
+            reason: "Documents are expired and invalid",
+          },
+        }
+      );
+      await callHandler(approveTruck, req, { id: truckAuditReject.id });
+
+      const { writeAuditLog } = require("@/lib/auditLog");
+      expect(writeAuditLog).toHaveBeenCalledWith(
+        expect.objectContaining({ action: "REJECT" })
       );
     });
   });
