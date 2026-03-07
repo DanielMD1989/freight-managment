@@ -55,16 +55,12 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Check if user has uploaded any documents (via loads they created)
-    const documentCount = await db.document.count({
-      where: {
-        load: {
-          createdById: user.id,
-        },
-      },
+    // Check if user has uploaded any company registration documents
+    const documentCount = await db.companyDocument.count({
+      where: { organizationId: user.organization?.id ?? "" },
     });
 
-    const hasDocuments = documentCount > 0;
+    const hasDocuments = documentCount > 0 && !!user.organization?.id;
 
     // Build verification steps
     const steps: VerificationStep[] = [

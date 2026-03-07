@@ -101,6 +101,10 @@ jest.mock("@/lib/db", () => {
     user: {
       isActive: true,
       emailVerified: false,
+      // G-A1-1: OTP fields
+      otpCode: null,
+      otpExpiresAt: null,
+      otpChannel: null,
     },
     load: {
       serviceFeeStatus: "PENDING",

@@ -111,6 +111,9 @@ const {
   DELETE: unverifyOrg,
 } = require("@/app/api/admin/organizations/[id]/verify/route");
 const {
+  POST: rejectOrg,
+} = require("@/app/api/admin/organizations/[id]/reject/route");
+const {
   GET: getVerificationStatus,
 } = require("@/app/api/user/verification-status/route");
 
@@ -562,6 +565,162 @@ describe("Admin Organizations API", () => {
       expect(org.verificationStatus).toBe("PENDING");
       expect(org.documentsLockedAt).toBeNull();
       expect(org.isVerified).toBe(false);
+    });
+  });
+
+  // ─── POST /api/admin/organizations/[id]/reject (G-A1-2) ────────────────────
+
+  describe("POST /api/admin/organizations/[id]/reject", () => {
+    let rejectOrgId: string;
+
+    beforeEach(async () => {
+      // Create a fresh PENDING org for each reject test
+      const org = await db.organization.create({
+        data: {
+          id: `reject-org-${Date.now()}`,
+          name: "Org To Reject",
+          type: "SHIPPER",
+          contactEmail: "reject@test.com",
+          contactPhone: "+251911009900",
+          verificationStatus: "PENDING",
+        },
+      });
+      rejectOrgId = org.id;
+    });
+
+    it("T-REJ-1: Admin rejects org with valid reason → 200, verificationStatus=REJECTED", async () => {
+      useAdminSession();
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/admin/organizations/${rejectOrgId}/reject`,
+        { body: { reason: "Missing TIN certificate and business license" } }
+      );
+      const res = await callHandler(rejectOrg, req, { id: rejectOrgId });
+      const body = await parseResponse(res);
+      expect(res.status).toBe(200);
+      expect(body.organization.verificationStatus).toBe("REJECTED");
+      expect(body.organization.rejectionReason).toBeTruthy();
+
+      const org = await db.organization.findUnique({
+        where: { id: rejectOrgId },
+      });
+      expect(org.verificationStatus).toBe("REJECTED");
+      expect(org.rejectedAt).toBeTruthy();
+      expect(org.isVerified).toBe(false);
+      expect(org.documentsLockedAt).toBeNull();
+    });
+
+    it("T-REJ-2: Non-admin (DISPATCHER) → 403", async () => {
+      useDispatcherSession();
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/admin/organizations/${rejectOrgId}/reject`,
+        { body: { reason: "Missing documents for rejection test" } }
+      );
+      const res = await callHandler(rejectOrg, req, { id: rejectOrgId });
+      expect(res.status).toBe(403);
+    });
+
+    it("T-REJ-3: Org not found → 404", async () => {
+      useAdminSession();
+      const req = createRequest(
+        "POST",
+        "http://localhost:3000/api/admin/organizations/non-existent-org/reject",
+        { body: { reason: "Missing documents for rejection test" } }
+      );
+      const res = await callHandler(rejectOrg, req, { id: "non-existent-org" });
+      expect(res.status).toBe(404);
+    });
+
+    it("T-REJ-4: Org already APPROVED → 400", async () => {
+      useAdminSession();
+      await db.organization.update({
+        where: { id: rejectOrgId },
+        data: { verificationStatus: "APPROVED", isVerified: true },
+      });
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/admin/organizations/${rejectOrgId}/reject`,
+        { body: { reason: "Missing documents for rejection test" } }
+      );
+      const res = await callHandler(rejectOrg, req, { id: rejectOrgId });
+      const body = await parseResponse(res);
+      expect(res.status).toBe(400);
+      expect(body.error).toContain("approved");
+    });
+
+    it("T-REJ-5: Org already REJECTED → 400", async () => {
+      useAdminSession();
+      await db.organization.update({
+        where: { id: rejectOrgId },
+        data: { verificationStatus: "REJECTED" },
+      });
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/admin/organizations/${rejectOrgId}/reject`,
+        { body: { reason: "Missing documents for rejection test" } }
+      );
+      const res = await callHandler(rejectOrg, req, { id: rejectOrgId });
+      const body = await parseResponse(res);
+      expect(res.status).toBe(400);
+      expect(body.error).toContain("rejected");
+    });
+
+    it("T-REJ-6: Missing/too-short reason → 400", async () => {
+      useAdminSession();
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/admin/organizations/${rejectOrgId}/reject`,
+        { body: { reason: "Short" } }
+      );
+      const res = await callHandler(rejectOrg, req, { id: rejectOrgId });
+      expect(res.status).toBe(400);
+    });
+
+    it("T-REJ-7: createNotification called for each org user", async () => {
+      useAdminSession();
+      // Create a user in the org
+      await db.user.create({
+        data: {
+          id: `reject-user-${rejectOrgId}`,
+          email: `reject-${rejectOrgId}@test.com`,
+          passwordHash: "hash",
+          firstName: "Reject",
+          lastName: "User",
+          phone: "+251911009901",
+          role: "SHIPPER",
+          status: "PENDING_VERIFICATION",
+          organizationId: rejectOrgId,
+        },
+      });
+
+      const {
+        createNotification: mockCreateNotif,
+      } = require("@/lib/notifications");
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/admin/organizations/${rejectOrgId}/reject`,
+        { body: { reason: "Missing TIN certificate and business license" } }
+      );
+      await callHandler(rejectOrg, req, { id: rejectOrgId });
+      expect(mockCreateNotif).toHaveBeenCalled();
+    });
+
+    it("T-REJ-8: writeAuditLog called with correct event type", async () => {
+      useAdminSession();
+      const { writeAuditLog } = require("@/lib/auditLog");
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/admin/organizations/${rejectOrgId}/reject`,
+        { body: { reason: "Missing TIN certificate and business license" } }
+      );
+      await callHandler(rejectOrg, req, { id: rejectOrgId });
+      expect(writeAuditLog).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "ORG_VERIFIED",
+          action: "REJECT",
+        })
+      );
     });
   });
 

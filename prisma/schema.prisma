@@ -284,6 +284,10 @@ model User {
   isEmailVerified         Boolean    @default(false)
   isPhoneVerified         Boolean    @default(false)
   isActive                Boolean    @default(true) // DEPRECATED: Use status field instead
+  // G-A1-1: OTP verification fields
+  otpCode                 String?    // bcrypt-hashed OTP; null after verification
+  otpExpiresAt            DateTime?  // 10-minute window
+  otpChannel              String?    // "email" | "sms"
   lastLoginAt             DateTime?
   notificationPreferences Json? // PHASE 2: Story 15.13 - User notification preferences
   createdAt               DateTime   @default(now())

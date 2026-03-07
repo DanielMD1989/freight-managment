@@ -178,6 +178,13 @@ export function mockRateLimit() {
       windowMs: 3600000,
       keyGenerator: () => "test",
     },
+    RATE_LIMIT_OTP_SEND: {
+      name: "otp_send",
+      limit: 3,
+      windowMs: 3600000,
+      message:
+        "Too many OTP requests. Please wait before requesting another code.",
+    },
     // withRpsLimit is a HOF that wraps a handler — in tests, just pass through
     withRpsLimit: jest.fn(
       (_config: unknown, handler: (req: any) => any) => handler

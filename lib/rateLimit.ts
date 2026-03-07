@@ -732,6 +732,16 @@ export const RATE_LIMIT_SEARCH: RateLimitConfig = {
   message: "Search rate limited. Please slow down.",
 };
 
+/**
+ * OTP send: 3 per hour per user (G-A1-1)
+ */
+export const RATE_LIMIT_OTP_SEND: RateLimitConfig = {
+  name: "otp_send",
+  limit: 3,
+  windowMs: 60 * 60 * 1000,
+  message: "Too many OTP requests. Please wait before requesting another code.",
+};
+
 // =============================================================================
 // RPS CONFIGURATIONS FOR KEY ENDPOINTS
 // =============================================================================
