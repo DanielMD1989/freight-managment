@@ -392,10 +392,11 @@ export async function findMatchingLoadsForTruck(
     throw new Error("Truck posting not found");
   }
 
-  // Fetch all POSTED loads with location details
+  // G-A7-8: Include SEARCHING and OFFERED loads (Round A6 consistency).
+  // Fetch all available loads with location details
   const loads = await db.load.findMany({
     where: {
-      status: "POSTED",
+      status: { in: ["POSTED", "SEARCHING", "OFFERED"] },
       pickupCityId: { not: null },
       deliveryCityId: { not: null },
     },
@@ -456,10 +457,19 @@ export async function findMatchingTrucksForLoad(
     throw new Error("Load not found or missing location details");
   }
 
-  // Fetch all ACTIVE truck postings
+  // G-A7-4: Exclude trucks on active trips at query level.
+  // G-A7-3: PICKUP_PENDING included — truck heading to pickup is already committed.
+  // Uses trips (hasMany, supports 'none') rather than assignedLoad (one-to-one).
   const truckPostings = await db.truckPosting.findMany({
     where: {
       status: "ACTIVE",
+      truck: {
+        trips: {
+          none: {
+            status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+          },
+        },
+      },
     },
     include: {
       truck: true,
@@ -471,9 +481,11 @@ export async function findMatchingTrucksForLoad(
   // Calculate match scores for all trucks
   const matches: TruckMatch[] = truckPostings
     .map((posting) => ({
-      posting,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Prisma includes differ from strict TruckMatch type when where.truck is also set
+      posting: posting as any,
       matchScore: calculateMatchScore(
-        posting,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        posting as any,
         load as Parameters<typeof calculateMatchScore>[1]
       ),
     }))

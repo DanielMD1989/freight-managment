@@ -175,10 +175,10 @@ export async function GET(
       100
     );
 
-    // Fetch all posted loads
+    // G-A7-7: Include SEARCHING and OFFERED loads (Round A6 consistency).
     const loads = await db.load.findMany({
       where: {
-        status: "POSTED",
+        status: { in: ["POSTED", "SEARCHING", "OFFERED"] },
       },
       include: {
         shipper: {

@@ -556,19 +556,32 @@ export async function GET(request: NextRequest) {
       where.originCityId = resolvedOriginCityId;
     }
 
+    // G-A7-1: Include open-destination (null) postings when destination filter is applied.
+    // Trucks with no declared destination are willing to go anywhere, so they must
+    // not be excluded when a shipper searches by destination.
     if (resolvedDestinationCityId) {
-      where.destinationCityId = resolvedDestinationCityId;
+      where.OR = [
+        { destinationCityId: resolvedDestinationCityId },
+        { destinationCityId: null },
+      ];
     }
 
     if (fullPartial && ["FULL", "PARTIAL"].includes(fullPartial)) {
       where.fullPartial = fullPartial;
     }
 
-    if (truckType) {
-      where.truck = {
-        truckType,
-      };
-    }
+    // G-A7-2 + G-A7-3: Exclude trucks on active trips at query level (not just response).
+    // PICKUP_PENDING is included because a truck heading to pickup is already committed.
+    // Uses the Trip relation (hasMany, supports 'none') rather than assignedLoad (one-to-one).
+    // Merged with truckType filter to avoid silently overwriting where.truck.
+    where.truck = {
+      ...(truckType ? { truckType } : {}),
+      trips: {
+        none: {
+          status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+        },
+      },
+    };
 
     // Fetch postings and count in parallel
     const [postings, total] = await Promise.all([
@@ -586,9 +599,10 @@ export async function GET(request: NextRequest) {
               // H6 FIX: GPS/IMEI fields removed from public response - sensitive operational data
               // Use /api/carrier/trucks for authenticated access to GPS info
               // Check if truck has an active load (boolean only — no tracking URLs or route info)
+              // G-A7-3: PICKUP_PENDING included — truck heading to pickup is already committed.
               assignedLoad: {
                 where: {
-                  OR: [{ status: "ASSIGNED" }, { status: "IN_TRANSIT" }],
+                  status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
                 },
                 select: {
                   id: true,

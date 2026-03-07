@@ -140,6 +140,16 @@ export async function POST(request: NextRequest) {
             name: true,
           },
         },
+        // G-A7-6: Fetch active trips to block requests for busy trucks.
+        // G-A7-3: PICKUP_PENDING included — truck heading to pickup is already committed.
+        // Uses trips (hasMany) rather than assignedLoad (one-to-one) for proper filtering.
+        trips: {
+          where: {
+            status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+          },
+          select: { id: true },
+          take: 1,
+        },
       },
     });
 
@@ -162,6 +172,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Truck must be approved before requesting loads" },
         { status: 400 }
+      );
+    }
+
+    // G-A7-6: Reject requests for trucks already on an active trip.
+    if (truck.trips.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Truck is currently on an active trip and cannot be used for load requests",
+        },
+        { status: 409 }
       );
     }
 
