@@ -23,7 +23,7 @@ import { validateWalletBalancesForTrip } from "@/lib/serviceFeeManagement"; // S
 import { CacheInvalidation } from "@/lib/cache";
 import crypto from "crypto";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
-import { createNotification } from "@/lib/notifications";
+import { createNotification, NotificationType } from "@/lib/notifications";
 import { handleApiError } from "@/lib/apiErrors";
 
 // Validation schema for proposal response
@@ -446,7 +446,7 @@ export async function POST(
       for (const u of shipperUsers) {
         createNotification({
           userId: u.id,
-          type: "MATCH_PROPOSAL_ACCEPTED",
+          type: NotificationType.MATCH_PROPOSAL_ACCEPTED,
           title: "Load Matched",
           message: `Your load from ${proposal.load.pickupCity} to ${proposal.load.deliveryCity} has been matched with a truck.`,
           metadata: {
@@ -459,7 +459,7 @@ export async function POST(
       // Notify the dispatcher who proposed the match
       createNotification({
         userId: proposal.proposedById,
-        type: "MATCH_PROPOSAL_ACCEPTED",
+        type: NotificationType.MATCH_PROPOSAL_ACCEPTED,
         title: "Match Proposal Accepted",
         message: `Carrier accepted your match proposal for load ${proposal.load.pickupCity} → ${proposal.load.deliveryCity}.`,
         metadata: {
@@ -514,7 +514,7 @@ export async function POST(
       // Fix 1a: Notify dispatcher of rejection
       createNotification({
         userId: proposal.proposedById,
-        type: "MATCH_PROPOSAL_REJECTED",
+        type: NotificationType.MATCH_PROPOSAL_REJECTED,
         title: "Match Proposal Rejected",
         message: `Carrier rejected your match proposal for truck ${proposal.truck.licensePlate}.${data.responseNotes ? ` Reason: ${data.responseNotes}` : ""}`,
         metadata: {
@@ -523,6 +523,27 @@ export async function POST(
           reason: data.responseNotes,
         },
       }).catch((err) => console.error("Failed to notify dispatcher:", err));
+
+      // G-A13-1: Notify shipper — their load's match proposal was declined
+      const rejectedShipperUsers = await db.user.findMany({
+        where: { organizationId: proposal.load.shipperId, status: "ACTIVE" },
+        select: { id: true },
+      });
+      for (const u of rejectedShipperUsers) {
+        createNotification({
+          userId: u.id,
+          type: NotificationType.MATCH_PROPOSAL_REJECTED,
+          title: "Match Proposal Declined",
+          message: `The truck match proposal for your load from ${proposal.load.pickupCity} to ${proposal.load.deliveryCity} was declined by the carrier.`,
+          metadata: {
+            proposalId,
+            loadId: proposal.loadId,
+            reason: data.responseNotes,
+          },
+        }).catch((err) =>
+          console.error("Failed to notify shipper of rejection:", err)
+        );
+      }
 
       return NextResponse.json({
         proposal: updatedProposal,
