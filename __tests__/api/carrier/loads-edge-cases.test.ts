@@ -164,6 +164,39 @@ describe("Carrier Load Edge Cases", () => {
       },
     });
 
+    // SEARCHING and OFFERED loads for G-A6-3 visibility test
+    await db.load.create({
+      data: {
+        id: "searching-load-mf",
+        status: "SEARCHING",
+        pickupCity: "Addis Ababa",
+        deliveryCity: "Mekelle",
+        pickupDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        deliveryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        truckType: "FLATBED",
+        weight: 3000,
+        cargoDescription: "Searching load for marketplace test",
+        shipperId: seed.shipperOrg.id,
+        createdById: seed.shipperUser.id,
+      },
+    });
+
+    await db.load.create({
+      data: {
+        id: "offered-load-mf",
+        status: "OFFERED",
+        pickupCity: "Addis Ababa",
+        deliveryCity: "Dire Dawa",
+        pickupDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        deliveryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        truckType: "DRY_VAN",
+        weight: 2500,
+        cargoDescription: "Offered load for marketplace test",
+        shipperId: seed.shipperOrg.id,
+        createdById: seed.shipperUser.id,
+      },
+    });
+
     // Extra posted loads for pagination tests
     for (let i = 1; i <= 3; i++) {
       await db.load.create({
@@ -197,7 +230,7 @@ describe("Carrier Load Edge Cases", () => {
   // ─── Marketplace Filtering ─────────────────────────────────────────────
 
   describe("Marketplace filtering", () => {
-    it("carrier GET forces POSTED status (ignores ?status=DRAFT)", async () => {
+    it("carrier marketplace shows POSTED, SEARCHING, OFFERED — hides DRAFT and ASSIGNED+", async () => {
       const req = createRequest(
         "GET",
         "http://localhost:3000/api/loads?status=DRAFT"
@@ -205,10 +238,18 @@ describe("Carrier Load Edge Cases", () => {
       const res = await listLoads(req);
       expect(res.status).toBe(200);
       const data = await parseResponse(res);
-      // Carrier marketplace mode forces POSTED - should not see DRAFT loads
+      // Blueprint: POSTED, SEARCHING, OFFERED visible; DRAFT, ASSIGNED+ hidden
+      const VISIBLE = ["POSTED", "SEARCHING", "OFFERED"];
       for (const load of data.loads) {
-        expect(load.status).toBe("POSTED");
+        expect(VISIBLE).toContain(load.status);
       }
+      // Confirm both new statuses appear
+      expect(
+        data.loads.some((l: { status: string }) => l.status === "SEARCHING")
+      ).toBe(true);
+      expect(
+        data.loads.some((l: { status: string }) => l.status === "OFFERED")
+      ).toBe(true);
     });
 
     it("combined filters truckType+pickupCity work", async () => {

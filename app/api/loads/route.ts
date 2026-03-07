@@ -9,6 +9,7 @@ import { LoadCache, CacheInvalidation } from "@/lib/cache";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { handleApiError } from "@/lib/apiErrors";
 import { sanitizeText } from "@/lib/validation";
+import { calculateDistanceKm } from "@/lib/geo";
 
 const createLoadSchema = z
   .object({
@@ -277,6 +278,50 @@ export async function GET(request: NextRequest) {
     const rateMin = searchParams.get("rateMin");
     const rateMax = searchParams.get("rateMax");
 
+    // G-A6-1: DH-O filter — carrier position → load pickup
+    const carrierLatRaw = searchParams.get("carrierLat");
+    const carrierLonRaw = searchParams.get("carrierLon");
+    const dhOMaxKmRaw = searchParams.get("dhOMaxKm");
+    const carrierLat = carrierLatRaw ? parseFloat(carrierLatRaw) : undefined;
+    const carrierLon = carrierLonRaw ? parseFloat(carrierLonRaw) : undefined;
+    const dhOMaxKm = dhOMaxKmRaw
+      ? Math.min(Math.max(parseFloat(dhOMaxKmRaw), 1), 2000)
+      : undefined;
+    const hasDHOFilter =
+      carrierLat !== undefined &&
+      carrierLon !== undefined &&
+      dhOMaxKm !== undefined &&
+      !isNaN(carrierLat) &&
+      !isNaN(carrierLon) &&
+      !isNaN(dhOMaxKm) &&
+      carrierLat >= -90 &&
+      carrierLat <= 90 &&
+      carrierLon >= -180 &&
+      carrierLon <= 180;
+
+    // G-A6-2: DH-D filter — load delivery → carrier home base
+    const destLatRaw = searchParams.get("destLat");
+    const destLonRaw = searchParams.get("destLon");
+    const dhDMaxKmRaw = searchParams.get("dhDMaxKm");
+    const destLat = destLatRaw ? parseFloat(destLatRaw) : undefined;
+    const destLon = destLonRaw ? parseFloat(destLonRaw) : undefined;
+    const dhDMaxKm = dhDMaxKmRaw
+      ? Math.min(Math.max(parseFloat(dhDMaxKmRaw), 1), 2000)
+      : undefined;
+    const hasDHDFilter =
+      destLat !== undefined &&
+      destLon !== undefined &&
+      dhDMaxKm !== undefined &&
+      !isNaN(destLat) &&
+      !isNaN(destLon) &&
+      !isNaN(dhDMaxKm) &&
+      destLat >= -90 &&
+      destLat <= 90 &&
+      destLon >= -180 &&
+      destLon <= 180;
+
+    const needsGeoFilter = hasDHOFilter || hasDHDFilter;
+
     // PHASE 4: Build cache key from filter parameters
     const cacheFilters = {
       page,
@@ -294,6 +339,12 @@ export async function GET(request: NextRequest) {
       pickupFrom,
       rateMin,
       rateMax,
+      carrierLat,
+      carrierLon,
+      dhOMaxKm, // G-A6-1
+      destLat,
+      destLon,
+      dhDMaxKm, // G-A6-2
       role: session.role,
       orgId: session.organizationId,
       sortBy: searchParams.get("sortBy"),
@@ -341,9 +392,8 @@ export async function GET(request: NextRequest) {
         };
       }
     } else {
-      // Only show posted loads in marketplace - force POSTED status
-      // Do NOT allow status query param to override this (prevents draft load exposure)
-      where.status = "POSTED";
+      // Blueprint: "ASSIGNED+ loads hidden" — POSTED, SEARCHING, OFFERED all visible
+      where.status = { in: ["POSTED", "SEARCHING", "OFFERED"] };
     }
 
     // Allow status filter only for authenticated views (myLoads, myTrips, dispatcher)
@@ -422,92 +472,136 @@ export async function GET(request: NextRequest) {
         break;
     }
 
-    const [loads, total] = await Promise.all([
-      db.load.findMany({
-        where,
+    const loadSelect = {
+      id: true,
+      status: true,
+      postedAt: true, // [NEW] For age calculation
+      // Location & Schedule
+      pickupCity: true,
+      pickupAddress: true,
+      pickupDockHours: true, // [NEW]
+      pickupDate: true,
+      appointmentRequired: true, // [NEW]
+      deliveryCity: true,
+      deliveryAddress: true,
+      deliveryDockHours: true, // [NEW]
+      deliveryDate: true,
+      tripKm: true,
+      dhToOriginKm: true,
+      dhAfterDeliveryKm: true,
+      originLat: true,
+      originLon: true,
+      destinationLat: true,
+      destinationLon: true,
+      // Load Details
+      truckType: true,
+      weight: true,
+      volume: true,
+      cargoDescription: true,
+      isFullLoad: true,
+      fullPartial: true, // [NEW]
+      isFragile: true,
+      requiresRefrigeration: true,
+      lengthM: true,
+      casesCount: true,
+      // Settings & Fees
+      shipperServiceFee: true,
+      currency: true,
+      bookMode: true, // [NEW]
+      // SPRINT 8: Market pricing (dtpReference, factorRating) removed per TRD
+      // Privacy & Safety
+      isAnonymous: true,
+      // NOTE: shipperContactName and shipperContactPhone are NEVER included in public list
+      safetyNotes: true,
+      specialInstructions: true,
+      // POD status
+      podSubmitted: true,
+      podVerified: true,
+      // Timestamps
+      createdAt: true,
+      updatedAt: true,
+      // Foreign Keys (needed for relations)
+      pickupCityId: true,
+      deliveryCityId: true,
+      shipperId: true,
+      createdById: true,
+      // Relations
+      shipper: {
         select: {
           id: true,
-          status: true,
-          postedAt: true, // [NEW] For age calculation
-          // Location & Schedule
-          pickupCity: true,
-          pickupAddress: true,
-          pickupDockHours: true, // [NEW]
-          pickupDate: true,
-          appointmentRequired: true, // [NEW]
-          deliveryCity: true,
-          deliveryAddress: true,
-          deliveryDockHours: true, // [NEW]
-          deliveryDate: true,
-          tripKm: true,
-          dhToOriginKm: true,
-          dhAfterDeliveryKm: true,
-          originLat: true,
-          originLon: true,
-          destinationLat: true,
-          destinationLon: true,
-          // Load Details
+          name: true,
+          isVerified: true,
+        },
+      },
+      assignedTruck: {
+        select: {
+          id: true,
+          licensePlate: true,
           truckType: true,
-          weight: true,
-          volume: true,
-          cargoDescription: true,
-          isFullLoad: true,
-          fullPartial: true, // [NEW]
-          isFragile: true,
-          requiresRefrigeration: true,
-          lengthM: true,
-          casesCount: true,
-          // Settings & Fees
-          shipperServiceFee: true,
-          currency: true,
-          bookMode: true, // [NEW]
-          // SPRINT 8: Market pricing (dtpReference, factorRating) removed per TRD
-          // Privacy & Safety
-          isAnonymous: true,
-          // NOTE: shipperContactName and shipperContactPhone are NEVER included in public list
-          safetyNotes: true,
-          specialInstructions: true,
-          // POD status
-          podSubmitted: true,
-          podVerified: true,
-          // Timestamps
-          createdAt: true,
-          updatedAt: true,
-          // Foreign Keys (needed for relations)
-          pickupCityId: true,
-          deliveryCityId: true,
-          shipperId: true,
-          createdById: true,
-          // Relations
-          shipper: {
+          capacity: true,
+          carrierId: true,
+          carrier: {
             select: {
               id: true,
               name: true,
-              isVerified: true,
-            },
-          },
-          assignedTruck: {
-            select: {
-              id: true,
-              licensePlate: true,
-              truckType: true,
-              capacity: true,
-              carrierId: true,
-              carrier: {
-                select: {
-                  id: true,
-                  name: true,
-                },
-              },
             },
           },
         },
-        skip: (page - 1) * limit,
-        take: limit,
+      },
+    } as const;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let loads: any[];
+    let total: number;
+
+    if (needsGeoFilter) {
+      // Fetch larger batch for in-memory geo filtering
+      // Loads missing required coordinates are excluded from geo-filtered results
+      const allDbLoads = await db.load.findMany({
+        where,
+        select: loadSelect,
+        take: 500,
         orderBy,
-      }),
-      db.load.count({ where }),
-    ]);
+      });
+
+      const geoFiltered = allDbLoads.filter((load) => {
+        if (hasDHOFilter) {
+          const oLat = load.originLat ? Number(load.originLat) : null;
+          const oLon = load.originLon ? Number(load.originLon) : null;
+          if (oLat === null || oLon === null) return false;
+          if (
+            calculateDistanceKm(carrierLat!, carrierLon!, oLat, oLon) >
+            dhOMaxKm!
+          )
+            return false;
+        }
+        if (hasDHDFilter) {
+          const dLat = load.destinationLat ? Number(load.destinationLat) : null;
+          const dLon = load.destinationLon ? Number(load.destinationLon) : null;
+          if (dLat === null || dLon === null) return false;
+          if (calculateDistanceKm(dLat, dLon, destLat!, destLon!) > dhDMaxKm!)
+            return false;
+        }
+        return true;
+      });
+
+      total = geoFiltered.length;
+      loads = geoFiltered.slice((page - 1) * limit, page * limit);
+    } else {
+      // Standard paginated path
+      const result = await Promise.all([
+        db.load.findMany({
+          where,
+          select: loadSelect,
+          skip: (page - 1) * limit,
+          take: limit,
+          orderBy,
+        }),
+        db.load.count({ where }),
+      ]);
+      loads = result[0];
+      total = result[1];
+    }
 
     const loadsWithComputed = loads.map((load) => {
       // Compute age

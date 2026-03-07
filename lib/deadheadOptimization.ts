@@ -266,7 +266,9 @@ export async function findLoadsWithMinimalDHO(
 
   // Build where clause
   const where: Prisma.LoadWhereInput = {
-    status: LoadStatus.POSTED,
+    status: {
+      in: [LoadStatus.POSTED, LoadStatus.SEARCHING, LoadStatus.OFFERED],
+    },
   };
 
   if (filters?.truckType) {
@@ -401,7 +403,9 @@ export async function findNextLoadsWithMinimalDHD(
 
   // Build where clause for next loads
   const where: Prisma.LoadWhereInput = {
-    status: LoadStatus.POSTED,
+    status: {
+      in: [LoadStatus.POSTED, LoadStatus.SEARCHING, LoadStatus.OFFERED],
+    },
     id: { not: currentLoadId }, // Exclude current load
     pickupDate: {
       gte: currentLoad.deliveryDate ?? undefined, // Pickup after current delivery
