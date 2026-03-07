@@ -20,6 +20,7 @@ import { z } from "zod";
 // P1-002 FIX: Import CacheInvalidation for post-update cache clearing
 import { CacheInvalidation } from "@/lib/cache";
 import { handleApiError } from "@/lib/apiErrors";
+import { refundServiceFee } from "@/lib/serviceFeeManagement";
 
 const updateTripSchema = z.object({
   status: z
@@ -302,6 +303,7 @@ export async function PATCH(
         case "CANCELLED":
           updateData.cancelledAt = new Date();
           updateData.trackingEnabled = false;
+          updateData.cancelledBy = session.userId; // mirrors cancel route for auditability
           break;
       }
     }
@@ -370,13 +372,28 @@ export async function PATCH(
         // Sync trip status with load status (inside transaction)
         let loadSynced = false;
         if (validatedData.status) {
-          const loadStatus = mapTripStatusToLoadStatus(validatedData.status);
-          if (loadStatus) {
+          if (validatedData.status === "CANCELLED") {
+            // Blueprint §7: cancel reverts load to POSTED so shipper can find new carrier.
+            // Also clears assignment fields — mirrors cancel route exactly.
             await tx.load.update({
               where: { id: trip.loadId },
-              data: { status: loadStatus },
+              data: {
+                status: LoadStatus.POSTED,
+                assignedTruckId: null,
+                assignedAt: null,
+                postedAt: new Date(),
+              },
             });
             loadSynced = true;
+          } else {
+            const loadStatus = mapTripStatusToLoadStatus(validatedData.status);
+            if (loadStatus) {
+              await tx.load.update({
+                where: { id: trip.loadId },
+                data: { status: loadStatus },
+              });
+              loadSynced = true;
+            }
           }
         }
 
@@ -437,6 +454,24 @@ export async function PATCH(
         );
       }
       throw error;
+    }
+
+    // Refund service fee if trip is CANCELLED after fees were already deducted.
+    // refundServiceFee() owns its own $transaction — must be outside this route's tx.
+    // Pattern mirrors BUG-R9-2 fix in loads/[id]/status/route.ts.
+    if (validatedData.status === "CANCELLED") {
+      const loadFeeStatus = await db.load.findUnique({
+        where: { id: trip.loadId },
+        select: { shipperFeeStatus: true },
+      });
+      if (loadFeeStatus?.shipperFeeStatus === "DEDUCTED") {
+        try {
+          await refundServiceFee(trip.loadId);
+        } catch (refundError) {
+          // Non-blocking: trip is already cancelled; ops team handles via audit log
+          console.error("Refund failed after trip cancellation:", refundError);
+        }
+      }
     }
 
     // Cache invalidation MUST happen after transaction commits (not inside tx)

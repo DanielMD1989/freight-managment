@@ -3,7 +3,7 @@
  *
  * POST /api/trips/[tripId]/cancel - Cancel a trip
  *
- * Trips can be cancelled by carrier or shipper before COMPLETED status
+ * Trips can be cancelled by CARRIER or DISPATCHER per blueprint §7
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -16,6 +16,7 @@ import { CacheInvalidation } from "@/lib/cache";
 import { handleApiError } from "@/lib/apiErrors";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { Prisma } from "@prisma/client";
+import { refundServiceFee } from "@/lib/serviceFeeManagement";
 
 const cancelTripSchema = z.object({
   reason: z.string().min(1, "Cancellation reason is required").max(500),
@@ -122,11 +123,19 @@ export async function POST(
       );
     }
 
+    // G-A11-2: DELIVERED is terminal-protection — cargo was already delivered.
+    // State machine forbids DELIVERED→CANCELLED; cancel route must enforce same.
+    if (trip.status === "DELIVERED") {
+      return NextResponse.json(
+        { error: "Cannot cancel a delivered trip" },
+        { status: 400 }
+      );
+    }
+
     // Check if user has permission to cancel
+    // Blueprint §7: CARRIER or DISPATCHER can cancel. SHIPPER is not a cancel actor.
     const isCarrier =
       session.role === "CARRIER" && session.organizationId === trip.carrierId;
-    const isShipper =
-      session.role === "SHIPPER" && session.organizationId === trip.shipperId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
     // Dispatcher scoped to trips belonging to their org (carrier or shipper side)
     const isDispatcher =
@@ -134,28 +143,31 @@ export async function POST(
       (session.organizationId === trip.carrierId ||
         session.organizationId === trip.shipperId);
 
-    if (!isCarrier && !isShipper && !isAdmin && !isDispatcher) {
+    if (!isCarrier && !isAdmin && !isDispatcher) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
     // Determine who is cancelling for notification purposes
     const cancelledByRole = isCarrier
       ? "Carrier"
-      : isShipper
-        ? "Shipper"
-        : isDispatcher
-          ? "Dispatcher"
-          : "Admin";
+      : isDispatcher
+        ? "Dispatcher"
+        : "Admin";
 
-    // H2 FIX: If carrier/dispatcher/admin cancels, set load back to POSTED so shipper can find new carrier.
-    // Only set to CANCELLED if shipper initiated the cancellation.
-    const loadStatusAfterCancel = isShipper ? "CANCELLED" : "POSTED";
+    // Blueprint §7: carrier/dispatcher/admin cancel reverts load to POSTED
+    // so shipper can find a new carrier. Load is never set to CANCELLED by this route.
+    const loadStatusAfterCancel = "POSTED";
 
     // CRITICAL FIX: Wrap all state changes in a transaction for atomicity
     const updatedTrip = await db.$transaction(async (tx) => {
       // Update trip status to CANCELLED — include status guard to prevent race condition
       const updatedTrip = await tx.trip.update({
-        where: { id: tripId, status: { notIn: ["COMPLETED", "CANCELLED"] } },
+        where: {
+          id: tripId,
+          status: {
+            notIn: ["COMPLETED", "CANCELLED", "IN_TRANSIT", "DELIVERED"],
+          },
+        },
         data: {
           status: "CANCELLED",
           cancelledAt: new Date(),
@@ -222,30 +234,49 @@ export async function POST(
     await CacheInvalidation.trip(tripId, trip.carrierId, trip.shipperId);
     await CacheInvalidation.load(trip.loadId, trip.shipperId);
 
-    // Notify the other party
-    if (isCarrier || isAdmin) {
-      // Notify shipper
+    // Refund service fee if fees were already deducted before this cancellation.
+    // refundServiceFee() owns its own $transaction — must run outside this route's tx.
+    // Non-blocking: trip is already cancelled; ops team handles via audit log.
+    const loadFeeStatus = await db.load.findUnique({
+      where: { id: trip.loadId },
+      select: { shipperFeeStatus: true },
+    });
+    if (loadFeeStatus?.shipperFeeStatus === "DEDUCTED") {
+      try {
+        await refundServiceFee(trip.loadId);
+      } catch (refundError) {
+        console.error("Refund failed after trip cancellation:", refundError);
+      }
+    }
+
+    // Blueprint §7 notification intent:
+    // - Carrier cancels → notify shipper (carrier is the initiator, shipper is the other party)
+    // - Dispatcher cancels → notify BOTH shipper AND carrier (dispatcher acts for platform)
+    // - Admin cancels → notify BOTH shipper AND carrier
+
+    // Notify shipper: when carrier, dispatcher, or admin cancels
+    if (isCarrier || isAdmin || isDispatcher) {
       const shipperUserId = trip.shipper?.users?.[0]?.id;
       if (shipperUserId) {
         await createNotification({
           userId: shipperUserId,
           type: NotificationType.TRIP_CANCELLED,
           title: "Trip Cancelled",
-          message: `${trip.carrier?.name || "Carrier"} has cancelled the trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Reason: ${validatedData.reason}`,
+          message: `${cancelledByRole} has cancelled the trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Reason: ${validatedData.reason}`,
           metadata: { tripId, loadId: trip.loadId },
         });
       }
     }
 
-    if (isShipper || isAdmin) {
-      // Notify carrier
+    // Notify carrier: when dispatcher or admin cancels (carrier cancels their own trip — they know)
+    if (isAdmin || isDispatcher) {
       const carrierUserId = trip.carrier?.users?.[0]?.id;
       if (carrierUserId) {
         await createNotification({
           userId: carrierUserId,
           type: NotificationType.TRIP_CANCELLED,
           title: "Trip Cancelled",
-          message: `${trip.shipper?.name || "Shipper"} has cancelled the trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Reason: ${validatedData.reason}`,
+          message: `${cancelledByRole} has cancelled the trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Reason: ${validatedData.reason}`,
           metadata: { tripId, loadId: trip.loadId },
         });
       }

@@ -18,6 +18,7 @@ import { sanitizeText } from "@/lib/validation";
 // CRITICAL FIX: Import notification helper for status change notifications
 import { createNotification } from "@/lib/notifications";
 import { logger } from "@/lib/logger";
+import { refundServiceFee } from "@/lib/serviceFeeManagement";
 
 /**
  * Helper function to apply RPS rate limiting
@@ -285,6 +286,7 @@ export async function PATCH(
         assignedTruckId: true,
         tripKm: true,
         estimatedTripKm: true,
+        shipperFeeStatus: true,
         // Include carrier info for trust metrics
         assignedTruck: {
           select: {
@@ -563,6 +565,22 @@ export async function PATCH(
 
       // Sprint 16: Check for suspicious bypass pattern
       await checkSuspiciousCancellation(id);
+
+      // Refund service fee if fees were already deducted.
+      // Non-admins are blocked from cancelling active loads here (409 guard above);
+      // the canonical status change path (loads/[id]/status/route.ts) already handles
+      // this. This guards the admin PATCH bypass path.
+      // Non-blocking: load is already cancelled.
+      if (existingLoad.shipperFeeStatus === "DEDUCTED") {
+        try {
+          await refundServiceFee(id);
+        } catch (refundError) {
+          console.error(
+            "Refund failed after load PATCH cancellation:",
+            refundError
+          );
+        }
+      }
     }
 
     // Log event

@@ -827,6 +827,61 @@ describe("Carrier Trip Management", () => {
       expect(data.trip.trackingEnabled).toBe(false);
     });
 
+    it("PATCH CANCELLED: load → POSTED (not CANCELLED), assignedTruckId cleared", async () => {
+      await db.load.update({
+        where: { id: seed.load.id },
+        data: { status: "ASSIGNED", assignedTruckId: seed.truck.id },
+      });
+      const t = await db.trip.create({
+        data: {
+          id: "patch-cancel-load-test",
+          loadId: seed.load.id,
+          truckId: seed.truck.id,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "ASSIGNED",
+          trackingEnabled: true,
+        },
+      });
+
+      const req = createRequest(
+        "PATCH",
+        `http://localhost:3000/api/trips/${t.id}`,
+        { body: { status: "CANCELLED" } }
+      );
+      const res = await callHandler(updateTrip, req, { tripId: t.id });
+      expect(res.status).toBe(200);
+
+      const load = await db.load.findUnique({ where: { id: seed.load.id } });
+      expect(load.status).toBe("POSTED");
+      expect(load.assignedTruckId).toBeNull();
+    });
+
+    it("PATCH CANCELLED: cancelledBy set to session userId", async () => {
+      const t = await db.trip.create({
+        data: {
+          id: "patch-cancel-auditby-test",
+          loadId: seed.load.id,
+          truckId: seed.truck.id,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "PICKUP_PENDING",
+          trackingEnabled: true,
+        },
+      });
+
+      const req = createRequest(
+        "PATCH",
+        `http://localhost:3000/api/trips/${t.id}`,
+        { body: { status: "CANCELLED" } }
+      );
+      const res = await callHandler(updateTrip, req, { tripId: t.id });
+      expect(res.status).toBe(200);
+
+      const trip = await db.trip.findUnique({ where: { id: t.id } });
+      expect(trip.cancelledBy).toBe(carrierSession.userId);
+    });
+
     it("IN_TRANSIT → CANCELLED via PATCH blocked (must use exception workflow) → 400", async () => {
       const inTransitTrip = await db.trip.create({
         data: {

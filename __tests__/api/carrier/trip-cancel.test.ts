@@ -2,9 +2,9 @@
  * Trip Cancellation API Tests
  *
  * Tests for POST /api/trips/[tripId]/cancel:
- * - Carrier or shipper can cancel before COMPLETED
+ * - Carrier, dispatcher, or admin can cancel; shipper gets 404 (not a blueprint cancel actor)
  * - Admin can cancel any trip
- * - Trip set to CANCELLED, load set to CANCELLED with assignedTruckId nulled
+ * - Trip set to CANCELLED, load reverted to POSTED (not CANCELLED) with assignedTruckId nulled
  * - TRIP_CANCELLED load event with metadata
  * - Cache invalidation and notifications
  *
@@ -383,7 +383,7 @@ describe("Trip Cancellation", () => {
       expect(data.trip.status).toBe("CANCELLED");
     });
 
-    it("shipper can cancel → 200", async () => {
+    it("shipper cannot cancel (not a blueprint cancel actor) → 404", async () => {
       setAuthSession(shipperSession);
       const { tripId } = await createCancellableTrip();
 
@@ -393,10 +393,7 @@ describe("Trip Cancellation", () => {
         { body: { reason: "Load no longer available" } }
       );
       const res = await callHandler(cancelTrip, req, { tripId });
-      expect(res.status).toBe(200);
-
-      const data = await parseResponse(res);
-      expect(data.trip.status).toBe("CANCELLED");
+      expect(res.status).toBe(404);
     });
   });
 
@@ -514,12 +511,12 @@ describe("Trip Cancellation", () => {
     });
   });
 
-  // ─── Cancel by Shipper ──────────────────────────────────────────────────────
+  // ─── SHIPPER blocked from cancel route ──────────────────────────────────────
 
-  describe("Cancel by Shipper", () => {
-    it("shipper cancels with same state changes", async () => {
+  describe("SHIPPER blocked from cancel route", () => {
+    it("shipper gets 404 regardless of trip state", async () => {
       setAuthSession(shipperSession);
-      const { tripId, loadId } = await createCancellableTrip();
+      const { tripId } = await createCancellableTrip();
 
       const req = createRequest(
         "POST",
@@ -527,14 +524,23 @@ describe("Trip Cancellation", () => {
         { body: { reason: "Found cheaper option" } }
       );
       const res = await callHandler(cancelTrip, req, { tripId });
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(404);
+    });
 
-      const data = await parseResponse(res);
-      expect(data.trip.status).toBe("CANCELLED");
+    it("load NOT changed when shipper is blocked (no DB write occurred)", async () => {
+      setAuthSession(shipperSession);
+      const { tripId, loadId } = await createCancellableTrip("ASSIGNED");
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/trips/${tripId}/cancel`,
+        { body: { reason: "Found cheaper option" } }
+      );
+      const res = await callHandler(cancelTrip, req, { tripId });
+      expect(res.status).toBe(404);
 
       const load = await db.load.findUnique({ where: { id: loadId } });
-      expect(load.status).toBe("CANCELLED");
-      expect(load.assignedTruckId).toBeNull();
+      expect(load.status).toBe("ASSIGNED"); // unchanged — no DB write occurred
     });
   });
 
@@ -700,6 +706,73 @@ describe("Trip Cancellation", () => {
           title: "Trip Cancelled",
         })
       );
+    });
+
+    it("G-A11-3: dispatcher cancel notifies BOTH shipper and carrier", async () => {
+      const scopedDispatcher = createMockSession({
+        userId: "scoped-d2",
+        email: "d2@test.com",
+        role: "DISPATCHER",
+        organizationId: seed.carrierOrg.id,
+      });
+      setAuthSession(scopedDispatcher);
+      const { tripId } = await createCancellableTrip("ASSIGNED");
+      const { createNotification } = require("@/lib/notifications");
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/trips/${tripId}/cancel`,
+        { body: { reason: "Dispatcher cancel" } }
+      );
+      const res = await callHandler(cancelTrip, req, { tripId });
+      expect(res.status).toBe(200);
+      expect(createNotification).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // ─── Terminal State Guards ──────────────────────────────────────────────────
+
+  describe("Terminal State Guards", () => {
+    it("G-A11-2: DELIVERED trip → 400 (terminal-protection)", async () => {
+      const { tripId } = await createCancellableTrip("DELIVERED");
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/trips/${tripId}/cancel`,
+        { body: { reason: "Try cancel after delivery" } }
+      );
+      const res = await callHandler(cancelTrip, req, { tripId });
+      expect(res.status).toBe(400);
+
+      const data = await parseResponse(res);
+      expect(data.error).toContain("delivered");
+    });
+  });
+
+  // ─── Concurrency ───────────────────────────────────────────────────────────
+
+  describe("Concurrency", () => {
+    it("G-A11-1: concurrent race P2025 → 409", async () => {
+      const { Prisma } = require("@prisma/client");
+      const { tripId } = await createCancellableTrip("ASSIGNED");
+
+      jest.spyOn(db, "$transaction").mockRejectedValueOnce(
+        new Prisma.PrismaClientKnownRequestError("Record not found", {
+          code: "P2025",
+          clientVersion: "5.0.0",
+        })
+      );
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/trips/${tripId}/cancel`,
+        { body: { reason: "Concurrent test" } }
+      );
+      const res = await callHandler(cancelTrip, req, { tripId });
+      expect(res.status).toBe(409);
+
+      const data = await parseResponse(res);
+      expect(data.error).toMatch(/concurrently/i);
     });
   });
 });

@@ -2035,11 +2035,14 @@ describe("E2E Business Workflow (User Stories)", () => {
       expect(posting?.status).toBe("ACTIVE");
     });
 
-    it("US-5.4: cancelled trip syncs load status to CANCELLED", async () => {
+    it("US-5.4: cancelled trip reverts load to POSTED (blueprint §7 — shipper can rebook)", async () => {
       const cancelledLoad = await db.load.findUnique({
         where: { id: "load-cancel-8" },
       });
-      expect(cancelledLoad?.status).toBe("CANCELLED");
+      // Blueprint §7: PATCH CANCELLED reverts load to POSTED (not CANCELLED)
+      // so the shipper can find a new carrier. assignedTruckId is also cleared.
+      expect(cancelledLoad?.status).toBe("POSTED");
+      expect(cancelledLoad?.assignedTruckId).toBeNull();
     });
   });
 
