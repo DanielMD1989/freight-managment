@@ -48,6 +48,12 @@ describe("deductServiceFee — Balance Verification", () => {
     expect(getBalance(seed.carrierWallet.id)).toBe(5000 - 1545);
     // Platform: 2575 + 1545 = 4120
     expect(getBalance(seed.platformAccount.id)).toBe(4120);
+
+    // S9: Rate/KM snapshot persisted on Load
+    const load = await db.load.findUnique({ where: { id: seed.load.id } });
+    expect(Number(load!.shipperRatePerKmUsed)).toBe(5); // corridor shipperPricePerKm
+    expect(Number(load!.carrierRatePerKmUsed)).toBe(3); // corridor carrierPricePerKm
+    expect(Number(load!.totalKmUsed)).toBe(515); // estimatedTripKm
   });
 
   it("returns correct fee amounts in result", async () => {
@@ -118,6 +124,10 @@ describe("deductServiceFee — Balance Verification", () => {
     expect(result.carrierFee).toBe(1800);
     expect(getBalance(seed.shipperWallet.id)).toBe(10000 - 3000);
     expect(getBalance(seed.carrierWallet.id)).toBe(5000 - 1800);
+
+    // S9: totalKmUsed reflects actualTripKm (GPS wins)
+    const load = await db.load.findUnique({ where: { id: seed.load.id } });
+    expect(Number(load!.totalKmUsed)).toBe(600);
   });
 
   it("waives fees when no corridor and no matching route", async () => {
@@ -139,6 +149,12 @@ describe("deductServiceFee — Balance Verification", () => {
     expect(status.carrierFeeStatus).toBe("WAIVED");
     // Balances unchanged
     expect(getBalance(seed.shipperWallet.id)).toBe(10000);
+
+    // S9: snapshot fields are 0 (not NULL) when waived — distinguishes "ran but waived" from "never ran"
+    const load = await db.load.findUnique({ where: { id: seed.load.id } });
+    expect(Number(load!.shipperRatePerKmUsed)).toBe(0);
+    expect(Number(load!.carrierRatePerKmUsed)).toBe(0);
+    expect(Number(load!.totalKmUsed)).toBe(0);
   });
 
   it("finds corridor via route match when corridorId is null", async () => {
@@ -247,12 +263,12 @@ describe("deductServiceFee — Balance Verification", () => {
 // ─── 2. refundServiceFee — Balance Verification ─────────────────────────────
 
 describe("refundServiceFee — Balance Verification", () => {
-  it("refunds shipper and decreases platform balance", async () => {
+  it("refunds both shipper and carrier and reduces platform to zero", async () => {
     const seed = await seedFinancialTestData();
     await deductServiceFee(seed.load.id);
 
     const shipperBalanceAfterDeduct = getBalance(seed.shipperWallet.id);
-    const platformBalanceAfterDeduct = getBalance(seed.platformAccount.id);
+    const carrierBalanceAfterDeduct = getBalance(seed.carrierWallet.id);
 
     const result = await refundServiceFee(seed.load.id);
 
@@ -261,10 +277,14 @@ describe("refundServiceFee — Balance Verification", () => {
     expect(getBalance(seed.shipperWallet.id)).toBe(
       shipperBalanceAfterDeduct + 2575
     );
-    // Platform loses 2575
-    expect(getBalance(seed.platformAccount.id)).toBe(
-      platformBalanceAfterDeduct - 2575
+    // A3: Carrier also gets back carrierFee (1545)
+    expect(getBalance(seed.carrierWallet.id)).toBe(
+      carrierBalanceAfterDeduct + 1545
     );
+    // Platform returns to 0 (both fees refunded)
+    expect(getBalance(seed.platformAccount.id)).toBe(0);
+    // Result carries carrier refund amount
+    expect(result.carrierFeeRefunded).toBe(1545);
   });
 
   it("creates journal entry with SERVICE_FEE_REFUND type", async () => {
@@ -280,7 +300,7 @@ describe("refundServiceFee — Balance Verification", () => {
     expect(refundEntry).toBeDefined();
   });
 
-  it("updates load status to REFUNDED", async () => {
+  it("updates load status to REFUNDED for both parties", async () => {
     const seed = await seedFinancialTestData();
     await deductServiceFee(seed.load.id);
 
@@ -288,6 +308,8 @@ describe("refundServiceFee — Balance Verification", () => {
 
     const status = getLoadFeeStatus(seed.load.id);
     expect(status.shipperFeeStatus).toBe("REFUNDED");
+    // A3: carrier also refunded
+    expect(status.carrierFeeStatus).toBe("REFUNDED");
   });
 
   it("marks REFUNDED with no journal for zero fee", async () => {
@@ -316,6 +338,7 @@ describe("refundServiceFee — Balance Verification", () => {
     expect(refundEntriesAfter.length).toBe(refundEntriesBefore.length);
     const status = getLoadFeeStatus(seed.load.id);
     expect(status.shipperFeeStatus).toBe("REFUNDED");
+    expect(status.carrierFeeStatus).toBe("REFUNDED"); // A3: both marked refunded
   });
 
   it("returns error when platform account is missing", async () => {
@@ -466,18 +489,21 @@ describe("Full Lifecycle Integration", () => {
     expect(getBalance(seed.platformAccount.id)).toBe(4120);
   });
 
-  it("deduct → refund: shipper balance restored, platform net = carrier fee only", async () => {
+  it("deduct → refund: both balances restored, platform returns to zero", async () => {
     const seed = await seedFinancialTestData();
 
     await deductServiceFee(seed.load.id);
     expect(getBalance(seed.shipperWallet.id)).toBe(10000 - 2575);
+    expect(getBalance(seed.carrierWallet.id)).toBe(5000 - 1545);
 
     await refundServiceFee(seed.load.id);
 
     // Shipper restored
     expect(getBalance(seed.shipperWallet.id)).toBe(10000);
-    // Platform net = carrier fee only (4120 - 2575 = 1545)
-    expect(getBalance(seed.platformAccount.id)).toBe(1545);
+    // A3: Carrier also restored
+    expect(getBalance(seed.carrierWallet.id)).toBe(5000);
+    // Platform net = 0 (both parties refunded)
+    expect(getBalance(seed.platformAccount.id)).toBe(0);
   });
 
   it("multi-load sequential deductions accumulate correctly", async () => {

@@ -604,7 +604,9 @@ model Load {
   deliveryDate      DateTime
 
   // [NEW] Logistics & Distance
-  tripKm            Decimal? // Required when status = POSTED (legacy - use estimatedTripKm)
+  // DEPRECATED: same concept as estimatedTripKm; kept for backward compat with existing rows.
+  // New loads should always populate estimatedTripKm. Do not remove this field.
+  tripKm            Decimal?
   estimatedTripKm   Decimal? // SPRINT 16: Estimated trip distance from map
   dhToOriginKm      Decimal? // Deadhead to origin
   dhAfterDeliveryKm Decimal? // Deadhead after delivery
@@ -698,6 +700,13 @@ model Load {
   carrierFeeStatus     ServiceFeeStatus @default(PENDING)
   carrierFeeDeductedAt DateTime? // When carrier fee was deducted
 
+  // Rate/KM snapshot — written once by deductServiceFee(); immutable audit record.
+  // NULL until deductServiceFee() runs. Zero when fees are waived (no corridor found).
+  // Enables: reconstruct formula, dispute resolution, corridor rate change protection.
+  shipperRatePerKmUsed Decimal? @db.Decimal(10, 4)
+  carrierRatePerKmUsed Decimal? @db.Decimal(10, 4)
+  totalKmUsed          Decimal? @db.Decimal(10, 2)
+
   // Legacy fields (keep for backward compatibility)
   serviceFeeStatus     ServiceFeeStatus @default(PENDING)
   serviceFeeReservedAt DateTime? // When fee was reserved
@@ -757,6 +766,7 @@ model Load {
   @@index([fullPartial]) // [NEW] For filtering by full/partial
   @@index([bookMode]) // [NEW] For filtering by booking mode
   @@index([postedAt]) // [NEW] For age calculation and sorting
+  @@index([shipperFeeStatus, carrierFeeStatus]) // A5: efficient admin fee monitoring
   @@index([trackingUrl]) // SPRINT 16: For tracking page lookups
   @@index([trackingEnabled]) // SPRINT 16: For filtering tracked loads
   @@index([corridorId]) // Service Fee: For corridor-based queries
@@ -1058,9 +1068,9 @@ model Trip {
   cancelledBy  String? // User ID who cancelled
   cancelReason String?
 
-  // Distance tracking
-  estimatedDistanceKm  Decimal? @db.Decimal(10, 2) // Estimated route distance
-  actualDistanceKm     Decimal? @db.Decimal(10, 2) // Actual GPS-computed distance
+  // Distance tracking (GPS/display only — NOT read by fee calculation. Billing reads from Load.)
+  estimatedDistanceKm  Decimal? @db.Decimal(10, 2) // GPS/display only — estimated route distance
+  actualDistanceKm     Decimal? @db.Decimal(10, 2) // GPS/display only — actual GPS-computed distance
   estimatedDurationMin Int? // Estimated travel time in minutes
 
   // Tracking URLs

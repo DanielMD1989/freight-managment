@@ -107,6 +107,10 @@ jest.mock("@/lib/db", () => {
       settlementStatus: "PENDING",
       podSubmitted: false,
       podVerified: false,
+      // S9: Rate/KM snapshot fields (null until deductServiceFee runs)
+      shipperRatePerKmUsed: null,
+      carrierRatePerKmUsed: null,
+      totalKmUsed: null,
     },
     loadEscalation: {
       status: "OPEN",

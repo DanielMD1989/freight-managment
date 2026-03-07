@@ -43,6 +43,10 @@ export async function GET(
         carrierServiceFee: true,
         carrierFeeStatus: true,
         carrierFeeDeductedAt: true,
+        // S9: Rate/KM audit snapshot
+        shipperRatePerKmUsed: true,
+        carrierRatePerKmUsed: true,
+        totalKmUsed: true,
         corridorId: true,
         corridor: {
           select: {
@@ -114,12 +118,21 @@ export async function GET(
           fee: load.shipperServiceFee ? Number(load.shipperServiceFee) : null,
           status: load.shipperFeeStatus,
           deductedAt: load.shipperFeeDeductedAt,
+          ratePerKmUsed:
+            load.shipperRatePerKmUsed != null
+              ? Number(load.shipperRatePerKmUsed)
+              : null,
         },
         carrier: {
           fee: load.carrierServiceFee ? Number(load.carrierServiceFee) : null,
           status: load.carrierFeeStatus,
           deductedAt: load.carrierFeeDeductedAt,
+          ratePerKmUsed:
+            load.carrierRatePerKmUsed != null
+              ? Number(load.carrierRatePerKmUsed)
+              : null,
         },
+        totalKmUsed: load.totalKmUsed != null ? Number(load.totalKmUsed) : null,
       },
       corridor: load.corridor
         ? {

@@ -8,7 +8,6 @@ import {
   deductServiceFee,
   refundServiceFee,
   validateWalletBalancesForTrip,
-  reserveServiceFee,
   assignCorridorToLoad,
 } from "@/lib/serviceFeeManagement";
 import { db } from "@/lib/db";
@@ -389,7 +388,10 @@ describe("lib/serviceFeeManagement", () => {
         shipperId: "shipper-1",
         shipperServiceFee: 500,
         serviceFeeEtb: 500,
+        shipperFeeStatus: "DEDUCTED",
+        carrierFeeStatus: "PENDING",
         shipper: { name: "Test Shipper" },
+        assignedTruck: null,
       });
 
       mockDb.financialAccount.findFirst
@@ -408,7 +410,10 @@ describe("lib/serviceFeeManagement", () => {
         shipperId: "shipper-1",
         shipperServiceFee: 500,
         serviceFeeEtb: 500,
+        shipperFeeStatus: "DEDUCTED",
+        carrierFeeStatus: "PENDING",
         shipper: { name: "Test Shipper" },
+        assignedTruck: null,
       });
 
       mockDb.financialAccount.findFirst
@@ -449,7 +454,10 @@ describe("lib/serviceFeeManagement", () => {
         shipperId: "shipper-1",
         shipperServiceFee: null,
         serviceFeeEtb: 300, // Legacy field
+        shipperFeeStatus: "DEDUCTED",
+        carrierFeeStatus: "PENDING",
         shipper: { name: "Test Shipper" },
+        assignedTruck: null,
       });
 
       mockDb.financialAccount.findFirst
@@ -620,23 +628,7 @@ describe("lib/serviceFeeManagement", () => {
     });
   });
 
-  // ============================================================================
-  // reserveServiceFee - Deprecated function
-  // ============================================================================
-  describe("reserveServiceFee (deprecated)", () => {
-    it("should return success with warning message", async () => {
-      const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
-
-      const result = await reserveServiceFee("load-1");
-
-      expect(result.success).toBe(true);
-      expect(result.serviceFee.toNumber()).toBe(0);
-      expect(result.error).toContain("Reserve flow removed");
-      expect(consoleSpy).toHaveBeenCalled();
-
-      consoleSpy.mockRestore();
-    });
-  });
+  // reserveServiceFee removed (A2: dead code, never called in codebase)
 
   // ============================================================================
   // assignCorridorToLoad - Assign corridor and pre-calculate fees
