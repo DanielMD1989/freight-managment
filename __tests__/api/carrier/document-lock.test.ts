@@ -97,7 +97,7 @@ jest.mock("@/lib/fileStorage", () => ({
 jest.mock("@/lib/validation", () => ({
   validateFileName: jest.fn().mockReturnValue({ valid: true }),
   validateIdFormat: jest.fn().mockReturnValue({ valid: true }),
-  zodErrorResponse: jest.fn((error: any) => {
+  zodErrorResponse: jest.fn((_error: any) => {
     const { NextResponse } = require("next/server");
     return NextResponse.json({ error: "Validation error" }, { status: 400 });
   }),

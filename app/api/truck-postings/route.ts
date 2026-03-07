@@ -23,7 +23,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { requireActiveUser } from "@/lib/auth";
+import { requireActiveUser, getSessionAny } from "@/lib/auth";
 import {
   weightSchema,
   lengthSchema,
@@ -400,6 +400,27 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+
+    // A4: Block marketplace search if authenticated Shipper/Carrier is below minimum balance
+    const browseSession = await getSessionAny();
+    if (
+      browseSession?.organizationId &&
+      (browseSession.role === "SHIPPER" || browseSession.role === "CARRIER")
+    ) {
+      const walletAccount = await db.financialAccount.findFirst({
+        where: { organizationId: browseSession.organizationId, isActive: true },
+        select: { balance: true, minimumBalance: true },
+      });
+      if (
+        walletAccount &&
+        walletAccount.balance < walletAccount.minimumBalance
+      ) {
+        return NextResponse.json(
+          { error: "Insufficient wallet balance for marketplace access" },
+          { status: 402 }
+        );
+      }
+    }
 
     const organizationId = searchParams.get("organizationId");
     const originCityId = searchParams.get("originCityId");

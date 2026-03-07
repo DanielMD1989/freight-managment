@@ -18,6 +18,23 @@ export async function GET(
   try {
     const session = await requireActiveUser();
 
+    // A4: Block marketplace search if wallet below minimum threshold
+    if (session.organizationId) {
+      const walletAccount = await db.financialAccount.findFirst({
+        where: { organizationId: session.organizationId, isActive: true },
+        select: { balance: true, minimumBalance: true },
+      });
+      if (
+        walletAccount &&
+        walletAccount.balance < walletAccount.minimumBalance
+      ) {
+        return NextResponse.json(
+          { error: "Insufficient wallet balance for marketplace access" },
+          { status: 402 }
+        );
+      }
+    }
+
     // M10 FIX: Rate limit nearby-loads queries
     const ip = request.headers.get("x-forwarded-for") || "unknown";
     const config = RPS_CONFIGS.gps;
