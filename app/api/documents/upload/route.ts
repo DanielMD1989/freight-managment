@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
     if (entityType === "company") {
       const organization = await db.organization.findUnique({
         where: { id: entityId },
-        select: { id: true },
+        select: { id: true, documentsLockedAt: true },
       });
 
       if (!organization) {
@@ -227,10 +227,21 @@ export async function POST(request: NextRequest) {
           { status: 403 }
         );
       }
+
+      // G-A3-1: Block upload if org documents are locked after approval
+      if (organization.documentsLockedAt) {
+        return NextResponse.json(
+          {
+            error:
+              "Documents are locked after approval. Contact support to update documents.",
+          },
+          { status: 423 }
+        );
+      }
     } else {
       const truck = await db.truck.findUnique({
         where: { id: entityId },
-        select: { id: true, carrierId: true },
+        select: { id: true, carrierId: true, documentsLockedAt: true },
       });
 
       if (!truck) {
@@ -249,6 +260,17 @@ export async function POST(request: NextRequest) {
               "You can only upload documents for trucks owned by your organization",
           },
           { status: 403 }
+        );
+      }
+
+      // G-A3-2: Block upload if truck documents are locked after approval
+      if (truck.documentsLockedAt) {
+        return NextResponse.json(
+          {
+            error:
+              "Truck documents are locked after approval. Contact support to update documents.",
+          },
+          { status: 423 }
         );
       }
     }
