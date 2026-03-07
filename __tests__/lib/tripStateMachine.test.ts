@@ -360,14 +360,15 @@ describe("lib/tripStateMachine", () => {
       expect(result.error).toBeUndefined();
     });
 
-    it("CARRIER cannot set EXCEPTION (DISPATCHER/ADMIN only)", () => {
+    it("CARRIER can set EXCEPTION (carrier reports incidents on the road — G-A12-2)", () => {
+      // Blueprint §7: only RESOLUTION is admin-only; raising an exception is not restricted.
       const result = validateTripStateTransition(
         "IN_TRANSIT",
         "EXCEPTION",
         "CARRIER"
       );
-      expect(result.valid).toBe(false);
-      expect(result.error).toContain("CARRIER cannot set trip status");
+      expect(result.valid).toBe(true);
+      expect(result.error).toBeUndefined();
     });
   });
 

@@ -1058,6 +1058,7 @@ model Trip {
   pickedUpAt  DateTime? // When load was picked up (status -> IN_TRANSIT)
   deliveredAt DateTime? // When load was delivered (status -> DELIVERED)
   completedAt DateTime? // When POD confirmed (status -> COMPLETED)
+  exceptionAt DateTime? // When exception was raised (status -> EXCEPTION)
 
   // Delivery receiver info (captured when marking as DELIVERED)
   receiverName  String? // Name of person who received the delivery

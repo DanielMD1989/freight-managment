@@ -21,6 +21,7 @@ import { z } from "zod";
 import { CacheInvalidation } from "@/lib/cache";
 import { handleApiError } from "@/lib/apiErrors";
 import { refundServiceFee } from "@/lib/serviceFeeManagement";
+import { createNotificationForRole } from "@/lib/notifications";
 
 const updateTripSchema = z.object({
   status: z
@@ -259,6 +260,21 @@ export async function PATCH(
         );
       }
 
+      // Blueprint §7: only ADMIN/SUPER_ADMIN can resolve FROM EXCEPTION.
+      // DISPATCHER has ASSIGNED + CANCELLED in their role permissions (for other
+      // scenarios) so canRoleSetTripStatus() alone is insufficient — we need a
+      // context-aware guard here that checks the *current* trip status.
+      if (
+        trip.status === "EXCEPTION" &&
+        session.role !== "ADMIN" &&
+        session.role !== "SUPER_ADMIN"
+      ) {
+        return NextResponse.json(
+          { error: "Only admins can resolve a trip exception" },
+          { status: 403 }
+        );
+      }
+
       // COMPLETED requires POD to be submitted (podVerified not required —
       // carrier can complete after upload; shipper can confirm via /confirm)
       if (validatedData.status === "COMPLETED") {
@@ -299,6 +315,9 @@ export async function PATCH(
         case "COMPLETED":
           updateData.completedAt = new Date();
           updateData.trackingEnabled = false; // GPS stops on completion
+          break;
+        case "EXCEPTION":
+          updateData.exceptionAt = new Date();
           break;
         case "CANCELLED":
           updateData.cancelledAt = new Date();
@@ -480,6 +499,29 @@ export async function PATCH(
     await CacheInvalidation.trip(tripId, trip.carrierId, trip.shipperId);
     if (loadSynced) {
       await CacheInvalidation.load(trip.loadId, trip.shipperId);
+    }
+
+    // Notify all dispatchers when a trip enters EXCEPTION state.
+    // Mirrors the pattern from loads/[id]/status/route.ts (EXCEPTION_CREATED notification).
+    // Non-blocking: trip state is already persisted.
+    if (validatedData.status === "EXCEPTION") {
+      try {
+        await createNotificationForRole({
+          role: "DISPATCHER",
+          type: "EXCEPTION_CREATED",
+          title: "Trip Exception Raised",
+          message: `Trip (${updatedTrip.load?.pickupCity} → ${updatedTrip.load?.deliveryCity}) has entered EXCEPTION state and requires admin resolution.`,
+          metadata: {
+            tripId,
+            loadId: trip.loadId,
+            previousStatus: trip.status,
+            raisedByRole: session.role,
+          },
+        });
+      } catch (notifyError) {
+        // Non-blocking: trip state is persisted; notification failure is non-fatal
+        console.error("Exception notification failed:", notifyError);
+      }
     }
 
     return NextResponse.json({
