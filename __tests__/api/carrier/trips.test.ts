@@ -797,7 +797,7 @@ describe("Carrier Trip Management", () => {
       expect(data.trip.trackingEnabled).toBe(false);
     });
 
-    it("any non-terminal → CANCELLED", async () => {
+    it("ASSIGNED → CANCELLED (carrier can cancel pre-transit trips)", async () => {
       const cancelTrip = await db.trip.create({
         data: {
           id: "cancel-trip",
@@ -805,7 +805,7 @@ describe("Carrier Trip Management", () => {
           truckId: seed.truck.id,
           carrierId: seed.carrierOrg.id,
           shipperId: seed.shipperOrg.id,
-          status: "IN_TRANSIT",
+          status: "ASSIGNED",
           trackingEnabled: true,
         },
       });
@@ -825,6 +825,34 @@ describe("Carrier Trip Management", () => {
       expect(data.trip.status).toBe("CANCELLED");
       expect(data.trip.cancelledAt).toBeDefined();
       expect(data.trip.trackingEnabled).toBe(false);
+    });
+
+    it("IN_TRANSIT → CANCELLED via PATCH blocked (must use exception workflow) → 400", async () => {
+      const inTransitTrip = await db.trip.create({
+        data: {
+          id: "in-transit-cancel-trip",
+          loadId: seed.load.id,
+          truckId: seed.truck.id,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "IN_TRANSIT",
+          trackingEnabled: true,
+        },
+      });
+
+      const req = createRequest(
+        "PATCH",
+        `http://localhost:3000/api/trips/${inTransitTrip.id}`,
+        { body: { status: "CANCELLED" } }
+      );
+
+      const res = await callHandler(updateTrip, req, {
+        tripId: inTransitTrip.id,
+      });
+      expect(res.status).toBe(400);
+
+      const data = await parseResponse(res);
+      expect(data.error).toContain("Invalid status transition");
     });
 
     // Invalid transitions

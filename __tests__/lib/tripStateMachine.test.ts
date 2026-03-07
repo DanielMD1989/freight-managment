@@ -87,10 +87,10 @@ describe("lib/tripStateMachine", () => {
         ).toBe(true);
       });
 
-      it("should allow IN_TRANSIT → CANCELLED", () => {
+      it("should NOT allow IN_TRANSIT → CANCELLED (must go through EXCEPTION first)", () => {
         expect(
           isValidTripTransition(TripStatus.IN_TRANSIT, TripStatus.CANCELLED)
-        ).toBe(true);
+        ).toBe(false);
       });
     });
 
@@ -499,16 +499,17 @@ describe("lib/tripStateMachine", () => {
       ).toBe(true);
     });
 
-    it("should support cancellation at non-terminal states before delivery", () => {
+    it("should support cancellation at ASSIGNED and PICKUP_PENDING (not IN_TRANSIT — must use exception workflow)", () => {
       expect(
         isValidTripTransition(TripStatus.ASSIGNED, TripStatus.CANCELLED)
       ).toBe(true);
       expect(
         isValidTripTransition(TripStatus.PICKUP_PENDING, TripStatus.CANCELLED)
       ).toBe(true);
+      // IN_TRANSIT cannot be directly cancelled — must go through EXCEPTION first
       expect(
         isValidTripTransition(TripStatus.IN_TRANSIT, TripStatus.CANCELLED)
-      ).toBe(true);
+      ).toBe(false);
       // DELIVERED is a terminal-protection state — cannot be cancelled after delivery
       expect(
         isValidTripTransition(TripStatus.DELIVERED, TripStatus.CANCELLED)

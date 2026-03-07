@@ -557,7 +557,7 @@ describe("Trip Cancellation", () => {
       expect(data.trip.status).toBe("CANCELLED");
     });
 
-    it("dispatcher cannot cancel (coordination only) → 404", async () => {
+    it("dispatcher (unscoped — no org match) → 404", async () => {
       setAuthSession(dispatcherSession);
       const { tripId } = await createCancellableTrip();
 
@@ -567,7 +567,34 @@ describe("Trip Cancellation", () => {
         { body: { reason: "Dispatch override" } }
       );
       const res = await callHandler(cancelTrip, req, { tripId });
+      // dispatcher-org-1 is not carrier-org or shipper-org → 404
       expect(res.status).toBe(404);
+    });
+
+    it("dispatcher (scoped to carrier org) can cancel → 200", async () => {
+      const scopedDispatcher = createMockSession({
+        userId: "scoped-dispatcher-user",
+        email: "scoped-dispatcher@test.com",
+        role: "DISPATCHER",
+        organizationId: seed.carrierOrg.id,
+      });
+      setAuthSession(scopedDispatcher);
+      const { tripId, loadId } = await createCancellableTrip();
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/trips/${tripId}/cancel`,
+        { body: { reason: "Dispatcher initiated cancel" } }
+      );
+      const res = await callHandler(cancelTrip, req, { tripId });
+      expect(res.status).toBe(200);
+
+      const data = await parseResponse(res);
+      expect(data.trip.status).toBe("CANCELLED");
+
+      // Load should revert to POSTED (not CANCELLED) — same as carrier cancel
+      const load = await db.load.findUnique({ where: { id: loadId } });
+      expect(load.status).toBe("POSTED");
     });
   });
 

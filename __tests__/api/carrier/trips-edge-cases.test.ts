@@ -485,13 +485,13 @@ describe("Carrier Trip Edge Cases", () => {
       expect(truck.isAvailable).toBe(true);
     });
 
-    it("restores truck availability after CANCELLED from IN_TRANSIT", async () => {
+    it("restores truck availability after CANCELLED from PICKUP_PENDING", async () => {
       await db.truck.update({
         where: { id: seed.truck.id },
         data: { isAvailable: false },
       });
 
-      const { tripId } = await createTripAtStatus("IN_TRANSIT");
+      const { tripId } = await createTripAtStatus("PICKUP_PENDING");
 
       const req = createRequest(
         "PATCH",

@@ -314,10 +314,11 @@ describe("State Machine Abuse Tests", () => {
       expect(isValidTripTransition("COMPLETED", "DELIVERED")).toBe(false);
     });
 
-    it("should allow cancellation from non-terminal states before delivery", () => {
+    it("should allow cancellation from ASSIGNED/PICKUP_PENDING but not IN_TRANSIT (exception workflow required)", () => {
       expect(isValidTripTransition("ASSIGNED", "CANCELLED")).toBe(true);
       expect(isValidTripTransition("PICKUP_PENDING", "CANCELLED")).toBe(true);
-      expect(isValidTripTransition("IN_TRANSIT", "CANCELLED")).toBe(true);
+      // IN_TRANSIT cannot be directly cancelled — must go through EXCEPTION first
+      expect(isValidTripTransition("IN_TRANSIT", "CANCELLED")).toBe(false);
       // DELIVERED cannot be cancelled — protects against post-delivery payment disputes
       expect(isValidTripTransition("DELIVERED", "CANCELLED")).toBe(false);
     });

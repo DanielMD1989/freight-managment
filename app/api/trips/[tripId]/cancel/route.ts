@@ -128,8 +128,13 @@ export async function POST(
     const isShipper =
       session.role === "SHIPPER" && session.organizationId === trip.shipperId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
+    // Dispatcher scoped to trips belonging to their org (carrier or shipper side)
+    const isDispatcher =
+      session.role === "DISPATCHER" &&
+      (session.organizationId === trip.carrierId ||
+        session.organizationId === trip.shipperId);
 
-    if (!isCarrier && !isShipper && !isAdmin) {
+    if (!isCarrier && !isShipper && !isAdmin && !isDispatcher) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
@@ -138,9 +143,11 @@ export async function POST(
       ? "Carrier"
       : isShipper
         ? "Shipper"
-        : "Admin";
+        : isDispatcher
+          ? "Dispatcher"
+          : "Admin";
 
-    // H2 FIX: If carrier/admin cancels, set load back to POSTED so shipper can find new carrier.
+    // H2 FIX: If carrier/dispatcher/admin cancels, set load back to POSTED so shipper can find new carrier.
     // Only set to CANCELLED if shipper initiated the cancellation.
     const loadStatusAfterCancel = isShipper ? "CANCELLED" : "POSTED";
 

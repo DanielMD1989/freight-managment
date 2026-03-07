@@ -210,12 +210,17 @@ export async function PATCH(
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
-    // Only carrier can update trip status (GPS rule from spec)
+    // Carrier, admin, or dispatcher can update trip status
     const isCarrier =
       session.role === "CARRIER" && trip.carrierId === session.organizationId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
+    // Dispatcher scoped to trips belonging to their org (carrier or shipper side)
+    const isDispatcher =
+      session.role === "DISPATCHER" &&
+      (trip.carrierId === session.organizationId ||
+        trip.shipperId === session.organizationId);
 
-    if (!isCarrier && !isAdmin) {
+    if (!isCarrier && !isAdmin && !isDispatcher) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
@@ -253,23 +258,14 @@ export async function PATCH(
         );
       }
 
-      // COMPLETED requires POD to be submitted and verified
+      // COMPLETED requires POD to be submitted (podVerified not required —
+      // carrier can complete after upload; shipper can confirm via /confirm)
       if (validatedData.status === "COMPLETED") {
         if (!trip.load?.podSubmitted) {
           return NextResponse.json(
             {
               error: "POD must be uploaded before completing the trip",
               requiresPod: true,
-            },
-            { status: 400 }
-          );
-        }
-        if (!trip.load?.podVerified) {
-          return NextResponse.json(
-            {
-              error:
-                "POD must be verified by shipper before completing the trip",
-              awaitingVerification: true,
             },
             { status: 400 }
           );

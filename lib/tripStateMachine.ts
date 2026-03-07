@@ -29,7 +29,7 @@ export const VALID_TRIP_TRANSITIONS: Record<TripStatus, TripStatus[]> = {
   [TripStatus.IN_TRANSIT]: [
     TripStatus.DELIVERED,
     TripStatus.EXCEPTION,
-    TripStatus.CANCELLED,
+    // CANCELLED removed — blueprint requires EXCEPTION detour first
   ],
 
   [TripStatus.DELIVERED]: [TripStatus.COMPLETED],

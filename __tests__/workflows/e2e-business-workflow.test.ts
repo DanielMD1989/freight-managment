@@ -1527,19 +1527,19 @@ describe("E2E Business Workflow (User Stories)", () => {
       expect(load?.podSubmitted).toBe(true);
     });
 
-    it("US-6.3: COMPLETED blocked without verification → awaitingVerification", async () => {
+    it("US-6.3: COMPLETED succeeds after POD submitted (carrier path — podVerified no longer required)", async () => {
       asCarrier(seed);
 
-      // The trip re-fetches load including podSubmitted/podVerified fields
+      // podSubmitted=true from US-6.1; carrier can now complete without shipper verification
       const req = createRequest(
         "PATCH",
         `http://localhost:3000/api/trips/${podTripId}`,
         { body: { status: "COMPLETED" } }
       );
       const res = await callHandler(updateTrip, req, { tripId: podTripId });
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(200);
       const data = await parseResponse(res);
-      expect(data.awaitingVerification).toBe(true);
+      expect(data.trip.status).toBe("COMPLETED");
     });
 
     it("US-6.2: shipper verifies POD → podVerified = true", async () => {
@@ -1799,7 +1799,7 @@ describe("E2E Business Workflow (User Stories)", () => {
       const refundLoad = await db.load.create({
         data: {
           id: "load-refund-7",
-          status: "IN_TRANSIT",
+          status: "PICKUP_PENDING",
           pickupCity: "Addis Ababa",
           pickupDate: new Date(Date.now() - 3 * 86400000),
           deliveryCity: "Dire Dawa",
@@ -1820,7 +1820,7 @@ describe("E2E Business Workflow (User Stories)", () => {
           truckId: refundTruck.id,
           carrierId: seed.carrierOrg.id,
           shipperId: seed.shipperOrg.id,
-          status: "IN_TRANSIT",
+          status: "PICKUP_PENDING",
           pickupCity: "Addis Ababa",
           deliveryCity: "Dire Dawa",
           trackingUrl: "trip-refund-test",

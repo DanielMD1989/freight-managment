@@ -328,7 +328,7 @@ describe("US-8.1 — Truck availability reset inside trip $transaction", () => {
 
   it("CANCELLED trip resets truck.isAvailable inside the $transaction", async () => {
     const { trip, truck } = await seedTripAtomicityData({
-      tripStatus: "IN_TRANSIT",
+      tripStatus: "PICKUP_PENDING",
     });
 
     setAuthSession(adminSession);
@@ -475,7 +475,7 @@ describe("US-8.2 — Posting reactivation inside trip $transaction", () => {
 
   it("CANCELLED trip reverts MATCHED posting to ACTIVE inside $transaction", async () => {
     const { trip, posting } = await seedTripAtomicityData({
-      tripStatus: "IN_TRANSIT",
+      tripStatus: "PICKUP_PENDING",
       postingStatus: "MATCHED",
     });
 
@@ -595,18 +595,18 @@ describe("Cross-domain atomicity — trip update concurrent guard", () => {
   });
 
   it("Concurrent trip update race: P2025 error returns 409", async () => {
-    const { trip } = await seedTripAtomicityData({ tripStatus: "IN_TRANSIT" });
+    const { trip } = await seedTripAtomicityData({
+      tripStatus: "PICKUP_PENDING",
+    });
 
     // Mock db.$transaction to throw P2025 (simulates optimistic lock failure)
     const { Prisma } = require("@prisma/client");
-    jest
-      .spyOn(db, "$transaction")
-      .mockRejectedValueOnce(
-        new Prisma.PrismaClientKnownRequestError("Record to update not found", {
-          code: "P2025",
-          clientVersion: "5.0.0",
-        })
-      );
+    jest.spyOn(db, "$transaction").mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError("Record to update not found", {
+        code: "P2025",
+        clientVersion: "5.0.0",
+      })
+    );
 
     const req = createRequest(
       "PATCH",
