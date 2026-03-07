@@ -131,12 +131,30 @@ const adminSession = createMockSession({
 // ─── Suite ────────────────────────────────────────────────────────────────────
 
 describe("Load Edit/Delete Dispatcher Bypass — PATCH & DELETE /api/loads/[id]", () => {
-  const patchLoadId = "test-load-001";
+  const patchLoadId = "test-load-001"; // POSTED — used for access control tests (403/401)
+  const patchDraftLoadId = "led-draft-patch-001"; // DRAFT — used for LED-2 (200 regression)
   const deleteShprLoadId = "led-delete-shpr-001";
   const deleteAdminLoadId = "led-delete-admin-001";
 
   beforeAll(async () => {
     await seedTestData();
+
+    // DRAFT load for LED-2 regression (test-load-001 is POSTED — structural edits blocked)
+    await db.load.create({
+      data: {
+        id: patchDraftLoadId,
+        status: "DRAFT",
+        pickupCity: "Addis Ababa",
+        pickupDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        deliveryCity: "Dire Dawa",
+        deliveryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        truckType: "DRY_VAN",
+        weight: 5000,
+        cargoDescription: "LED regression draft load",
+        shipperId: "shipper-org-1",
+        createdById: "shipper-user-1",
+      },
+    });
 
     // Separate DRAFT loads for destructive DELETE tests (DELETE removes the record)
     await db.load.create({
@@ -201,23 +219,24 @@ describe("Load Edit/Delete Dispatcher Bypass — PATCH & DELETE /api/loads/[id]"
     expect(body.error).toBeDefined();
   });
 
-  // LED-2: Shipper PATCH own load (valid body) → 200 (regression)
-  it("LED-2: shipper PATCH own load → 200 (regression)", async () => {
+  // LED-2: Shipper PATCH own DRAFT load (valid body) → 200 (regression)
+  // Uses DRAFT load because POSTED loads block structural field edits (G-A5-1)
+  it("LED-2: shipper PATCH own DRAFT load → 200 (regression)", async () => {
     setAuthSession(shipperSession);
 
     const req = createRequest(
       "PATCH",
-      `http://localhost/api/loads/${patchLoadId}`,
+      `http://localhost/api/loads/${patchDraftLoadId}`,
       {
         body: { cargoDescription: "Updated cargo description" },
       }
     );
-    const res = await callHandler(patchLoad, req, { id: patchLoadId });
+    const res = await callHandler(patchLoad, req, { id: patchDraftLoadId });
     const body = await parseResponse(res);
 
     expect(res.status).toBe(200);
     expect(body.load).toBeDefined();
-    expect(body.load.id).toBe(patchLoadId);
+    expect(body.load.id).toBe(patchDraftLoadId);
   });
 
   // LED-3: Non-owner shipper PATCH load → 403

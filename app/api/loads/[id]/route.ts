@@ -326,21 +326,64 @@ export async function PATCH(
       );
     }
 
-    // H13 FIX: Cannot edit if already assigned or in PICKUP_PENDING
+    // G-A5-1: Parse body before state guards (needed for structural field detection)
+    const body = await request.json();
+    const validatedData = updateLoadSchema.parse(body);
+
+    const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
+
+    // G-A5-1: Terminal states — no modifications allowed (admin can bypass)
     if (
-      existingLoad.status === "ASSIGNED" ||
-      existingLoad.status === "PICKUP_PENDING" ||
-      existingLoad.status === "IN_TRANSIT" ||
-      existingLoad.status === "DELIVERED"
+      !isAdmin &&
+      (existingLoad.status === "COMPLETED" ||
+        existingLoad.status === "CANCELLED" ||
+        existingLoad.status === "EXPIRED")
     ) {
       return NextResponse.json(
-        { error: "Cannot edit load after it has been assigned" },
-        { status: 400 }
+        { error: "Cannot modify a completed, cancelled, or expired load" },
+        { status: 409 }
       );
     }
 
-    const body = await request.json();
-    const validatedData = updateLoadSchema.parse(body);
+    // G-A5-1: Operational states — all edits blocked while trip is in progress
+    // Assigned loads are under carrier contract; status changes go through trip management API
+    if (
+      !isAdmin &&
+      (existingLoad.status === "ASSIGNED" ||
+        existingLoad.status === "PICKUP_PENDING" ||
+        existingLoad.status === "IN_TRANSIT" ||
+        existingLoad.status === "DELIVERED" ||
+        existingLoad.status === "EXCEPTION")
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Cannot edit load after it has been assigned to a carrier. Use the trip management API for in-progress loads.",
+        },
+        { status: 409 }
+      );
+    }
+
+    // G-A5-1: Live marketplace states — structural field edits blocked
+    // Only status-only transitions allowed (e.g., POSTED → UNPOSTED to withdraw from market)
+    // To edit load details: change status to UNPOSTED first, make changes, then re-post
+    if (
+      !isAdmin &&
+      (existingLoad.status === "POSTED" ||
+        existingLoad.status === "SEARCHING" ||
+        existingLoad.status === "OFFERED")
+    ) {
+      const { status: _statusOnly, ...structuralFields } = validatedData;
+      if (Object.keys(structuralFields).length > 0) {
+        return NextResponse.json(
+          {
+            error:
+              "Cannot edit load details while active on the marketplace. Change status to UNPOSTED first, then make your changes.",
+          },
+          { status: 409 }
+        );
+      }
+    }
 
     // Sanitize user-provided text fields
     if (validatedData.cargoDescription)

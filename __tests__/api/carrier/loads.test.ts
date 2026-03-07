@@ -779,11 +779,12 @@ describe("Carrier Load Marketplace", () => {
     let editableLoadId: string;
 
     beforeAll(async () => {
-      // Create a POSTED load owned by shipper for edit tests
+      // Create a DRAFT load owned by shipper for edit tests
+      // (POSTED loads block structural field edits — G-A5-1)
       const editLoad = await db.load.create({
         data: {
-          id: "editable-posted-load",
-          status: "POSTED",
+          id: "editable-draft-load",
+          status: "DRAFT",
           pickupCity: "Addis Ababa",
           deliveryCity: "Hawassa",
           pickupDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
@@ -793,14 +794,13 @@ describe("Carrier Load Marketplace", () => {
           cargoDescription: "Editable load cargo",
           shipperId: seed.shipperOrg.id,
           createdById: seed.shipperUser.id,
-          postedAt: new Date(),
           tripKm: 275,
         },
       });
       editableLoadId = editLoad.id;
     });
 
-    it("shipper can update own POSTED load fields", async () => {
+    it("shipper can update own DRAFT load fields", async () => {
       setAuthSession(shipperSession);
 
       const req = createRequest(
@@ -818,7 +818,7 @@ describe("Carrier Load Marketplace", () => {
       expect(data.load).toBeDefined();
     });
 
-    it("cannot edit load after ASSIGNED status → 400", async () => {
+    it("cannot edit load after ASSIGNED status → 409", async () => {
       setAuthSession(shipperSession);
 
       const req = createRequest(
@@ -828,7 +828,7 @@ describe("Carrier Load Marketplace", () => {
       );
 
       const res = await callHandler(updateLoad, req, { id: "assigned-load" });
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(409);
 
       const data = await parseResponse(res);
       expect(data.error).toContain("Cannot edit load after");

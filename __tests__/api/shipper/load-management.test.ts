@@ -245,6 +245,23 @@ describe("Shipper Load Management", () => {
       },
     });
 
+    // DRAFT load for PATCH regression tests (test-load-001 is POSTED — structural edits blocked)
+    await db.load.create({
+      data: {
+        id: "lm-patchable-draft",
+        status: "DRAFT",
+        pickupCity: "Addis Ababa",
+        pickupDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        deliveryCity: "Dire Dawa",
+        deliveryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        truckType: "DRY_VAN",
+        weight: 5000,
+        cargoDescription: "Patchable draft load for regression tests",
+        shipperId: "shipper-org-1",
+        createdById: "shipper-user-1",
+      },
+    });
+
     await db.load.create({
       data: {
         id: "assigned-load-nodelete",
@@ -372,19 +389,19 @@ describe("Shipper Load Management", () => {
 
   // ── PATCH /api/loads/[id] ────────────────────────────────────────────────
 
-  it("shipper can PATCH their own load and gets 200 with { load: {...} }", async () => {
+  it("shipper can PATCH their own DRAFT load and gets 200 with { load: {...} }", async () => {
     setAuthSession(shipperSession);
 
     const req = createRequest(
       "PATCH",
-      "http://localhost/api/loads/test-load-001",
+      "http://localhost/api/loads/lm-patchable-draft",
       {
         body: { cargoDescription: "Updated cargo description" },
       }
     );
 
     const response = await callHandler(updateLoad, req, {
-      id: "test-load-001",
+      id: "lm-patchable-draft",
     });
     const body = await parseResponse(response);
 
