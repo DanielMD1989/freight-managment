@@ -250,6 +250,29 @@ export async function POST(request: NextRequest) {
       )
     );
 
+    // Notify shipper org too — dispatcher proposed a match for their load
+    if (load.shipperId) {
+      const shipperUsers = await db.user.findMany({
+        where: { organizationId: load.shipperId, status: "ACTIVE" },
+        select: { id: true },
+      });
+      await Promise.all(
+        shipperUsers.map((u) =>
+          createNotification({
+            userId: u.id,
+            type: "MATCH_PROPOSAL",
+            title: "Truck Matched to Your Load",
+            message: `A dispatcher has matched truck ${proposal.truck.licensePlate} to your load from ${proposal.load.pickupCity} to ${proposal.load.deliveryCity}`,
+            metadata: {
+              proposalId: proposal.id,
+              loadId: proposal.loadId,
+              truckId: proposal.truckId,
+            },
+          })
+        )
+      );
+    }
+
     // Fix 8b: Cache invalidation after match proposal creation
     await CacheInvalidation.load(data.loadId);
 

@@ -163,6 +163,47 @@ describe("Truck Requests — POST /api/truck-requests", () => {
     expect(body.request.truckId).toBe(seed.truck.id);
   });
 
+  // N2-2: notifyTruckRequest must include loadId in metadata (S10 fix)
+  it("T-1b: creating truck request calls notifyTruckRequest with loadId", async () => {
+    setAuthSession(shipperSession);
+    jest.clearAllMocks();
+
+    // Use a fresh load to avoid 409 conflicts from T-1
+    const freshLoadId = "tr-notify-load-001";
+    await db.load.create({
+      data: {
+        id: freshLoadId,
+        status: "POSTED",
+        pickupCity: "Addis Ababa",
+        pickupDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        deliveryCity: "Dire Dawa",
+        deliveryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        truckType: "DRY_VAN",
+        weight: 3000,
+        cargoDescription: "Notification test cargo",
+        shipperId: seed.shipperOrg.id,
+        createdById: seed.shipperUser.id,
+        postedAt: new Date(),
+      },
+    });
+
+    const req = createRequest("POST", "http://localhost/api/truck-requests", {
+      body: {
+        loadId: freshLoadId,
+        truckId: seed.truck.id,
+        notes: "Notification test",
+        expiresInHours: 24,
+      },
+    });
+    const res = await createTruckRequest(req);
+    expect(res.status).toBe(201);
+
+    const { notifyTruckRequest } = require("@/lib/notifications");
+    expect(notifyTruckRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ loadId: freshLoadId })
+    );
+  });
+
   // T-2: CARRIER cannot create truck request → 403
   it("T-2: CARRIER cannot create truck request → 403", async () => {
     setAuthSession(carrierSession);

@@ -7,6 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useSettingsStore } from "../../src/stores/settings";
 import { useAuthStore } from "../../src/stores/auth";
+import { pushService } from "../../src/services/push";
 import { Card } from "../../src/components/Card";
 import { Button } from "../../src/components/Button";
 import { colors } from "../../src/theme/colors";
@@ -25,6 +26,15 @@ export default function SettingsScreen() {
     setGpsEnabled,
   } = useSettingsStore();
   const logout = useAuthStore((s) => s.logout);
+
+  const handlePushToggle = async (value: boolean) => {
+    if (value) {
+      await pushService.registerForPush();
+    } else {
+      await pushService.unregisterToken();
+    }
+    setPushEnabled(value);
+  };
 
   const toggleLanguage = async () => {
     const newLocale = locale === "en" ? "am" : "en";
@@ -61,7 +71,7 @@ export default function SettingsScreen() {
           </View>
           <Switch
             value={pushEnabled}
-            onValueChange={setPushEnabled}
+            onValueChange={handlePushToggle}
             trackColor={{ true: colors.primary500 }}
           />
         </View>

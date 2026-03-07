@@ -11,6 +11,9 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useAuthStore } from "../src/stores/auth";
 import { useSettingsStore } from "../src/stores/settings";
 import { LoadingSpinner } from "../src/components/LoadingSpinner";
+import { pushService } from "../src/services/push";
+import { getNotificationRoute } from "../src/utils/notificationRouting";
+import type { NotificationMetadata } from "../src/utils/notificationRouting";
 import "../src/i18n/config";
 
 const queryClient = new QueryClient({
@@ -34,6 +37,31 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     initialize();
     loadSettings();
   }, [initialize, loadSettings]);
+
+  // Register for push notifications when authenticated
+  useEffect(() => {
+    if (user) {
+      pushService.registerForPush().catch(console.error);
+    }
+  }, [user]);
+
+  // Handle push notification taps — deep link to relevant screen
+  useEffect(() => {
+    const subscription = pushService.onNotificationResponse((response) => {
+      const data = (
+        response as {
+          notification: {
+            request: { content: { data: Record<string, unknown> } };
+          };
+        }
+      ).notification.request.content.data;
+      const type = data.type as string | undefined;
+      const metadata = data as NotificationMetadata;
+      const route = getNotificationRoute(type, metadata, user?.role ?? "");
+      if (route) router.push(route as `/${string}`);
+    });
+    return () => subscription.remove();
+  }, [user?.role, router]);
 
   // Redirect based on auth state
   useEffect(() => {

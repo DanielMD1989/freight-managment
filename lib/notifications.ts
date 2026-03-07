@@ -341,29 +341,6 @@ export async function getRecentNotifications(
   }
 }
 
-/**
- * Delete old notifications (cleanup utility)
- * Keeps last 90 days by default
- */
-export async function cleanupOldNotifications(daysToKeep: number = 90) {
-  try {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
-
-    const result = await db.notification.deleteMany({
-      where: {
-        createdAt: { lt: cutoffDate },
-        read: true, // Only delete read notifications
-      },
-    });
-
-    return result.count;
-  } catch (error) {
-    console.error("Failed to cleanup notifications:", error);
-    return 0;
-  }
-}
-
 // ============================================================================
 // SPECIFIC NOTIFICATION HELPERS
 // ============================================================================
@@ -411,16 +388,23 @@ export async function notifyTruckRequest(params: {
   loadReference: string;
   truckPlate: string;
   requestId: string;
+  loadId: string;
 }) {
-  const { carrierId, shipperName, loadReference, truckPlate, requestId } =
-    params;
+  const {
+    carrierId,
+    shipperName,
+    loadReference,
+    truckPlate,
+    requestId,
+    loadId,
+  } = params;
 
   await notifyOrganization({
     organizationId: carrierId,
     type: "TRUCK_REQUEST_RECEIVED",
     title: "New Truck Request",
     message: `${shipperName} has requested truck ${truckPlate} for load ${loadReference}. Please respond within 24 hours.`,
-    metadata: { requestId, shipperName, loadReference, truckPlate },
+    metadata: { requestId, shipperName, loadReference, truckPlate, loadId },
   });
 }
 
@@ -450,30 +434,6 @@ export async function notifyTruckRequestResponse(params: {
 }
 
 /**
- * Notify carrier about a new load match proposal
- */
-export async function notifyMatchProposal(params: {
-  carrierId: string;
-  shipperName: string;
-  loadReference: string;
-  proposalId: string;
-  offeredRate?: number;
-}) {
-  const { carrierId, shipperName, loadReference, proposalId, offeredRate } =
-    params;
-
-  await notifyOrganization({
-    organizationId: carrierId,
-    type: "LOAD_MATCHED",
-    title: "New Load Match Proposal",
-    message: offeredRate
-      ? `${shipperName} has proposed load ${loadReference} at ${offeredRate.toLocaleString()} ETB.`
-      : `${shipperName} has proposed load ${loadReference}.`,
-    metadata: { proposalId, shipperName, loadReference, offeredRate },
-  });
-}
-
-/**
  * Notify about exception assignment
  */
 export async function notifyExceptionAssigned(params: {
@@ -481,110 +441,16 @@ export async function notifyExceptionAssigned(params: {
   exceptionType: string;
   loadReference: string;
   exceptionId: string;
+  loadId: string;
 }) {
-  const { userId, exceptionType, loadReference, exceptionId } = params;
+  const { userId, exceptionType, loadReference, exceptionId, loadId } = params;
 
   await createNotification({
     userId,
     type: NotificationType.EXCEPTION_CREATED,
     title: "Exception Assigned to You",
     message: `You have been assigned a ${exceptionType.replace(/_/g, " ").toLowerCase()} exception for load ${loadReference}.`,
-    metadata: { exceptionId, exceptionType, loadReference },
-  });
-}
-
-/**
- * Notify parties about exception resolution
- */
-export async function notifyExceptionResolved(params: {
-  exceptionId: string;
-  loadId: string;
-  resolution: string;
-}) {
-  const { exceptionId, loadId, resolution } = params;
-
-  try {
-    const load = await db.load.findUnique({
-      where: { id: loadId },
-      select: {
-        shipperId: true,
-        assignedTruck: {
-          select: { carrierId: true },
-        },
-      },
-    });
-
-    if (!load) return;
-
-    const notifications = [];
-
-    if (load.shipperId) {
-      notifications.push(
-        notifyOrganization({
-          organizationId: load.shipperId,
-          type: "EXCEPTION_RESOLVED",
-          title: "Exception Resolved",
-          message: `An exception for your load has been resolved: ${resolution}`,
-          metadata: { exceptionId, loadId, resolution },
-        })
-      );
-    }
-
-    if (load.assignedTruck?.carrierId) {
-      notifications.push(
-        notifyOrganization({
-          organizationId: load.assignedTruck.carrierId,
-          type: "EXCEPTION_RESOLVED",
-          title: "Exception Resolved",
-          message: `An exception for your assigned load has been resolved: ${resolution}`,
-          metadata: { exceptionId, loadId, resolution },
-        })
-      );
-    }
-
-    await Promise.all(notifications);
-  } catch (error) {
-    console.error("Failed to notify exception resolution:", error);
-  }
-}
-
-/**
- * Notify about load status change
- */
-export async function notifyLoadStatusChange(params: {
-  loadId: string;
-  newStatus: string;
-  loadReference: string;
-}) {
-  const { loadId, newStatus, loadReference } = params;
-
-  await notifyLoadStakeholders(
-    loadId,
-    "LOAD_STATUS_CHANGED",
-    "Load Status Updated",
-    `Load ${loadReference} status changed to ${newStatus.replace(/_/g, " ")}.`
-  );
-}
-
-/**
- * Notify carrier about truck approval (admin action)
- */
-export async function notifyTruckApproval(params: {
-  carrierId: string;
-  truckPlate: string;
-  approved: boolean;
-  reason?: string;
-}) {
-  const { carrierId, truckPlate, approved, reason } = params;
-
-  await notifyOrganization({
-    organizationId: carrierId,
-    type: approved ? "TRUCK_APPROVED" : "TRUCK_REJECTED",
-    title: approved ? "Truck Approved" : "Truck Registration Rejected",
-    message: approved
-      ? `Your truck ${truckPlate} has been approved and is now visible on the DAT board.`
-      : `Your truck ${truckPlate} registration was rejected. ${reason || "Please contact support for details."}`,
-    metadata: { truckPlate, approved, reason },
+    metadata: { exceptionId, exceptionType, loadReference, loadId },
   });
 }
 

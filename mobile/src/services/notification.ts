@@ -9,6 +9,7 @@ class NotificationService {
   /** Get notifications */
   async getNotifications(params?: { page?: number; limit?: number }): Promise<{
     notifications: Notification[];
+    unreadCount: number;
     pagination: { page: number; limit: number; total: number; pages: number };
   }> {
     try {
@@ -22,7 +23,7 @@ class NotificationService {
   /** Mark notification as read */
   async markAsRead(id: string): Promise<void> {
     try {
-      await apiClient.patch(`/api/notifications/${id}`, { read: true });
+      await apiClient.put(`/api/notifications/${id}/read`);
     } catch (error) {
       throw new Error(getErrorMessage(error));
     }
@@ -31,17 +32,7 @@ class NotificationService {
   /** Mark all as read */
   async markAllAsRead(): Promise<void> {
     try {
-      await apiClient.post("/api/notifications/mark-all-read");
-    } catch (error) {
-      throw new Error(getErrorMessage(error));
-    }
-  }
-
-  /** Get unread count */
-  async getUnreadCount(): Promise<number> {
-    try {
-      const response = await apiClient.get("/api/notifications/unread-count");
-      return response.data.count ?? 0;
+      await apiClient.put("/api/notifications/mark-all-read");
     } catch (error) {
       throw new Error(getErrorMessage(error));
     }

@@ -231,6 +231,47 @@ describe("Load Escalations — POST /api/loads/[id]/escalations", () => {
     expect(body.escalation.priority).toBe("HIGH");
   });
 
+  // N2-3: notifyExceptionAssigned must include loadId in metadata (S10 fix)
+  it("escalation with assignedTo calls notifyExceptionAssigned with loadId", async () => {
+    setAuthSession(shipperSession);
+    jest.clearAllMocks();
+
+    // Create a dispatcher user to assign to
+    await db.user.upsert({
+      where: { id: "dispatcher-for-notify-test" },
+      update: {},
+      create: {
+        id: "dispatcher-for-notify-test",
+        email: "dispatcher-notify@test.com",
+        role: "DISPATCHER",
+        firstName: "Notify",
+        lastName: "Dispatcher",
+        status: "ACTIVE",
+        passwordHash: "mock-hash",
+      },
+    });
+
+    const req = createRequest(
+      "POST",
+      `http://localhost:3000/api/loads/${seed.load.id}/escalations`,
+      {
+        body: escalationPayload({
+          assignedTo: "dispatcher-for-notify-test",
+        }),
+      }
+    );
+    const res = await callHandler(createEscalation, req, { id: seed.load.id });
+    expect(res.status).toBe(200);
+
+    const { notifyExceptionAssigned } = require("@/lib/notifications");
+    expect(notifyExceptionAssigned).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "dispatcher-for-notify-test",
+        loadId: seed.load.id,
+      })
+    );
+  });
+
   it("unrelated user (different org, not dispatcher/admin) → 403", async () => {
     const unrelated = createMockSession({
       userId: "unrelated-carrier-user",

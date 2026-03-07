@@ -19,7 +19,11 @@ export async function GET() {
     const notifications = await getRecentNotifications(session.userId, 20);
     const unreadCount = await getUnreadCount(session.userId);
 
-    return NextResponse.json({ notifications, unreadCount });
+    return NextResponse.json({
+      notifications,
+      unreadCount,
+      userRole: session.role,
+    });
   } catch (error) {
     return handleApiError(error, "Failed to fetch notifications");
   }

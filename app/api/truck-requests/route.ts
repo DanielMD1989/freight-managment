@@ -269,6 +269,7 @@ export async function POST(request: NextRequest) {
       loadReference: `LOAD-${data.loadId.slice(-8).toUpperCase()}`,
       truckPlate: truck.licensePlate,
       requestId: truckRequest.id,
+      loadId: data.loadId,
     }).catch((err) => console.error("Failed to send notification:", err));
 
     return NextResponse.json(

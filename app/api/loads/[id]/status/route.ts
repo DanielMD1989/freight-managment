@@ -18,7 +18,10 @@ import { deductServiceFee, refundServiceFee } from "@/lib/serviceFeeManagement";
 // CRITICAL FIX: Import CacheInvalidation for status changes
 import { CacheInvalidation } from "@/lib/cache";
 // CRITICAL FIX: Import notification helper for status change notifications
-import { notifyLoadStakeholders } from "@/lib/notifications";
+import {
+  notifyLoadStakeholders,
+  createNotificationForRole,
+} from "@/lib/notifications";
 // CRITICAL FIX: Import trust metrics for analytics tracking
 import {
   incrementCompletedLoads,
@@ -476,6 +479,21 @@ export async function PATCH(
       `Load Status: ${newStatus}`,
       `Load status has been updated to ${getStatusDescription(newStatus as LoadStatus)}`
     );
+
+    // Notify all dispatchers when a load enters EXCEPTION state
+    if (newStatus === "EXCEPTION") {
+      await createNotificationForRole({
+        role: "DISPATCHER",
+        type: "EXCEPTION_CREATED",
+        title: "Load Exception Raised",
+        message: `Load ${loadId.slice(-8).toUpperCase()} (${updatedLoad.pickupCity} → ${updatedLoad.deliveryCity}) has entered EXCEPTION state.`,
+        metadata: {
+          loadId,
+          pickupCity: updatedLoad.pickupCity,
+          deliveryCity: updatedLoad.deliveryCity,
+        },
+      });
+    }
 
     // CRITICAL FIX: Update trust metrics for analytics tracking
     if (newStatus === "DELIVERED" || newStatus === "COMPLETED") {

@@ -201,6 +201,7 @@ export async function POST(
         exceptionType: validatedData.escalationType,
         loadReference: `${load.id.substring(0, 8)}`,
         exceptionId: escalation.id,
+        loadId,
       });
     }
 

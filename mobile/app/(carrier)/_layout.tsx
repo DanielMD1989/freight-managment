@@ -7,9 +7,11 @@ import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { colors } from "../../src/theme/colors";
+import { useNotificationUnreadCount } from "../../src/hooks/useNotifications";
 
 export default function CarrierLayout() {
   const { t } = useTranslation();
+  const unreadCount = useNotificationUnreadCount();
 
   return (
     <Tabs
@@ -38,6 +40,7 @@ export default function CarrierLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="grid-outline" size={size} color={color} />
           ),
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
       />
       <Tabs.Screen

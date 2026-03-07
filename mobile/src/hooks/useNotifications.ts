@@ -11,16 +11,14 @@ export function useNotifications(params?: { page?: number; limit?: number }) {
   return useQuery({
     queryKey: [...NOTIFICATIONS_KEY, params],
     queryFn: () => notificationService.getNotifications(params),
+    refetchInterval: 30000, // Refresh every 30s
   });
 }
 
-/** Unread count */
-export function useUnreadNotificationCount() {
-  return useQuery({
-    queryKey: [...NOTIFICATIONS_KEY, "unread-count"],
-    queryFn: () => notificationService.getUnreadCount(),
-    refetchInterval: 30000, // Refresh every 30s
-  });
+/** Derived unread count — reads from the already-fetched notifications query, no extra HTTP call */
+export function useNotificationUnreadCount() {
+  const { data } = useNotifications();
+  return data?.unreadCount ?? 0;
 }
 
 /** Mark as read */

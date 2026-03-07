@@ -474,6 +474,52 @@ describe("Load Status API", () => {
       expect(data.load).toBeDefined();
       expect(data.load.status).toBe("DELIVERED");
     });
+
+    // N3-6: EXCEPTION status → dispatchers get EXCEPTION_CREATED notification
+    it("admin sets EXCEPTION → createNotificationForRole called for DISPATCHER", async () => {
+      setAuthSession(adminSession);
+
+      await db.load.create({
+        data: {
+          id: "load-exception-notify-001",
+          status: "IN_TRANSIT",
+          pickupCity: "Addis Ababa",
+          pickupDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
+          deliveryCity: "Jimma",
+          deliveryDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+          truckType: "DRY_VAN",
+          weight: 3000,
+          cargoDescription: "Exception test cargo",
+          shipperId: "shipper-org-1",
+          createdById: "shipper-user-1",
+          postedAt: new Date(),
+        },
+      });
+
+      jest.clearAllMocks();
+
+      const req = createRequest(
+        "PATCH",
+        "http://localhost:3000/api/loads/load-exception-notify-001/status",
+        { body: { status: "EXCEPTION" } }
+      );
+
+      const res = await callHandler(updateStatus, req, {
+        id: "load-exception-notify-001",
+      });
+      expect(res.status).toBe(200);
+
+      const { createNotificationForRole } = require("@/lib/notifications");
+      expect(createNotificationForRole).toHaveBeenCalledWith(
+        expect.objectContaining({
+          role: "DISPATCHER",
+          type: "EXCEPTION_CREATED",
+          metadata: expect.objectContaining({
+            loadId: "load-exception-notify-001",
+          }),
+        })
+      );
+    });
   });
 
   // ─── GET /api/loads/[id]/status ──────────────────────────────────────────

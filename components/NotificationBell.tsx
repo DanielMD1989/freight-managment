@@ -28,6 +28,7 @@ export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRole, setUserRole] = useState<string>("");
 
   useEffect(() => {
     fetchNotifications();
@@ -42,6 +43,7 @@ export default function NotificationBell() {
         const data = await response.json();
         setNotifications(data.notifications || []);
         setUnreadCount(data.unreadCount || 0);
+        setUserRole(data.userRole || "");
         setIsAuthenticated(true);
       } else if (response.status === 401) {
         setIsAuthenticated(false);
@@ -219,67 +221,143 @@ export default function NotificationBell() {
     return date.toLocaleDateString();
   };
 
-  const getNotificationRoute = (notification: Notification): string | null => {
+  const getNotificationRoute = (
+    notification: Notification,
+    role: string
+  ): string | null => {
     const { type, metadata } = notification;
+    const isCarrier = role === "CARRIER";
+    const isShipper = role === "SHIPPER";
+    const isDispatcher = role === "DISPATCHER";
+    const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
 
-    // ========== CARRIER-SIDE NOTIFICATIONS ==========
+    switch (type) {
+      // ── Truck status ──────────────────────────────────────────────────────
+      case "TRUCK_APPROVED":
+      case "TRUCK_REJECTED":
+        return metadata?.truckId
+          ? `/carrier/trucks?highlight=${metadata.truckId}`
+          : `/carrier/trucks`;
 
-    // Carrier's outgoing load request was approved by shipper
-    if (type === "LOAD_REQUEST_APPROVED" && metadata?.loadId) {
-      return `/carrier/trips/${metadata.loadId}`;
-    }
-    // Carrier's outgoing load request was rejected by shipper
-    if (type === "LOAD_REQUEST_REJECTED" && metadata?.loadRequestId) {
-      return `/carrier/load-requests?highlight=${metadata.loadRequestId}`;
-    }
-    // Carrier received incoming truck request from shipper
-    if (type === "TRUCK_REQUEST_RECEIVED" && metadata?.requestId) {
-      return `/carrier/requests?highlight=${metadata.requestId}`;
-    }
+      // ── Match proposal ────────────────────────────────────────────────────
+      case "MATCH_PROPOSAL":
+        if (isCarrier)
+          return `/carrier/proposals?highlight=${metadata?.proposalId ?? ""}`;
+        if (isShipper && metadata?.loadId)
+          return `/shipper/loads/${metadata.loadId}?tab=proposals`;
+        return null;
 
-    // ========== SHIPPER-SIDE NOTIFICATIONS ==========
+      case "MATCH_PROPOSAL_ACCEPTED":
+        if (metadata?.loadId) {
+          return isCarrier
+            ? `/carrier/trips/${metadata.loadId}`
+            : `/shipper/loads/${metadata.loadId}`;
+        }
+        return null;
 
-    // Shipper received incoming load request from carrier
-    if (type === "LOAD_REQUEST_RECEIVED" && metadata?.loadRequestId) {
-      return `/shipper/requests?highlight=${metadata.loadRequestId}`;
-    }
-    // Shipper's outgoing truck request was approved by carrier
-    if (type === "TRUCK_REQUEST_APPROVED" && metadata?.loadId) {
-      return `/shipper/trips/${metadata.loadId}`;
-    }
-    // Shipper's outgoing truck request was rejected by carrier
-    if (type === "TRUCK_REQUEST_REJECTED" && metadata?.requestId) {
-      return `/shipper/requests?tab=my-requests&highlight=${metadata.requestId}`;
-    }
+      case "MATCH_PROPOSAL_REJECTED":
+        return isCarrier ? `/carrier/proposals` : null;
 
-    // Trip-related notifications
-    if (type === "TRIP_STARTED" && metadata?.loadId) {
-      return `/carrier/trips/${metadata.loadId}`;
-    }
-    if (type === "TRIP_COMPLETED" && metadata?.loadId) {
-      return `/carrier/trips/${metadata.loadId}`;
-    }
-    if (type === "POD_UPLOADED" && metadata?.loadId) {
-      return `/shipper/loads/${metadata.loadId}`;
-    }
+      // ── Exceptions & escalations ──────────────────────────────────────────
+      case "EXCEPTION_CREATED":
+        if (isDispatcher)
+          return metadata?.escalationId
+            ? `/dispatcher/escalations/${metadata.escalationId}`
+            : `/dispatcher/escalations`;
+        if (metadata?.loadId) {
+          return isCarrier
+            ? `/carrier/trips/${metadata.loadId}`
+            : `/shipper/loads/${metadata.loadId}`;
+        }
+        return null;
 
-    // GPS and tracking notifications
-    if (type.includes("GPS") && metadata?.loadId) {
-      return `/carrier/trips/${metadata.loadId}`;
-    }
+      case "ESCALATION_ASSIGNED":
+        if (isDispatcher && metadata?.escalationId)
+          return `/dispatcher/escalations/${metadata.escalationId}`;
+        return isDispatcher ? `/dispatcher/escalations` : null;
 
-    // Settlement notifications
-    if (type.includes("SETTLEMENT") && metadata?.settlementId) {
-      return `/carrier/wallet?settlement=${metadata.settlementId}`;
-    }
+      case "ESCALATION_RESOLVED":
+        if (metadata?.loadId) {
+          return isCarrier
+            ? `/carrier/trips/${metadata.loadId}`
+            : `/shipper/loads/${metadata.loadId}`;
+        }
+        return null;
 
-    // User/verification notifications
-    if (type.includes("USER") || type.includes("VERIFICATION")) {
-      return "/settings";
-    }
+      // ── Service fees & wallet ─────────────────────────────────────────────
+      case "SERVICE_FEE_DEDUCTED":
+      case "SERVICE_FEE_REFUNDED":
+      case "SERVICE_FEE_RESERVED":
+        return isCarrier ? `/carrier/wallet` : `/shipper/wallet`;
 
-    // Default: no navigation
-    return null;
+      case "WALLET_TOPUP_CONFIRMED":
+        if (isCarrier) return `/carrier/wallet`;
+        if (isShipper) return `/shipper/wallet`;
+        return `/admin/users`;
+
+      // ── Return loads ──────────────────────────────────────────────────────
+      case "RETURN_LOAD_AVAILABLE":
+      case "RETURN_LOAD_MATCHED":
+        return `/carrier/loads`;
+
+      // ── Bypass / admin ────────────────────────────────────────────────────
+      case "BYPASS_WARNING":
+      case "ACCOUNT_FLAGGED":
+        return isAdmin ? `/admin/users` : null;
+
+      case "DOCUMENT_SUBMITTED":
+        return isAdmin ? `/admin/verification/queue` : null;
+
+      // ── Carrier request flow ──────────────────────────────────────────────
+      case "LOAD_REQUEST_APPROVED":
+        return metadata?.loadId ? `/carrier/trips/${metadata.loadId}` : null;
+      case "LOAD_REQUEST_REJECTED":
+        return metadata?.loadRequestId
+          ? `/carrier/load-requests?highlight=${metadata.loadRequestId}`
+          : null;
+      case "TRUCK_REQUEST_RECEIVED":
+        return metadata?.requestId
+          ? `/carrier/requests?highlight=${metadata.requestId}`
+          : null;
+
+      // ── Shipper request flow ──────────────────────────────────────────────
+      case "LOAD_REQUEST_RECEIVED":
+        return metadata?.loadRequestId
+          ? `/shipper/requests?highlight=${metadata.loadRequestId}`
+          : null;
+      case "TRUCK_REQUEST_APPROVED":
+        return metadata?.loadId ? `/shipper/trips/${metadata.loadId}` : null;
+      case "TRUCK_REQUEST_REJECTED":
+        return metadata?.requestId
+          ? `/shipper/requests?tab=my-requests&highlight=${metadata.requestId}`
+          : null;
+
+      // ── Trip events ───────────────────────────────────────────────────────
+      case "TRIP_STARTED":
+      case "TRIP_COMPLETED":
+        return metadata?.loadId ? `/carrier/trips/${metadata.loadId}` : null;
+      case "POD_UPLOADED":
+        return metadata?.loadId ? `/shipper/loads/${metadata.loadId}` : null;
+      case "SETTLEMENT_COMPLETE":
+        if (metadata?.settlementId)
+          return isCarrier
+            ? `/carrier/wallet?settlement=${metadata.settlementId}`
+            : `/shipper/wallet`;
+        return isCarrier ? `/carrier/wallet` : `/shipper/wallet`;
+
+      // ── GPS ───────────────────────────────────────────────────────────────
+      case "GPS_OFFLINE":
+      case "TRUCK_AT_PICKUP":
+      case "TRUCK_AT_DELIVERY":
+        return metadata?.loadId ? `/carrier/trips/${metadata.loadId}` : null;
+
+      // ── User / verification ───────────────────────────────────────────────
+      case "USER_STATUS_CHANGED":
+        return `/settings`;
+
+      default:
+        return null;
+    }
   };
 
   const handleNotificationClick = async (notification: Notification) => {
@@ -287,7 +365,7 @@ export default function NotificationBell() {
     await handleMarkAsRead(notification.id);
 
     // Navigate to relevant page
-    const route = getNotificationRoute(notification);
+    const route = getNotificationRoute(notification, userRole);
     if (route) {
       setIsOpen(false);
       router.push(route);

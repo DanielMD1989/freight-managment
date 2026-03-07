@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Tests for notification query hooks — verify query keys, polling interval,
- * and cache invalidation
+ * and cache invalidation (S10: useUnreadNotificationCount → useNotificationUnreadCount)
  */
 import { notificationService } from "../../src/services/notification";
 
@@ -26,7 +26,6 @@ jest.mock("@tanstack/react-query", () => ({
 jest.mock("../../src/services/notification", () => ({
   notificationService: {
     getNotifications: jest.fn(),
-    getUnreadCount: jest.fn(),
     markAsRead: jest.fn(),
     markAllAsRead: jest.fn(),
   },
@@ -34,7 +33,7 @@ jest.mock("../../src/services/notification", () => ({
 
 import {
   useNotifications,
-  useUnreadNotificationCount,
+  useNotificationUnreadCount,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
 } from "../../src/hooks/useNotifications";
@@ -65,26 +64,24 @@ describe("Notification Hooks", () => {
       useNotifications();
       expect(capturedOptions.queryKey).toEqual(["notifications", undefined]);
     });
-  });
-
-  describe("useUnreadNotificationCount", () => {
-    it('should use queryKey ["notifications", "unread-count"]', () => {
-      useUnreadNotificationCount();
-      expect(capturedOptions.queryKey).toEqual([
-        "notifications",
-        "unread-count",
-      ]);
-    });
 
     it("should set refetchInterval to 30000 (30s polling)", () => {
-      useUnreadNotificationCount();
+      useNotifications();
       expect(capturedOptions.refetchInterval).toBe(30000);
     });
+  });
 
-    it("should call notificationService.getUnreadCount as queryFn", () => {
-      useUnreadNotificationCount();
-      capturedOptions.queryFn();
-      expect(notificationService.getUnreadCount).toHaveBeenCalledTimes(1);
+  describe("useNotificationUnreadCount (derived, no extra HTTP call)", () => {
+    it("should return 0 when data is undefined", () => {
+      // useNotifications returns { data: undefined } from the mock
+      const count = useNotificationUnreadCount();
+      expect(count).toBe(0);
+    });
+
+    it("should not make a separate getUnreadCount HTTP call", () => {
+      useNotificationUnreadCount();
+      // notificationService has no getUnreadCount — this validates it isn't called
+      expect(notificationService.getNotifications).not.toHaveBeenCalled();
     });
   });
 

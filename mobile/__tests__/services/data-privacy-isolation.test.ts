@@ -29,6 +29,7 @@ import { getErrorMessage } from "../../src/api/client";
 const mockGet = jest.fn();
 const mockPost = jest.fn();
 const mockPatch = jest.fn();
+const mockPut = jest.fn();
 const mockDelete = jest.fn();
 
 jest.mock("../../src/api/client", () => ({
@@ -37,6 +38,7 @@ jest.mock("../../src/api/client", () => ({
     get: (...args: any[]) => mockGet(...args),
     post: (...args: any[]) => mockPost(...args),
     patch: (...args: any[]) => mockPatch(...args),
+    put: (...args: any[]) => mockPut(...args),
     delete: (...args: any[]) => mockDelete(...args),
     defaults: { headers: { common: {} } },
   },
@@ -626,30 +628,36 @@ describe("Mobile Data Privacy & Isolation", () => {
     });
 
     it("markAsRead for own notification succeeds", async () => {
-      mockPatch.mockResolvedValue({ data: {} });
+      mockPut.mockResolvedValue({ data: {} });
 
       await expect(
         notificationService.markAsRead("own-notif")
       ).resolves.not.toThrow();
-      expect(mockPatch).toHaveBeenCalledWith("/api/notifications/own-notif", {
-        read: true,
-      });
+      expect(mockPut).toHaveBeenCalledWith("/api/notifications/own-notif/read");
     });
 
     it("markAsRead for other user's notification returns error", async () => {
-      mockPatch.mockRejectedValue(apiError(404, "Notification not found"));
+      mockPut.mockRejectedValue(apiError(404, "Notification not found"));
 
       await expect(
         notificationService.markAsRead("other-notif")
       ).rejects.toThrow("Notification not found");
     });
 
-    it("unread count scoped to own user", async () => {
-      mockGet.mockResolvedValue({ data: { count: 3 } });
+    it("unread count returned inline with getNotifications response", async () => {
+      mockGet.mockResolvedValue({
+        data: {
+          notifications: [],
+          unreadCount: 3,
+          pagination: { page: 1, limit: 20, total: 0, pages: 0 },
+        },
+      });
 
-      const result = await notificationService.getUnreadCount();
-      expect(result).toBe(3);
-      expect(mockGet).toHaveBeenCalledWith("/api/notifications/unread-count");
+      const result = await notificationService.getNotifications();
+      expect(result.unreadCount).toBe(3);
+      expect(mockGet).toHaveBeenCalledWith("/api/notifications", {
+        params: undefined,
+      });
     });
   });
 
@@ -735,10 +743,19 @@ describe("Mobile Data Privacy & Isolation", () => {
 
     it("all requests use centralized client (x-client-type: mobile added by interceptor)", async () => {
       // Multiple services all route through the same apiClient
-      mockGet.mockResolvedValue({ data: { count: 0 } });
+      mockGet.mockResolvedValue({
+        data: {
+          notifications: [],
+          unreadCount: 0,
+          pagination: { page: 1, limit: 20, total: 0, pages: 0 },
+        },
+      });
 
-      await notificationService.getUnreadCount();
-      expect(mockGet).toHaveBeenCalledWith("/api/notifications/unread-count");
+      await notificationService.getNotifications();
+      expect(mockGet).toHaveBeenCalledWith(
+        "/api/notifications",
+        expect.anything()
+      );
 
       mockGet.mockClear();
       mockGet.mockResolvedValue({ data: { trips: [] } });
