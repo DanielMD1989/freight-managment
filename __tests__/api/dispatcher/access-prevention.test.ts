@@ -474,16 +474,15 @@ describe("Dispatcher Access Prevention", () => {
     expect([200, 201, 400, 404, 409]).toContain(res.status);
   });
 
-  // AP-10: DISPATCHER without org GET /api/load-requests → 400 (BUG-D regression)
-  it("AP-10: DISPATCHER without org GET /api/load-requests → 400 (BUG-D regression)", async () => {
+  // AP-10: DISPATCHER GET /api/load-requests → 200 with full visibility (G-A9-4)
+  // G-A9-4: Dispatchers have full platform visibility — org filter removed (blueprint §5).
+  it("AP-10: DISPATCHER GET /api/load-requests → 200 (G-A9-4 full visibility)", async () => {
     setAuthSession(dispatcherNoOrgSession);
 
     const req = createRequest("GET", "http://localhost/api/load-requests");
     const res = await listLoadRequests(req);
-    const body = await parseResponse(res);
 
-    // BUG-D fix: DISPATCHER with null org returns 400 (not 200 with data leak)
-    expect(res.status).toBe(400);
-    expect(body.error).toBeDefined();
+    // G-A9-4: All dispatchers (with or without org) get full visibility
+    expect(res.status).toBe(200);
   });
 });

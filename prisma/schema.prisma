@@ -261,11 +261,12 @@ enum ProposalStatus {
 
 // Shipper truck request status
 enum RequestStatus {
-  PENDING // Request created, awaiting carrier approval
-  APPROVED // Carrier approved the request
-  REJECTED // Carrier rejected the request
-  EXPIRED // Request expired without response
-  CANCELLED // Shipper cancelled the request
+  PENDING          // Request created, awaiting first-party response
+  SHIPPER_APPROVED // G-A9-2: Shipper accepted; waiting for Carrier to confirm
+  APPROVED         // Fully confirmed (Carrier confirmed for load-requests; Carrier accepted for truck-requests)
+  REJECTED         // Rejected by responding party
+  EXPIRED          // Request expired without response
+  CANCELLED        // Cancelled by requesting party or system
 }
 
 // ============================================================================
@@ -320,6 +321,7 @@ model User {
   trucksApproved        Truck[]       @relation("TruckApprovedBy")
   loadRequestsCreated   LoadRequest[] @relation("LoadRequestedBy")
   loadRequestsResponded LoadRequest[] @relation("LoadRequestRespondedBy")
+  loadRequestsConfirmed LoadRequest[] @relation("LoadRequestConfirmedBy")
 
   // Round S3: Document relation back-references
   companyDocumentsUploaded CompanyDocument[] @relation("CompanyDocumentUploadedBy")
@@ -1616,6 +1618,11 @@ model LoadRequest {
   responseNotes String?
   respondedById String?
   respondedBy   User?     @relation("LoadRequestRespondedBy", fields: [respondedById], references: [id])
+
+  // Carrier final confirmation (G-A9-2)
+  confirmedAt   DateTime?
+  confirmedById String?
+  confirmedBy   User?     @relation("LoadRequestConfirmedBy", fields: [confirmedById], references: [id])
 
   // Expiration
   expiresAt DateTime

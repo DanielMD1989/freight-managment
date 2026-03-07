@@ -301,6 +301,14 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // G-A9-3: Transition load POSTED → SEARCHING ("active carrier search in progress")
+    if (load.status === "POSTED") {
+      await db.load.update({
+        where: { id: data.loadId },
+        data: { status: "SEARCHING" },
+      });
+    }
+
     // Notify shipper users
     const shipperUsers = await db.user.findMany({
       where: {
@@ -381,20 +389,7 @@ export async function GET(request: NextRequest) {
       // Shippers see requests for their loads
       where.shipperId = session.organizationId;
     } else if (session.role === "DISPATCHER") {
-      // BUG-D FIX: Guard against null-org dispatcher leaking orphaned records.
-      // A dispatcher with no org would produce WHERE carrierId IS NULL OR shipperId IS NULL,
-      // exposing historical records with missing organization data.
-      if (!session.organizationId) {
-        return NextResponse.json(
-          { error: "Dispatcher must belong to an organization" },
-          { status: 400 }
-        );
-      }
-      // Dispatchers see load requests for their organization
-      where.OR = [
-        { carrierId: session.organizationId },
-        { shipperId: session.organizationId },
-      ];
+      // G-A9-4: Dispatchers have full platform visibility (blueprint §5) — no org filter
     } else if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }

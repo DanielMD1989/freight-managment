@@ -15,12 +15,8 @@ import { z } from "zod";
 import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { createNotification } from "@/lib/notifications";
-import { enableTrackingForLoad } from "@/lib/gpsTracking";
-import crypto from "crypto";
-// P0-003 FIX: Import CacheInvalidation for post-approval cache clearing
 import { CacheInvalidation } from "@/lib/cache";
 import { handleApiError } from "@/lib/apiErrors";
-import { validateWalletBalancesForTrip } from "@/lib/serviceFeeManagement";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 
 // Validation schema for load request response
@@ -137,7 +133,9 @@ export async function POST(
     if (loadRequest.status !== "PENDING") {
       // Idempotent: If already in the desired state, return success
       if (
-        (loadRequest.status === "APPROVED" && data.action === "APPROVE") ||
+        ((loadRequest.status === "SHIPPER_APPROVED" ||
+          loadRequest.status === "APPROVED") &&
+          data.action === "APPROVE") ||
         (loadRequest.status === "REJECTED" && data.action === "REJECT")
       ) {
         return NextResponse.json({
@@ -170,27 +168,11 @@ export async function POST(
     }
 
     if (data.action === "APPROVE") {
-      // H16 FIX: Validate wallet balances before assignment
-      const walletValidation = await validateWalletBalancesForTrip(
-        loadRequest.loadId,
-        loadRequest.truck.carrierId
-      );
-      if (!walletValidation.valid) {
-        return NextResponse.json(
-          {
-            error:
-              walletValidation.errors?.[0] ||
-              "Insufficient wallet balance for this trip",
-          },
-          { status: 400 }
-        );
-      }
-
-      // P0-002 & P0-003 FIX: All checks and operations now inside atomic transaction
-      // This prevents race conditions and ensures trip creation is atomic
+      // G-A9-2: Soft-accept only — no Trip created, no load assignment, no truck removal.
+      // The Carrier must call POST /api/load-requests/[id]/confirm to finalise the booking.
       try {
-        const result = await db.$transaction(async (tx) => {
-          // H14 FIX: Re-check request status inside transaction
+        const updatedRequest = await db.$transaction(async (tx) => {
+          // Re-check status inside transaction (race guard)
           const freshRequest = await tx.loadRequest.findUnique({
             where: { id: requestId },
             select: { status: true },
@@ -199,201 +181,35 @@ export async function POST(
             throw new Error("REQUEST_ALREADY_PROCESSED");
           }
 
-          // P0-002 FIX: Re-fetch load inside transaction to prevent race condition
-          const freshLoad = await tx.load.findUnique({
-            where: { id: loadRequest.loadId },
-            select: {
-              id: true,
-              status: true,
-              assignedTruckId: true,
-              shipperId: true,
-              pickupCity: true,
-              deliveryCity: true,
-              pickupAddress: true,
-              deliveryAddress: true,
-              originLat: true,
-              originLon: true,
-              destinationLat: true,
-              destinationLon: true,
-              tripKm: true,
-              estimatedTripKm: true,
-            },
-          });
-
-          if (!freshLoad) {
-            throw new Error("LOAD_NOT_FOUND");
-          }
-
-          // P0-002 FIX: Check availability INSIDE transaction
-          if (freshLoad.assignedTruckId) {
-            throw new Error("LOAD_ALREADY_ASSIGNED");
-          }
-
-          const availableStatuses = ["POSTED", "SEARCHING", "OFFERED"];
-          if (!availableStatuses.includes(freshLoad.status)) {
-            throw new Error(`LOAD_NOT_AVAILABLE:${freshLoad.status}`);
-          }
-
-          // Check if truck is already assigned to another active load
-          const existingAssignment = await tx.load.findFirst({
-            where: {
-              assignedTruckId: loadRequest.truckId,
-              status: {
-                notIn: ["DELIVERED", "COMPLETED", "CANCELLED", "EXPIRED"],
-              },
-            },
-            select: {
-              id: true,
-              pickupCity: true,
-              deliveryCity: true,
-              status: true,
-            },
-          });
-
-          if (existingAssignment) {
-            throw new Error(
-              `TRUCK_BUSY:${existingAssignment.pickupCity}:${existingAssignment.deliveryCity}`
-            );
-          }
-
-          // Unassign truck from any completed loads
-          await tx.load.updateMany({
-            where: {
-              assignedTruckId: loadRequest.truckId,
-              status: {
-                in: ["DELIVERED", "COMPLETED", "CANCELLED", "EXPIRED"],
-              },
-            },
-            data: { assignedTruckId: null },
-          });
-
-          // Update load request to approved
-          const updatedRequest = await tx.loadRequest.update({
+          return tx.loadRequest.update({
             where: { id: requestId },
             data: {
-              status: "APPROVED",
+              status: "SHIPPER_APPROVED",
               respondedAt: new Date(),
               responseNotes: data.responseNotes,
               respondedById: session.userId,
             },
           });
-
-          // Assign load to truck
-          const updatedLoad = await tx.load.update({
-            where: { id: loadRequest.loadId },
-            data: {
-              assignedTruckId: loadRequest.truckId,
-              assignedAt: new Date(),
-              status: "ASSIGNED",
-            },
-          });
-
-          // P0-003 FIX: Create trip INSIDE transaction (atomic with assignment)
-          const trackingUrl = `trip-${loadRequest.loadId.slice(-6)}-${crypto.randomBytes(12).toString("hex")}`;
-
-          const trip = await tx.trip.create({
-            data: {
-              loadId: loadRequest.loadId,
-              truckId: loadRequest.truckId,
-              carrierId: loadRequest.carrierId,
-              shipperId: freshLoad.shipperId,
-              status: "ASSIGNED",
-              pickupLat: freshLoad.originLat,
-              pickupLng: freshLoad.originLon,
-              pickupAddress: freshLoad.pickupAddress,
-              pickupCity: freshLoad.pickupCity,
-              deliveryLat: freshLoad.destinationLat,
-              deliveryLng: freshLoad.destinationLon,
-              deliveryAddress: freshLoad.deliveryAddress,
-              deliveryCity: freshLoad.deliveryCity,
-              estimatedDistanceKm:
-                freshLoad.tripKm || freshLoad.estimatedTripKm,
-              trackingUrl,
-              trackingEnabled: true,
-            },
-          });
-
-          // Create load event
-          await tx.loadEvent.create({
-            data: {
-              loadId: loadRequest.loadId,
-              eventType: "ASSIGNED",
-              description: `Load assigned to ${loadRequest.carrier.name} (${loadRequest.truck.licensePlate}) via carrier request`,
-              userId: session.userId,
-              metadata: {
-                loadRequestId: requestId,
-                approvedViaRequest: true,
-                carrierId: loadRequest.carrierId,
-                tripId: trip.id,
-              },
-            },
-          });
-
-          // Cancel other pending load requests for this load
-          await tx.loadRequest.updateMany({
-            where: {
-              loadId: loadRequest.loadId,
-              id: { not: requestId },
-              status: "PENDING",
-            },
-            data: { status: "CANCELLED" },
-          });
-
-          // Cancel pending truck requests for this load
-          await tx.truckRequest.updateMany({
-            where: {
-              loadId: loadRequest.loadId,
-              status: "PENDING",
-            },
-            data: { status: "CANCELLED" },
-          });
-
-          // Cancel pending match proposals
-          await tx.matchProposal.updateMany({
-            where: {
-              loadId: loadRequest.loadId,
-              status: "PENDING",
-            },
-            data: { status: "CANCELLED" },
-          });
-
-          // Mark truck posting as MATCHED so it disappears from loadboard
-          await tx.truckPosting.updateMany({
-            where: { truckId: loadRequest.truckId, status: "ACTIVE" },
-            data: { status: "MATCHED", updatedAt: new Date() },
-          });
-          // Mark truck as unavailable
-          await tx.truck.update({
-            where: { id: loadRequest.truckId },
-            data: { isAvailable: false },
-          });
-
-          return { request: updatedRequest, load: updatedLoad, trip };
         });
 
-        // P0-003 FIX: Invalidate cache after approval to prevent stale data
-        // This ensures the load no longer appears as available in searches
-        // Note: truck() invalidation also clears matching:* and truck-postings:* caches
+        await db.loadEvent.create({
+          data: {
+            loadId: loadRequest.loadId,
+            eventType: "LOAD_REQUEST_ACCEPTED",
+            description: `Shipper accepted load request from ${loadRequest.carrier.name} — awaiting carrier confirmation`,
+            userId: session.userId,
+            metadata: {
+              loadRequestId: requestId,
+              carrierId: loadRequest.carrierId,
+            },
+          },
+        });
+
+        // Cache invalidate (load is still marketplace-visible but in soft-reservation)
         await CacheInvalidation.load(
           loadRequest.loadId,
           loadRequest.load.shipperId
         );
-        await CacheInvalidation.truck(
-          loadRequest.truckId,
-          loadRequest.truck.carrierId
-        );
-
-        // Non-critical: Enable GPS tracking outside transaction (fire-and-forget)
-        let trackingUrl: string | null = result.trip?.trackingUrl || null;
-        if (loadRequest.truck.imei && loadRequest.truck.gpsVerifiedAt) {
-          enableTrackingForLoad(loadRequest.loadId, loadRequest.truckId)
-            .then((url) => {
-              if (url) trackingUrl = url;
-            })
-            .catch((err) =>
-              console.error("Failed to enable GPS tracking:", err)
-            );
-        }
 
         // Non-critical: Notify carrier users (fire-and-forget)
         db.user
@@ -401,13 +217,13 @@ export async function POST(
             where: { organizationId: loadRequest.carrierId, status: "ACTIVE" },
             select: { id: true },
           })
-          .then(async (carrierUsers) => {
-            for (const user of carrierUsers) {
+          .then(async (users) => {
+            for (const u of users) {
               await createNotification({
-                userId: user.id,
+                userId: u.id,
                 type: "LOAD_REQUEST_APPROVED",
-                title: "Load Request Approved",
-                message: `Your request for the load from ${loadRequest.load.pickupCity} to ${loadRequest.load.deliveryCity} has been approved!`,
+                title: "Shipper Accepted Your Request",
+                message: `The shipper accepted your request for the load from ${loadRequest.load.pickupCity} to ${loadRequest.load.deliveryCity}. Please confirm to finalise the booking.`,
                 metadata: {
                   loadRequestId: requestId,
                   loadId: loadRequest.loadId,
@@ -416,20 +232,14 @@ export async function POST(
               });
             }
           })
-          .catch((err) => console.error("Failed to notify carriers:", err));
+          .catch((err) => console.error("Failed to notify carrier:", err));
 
         return NextResponse.json({
-          request: result.request,
-          load: result.load,
-          trip: result.trip,
-          trackingUrl,
+          request: updatedRequest,
           message:
-            "Load request approved. Load has been assigned to the carrier.",
+            "Load request accepted. Carrier notified to confirm booking.",
         });
-
-        // FIX: Use unknown type with type guard
       } catch (error: unknown) {
-        // Handle specific transaction errors
         const errorMessage = error instanceof Error ? error.message : "";
         if (errorMessage === "REQUEST_ALREADY_PROCESSED") {
           return NextResponse.json(
@@ -437,35 +247,7 @@ export async function POST(
             { status: 409 }
           );
         }
-        if (errorMessage === "LOAD_NOT_FOUND") {
-          return NextResponse.json(
-            { error: "Load not found" },
-            { status: 404 }
-          );
-        }
-        if (errorMessage === "LOAD_ALREADY_ASSIGNED") {
-          return NextResponse.json(
-            { error: "Load has already been assigned to another truck" },
-            { status: 409 }
-          );
-        }
-        if (errorMessage.startsWith("LOAD_NOT_AVAILABLE:")) {
-          const status = errorMessage.split(":")[1];
-          return NextResponse.json(
-            { error: `Load is no longer available (status: ${status})` },
-            { status: 400 }
-          );
-        }
-        if (errorMessage.startsWith("TRUCK_BUSY:")) {
-          const [, pickup, delivery] = errorMessage.split(":");
-          return NextResponse.json(
-            {
-              error: `This truck is already assigned to an active load (${pickup} → ${delivery})`,
-            },
-            { status: 400 }
-          );
-        }
-        throw error; // Re-throw for generic error handling
+        throw error;
       }
     } else {
       // HIGH FIX #5: Wrap REJECT path in transaction for atomicity
@@ -502,6 +284,24 @@ export async function POST(
         loadRequest.loadId,
         loadRequest.load?.shipperId
       );
+
+      // G-A9-3: Revert load SEARCHING → POSTED if no other active requests remain
+      const remaining = await db.loadRequest.count({
+        where: {
+          loadId: loadRequest.loadId,
+          status: { in: ["PENDING", "SHIPPER_APPROVED"] },
+          id: { not: requestId },
+        },
+      });
+      if (remaining === 0) {
+        await db.load.update({
+          where: {
+            id: loadRequest.loadId,
+            status: { in: ["SEARCHING", "OFFERED"] },
+          },
+          data: { status: "POSTED" },
+        });
+      }
 
       // Non-critical: Notify carrier users (fire-and-forget, outside transaction)
       const carrierUsers = await db.user.findMany({

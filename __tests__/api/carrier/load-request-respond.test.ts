@@ -250,10 +250,10 @@ describe("Load Request Respond", () => {
     });
   });
 
-  // ─── APPROVE happy path ─────────────────────────────────────────────────────
+  // ─── APPROVE happy path (G-A9-2: now sets SHIPPER_APPROVED only) ─────────────
 
   describe("APPROVE happy path", () => {
-    it("200 with request, load, and trip in response", async () => {
+    it("200 with request in response — no trip created (G-A9-2)", async () => {
       // Reset load to available state
       await db.load.update({
         where: { id: seed.load.id },
@@ -276,15 +276,37 @@ describe("Load Request Respond", () => {
 
       const data = await parseResponse(res);
       expect(data.request).toBeDefined();
-      expect(data.load).toBeDefined();
-      expect(data.trip).toBeDefined();
-      expect(data.message).toContain("approved");
+      // G-A9-2: No trip on APPROVE — trip is created only after Carrier CONFIRM
+      expect(data.trip).toBeUndefined();
+      expect(data.message).toContain("accepted");
     });
 
-    it("load status becomes ASSIGNED after approval", async () => {
+    it("request status becomes SHIPPER_APPROVED (G-A9-2)", async () => {
       await db.load.update({
         where: { id: seed.load.id },
         data: { status: "POSTED", assignedTruckId: null },
+      });
+      await db.truck.update({
+        where: { id: seed.truck.id },
+        data: { isAvailable: true },
+      });
+      const lr = await createLoadRequest();
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/load-requests/${lr.id}/respond`,
+        { body: { action: "APPROVE" } }
+      );
+
+      const res = await callHandler(POST, req, { id: lr.id });
+      const data = await parseResponse(res);
+      expect(data.request.status).toBe("SHIPPER_APPROVED");
+    });
+
+    it("load stays SEARCHING after APPROVE — not yet ASSIGNED (G-A9-2)", async () => {
+      await db.load.update({
+        where: { id: seed.load.id },
+        data: { status: "SEARCHING", assignedTruckId: null },
       });
       await db.truck.update({
         where: { id: seed.truck.id },
@@ -303,47 +325,18 @@ describe("Load Request Respond", () => {
       const updatedLoad = await db.load.findUnique({
         where: { id: seed.load.id },
       });
-      expect(updatedLoad.status).toBe("ASSIGNED");
-      expect(updatedLoad.assignedTruckId).toBe(seed.truck.id);
-    });
-
-    it("trip created with correct fields", async () => {
-      await db.load.update({
-        where: { id: seed.load.id },
-        data: { status: "POSTED", assignedTruckId: null },
-      });
-      await db.truck.update({
-        where: { id: seed.truck.id },
-        data: { isAvailable: true },
-      });
-      const lr = await createLoadRequest();
-
-      const req = createRequest(
-        "POST",
-        `http://localhost:3000/api/load-requests/${lr.id}/respond`,
-        { body: { action: "APPROVE" } }
-      );
-
-      const res = await callHandler(POST, req, { id: lr.id });
-      const data = await parseResponse(res);
-
-      expect(data.trip.loadId).toBe(seed.load.id);
-      expect(data.trip.truckId).toBe(seed.truck.id);
-      expect(data.trip.carrierId).toBe(seed.carrierOrg.id);
-      expect(data.trip.status).toBe("ASSIGNED");
+      // Load must still be SEARCHING (not ASSIGNED) until Carrier confirms
+      expect(updatedLoad.status).toBe("SEARCHING");
+      expect(updatedLoad.assignedTruckId).toBeNull();
     });
   });
 
-  // ─── APPROVE race conditions ────────────────────────────────────────────────
+  // ─── APPROVE concurrency (G-A9-2: race conditions now belong to CONFIRM route) ──
 
-  describe("APPROVE race conditions", () => {
-    it("409 when load already has assignedTruckId", async () => {
-      // Load already assigned to another truck
-      await db.load.update({
-        where: { id: seed.load.id },
-        data: { status: "POSTED", assignedTruckId: "other-truck-id" },
-      });
-      const lr = await createLoadRequest();
+  describe("APPROVE concurrency", () => {
+    it("409 when request already processed (concurrent approve)", async () => {
+      // Pre-set request to SHIPPER_APPROVED (simulates concurrent first approve)
+      const lr = await createLoadRequest({ status: "SHIPPER_APPROVED" });
 
       const req = createRequest(
         "POST",
@@ -351,97 +344,52 @@ describe("Load Request Respond", () => {
         { body: { action: "APPROVE" } }
       );
 
+      // Idempotent: SHIPPER_APPROVED + APPROVE → 200 with idempotent:true
       const res = await callHandler(POST, req, { id: lr.id });
-      expect(res.status).toBe(409);
+      expect(res.status).toBe(200);
 
       const data = await parseResponse(res);
-      expect(data.error).toContain("already been assigned");
-    });
-
-    it("400 when load status is CANCELLED", async () => {
-      await db.load.update({
-        where: { id: seed.load.id },
-        data: { status: "CANCELLED", assignedTruckId: null },
-      });
-      const lr = await createLoadRequest();
-
-      const req = createRequest(
-        "POST",
-        `http://localhost:3000/api/load-requests/${lr.id}/respond`,
-        { body: { action: "APPROVE" } }
-      );
-
-      const res = await callHandler(POST, req, { id: lr.id });
-      expect(res.status).toBe(400);
-
-      const data = await parseResponse(res);
-      expect(data.error).toContain("no longer available");
-    });
-
-    it("400 when truck is busy with active load", async () => {
-      // Reset load to available state
-      await db.load.update({
-        where: { id: seed.load.id },
-        data: { status: "POSTED", assignedTruckId: null },
-      });
-
-      // Create another load assigned to the same truck
-      await db.load.create({
-        data: {
-          id: "busy-load",
-          status: "IN_TRANSIT",
-          pickupCity: "Mekelle",
-          deliveryCity: "Bahir Dar",
-          pickupDate: new Date(),
-          deliveryDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-          truckType: "DRY_VAN",
-          weight: 5000,
-          cargoDescription: "Active load blocking truck",
-          shipperId: seed.shipperOrg.id,
-          createdById: seed.shipperUser.id,
-          assignedTruckId: seed.truck.id,
-        },
-      });
-
-      const lr = await createLoadRequest();
-
-      const req = createRequest(
-        "POST",
-        `http://localhost:3000/api/load-requests/${lr.id}/respond`,
-        { body: { action: "APPROVE" } }
-      );
-
-      const res = await callHandler(POST, req, { id: lr.id });
-      expect(res.status).toBe(400);
-
-      const data = await parseResponse(res);
-      expect(data.error).toContain("already assigned to an active load");
-
-      // Cleanup busy load
-      await db.load.delete({ where: { id: "busy-load" } });
+      expect(data.idempotent).toBe(true);
     });
   });
 
-  // ─── APPROVE side effects ──────────────────────────────────────────────────
+  // ─── APPROVE side effects (G-A9-2: only soft-reservation; no assignment) ────
 
   describe("APPROVE side effects", () => {
-    it("competing PENDING loadRequests are cancelled", async () => {
+    it("load event LOAD_REQUEST_ACCEPTED is created (G-A9-2)", async () => {
       await db.load.update({
         where: { id: seed.load.id },
         data: { status: "POSTED", assignedTruckId: null },
       });
-      await db.truck.update({
-        where: { id: seed.truck.id },
-        data: { isAvailable: true },
-      });
-
-      // Create the request to approve
       const lr = await createLoadRequest();
 
-      // Create a competing request for the same load
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/load-requests/${lr.id}/respond`,
+        { body: { action: "APPROVE" } }
+      );
+
+      await callHandler(POST, req, { id: lr.id });
+
+      // APPROVE creates LOAD_REQUEST_ACCEPTED event (not ASSIGNED)
+      const events = await db.loadEvent.findMany({
+        where: { loadId: seed.load.id, eventType: "LOAD_REQUEST_ACCEPTED" },
+      });
+      expect(events.length).toBeGreaterThan(0);
+    });
+
+    it("competing requests are NOT cancelled on APPROVE — only on CONFIRM (G-A9-2)", async () => {
+      await db.load.update({
+        where: { id: seed.load.id },
+        data: { status: "POSTED", assignedTruckId: null },
+      });
+
+      const lr = await createLoadRequest();
+
+      // Competing request
       const competing = await db.loadRequest.create({
         data: {
-          id: "competing-lr",
+          id: "competing-lr-respond",
           loadId: seed.load.id,
           truckId: "some-other-truck",
           carrierId: "some-other-carrier",
@@ -460,80 +408,33 @@ describe("Load Request Respond", () => {
 
       await callHandler(POST, req, { id: lr.id });
 
-      // Check competing request was cancelled
+      // Competing request remains PENDING — only CONFIRM cancels it
       const updatedCompeting = await db.loadRequest.findUnique({
         where: { id: competing.id },
       });
-      expect(updatedCompeting.status).toBe("CANCELLED");
-    });
-
-    it("truck posting marked MATCHED and truck.isAvailable set to false", async () => {
-      await db.load.update({
-        where: { id: seed.load.id },
-        data: { status: "POSTED", assignedTruckId: null },
-      });
-      await db.truck.update({
-        where: { id: seed.truck.id },
-        data: { isAvailable: true },
-      });
-
-      // Create active truck posting for this truck
-      await db.truckPosting.update({
-        where: { id: seed.truckPosting.id },
-        data: { status: "ACTIVE", truckId: seed.truck.id },
-      });
-
-      const lr = await createLoadRequest();
-
-      const req = createRequest(
-        "POST",
-        `http://localhost:3000/api/load-requests/${lr.id}/respond`,
-        { body: { action: "APPROVE" } }
-      );
-
-      await callHandler(POST, req, { id: lr.id });
-
-      const updatedPosting = await db.truckPosting.findUnique({
-        where: { id: seed.truckPosting.id },
-      });
-      expect(updatedPosting.status).toBe("MATCHED");
-
-      const updatedTruck = await db.truck.findUnique({
-        where: { id: seed.truck.id },
-      });
-      expect(updatedTruck.isAvailable).toBe(false);
-    });
-
-    it("load event ASSIGNED is created", async () => {
-      await db.load.update({
-        where: { id: seed.load.id },
-        data: { status: "POSTED", assignedTruckId: null },
-      });
-      await db.truck.update({
-        where: { id: seed.truck.id },
-        data: { isAvailable: true },
-      });
-      const lr = await createLoadRequest();
-
-      const req = createRequest(
-        "POST",
-        `http://localhost:3000/api/load-requests/${lr.id}/respond`,
-        { body: { action: "APPROVE" } }
-      );
-
-      await callHandler(POST, req, { id: lr.id });
-
-      // Check that a load event was created
-      const events = await db.loadEvent.findMany({
-        where: { loadId: seed.load.id, eventType: "ASSIGNED" },
-      });
-      expect(events.length).toBeGreaterThan(0);
+      expect(updatedCompeting.status).toBe("PENDING");
     });
   });
 
   // ─── Idempotency ────────────────────────────────────────────────────────────
 
   describe("Idempotency", () => {
+    it("already SHIPPER_APPROVED + action APPROVE → 200 with idempotent:true", async () => {
+      const lr = await createLoadRequest({ status: "SHIPPER_APPROVED" });
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/load-requests/${lr.id}/respond`,
+        { body: { action: "APPROVE" } }
+      );
+
+      const res = await callHandler(POST, req, { id: lr.id });
+      expect(res.status).toBe(200);
+
+      const data = await parseResponse(res);
+      expect(data.idempotent).toBe(true);
+    });
+
     it("already APPROVED + action APPROVE → 200 with idempotent:true", async () => {
       const lr = await createLoadRequest({ status: "APPROVED" });
 

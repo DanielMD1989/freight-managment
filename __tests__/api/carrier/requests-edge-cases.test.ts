@@ -334,8 +334,8 @@ describe("Carrier Load Requests Edge Cases", () => {
 
   // ─── Approve Creates Trip ──────────────────────────────────────────────
 
-  describe("Approve creates trip", () => {
-    it("APPROVE response creates trip with status=ASSIGNED", async () => {
+  describe("Approve sets SHIPPER_APPROVED (G-A9-2)", () => {
+    it("APPROVE response sets SHIPPER_APPROVED — no trip yet", async () => {
       setAuthSession(shipperSession);
 
       const req = createRequest(
@@ -348,8 +348,9 @@ describe("Carrier Load Requests Edge Cases", () => {
       });
       expect(res.status).toBe(200);
       const data = await parseResponse(res);
-      expect(data.trip).toBeDefined();
-      expect(data.trip.status).toBe("ASSIGNED");
+      // G-A9-2: Trip is only created after Carrier CONFIRM
+      expect(data.trip).toBeUndefined();
+      expect(data.request.status).toBe("SHIPPER_APPROVED");
     });
   });
 

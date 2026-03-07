@@ -126,6 +126,9 @@ const {
   POST: respondLoadRequest,
 } = require("@/app/api/load-requests/[id]/respond/route");
 const {
+  POST: confirmLoadRequest,
+} = require("@/app/api/load-requests/[id]/confirm/route");
+const {
   POST: respondTruckRequest,
 } = require("@/app/api/truck-requests/[id]/respond/route");
 const {
@@ -928,7 +931,7 @@ describe("E2E Business Workflow (User Stories)", () => {
       loadRequestId = lr.id;
     });
 
-    it("US-4.4: shipper approves load request → trip created, load ASSIGNED", async () => {
+    it("US-4.4a: shipper approves load request → SHIPPER_APPROVED (G-A9-2)", async () => {
       asShipper(seed);
 
       const req = createRequest(
@@ -938,6 +941,26 @@ describe("E2E Business Workflow (User Stories)", () => {
       );
 
       const res = await callHandler(respondLoadRequest, req, {
+        id: loadRequestId,
+      });
+      expect(res.status).toBe(200);
+
+      const data = await parseResponse(res);
+      // G-A9-2: Shipper APPROVE only sets SHIPPER_APPROVED — no trip yet
+      expect(data.request.status).toBe("SHIPPER_APPROVED");
+      expect(data.trip).toBeUndefined();
+    });
+
+    it("US-4.4b: carrier confirms booking → trip created, load ASSIGNED (G-A9-2)", async () => {
+      asCarrier(seed);
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/load-requests/${loadRequestId}/confirm`,
+        { body: { action: "CONFIRM" } }
+      );
+
+      const res = await callHandler(confirmLoadRequest, req, {
         id: loadRequestId,
       });
       expect(res.status).toBe(200);

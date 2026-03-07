@@ -145,6 +145,8 @@ jest.mock("@/lib/db", () => {
     },
     loadRequest: {
       status: "PENDING",
+      confirmedById: null,
+      confirmedAt: null,
     },
     truckRequest: {
       status: "PENDING",
@@ -209,6 +211,7 @@ jest.mock("@/lib/db", () => {
     requestedBy:     { fk: 'requestedById',     store: 'users' },
     proposedBy:      { fk: 'proposedById',      store: 'users' },
     respondedBy:     { fk: 'respondedById',     store: 'users' },
+    confirmedBy:     { fk: 'confirmedById',     store: 'users' },
     assignedTo:      { fk: 'assignedToId',      store: 'users' },
     disputedOrg:     { fk: 'disputedOrgId',     store: 'organizations' },
     corridor:        { fk: 'corridorId',        store: 'corridors' },

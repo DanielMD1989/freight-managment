@@ -89,6 +89,7 @@ export function getNotificationRoute(
 
     // ── Load request flow ────────────────────────────────────────────────────
     case "LOAD_REQUEST":
+    case "LOAD_REQUEST_RECEIVED": // G-A9-1: actual type emitted by POST /api/load-requests
     case "LOAD_REQUEST_APPROVED":
     case "LOAD_REQUEST_REJECTED":
       return isCarrier ? "/(carrier)/requests" : "/(shipper)/requests";

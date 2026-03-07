@@ -55,6 +55,12 @@ describe("Notification Routing", () => {
       );
     });
 
+    it("LOAD_REQUEST_RECEIVED → /(shipper)/requests (G-A9-1)", () => {
+      expect(getNotificationRoute("LOAD_REQUEST_RECEIVED", {}, role)).toBe(
+        "/(shipper)/requests"
+      );
+    });
+
     it("LOAD_REQUEST_APPROVED → /(shipper)/requests", () => {
       expect(getNotificationRoute("LOAD_REQUEST_APPROVED", {}, role)).toBe(
         "/(shipper)/requests"
@@ -137,6 +143,12 @@ describe("Notification Routing", () => {
     // Carrier must be deep-linked to /(carrier)/requests on tap.
     it("TRUCK_REQUEST_RECEIVED → /(carrier)/requests", () => {
       expect(getNotificationRoute("TRUCK_REQUEST_RECEIVED", {}, role)).toBe(
+        "/(carrier)/requests"
+      );
+    });
+
+    it("LOAD_REQUEST_RECEIVED → /(carrier)/requests (G-A9-1)", () => {
+      expect(getNotificationRoute("LOAD_REQUEST_RECEIVED", {}, role)).toBe(
         "/(carrier)/requests"
       );
     });

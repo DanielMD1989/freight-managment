@@ -410,8 +410,8 @@ describe("Load Requests — GET /api/load-requests", () => {
     expect(Array.isArray(body.loadRequests)).toBe(true);
   });
 
-  // GAP-F: DISPATCHER without org → 400 (validates BUG-D fix)
-  it("GAP-F: DISPATCHER with null organizationId → 400 (BUG-D fix)", async () => {
+  // GAP-F: DISPATCHER without org → 200 (G-A9-4 full visibility, replaces BUG-D guard)
+  it("GAP-F: DISPATCHER with null organizationId → 200 (G-A9-4 full visibility)", async () => {
     const dispatcherNoOrg = createMockSession({
       userId: "dispatcher-no-org-user",
       role: "DISPATCHER",
@@ -422,11 +422,9 @@ describe("Load Requests — GET /api/load-requests", () => {
 
     const req = createRequest("GET", "http://localhost:3000/api/load-requests");
     const res = await listLoadRequests(req);
-    const body = await parseResponse(res);
 
-    // BUG-D fix: null-org dispatcher must not leak orphaned records
-    expect(res.status).toBe(400);
-    expect(body.error).toMatch(/organization/i);
+    // G-A9-4: Dispatchers have full platform visibility — no org guard (blueprint §5)
+    expect(res.status).toBe(200);
   });
 
   // GAP-R3-CR: Cross-carrier GET isolation
@@ -528,7 +526,7 @@ describe("Load Requests — POST /api/load-requests/[id]/respond", () => {
     expect(body.request.status).toBe("REJECTED");
   });
 
-  it("shipper approves load request → 200, trip created", async () => {
+  it("shipper approves load request → 200, status=SHIPPER_APPROVED, no trip yet (G-A9-2)", async () => {
     // Create a fresh POSTED load for this test (seeded load might already be ASSIGNED)
     const freshLoad = await db.load.create({
       data: {
@@ -570,8 +568,9 @@ describe("Load Requests — POST /api/load-requests/[id]/respond", () => {
 
     expect(res.status).toBe(200);
     expect(body.request).toBeDefined();
-    expect(body.trip).toBeDefined();
-    expect(body.trip.status).toBe("ASSIGNED");
+    // G-A9-2: Shipper APPROVE sets SHIPPER_APPROVED only — Carrier must confirm to create trip
+    expect(body.request.status).toBe("SHIPPER_APPROVED");
+    expect(body.trip).toBeUndefined();
   });
 
   it("non-owner (different org) cannot respond → 404 (resource cloaking)", async () => {
