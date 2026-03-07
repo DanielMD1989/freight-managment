@@ -133,6 +133,14 @@ describe("Notification Routing", () => {
       );
     });
 
+    // G-A8-1: notifyTruckRequest() emits "TRUCK_REQUEST_RECEIVED" (not "TRUCK_REQUEST").
+    // Carrier must be deep-linked to /(carrier)/requests on tap.
+    it("TRUCK_REQUEST_RECEIVED → /(carrier)/requests", () => {
+      expect(getNotificationRoute("TRUCK_REQUEST_RECEIVED", {}, role)).toBe(
+        "/(carrier)/requests"
+      );
+    });
+
     it("GPS_OFFLINE → /(carrier)/map", () => {
       expect(getNotificationRoute("GPS_OFFLINE", {}, role)).toBe(
         "/(carrier)/map"

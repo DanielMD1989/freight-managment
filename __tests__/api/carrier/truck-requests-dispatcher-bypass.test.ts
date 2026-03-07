@@ -264,8 +264,9 @@ describe("Truck Request Dispatcher Bypass — GET & DELETE /api/truck-requests/[
 
   // ─── GET tests ───────────────────────────────────────────────────────────
 
-  // TR-D1: DISPATCHER with shipper-org GET request → 404 (BUG-E2E-1 fix)
-  it("TR-D1: DISPATCHER with shipper-org GET request → 404 (BUG-E2E-1 fix)", async () => {
+  // TR-D1: DISPATCHER GET request → 200 (blueprint §5: full platform visibility)
+  // G-A8-5 fix: Dispatchers have full visibility per blueprint; only accept/reject is blocked.
+  it("TR-D1: DISPATCHER GET truck request detail → 200 (full visibility, G-A8-5)", async () => {
     setAuthSession(dispatcherShipperOrgSession);
 
     const req = createRequest(
@@ -275,13 +276,13 @@ describe("Truck Request Dispatcher Bypass — GET & DELETE /api/truck-requests/[
     const res = await callHandler(getTruckRequest, req, { id: truckRequestId });
     const body = await parseResponse(res);
 
-    // BUG-E2E-1 fix: DISPATCHER org matches shipperId but role is not SHIPPER → 404
-    expect(res.status).toBe(404);
-    expect(body.error).toMatch(/not found/i);
+    // G-A8-5: blueprint §5 grants dispatchers full visibility — 200 is correct
+    expect(res.status).toBe(200);
+    expect(body.request).toBeDefined();
   });
 
-  // TR-D2: DISPATCHER with carrier-org GET request → 404 (BUG-E2E-1 fix)
-  it("TR-D2: DISPATCHER with carrier-org GET request → 404 (BUG-E2E-1 fix)", async () => {
+  // TR-D2: DISPATCHER (carrier-org) GET request → 200 (blueprint §5: full visibility)
+  it("TR-D2: DISPATCHER (carrier-org) GET truck request detail → 200 (full visibility, G-A8-5)", async () => {
     setAuthSession(dispatcherCarrierOrgSession);
 
     const req = createRequest(
@@ -291,9 +292,9 @@ describe("Truck Request Dispatcher Bypass — GET & DELETE /api/truck-requests/[
     const res = await callHandler(getTruckRequest, req, { id: truckRequestId });
     const body = await parseResponse(res);
 
-    // BUG-E2E-1 fix: DISPATCHER org matches carrierId but role is not CARRIER → 404
-    expect(res.status).toBe(404);
-    expect(body.error).toMatch(/not found/i);
+    // G-A8-5: blueprint §5 grants dispatchers full visibility — 200 is correct
+    expect(res.status).toBe(200);
+    expect(body.request).toBeDefined();
   });
 
   // TR-D3: Shipper GET own request → 200 (regression)

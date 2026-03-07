@@ -379,6 +379,18 @@ export async function POST(
             data: { isAvailable: false },
           });
 
+          // G-A8-2: Cancel all other pending truck requests for the same truck
+          // (different shippers targeting this truck for different loads).
+          // The truck is now committed — those requests can never be approved.
+          await tx.truckRequest.updateMany({
+            where: {
+              truckId: truckRequest.truckId,
+              id: { not: requestId },
+              status: "PENDING",
+            },
+            data: { status: "CANCELLED" },
+          });
+
           return { request: updatedRequest, load: updatedLoad, trip };
         });
 

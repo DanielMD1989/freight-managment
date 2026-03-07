@@ -279,6 +279,16 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // G-A8-3: Transition load from POSTED → OFFERED ("active offer in progress").
+    // Blueprint load state machine: DRAFT → POSTED → SEARCHING / OFFERED → ASSIGNED.
+    // Only advance from POSTED; SEARCHING/OFFERED loads stay in their current state.
+    if (load.status === "POSTED") {
+      await db.load.update({
+        where: { id: data.loadId },
+        data: { status: "OFFERED" },
+      });
+    }
+
     // Fix 8a: Cache invalidation after truck request creation
     await CacheInvalidation.load(data.loadId);
 

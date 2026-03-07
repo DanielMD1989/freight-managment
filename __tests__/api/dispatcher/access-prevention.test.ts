@@ -360,8 +360,10 @@ describe("Dispatcher Access Prevention", () => {
     expect(body.error).toMatch(/not found/i);
   });
 
-  // AP-4: DISPATCHER GET /api/truck-requests/[id] via org-match → 404 (BUG-E2E-1)
-  it("AP-4: DISPATCHER GET truck-request via org-match → 404 (BUG-E2E-1)", async () => {
+  // AP-4: DISPATCHER GET /api/truck-requests/[id] → 200 (blueprint §5: full visibility)
+  // G-A8-5 fix: blueprint grants Dispatchers full read visibility across the platform.
+  // Only accept/reject is blocked — viewing a request detail is intentionally allowed.
+  it("AP-4: DISPATCHER GET truck-request → 200 (full visibility, G-A8-5)", async () => {
     setAuthSession(dispatcherSession);
 
     const req = createRequest(
@@ -373,9 +375,9 @@ describe("Dispatcher Access Prevention", () => {
     });
     const body = await parseResponse(res);
 
-    // BUG-E2E-1 fix: DISPATCHER org matches shipperId but role is not SHIPPER → 404
-    expect(res.status).toBe(404);
-    expect(body.error).toMatch(/not found/i);
+    // G-A8-5: blueprint §5 — Dispatcher sees ALL loads and trucks; 200 is correct
+    expect(res.status).toBe(200);
+    expect(body.request).toBeDefined();
   });
 
   // AP-5: DISPATCHER GET document download via org-match → 403 (BUG-E2E-3)

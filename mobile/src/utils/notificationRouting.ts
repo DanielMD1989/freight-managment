@@ -82,6 +82,7 @@ export function getNotificationRoute(
 
     // ── Truck request flow ───────────────────────────────────────────────────
     case "TRUCK_REQUEST":
+    case "TRUCK_REQUEST_RECEIVED": // G-A8-1: actual type emitted by notifyTruckRequest()
     case "TRUCK_REQUEST_APPROVED":
     case "TRUCK_REQUEST_REJECTED":
       return isCarrier ? "/(carrier)/requests" : "/(shipper)/requests";

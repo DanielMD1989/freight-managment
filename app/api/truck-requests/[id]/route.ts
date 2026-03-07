@@ -11,6 +11,7 @@ import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { handleApiError } from "@/lib/apiErrors";
 import { Prisma } from "@prisma/client";
+import { CacheInvalidation } from "@/lib/cache";
 
 /**
  * GET /api/truck-requests/[id]
@@ -68,8 +69,10 @@ export async function GET(
       );
     }
 
-    // Check if user has access (shipper who created or carrier who received)
+    // Check if user has access (shipper who created, carrier who received,
+    // admin override, or dispatcher — who has full platform visibility per blueprint §5)
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
+    const isDispatcher = session.role === "DISPATCHER"; // G-A8-5: Dispatcher full visibility
     const isShipper =
       session.role === "SHIPPER" &&
       truckRequest.shipperId === session.organizationId;
@@ -77,7 +80,7 @@ export async function GET(
       session.role === "CARRIER" &&
       truckRequest.carrierId === session.organizationId;
 
-    if (!isShipper && !isCarrier && !isAdmin) {
+    if (!isShipper && !isCarrier && !isAdmin && !isDispatcher) {
       return NextResponse.json(
         { error: "Truck request not found" },
         { status: 404 }
@@ -117,6 +120,7 @@ export async function DELETE(
         status: true,
         shipperId: true,
         requestedById: true,
+        loadId: true, // G-A8-4: needed for cache invalidation and LoadEvent
       },
     });
 
@@ -175,6 +179,20 @@ export async function DELETE(
       }
       throw err;
     }
+
+    // G-A8-4: Cache invalidation — parity with POST /cancel route
+    await CacheInvalidation.load(truckRequest.loadId);
+
+    // G-A8-4: Audit trail — parity with POST /cancel route
+    await db.loadEvent.create({
+      data: {
+        loadId: truckRequest.loadId,
+        eventType: "REQUEST_CANCELLED",
+        description: "Truck request cancelled by shipper",
+        userId: session.userId,
+        metadata: { requestId: id },
+      },
+    });
 
     return NextResponse.json({
       success: true,
