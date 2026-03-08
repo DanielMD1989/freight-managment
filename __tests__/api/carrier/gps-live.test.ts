@@ -319,16 +319,14 @@ describe("GPS Live API", () => {
       expect(data.loadId).toBe("live-load-1");
     });
 
-    it("shipper gets position:null when load not IN_TRANSIT", async () => {
+    it("shipper blocked from GPS when load not IN_TRANSIT → 403", async () => {
       setAuthSession(shipperSession);
       const req = createRequest(
         "GET",
         "http://localhost:3000/api/gps/live?loadId=live-load-assigned"
       );
       const res = await getLive(req);
-      expect(res.status).toBe(200);
-      const data = await parseResponse(res);
-      expect(data.position).toBeNull();
+      expect(res.status).toBe(403);
     });
 
     it("returns position:null when no truck assigned", async () => {

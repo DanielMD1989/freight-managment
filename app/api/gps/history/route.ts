@@ -59,6 +59,7 @@ async function getHandler(request: NextRequest) {
         where: { id: loadId },
         select: {
           id: true,
+          status: true,
           shipperId: true,
           assignedTruck: {
             select: {
@@ -80,6 +81,13 @@ async function getHandler(request: NextRequest) {
       } else if (session.role === "SHIPPER") {
         if (load.shipperId !== user?.organizationId) {
           return NextResponse.json({ error: "Not found" }, { status: 404 });
+        }
+        // A19-2: Shipper can only access route history after trip completion (blueprint v1.2)
+        if (load.status !== "COMPLETED") {
+          return NextResponse.json(
+            { error: "Route history only available after trip completion" },
+            { status: 403 }
+          );
         }
       }
       // Admin/Dispatcher can access any load

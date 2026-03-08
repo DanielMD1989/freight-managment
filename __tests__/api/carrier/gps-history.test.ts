@@ -170,10 +170,11 @@ describe("GPS History API", () => {
     });
 
     // Load for history tests (assigned to hist-truck-1)
+    // Must be COMPLETED for Shipper access (A19-2 blueprint v1.2 rule)
     await db.load.create({
       data: {
         id: "hist-load-1",
-        status: "DELIVERED",
+        status: "COMPLETED",
         pickupCity: "Addis Ababa",
         deliveryCity: "Hawassa",
         truckType: "DRY_VAN",

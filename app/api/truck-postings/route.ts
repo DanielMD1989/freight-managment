@@ -44,6 +44,7 @@ import {
 // P1-001 FIX: Import CacheInvalidation for post-creation cache clearing
 import { CacheInvalidation } from "@/lib/cache";
 import { handleApiError } from "@/lib/apiErrors";
+import { calculateDistanceKm } from "@/lib/geo";
 
 // Validation schema for truck posting
 const TruckPostingSchema = z.object({
@@ -583,68 +584,158 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    // Fetch postings and count in parallel
-    const [postings, total] = await Promise.all([
-      db.truckPosting.findMany({
-        where,
-        include: {
-          truck: {
-            select: {
-              id: true,
-              licensePlate: true,
-              truckType: true,
-              capacity: true,
-              lengthM: true,
-              approvalStatus: true,
-              // H6 FIX: GPS/IMEI fields removed from public response - sensitive operational data
-              // Use /api/carrier/trucks for authenticated access to GPS info
-              // Check if truck has an active load (boolean only — no tracking URLs or route info)
-              // G-A7-3: PICKUP_PENDING included — truck heading to pickup is already committed.
-              assignedLoad: {
-                where: {
-                  status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
-                },
-                select: {
-                  id: true,
+    // Fetch postings, count, and load city coordinates (for DH filter) in parallel
+    const [postings, total, loadOriginCityData, loadDestCityData] =
+      await Promise.all([
+        db.truckPosting.findMany({
+          where,
+          include: {
+            truck: {
+              select: {
+                id: true,
+                licensePlate: true,
+                truckType: true,
+                capacity: true,
+                lengthM: true,
+                approvalStatus: true,
+                // H6 FIX: GPS/IMEI fields removed from public response - sensitive operational data
+                // Use /api/carrier/trucks for authenticated access to GPS info
+                // Check if truck has an active load (boolean only — no tracking URLs or route info)
+                // G-A7-3: PICKUP_PENDING included — truck heading to pickup is already committed.
+                assignedLoad: {
+                  where: {
+                    status: {
+                      in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"],
+                    },
+                  },
+                  select: {
+                    id: true,
+                  },
                 },
               },
             },
-          },
-          originCity: {
-            select: {
-              name: true,
-              nameEthiopic: true,
-              region: true,
-              latitude: true,
-              longitude: true,
+            originCity: {
+              select: {
+                name: true,
+                nameEthiopic: true,
+                region: true,
+                latitude: true,
+                longitude: true,
+              },
+            },
+            destinationCity: {
+              select: {
+                name: true,
+                nameEthiopic: true,
+                region: true,
+                latitude: true,
+                longitude: true,
+              },
+            },
+            carrier: {
+              select: {
+                name: true,
+                isVerified: true,
+              },
             },
           },
-          destinationCity: {
-            select: {
-              name: true,
-              nameEthiopic: true,
-              region: true,
-              latitude: true,
-              longitude: true,
-            },
-          },
-          carrier: {
-            select: {
-              name: true,
-              isVerified: true,
-            },
-          },
-        },
-        orderBy: [{ postedAt: "desc" }, { availableFrom: "asc" }],
-        skip: offset,
-        take: limit,
-      }),
-      db.truckPosting.count({ where }),
-    ]);
+          orderBy: [{ postedAt: "desc" }, { availableFrom: "asc" }],
+          skip: offset,
+          take: limit,
+        }),
+        db.truckPosting.count({ where }),
+        // DH-O/DH-D filter: fetch load's origin city coordinates
+        resolvedOriginCityId
+          ? db.ethiopianLocation.findUnique({
+              where: { id: resolvedOriginCityId },
+              select: { latitude: true, longitude: true },
+            })
+          : Promise.resolve(null),
+        // DH-O/DH-D filter: fetch load's destination city coordinates
+        resolvedDestinationCityId
+          ? db.ethiopianLocation.findUnique({
+              where: { id: resolvedDestinationCityId },
+              select: { latitude: true, longitude: true },
+            })
+          : Promise.resolve(null),
+      ]);
+
+    // A18: DH-O/DH-D post-filter — only applied when both origin and destination are provided.
+    // Blueprint v1.2: load's pickup must fall within truck DH-O radius AND
+    // load's delivery must fall within truck DH-D radius.
+    // With exact city-ID DB filtering this is semantically a no-op (same city → distance ≈ 0),
+    // but adds correct infrastructure for future relaxed-search queries.
+    const loadOriginCoords =
+      loadOriginCityData?.latitude && loadOriginCityData?.longitude
+        ? {
+            lat: Number(loadOriginCityData.latitude),
+            lon: Number(loadOriginCityData.longitude),
+          }
+        : null;
+    const loadDestCoords =
+      loadDestCityData?.latitude && loadDestCityData?.longitude
+        ? {
+            lat: Number(loadDestCityData.latitude),
+            lon: Number(loadDestCityData.longitude),
+          }
+        : null;
+
+    const filteredPostings =
+      loadOriginCoords && loadDestCoords
+        ? postings.filter((posting) => {
+            const truckOriginLat = posting.originCity?.latitude
+              ? Number(posting.originCity.latitude)
+              : null;
+            const truckOriginLon = posting.originCity?.longitude
+              ? Number(posting.originCity.longitude)
+              : null;
+            const truckDestLat = posting.destinationCity?.latitude
+              ? Number(posting.destinationCity.latitude)
+              : null;
+            const truckDestLon = posting.destinationCity?.longitude
+              ? Number(posting.destinationCity.longitude)
+              : null;
+
+            // DH-O: distance from truck origin to load pickup
+            const dhO =
+              truckOriginLat !== null && truckOriginLon !== null
+                ? calculateDistanceKm(
+                    truckOriginLat,
+                    truckOriginLon,
+                    loadOriginCoords.lat,
+                    loadOriginCoords.lon
+                  )
+                : 0;
+            const declaredDhO = posting.preferredDhToOriginKm
+              ? Number(posting.preferredDhToOriginKm)
+              : null;
+            const passesOrigin = declaredDhO === null || dhO <= declaredDhO;
+
+            // DH-D: distance from load delivery to truck destination
+            // Skip if truck has no declared destination (flexible)
+            const truckDestExists =
+              truckDestLat !== null && truckDestLon !== null;
+            const dhD = truckDestExists
+              ? calculateDistanceKm(
+                  loadDestCoords.lat,
+                  loadDestCoords.lon,
+                  truckDestLat!,
+                  truckDestLon!
+                )
+              : 0;
+            const declaredDhD = posting.preferredDhAfterDeliveryKm
+              ? Number(posting.preferredDhAfterDeliveryKm)
+              : null;
+            const passesDest =
+              declaredDhD === null || !truckDestExists || dhD <= declaredDhD;
+
+            return passesOrigin && passesDest;
+          })
+        : postings;
 
     // Transform postings to flatten nested fields for UI consumption
     // FIX: Remove any - Prisma infers type from query
-    const transformedPostings = postings.map((posting) => ({
+    const transformedPostings = filteredPostings.map((posting) => ({
       ...posting,
       // Flatten city names
       currentCity: posting.originCity?.name || "",

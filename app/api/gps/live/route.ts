@@ -70,14 +70,12 @@ async function getHandler(request: NextRequest) {
         if (load.shipperId !== user?.organizationId) {
           return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
-        // Shipper can only see position when trip is IN_TRANSIT
+        // Shipper can only see position when trip is IN_TRANSIT (blueprint v1.2)
         if (load.status !== "IN_TRANSIT") {
-          return NextResponse.json({
-            loadId: load.id,
-            status: load.status,
-            position: null,
-            message: "GPS tracking is only available when trip is IN_TRANSIT",
-          });
+          return NextResponse.json(
+            { error: "GPS tracking only available during active transit" },
+            { status: 403 }
+          );
         }
       }
 

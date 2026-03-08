@@ -61,7 +61,10 @@ Approved Shipper
     ↓
 Insert Load(s)           ← multiple active loads allowed simultaneously; each independently searchable
     ↓
-Search Matching Trucks   ← system matches by origin & destination; filters out trucks on active trips
+Search Matching Trucks   ← load's pickup point must fall within truck's DH-O (deadhead-origin) radius
+                         ← load's delivery point must fall within truck's DH-D (deadhead-destination) radius
+                         ← only trucks meeting BOTH radius conditions are shown
+                         ← trucks on active trips are excluded
     ↓
 Send Request to Truck    ← notification delivered to Carrier
     ↓
@@ -75,6 +78,12 @@ Send Request to Truck    ← notification delivered to Carrier
   │  Shipper can request another matching truck      │
   └─────────────────────────────────────────────────┘
 ```
+
+### Trip Visibility (active trip only)
+
+- **Live GPS tracking:** Shipper can see the truck's real-time location during an active trip (status `IN_TRANSIT` only).
+- **No GPS access** before the trip starts or on any other truck.
+- **Route history:** After trip completion (`COMPLETED`), Shipper can view the full route from pickup to delivery.
 
 ---
 
@@ -90,11 +99,15 @@ Register Truck(s)              ← each truck goes through its own approval flow
 Awaiting Truck Approval        ← Admin reviews truck registration documents
     ↓
   ┌─ Truck Approved ─────────────────────────────────────────────────────┐
+  │  Post Truck to Marketplace (TruckPosting)                              │
+  │    ← Carrier creates a TruckPosting per truck                          │
+  │    ← DH-O (deadhead-origin) radius stored on TruckPosting             │
+  │    ← DH-D (deadhead-destination) radius stored on TruckPosting        │
+  │  ↓                                                                     │
   │  Search Load Marketplace                                               │
-  │    ← browses loads matching truck origin & destination                 │
-  │    ← Carrier sets DH-O (deadhead origin) radius per truck             │
-  │    ← Carrier sets DH-D (deadhead destination) radius per truck        │
-  │    ← loads within those radii are shown; ASSIGNED+ loads hidden       │
+  │    ← browses loads whose pickup falls within truck DH-O radius         │
+  │    ← browses loads whose delivery falls within truck DH-D radius       │
+  │    ← ASSIGNED+ loads are hidden                                        │
   │  ↓                                                                     │
   │  Request a Load             ← notification sent to Shipper             │
   │  ↓                                                                     │
@@ -224,15 +237,16 @@ Revenue     = Shipper Fee + Carrier Fee
 
 ## 9. Admin Capabilities
 
-| Action             | Scope                                                             |
-| ------------------ | ----------------------------------------------------------------- |
-| Approve / Reject   | Shipper registrations, Carrier registrations, Truck registrations |
-| Revoke Access      | Dispatcher, Shipper, or Carrier accounts                          |
-| Full Data Access   | All loads, trucks, trips, and documents                           |
-| Financial Overview | Revenue from each Carrier & Shipper individually                  |
-| Time-Based Reports | Revenue by Day / Week / Month / Year                              |
-| Match Loads        | Manually match loads and trucks                                   |
-| Wallet Management  | Deposit funds via bank slip into user wallets                     |
+| Action             | Scope                                                                   |
+| ------------------ | ----------------------------------------------------------------------- |
+| Approve / Reject   | Shipper registrations, Carrier registrations, Truck registrations       |
+| Revoke Access      | Dispatcher, Shipper, or Carrier accounts                                |
+| Full Data Access   | All loads, trucks, trips, and documents                                 |
+| Financial Overview | Revenue from each Carrier & Shipper individually                        |
+| Time-Based Reports | Revenue by Day / Week / Month / Year                                    |
+| Match Loads        | Manually match loads and trucks                                         |
+| Wallet Management  | Deposit funds via bank slip into user wallets                           |
+| Exception Handling | Resolve EXCEPTION-state trips; only Admin can transition from EXCEPTION |
 
 ---
 
@@ -246,442 +260,3 @@ Revenue     = Shipper Fee + Carrier Fee
 | Platform-Wide Analytics | All financial, operational, and user data |
 
 ---
-
----
-
-# 🔍 CLI Review Rounds
-
-> One functionality per round. Confirm each before moving to the next.
-> Always start every session with: `Read freight_marketplace_blueprint.md first.`
-
----
-
-## SCHEMA REVIEWS
-
-### Round S1 — User Roles & Account Hierarchy
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the schema file.
-Check only this: Does the schema correctly represent the 5 roles —
-SuperAdmin, Admin, Dispatcher, Shipper, Carrier — and their hierarchy?
-Is there a clear way to distinguish each role and who created whom?
-List gaps only.
-```
-
-### Round S2 — Shipper Registration Fields
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the schema file.
-Check only this: Does the Shipper model have all fields needed for
-registration, document upload, approval status, rejection reason,
-and document lock after approval?
-List gaps only.
-```
-
-### Round S3 — Carrier Registration Fields
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the schema file.
-Check only this: Does the Carrier model have all fields needed for
-registration, document upload, approval status, rejection reason,
-and document lock after approval?
-List gaps only.
-```
-
-### Round S4 — Truck Model
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the schema file.
-Check only this: Does the Truck model have fields for document upload,
-approval status, rejection reason, DH-O radius, DH-D radius,
-and marketplace visibility (available/unavailable)?
-List gaps only.
-```
-
-### Round S5 — Load Model & State Machine
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the schema file.
-Check only this: Does the Load model support all 8 states —
-DRAFT, POSTED, SEARCHING, OFFERED, ASSIGNED, PICKUP_PENDING,
-IN_TRANSIT, DELIVERED, COMPLETED?
-Is there a status field that maps to these exactly?
-List gaps only.
-```
-
-### Round S6 — Trip Model & State Machine
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the schema file.
-Check only this: Does the Trip model have all 5 states —
-ASSIGNED, PICKUP_PENDING, IN_TRANSIT, DELIVERED, COMPLETED —
-plus CANCELLED and EXCEPTION?
-Are all timestamps present: startedAt, pickedUpAt, deliveredAt,
-completedAt, cancelledAt?
-List gaps only.
-```
-
-### Round S7 — Trip to Load Relationship
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the schema file.
-Check only this: Is there a clear relationship between Trip and Load?
-When a Trip state changes, is there a mechanism to sync the Load state?
-List gaps only.
-```
-
-### Round S8 — Wallet Model
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the schema file.
-Check only this: Does the Wallet model support balance tracking,
-minimum threshold configuration, deposit history, and individual
-rate/km per Shipper and Carrier?
-List gaps only.
-```
-
-### Round S9 — Service Fee Model
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the schema file.
-Check only this: Does the schema support storing the service fee
-per trip — separately for Shipper and Carrier — with the rate/km
-used and total KM?
-Is there a promotional price field per account?
-List gaps only.
-```
-
-### Round S10 — Notification Model
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the schema file.
-Check only this: Does the schema have a Notification model that
-supports sending to specific roles (Carrier, Shipper, Dispatcher, Admin)?
-Can it store notification type, read status, and related entity (trip, load, truck)?
-List gaps only.
-```
-
----
-
-## API REVIEWS
-
-### Round A1 — Registration Endpoints (Shipper & Carrier)
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the auth/registration routes.
-Check only this: Are there endpoints for register, OTP verify,
-document upload, and resubmit after rejection — for both Shipper and Carrier?
-List missing or incomplete endpoints only.
-```
-
-### Round A2 — Admin Approval Endpoints
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the admin routes.
-Check only this: Are there endpoints for Admin to approve/reject
-Shipper registration, Carrier registration, and Truck registration?
-Does the rejection response include a reason field?
-List missing or incomplete endpoints only.
-```
-
-### Round A3 — Document Lock Enforcement
-
-```
-Read freight_marketplace_blueprint.md first.
-Check only this: Is there middleware or a guard that prevents
-Shipper or Carrier from editing documents after approval?
-Does it apply to both account docs and truck docs?
-List gaps only.
-```
-
-### Round A4 — Wallet Threshold Check Middleware
-
-```
-Read freight_marketplace_blueprint.md first.
-Check only this: Is there a middleware or guard that checks
-wallet balance before any of these actions:
-- searching loads
-- searching trucks
-- sending a request
-- receiving a request
-Does it block the action if below threshold?
-List gaps only.
-```
-
-### Round A5 — Load CRUD Endpoints
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the load routes.
-Check only this: Are there endpoints to create (DRAFT), publish (POSTED),
-edit (only in DRAFT), and view a load?
-Can a Shipper post multiple loads at the same time?
-List missing or incomplete endpoints only.
-```
-
-### Round A6 — Load Marketplace Search
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the load search routes.
-Check only this: Can Carriers search loads filtered by
-origin, destination, DH-O radius, and DH-D radius?
-Does the search exclude loads that are ASSIGNED or beyond?
-List gaps only.
-```
-
-### Round A7 — Truck Marketplace Search
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the truck search routes.
-Check only this: Can Shippers search trucks filtered by
-origin and destination?
-Does the search exclude trucks that are currently on an active trip?
-List gaps only.
-```
-
-### Round A8 — Shipper Request Flow Endpoints
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the request/matching routes.
-Check only this: Can a Shipper send a load request to a truck?
-Does it trigger a notification to the Carrier?
-Can the Carrier accept or reject?
-On accept — does the load and truck disappear from marketplace immediately?
-List gaps only.
-```
-
-### Round A9 — Carrier Request Flow Endpoints
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the request/matching routes.
-Check only this: Can a Carrier request a load?
-Does it notify the Shipper?
-Can the Shipper accept or reject?
-On Shipper accept — does the Carrier get a final confirmation step?
-On Carrier final confirm — do load and truck disappear from marketplace?
-List gaps only.
-```
-
-### Round A10 — Trip State Transition Endpoints
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the trip routes.
-Check only this: Are there endpoints for each transition —
-ASSIGNED → PICKUP_PENDING → IN_TRANSIT → DELIVERED → COMPLETED?
-Is each transition restricted to CARRIER only?
-Are the correct timestamps set on each transition?
-List gaps only.
-```
-
-### Round A11 — Trip Cancellation Endpoint
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the trip routes.
-Check only this: Is there a cancel endpoint for trips?
-Is it restricted to CARRIER and DISPATCHER only?
-Is IN_TRANSIT blocked from direct cancellation?
-List gaps only.
-```
-
-### Round A12 — Exception Path Endpoint
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the trip routes.
-Check only this: Is there an endpoint to move a trip to EXCEPTION state?
-Is the resolution endpoint (EXCEPTION → any state) restricted to ADMIN only?
-List gaps only.
-```
-
-### Round A13 — Dispatcher Propose Match Endpoint
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the dispatcher routes.
-Check only this: Can a Dispatcher propose a match between a load and a truck?
-Does it send a notification to the Carrier or Shipper?
-Is there any endpoint that lets Dispatcher accept or reject on their behalf?
-(There should NOT be — flag it if found.)
-List gaps only.
-```
-
-### Round A14 — POD Upload Endpoint
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the trip routes.
-Check only this: Is there a POD upload endpoint?
-Does it trigger the DELIVERED → COMPLETED transition?
-Does it trigger the service fee calculation?
-Does it make the truck available on the marketplace again?
-List gaps only.
-```
-
-### Round A15 — Service Fee Calculation
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the fee calculation logic.
-Check only this: Is the fee calculated as rate/km × total KM?
-Is it calculated separately for Shipper and Carrier?
-Is the rate/km configurable per account?
-Is there a promotional price override per account?
-Are the fees deducted from the correct wallets?
-List gaps only.
-```
-
-### Round A16 — Admin Financial Reports
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the admin report routes.
-Check only this: Can Admin view revenue collected —
-per Carrier, per Shipper, and total —
-filtered by day, week, month, and year?
-List missing filters or breakdowns only.
-```
-
-### Round A17 — Access Revocation Endpoints
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the admin routes.
-Check only this: Can Admin revoke access for Dispatcher, Shipper, Carrier?
-Can Super Admin revoke access for Admin?
-Does revoking immediately block marketplace and platform access?
-List gaps only.
-```
-
----
-
-## NOTIFICATION REVIEWS
-
-### Round N1 — Registration & Approval Notifications
-
-```
-Read freight_marketplace_blueprint.md first.
-Check only this: Are notifications sent for —
-- Shipper/Carrier submits documents → notify Admin
-- Admin approves Shipper/Carrier → notify user
-- Admin rejects Shipper/Carrier → notify user with reason
-- Admin approves Truck → notify Carrier
-- Admin rejects Truck → notify Carrier with reason
-List missing notification triggers only.
-```
-
-### Round N2 — Request & Match Notifications
-
-```
-Read freight_marketplace_blueprint.md first.
-Check only this: Are notifications sent for —
-- Shipper sends request to Carrier → notify Carrier
-- Carrier sends request to Shipper → notify Shipper
-- Dispatcher proposes match → notify both Carrier and Shipper
-- Carrier accepts Shipper request → notify Shipper
-- Carrier rejects Shipper request → notify Shipper
-- Shipper accepts Carrier request → notify Carrier
-- Shipper rejects Carrier request → notify Carrier
-- Carrier gives final confirmation → notify Shipper
-List missing notification triggers only.
-```
-
-### Round N3 — Trip State Change Notifications
-
-```
-Read freight_marketplace_blueprint.md first.
-Check only this: Are notifications sent when trip moves to each state —
-PICKUP_PENDING, IN_TRANSIT, DELIVERED, COMPLETED, CANCELLED, EXCEPTION?
-Who receives each notification (Shipper, Carrier, Dispatcher, Admin)?
-List missing triggers only.
-```
-
-### Round N4 — Wallet Notifications
-
-```
-Read freight_marketplace_blueprint.md first.
-Check only this: Are notifications sent for —
-- Wallet balance drops below threshold → notify user
-- Wallet top-up confirmed by Admin → notify user
-List missing triggers only.
-```
-
----
-
-## UI REVIEWS
-
-### Round U1 — Dispatcher UI: Propose Only
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the Dispatcher UI components.
-Check only this: Does the Dispatcher UI have accept/reject buttons
-on behalf of Carrier or Shipper anywhere?
-(There should NOT be — flag every instance found.)
-List gaps only.
-```
-
-### Round U2 — Shipper UI: Multiple Loads
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the Shipper dashboard UI.
-Check only this: Can a Shipper see and manage multiple active loads
-at the same time from the dashboard?
-List gaps only.
-```
-
-### Round U3 — Carrier UI: DH-O and DH-D Input
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the Carrier truck management UI.
-Check only this: Is there an input for DH-O and DH-D per truck?
-Is it editable before approval?
-Is it locked after approval alongside documents?
-List gaps only.
-```
-
-### Round U4 — Marketplace Visibility
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the marketplace UI components.
-Check only this: Do loads disappear from the marketplace
-the moment they reach ASSIGNED state?
-Do trucks disappear from the marketplace the moment they are on an active trip?
-List gaps only.
-```
-
-### Round U5 — Document Lock UI
-
-```
-Read freight_marketplace_blueprint.md first.
-Open the profile/document UI for Shipper and Carrier.
-Check only this: Are document upload/edit fields disabled
-after the account is approved?
-Does the UI clearly communicate that documents are locked?
-List gaps only.
-```
-
----
-
-_Total rounds: 10 Schema + 17 API + 4 Notification + 5 UI = 36 focused rounds._
-_Complete one round, review the output, confirm, then move to the next._
