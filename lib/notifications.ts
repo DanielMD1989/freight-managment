@@ -45,7 +45,14 @@ export const NotificationType = {
   MATCH_PROPOSAL_ACCEPTED: "MATCH_PROPOSAL_ACCEPTED",
   MATCH_PROPOSAL_REJECTED: "MATCH_PROPOSAL_REJECTED",
   LOAD_REQUEST: "LOAD_REQUEST",
+  LOAD_REQUEST_RECEIVED: "LOAD_REQUEST_RECEIVED",
+  LOAD_REQUEST_APPROVED: "LOAD_REQUEST_APPROVED",
+  LOAD_REQUEST_REJECTED: "LOAD_REQUEST_REJECTED",
+  LOAD_ASSIGNED: "LOAD_ASSIGNED",
   TRUCK_REQUEST: "TRUCK_REQUEST",
+  TRUCK_REQUEST_RECEIVED: "TRUCK_REQUEST_RECEIVED",
+  TRUCK_REQUEST_APPROVED: "TRUCK_REQUEST_APPROVED",
+  TRUCK_REQUEST_REJECTED: "TRUCK_REQUEST_REJECTED",
   REQUEST_APPROVED: "REQUEST_APPROVED",
   REQUEST_REJECTED: "REQUEST_REJECTED",
 
@@ -414,7 +421,7 @@ export async function notifyTruckRequest(params: {
 
   await notifyOrganization({
     organizationId: carrierId,
-    type: "TRUCK_REQUEST_RECEIVED",
+    type: NotificationType.TRUCK_REQUEST_RECEIVED,
     title: "New Truck Request",
     message: `${shipperName} has requested truck ${truckPlate} for load ${loadReference}. Please respond within 24 hours.`,
     metadata: { requestId, shipperName, loadReference, truckPlate, loadId },
@@ -437,7 +444,9 @@ export async function notifyTruckRequestResponse(params: {
 
   await notifyOrganization({
     organizationId: shipperId,
-    type: approved ? "TRUCK_REQUEST_APPROVED" : "TRUCK_REQUEST_REJECTED",
+    type: approved
+      ? NotificationType.TRUCK_REQUEST_APPROVED
+      : NotificationType.TRUCK_REQUEST_REJECTED,
     title: approved ? "Truck Request Approved" : "Truck Request Rejected",
     message: approved
       ? `${carrierName} has approved your request for truck ${truckPlate}. The truck is now booked for your load.`

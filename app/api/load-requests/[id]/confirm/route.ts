@@ -15,7 +15,11 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
-import { createNotification } from "@/lib/notifications";
+import {
+  createNotification,
+  notifyOrganization,
+  NotificationType,
+} from "@/lib/notifications";
 import { enableTrackingForLoad } from "@/lib/gpsTracking";
 import crypto from "crypto";
 import { CacheInvalidation } from "@/lib/cache";
@@ -268,6 +272,36 @@ export async function POST(
             },
           });
 
+          // Capture affected org IDs before cancellation (for post-tx notifications)
+          const pendingLoadReqsForLoad = await tx.loadRequest.findMany({
+            where: {
+              loadId: loadRequest.loadId,
+              id: { not: requestId },
+              status: { in: ["PENDING", "SHIPPER_APPROVED"] },
+            },
+            select: { carrierId: true },
+          });
+          const pendingLoadReqsForTruck = await tx.loadRequest.findMany({
+            where: {
+              truckId: loadRequest.truckId,
+              id: { not: requestId },
+              status: { in: ["PENDING", "SHIPPER_APPROVED"] },
+            },
+            select: { carrierId: true },
+          });
+          const pendingLoadReqsToCancel = [
+            ...pendingLoadReqsForLoad,
+            ...pendingLoadReqsForTruck,
+          ];
+          const pendingTruckReqsToCancel = await tx.truckRequest.findMany({
+            where: { loadId: loadRequest.loadId, status: "PENDING" },
+            select: { shipperId: true },
+          });
+          const pendingMatchPropsToCancel = await tx.matchProposal.findMany({
+            where: { loadId: loadRequest.loadId, status: "PENDING" },
+            select: { carrierId: true, proposedById: true },
+          });
+
           // G-A9-5: Cancel ALL other PENDING/SHIPPER_APPROVED load requests for same load
           await tx.loadRequest.updateMany({
             where: {
@@ -312,7 +346,14 @@ export async function POST(
             data: { isAvailable: false },
           });
 
-          return { request: updatedRequest, load: updatedLoad, trip };
+          return {
+            request: updatedRequest,
+            load: updatedLoad,
+            trip,
+            pendingLoadReqsToCancel,
+            pendingTruckReqsToCancel,
+            pendingMatchPropsToCancel,
+          };
         });
 
         await CacheInvalidation.load(
@@ -322,6 +363,46 @@ export async function POST(
         await CacheInvalidation.truck(
           loadRequest.truckId,
           loadRequest.truck.carrierId
+        );
+
+        // Non-critical: Notify parties whose competing requests were cancelled (fire-and-forget)
+        Promise.all([
+          ...result.pendingLoadReqsToCancel.map(({ carrierId }) =>
+            notifyOrganization({
+              organizationId: carrierId,
+              type: NotificationType.LOAD_REQUEST_REJECTED,
+              title: "Request No Longer Available",
+              message:
+                "Your load request was cancelled — the load has been assigned.",
+            })
+          ),
+          ...result.pendingTruckReqsToCancel.map(({ shipperId }) =>
+            notifyOrganization({
+              organizationId: shipperId,
+              type: NotificationType.TRUCK_REQUEST_REJECTED,
+              title: "Request No Longer Available",
+              message:
+                "Your truck request was cancelled — the load has been assigned to another carrier.",
+            })
+          ),
+          ...result.pendingMatchPropsToCancel.flatMap(
+            ({ carrierId, proposedById }) => [
+              notifyOrganization({
+                organizationId: carrierId,
+                type: NotificationType.MATCH_PROPOSAL_REJECTED,
+                title: "Match Proposal Cancelled",
+                message: "The load was assigned to another truck.",
+              }),
+              createNotification({
+                userId: proposedById,
+                type: NotificationType.MATCH_PROPOSAL_REJECTED,
+                title: "Match Proposal Cancelled",
+                message: "The load was assigned to another truck.",
+              }),
+            ]
+          ),
+        ]).catch((err) =>
+          console.error("Cancellation notifications failed:", err)
         );
 
         // Non-critical: Enable GPS tracking (fire-and-forget)
@@ -349,7 +430,7 @@ export async function POST(
             for (const u of users) {
               await createNotification({
                 userId: u.id,
-                type: "LOAD_ASSIGNED",
+                type: NotificationType.LOAD_ASSIGNED,
                 title: "Carrier Confirmed Booking",
                 message: `Carrier confirmed booking — load from ${loadRequest.load.pickupCity} to ${loadRequest.load.deliveryCity} is now assigned to truck ${loadRequest.truck.licensePlate}.`,
                 metadata: {

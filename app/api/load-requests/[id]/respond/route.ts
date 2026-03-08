@@ -14,7 +14,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
-import { createNotification } from "@/lib/notifications";
+import { createNotification, NotificationType } from "@/lib/notifications";
 import { CacheInvalidation } from "@/lib/cache";
 import { handleApiError } from "@/lib/apiErrors";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
@@ -221,7 +221,7 @@ export async function POST(
             for (const u of users) {
               await createNotification({
                 userId: u.id,
-                type: "LOAD_REQUEST_APPROVED",
+                type: NotificationType.LOAD_REQUEST_APPROVED,
                 title: "Shipper Accepted Your Request",
                 message: `The shipper accepted your request for the load from ${loadRequest.load.pickupCity} to ${loadRequest.load.deliveryCity}. Please confirm to finalise the booking.`,
                 metadata: {
@@ -315,7 +315,7 @@ export async function POST(
       for (const user of carrierUsers) {
         createNotification({
           userId: user.id,
-          type: "LOAD_REQUEST_REJECTED",
+          type: NotificationType.LOAD_REQUEST_REJECTED,
           title: "Load Request Rejected",
           message: `Your request for the load from ${loadRequest.load.pickupCity} to ${loadRequest.load.deliveryCity} was rejected.${data.responseNotes ? ` Reason: ${data.responseNotes}` : ""}`,
           metadata: {

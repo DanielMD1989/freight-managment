@@ -18,7 +18,12 @@ import { canApproveRequests } from "@/lib/dispatcherPermissions";
 import { RULE_CARRIER_FINAL_AUTHORITY } from "@/lib/foundation-rules";
 import { UserRole } from "@prisma/client";
 import { enableTrackingForLoad } from "@/lib/gpsTracking";
-import { notifyTruckRequestResponse } from "@/lib/notifications";
+import {
+  notifyTruckRequestResponse,
+  notifyOrganization,
+  createNotification,
+  NotificationType,
+} from "@/lib/notifications";
 import crypto from "crypto";
 // P0-003 FIX: Import CacheInvalidation for post-approval cache clearing
 import { CacheInvalidation } from "@/lib/cache";
@@ -340,6 +345,36 @@ export async function POST(
             },
           });
 
+          // Capture affected org IDs before cancellation (for post-tx notifications)
+          const pendingTruckReqsForLoad = await tx.truckRequest.findMany({
+            where: {
+              loadId: truckRequest.loadId,
+              id: { not: requestId },
+              status: "PENDING",
+            },
+            select: { shipperId: true },
+          });
+          const pendingTruckReqsForTruck = await tx.truckRequest.findMany({
+            where: {
+              truckId: truckRequest.truckId,
+              id: { not: requestId },
+              status: "PENDING",
+            },
+            select: { shipperId: true },
+          });
+          const pendingTruckReqsToCancel = [
+            ...pendingTruckReqsForLoad,
+            ...pendingTruckReqsForTruck,
+          ];
+          const pendingLoadReqsToCancel = await tx.loadRequest.findMany({
+            where: { loadId: truckRequest.loadId, status: "PENDING" },
+            select: { carrierId: true },
+          });
+          const pendingMatchPropsToCancel = await tx.matchProposal.findMany({
+            where: { loadId: truckRequest.loadId, status: "PENDING" },
+            select: { carrierId: true, proposedById: true },
+          });
+
           // Cancel other pending requests for this load
           await tx.truckRequest.updateMany({
             where: {
@@ -391,7 +426,14 @@ export async function POST(
             data: { status: "CANCELLED" },
           });
 
-          return { request: updatedRequest, load: updatedLoad, trip };
+          return {
+            request: updatedRequest,
+            load: updatedLoad,
+            trip,
+            pendingTruckReqsToCancel,
+            pendingLoadReqsToCancel,
+            pendingMatchPropsToCancel,
+          };
         });
 
         // P0-003 FIX: Invalidate cache after approval to prevent stale data
@@ -404,6 +446,46 @@ export async function POST(
         await CacheInvalidation.truck(
           truckRequest.truckId,
           truckRequest.truck.carrierId
+        );
+
+        // Non-critical: Notify parties whose competing requests were cancelled (fire-and-forget)
+        Promise.all([
+          ...result.pendingTruckReqsToCancel.map(({ shipperId }) =>
+            notifyOrganization({
+              organizationId: shipperId,
+              type: NotificationType.TRUCK_REQUEST_REJECTED,
+              title: "Request No Longer Available",
+              message:
+                "Your truck request was cancelled — the load has been assigned to another carrier.",
+            })
+          ),
+          ...result.pendingLoadReqsToCancel.map(({ carrierId }) =>
+            notifyOrganization({
+              organizationId: carrierId,
+              type: NotificationType.LOAD_REQUEST_REJECTED,
+              title: "Request No Longer Available",
+              message:
+                "Your load request was cancelled — the load has been assigned.",
+            })
+          ),
+          ...result.pendingMatchPropsToCancel.flatMap(
+            ({ carrierId, proposedById }) => [
+              notifyOrganization({
+                organizationId: carrierId,
+                type: NotificationType.MATCH_PROPOSAL_REJECTED,
+                title: "Match Proposal Cancelled",
+                message: "The load was assigned to another truck.",
+              }),
+              createNotification({
+                userId: proposedById,
+                type: NotificationType.MATCH_PROPOSAL_REJECTED,
+                title: "Match Proposal Cancelled",
+                message: "The load was assigned to another truck.",
+              }),
+            ]
+          ),
+        ]).catch((err) =>
+          console.error("Cancellation notifications failed:", err)
         );
 
         // Non-critical: Enable GPS tracking outside transaction (fire-and-forget)

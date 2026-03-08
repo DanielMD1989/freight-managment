@@ -15,7 +15,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
-import { createNotification } from "@/lib/notifications";
+import { createNotification, NotificationType } from "@/lib/notifications";
 import { Prisma } from "@prisma/client";
 import { handleApiError } from "@/lib/apiErrors";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
@@ -322,7 +322,7 @@ export async function POST(request: NextRequest) {
       shipperUsers.map((user) =>
         createNotification({
           userId: user.id,
-          type: "LOAD_REQUEST_RECEIVED",
+          type: NotificationType.LOAD_REQUEST_RECEIVED,
           title: "New Load Request",
           message: `${truck.carrier.name} wants to haul your load from ${load.pickupCity} to ${load.deliveryCity}`,
           metadata: {

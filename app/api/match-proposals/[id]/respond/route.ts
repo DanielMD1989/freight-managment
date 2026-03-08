@@ -23,7 +23,11 @@ import { validateWalletBalancesForTrip } from "@/lib/serviceFeeManagement"; // S
 import { CacheInvalidation } from "@/lib/cache";
 import crypto from "crypto";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
-import { createNotification, NotificationType } from "@/lib/notifications";
+import {
+  createNotification,
+  notifyOrganization,
+  NotificationType,
+} from "@/lib/notifications";
 import { handleApiError } from "@/lib/apiErrors";
 
 // Validation schema for proposal response
@@ -195,6 +199,12 @@ export async function POST(
         proposal: Record<string, unknown>;
         load: Record<string, unknown>;
         trip: Record<string, unknown> & { trackingUrl?: string | null };
+        pendingMatchPropsToCancel: Array<{
+          carrierId: string;
+          proposedById: string;
+        }>;
+        pendingLoadReqsToCancel: Array<{ carrierId: string }>;
+        pendingTruckReqsToCancel: Array<{ shipperId: string }>;
       };
 
       try {
@@ -337,6 +347,24 @@ export async function POST(
             },
           });
 
+          // Capture affected org IDs before cancellation (for post-tx notifications)
+          const pendingMatchPropsToCancel = await tx.matchProposal.findMany({
+            where: {
+              loadId: proposal.loadId,
+              id: { not: proposalId },
+              status: "PENDING",
+            },
+            select: { carrierId: true, proposedById: true },
+          });
+          const pendingLoadReqsToCancel = await tx.loadRequest.findMany({
+            where: { loadId: proposal.loadId, status: "PENDING" },
+            select: { carrierId: true },
+          });
+          const pendingTruckReqsToCancel = await tx.truckRequest.findMany({
+            where: { loadId: proposal.loadId, status: "PENDING" },
+            select: { shipperId: true },
+          });
+
           // Cancel other pending proposals for this load
           await tx.matchProposal.updateMany({
             where: {
@@ -369,7 +397,14 @@ export async function POST(
             data: { isAvailable: false },
           });
 
-          return { proposal: updatedProposal, load: updatedLoad, trip };
+          return {
+            proposal: updatedProposal,
+            load: updatedLoad,
+            trip,
+            pendingMatchPropsToCancel,
+            pendingLoadReqsToCancel,
+            pendingTruckReqsToCancel,
+          };
         });
         // H8 FIX: Use unknown type with type guard
       } catch (error: unknown) {
@@ -419,6 +454,46 @@ export async function POST(
       // P0-007 FIX: Cache invalidation after transaction commits
       await CacheInvalidation.load(proposal.loadId, proposal.load.shipperId);
       await CacheInvalidation.truck(proposal.truckId, proposal.truck.carrierId);
+
+      // Non-critical: Notify parties whose competing requests were cancelled (fire-and-forget)
+      Promise.all([
+        ...result.pendingMatchPropsToCancel.flatMap(
+          ({ carrierId, proposedById }) => [
+            notifyOrganization({
+              organizationId: carrierId,
+              type: NotificationType.MATCH_PROPOSAL_REJECTED,
+              title: "Match Proposal Cancelled",
+              message: "The load was assigned to another truck.",
+            }),
+            createNotification({
+              userId: proposedById,
+              type: NotificationType.MATCH_PROPOSAL_REJECTED,
+              title: "Match Proposal Cancelled",
+              message: "The load was assigned to another truck.",
+            }),
+          ]
+        ),
+        ...result.pendingLoadReqsToCancel.map(({ carrierId }) =>
+          notifyOrganization({
+            organizationId: carrierId,
+            type: NotificationType.LOAD_REQUEST_REJECTED,
+            title: "Request No Longer Available",
+            message:
+              "Your load request was cancelled — the load has been assigned.",
+          })
+        ),
+        ...result.pendingTruckReqsToCancel.map(({ shipperId }) =>
+          notifyOrganization({
+            organizationId: shipperId,
+            type: NotificationType.TRUCK_REQUEST_REJECTED,
+            title: "Request No Longer Available",
+            message:
+              "Your truck request was cancelled — the load has been assigned to another carrier.",
+          })
+        ),
+      ]).catch((err) =>
+        console.error("Cancellation notifications failed:", err)
+      );
 
       // SERVICE FEE NOTE: Wallet balances were validated before acceptance.
       // Actual fee deduction happens on trip completion (deductServiceFee).

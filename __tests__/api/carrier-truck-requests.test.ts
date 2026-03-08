@@ -62,6 +62,7 @@ jest.mock("@/lib/notifications", () => ({
   createNotification: jest.fn(async () => ({ id: "notif-1" })),
   notifyTruckRequest: jest.fn(async () => {}),
   notifyTruckRequestResponse: jest.fn(async () => {}),
+  notifyOrganization: jest.fn(async () => {}),
   getRecentNotifications: jest.fn(async () => []),
   getUnreadCount: jest.fn(async () => 0),
   markAsRead: jest.fn(async () => {}),

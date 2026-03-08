@@ -230,7 +230,7 @@ export async function POST(request: NextRequest) {
 
     // Notify carrier users about the proposal
     const carrierUsers = await db.user.findMany({
-      where: { organizationId: truck.carrierId, isActive: true },
+      where: { organizationId: truck.carrierId, status: "ACTIVE" },
       select: { id: true },
     });
 
