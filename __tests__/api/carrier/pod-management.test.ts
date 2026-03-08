@@ -80,11 +80,13 @@ jest.mock("@/lib/notifications", () => ({
 }));
 
 // Custom deductServiceFee mock
+// platformRevenue uses a Decimal-like mock (G-A15-1: routes call .greaterThan(0))
 const mockDeductServiceFee = jest.fn(async () => ({
   success: true,
   shipperFee: 150.0,
   carrierFee: 75.0,
   totalPlatformFee: 225.0,
+  platformRevenue: { greaterThan: (n: number) => 225 > n },
   transactionId: "txn-mock-1",
 }));
 
@@ -205,11 +207,13 @@ describe("POD Management", () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     setAuthSession(carrierSession);
+    // G-A15-1: pod route now checks platformRevenue?.greaterThan(0) for settlement
     mockDeductServiceFee.mockResolvedValue({
       success: true,
       shipperFee: 150.0,
       carrierFee: 75.0,
       totalPlatformFee: 225.0,
+      platformRevenue: { greaterThan: (n: number) => 225 > n },
       transactionId: "txn-mock-1",
     });
     // Reset load to DELIVERED state for each test

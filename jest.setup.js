@@ -231,6 +231,8 @@ jest.mock("@/lib/db", () => {
     routeHistory: { type: 'hasMany', store: 'gpsPositions', matchFk: 'tripId',
                     sort: (a, b) => (b.timestamp || 0) - (a.timestamp || 0) },
     postings:     { type: 'hasMany', store: 'truckPostings', matchFk: 'truckId' },
+    // confirm/route.ts: trip.podDocuments (TripPod[] via Trip.podDocuments relation)
+    podDocuments: { type: 'hasMany', store: 'tripPods', matchFk: 'tripId' },
     // Round A7: Loads assigned to a truck (reverse of Load.assignedTruckId)
     assignedLoad: { type: 'hasMany', store: 'loads', matchFk: 'assignedTruckId' },
     // Round A7: Trips belonging to a truck (hasMany via Trip.truckId)

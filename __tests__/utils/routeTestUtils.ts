@@ -287,6 +287,7 @@ export function mockNotifications() {
       POD_VERIFIED: "POD_VERIFIED",
       DELIVERY_CONFIRMED: "DELIVERY_CONFIRMED",
       SETTLEMENT_COMPLETE: "SETTLEMENT_COMPLETE",
+      PARTIAL_FEE_COLLECTION: "PARTIAL_FEE_COLLECTION",
     },
   }));
 }
@@ -603,7 +604,8 @@ export function mockServiceFee() {
       shipperFee: 100,
       carrierFee: 50,
       totalPlatformFee: 150,
-      platformRevenue: 150,
+      // G-A15-1: routes call .greaterThan(0) — use Decimal-like mock
+      platformRevenue: { greaterThan: (n: number) => 150 > n },
       transactionId: "txn-mock",
       details: {
         shipper: { fee: 100, status: "DEDUCTED" },
@@ -739,7 +741,7 @@ export function mockServiceFeeCalculation() {
     calculateDualPartyFeePreview: jest.fn(() => ({
       shipper: { fee: 100, percentage: 2 },
       carrier: { fee: 50, percentage: 1 },
-      total: 150,
+      totalPlatformFee: 150,
     })),
   }));
 }

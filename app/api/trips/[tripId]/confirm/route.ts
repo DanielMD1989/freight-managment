@@ -229,8 +229,15 @@ export async function POST(
         });
       }
 
-      // Update settlement status inside transaction (fee already deducted above)
-      if (serviceFeeResult?.success && serviceFeeResult.totalPlatformFee >= 0) {
+      // G-A15-1: Only mark PAID when fees were actually collected (platformRevenue > 0)
+      // or when the load is fee-waived (totalPlatformFee = 0, e.g. no corridor).
+      // Using totalPlatformFee >= 0 was a bug: it was always true, marking PAID even
+      // when wallets were empty and platformRevenue = 0 (nothing actually collected).
+      const feeActuallySettled =
+        serviceFeeResult?.success &&
+        (serviceFeeResult.platformRevenue?.greaterThan(0) ||
+          serviceFeeResult.totalPlatformFee === 0);
+      if (feeActuallySettled) {
         await tx.load.update({
           where: { id: trip.loadId },
           data: { settlementStatus: "PAID", settledAt: new Date() },
@@ -241,7 +248,10 @@ export async function POST(
     });
 
     // Fire-and-forget: Log fee event after transaction commits
-    if (serviceFeeResult?.success && serviceFeeResult.totalPlatformFee > 0) {
+    if (
+      serviceFeeResult?.success &&
+      serviceFeeResult.platformRevenue?.greaterThan(0)
+    ) {
       db.loadEvent
         .create({
           data: {

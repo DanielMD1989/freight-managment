@@ -491,12 +491,15 @@ export async function PATCH(
           });
         }
 
-        // G-A14-2: Mark settlement PAID when fee deduction ran this call.
-        // If fees were already deducted by a prior path, skip (settled there).
+        // G-A14-2 + G-A15-1: Mark settlement PAID only when fees were actually
+        // collected (platformRevenue > 0) or the load is fee-waived (totalPlatformFee = 0).
+        // Skips if fees were already deducted by a prior path.
         if (
           validatedData.status === "COMPLETED" &&
           completionFeeResult !== null &&
-          completionFeeResult.error !== "Service fees already deducted"
+          completionFeeResult.error !== "Service fees already deducted" &&
+          (completionFeeResult.platformRevenue?.greaterThan(0) ||
+            completionFeeResult.totalPlatformFee === 0)
         ) {
           await tx.load.update({
             where: { id: trip.loadId },

@@ -117,7 +117,7 @@ jest.mock("@/lib/serviceFeeManagement", () => ({
     shipperFee: 100,
     carrierFee: 50,
     totalPlatformFee: 150,
-    platformRevenue: 150,
+    platformRevenue: { greaterThan: (n: number) => 150 > n },
     transactionId: "txn-mock",
     details: {
       shipper: { fee: 100, status: "DEDUCTED" },

@@ -79,13 +79,14 @@ mockApiErrors();
 mockLogger();
 
 // Controllable deductServiceFee mock
+// platformRevenue uses a Decimal-like mock (G-A15-1: routes call .greaterThan(0))
 const mockDeductFee = jest.fn(async () => ({
   success: true,
   serviceFee: 150,
   shipperFee: 100,
   carrierFee: 50,
   totalPlatformFee: 150,
-  platformRevenue: 150,
+  platformRevenue: { greaterThan: (n: number) => 150 > n },
   transactionId: "txn-pod-test",
   details: {
     shipper: { fee: 100, status: "DEDUCTED" },
@@ -463,7 +464,7 @@ describe("PC1–PC6 — PATCH /trips/[tripId] COMPLETED (carrier-initiated)", ()
       shipperFee: 0,
       carrierFee: 0,
       totalPlatformFee: 0,
-      platformRevenue: 0,
+      platformRevenue: { greaterThan: () => false },
       transactionId: "",
       details: {},
     } as any);

@@ -41,6 +41,7 @@ import {
   calculateFeesFromCorridor,
   calculatePartyFee,
 } from "./serviceFeeCalculation";
+import { createNotificationForRole, NotificationType } from "./notifications";
 
 // Result interfaces
 export interface ServiceFeeDeductResult {
@@ -380,6 +381,10 @@ export async function deductServiceFee(
   }
 
   // A5: Warn when partial deduction occurs — surfaces in application logs for admin investigation
+  const partialDeductionOccurred =
+    (!shipperDeducted && shipperFeeCalc.finalFee > 0) ||
+    (!carrierDeducted && carrierFeeCalc.finalFee > 0);
+
   if (!shipperDeducted && shipperFeeCalc.finalFee > 0) {
     console.warn(
       `[serviceFee] Partial deduction: shipper fee PENDING for load ${loadId}. Required: ${shipperFeeCalc.finalFee}`
@@ -389,6 +394,32 @@ export async function deductServiceFee(
     console.warn(
       `[serviceFee] Partial deduction: carrier fee PENDING for load ${loadId}. Required: ${carrierFeeCalc.finalFee}`
     );
+  }
+
+  // G-A15-4: Notify all admins when partial fee collection occurs (GPS actual > estimated
+  // or insufficient wallet balance). Fire-and-forget — financial state is already written.
+  if (partialDeductionOccurred) {
+    const estimatedKm =
+      load.estimatedTripKm && Number(load.estimatedTripKm) > 0
+        ? Number(load.estimatedTripKm)
+        : Number(corridor.distanceKm);
+    const actualKm = distanceKm;
+    const collected =
+      (shipperDeducted ? shipperFeeCalc.finalFee : 0) +
+      (carrierDeducted ? carrierFeeCalc.finalFee : 0);
+    createNotificationForRole({
+      role: "ADMIN",
+      type: NotificationType.PARTIAL_FEE_COLLECTION,
+      title: "Partial Service Fee Collection",
+      message: `Load ${loadId}: actual ${actualKm}km vs estimated ${estimatedKm}km. Collected ${collected.toFixed(2)} / ${totalPlatformFee.toFixed(2)} ETB.`,
+      metadata: {
+        loadId,
+        actualKm,
+        estimatedKm,
+        collected,
+        expected: totalPlatformFee,
+      },
+    }).catch((err) => console.error("Admin partial-fee notify failed:", err));
   }
 
   // Credit platform revenue with total deducted fees

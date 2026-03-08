@@ -393,7 +393,10 @@ export async function PUT(
       carrierFee?: number;
     } = { status: "skipped" };
 
-    if (feeResult.success && feeResult.totalPlatformFee > 0) {
+    // G-A15-1: Only mark PAID when fees were actually collected (platformRevenue > 0).
+    // Using totalPlatformFee > 0 was a bug: fees can be > 0 but wallets empty,
+    // so platformRevenue = 0 even though totalPlatformFee > 0 (nothing collected).
+    if (feeResult.success && feeResult.platformRevenue?.greaterThan(0)) {
       // B3 FIX: Wrap settlement DB writes in transaction for atomicity
       await db.$transaction(async (tx) => {
         await tx.load.update({

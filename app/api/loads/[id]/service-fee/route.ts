@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireActiveUser } from "@/lib/auth";
-import { calculateFeePreview } from "@/lib/serviceFeeCalculation";
+import { calculateDualPartyFeePreview } from "@/lib/serviceFeeCalculation";
 import { handleApiError } from "@/lib/apiErrors";
 
 /**
@@ -58,11 +58,34 @@ export async function GET(
             pricePerKm: true,
             promoFlag: true,
             promoDiscountPct: true,
+            // G-A15-3: dual-party fields for authoritative preview
+            shipperPricePerKm: true,
+            carrierPricePerKm: true,
+            shipperPromoFlag: true,
+            shipperPromoPct: true,
+            carrierPromoFlag: true,
+            carrierPromoPct: true,
+          },
+        },
+        shipper: {
+          select: {
+            id: true,
+            shipperRatePerKm: true,
+            shipperPromoFlag: true,
+            shipperPromoPct: true,
           },
         },
         assignedTruck: {
           select: {
             carrierId: true,
+            carrier: {
+              select: {
+                id: true,
+                carrierRatePerKm: true,
+                carrierPromoFlag: true,
+                carrierPromoPct: true,
+              },
+            },
           },
         },
       },
@@ -79,28 +102,71 @@ export async function GET(
       (session.role === "SHIPPER" &&
         session.organizationId === load.shipperId) ||
       (session.role === "CARRIER" &&
-        session.organizationId === load.assignedTruck?.carrierId);
+        session.organizationId ===
+          (load.assignedTruck?.carrierId ?? load.assignedTruck?.carrier?.id));
 
     if (!hasAccess) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    // Calculate fee breakdown if corridor exists (using centralized function)
+    // G-A15-3: Calculate dual-party fee preview using authoritative corridor fields
+    // and org-first rate override chain (org.ratePerKm > corridor.partyPricePerKm > corridor.pricePerKm)
     let feeBreakdown = null;
     if (load.corridor) {
-      const preview = calculateFeePreview(
-        Number(load.corridor.distanceKm),
-        Number(load.corridor.pricePerKm),
-        load.corridor.promoFlag,
-        load.corridor.promoDiscountPct
-          ? Number(load.corridor.promoDiscountPct)
-          : null
+      const distanceKm = Number(load.corridor.distanceKm);
+
+      // Shipper rate: org override → corridor.shipperPricePerKm → corridor.pricePerKm
+      const shipperPricePerKm = load.shipper?.shipperRatePerKm
+        ? Number(load.shipper.shipperRatePerKm)
+        : load.corridor.shipperPricePerKm
+          ? Number(load.corridor.shipperPricePerKm)
+          : Number(load.corridor.pricePerKm);
+      const shipperPromoFlag =
+        load.shipper?.shipperPromoFlag ||
+        load.corridor.shipperPromoFlag ||
+        load.corridor.promoFlag ||
+        false;
+      const shipperPromoPct = load.shipper?.shipperPromoPct
+        ? Number(load.shipper.shipperPromoPct)
+        : load.corridor.shipperPromoPct
+          ? Number(load.corridor.shipperPromoPct)
+          : load.corridor.promoDiscountPct
+            ? Number(load.corridor.promoDiscountPct)
+            : null;
+
+      // Carrier rate: org override → corridor.carrierPricePerKm → 0
+      const carrierPricePerKm = load.assignedTruck?.carrier?.carrierRatePerKm
+        ? Number(load.assignedTruck.carrier.carrierRatePerKm)
+        : load.corridor.carrierPricePerKm
+          ? Number(load.corridor.carrierPricePerKm)
+          : 0;
+      const carrierPromoFlag =
+        load.assignedTruck?.carrier?.carrierPromoFlag ||
+        load.corridor.carrierPromoFlag ||
+        false;
+      const carrierPromoPct = load.assignedTruck?.carrier?.carrierPromoPct
+        ? Number(load.assignedTruck.carrier.carrierPromoPct)
+        : load.corridor.carrierPromoPct
+          ? Number(load.corridor.carrierPromoPct)
+          : null;
+
+      const preview = calculateDualPartyFeePreview(
+        distanceKm,
+        shipperPricePerKm,
+        shipperPromoFlag,
+        shipperPromoPct,
+        carrierPricePerKm,
+        carrierPromoFlag,
+        carrierPromoPct
       );
 
       feeBreakdown = {
-        ...preview,
-        promoApplied:
-          load.corridor.promoFlag && !!load.corridor.promoDiscountPct,
+        distanceKm,
+        shipperFee: preview.shipper,
+        carrierFee: preview.carrier,
+        totalFee: preview.totalPlatformFee,
+        shipperPromoApplied: shipperPromoFlag && !!shipperPromoPct,
+        carrierPromoApplied: carrierPromoFlag && !!carrierPromoPct,
       };
     }
 

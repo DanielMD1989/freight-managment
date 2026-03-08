@@ -62,6 +62,9 @@ export const NotificationType = {
   // Trip Status Notifications
   TRIP_CANCELLED: "TRIP_CANCELLED",
   DELIVERY_CONFIRMED: "DELIVERY_CONFIRMED",
+
+  // Financial Integrity Alerts
+  PARTIAL_FEE_COLLECTION: "PARTIAL_FEE_COLLECTION",
 } as const;
 
 /**
