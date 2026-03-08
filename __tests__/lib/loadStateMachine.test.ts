@@ -216,12 +216,20 @@ describe("lib/loadStateMachine", () => {
     });
 
     describe("DISPATCHER permissions", () => {
-      it("DISPATCHER can set SEARCHING", () => {
-        expect(canRoleSetStatus("DISPATCHER", LoadStatus.SEARCHING)).toBe(true);
+      it("DISPATCHER cannot set SEARCHING (coordination-only: G-U2-2)", () => {
+        expect(canRoleSetStatus("DISPATCHER", LoadStatus.SEARCHING)).toBe(
+          false
+        );
       });
 
-      it("DISPATCHER can set OFFERED", () => {
-        expect(canRoleSetStatus("DISPATCHER", LoadStatus.OFFERED)).toBe(true);
+      it("DISPATCHER cannot set OFFERED (coordination-only: G-U2-2)", () => {
+        expect(canRoleSetStatus("DISPATCHER", LoadStatus.OFFERED)).toBe(false);
+      });
+
+      it("DISPATCHER cannot set PICKUP_PENDING (carrier milestone: G-U2-2)", () => {
+        expect(canRoleSetStatus("DISPATCHER", LoadStatus.PICKUP_PENDING)).toBe(
+          false
+        );
       });
 
       it("DISPATCHER can set EXCEPTION", () => {

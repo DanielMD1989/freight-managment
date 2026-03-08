@@ -150,47 +150,57 @@ export async function PATCH(
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
     // Additional permission check based on role
-    if (!isAdmin && !isDispatcher) {
-      // Shippers can only update their own loads
-      if (isShipper) {
-        const shipperStatuses = ["DRAFT", "POSTED", "CANCELLED", "UNPOSTED"];
-        if (!shipperStatuses.includes(newStatus)) {
+    if (!isAdmin) {
+      // DISPATCHER: only EXCEPTION is a coordination action (Blueprint: "Propose Only")
+      if (isDispatcher) {
+        if (newStatus !== "EXCEPTION") {
           return NextResponse.json(
-            {
-              error:
-                "Shippers can only set status to DRAFT, POSTED, CANCELLED, or UNPOSTED",
-            },
+            { error: "Dispatchers can only set status to EXCEPTION" },
             { status: 403 }
           );
         }
-      }
+      } else {
+        // Shippers can only update their own loads
+        if (isShipper) {
+          const shipperStatuses = ["DRAFT", "POSTED", "CANCELLED", "UNPOSTED"];
+          if (!shipperStatuses.includes(newStatus)) {
+            return NextResponse.json(
+              {
+                error:
+                  "Shippers can only set status to DRAFT, POSTED, CANCELLED, or UNPOSTED",
+              },
+              { status: 403 }
+            );
+          }
+        }
 
-      // Carriers can only update assigned loads
-      if (isCarrier) {
-        const carrierStatuses = [
-          "ASSIGNED",
-          "PICKUP_PENDING",
-          "IN_TRANSIT",
-          "DELIVERED",
-        ];
-        if (!carrierStatuses.includes(newStatus)) {
+        // Carriers can only update assigned loads
+        if (isCarrier) {
+          const carrierStatuses = [
+            "ASSIGNED",
+            "PICKUP_PENDING",
+            "IN_TRANSIT",
+            "DELIVERED",
+          ];
+          if (!carrierStatuses.includes(newStatus)) {
+            return NextResponse.json(
+              {
+                error:
+                  "Carriers can only set status to ASSIGNED, PICKUP_PENDING, IN_TRANSIT, or DELIVERED",
+              },
+              { status: 403 }
+            );
+          }
+        }
+
+        // If not owner and not admin/dispatcher, deny
+        if (!isShipper && !isCarrier) {
           return NextResponse.json(
-            {
-              error:
-                "Carriers can only set status to ASSIGNED, PICKUP_PENDING, IN_TRANSIT, or DELIVERED",
-            },
+            { error: "You do not have permission to update this load" },
             { status: 403 }
           );
         }
-      }
-
-      // If not owner and not admin/dispatcher, deny
-      if (!isShipper && !isCarrier) {
-        return NextResponse.json(
-          { error: "You do not have permission to update this load" },
-          { status: 403 }
-        );
-      }
+      } // end else (non-dispatcher)
     }
 
     // Determine if truck should be unassigned (terminal states)

@@ -73,7 +73,7 @@ export default function StatusUpdateModal({
     try {
       const csrfToken = await getCSRFToken();
       const response = await fetch(`/api/loads/${loadId}/status`, {
-        method: "PUT",
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           ...(csrfToken && { "X-CSRF-Token": csrfToken }),

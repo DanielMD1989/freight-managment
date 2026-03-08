@@ -886,7 +886,8 @@ function LoadsTable({
                         Assign
                       </button>
                     )}
-                    {load.status !== "DELIVERED" &&
+                    {(userRole === "ADMIN" || userRole === "SUPER_ADMIN") &&
+                      load.status !== "DELIVERED" &&
                       load.status !== "CANCELLED" && (
                         <button
                           onClick={() => handleUpdateStatus(load)}

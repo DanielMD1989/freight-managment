@@ -212,7 +212,7 @@ describe("StatusUpdateModal", () => {
         expect(mockFetch).toHaveBeenCalledWith(
           "/api/loads/load-123/status",
           expect.objectContaining({
-            method: "PUT",
+            method: "PATCH",
             headers: expect.objectContaining({
               "Content-Type": "application/json",
               "X-CSRF-Token": "test-csrf-token",

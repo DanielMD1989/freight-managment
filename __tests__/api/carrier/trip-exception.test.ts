@@ -541,6 +541,28 @@ describe("Trip Exception Path — Round A12", () => {
     });
   });
 
+  // ─── E10/E11: Dispatcher exceptions ──────────────────────────────────────────
+
+  describe("E11 — Dispatcher (org-scoped) cannot resolve EXCEPTION → ASSIGNED", () => {
+    it("Blueprint §7: only ADMIN can resolve from EXCEPTION — DISPATCHER blocked even when org-scoped → 403", async () => {
+      const { tripId } = await createExceptionTrip("EXCEPTION");
+      setAuthSession(dispatcherScopedSession);
+
+      const req = createRequest(
+        "PATCH",
+        `http://localhost:3000/api/trips/${tripId}`,
+        {
+          body: { status: "ASSIGNED" },
+        }
+      );
+      const res = await callHandler(updateTrip, req, { tripId });
+      expect(res.status).toBe(403);
+
+      const data = await parseResponse(res);
+      expect(data.error).toMatch(/only admins can resolve/i);
+    });
+  });
+
   // ─── E9: DISPATCHER notified when trip enters EXCEPTION (G-A12-3) ─────────
 
   describe("E9 — DISPATCHER notification on EXCEPTION", () => {

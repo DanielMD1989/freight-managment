@@ -123,10 +123,7 @@ export const ROLE_PERMISSIONS: Record<string, LoadStatus[]> = {
   ],
 
   DISPATCHER: [
-    LoadStatus.SEARCHING,
-    LoadStatus.OFFERED,
-    LoadStatus.PICKUP_PENDING,
-    LoadStatus.EXCEPTION,
+    LoadStatus.EXCEPTION, // Coordination only — flag an issue for admin/carrier resolution
   ],
 
   ADMIN: [

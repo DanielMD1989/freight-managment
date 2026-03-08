@@ -151,11 +151,45 @@ export async function PATCH(
     const isDispatcher = session.role === "DISPATCHER";
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
 
-    if (!isDispatcher && !isAdmin) {
-      return NextResponse.json(
-        { error: "Only dispatchers and admins can update escalations" },
-        { status: 403 }
-      );
+    if (!isAdmin) {
+      if (isDispatcher) {
+        // DISPATCHER: coordination only — escalate, add notes, change priority
+        const forbiddenStatuses = [
+          "RESOLVED",
+          "CLOSED",
+          "ASSIGNED",
+          "IN_PROGRESS",
+          "OPEN",
+        ];
+        if (
+          validatedData.status &&
+          forbiddenStatuses.includes(validatedData.status)
+        ) {
+          return NextResponse.json(
+            {
+              error: "Dispatchers can only set escalation status to ESCALATED",
+            },
+            { status: 403 }
+          );
+        }
+        if (validatedData.resolution !== undefined) {
+          return NextResponse.json(
+            { error: "Dispatchers cannot set escalation resolution" },
+            { status: 403 }
+          );
+        }
+        if (validatedData.assignedTo !== undefined) {
+          return NextResponse.json(
+            { error: "Dispatchers cannot assign escalations" },
+            { status: 403 }
+          );
+        }
+      } else {
+        return NextResponse.json(
+          { error: "Only dispatchers and admins can update escalations" },
+          { status: 403 }
+        );
+      }
     }
 
     // Build update data
