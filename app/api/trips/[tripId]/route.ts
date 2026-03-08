@@ -20,8 +20,12 @@ import { z } from "zod";
 // P1-002 FIX: Import CacheInvalidation for post-update cache clearing
 import { CacheInvalidation } from "@/lib/cache";
 import { handleApiError } from "@/lib/apiErrors";
-import { refundServiceFee } from "@/lib/serviceFeeManagement";
-import { createNotificationForRole } from "@/lib/notifications";
+import { refundServiceFee, deductServiceFee } from "@/lib/serviceFeeManagement";
+import {
+  createNotificationForRole,
+  createNotification,
+  NotificationType,
+} from "@/lib/notifications";
 
 const updateTripSchema = z.object({
   status: z
@@ -327,6 +331,35 @@ export async function PATCH(
       }
     }
 
+    // G-A14-1: Deduct service fee on carrier-initiated COMPLETED (canonical blueprint path).
+    // Must run BEFORE $transaction — same blocking pattern as /confirm and PUT /loads/[id]/pod.
+    let completionFeeResult: Awaited<
+      ReturnType<typeof deductServiceFee>
+    > | null = null;
+    if (validatedData.status === "COMPLETED") {
+      try {
+        completionFeeResult = await deductServiceFee(trip.loadId);
+        if (
+          !completionFeeResult.success &&
+          completionFeeResult.error !== "Service fees already deducted"
+        ) {
+          return NextResponse.json(
+            {
+              error: "Cannot complete trip: fee deduction failed",
+              details: completionFeeResult.error,
+            },
+            { status: 400 }
+          );
+        }
+      } catch (feeErr: unknown) {
+        console.error("Fee deduction failed on COMPLETED:", feeErr);
+        return NextResponse.json(
+          { error: "Cannot complete trip: fee deduction failed" },
+          { status: 400 }
+        );
+      }
+    }
+
     // P1-002 FIX: Wrap trip update and load sync in single transaction
     // to ensure atomic status synchronization
     let updatedTrip;
@@ -458,6 +491,19 @@ export async function PATCH(
           });
         }
 
+        // G-A14-2: Mark settlement PAID when fee deduction ran this call.
+        // If fees were already deducted by a prior path, skip (settled there).
+        if (
+          validatedData.status === "COMPLETED" &&
+          completionFeeResult !== null &&
+          completionFeeResult.error !== "Service fees already deducted"
+        ) {
+          await tx.load.update({
+            where: { id: trip.loadId },
+            data: { settlementStatus: "PAID", settledAt: new Date() },
+          });
+        }
+
         return { updatedTrip, loadSynced };
       }));
     } catch (error) {
@@ -499,6 +545,26 @@ export async function PATCH(
     await CacheInvalidation.trip(tripId, trip.carrierId, trip.shipperId);
     if (loadSynced) {
       await CacheInvalidation.load(trip.loadId, trip.shipperId);
+    }
+
+    // G-A14-4: Notify all active shipper org users on carrier-initiated COMPLETED.
+    // Fire-and-forget — trip state is already persisted.
+    if (validatedData.status === "COMPLETED") {
+      const shipperUsers = await db.user.findMany({
+        where: { organizationId: trip.shipperId, status: "ACTIVE" },
+        select: { id: true },
+      });
+      for (const u of shipperUsers) {
+        createNotification({
+          userId: u.id,
+          type: NotificationType.DELIVERY_CONFIRMED,
+          title: "Trip Completed",
+          message: `Trip from ${updatedTrip.load?.pickupCity} to ${updatedTrip.load?.deliveryCity} has been completed by the carrier.`,
+          metadata: { tripId, loadId: trip.loadId },
+        }).catch((err) =>
+          console.error("Failed to notify shipper of completion:", err)
+        );
+      }
     }
 
     // Notify all dispatchers when a trip enters EXCEPTION state.

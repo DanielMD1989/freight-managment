@@ -70,8 +70,8 @@ export async function POST(
           select: {
             id: true,
             users: {
+              where: { status: "ACTIVE" },
               select: { id: true },
-              take: 1,
             },
           },
         },
@@ -220,16 +220,18 @@ export async function POST(
     await CacheInvalidation.load(trip.loadId, trip.load?.shipperId);
     await CacheInvalidation.trip(tripId, trip.carrierId, trip.shipperId);
 
-    // Notify shipper that POD has been submitted
-    const shipperUserId = trip.shipper?.users?.[0]?.id;
-    if (shipperUserId) {
-      await createNotification({
-        userId: shipperUserId,
+    // G-A14-5: Notify ALL active shipper org users (not just first — take:1 removed).
+    const shipperUsers = trip.shipper?.users ?? [];
+    for (const u of shipperUsers) {
+      createNotification({
+        userId: u.id,
         type: NotificationType.POD_SUBMITTED,
         title: "Proof of Delivery Submitted",
         message: `Carrier has submitted POD for trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Please verify and confirm delivery.`,
         metadata: { tripId, loadId: trip.loadId },
-      });
+      }).catch((err) =>
+        console.error("Failed to notify shipper of POD submission:", err)
+      );
     }
 
     return NextResponse.json({

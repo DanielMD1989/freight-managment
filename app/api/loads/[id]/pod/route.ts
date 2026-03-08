@@ -199,7 +199,7 @@ export async function POST(
     // TD-007 FIX: Invalidate cache after POD submission
     await CacheInvalidation.load(loadId);
 
-    // C4 FIX: Notify shipper user (not org ID) that POD has been submitted
+    // G-A14-5: Notify ALL active shipper org users (not just first — take:1 removed).
     const loadWithShipper = await db.load.findUnique({
       where: { id: loadId },
       select: {
@@ -209,23 +209,25 @@ export async function POST(
         shipper: {
           select: {
             users: {
+              where: { status: "ACTIVE" },
               select: { id: true },
-              take: 1,
             },
           },
         },
       },
     });
 
-    const shipperUserId = loadWithShipper?.shipper?.users?.[0]?.id;
-    if (shipperUserId) {
-      await createNotification({
-        userId: shipperUserId,
+    const shipperUsers = loadWithShipper?.shipper?.users ?? [];
+    for (const u of shipperUsers) {
+      createNotification({
+        userId: u.id,
         type: NotificationType.POD_SUBMITTED,
         title: "Proof of Delivery Submitted",
-        message: `Carrier has submitted POD for load ${loadWithShipper.pickupCity} → ${loadWithShipper.deliveryCity}. Please verify.`,
+        message: `Carrier has submitted POD for load ${loadWithShipper?.pickupCity} → ${loadWithShipper?.deliveryCity}. Please verify.`,
         metadata: { loadId },
-      });
+      }).catch((err) =>
+        console.error("Failed to notify shipper of POD submission:", err)
+      );
     }
 
     return NextResponse.json({
@@ -467,6 +469,58 @@ export async function PUT(
 
     // Invalidate cache again after settlement updates
     await CacheInvalidation.load(loadId, load.shipperId);
+
+    // G-A14-3: Transition trip→COMPLETED and restore truck after shipper verifies POD.
+    // Blueprint §3+4: "After POD upload + completion: Truck returns to marketplace."
+    // The PUT path satisfies "POD" but left the trip in DELIVERED and truck locked.
+    // Idempotent: findFirst({status:"DELIVERED"}) returns null if already COMPLETED.
+    const associatedTrip = await db.trip.findFirst({
+      where: { loadId, status: "DELIVERED" },
+      select: { id: true, truckId: true },
+    });
+    if (associatedTrip) {
+      try {
+        await db.$transaction(async (tx) => {
+          await tx.trip.update({
+            where: { id: associatedTrip.id },
+            data: {
+              status: "COMPLETED",
+              completedAt: new Date(),
+              trackingEnabled: false,
+            },
+          });
+          await tx.load.update({
+            where: { id: loadId },
+            data: { status: "COMPLETED" },
+          });
+          if (associatedTrip.truckId) {
+            const otherActiveTrips = await tx.trip.count({
+              where: {
+                truckId: associatedTrip.truckId,
+                id: { not: associatedTrip.id },
+                status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+              },
+            });
+            if (otherActiveTrips === 0) {
+              await tx.truck.update({
+                where: { id: associatedTrip.truckId },
+                data: { isAvailable: true },
+              });
+            }
+            await tx.truckPosting.updateMany({
+              where: { truckId: associatedTrip.truckId, status: "MATCHED" },
+              data: { status: "ACTIVE", updatedAt: new Date() },
+            });
+          }
+        });
+      } catch (completionErr) {
+        // Non-blocking: POD is verified + fees deducted; ops team handles via audit log
+        console.error(
+          "Trip completion after POD verify failed:",
+          completionErr
+        );
+      }
+    }
 
     return NextResponse.json({
       message: "POD verified successfully. Settlement can now be processed.",
