@@ -28,6 +28,7 @@ interface Truck {
   isAvailable: boolean;
   status: string;
   approvalStatus: string;
+  documentsLockedAt: string | null;
   createdAt: string;
   carrier: {
     id: string;
@@ -499,6 +500,7 @@ export default function TruckDetailsPage({
               setCoverageType("");
             }}
             helperText="Upload vehicle registration, insurance, or inspection documents"
+            isLocked={!!truck.documentsLockedAt}
             extraFormData={
               selectedDocType === "INSURANCE"
                 ? {

@@ -9,6 +9,7 @@ import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
 import DocumentManagementClient from "./DocumentManagementClient";
 
 interface Document {
@@ -88,6 +89,12 @@ export default async function DocumentsPage() {
   // Fetch documents
   const documents = await getDocuments(session.organizationId);
 
+  // Fetch lock state directly (G-U6-2)
+  const org = await db.organization.findUnique({
+    where: { id: session.organizationId },
+    select: { documentsLockedAt: true },
+  });
+
   return (
     <div className="mx-auto max-w-5xl p-6">
       {/* Header */}
@@ -108,6 +115,7 @@ export default async function DocumentsPage() {
         <DocumentManagementClient
           initialDocuments={documents || []}
           organizationId={session.organizationId}
+          isLocked={!!org?.documentsLockedAt}
         />
       </Suspense>
     </div>

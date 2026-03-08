@@ -30,6 +30,7 @@ async function getOrganizationData(organizationId: string) {
       city: true,
       isVerified: true,
       verifiedAt: true,
+      documentsLockedAt: true, // G-U6-6
       licenseNumber: true,
       taxId: true,
       allowNameDisplay: true,
@@ -67,6 +68,7 @@ export default async function CarrierSettingsPage() {
   const transformedOrg = {
     ...organization,
     verifiedAt: organization.verifiedAt?.toISOString() || null,
+    documentsLockedAt: organization.documentsLockedAt?.toISOString() || null,
     createdAt: organization.createdAt.toISOString(),
   };
 

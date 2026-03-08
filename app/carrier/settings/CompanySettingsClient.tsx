@@ -22,6 +22,7 @@ interface Organization {
   city: string | null;
   isVerified: boolean;
   verifiedAt: string | null;
+  documentsLockedAt: string | null;
   licenseNumber: string | null;
   taxId: string | null;
   allowNameDisplay: boolean;
@@ -163,6 +164,27 @@ export default function CompanySettingsClient({ organization }: Props) {
           <p className="mt-2 text-xs text-gray-500">
             Verified on {new Date(organization.verifiedAt).toLocaleDateString()}
           </p>
+        )}
+        {organization.documentsLockedAt && (
+          <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <svg
+              className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              />
+            </svg>
+            <p className="text-xs text-amber-800">
+              Your documents are locked following account verification. Contact
+              support to update documents.
+            </p>
+          </div>
         )}
       </div>
 

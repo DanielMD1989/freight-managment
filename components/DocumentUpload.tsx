@@ -29,6 +29,7 @@ interface DocumentUploadProps {
   label?: string;
   helperText?: string;
   extraFormData?: Record<string, string>;
+  isLocked?: boolean;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -49,6 +50,7 @@ export default function DocumentUpload({
   label,
   helperText,
   extraFormData,
+  isLocked,
 }: DocumentUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -223,71 +225,98 @@ export default function DocumentUpload({
         </label>
       )}
 
-      {/* Drag & Drop Area */}
-      <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
-        className={`relative cursor-pointer rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
-          isDragging
-            ? "border-[#1e9c99] bg-[#1e9c99]/10"
-            : selectedFile
-              ? "border-green-500 bg-green-50"
-              : "border-[#064d51]/30 bg-[#f0fdfa] hover:border-[#1e9c99]"
-        } `}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={ALLOWED_EXTENSIONS.join(",")}
-          onChange={handleFileChange}
-          className="hidden"
-        />
-
-        <div className="space-y-2">
-          {/* Icon */}
-          <svg
-            className="mx-auto h-12 w-12 text-[#064d51]/50"
-            stroke="currentColor"
-            fill="none"
-            viewBox="0 0 48 48"
-          >
-            <path
-              d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-
-          {/* Text */}
-          {selectedFile ? (
-            <div>
-              <p className="text-sm font-medium text-green-600">
-                {selectedFile.name}
-              </p>
-              <p className="text-xs text-[#064d51]/60">
-                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-              </p>
-            </div>
-          ) : (
-            <div>
-              <p className="text-sm text-[#064d51]/70">
-                <span className="font-semibold">Click to upload</span> or drag
-                and drop
-              </p>
-              <p className="text-xs text-[#064d51]/60">
-                PDF, JPG, or PNG (max 10MB)
-              </p>
-            </div>
-          )}
-
-          {helperText && !selectedFile && (
-            <p className="mt-2 text-xs text-[#064d51]/60">{helperText}</p>
-          )}
+      {/* Drag & Drop Area — or Lock Banner */}
+      {isLocked ? (
+        <div className="rounded-lg border-2 border-amber-200 bg-amber-50 p-6 text-center">
+          <div className="flex flex-col items-center space-y-2">
+            <svg
+              className="h-10 w-10 text-amber-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              />
+            </svg>
+            <p className="text-sm font-semibold text-amber-800">
+              Documents Locked
+            </p>
+            <p className="text-xs text-amber-700">
+              Documents are locked after account approval. Contact support to
+              update a document.
+            </p>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={`relative cursor-pointer rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
+            isDragging
+              ? "border-[#1e9c99] bg-[#1e9c99]/10"
+              : selectedFile
+                ? "border-green-500 bg-green-50"
+                : "border-[#064d51]/30 bg-[#f0fdfa] hover:border-[#1e9c99]"
+          } `}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ALLOWED_EXTENSIONS.join(",")}
+            onChange={handleFileChange}
+            className="hidden"
+          />
+
+          <div className="space-y-2">
+            {/* Icon */}
+            <svg
+              className="mx-auto h-12 w-12 text-[#064d51]/50"
+              stroke="currentColor"
+              fill="none"
+              viewBox="0 0 48 48"
+            >
+              <path
+                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+
+            {/* Text */}
+            {selectedFile ? (
+              <div>
+                <p className="text-sm font-medium text-green-600">
+                  {selectedFile.name}
+                </p>
+                <p className="text-xs text-[#064d51]/60">
+                  {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                </p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm text-[#064d51]/70">
+                  <span className="font-semibold">Click to upload</span> or drag
+                  and drop
+                </p>
+                <p className="text-xs text-[#064d51]/60">
+                  PDF, JPG, or PNG (max 10MB)
+                </p>
+              </div>
+            )}
+
+            {helperText && !selectedFile && (
+              <p className="mt-2 text-xs text-[#064d51]/60">{helperText}</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Upload Progress */}
       {uploading && (
@@ -352,10 +381,10 @@ export default function DocumentUpload({
       )}
 
       {/* Upload Button */}
-      {selectedFile && !success && (
+      {selectedFile && !success && !isLocked && (
         <button
           onClick={handleUpload}
-          disabled={uploading}
+          disabled={uploading || isLocked}
           className="w-full rounded-md bg-[#1e9c99] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#064d51] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {uploading

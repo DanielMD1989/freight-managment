@@ -8,6 +8,7 @@
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
 
 interface Document {
   id: string;
@@ -86,6 +87,12 @@ export default async function CarrierDocumentsPage() {
   // Fetch documents
   const documents = await getDocuments(session.organizationId);
 
+  // Fetch lock state directly (G-U6-3)
+  const org = await db.organization.findUnique({
+    where: { id: session.organizationId },
+    select: { documentsLockedAt: true },
+  });
+
   // Import the client component dynamically to avoid duplication
   const { default: DocumentManagementClient } =
     await import("@/app/shipper/documents/DocumentManagementClient");
@@ -104,6 +111,7 @@ export default async function CarrierDocumentsPage() {
       <DocumentManagementClient
         initialDocuments={documents || []}
         organizationId={session.organizationId}
+        isLocked={!!org?.documentsLockedAt}
       />
     </div>
   );

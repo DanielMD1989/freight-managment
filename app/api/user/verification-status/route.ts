@@ -46,6 +46,7 @@ export async function GET() {
             verifiedAt: true,
             verificationStatus: true, // Round S2
             rejectionReason: true, // Round S2
+            documentsLockedAt: true, // Round U6
           },
         },
       },
@@ -147,6 +148,7 @@ export async function GET() {
             isVerified: user.organization.isVerified,
             verificationStatus: user.organization.verificationStatus, // Round S2
             rejectionReason: user.organization.rejectionReason ?? null, // Round S2
+            documentsLockedAt: user.organization.documentsLockedAt ?? null, // Round U6
           }
         : null,
       verification: {
