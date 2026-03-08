@@ -13,7 +13,7 @@ import { writeAuditLog, AuditEventType, AuditSeverity } from "@/lib/auditLog";
 import { handleApiError } from "@/lib/apiErrors";
 // M7 FIX: Add CSRF validation
 import { validateCSRFWithMobile } from "@/lib/csrf";
-import { createNotification } from "@/lib/notifications";
+import { createNotification, NotificationType } from "@/lib/notifications";
 // G-A17-6: Cache invalidation for user cascade on unverify
 import { CacheInvalidation } from "@/lib/cache";
 
@@ -115,7 +115,7 @@ export async function POST(
       orgUsers.map((u) =>
         createNotification({
           userId: u.id,
-          type: "ACCOUNT_APPROVED",
+          type: NotificationType.ACCOUNT_APPROVED,
           title: "Registration Approved",
           message:
             "Your organization has been approved. You now have full marketplace access.",

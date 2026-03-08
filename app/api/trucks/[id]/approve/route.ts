@@ -14,7 +14,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { requireActiveUser } from "@/lib/auth";
 import { hasPermission, Permission } from "@/lib/rbac/permissions";
-import { createNotification } from "@/lib/notifications";
+import { createNotification, NotificationType } from "@/lib/notifications";
 import { UserRole } from "@prisma/client";
 // P1-001-B FIX: Import CacheInvalidation for approval status changes
 import { CacheInvalidation } from "@/lib/cache";
@@ -154,7 +154,7 @@ export async function POST(
       for (const user of carrierUsers) {
         await createNotification({
           userId: user.id,
-          type: "TRUCK_APPROVED",
+          type: NotificationType.TRUCK_APPROVED,
           title: "Truck Approved",
           message: `Your truck ${truck.licensePlate} has been approved and is now available for posting.`,
           metadata: {
@@ -250,7 +250,7 @@ export async function POST(
       for (const user of carrierUsers) {
         await createNotification({
           userId: user.id,
-          type: "TRUCK_REJECTED",
+          type: NotificationType.TRUCK_REJECTED,
           title: "Truck Rejected",
           message: `Your truck ${truck.licensePlate} has been rejected. Reason: ${data.reason}`,
           metadata: {

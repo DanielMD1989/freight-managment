@@ -166,6 +166,99 @@ describe("Notification Routing", () => {
     });
   });
 
+  // ---- Registration & approval routes (G-N1-7, G-N1-8, G-N1-9) ----
+
+  describe("registration & approval routes", () => {
+    // NA-9: ACCOUNT_APPROVED routes to carrier dashboard for CARRIER
+    it("NA-9: ACCOUNT_APPROVED → /(carrier)/dashboard for CARRIER", () => {
+      expect(getNotificationRoute("ACCOUNT_APPROVED", {}, "CARRIER")).toBe(
+        "/(carrier)/dashboard"
+      );
+    });
+
+    it("NA-9b: ACCOUNT_APPROVED → /(shipper)/dashboard for SHIPPER", () => {
+      expect(getNotificationRoute("ACCOUNT_APPROVED", {}, "SHIPPER")).toBe(
+        "/(shipper)/dashboard"
+      );
+    });
+
+    it("NA-9c: ACCOUNT_APPROVED → /(dispatcher)/dashboard for DISPATCHER", () => {
+      expect(getNotificationRoute("ACCOUNT_APPROVED", {}, "DISPATCHER")).toBe(
+        "/(dispatcher)/dashboard"
+      );
+    });
+
+    // NA-10: ACCOUNT_FLAGGED routes to profile for CARRIER (not null)
+    it("NA-10: ACCOUNT_FLAGGED → /(carrier)/profile for CARRIER (not null)", () => {
+      expect(getNotificationRoute("ACCOUNT_FLAGGED", {}, "CARRIER")).toBe(
+        "/(carrier)/profile"
+      );
+    });
+
+    it("NA-10b: ACCOUNT_FLAGGED → /(shipper)/profile for SHIPPER (not null)", () => {
+      expect(getNotificationRoute("ACCOUNT_FLAGGED", {}, "SHIPPER")).toBe(
+        "/(shipper)/profile"
+      );
+    });
+
+    it("NA-10c: ACCOUNT_FLAGGED → /(admin)/users for ADMIN", () => {
+      expect(getNotificationRoute("ACCOUNT_FLAGGED", {}, "ADMIN")).toBe(
+        "/(admin)/users"
+      );
+    });
+
+    // NA-11: USER_STATUS_CHANGED routes to /(shared)/profile
+    it("NA-11: USER_STATUS_CHANGED → /(shared)/profile for any role", () => {
+      expect(getNotificationRoute("USER_STATUS_CHANGED", {}, "CARRIER")).toBe(
+        "/(shared)/profile"
+      );
+      expect(getNotificationRoute("USER_STATUS_CHANGED", {}, "SHIPPER")).toBe(
+        "/(shared)/profile"
+      );
+    });
+
+    // NA-12: DOCUMENTS_SUBMITTED routes to /(admin)/verification for ADMIN
+    it("NA-12: DOCUMENTS_SUBMITTED → /(admin)/verification for ADMIN", () => {
+      expect(getNotificationRoute("DOCUMENTS_SUBMITTED", {}, "ADMIN")).toBe(
+        "/(admin)/verification"
+      );
+    });
+
+    it("NA-12b: DOCUMENTS_SUBMITTED → null for non-admin", () => {
+      expect(
+        getNotificationRoute("DOCUMENTS_SUBMITTED", {}, "CARRIER")
+      ).toBeNull();
+      expect(
+        getNotificationRoute("DOCUMENTS_SUBMITTED", {}, "SHIPPER")
+      ).toBeNull();
+    });
+
+    it("REGISTRATION_RESUBMITTED → /(admin)/verification for ADMIN", () => {
+      expect(
+        getNotificationRoute("REGISTRATION_RESUBMITTED", {}, "ADMIN")
+      ).toBe("/(admin)/verification");
+    });
+
+    it("TRUCK_RESUBMITTED → /(admin)/verification for ADMIN", () => {
+      expect(getNotificationRoute("TRUCK_RESUBMITTED", {}, "ADMIN")).toBe(
+        "/(admin)/verification"
+      );
+    });
+
+    it("TRUCK_RESUBMITTED → null for non-admin", () => {
+      expect(
+        getNotificationRoute("TRUCK_RESUBMITTED", {}, "CARRIER")
+      ).toBeNull();
+    });
+
+    it("BYPASS_WARNING still routes to /(admin)/users (not affected by ACCOUNT_FLAGGED split)", () => {
+      expect(getNotificationRoute("BYPASS_WARNING", {}, "ADMIN")).toBe(
+        "/(admin)/users"
+      );
+      expect(getNotificationRoute("BYPASS_WARNING", {}, "CARRIER")).toBeNull();
+    });
+  });
+
   // ---- Shared / null routes ----
 
   describe("shared and null routes", () => {

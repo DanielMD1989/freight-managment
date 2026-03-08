@@ -168,9 +168,30 @@ export function getNotificationRoute(
       }
       return null;
 
+    // ── Account status (registration approval / rejection) ──────────────────
+    case "ACCOUNT_APPROVED":
+      if (isCarrier) return "/(carrier)/dashboard";
+      if (isShipper) return "/(shipper)/dashboard";
+      if (isDispatcher) return "/(dispatcher)/dashboard";
+      return null;
+
+    case "ACCOUNT_FLAGGED":
+      if (isAdmin) return "/(admin)/users";
+      if (isCarrier) return "/(carrier)/profile";
+      if (isShipper) return "/(shipper)/profile";
+      return null;
+
+    case "USER_STATUS_CHANGED":
+      return "/(shared)/profile";
+
+    // ── Admin-only verification queue notifications ──────────────────────────
+    case "DOCUMENTS_SUBMITTED":
+    case "REGISTRATION_RESUBMITTED":
+    case "TRUCK_RESUBMITTED":
+      return isAdmin ? "/(admin)/verification" : null;
+
     // ── Admin / bypass ───────────────────────────────────────────────────────
     case "BYPASS_WARNING":
-    case "ACCOUNT_FLAGGED":
       return isAdmin ? "/(admin)/users" : null;
 
     // ── No navigation ────────────────────────────────────────────────────────

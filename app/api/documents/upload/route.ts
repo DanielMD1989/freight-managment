@@ -37,6 +37,10 @@ import { requireRegistrationAccess } from "@/lib/auth";
 import { validateFileName, validateIdFormat } from "@/lib/validation";
 import { checkRateLimit, RATE_LIMIT_DOCUMENT_UPLOAD } from "@/lib/rateLimit";
 import { validateCSRFWithMobile } from "@/lib/csrf";
+import {
+  createNotificationForRole,
+  NotificationType,
+} from "@/lib/notifications";
 
 // Form data schema for document upload
 const documentUploadSchema = z.object({
@@ -345,6 +349,21 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      createNotificationForRole({
+        role: "ADMIN",
+        type: NotificationType.DOCUMENTS_SUBMITTED,
+        title: "New Document Pending Review",
+        message: `Company document uploaded (${type}) — awaiting verification.`,
+        metadata: {
+          entityType,
+          entityId,
+          documentType: type,
+          uploadedById: userId,
+        },
+      }).catch((err) =>
+        console.error("Failed to notify admins of doc upload:", err)
+      );
+
       const response = NextResponse.json({
         message: "Company document uploaded successfully",
         document,
@@ -392,6 +411,21 @@ export async function POST(request: NextRequest) {
           coverageType: true,
         },
       });
+
+      createNotificationForRole({
+        role: "ADMIN",
+        type: NotificationType.DOCUMENTS_SUBMITTED,
+        title: "New Document Pending Review",
+        message: `Truck document uploaded (${type}) — awaiting verification.`,
+        metadata: {
+          entityType,
+          entityId,
+          documentType: type,
+          uploadedById: userId,
+        },
+      }).catch((err) =>
+        console.error("Failed to notify admins of doc upload:", err)
+      );
 
       const response = NextResponse.json({
         message: "Truck document uploaded successfully",

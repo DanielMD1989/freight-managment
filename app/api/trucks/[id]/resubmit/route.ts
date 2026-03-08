@@ -12,6 +12,10 @@ import { db } from "@/lib/db";
 import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { handleApiError } from "@/lib/apiErrors";
+import {
+  createNotificationForRole,
+  NotificationType,
+} from "@/lib/notifications";
 
 export async function POST(
   request: NextRequest,
@@ -65,6 +69,20 @@ export async function POST(
         rejectedAt: null,
       },
     });
+
+    createNotificationForRole({
+      role: "ADMIN",
+      type: NotificationType.TRUCK_RESUBMITTED,
+      title: "Truck Resubmitted for Review",
+      message: `Truck ${truck.licensePlate} has been resubmitted for approval.`,
+      metadata: {
+        truckId,
+        licensePlate: truck.licensePlate,
+        carrierId: truck.carrierId,
+      },
+    }).catch((err) =>
+      console.error("Failed to notify admins of truck resubmit:", err)
+    );
 
     return NextResponse.json({
       message: "Truck resubmitted for review",

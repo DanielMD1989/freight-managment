@@ -12,6 +12,10 @@ import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { handleApiError } from "@/lib/apiErrors";
+import {
+  createNotificationForRole,
+  NotificationType,
+} from "@/lib/notifications";
 
 /**
  * POST /api/user/resubmit
@@ -67,6 +71,19 @@ export async function POST(request: NextRequest) {
         rejectedAt: null,
       },
     });
+
+    createNotificationForRole({
+      role: "ADMIN",
+      type: NotificationType.REGISTRATION_RESUBMITTED,
+      title: "Registration Resubmitted",
+      message: `Organization ${user.organization.id} has been resubmitted for review.`,
+      metadata: {
+        orgId: user.organization.id,
+        resubmittedById: session.userId,
+      },
+    }).catch((err) =>
+      console.error("Failed to notify admins of resubmit:", err)
+    );
 
     // Transition REGISTERED user to PENDING_VERIFICATION
     if (user.status === "REGISTERED") {
