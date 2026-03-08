@@ -50,25 +50,6 @@ interface Load {
   updatedAt: string;
 }
 
-interface Trip {
-  id: string;
-  loadId: string;
-  status: string;
-  truck: {
-    plateNumber: string;
-    truckType: string;
-  };
-  carrier: {
-    name: string;
-  };
-  pickupLocation?: {
-    address: string;
-  };
-  deliveryLocation?: {
-    address: string;
-  };
-}
-
 interface DashboardData {
   stats?: {
     totalLoads: number;
@@ -103,7 +84,9 @@ interface ShipperDashboardClientProps {
   user: User;
   dashboardData: DashboardData | null;
   recentLoads: Load[];
-  activeTrips: Trip[];
+  activeLoads: Load[];
+  postedLoads: Load[];
+  recentDeliveries: Load[];
   carrierApplications?: CarrierApplication[];
 }
 
@@ -128,7 +111,9 @@ export default function ShipperDashboardClient({
   user,
   dashboardData,
   recentLoads,
-  activeTrips,
+  activeLoads,
+  postedLoads,
+  recentDeliveries,
   carrierApplications = [],
 }: ShipperDashboardClientProps) {
   const stats = dashboardData?.stats || {
@@ -150,11 +135,6 @@ export default function ShipperDashboardClient({
     month: "long",
     day: "numeric",
   });
-
-  // Filter delivered loads
-  const deliveredLoads = recentLoads.filter(
-    (l) => l.status === "DELIVERED" || l.status === "COMPLETED"
-  );
 
   // Filter pending applications
   const pendingApplications = carrierApplications.filter(
@@ -268,18 +248,25 @@ export default function ShipperDashboardClient({
             <DashboardSection
               title="Active Shipments"
               subtitle="Shipments currently in progress"
-              action={{ label: "View All", href: "/shipper/map" }}
+              action={{
+                label: "View All",
+                href: "/shipper/loads?status=active",
+              }}
               noPadding
             >
-              {activeTrips.length > 0 ? (
+              {activeLoads.length > 0 ? (
                 <div
                   className="divide-y"
                   style={{ borderColor: "var(--border)" }}
                 >
-                  {activeTrips.slice(0, 5).map((trip) => (
+                  {activeLoads.slice(0, 5).map((load) => (
                     <Link
-                      key={trip.id}
-                      href="/shipper/map"
+                      key={load.id}
+                      href={
+                        load.status === "IN_TRANSIT"
+                          ? `/shipper/loads/${load.id}/tracking`
+                          : `/shipper/loads/${load.id}`
+                      }
                       className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-[var(--bg-tinted)]"
                     >
                       <div className="min-w-0 flex-1">
@@ -288,7 +275,7 @@ export default function ShipperDashboardClient({
                             className="text-sm font-medium"
                             style={{ color: "var(--foreground)" }}
                           >
-                            Load #{trip.loadId.slice(-6)}
+                            Load #{load.id.slice(-6)}
                           </span>
                           <span style={{ color: "var(--foreground-muted)" }}>
                             •
@@ -297,19 +284,19 @@ export default function ShipperDashboardClient({
                             className="truncate text-sm"
                             style={{ color: "var(--foreground-muted)" }}
                           >
-                            {trip.carrier?.name || "Unknown Carrier"}
+                            {load.pickupCity} → {load.deliveryCity}
                           </span>
                         </div>
                         <div
                           className="flex items-center gap-2 text-xs"
                           style={{ color: "var(--foreground-muted)" }}
                         >
-                          <span>{trip.truck?.plateNumber || "-"}</span>
+                          <span>{load.truckType}</span>
                           <span>•</span>
-                          <span>{trip.truck?.truckType || "-"}</span>
+                          <span>{(load.weight || 0).toLocaleString()} kg</span>
                         </div>
                       </div>
-                      <StatusBadge status={trip.status} />
+                      <StatusBadge status={load.status} />
                     </Link>
                   ))}
                 </div>
@@ -331,7 +318,7 @@ export default function ShipperDashboardClient({
                     className="text-xs"
                     style={{ color: "var(--foreground-muted)" }}
                   >
-                    Your shipments will appear here once in transit
+                    Assigned and in-transit loads will appear here
                   </p>
                 </div>
               )}
@@ -343,6 +330,7 @@ export default function ShipperDashboardClient({
             <DashboardSection
               title="Recent Activity"
               subtitle="Latest updates"
+              action={{ label: "View All", href: "/shipper/loads" }}
               noPadding
             >
               <div
@@ -407,74 +395,69 @@ export default function ShipperDashboardClient({
               action={{ label: "View All", href: "/shipper/loads" }}
               noPadding
             >
-              {recentLoads.filter((l) => l.status === "POSTED").length > 0 ? (
+              {postedLoads.length > 0 ? (
                 <div
                   className="divide-y"
                   style={{ borderColor: "var(--border)" }}
                 >
-                  {recentLoads
-                    .filter((l) => l.status === "POSTED")
-                    .slice(0, 4)
-                    .map((load) => (
-                      <Link
-                        key={load.id}
-                        href={`/shipper/loads/${load.id}`}
-                        className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-[var(--bg-tinted)]"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="mb-1 flex items-center gap-2">
-                            <span
-                              className="text-sm font-medium"
-                              style={{ color: "var(--foreground)" }}
-                            >
-                              {load.pickupCity}
-                            </span>
-                            <svg
-                              className="h-4 w-4"
-                              style={{ color: "var(--foreground-muted)" }}
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M17 8l4 4m0 0l-4 4m4-4H3"
-                              />
-                            </svg>
-                            <span
-                              className="text-sm font-medium"
-                              style={{ color: "var(--foreground)" }}
-                            >
-                              {load.deliveryCity}
-                            </span>
-                          </div>
-                          <div
-                            className="flex items-center gap-2 text-xs"
-                            style={{ color: "var(--foreground-muted)" }}
-                          >
-                            <span>{load.truckType}</span>
-                            <span>•</span>
-                            <span>
-                              {(load.weight || 0).toLocaleString()} kg
-                            </span>
-                            <span>•</span>
-                            <span>
-                              {new Date(load.pickupDate).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div
-                            className="text-sm font-semibold"
+                  {postedLoads.slice(0, 4).map((load) => (
+                    <Link
+                      key={load.id}
+                      href={`/shipper/loads/${load.id}`}
+                      className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-[var(--bg-tinted)]"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1 flex items-center gap-2">
+                          <span
+                            className="text-sm font-medium"
                             style={{ color: "var(--foreground)" }}
                           >
-                            {(load.shipperServiceFee || 0).toLocaleString()} ETB
-                          </div>
+                            {load.pickupCity}
+                          </span>
+                          <svg
+                            className="h-4 w-4"
+                            style={{ color: "var(--foreground-muted)" }}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M17 8l4 4m0 0l-4 4m4-4H3"
+                            />
+                          </svg>
+                          <span
+                            className="text-sm font-medium"
+                            style={{ color: "var(--foreground)" }}
+                          >
+                            {load.deliveryCity}
+                          </span>
                         </div>
-                      </Link>
-                    ))}
+                        <div
+                          className="flex items-center gap-2 text-xs"
+                          style={{ color: "var(--foreground-muted)" }}
+                        >
+                          <span>{load.truckType}</span>
+                          <span>•</span>
+                          <span>{(load.weight || 0).toLocaleString()} kg</span>
+                          <span>•</span>
+                          <span>
+                            {new Date(load.pickupDate).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div
+                          className="text-sm font-semibold"
+                          style={{ color: "var(--foreground)" }}
+                        >
+                          {(load.shipperServiceFee || 0).toLocaleString()} ETB
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
               ) : (
                 <div className="py-12 text-center">
@@ -581,12 +564,12 @@ export default function ShipperDashboardClient({
               action={{ label: "View All", href: "/shipper/trips" }}
               noPadding
             >
-              {deliveredLoads.length > 0 ? (
+              {recentDeliveries.length > 0 ? (
                 <div
                   className="divide-y"
                   style={{ borderColor: "var(--border)" }}
                 >
-                  {deliveredLoads.slice(0, 4).map((load) => (
+                  {recentDeliveries.slice(0, 4).map((load) => (
                     <Link
                       key={load.id}
                       href={`/shipper/loads/${load.id}`}

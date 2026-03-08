@@ -87,11 +87,19 @@ export async function GET(request: NextRequest) {
         where: { shipperId: session.organizationId },
       }),
 
-      // Active loads (POSTED, ASSIGNED - not counting IN_TRANSIT separately)
+      // Active loads (all pre-delivery states)
       db.load.count({
         where: {
           shipperId: session.organizationId,
-          status: { in: ["POSTED", "ASSIGNED"] },
+          status: {
+            in: [
+              "POSTED",
+              "SEARCHING",
+              "OFFERED",
+              "ASSIGNED",
+              "PICKUP_PENDING",
+            ],
+          },
         },
       }),
 

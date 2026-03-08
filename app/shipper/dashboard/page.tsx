@@ -56,11 +56,11 @@ async function getRecentLoads(sessionCookie: string) {
   }
 }
 
-async function getActiveTrips(sessionCookie: string) {
+async function getActiveLoads(sessionCookie: string) {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
     const response = await fetch(
-      `${baseUrl}/api/map/trips?role=shipper&limit=5`,
+      `${baseUrl}/api/loads?status=ASSIGNED,PICKUP_PENDING,IN_TRANSIT&myLoads=true&limit=5`,
       {
         headers: {
           Cookie: `session=${sessionCookie}`,
@@ -71,7 +71,49 @@ async function getActiveTrips(sessionCookie: string) {
 
     if (!response.ok) return [];
     const data = await response.json();
-    return data.trips || [];
+    return data.loads || [];
+  } catch {
+    return [];
+  }
+}
+
+async function getPostedLoads(sessionCookie: string) {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    const response = await fetch(
+      `${baseUrl}/api/loads?status=POSTED&myLoads=true&limit=4`,
+      {
+        headers: {
+          Cookie: `session=${sessionCookie}`,
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) return [];
+    const data = await response.json();
+    return data.loads || [];
+  } catch {
+    return [];
+  }
+}
+
+async function getRecentDeliveries(sessionCookie: string) {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    const response = await fetch(
+      `${baseUrl}/api/loads?status=DELIVERED,COMPLETED&myLoads=true&limit=4`,
+      {
+        headers: {
+          Cookie: `session=${sessionCookie}`,
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) return [];
+    const data = await response.json();
+    return data.loads || [];
   } catch {
     return [];
   }
@@ -112,13 +154,21 @@ export default async function ShipperDashboardPage() {
     redirect("/unauthorized");
   }
 
-  const [dashboardData, recentLoads, activeTrips, carrierApplications] =
-    await Promise.all([
-      getDashboardData(sessionCookie.value),
-      getRecentLoads(sessionCookie.value),
-      getActiveTrips(sessionCookie.value),
-      getCarrierApplications(sessionCookie.value),
-    ]);
+  const [
+    dashboardData,
+    recentLoads,
+    activeLoads,
+    postedLoads,
+    recentDeliveries,
+    carrierApplications,
+  ] = await Promise.all([
+    getDashboardData(sessionCookie.value),
+    getRecentLoads(sessionCookie.value),
+    getActiveLoads(sessionCookie.value),
+    getPostedLoads(sessionCookie.value),
+    getRecentDeliveries(sessionCookie.value),
+    getCarrierApplications(sessionCookie.value),
+  ]);
 
   return (
     <Suspense fallback={<DashboardSkeleton />}>
@@ -126,7 +176,9 @@ export default async function ShipperDashboardPage() {
         user={session}
         dashboardData={dashboardData}
         recentLoads={recentLoads}
-        activeTrips={activeTrips}
+        activeLoads={activeLoads}
+        postedLoads={postedLoads}
+        recentDeliveries={recentDeliveries}
         carrierApplications={carrierApplications}
       />
     </Suspense>
