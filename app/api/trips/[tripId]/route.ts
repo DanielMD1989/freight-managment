@@ -24,6 +24,7 @@ import { refundServiceFee, deductServiceFee } from "@/lib/serviceFeeManagement";
 import {
   createNotificationForRole,
   createNotification,
+  notifyOrganization,
   NotificationType,
 } from "@/lib/notifications";
 
@@ -550,6 +551,68 @@ export async function PATCH(
       await CacheInvalidation.load(trip.loadId, trip.shipperId);
     }
 
+    // G-N3-1: PICKUP_PENDING → notify all active shipper users (carrier en route to pickup)
+    if (validatedData.status === "PICKUP_PENDING") {
+      notifyOrganization({
+        organizationId: trip.shipperId,
+        type: NotificationType.TRIP_STARTED,
+        title: "Carrier En Route to Pickup",
+        message: `Carrier is en route to pick up your load (${updatedTrip.load?.pickupCity} → ${updatedTrip.load?.deliveryCity}).`,
+        metadata: { tripId, loadId: trip.loadId },
+      }).catch((err) =>
+        console.error("PICKUP_PENDING notification failed:", err)
+      );
+    }
+
+    // G-N3-2: IN_TRANSIT → notify all active shipper users (cargo picked up)
+    if (validatedData.status === "IN_TRANSIT") {
+      notifyOrganization({
+        organizationId: trip.shipperId,
+        type: NotificationType.TRIP_IN_TRANSIT,
+        title: "Cargo In Transit",
+        message: `Your cargo has been picked up and is now in transit (${updatedTrip.load?.pickupCity} → ${updatedTrip.load?.deliveryCity}).`,
+        metadata: { tripId, loadId: trip.loadId },
+      }).catch((err) => console.error("IN_TRANSIT notification failed:", err));
+    }
+
+    // G-N3-3: DELIVERED → notify all active shipper users (prompt to verify POD)
+    if (validatedData.status === "DELIVERED") {
+      notifyOrganization({
+        organizationId: trip.shipperId,
+        type: NotificationType.TRIP_DELIVERED,
+        title: "Cargo Delivered",
+        message: `Cargo has arrived at destination (${updatedTrip.load?.pickupCity} → ${updatedTrip.load?.deliveryCity}). Please verify POD to complete the trip.`,
+        metadata: { tripId, loadId: trip.loadId },
+      }).catch((err) => console.error("DELIVERED notification failed:", err));
+    }
+
+    // G-N3-6: CANCELLED via PATCH — notify shipper always; notify carrier when admin/dispatcher cancels
+    if (validatedData.status === "CANCELLED") {
+      const cancelPromises: Promise<unknown>[] = [
+        notifyOrganization({
+          organizationId: trip.shipperId,
+          type: NotificationType.TRIP_CANCELLED,
+          title: "Trip Cancelled",
+          message: `Trip (${updatedTrip.load?.pickupCity} → ${updatedTrip.load?.deliveryCity}) has been cancelled.`,
+          metadata: { tripId, loadId: trip.loadId },
+        }),
+      ];
+      if (isAdmin || isDispatcher) {
+        cancelPromises.push(
+          notifyOrganization({
+            organizationId: trip.carrierId,
+            type: NotificationType.TRIP_CANCELLED,
+            title: "Trip Cancelled",
+            message: `Trip (${updatedTrip.load?.pickupCity} → ${updatedTrip.load?.deliveryCity}) has been cancelled.`,
+            metadata: { tripId, loadId: trip.loadId },
+          })
+        );
+      }
+      Promise.all(cancelPromises).catch((err) =>
+        console.error("CANCELLED notification failed:", err)
+      );
+    }
+
     // G-A14-4: Notify all active shipper org users on carrier-initiated COMPLETED.
     // Fire-and-forget — trip state is already persisted.
     if (validatedData.status === "COMPLETED") {
@@ -577,7 +640,20 @@ export async function PATCH(
       try {
         await createNotificationForRole({
           role: "DISPATCHER",
-          type: "EXCEPTION_CREATED",
+          type: NotificationType.EXCEPTION_CREATED,
+          title: "Trip Exception Raised",
+          message: `Trip (${updatedTrip.load?.pickupCity} → ${updatedTrip.load?.deliveryCity}) has entered EXCEPTION state and requires admin resolution.`,
+          metadata: {
+            tripId,
+            loadId: trip.loadId,
+            previousStatus: trip.status,
+            raisedByRole: session.role,
+          },
+        });
+        // G-N3-4: Also notify ADMIN — sole resolver per Blueprint §9
+        await createNotificationForRole({
+          role: "ADMIN",
+          type: NotificationType.EXCEPTION_CREATED,
           title: "Trip Exception Raised",
           message: `Trip (${updatedTrip.load?.pickupCity} → ${updatedTrip.load?.deliveryCity}) has entered EXCEPTION state and requires admin resolution.`,
           metadata: {
@@ -591,6 +667,34 @@ export async function PATCH(
         // Non-blocking: trip state is persisted; notification failure is non-fatal
         console.error("Exception notification failed:", notifyError);
       }
+    }
+
+    // G-N3-5: EXCEPTION resolved → notify carrier and shipper
+    if (trip.status === "EXCEPTION" && validatedData.status !== "EXCEPTION") {
+      const resolveMsg = `Exception for trip (${updatedTrip.load?.pickupCity} → ${updatedTrip.load?.deliveryCity}) has been resolved. New status: ${validatedData.status}.`;
+      const resolveMeta = {
+        tripId,
+        loadId: trip.loadId,
+        newStatus: validatedData.status,
+      };
+      Promise.all([
+        notifyOrganization({
+          organizationId: trip.carrierId,
+          type: NotificationType.EXCEPTION_RESOLVED,
+          title: "Exception Resolved",
+          message: resolveMsg,
+          metadata: resolveMeta,
+        }),
+        notifyOrganization({
+          organizationId: trip.shipperId,
+          type: NotificationType.EXCEPTION_RESOLVED,
+          title: "Exception Resolved",
+          message: resolveMsg,
+          metadata: resolveMeta,
+        }),
+      ]).catch((err) =>
+        console.error("EXCEPTION_RESOLVED notification failed:", err)
+      );
     }
 
     return NextResponse.json({

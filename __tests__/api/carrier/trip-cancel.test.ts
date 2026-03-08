@@ -62,6 +62,7 @@ mockLoadUtils();
 // Custom notifications mock with TRIP_CANCELLED type
 jest.mock("@/lib/notifications", () => ({
   createNotification: jest.fn(async () => ({ id: "notif-1" })),
+  notifyOrganization: jest.fn(async () => {}),
   notifyTruckRequest: jest.fn(async () => {}),
   getRecentNotifications: jest.fn(async () => []),
   getUnreadCount: jest.fn(async () => 0),
@@ -690,7 +691,7 @@ describe("Trip Cancellation", () => {
     it("other party notified on cancellation", async () => {
       // Carrier cancels → shipper should be notified
       const { tripId } = await createCancellableTrip();
-      const { createNotification } = require("@/lib/notifications");
+      const { notifyOrganization } = require("@/lib/notifications");
 
       const req = createRequest(
         "POST",
@@ -700,7 +701,7 @@ describe("Trip Cancellation", () => {
       const res = await callHandler(cancelTrip, req, { tripId });
       expect(res.status).toBe(200);
 
-      expect(createNotification).toHaveBeenCalledWith(
+      expect(notifyOrganization).toHaveBeenCalledWith(
         expect.objectContaining({
           type: "TRIP_CANCELLED",
           title: "Trip Cancelled",
@@ -717,7 +718,7 @@ describe("Trip Cancellation", () => {
       });
       setAuthSession(scopedDispatcher);
       const { tripId } = await createCancellableTrip("ASSIGNED");
-      const { createNotification } = require("@/lib/notifications");
+      const { notifyOrganization } = require("@/lib/notifications");
 
       const req = createRequest(
         "POST",
@@ -726,7 +727,7 @@ describe("Trip Cancellation", () => {
       );
       const res = await callHandler(cancelTrip, req, { tripId });
       expect(res.status).toBe(200);
-      expect(createNotification).toHaveBeenCalledTimes(2);
+      expect(notifyOrganization).toHaveBeenCalledTimes(2);
     });
   });
 

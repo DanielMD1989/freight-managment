@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
-import { createNotification, NotificationType } from "@/lib/notifications";
+import { notifyOrganization, NotificationType } from "@/lib/notifications";
 import { CacheInvalidation } from "@/lib/cache";
 import { z } from "zod";
 import { zodErrorResponse } from "@/lib/validation";
@@ -68,10 +68,6 @@ export async function POST(
           select: {
             id: true,
             name: true,
-            users: {
-              select: { id: true },
-              take: 1,
-            },
           },
         },
         shipper: {
@@ -281,11 +277,10 @@ export async function POST(
     );
     await CacheInvalidation.load(trip.loadId, trip.shipperId || "");
 
-    // Notify carrier that delivery has been confirmed
-    const carrierUserId = trip.carrier?.users?.[0]?.id;
-    if (carrierUserId) {
-      await createNotification({
-        userId: carrierUserId,
+    // G-N3-8: Notify ALL active carrier org users that delivery has been confirmed (not just first)
+    if (trip.carrier?.id) {
+      await notifyOrganization({
+        organizationId: trip.carrier.id,
         type: NotificationType.POD_VERIFIED,
         title: "Delivery Confirmed",
         message: `Shipper has confirmed delivery for trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Settlement can now proceed.`,

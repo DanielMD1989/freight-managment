@@ -65,6 +65,7 @@ mockLoadUtils();
 // Custom notifications mock with POD_VERIFIED type
 jest.mock("@/lib/notifications", () => ({
   createNotification: jest.fn(async () => ({ id: "notif-1" })),
+  notifyOrganization: jest.fn(async () => {}),
   notifyTruckRequest: jest.fn(async () => {}),
   getRecentNotifications: jest.fn(async () => []),
   getUnreadCount: jest.fn(async () => 0),
@@ -821,7 +822,7 @@ describe("Trip Delivery Confirmation", () => {
         },
       });
 
-      const { createNotification } = require("@/lib/notifications");
+      const { notifyOrganization } = require("@/lib/notifications");
 
       const req = createRequest(
         "POST",
@@ -832,7 +833,7 @@ describe("Trip Delivery Confirmation", () => {
       });
       expect(res.status).toBe(200);
 
-      expect(createNotification).toHaveBeenCalledWith(
+      expect(notifyOrganization).toHaveBeenCalledWith(
         expect.objectContaining({
           type: "POD_VERIFIED",
           title: "Delivery Confirmed",

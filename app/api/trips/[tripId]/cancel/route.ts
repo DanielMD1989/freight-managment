@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
-import { createNotification, NotificationType } from "@/lib/notifications";
+import { notifyOrganization, NotificationType } from "@/lib/notifications";
 import { z } from "zod";
 import { CacheInvalidation } from "@/lib/cache";
 import { handleApiError } from "@/lib/apiErrors";
@@ -74,20 +74,12 @@ export async function POST(
           select: {
             id: true,
             name: true,
-            users: {
-              select: { id: true },
-              take: 1,
-            },
           },
         },
         shipper: {
           select: {
             id: true,
             name: true,
-            users: {
-              select: { id: true },
-              take: 1,
-            },
           },
         },
       },
@@ -253,33 +245,31 @@ export async function POST(
     // - Carrier cancels → notify shipper (carrier is the initiator, shipper is the other party)
     // - Dispatcher cancels → notify BOTH shipper AND carrier (dispatcher acts for platform)
     // - Admin cancels → notify BOTH shipper AND carrier
+    // G-N3-9: Use notifyOrganization() to reach ALL active org users (not just first).
+
+    const cancelMsg = `${cancelledByRole} has cancelled the trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Reason: ${validatedData.reason}`;
+    const cancelMeta = { tripId, loadId: trip.loadId };
 
     // Notify shipper: when carrier, dispatcher, or admin cancels
-    if (isCarrier || isAdmin || isDispatcher) {
-      const shipperUserId = trip.shipper?.users?.[0]?.id;
-      if (shipperUserId) {
-        await createNotification({
-          userId: shipperUserId,
-          type: NotificationType.TRIP_CANCELLED,
-          title: "Trip Cancelled",
-          message: `${cancelledByRole} has cancelled the trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Reason: ${validatedData.reason}`,
-          metadata: { tripId, loadId: trip.loadId },
-        });
-      }
+    if (trip.shipperId) {
+      await notifyOrganization({
+        organizationId: trip.shipperId,
+        type: NotificationType.TRIP_CANCELLED,
+        title: "Trip Cancelled",
+        message: cancelMsg,
+        metadata: cancelMeta,
+      });
     }
 
     // Notify carrier: when dispatcher or admin cancels (carrier cancels their own trip — they know)
-    if (isAdmin || isDispatcher) {
-      const carrierUserId = trip.carrier?.users?.[0]?.id;
-      if (carrierUserId) {
-        await createNotification({
-          userId: carrierUserId,
-          type: NotificationType.TRIP_CANCELLED,
-          title: "Trip Cancelled",
-          message: `${cancelledByRole} has cancelled the trip ${trip.load?.pickupCity} → ${trip.load?.deliveryCity}. Reason: ${validatedData.reason}`,
-          metadata: { tripId, loadId: trip.loadId },
-        });
-      }
+    if ((isAdmin || isDispatcher) && trip.carrierId) {
+      await notifyOrganization({
+        organizationId: trip.carrierId,
+        type: NotificationType.TRIP_CANCELLED,
+        title: "Trip Cancelled",
+        message: cancelMsg,
+        metadata: cancelMeta,
+      });
     }
 
     return NextResponse.json({

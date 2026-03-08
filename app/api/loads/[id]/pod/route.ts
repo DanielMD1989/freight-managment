@@ -9,7 +9,11 @@ import { db } from "@/lib/db";
 import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { CacheInvalidation } from "@/lib/cache";
-import { createNotification, NotificationType } from "@/lib/notifications";
+import {
+  createNotification,
+  notifyOrganization,
+  NotificationType,
+} from "@/lib/notifications";
 import { uploadPOD } from "@/lib/storage";
 import { deductServiceFee } from "@/lib/serviceFeeManagement";
 import { checkRateLimit } from "@/lib/rateLimit";
@@ -521,6 +525,19 @@ export async function PUT(
         console.error(
           "Trip completion after POD verify failed:",
           completionErr
+        );
+      }
+
+      // G-N3-7: Notify all active shipper users that trip is COMPLETED after POD verify
+      if (load.shipperId) {
+        notifyOrganization({
+          organizationId: load.shipperId,
+          type: NotificationType.DELIVERY_CONFIRMED,
+          title: "Trip Completed",
+          message: `Trip from ${loadWithCarrier?.pickupCity} to ${loadWithCarrier?.deliveryCity} has been completed.`,
+          metadata: { loadId },
+        }).catch((err) =>
+          console.error("Failed to notify shipper of trip completion:", err)
         );
       }
     }

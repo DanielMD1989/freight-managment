@@ -55,6 +55,20 @@ export function getNotificationRoute(
       return null;
     }
 
+    // ── Trip progress (N3) ───────────────────────────────────────────────────
+    case "TRIP_STARTED":
+    case "TRIP_IN_TRANSIT":
+    case "TRIP_DELIVERED":
+    case "EXCEPTION_RESOLVED": {
+      const entityId = metadata.tripId ?? metadata.loadId;
+      if (entityId) {
+        return isCarrier
+          ? `/(carrier)/trips/${entityId}`
+          : `/(shipper)/trips/${entityId}`;
+      }
+      return isCarrier ? "/(carrier)/trips" : "/(shipper)/trips";
+    }
+
     // ── Truck approval ───────────────────────────────────────────────────────
     case "TRUCK_APPROVED":
     case "TRUCK_REJECTED":
