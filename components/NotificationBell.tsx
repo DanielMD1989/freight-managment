@@ -295,6 +295,11 @@ export default function NotificationBell() {
         if (isShipper) return `/shipper/wallet`;
         return `/admin/users`;
 
+      case "WITHDRAWAL_APPROVED":
+      case "WITHDRAWAL_REJECTED":
+      case "LOW_BALANCE_WARNING":
+        return isCarrier ? `/carrier/wallet` : `/shipper/wallet`;
+
       // ── Return loads ──────────────────────────────────────────────────────
       case "RETURN_LOAD_AVAILABLE":
       case "RETURN_LOAD_MATCHED":

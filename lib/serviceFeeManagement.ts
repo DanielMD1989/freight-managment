@@ -41,7 +41,11 @@ import {
   calculateFeesFromCorridor,
   calculatePartyFee,
 } from "./serviceFeeCalculation";
-import { createNotificationForRole, NotificationType } from "./notifications";
+import {
+  createNotificationForRole,
+  notifyOrganization,
+  NotificationType,
+} from "./notifications";
 
 // Result interfaces
 export interface ServiceFeeDeductResult {
@@ -305,7 +309,12 @@ export async function deductServiceFee(
         accountType: "SHIPPER_WALLET",
         isActive: true,
       },
-      select: { id: true, balance: true },
+      select: {
+        id: true,
+        balance: true,
+        organizationId: true,
+        minimumBalance: true,
+      },
     }),
     carrierId
       ? db.financialAccount.findFirst({
@@ -314,7 +323,12 @@ export async function deductServiceFee(
             accountType: "CARRIER_WALLET",
             isActive: true,
           },
-          select: { id: true, balance: true },
+          select: {
+            id: true,
+            balance: true,
+            organizationId: true,
+            minimumBalance: true,
+          },
         })
       : null,
     db.financialAccount.findFirst({
@@ -592,6 +606,98 @@ export async function deductServiceFee(
     }
 
     transactionId = result;
+
+    // G-W-N4-5: Notify shipper and carrier that service fees were deducted
+    if (totalDeducted > 0) {
+      const feeNotifies: Promise<void>[] = [];
+      if (shipperDeducted && shipperWallet && shipperFeeCalc.finalFee > 0) {
+        feeNotifies.push(
+          notifyOrganization({
+            organizationId: load.shipperId,
+            type: NotificationType.SERVICE_FEE_DEDUCTED,
+            title: "Service Fee Deducted",
+            message: `${shipperFeeCalc.finalFee.toFixed(2)} ETB service fee deducted upon trip completion.`,
+            metadata: { loadId, amount: shipperFeeCalc.finalFee },
+          })
+        );
+      }
+      if (
+        carrierDeducted &&
+        carrierWallet &&
+        carrierId &&
+        carrierFeeCalc.finalFee > 0
+      ) {
+        feeNotifies.push(
+          notifyOrganization({
+            organizationId: carrierId,
+            type: NotificationType.SERVICE_FEE_DEDUCTED,
+            title: "Service Fee Deducted",
+            message: `${carrierFeeCalc.finalFee.toFixed(2)} ETB service fee deducted upon trip completion.`,
+            metadata: { loadId, amount: carrierFeeCalc.finalFee },
+          })
+        );
+      }
+      Promise.all(feeNotifies).catch((err) =>
+        console.error("fee deducted notify err", err)
+      );
+
+      // G-W-N4-7: Post-deduction low-balance warning
+      const balanceChecks: Promise<void>[] = [];
+      if (shipperDeducted && shipperWallet && shipperFeeCalc.finalFee > 0) {
+        const newShipperBalance = new Decimal(shipperWallet.balance).minus(
+          shipperFeeCalc.finalFee
+        );
+        if (
+          newShipperBalance.lessThan(
+            new Decimal(shipperWallet.minimumBalance ?? 0)
+          )
+        ) {
+          balanceChecks.push(
+            notifyOrganization({
+              organizationId: load.shipperId,
+              type: NotificationType.LOW_BALANCE_WARNING,
+              title: "Low Wallet Balance",
+              message: `Your wallet balance has dropped below the minimum required for marketplace access. Please top up.`,
+              metadata: {
+                currentBalance: newShipperBalance.toNumber(),
+                minimumBalance: Number(shipperWallet.minimumBalance),
+              },
+            })
+          );
+        }
+      }
+      if (
+        carrierDeducted &&
+        carrierWallet &&
+        carrierId &&
+        carrierFeeCalc.finalFee > 0
+      ) {
+        const newCarrierBalance = new Decimal(carrierWallet.balance).minus(
+          carrierFeeCalc.finalFee
+        );
+        if (
+          newCarrierBalance.lessThan(
+            new Decimal(carrierWallet.minimumBalance ?? 0)
+          )
+        ) {
+          balanceChecks.push(
+            notifyOrganization({
+              organizationId: carrierId,
+              type: NotificationType.LOW_BALANCE_WARNING,
+              title: "Low Wallet Balance",
+              message: `Your wallet balance has dropped below the minimum required for marketplace access. Please top up.`,
+              metadata: {
+                currentBalance: newCarrierBalance.toNumber(),
+                minimumBalance: Number(carrierWallet.minimumBalance),
+              },
+            })
+          );
+        }
+      }
+      Promise.all(balanceChecks).catch((err) =>
+        console.error("post-deduct low-balance notify err", err)
+      );
+    }
   } else {
     // No fees to process - just update load with calculated fees
     // BUG-R9-1 FIX: Wrap in $transaction to prevent partial write race window
@@ -867,6 +973,39 @@ export async function refundServiceFee(
         newShipperBalance: new Decimal(updatedShipperWallet.balance),
       };
     }
+  );
+
+  // G-W-N4-4: Notify shipper and carrier that service fees were refunded
+  const refundNotifies: Promise<void>[] = [
+    notifyOrganization({
+      organizationId: load.shipperId,
+      type: NotificationType.SERVICE_FEE_REFUNDED,
+      title: "Service Fee Refunded",
+      message: `${shipperFeeToRefund.toFixed(2)} ETB service fee has been refunded to your wallet.`,
+      metadata: {
+        loadId,
+        shipperRefund: shipperFeeToRefund.toNumber(),
+        carrierRefund: carrierFeeToRefund.toNumber(),
+      },
+    }),
+    ...(carrierFeeToRefund.greaterThan(0) && carrierId
+      ? [
+          notifyOrganization({
+            organizationId: carrierId,
+            type: NotificationType.SERVICE_FEE_REFUNDED,
+            title: "Service Fee Refunded",
+            message: `${carrierFeeToRefund.toFixed(2)} ETB service fee has been refunded to your wallet.`,
+            metadata: {
+              loadId,
+              shipperRefund: shipperFeeToRefund.toNumber(),
+              carrierRefund: carrierFeeToRefund.toNumber(),
+            },
+          }),
+        ]
+      : []),
+  ];
+  Promise.all(refundNotifies).catch((err) =>
+    console.error("fee refund notify err", err)
   );
 
   return {

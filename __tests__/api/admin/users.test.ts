@@ -18,6 +18,7 @@ import {
   mockRateLimit,
   mockSecurity,
   mockCache,
+  mockNotifications,
   mockCors,
   mockAuditLog,
   mockGps,
@@ -44,6 +45,7 @@ mockCsrf();
 mockRateLimit();
 mockSecurity();
 mockCache();
+mockNotifications();
 mockCors();
 mockAuditLog();
 mockGps();

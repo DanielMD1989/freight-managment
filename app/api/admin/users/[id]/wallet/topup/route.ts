@@ -13,6 +13,7 @@ import { CacheInvalidation } from "@/lib/cache";
 import { z } from "zod";
 import { handleApiError } from "@/lib/apiErrors";
 import { DepositMethod } from "@prisma/client";
+import { notifyOrganization, NotificationType } from "@/lib/notifications";
 // H15 FIX: Import max topup constant
 import {
   MAX_WALLET_TOPUP_AMOUNT,
@@ -179,6 +180,20 @@ export async function POST(
 
     // Invalidate user cache so wallet balance reflects immediately
     await CacheInvalidation.user(id);
+
+    // G-W-N4-1: Notify all active org members that wallet was topped up
+    notifyOrganization({
+      organizationId: user.organizationId,
+      type: NotificationType.WALLET_TOPUP_CONFIRMED,
+      title: "Wallet Topped Up",
+      message: `${amount.toLocaleString()} ETB has been added to your wallet. New balance: ${Number(result.updatedWallet.balance).toLocaleString()} ETB.`,
+      metadata: {
+        amount,
+        newBalance: Number(result.updatedWallet.balance),
+        depositId: result.deposit.id,
+        paymentMethod,
+      },
+    }).catch((err) => console.error("topup notify err", err));
 
     return NextResponse.json({
       success: true,

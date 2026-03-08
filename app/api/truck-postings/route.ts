@@ -45,6 +45,7 @@ import {
 import { CacheInvalidation } from "@/lib/cache";
 import { handleApiError } from "@/lib/apiErrors";
 import { calculateDistanceKm } from "@/lib/geo";
+import { createNotification, NotificationType } from "@/lib/notifications";
 
 // Validation schema for truck posting
 const TruckPostingSchema = z.object({
@@ -416,6 +417,34 @@ export async function GET(request: NextRequest) {
         walletAccount &&
         walletAccount.balance < walletAccount.minimumBalance
       ) {
+        // G-W-N4-6: Fire LOW_BALANCE_WARNING at most once per 24h per user
+        const userId = browseSession?.userId;
+        if (userId) {
+          const oneDayAgo = new Date(Date.now() - 86_400_000);
+          db.notification
+            .findFirst({
+              where: {
+                userId,
+                type: NotificationType.LOW_BALANCE_WARNING,
+                createdAt: { gte: oneDayAgo },
+              },
+            })
+            .then((existing) => {
+              if (!existing) {
+                createNotification({
+                  userId,
+                  type: NotificationType.LOW_BALANCE_WARNING,
+                  title: "Insufficient Wallet Balance",
+                  message: `Your wallet balance is below the required minimum (${Number(walletAccount.minimumBalance).toLocaleString()} ETB). Top up to restore marketplace access.`,
+                  metadata: {
+                    currentBalance: Number(walletAccount.balance),
+                    minimumBalance: Number(walletAccount.minimumBalance),
+                  },
+                }).catch((err) => console.error("low-balance notify err", err));
+              }
+            })
+            .catch(() => {});
+        }
         return NextResponse.json(
           { error: "Insufficient wallet balance for marketplace access" },
           { status: 402 }

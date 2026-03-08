@@ -12,6 +12,7 @@ import { validateCSRFWithMobile } from "@/lib/csrf";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { CacheInvalidation } from "@/lib/cache";
 import { handleApiError } from "@/lib/apiErrors";
+import { notifyOrganization, NotificationType } from "@/lib/notifications";
 
 const updateSchema = z.object({
   action: z.enum(["APPROVED", "REJECTED"]),
@@ -193,6 +194,39 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     // Invalidate requesting user's cache so their wallet reflects immediately
     await CacheInvalidation.user(updated.requestedById);
+
+    // G-W-N4-2 / G-W-N4-3: Notify requesting user's org of approval/rejection
+    const reqUser = await db.user.findUnique({
+      where: { id: updated.requestedById },
+      select: { organizationId: true },
+    });
+    if (reqUser?.organizationId) {
+      if (action === "APPROVED") {
+        notifyOrganization({
+          organizationId: reqUser.organizationId,
+          type: NotificationType.WITHDRAWAL_APPROVED,
+          title: "Withdrawal Approved",
+          message: `Your withdrawal of ${Number(updated.amount).toLocaleString()} ETB to ${updated.bankName} has been approved.`,
+          metadata: {
+            withdrawalRequestId: id,
+            amount: Number(updated.amount),
+            bankName: updated.bankName,
+          },
+        }).catch((err) => console.error("withdrawal approved notify err", err));
+      } else {
+        notifyOrganization({
+          organizationId: reqUser.organizationId,
+          type: NotificationType.WITHDRAWAL_REJECTED,
+          title: "Withdrawal Request Rejected",
+          message: `Your withdrawal request of ${Number(updated.amount).toLocaleString()} ETB was not approved. Funds have been returned to your wallet.${rejectionReason ? ` Reason: ${rejectionReason}` : ""}`,
+          metadata: {
+            withdrawalRequestId: id,
+            amount: Number(updated.amount),
+            rejectionReason,
+          },
+        }).catch((err) => console.error("withdrawal rejected notify err", err));
+      }
+    }
 
     return NextResponse.json({
       message: `Withdrawal request ${action.toLowerCase()}`,

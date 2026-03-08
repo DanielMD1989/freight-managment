@@ -9,6 +9,7 @@ import { requireActiveUser } from "@/lib/auth";
 import { findLoadsWithMinimalDHO } from "@/lib/deadheadOptimization";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { handleApiError } from "@/lib/apiErrors";
+import { createNotification, NotificationType } from "@/lib/notifications";
 
 // GET /api/trucks/[id]/nearby-loads - Find loads with minimal DH-O
 export async function GET(
@@ -28,6 +29,31 @@ export async function GET(
         walletAccount &&
         walletAccount.balance < walletAccount.minimumBalance
       ) {
+        // G-W-N4-6: Fire LOW_BALANCE_WARNING at most once per 24h per user
+        const oneDayAgo = new Date(Date.now() - 86_400_000);
+        db.notification
+          .findFirst({
+            where: {
+              userId: session.userId,
+              type: NotificationType.LOW_BALANCE_WARNING,
+              createdAt: { gte: oneDayAgo },
+            },
+          })
+          .then((existing) => {
+            if (!existing) {
+              createNotification({
+                userId: session.userId,
+                type: NotificationType.LOW_BALANCE_WARNING,
+                title: "Insufficient Wallet Balance",
+                message: `Your wallet balance is below the required minimum (${Number(walletAccount.minimumBalance).toLocaleString()} ETB). Top up to restore marketplace access.`,
+                metadata: {
+                  currentBalance: Number(walletAccount.balance),
+                  minimumBalance: Number(walletAccount.minimumBalance),
+                },
+              }).catch((err) => console.error("low-balance notify err", err));
+            }
+          })
+          .catch(() => {});
         return NextResponse.json(
           { error: "Insufficient wallet balance for marketplace access" },
           { status: 402 }

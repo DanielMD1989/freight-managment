@@ -274,6 +274,7 @@ export function mockNotifications() {
     markAllAsRead: jest.fn(async () => ({ count: 1 })),
     notifyLoadStakeholders: jest.fn(async () => {}),
     notifyExceptionAssigned: jest.fn(async () => {}),
+    notifyUserVerification: jest.fn(async () => {}),
     createNotificationForRole: jest.fn(async () => ({ id: "notif-role-1" })),
     NotificationType: {
       LOAD_REQUEST: "LOAD_REQUEST",
@@ -301,12 +302,18 @@ export function mockNotifications() {
       DELIVERY_CONFIRMED: "DELIVERY_CONFIRMED",
       SETTLEMENT_COMPLETE: "SETTLEMENT_COMPLETE",
       PARTIAL_FEE_COLLECTION: "PARTIAL_FEE_COLLECTION",
+      SERVICE_FEE_DEDUCTED: "SERVICE_FEE_DEDUCTED",
+      SERVICE_FEE_REFUNDED: "SERVICE_FEE_REFUNDED",
       TRUCK_APPROVED: "TRUCK_APPROVED",
       TRUCK_REJECTED: "TRUCK_REJECTED",
       ACCOUNT_APPROVED: "ACCOUNT_APPROVED",
       DOCUMENTS_SUBMITTED: "DOCUMENTS_SUBMITTED",
       REGISTRATION_RESUBMITTED: "REGISTRATION_RESUBMITTED",
       TRUCK_RESUBMITTED: "TRUCK_RESUBMITTED",
+      WALLET_TOPUP_CONFIRMED: "WALLET_TOPUP_CONFIRMED",
+      WITHDRAWAL_APPROVED: "WITHDRAWAL_APPROVED",
+      WITHDRAWAL_REJECTED: "WITHDRAWAL_REJECTED",
+      LOW_BALANCE_WARNING: "LOW_BALANCE_WARNING",
     },
   }));
 }

@@ -123,6 +123,13 @@ export function getNotificationRoute(
     case "SERVICE_FEE_RESERVED":
       return isCarrier ? "/(carrier)/wallet" : "/(shipper)/wallet";
 
+    // ── Wallet events (N4) ───────────────────────────────────────────────────
+    case "WALLET_TOPUP_CONFIRMED":
+    case "WITHDRAWAL_APPROVED":
+    case "WITHDRAWAL_REJECTED":
+    case "LOW_BALANCE_WARNING":
+      return isCarrier ? "/(carrier)/wallet" : "/(shipper)/wallet";
+
     // ── Settlement ───────────────────────────────────────────────────────────
     case "SETTLEMENT_COMPLETE":
       return isCarrier ? "/(carrier)/wallet" : "/(shipper)/wallet";
