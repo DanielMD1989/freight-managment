@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { handleApiError } from "@/lib/apiErrors";
 
@@ -22,7 +22,7 @@ export async function POST(
     if (csrfError) return csrfError;
 
     const { id: truckId } = await params;
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     const truck = await db.truck.findUnique({
       where: { id: truckId },

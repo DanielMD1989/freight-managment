@@ -44,7 +44,7 @@ export interface LoadMetrics {
 export interface TripMetrics {
   total: number;
   byStatus: Record<string, number>;
-  active: number; // ASSIGNED + PICKUP_PENDING + IN_TRANSIT
+  active: number; // ASSIGNED + PICKUP_PENDING + IN_TRANSIT + EXCEPTION
   completed: number; // DELIVERED + COMPLETED
   cancelled: number;
 }
@@ -123,6 +123,7 @@ export const TRIP_STATUSES = [
   "IN_TRANSIT",
   "DELIVERED",
   "COMPLETED",
+  "EXCEPTION",
   "CANCELLED",
 ] as const;
 
@@ -229,7 +230,8 @@ export async function getTripMetrics(): Promise<TripMetrics> {
     active:
       getCount("ASSIGNED") +
       getCount("PICKUP_PENDING") +
-      getCount("IN_TRANSIT"),
+      getCount("IN_TRANSIT") +
+      getCount("EXCEPTION"),
     completed: getCount("DELIVERED") + getCount("COMPLETED"),
     cancelled: getCount("CANCELLED"),
   };
