@@ -312,8 +312,8 @@ export async function POST(request: NextRequest) {
           fullPartial: data.fullPartial,
           availableLength: data.availableLength || null,
           availableWeight: data.availableWeight || null,
-          preferredDhToOriginKm: data.preferredDhToOriginKm || null,
-          preferredDhAfterDeliveryKm: data.preferredDhAfterDeliveryKm || null,
+          preferredDhToOriginKm: data.preferredDhToOriginKm ?? null,
+          preferredDhAfterDeliveryKm: data.preferredDhAfterDeliveryKm ?? null,
           contactName: data.contactName,
           contactPhone: data.contactPhone,
           ownerName: data.ownerName || null,
@@ -680,9 +680,15 @@ export async function GET(request: NextRequest) {
           }
         : null;
 
-    const filteredPostings =
+    // G-A18-2+G-A18-6: reduce instead of filter so DH distances are available in response
+    type PostingTuple = {
+      posting: (typeof postings)[number];
+      dhO: number | null;
+      dhD: number | null;
+    };
+    const filteredWithDistances: PostingTuple[] =
       loadOriginCoords && loadDestCoords
-        ? postings.filter((posting) => {
+        ? postings.reduce<PostingTuple[]>((acc, posting) => {
             const truckOriginLat = posting.originCity?.latitude
               ? Number(posting.originCity.latitude)
               : null;
@@ -706,9 +712,11 @@ export async function GET(request: NextRequest) {
                     loadOriginCoords.lon
                   )
                 : 0;
-            const declaredDhO = posting.preferredDhToOriginKm
-              ? Number(posting.preferredDhToOriginKm)
-              : null;
+            // G-A18-2: != null correctly handles stored value of 0
+            const declaredDhO =
+              posting.preferredDhToOriginKm != null
+                ? Number(posting.preferredDhToOriginKm)
+                : null;
             const passesOrigin = declaredDhO === null || dhO <= declaredDhO;
 
             // DH-D: distance from load delivery to truck destination
@@ -723,32 +731,41 @@ export async function GET(request: NextRequest) {
                   truckDestLon!
                 )
               : 0;
-            const declaredDhD = posting.preferredDhAfterDeliveryKm
-              ? Number(posting.preferredDhAfterDeliveryKm)
-              : null;
+            // G-A18-2: != null correctly handles stored value of 0
+            const declaredDhD =
+              posting.preferredDhAfterDeliveryKm != null
+                ? Number(posting.preferredDhAfterDeliveryKm)
+                : null;
             const passesDest =
               declaredDhD === null || !truckDestExists || dhD <= declaredDhD;
 
-            return passesOrigin && passesDest;
-          })
-        : postings;
+            if (passesOrigin && passesDest) {
+              acc.push({ posting, dhO, dhD });
+            }
+            return acc;
+          }, [])
+        : postings.map((posting) => ({ posting, dhO: null, dhD: null }));
 
     // Transform postings to flatten nested fields for UI consumption
-    // FIX: Remove any - Prisma infers type from query
-    const transformedPostings = filteredPostings.map((posting) => ({
-      ...posting,
-      // Flatten city names
-      currentCity: posting.originCity?.name || "",
-      destinationCity: posting.destinationCity?.name || null,
-      // Add availableDate for compatibility
-      availableDate: posting.availableFrom,
-      // Flatten truck info
-      truckType: posting.truck?.truckType || "",
-      lengthM: posting.truck?.lengthM || posting.availableLength,
-      maxWeight: posting.truck?.capacity || posting.availableWeight,
-      // Carrier contact is intentionally public - carriers post contact info so shippers can reach them
-      carrierContactPhone: posting.contactPhone,
-    }));
+    const transformedPostings = filteredWithDistances.map(
+      ({ posting, dhO, dhD }) => ({
+        ...posting,
+        // Flatten city names
+        currentCity: posting.originCity?.name || "",
+        destinationCity: posting.destinationCity?.name || null,
+        // Add availableDate for compatibility
+        availableDate: posting.availableFrom,
+        // Flatten truck info
+        truckType: posting.truck?.truckType || "",
+        lengthM: posting.truck?.lengthM || posting.availableLength,
+        maxWeight: posting.truck?.capacity || posting.availableWeight,
+        // Carrier contact is intentionally public - carriers post contact info so shippers can reach them
+        carrierContactPhone: posting.contactPhone,
+        // G-A18-6: Computed DH distances — null when no radius filter active
+        dhToOriginKm: dhO !== null ? Math.round(dhO) : null,
+        dhAfterDeliveryKm: dhD !== null ? Math.round(dhD) : null,
+      })
+    );
 
     // Calculate match counts if requested
     type TransformedPosting = (typeof transformedPostings)[number] & {
@@ -817,15 +834,20 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // G-A18-1: pagination total reflects filtered count, not pre-filter DB count
+    const dhFilterActive = !!(loadOriginCoords && loadDestCoords);
+    const filteredTotal = dhFilterActive ? filteredWithDistances.length : total;
+
     return NextResponse.json({
       truckPostings: postingsWithMatchCount,
       postings: postingsWithMatchCount, // Keep for backward compatibility
       pagination: {
-        total,
+        total: filteredTotal,
         limit,
         offset,
+        ...(dhFilterActive && { dbTotal: total }),
       },
-      total,
+      total: filteredTotal,
       limit,
       offset,
     });

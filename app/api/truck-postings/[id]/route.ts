@@ -149,12 +149,14 @@ export async function GET(
       availableWeight: posting.availableWeight
         ? Number(posting.availableWeight)
         : null,
-      preferredDhToOriginKm: posting.preferredDhToOriginKm
-        ? Number(posting.preferredDhToOriginKm)
-        : null,
-      preferredDhAfterDeliveryKm: posting.preferredDhAfterDeliveryKm
-        ? Number(posting.preferredDhAfterDeliveryKm)
-        : null,
+      preferredDhToOriginKm:
+        posting.preferredDhToOriginKm != null
+          ? Number(posting.preferredDhToOriginKm)
+          : null,
+      preferredDhAfterDeliveryKm:
+        posting.preferredDhAfterDeliveryKm != null
+          ? Number(posting.preferredDhAfterDeliveryKm)
+          : null,
       truck: {
         ...posting.truck,
         capacity: Number(posting.truck.capacity),
