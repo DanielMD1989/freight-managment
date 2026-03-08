@@ -145,7 +145,15 @@ export async function POST(request: NextRequest) {
         // Uses trips (hasMany) rather than assignedLoad (one-to-one) for proper filtering.
         trips: {
           where: {
-            status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+            status: {
+              in: [
+                "ASSIGNED",
+                "PICKUP_PENDING",
+                "IN_TRANSIT",
+                "DELIVERED",
+                "EXCEPTION",
+              ],
+            },
           },
           select: { id: true },
           take: 1,

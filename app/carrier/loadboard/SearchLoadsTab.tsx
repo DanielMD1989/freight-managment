@@ -372,7 +372,7 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      params.append("status", "POSTED");
+      params.append("status", "POSTED,SEARCHING,OFFERED");
 
       if (filterValues.truckType) {
         params.append("truckType", filterValues.truckType);

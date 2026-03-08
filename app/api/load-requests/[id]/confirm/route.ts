@@ -195,7 +195,15 @@ export async function POST(
           const activeTripCount = await tx.trip.count({
             where: {
               truckId: loadRequest.truckId,
-              status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+              status: {
+                in: [
+                  "ASSIGNED",
+                  "PICKUP_PENDING",
+                  "IN_TRANSIT",
+                  "DELIVERED",
+                  "EXCEPTION",
+                ],
+              },
             },
           });
           if (activeTripCount > 0) {

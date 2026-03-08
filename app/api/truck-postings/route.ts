@@ -301,6 +301,27 @@ export async function POST(request: NextRequest) {
         throw new Error("ONE_ACTIVE_POST_PER_TRUCK");
       }
 
+      // G-U5-3: Block posting when truck has a DELIVERED or EXCEPTION trip.
+      // The ACTIVE-posting guard above only catches the normal path (old posting still ACTIVE).
+      // When old posting is MATCHED (all active-trip states), a new ACTIVE posting can slip through.
+      const activeTripCount = await tx.trip.count({
+        where: {
+          truckId: data.truckId,
+          status: {
+            in: [
+              "ASSIGNED",
+              "PICKUP_PENDING",
+              "IN_TRANSIT",
+              "DELIVERED",
+              "EXCEPTION",
+            ],
+          },
+        },
+      });
+      if (activeTripCount > 0) {
+        throw new Error("TRUCK_HAS_ACTIVE_TRIP");
+      }
+
       return tx.truckPosting.create({
         data: {
           truckId: data.truckId,
@@ -375,6 +396,12 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json(
         { error: "This truck already has an active posting" },
+        { status: 409 }
+      );
+    }
+    if (error instanceof Error && error.message === "TRUCK_HAS_ACTIVE_TRIP") {
+      return NextResponse.json(
+        { error: "Cannot create posting: truck has an active trip" },
         { status: 409 }
       );
     }
@@ -608,7 +635,15 @@ export async function GET(request: NextRequest) {
       ...(truckType ? { truckType } : {}),
       trips: {
         none: {
-          status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+          status: {
+            in: [
+              "ASSIGNED",
+              "PICKUP_PENDING",
+              "IN_TRANSIT",
+              "DELIVERED",
+              "EXCEPTION",
+            ],
+          },
         },
       },
     };

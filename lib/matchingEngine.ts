@@ -466,7 +466,15 @@ export async function findMatchingTrucksForLoad(
       truck: {
         trips: {
           none: {
-            status: { in: ["ASSIGNED", "PICKUP_PENDING", "IN_TRANSIT"] },
+            status: {
+              in: [
+                "ASSIGNED",
+                "PICKUP_PENDING",
+                "IN_TRANSIT",
+                "DELIVERED",
+                "EXCEPTION",
+              ],
+            },
           },
         },
       },

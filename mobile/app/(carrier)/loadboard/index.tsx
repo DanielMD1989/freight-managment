@@ -61,7 +61,7 @@ export default function CarrierLoadboard() {
 
   // Build query params from applied filters
   const queryParams: Record<string, string | number | undefined> = {
-    status: "POSTED",
+    status: "POSTED,SEARCHING,OFFERED",
   };
   if (appliedFilters.truckType)
     queryParams.truckType = appliedFilters.truckType;
