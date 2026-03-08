@@ -59,6 +59,8 @@ export default function TruckPostingModal({
     contactPhone: "",
     comments1: "",
     comments2: "",
+    dhO: "",
+    dhD: "",
   });
 
   const handleChange = (
@@ -165,6 +167,10 @@ export default function TruckPostingModal({
           contactName: user.firstName + " " + user.lastName,
           contactPhone: formData.contactPhone,
           notes: (formData.comments1 + " " + formData.comments2).trim() || null,
+          preferredDhToOriginKm: formData.dhO ? parseFloat(formData.dhO) : null,
+          preferredDhAfterDeliveryKm: formData.dhD
+            ? parseFloat(formData.dhD)
+            : null,
         }),
       });
 
@@ -329,6 +335,32 @@ export default function TruckPostingModal({
                   onChange={(e) => handleChange("weight", e.target.value)}
                   className="w-full rounded border border-[#064d51]/30 bg-white px-2 py-1 text-xs text-[#064d51]"
                   placeholder="40000"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-white">
+                  DH-O (km)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.dhO}
+                  onChange={(e) => handleChange("dhO", e.target.value)}
+                  className="w-full rounded border border-[#064d51]/30 bg-white px-2 py-1 text-xs text-[#064d51]"
+                  placeholder="Any"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-white">
+                  DH-D (km)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.dhD}
+                  onChange={(e) => handleChange("dhD", e.target.value)}
+                  className="w-full rounded border border-[#064d51]/30 bg-white px-2 py-1 text-xs text-[#064d51]"
+                  placeholder="Any"
                 />
               </div>
               <div>

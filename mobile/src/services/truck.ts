@@ -139,6 +139,8 @@ class TruckService {
     contactPhone: string;
     ownerName?: string;
     notes?: string;
+    preferredDhToOriginKm?: number | null;
+    preferredDhAfterDeliveryKm?: number | null;
   }): Promise<TruckPosting> {
     try {
       const response = await apiClient.post("/api/truck-postings", data);

@@ -432,6 +432,10 @@ export interface TruckPosting {
   availableLength?: number | null;
   availableWeight?: number | null;
 
+  // Deadhead radius preferences (null = no restriction)
+  preferredDhToOriginKm?: number | null;
+  preferredDhAfterDeliveryKm?: number | null;
+
   // Contact
   contactName: string;
   contactPhone: string;

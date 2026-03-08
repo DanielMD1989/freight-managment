@@ -28,6 +28,8 @@ const postingSchema = z.object({
   contactName: z.string().min(1, "Contact name is required"),
   contactPhone: z.string().min(1, "Contact phone is required"),
   notes: z.string().optional(),
+  preferredDhToOriginKm: z.string().optional(),
+  preferredDhAfterDeliveryKm: z.string().optional(),
 });
 
 type PostingForm = z.infer<typeof postingSchema>;
@@ -58,6 +60,8 @@ export default function PostTrucksScreen() {
       contactName: "",
       contactPhone: "",
       notes: "",
+      preferredDhToOriginKm: "",
+      preferredDhAfterDeliveryKm: "",
     },
   });
 
@@ -72,6 +76,12 @@ export default function PostTrucksScreen() {
         contactName: data.contactName,
         contactPhone: data.contactPhone,
         notes: data.notes || undefined,
+        preferredDhToOriginKm: data.preferredDhToOriginKm
+          ? parseFloat(data.preferredDhToOriginKm)
+          : null,
+        preferredDhAfterDeliveryKm: data.preferredDhAfterDeliveryKm
+          ? parseFloat(data.preferredDhAfterDeliveryKm)
+          : null,
       },
       {
         onSuccess: () => {
@@ -170,6 +180,34 @@ export default function PostTrucksScreen() {
             error={errors.contactPhone?.message}
             keyboardType="phone-pad"
             required
+          />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="preferredDhToOriginKm"
+        render={({ field: { onChange, value } }) => (
+          <Input
+            label="DH-O Radius (km)"
+            value={value ?? ""}
+            onChangeText={onChange}
+            keyboardType="numeric"
+            hint="Max km from pickup — leave blank for no limit"
+          />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="preferredDhAfterDeliveryKm"
+        render={({ field: { onChange, value } }) => (
+          <Input
+            label="DH-D Radius (km)"
+            value={value ?? ""}
+            onChangeText={onChange}
+            keyboardType="numeric"
+            hint="Max km from delivery — leave blank for no limit"
           />
         )}
       />

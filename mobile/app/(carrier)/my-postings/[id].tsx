@@ -140,6 +140,18 @@ export default function PostingDetailScreen() {
             value={`${posting.availableLength} m`}
           />
         )}
+        {posting.preferredDhToOriginKm != null && (
+          <DetailRow
+            label="DH-O Radius"
+            value={`${posting.preferredDhToOriginKm} km`}
+          />
+        )}
+        {posting.preferredDhAfterDeliveryKm != null && (
+          <DetailRow
+            label="DH-D Radius"
+            value={`${posting.preferredDhAfterDeliveryKm} km`}
+          />
+        )}
       </Card>
 
       {/* Contact Info */}
