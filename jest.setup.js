@@ -565,8 +565,14 @@ jest.mock("@/lib/db", () => {
                         .toLowerCase()
                         .includes(String(v.contains).toLowerCase());
                     }
+                    if (v && typeof v === "object" && v.in !== undefined)
+                      return v.in.includes(r[k]);
+                    if (v && typeof v === "object" && v.notIn !== undefined)
+                      return !v.notIn.includes(r[k]);
                     if (v && typeof v === "object" && v.gte !== undefined)
                       return (r[k] || 0) >= v.gte;
+                    if (v && typeof v === "object" && v.lte !== undefined)
+                      return (r[k] || 0) <= v.lte;
                     return r[k] === v;
                   })
                 );

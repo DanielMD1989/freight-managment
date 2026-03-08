@@ -277,8 +277,12 @@ export async function getTruckMetrics(): Promise<TruckMetrics> {
 export async function getRevenueMetrics(
   dateRange?: DateRange
 ): Promise<RevenueMetrics> {
-  const dateFilter = dateRange
-    ? { serviceFeeDeductedAt: { gte: dateRange.start, lte: dateRange.end } }
+  // Use per-party deduction timestamps (G-A16-6: was legacy serviceFeeDeductedAt)
+  const shipperDateFilter = dateRange
+    ? { shipperFeeDeductedAt: { gte: dateRange.start, lte: dateRange.end } }
+    : {};
+  const carrierDateFilter = dateRange
+    ? { carrierFeeDeductedAt: { gte: dateRange.start, lte: dateRange.end } }
     : {};
 
   const [
@@ -298,14 +302,14 @@ export async function getRevenueMetrics(
     db.load.aggregate({
       where: {
         shipperFeeStatus: "DEDUCTED",
-        ...dateFilter,
+        ...shipperDateFilter,
       },
       _sum: { shipperServiceFee: true },
     }),
     db.load.aggregate({
       where: {
         carrierFeeStatus: "DEDUCTED",
-        ...dateFilter,
+        ...carrierDateFilter,
       },
       _sum: { carrierServiceFee: true },
     }),

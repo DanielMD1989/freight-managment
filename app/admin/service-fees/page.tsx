@@ -4,18 +4,16 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
 interface ServiceFeeMetrics {
+  period: string;
   summary: {
+    shipperFeeCollected: number;
+    carrierFeeCollected: number;
     totalFeesCollected: number;
     totalFeesReserved: number;
     totalFeesRefunded: number;
     totalLoadsWithFees: number;
     averageFeePerLoad: number;
   };
-  byStatus: {
-    status: string;
-    count: number;
-    totalAmount: number;
-  }[];
   byCorridor: {
     corridorId: string;
     corridorName: string;
@@ -27,8 +25,11 @@ interface ServiceFeeMetrics {
     loadId: string;
     pickupCity: string;
     deliveryCity: string;
-    serviceFee: number;
-    status: string;
+    shipperFee: number;
+    carrierFee: number;
+    totalFee: number;
+    shipperFeeStatus: string;
+    carrierFeeStatus: string;
     date: string;
   }[];
 }
@@ -36,15 +37,15 @@ interface ServiceFeeMetrics {
 export default function ServiceFeeDashboard() {
   const [metrics, setMetrics] = useState<ServiceFeeMetrics | null>(null);
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState<"7d" | "30d" | "90d" | "all">(
-    "30d"
+  const [dateRange, setDateRange] = useState<"day" | "week" | "month" | "year">(
+    "month"
   );
 
   const fetchMetrics = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(
-        `/api/admin/service-fees/metrics?range=${dateRange}`
+        `/api/admin/service-fees/metrics?period=${dateRange}`
       );
       if (response.ok) {
         const data = await response.json();
@@ -110,10 +111,10 @@ export default function ServiceFeeDashboard() {
             onChange={(e) => setDateRange(e.target.value as typeof dateRange)}
             className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
           >
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
-            <option value="90d">Last 90 days</option>
-            <option value="all">All time</option>
+            <option value="day">Today</option>
+            <option value="week">Last 7 days</option>
+            <option value="month">Last month</option>
+            <option value="year">Last year</option>
           </select>
           <Link
             href="/admin/corridors"
@@ -136,24 +137,22 @@ export default function ServiceFeeDashboard() {
           </p>
         </div>
         <div className="rounded-lg bg-white p-6 shadow">
-          <dt className="text-sm font-medium text-gray-500">
-            Currently Reserved
-          </dt>
-          <dd className="mt-2 text-3xl font-semibold text-yellow-600">
-            {metrics ? formatCurrency(metrics.summary.totalFeesReserved) : "-"}
+          <dt className="text-sm font-medium text-gray-500">Shipper Fees</dt>
+          <dd className="mt-2 text-3xl font-semibold text-blue-600">
+            {metrics
+              ? formatCurrency(metrics.summary.shipperFeeCollected)
+              : "-"}
           </dd>
-          <p className="mt-1 text-xs text-gray-500">
-            Reserved for active loads
-          </p>
+          <p className="mt-1 text-xs text-gray-500">Collected from shippers</p>
         </div>
         <div className="rounded-lg bg-white p-6 shadow">
-          <dt className="text-sm font-medium text-gray-500">Total Refunded</dt>
-          <dd className="mt-2 text-3xl font-semibold text-blue-600">
-            {metrics ? formatCurrency(metrics.summary.totalFeesRefunded) : "-"}
+          <dt className="text-sm font-medium text-gray-500">Carrier Fees</dt>
+          <dd className="mt-2 text-3xl font-semibold text-purple-600">
+            {metrics
+              ? formatCurrency(metrics.summary.carrierFeeCollected)
+              : "-"}
           </dd>
-          <p className="mt-1 text-xs text-gray-500">
-            Returned on cancellations
-          </p>
+          <p className="mt-1 text-xs text-gray-500">Collected from carriers</p>
         </div>
         <div className="rounded-lg bg-white p-6 shadow">
           <dt className="text-sm font-medium text-gray-500">
@@ -169,39 +168,31 @@ export default function ServiceFeeDashboard() {
         </div>
       </div>
 
-      {/* Charts Row */}
+      {/* Fee Breakdown Row */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Status Distribution */}
+        {/* Reserved & Refunded */}
         <div className="rounded-lg bg-white p-6 shadow">
           <h3 className="mb-4 text-lg font-semibold text-gray-900">
-            Fee Status Distribution
+            Fee Status Summary
           </h3>
-          {metrics?.byStatus && metrics.byStatus.length > 0 ? (
-            <div className="space-y-3">
-              {metrics.byStatus.map((item) => (
-                <div
-                  key={item.status}
-                  className="flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(item.status)}`}
-                    >
-                      {item.status}
-                    </span>
-                    <span className="text-sm text-gray-600">
-                      {item.count} loads
-                    </span>
-                  </div>
-                  <span className="text-sm font-medium text-gray-900">
-                    {formatCurrency(item.totalAmount)}
-                  </span>
-                </div>
-              ))}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Currently Reserved</span>
+              <span className="text-sm font-medium text-yellow-700">
+                {metrics
+                  ? formatCurrency(metrics.summary.totalFeesReserved)
+                  : "-"}
+              </span>
             </div>
-          ) : (
-            <p className="text-sm text-gray-500">No data available</p>
-          )}
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Total Refunded</span>
+              <span className="text-sm font-medium text-blue-700">
+                {metrics
+                  ? formatCurrency(metrics.summary.totalFeesRefunded)
+                  : "-"}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Top Corridors */}
@@ -259,10 +250,19 @@ export default function ServiceFeeDashboard() {
                   Route
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
-                  Fee
+                  Shipper Fee
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
-                  Status
+                  Carrier Fee
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  Total Fee
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  Shipper Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  Carrier Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                   Date
@@ -286,13 +286,26 @@ export default function ServiceFeeDashboard() {
                       {tx.pickupCity} → {tx.deliveryCity}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900">
-                      {formatCurrency(tx.serviceFee)}
+                      {formatCurrency(tx.shipperFee)}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900">
+                      {formatCurrency(tx.carrierFee)}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900">
+                      {formatCurrency(tx.totalFee)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(tx.status)}`}
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(tx.shipperFeeStatus)}`}
                       >
-                        {tx.status}
+                        {tx.shipperFeeStatus}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(tx.carrierFeeStatus)}`}
+                      >
+                        {tx.carrierFeeStatus}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
@@ -303,7 +316,7 @@ export default function ServiceFeeDashboard() {
               ) : (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={8}
                     className="px-6 py-8 text-center text-sm text-gray-500"
                   >
                     No transactions found

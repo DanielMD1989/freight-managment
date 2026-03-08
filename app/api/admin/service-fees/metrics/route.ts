@@ -1,65 +1,56 @@
 /**
  * Admin Service Fee Metrics API
  *
- * GET /api/admin/service-fees/metrics
+ * GET /api/admin/service-fees/metrics?period=day|week|month|year
  *
- * Returns aggregated service fee metrics for the admin dashboard
+ * Returns aggregated service fee metrics for the admin dashboard.
+ *
+ * Fixed in Round A16:
+ * G-A16-3: date filter now uses shipperFeeDeductedAt (was updatedAt)
+ * G-A16-4: reads shipperServiceFee + carrierServiceFee (was legacy serviceFeeEtb)
+ * G-A16-5: period param is day|week|month|year (was 7d|30d|90d|all)
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { roundMoney } from "@/lib/rounding";
+import { handleApiError } from "@/lib/apiErrors";
+import { getDateRangeForPeriod, type TimePeriod } from "@/lib/admin/metrics";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth();
 
-    // Check admin access
     if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
-    const range = searchParams.get("range") || "30d";
+    const period = (searchParams.get("period") || "month") as TimePeriod;
+    const { start, end } = getDateRangeForPeriod(period);
 
-    // Calculate date filter
-    let dateFilter: Date | null = null;
-    switch (range) {
-      case "7d":
-        dateFilter = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case "30d":
-        dateFilter = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-        break;
-      case "90d":
-        dateFilter = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-        break;
-      case "all":
-      default:
-        dateFilter = null;
-    }
-
-    // Build where clause
-    const whereClause: Record<string, unknown> = {
-      serviceFeeEtb: { not: null },
-    };
-
-    if (dateFilter) {
-      whereClause.updatedAt = { gte: dateFilter };
-    }
-
-    // Fetch loads with service fees
+    // Fetch loads that had a shipper or carrier fee deducted in the period.
+    // Uses shipperFeeDeductedAt as the canonical date anchor (G-A16-3).
     const loadsWithFees = await db.load.findMany({
-      where: whereClause,
+      where: {
+        OR: [
+          { shipperFeeStatus: { in: ["DEDUCTED", "RESERVED", "REFUNDED"] } },
+          { carrierFeeStatus: { in: ["DEDUCTED", "RESERVED", "REFUNDED"] } },
+        ],
+        shipperFeeDeductedAt: { gte: start, lte: end },
+      },
       select: {
         id: true,
         pickupCity: true,
         deliveryCity: true,
-        serviceFeeEtb: true,
-        serviceFeeStatus: true,
+        shipperServiceFee: true,
+        carrierServiceFee: true,
+        shipperFeeStatus: true,
+        carrierFeeStatus: true,
+        shipperFeeDeductedAt: true,
+        carrierFeeDeductedAt: true,
         serviceFeeReservedAt: true,
-        serviceFeeDeductedAt: true,
         serviceFeeRefundedAt: true,
         corridorId: true,
         corridor: {
@@ -68,47 +59,45 @@ export async function GET(request: NextRequest) {
             name: true,
           },
         },
-        updatedAt: true,
       },
-      orderBy: { updatedAt: "desc" },
+      orderBy: { shipperFeeDeductedAt: "desc" },
     });
 
-    // Calculate summary metrics
-    let totalCollected = 0;
+    let totalShipperCollected = 0;
+    let totalCarrierCollected = 0;
     let totalReserved = 0;
     let totalRefunded = 0;
     let totalWithFees = 0;
 
-    const statusCounts: Record<string, { count: number; total: number }> = {};
     const corridorStats: Record<
       string,
       { name: string; count: number; total: number }
     > = {};
 
     for (const load of loadsWithFees) {
-      const fee = Number(load.serviceFeeEtb || 0);
-      if (fee <= 0) continue;
+      const shipperFee = Number(load.shipperServiceFee || 0);
+      const carrierFee = Number(load.carrierServiceFee || 0);
+      const combinedFee = shipperFee + carrierFee;
 
+      if (combinedFee <= 0) continue;
       totalWithFees++;
 
-      // Status aggregation
-      const status = load.serviceFeeStatus || "PENDING";
-      if (!statusCounts[status]) {
-        statusCounts[status] = { count: 0, total: 0 };
-      }
-      statusCounts[status].count++;
-      statusCounts[status].total += fee;
-
-      // Calculate totals by status
-      if (status === "DEDUCTED") {
-        totalCollected += fee;
-      } else if (status === "RESERVED") {
-        totalReserved += fee;
-      } else if (status === "REFUNDED") {
-        totalRefunded += fee;
+      if (load.shipperFeeStatus === "DEDUCTED") {
+        totalShipperCollected += shipperFee;
+      } else if (load.shipperFeeStatus === "RESERVED") {
+        totalReserved += shipperFee;
+      } else if (load.shipperFeeStatus === "REFUNDED") {
+        totalRefunded += shipperFee;
       }
 
-      // Corridor aggregation
+      if (load.carrierFeeStatus === "DEDUCTED") {
+        totalCarrierCollected += carrierFee;
+      } else if (load.carrierFeeStatus === "RESERVED") {
+        totalReserved += carrierFee;
+      } else if (load.carrierFeeStatus === "REFUNDED") {
+        totalRefunded += carrierFee;
+      }
+
       if (load.corridorId && load.corridor) {
         if (!corridorStats[load.corridorId]) {
           corridorStats[load.corridorId] = {
@@ -118,18 +107,10 @@ export async function GET(request: NextRequest) {
           };
         }
         corridorStats[load.corridorId].count++;
-        corridorStats[load.corridorId].total += fee;
+        corridorStats[load.corridorId].total += combinedFee;
       }
     }
 
-    // Format status breakdown (rounding delegated to lib/rounding.ts)
-    const byStatus = Object.entries(statusCounts).map(([status, data]) => ({
-      status,
-      count: data.count,
-      totalAmount: roundMoney(data.total),
-    }));
-
-    // Format corridor breakdown (rounding delegated to lib/rounding.ts)
     const byCorridor = Object.entries(corridorStats)
       .map(([corridorId, data]) => ({
         corridorId,
@@ -140,26 +121,39 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => b.totalFees - a.totalFees);
 
-    // Recent transactions (top 10)
+    const totalCollected = totalShipperCollected + totalCarrierCollected;
+
     const recentTransactions = loadsWithFees
-      .filter((load) => load.serviceFeeEtb && Number(load.serviceFeeEtb) > 0)
+      .filter(
+        (load) =>
+          Number(load.shipperServiceFee || 0) +
+            Number(load.carrierServiceFee || 0) >
+          0
+      )
       .slice(0, 10)
       .map((load) => ({
         loadId: load.id,
         pickupCity: load.pickupCity || "Unknown",
         deliveryCity: load.deliveryCity || "Unknown",
-        serviceFee: Number(load.serviceFeeEtb),
-        status: load.serviceFeeStatus || "PENDING",
+        shipperFee: Number(load.shipperServiceFee || 0),
+        carrierFee: Number(load.carrierServiceFee || 0),
+        totalFee:
+          Number(load.shipperServiceFee || 0) +
+          Number(load.carrierServiceFee || 0),
+        shipperFeeStatus: load.shipperFeeStatus || "PENDING",
+        carrierFeeStatus: load.carrierFeeStatus || "PENDING",
         date:
-          load.serviceFeeDeductedAt?.toISOString() ||
+          load.shipperFeeDeductedAt?.toISOString() ||
           load.serviceFeeRefundedAt?.toISOString() ||
           load.serviceFeeReservedAt?.toISOString() ||
-          load.updatedAt.toISOString(),
+          new Date().toISOString(),
       }));
 
-    // Rounding delegated to lib/rounding.ts
     return NextResponse.json({
+      period,
       summary: {
+        shipperFeeCollected: roundMoney(totalShipperCollected),
+        carrierFeeCollected: roundMoney(totalCarrierCollected),
         totalFeesCollected: roundMoney(totalCollected),
         totalFeesReserved: roundMoney(totalReserved),
         totalFeesRefunded: roundMoney(totalRefunded),
@@ -169,15 +163,10 @@ export async function GET(request: NextRequest) {
             ? roundMoney((totalCollected + totalReserved) / totalWithFees)
             : 0,
       },
-      byStatus,
       byCorridor,
       recentTransactions,
     });
   } catch (error) {
-    console.error("Service fee metrics error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Service fee metrics error");
   }
 }
