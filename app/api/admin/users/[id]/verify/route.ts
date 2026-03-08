@@ -13,6 +13,8 @@ import { sendEmail, createEmailHTML } from "@/lib/email";
 // CSRF FIX: Add CSRF validation
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { zodErrorResponse } from "@/lib/validation";
+// G-A17-4: Cache invalidation after status change
+import { CacheInvalidation } from "@/lib/cache";
 
 const verifyUserSchema = z
   .object({
@@ -83,6 +85,9 @@ export async function POST(
         updatedAt: true,
       },
     });
+
+    // G-A17-4: Invalidate status cache so change takes effect immediately
+    await CacheInvalidation.user(userId);
 
     // G-A2-4: When rejecting a user, sync org to REJECTED if not already APPROVED
     if (status === "REJECTED") {

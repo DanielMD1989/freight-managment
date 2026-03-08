@@ -31,6 +31,7 @@ import { handleApiError } from "@/lib/apiErrors";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { CacheInvalidation } from "@/lib/cache";
+import { revokeAllSessions } from "@/lib/auth";
 // H2-H6, M12 FIX: Import types for proper typing
 import type { UserUpdateData } from "@/lib/types/admin";
 
@@ -329,6 +330,11 @@ export async function PATCH(
     // Invalidate user cache so status changes take effect immediately
     await CacheInvalidation.user(userId);
 
+    // G-A17-2: Revoke all sessions when suspending so requireAuth() endpoints are also blocked
+    if (validatedData.status === "SUSPENDED") {
+      await revokeAllSessions(userId);
+    }
+
     return NextResponse.json({
       message: "User updated successfully",
       user: updatedUser,
@@ -449,6 +455,9 @@ export async function DELETE(
 
     // Invalidate user cache so suspension takes effect immediately
     await CacheInvalidation.user(userId);
+
+    // G-A17-2: Revoke all sessions so requireAuth() endpoints are also blocked
+    await revokeAllSessions(userId);
 
     return NextResponse.json({
       message: "User deleted successfully",

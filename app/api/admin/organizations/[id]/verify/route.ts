@@ -8,12 +8,14 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireActiveUser } from "@/lib/auth";
+import { requireActiveUser, revokeAllSessions } from "@/lib/auth";
 import { writeAuditLog, AuditEventType, AuditSeverity } from "@/lib/auditLog";
 import { handleApiError } from "@/lib/apiErrors";
 // M7 FIX: Add CSRF validation
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { createNotification } from "@/lib/notifications";
+// G-A17-6: Cache invalidation for user cascade on unverify
+import { CacheInvalidation } from "@/lib/cache";
 
 /**
  * POST /api/admin/organizations/[id]/verify
@@ -203,6 +205,27 @@ export async function DELETE(
         rejectedAt: null,
       },
     });
+
+    // G-A17-6: Cascade — downgrade ACTIVE org members to PENDING_VERIFICATION
+    // and revoke their sessions so marketplace access is blocked immediately
+    const activeOrgUsers = await db.user.findMany({
+      where: { organizationId: orgId, status: "ACTIVE" },
+      select: { id: true },
+    });
+
+    if (activeOrgUsers.length > 0) {
+      await db.user.updateMany({
+        where: { organizationId: orgId, status: "ACTIVE" },
+        data: { status: "PENDING_VERIFICATION" },
+      });
+
+      await Promise.all(
+        activeOrgUsers.map(async (u) => {
+          await revokeAllSessions(u.id);
+          await CacheInvalidation.user(u.id);
+        })
+      );
+    }
 
     // Create audit log entry
     await writeAuditLog({

@@ -105,6 +105,9 @@ jest.mock("@/lib/db", () => {
       otpCode: null,
       otpExpiresAt: null,
       otpChannel: null,
+      // G-A17-3: Revocation audit fields
+      revokedAt: null,
+      revocationReason: null,
     },
     load: {
       serviceFeeStatus: "PENDING",
