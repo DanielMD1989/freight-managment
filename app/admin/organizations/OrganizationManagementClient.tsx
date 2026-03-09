@@ -21,6 +21,8 @@ interface Organization {
   city: string | null;
   isVerified: boolean;
   verifiedAt: string | null;
+  verificationStatus: string;
+  rejectionReason: string | null;
   createdAt: string;
   _count: {
     users: number;
@@ -81,6 +83,13 @@ export default function OrganizationManagementClient({
   const [typeFilter, setTypeFilter] = useState(initialType || "");
   // L41 FIX: Add submitting state to prevent rapid clicks
   const [submittingOrgId, setSubmittingOrgId] = useState<string | null>(null);
+
+  // Reject modal state
+  const [rejectModalOrgId, setRejectModalOrgId] = useState<string | null>(null);
+  const [rejectModalOrgName, setRejectModalOrgName] = useState<string>("");
+  const [rejectReason, setRejectReason] = useState<string>("");
+  const [rejectError, setRejectError] = useState<string | null>(null);
+  const [rejectLoading, setRejectLoading] = useState(false);
 
   /**
    * Handle search submit
@@ -204,8 +213,117 @@ export default function OrganizationManagementClient({
     }
   };
 
+  /**
+   * Open reject modal
+   */
+  const openRejectModal = (orgId: string, orgName: string) => {
+    setRejectModalOrgId(orgId);
+    setRejectModalOrgName(orgName);
+    setRejectReason("");
+    setRejectError(null);
+  };
+
+  /**
+   * Submit organization rejection
+   */
+  const handleReject = async () => {
+    if (!rejectModalOrgId || rejectReason.trim().length < 10) {
+      setRejectError("Reason must be at least 10 characters.");
+      return;
+    }
+
+    setRejectLoading(true);
+    setRejectError(null);
+
+    try {
+      const csrfToken = await getCSRFToken();
+      const response = await fetch(
+        `/api/admin/organizations/${rejectModalOrgId}/reject`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+          },
+          body: JSON.stringify({ reason: rejectReason }),
+        }
+      );
+
+      if (response.ok) {
+        setRejectModalOrgId(null);
+        setRejectReason("");
+        router.refresh();
+      } else {
+        const data = await response.json();
+        setRejectError(data.error || "Failed to reject organization");
+      }
+    } catch {
+      setRejectError("An error occurred while rejecting the organization");
+    } finally {
+      setRejectLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Reject Modal */}
+      {rejectModalOrgId && (
+        <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
+          <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <h3 className="mb-2 text-lg font-semibold text-gray-900">
+              Reject Organization
+            </h3>
+            <p className="mb-4 text-sm text-gray-600">
+              Rejecting <strong>{rejectModalOrgName}</strong>. Members will be
+              notified with the reason.
+            </p>
+
+            {rejectError && (
+              <div className="mb-4 rounded border border-red-200 bg-red-50 p-3">
+                <p className="text-sm text-red-800">{rejectError}</p>
+              </div>
+            )}
+
+            <div className="mb-4">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Rejection Reason *
+              </label>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Provide a reason for rejection (min 10 characters)..."
+                rows={3}
+                className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-red-500"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                {rejectReason.length} / 10 minimum characters
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setRejectModalOrgId(null);
+                  setRejectReason("");
+                  setRejectError(null);
+                }}
+                disabled={rejectLoading}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReject}
+                disabled={rejectLoading || rejectReason.trim().length < 10}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {rejectLoading ? "Rejecting..." : "Confirm Rejection"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="rounded-lg bg-white p-6 shadow">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -391,22 +509,30 @@ export default function OrganizationManagementClient({
 
                   {/* Status */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {org.isVerified ? (
-                      <div className="flex flex-col">
+                    <div className="flex flex-col gap-1">
+                      {org.verificationStatus === "APPROVED" ? (
                         <span className="inline-flex rounded-full bg-green-100 px-2 py-1 text-xs leading-5 font-semibold text-green-800">
-                          Verified
+                          Approved
                         </span>
-                        {org.verifiedAt && (
-                          <span className="mt-1 text-xs text-gray-500">
-                            {formatDate(org.verifiedAt)}
+                      ) : org.verificationStatus === "REJECTED" ? (
+                        <span className="inline-flex rounded-full bg-red-100 px-2 py-1 text-xs leading-5 font-semibold text-red-800">
+                          Rejected
+                        </span>
+                      ) : (
+                        <span className="inline-flex rounded-full bg-yellow-100 px-2 py-1 text-xs leading-5 font-semibold text-yellow-800">
+                          Pending
+                        </span>
+                      )}
+                      {org.verificationStatus === "REJECTED" &&
+                        org.rejectionReason && (
+                          <span
+                            className="max-w-[140px] truncate text-xs text-gray-500"
+                            title={org.rejectionReason}
+                          >
+                            {org.rejectionReason}
                           </span>
                         )}
-                      </div>
-                    ) : (
-                      <span className="inline-flex rounded-full bg-yellow-100 px-2 py-1 text-xs leading-5 font-semibold text-yellow-800">
-                        Pending
-                      </span>
-                    )}
+                    </div>
                   </td>
 
                   {/* Created */}
@@ -416,29 +542,42 @@ export default function OrganizationManagementClient({
 
                   {/* Actions */}
                   <td className="px-6 py-4 text-sm font-medium whitespace-nowrap">
-                    <button
-                      onClick={() =>
-                        router.push(`/admin/organizations/${org.id}`)
-                      }
-                      className="mr-3 text-blue-600 hover:text-blue-900"
-                    >
-                      View
-                    </button>
-                    {!org.isVerified ? (
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
-                        onClick={() => handleVerify(org.id, org.name)}
-                        className="text-green-600 hover:text-green-900"
+                        onClick={() =>
+                          router.push(`/admin/organizations/${org.id}`)
+                        }
+                        className="text-blue-600 hover:text-blue-900"
                       >
-                        Verify
+                        View
                       </button>
-                    ) : (
-                      <button
-                        onClick={() => handleUnverify(org.id, org.name)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Unverify
-                      </button>
-                    )}
+                      {!org.isVerified ? (
+                        <button
+                          onClick={() => handleVerify(org.id, org.name)}
+                          disabled={submittingOrgId === org.id}
+                          className="text-green-600 hover:text-green-900 disabled:opacity-50"
+                        >
+                          Verify
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleUnverify(org.id, org.name)}
+                          disabled={submittingOrgId === org.id}
+                          className="text-orange-600 hover:text-orange-900 disabled:opacity-50"
+                        >
+                          Unverify
+                        </button>
+                      )}
+                      {org.verificationStatus !== "REJECTED" && (
+                        <button
+                          onClick={() => openRejectModal(org.id, org.name)}
+                          disabled={submittingOrgId === org.id}
+                          className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                        >
+                          Reject
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

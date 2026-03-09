@@ -293,6 +293,17 @@ export default function UserDetailClient({
   // L41 FIX: Add delete loading state
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Revoke access state
+  const [showRevokeModal, setShowRevokeModal] = useState(false);
+  const [revokeReason, setRevokeReason] = useState("");
+  const [revokeLoading, setRevokeLoading] = useState(false);
+  const [revokeError, setRevokeError] = useState<string | null>(null);
+
+  const canRevoke =
+    canEdit &&
+    user.status === "ACTIVE" &&
+    !["ADMIN", "SUPER_ADMIN"].includes(user.role);
+
   /**
    * Handle delete
    */
@@ -331,8 +342,113 @@ export default function UserDetailClient({
     }
   };
 
+  /**
+   * Handle revoke access
+   */
+  const handleRevoke = async () => {
+    if (revokeReason.trim().length < 10) {
+      setRevokeError("Reason must be at least 10 characters.");
+      return;
+    }
+
+    setRevokeLoading(true);
+    setRevokeError(null);
+
+    try {
+      const csrfToken = await getCSRFToken();
+      const response = await fetch(`/api/admin/users/${user.id}/revoke`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+        },
+        body: JSON.stringify({ reason: revokeReason }),
+      });
+
+      if (response.ok) {
+        setShowRevokeModal(false);
+        setRevokeReason("");
+        router.refresh();
+      } else {
+        const data = await response.json();
+        if (response.status === 403) {
+          setRevokeError("You cannot revoke access for admins.");
+        } else if (response.status === 409) {
+          setRevokeError("User access is already revoked.");
+        } else {
+          setRevokeError(data.error || "Failed to revoke access");
+        }
+      }
+    } catch {
+      setRevokeError("An error occurred while revoking access");
+    } finally {
+      setRevokeLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Revoke Modal */}
+      {showRevokeModal && (
+        <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
+          <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <h3 className="mb-2 text-lg font-semibold text-gray-900">
+              Revoke Access
+            </h3>
+            <p className="mb-1 text-sm text-gray-600">
+              Revoking access for{" "}
+              <strong>{user.firstName || user.email}</strong>.
+            </p>
+            <p className="mb-4 text-sm font-medium text-red-600">
+              This will immediately invalidate all active sessions.
+            </p>
+
+            {revokeError && (
+              <div className="mb-4 rounded border border-red-200 bg-red-50 p-3">
+                <p className="text-sm text-red-800">{revokeError}</p>
+              </div>
+            )}
+
+            <div className="mb-4">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Reason *
+              </label>
+              <textarea
+                value={revokeReason}
+                onChange={(e) => setRevokeReason(e.target.value)}
+                placeholder="Provide a reason for revoking access (min 10 characters)..."
+                rows={3}
+                className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-red-500"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                {revokeReason.length} / 10 minimum characters
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowRevokeModal(false);
+                  setRevokeReason("");
+                  setRevokeError(null);
+                }}
+                disabled={revokeLoading}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRevoke}
+                disabled={revokeLoading || revokeReason.trim().length < 10}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {revokeLoading ? "Revoking..." : "Revoke Access"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Messages */}
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4">
@@ -550,13 +666,27 @@ export default function UserDetailClient({
                 </div>
               )}
             </div>
-            <button
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="rounded-lg px-4 py-2 font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isDeleting ? "Deleting..." : "Delete User"}
-            </button>
+            <div className="flex gap-2">
+              {canRevoke && (
+                <button
+                  onClick={() => {
+                    setRevokeReason("");
+                    setRevokeError(null);
+                    setShowRevokeModal(true);
+                  }}
+                  className="rounded-lg px-4 py-2 font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700"
+                >
+                  Revoke Access
+                </button>
+              )}
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="rounded-lg px-4 py-2 font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isDeleting ? "Deleting..." : "Delete User"}
+              </button>
+            </div>
           </div>
         )}
 

@@ -20,6 +20,8 @@ interface Organization {
   city: string | null;
   isVerified: boolean;
   verifiedAt: string | null;
+  verificationStatus: string;
+  rejectionReason: string | null;
   createdAt: string;
   _count: {
     users: number;
