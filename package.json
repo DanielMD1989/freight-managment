@@ -23,7 +23,10 @@
     "storage:migrate": "npx tsx scripts/migrate-storage-to-s3.ts",
     "storage:migrate:dry-run": "npx tsx scripts/migrate-storage-to-s3.ts --dry-run",
     "prepare": "husky",
-    "type-check": "tsc -p tsconfig.build.json --noEmit"
+    "type-check": "tsc -p tsconfig.build.json --noEmit",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

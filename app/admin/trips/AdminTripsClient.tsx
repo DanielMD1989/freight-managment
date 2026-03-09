@@ -15,6 +15,7 @@ type TripStatus =
   | "ASSIGNED"
   | "PICKUP_PENDING"
   | "IN_TRANSIT"
+  | "EXCEPTION"
   | "DELIVERED"
   | "COMPLETED"
   | "CANCELLED";
@@ -55,6 +56,7 @@ const STATUS_TABS: { key: TripStatus; label: string }[] = [
   { key: "ASSIGNED", label: "Assigned" },
   { key: "PICKUP_PENDING", label: "Pickup Pending" },
   { key: "IN_TRANSIT", label: "In Transit" },
+  { key: "EXCEPTION", label: "Exception" },
   { key: "DELIVERED", label: "Delivered" },
   { key: "COMPLETED", label: "Completed" },
   { key: "CANCELLED", label: "Cancelled" },
@@ -70,6 +72,8 @@ const STATUS_COLORS: Record<string, string> = {
   DELIVERED: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300",
   COMPLETED:
     "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+  EXCEPTION:
+    "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
   CANCELLED: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
 };
 

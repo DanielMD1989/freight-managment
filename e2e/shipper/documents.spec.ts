@@ -33,6 +33,8 @@ test.describe("Shipper Documents", () => {
       .getByText(/INSURANCE CERTIFICATE|All Documents/)
       .first();
     const emptyState = page.getByText(/No Documents Yet/);
-    await expect(docContent.or(emptyState)).toBeVisible({ timeout: 10000 });
+    await expect(docContent.or(emptyState).first()).toBeVisible({
+      timeout: 10000,
+    });
   });
 });

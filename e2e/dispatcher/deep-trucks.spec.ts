@@ -55,6 +55,10 @@ test.describe("Deep: Dispatcher Trucks", () => {
 
   test("status filter present", async ({ page }) => {
     const main = page.getByRole("main");
+    await page
+      .getByPlaceholder(/Search/i)
+      .first()
+      .waitFor({ state: "visible", timeout: 10000 });
     const statusSelect = main.locator("select").first();
     const hasSelect = await statusSelect
       .isVisible({ timeout: 5000 })
@@ -64,7 +68,12 @@ test.describe("Deep: Dispatcher Trucks", () => {
       const options = await statusSelect.locator("option").allTextContents();
       expect(options.some((o) => /Active/i.test(o))).toBe(true);
     } else {
-      await expect(main.getByText(/All Statuses/i).first()).toBeVisible({
+      await expect(
+        main
+          .locator("label")
+          .filter({ hasText: /Status/i })
+          .first()
+      ).toBeVisible({
         timeout: 5000,
       });
     }
@@ -72,6 +81,10 @@ test.describe("Deep: Dispatcher Trucks", () => {
 
   test("truck type filter present", async ({ page }) => {
     const main = page.getByRole("main");
+    await page
+      .getByPlaceholder(/Search/i)
+      .first()
+      .waitFor({ state: "visible", timeout: 10000 });
     const selects = main.locator("select");
     const selectCount = await selects.count();
     let found = false;
@@ -83,7 +96,12 @@ test.describe("Deep: Dispatcher Trucks", () => {
       }
     }
     if (!found) {
-      await expect(main.getByText(/All Types/i).first()).toBeVisible({
+      await expect(
+        main
+          .locator("label")
+          .filter({ hasText: /Truck Type/i })
+          .first()
+      ).toBeVisible({
         timeout: 5000,
       });
     }
@@ -123,6 +141,10 @@ test.describe("Deep: Dispatcher Trucks", () => {
 
   test("refresh button present", async ({ page }) => {
     const main = page.getByRole("main");
+    await page
+      .getByPlaceholder(/Search/i)
+      .first()
+      .waitFor({ state: "visible", timeout: 10000 });
     const buttons = main.locator("button");
     const count = await buttons.count();
     expect(count).toBeGreaterThanOrEqual(1);

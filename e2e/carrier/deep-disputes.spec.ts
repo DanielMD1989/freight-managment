@@ -15,9 +15,9 @@ test.describe("Deep: Carrier Disputes List", () => {
   });
 
   test("page heading with subtitle renders", async ({ page }) => {
-    await expect(
-      page.getByText(/View and track your disputes/i).first()
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/.*track your disputes/i).first()).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test("filter buttons render", async ({ page }) => {

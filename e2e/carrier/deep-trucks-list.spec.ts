@@ -106,7 +106,9 @@ test.describe("Deep: Trucks List Page", () => {
       .getByText(/Pending Approval|PENDING|ET-/i)
       .first();
     const emptyState = page.getByText(/No.*trucks|no pending/i);
-    await expect(pendingContent.or(emptyState)).toBeVisible({ timeout: 10000 });
+    await expect(pendingContent.or(emptyState).first()).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test("Rejected tab shows rejected trucks or empty state", async ({
@@ -119,7 +121,7 @@ test.describe("Deep: Trucks List Page", () => {
       .getByText(/REJECTED|Rejection Reason|ET-/i)
       .first();
     const emptyState = page.getByText(/No.*trucks|no rejected/i);
-    await expect(rejectedContent.or(emptyState)).toBeVisible({
+    await expect(rejectedContent.or(emptyState).first()).toBeVisible({
       timeout: 10000,
     });
   });

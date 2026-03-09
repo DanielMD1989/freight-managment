@@ -22,6 +22,7 @@
 import { test, expect } from "@playwright/test";
 import path from "path";
 import fs from "fs";
+import { getToken as getSharedToken } from "./test-utils";
 
 const BASE_URL = "http://localhost:3000";
 const workflowAuthFile = path.join(__dirname, "../.auth/workflow-shipper.json");
@@ -66,18 +67,9 @@ async function apiCall(
   return { status: res.status, data: await res.json() };
 }
 
+// Use the shared file-based token cache to avoid rate-limit exhaustion across test files
 async function getToken(email: string, password: string): Promise<string> {
-  const res = await fetch(`${BASE_URL}/api/auth/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-client-type": "mobile",
-    },
-    body: JSON.stringify({ email, password }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(`Login failed for ${email}: ${data.error}`);
-  return data.sessionToken;
+  return getSharedToken(email, password);
 }
 
 // ── Part A: Registration ────────────────────────────────────────────
@@ -338,17 +330,44 @@ test.describe.serial("Load Posting to Trip Completion", () => {
     if (!adminToken) {
       adminToken = await getToken("admin@test.com", workflowPassword);
     }
-    // Use shipper's own token to approve
+    // Use shipper's own token to soft-approve
     const shipperToken = await getToken(workflowEmail, workflowPassword);
-    const { status, data } = await apiCall(
+    const { status: approveStatus } = await apiCall(
       "POST",
       `/api/load-requests/${requestId}/respond`,
       shipperToken,
       { action: "APPROVE" }
     );
+    // 200 = newly approved, 409 = already approved (idempotent)
+    expect([200, 409]).toContain(approveStatus);
 
-    expect(status).toBe(200);
-    tripId = data.trip?.id;
+    // Carrier confirms → creates trip
+    const { status: confirmStatus, data: confirmData } = await apiCall(
+      "POST",
+      `/api/load-requests/${requestId}/confirm`,
+      carrierToken,
+      { action: "CONFIRM" }
+    );
+
+    if (
+      confirmStatus === 409 ||
+      (confirmStatus === 400 && confirmData.currentStatus === "CONFIRMED")
+    ) {
+      // Already confirmed — find trip via carrier trips endpoint
+      const { data: tripsData } = await apiCall(
+        "GET",
+        "/api/trips?myTrips=true",
+        carrierToken
+      );
+      const trips = tripsData.trips ?? tripsData;
+      const match = Array.isArray(trips)
+        ? trips.find((t: { loadId?: string }) => t.loadId === loadId)
+        : null;
+      tripId = match?.id;
+    } else {
+      expect(confirmStatus).toBe(200);
+      tripId = confirmData.trip?.id;
+    }
     expect(tripId).toBeTruthy();
 
     // Verify in browser that the request shows as approved

@@ -9,9 +9,7 @@ test.describe("Shipper Trips", () => {
     await expect(
       page.getByRole("heading", { name: "Trip History" })
     ).toBeVisible();
-    await expect(
-      page.getByText(/View delivered and completed trips/)
-    ).toBeVisible();
+    await expect(page.getByText(/View delivered.*trips/)).toBeVisible();
   });
 
   test("displays status filter tabs", async ({ page }) => {

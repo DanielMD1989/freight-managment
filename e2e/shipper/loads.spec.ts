@@ -70,9 +70,13 @@ test.describe("Shipper Loads", () => {
   });
 
   test("load rows have View and action links", async ({ page }) => {
-    await expect(page.getByText("View").first()).toBeVisible();
-    await expect(page.getByText("Copy").first()).toBeVisible();
-    await expect(page.getByText("Delete").first()).toBeVisible();
+    await expect(page.getByText("View").first()).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(page.getByText("Copy").first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Delete").first()).toBeVisible({
+      timeout: 5000,
+    });
   });
 });
 

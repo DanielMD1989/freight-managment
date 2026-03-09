@@ -45,7 +45,9 @@ test.describe("Deep: Documents Page", () => {
       .getByText(/INSURANCE CERTIFICATE|All Documents|Business License/i)
       .first();
     const emptyState = page.getByText(/No Documents Yet/);
-    await expect(docContent.or(emptyState)).toBeVisible({ timeout: 10000 });
+    await expect(docContent.or(emptyState).first()).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test("cross-check documents against API", async ({ page }) => {

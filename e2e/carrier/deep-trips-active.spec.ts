@@ -84,14 +84,16 @@ test.describe("Deep: Ready to Start Tab", () => {
     const emptyState = main.getByText(
       /No.*approved loads|no trips|No approved/i
     );
-    await expect(content.or(emptyState)).toBeVisible({ timeout: 10000 });
+    await expect(content.or(emptyState).first()).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test("ASSIGNED trips show Ready to Start badge", async ({ page }) => {
     await page.waitForTimeout(2000);
     const badge = page.getByText(/Ready to Start/i).first();
     const emptyState = page.getByText(/No.*approved loads|no trips/i);
-    await expect(badge.or(emptyState)).toBeVisible({ timeout: 10000 });
+    await expect(badge.or(emptyState).first()).toBeVisible({ timeout: 10000 });
   });
 
   test("Start Trip button visible for ASSIGNED trips", async ({ page }) => {

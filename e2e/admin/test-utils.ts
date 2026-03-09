@@ -6,37 +6,15 @@
  */
 
 import { Page, expect } from "@playwright/test";
-import fs from "fs";
-import path from "path";
+
+import {
+  readTokenCache,
+  writeTokenCache,
+  TOKEN_CACHE_TTL,
+} from "../shared/token-cache";
 
 export const BASE_URL = "http://localhost:3000";
 export const TEST_PASSWORD = "Test123!";
-
-// ── Token cache (shared with carrier/shipper tests) ─────────────────
-
-const TOKEN_CACHE_DIR = path.join(__dirname, "../.auth");
-const TOKEN_CACHE_FILE = path.join(TOKEN_CACHE_DIR, "token-cache.json");
-const TOKEN_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-interface TokenCache {
-  [email: string]: { token: string; timestamp: number };
-}
-
-function readTokenCache(): TokenCache {
-  try {
-    if (fs.existsSync(TOKEN_CACHE_FILE)) {
-      return JSON.parse(fs.readFileSync(TOKEN_CACHE_FILE, "utf-8"));
-    }
-  } catch {
-    /* ignore */
-  }
-  return {};
-}
-
-function writeTokenCache(cache: TokenCache) {
-  fs.mkdirSync(TOKEN_CACHE_DIR, { recursive: true });
-  fs.writeFileSync(TOKEN_CACHE_FILE, JSON.stringify(cache));
-}
 
 // ── API helpers ──────────────────────────────────────────────────────
 

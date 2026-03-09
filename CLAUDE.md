@@ -113,6 +113,30 @@ Five roles: `SHIPPER`, `CARRIER`, `DISPATCHER`, `ADMIN`, `SUPER_ADMIN`
 
 Invalid transitions return 400. Canonical transitions defined in `lib/tripStateMachine.ts`.
 
+## E2E Test Stability Rules
+
+### Schema change → E2E update (same session)
+
+Whenever `app/api/loads/route.ts` `createLoadSchema` gains or loses a required field, update ALL of these in the same session:
+
+- `e2e/shipper/test-utils.ts` (`ensureLoad`, `ensureTrip`)
+- `e2e/carrier/test-utils.ts` (`ensureCarrierTrip`)
+- `e2e/admin/test-utils.ts`
+- `e2e/dispatcher/test-utils.ts` (`ensurePostedLoad`)
+- `e2e/shared/schema-validate.ts` (`loadPayloadSchema`)
+
+Find all inline load-creation sites:
+
+```bash
+grep -r "POST.*api/loads" e2e/ tests/e2e/
+```
+
+The shared schema validator (`e2e/shared/schema-validate.ts`) is a dev-time guard — it throws immediately with a descriptive error if any `ensure*()` factory sends an invalid payload.
+
+### Token cache
+
+All four role test-utils import `readTokenCache`/`writeTokenCache`/`TOKEN_CACHE_TTL` from `e2e/shared/token-cache.ts`. If the cache format changes, update only that file.
+
 ## Testing Notes
 
 - Jest defaults to `node` environment; component tests use `@jest-environment jsdom` docblock

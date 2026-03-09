@@ -24,7 +24,9 @@ test.describe("Shipper Wallet", () => {
   });
 
   test("displays transaction filter tabs", async ({ page }) => {
-    await expect(page.getByText("Transaction History")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Transaction History" })
+    ).toBeVisible();
     await expect(page.getByRole("button", { name: "All" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Deposits" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Refunds" })).toBeVisible();
@@ -32,9 +34,16 @@ test.describe("Shipper Wallet", () => {
 
   test("shows transactions or empty state", async ({ page }) => {
     await page.waitForTimeout(2000);
-    const transactions = page.getByText(/Deposit|Service Fee|Refund/).first();
-    const emptyState = page.getByText(/No transactions found/);
-    await expect(transactions.or(emptyState)).toBeVisible({ timeout: 10000 });
+    const txVisible = await page
+      .getByText(/Deposit|Service Fee|Refund/)
+      .first()
+      .isVisible({ timeout: 3000 })
+      .catch(() => false);
+    const emptyVisible = await page
+      .getByText(/No transactions found/)
+      .isVisible({ timeout: 3000 })
+      .catch(() => false);
+    expect(txVisible || emptyVisible).toBeTruthy();
   });
 
   test("switching transaction filter updates view", async ({ page }) => {

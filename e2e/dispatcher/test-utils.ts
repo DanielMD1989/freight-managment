@@ -6,38 +6,17 @@
  */
 
 import { Page, expect } from "@playwright/test";
-import fs from "fs";
-import path from "path";
+
+import {
+  readTokenCache,
+  writeTokenCache,
+  TOKEN_CACHE_TTL,
+} from "../shared/token-cache";
+import { assertValidLoad } from "../shared/schema-validate";
 
 export const BASE_URL = "http://localhost:3000";
 export const TEST_PASSWORD = "Test123!";
 export const DISPATCHER_PASSWORD = "password";
-
-// ── Token cache (shared with other role tests) ──────────────────────
-
-const TOKEN_CACHE_DIR = path.join(__dirname, "../.auth");
-const TOKEN_CACHE_FILE = path.join(TOKEN_CACHE_DIR, "token-cache.json");
-const TOKEN_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-interface TokenCache {
-  [email: string]: { token: string; timestamp: number };
-}
-
-function readTokenCache(): TokenCache {
-  try {
-    if (fs.existsSync(TOKEN_CACHE_FILE)) {
-      return JSON.parse(fs.readFileSync(TOKEN_CACHE_FILE, "utf-8"));
-    }
-  } catch {
-    /* ignore */
-  }
-  return {};
-}
-
-function writeTokenCache(cache: TokenCache) {
-  fs.mkdirSync(TOKEN_CACHE_DIR, { recursive: true });
-  fs.writeFileSync(TOKEN_CACHE_FILE, JSON.stringify(cache));
-}
 
 // ── API helpers ──────────────────────────────────────────────────────
 
@@ -137,26 +116,23 @@ export async function ensurePostedLoad(shipperToken: string): Promise<string> {
   }
 
   // Create a new load as shipper
+  const dispatcherLoadPayload = {
+    pickupCity: "Addis Ababa",
+    deliveryCity: "Dire Dawa",
+    pickupDate: new Date(Date.now() + 86400000).toISOString().split("T")[0],
+    deliveryDate: new Date(Date.now() + 3 * 86400000)
+      .toISOString()
+      .split("T")[0],
+    truckType: "DRY_VAN",
+    weight: 5000,
+    cargoDescription: "E2E dispatcher test cargo",
+  };
+  assertValidLoad(dispatcherLoadPayload);
   const { status, data: created } = await apiCall(
     "POST",
     "/api/loads",
     shipperToken,
-    {
-      cargoType: "General Merchandise",
-      weight: 5000,
-      truckType: "DRY_BOX",
-      pickupCity: "Addis Ababa",
-      pickupRegion: "Addis Ababa",
-      pickupAddress: "Bole Road",
-      deliveryCity: "Dire Dawa",
-      deliveryRegion: "Dire Dawa",
-      deliveryAddress: "Main Street",
-      pickupDate: new Date(Date.now() + 86400000).toISOString(),
-      deliveryDate: new Date(Date.now() + 3 * 86400000).toISOString(),
-      offeredRate: 25000,
-      currency: "ETB",
-      description: "E2E dispatcher test load",
-    }
+    dispatcherLoadPayload
   );
 
   if (status !== 201) {

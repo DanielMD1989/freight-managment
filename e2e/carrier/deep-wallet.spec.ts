@@ -92,7 +92,9 @@ test.describe("Deep: Carrier Wallet Page", () => {
       .getByText(/Earnings|Settlement|Deposit|Withdrawal/i)
       .first();
     const emptyState = page.getByText(/No transactions/i);
-    await expect(txContent.or(emptyState)).toBeVisible({ timeout: 10000 });
+    await expect(txContent.or(emptyState).first()).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test("Withdraw button is visible", async ({ page }) => {

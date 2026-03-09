@@ -64,9 +64,9 @@ test.describe("Deep: Wallet Page", () => {
   });
 
   test("transaction history section with filter tabs", async ({ page }) => {
-    await expect(page.getByText("Transaction History")).toBeVisible({
-      timeout: 10000,
-    });
+    await expect(
+      page.getByRole("heading", { name: "Transaction History" })
+    ).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole("button", { name: "All" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Deposits" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Refunds" })).toBeVisible();
@@ -76,21 +76,32 @@ test.describe("Deep: Wallet Page", () => {
     // Click Deposits filter
     await page.getByRole("button", { name: "Deposits" }).click();
     await page.waitForTimeout(1000);
-    await expect(page.getByText("Transaction History")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Transaction History" })
+    ).toBeVisible();
 
     // Click Refunds filter
     await page.getByRole("button", { name: "Refunds" }).click();
     await page.waitForTimeout(1000);
-    await expect(page.getByText("Transaction History")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Transaction History" })
+    ).toBeVisible();
 
     // Click All to reset
     await page.getByRole("button", { name: "All" }).click();
     await page.waitForTimeout(1000);
 
-    // Should show transactions or empty state
-    const txContent = page.getByText(/Deposit|Service Fee|Refund/).first();
-    const emptyState = page.getByText(/No transactions found/);
-    await expect(txContent.or(emptyState)).toBeVisible({ timeout: 10000 });
+    // Should show transactions or empty state (use isVisible to avoid strict mode)
+    const txVisible = await page
+      .getByText(/Deposit|Service Fee|Refund/)
+      .first()
+      .isVisible({ timeout: 3000 })
+      .catch(() => false);
+    const emptyVisible = await page
+      .getByText(/No transactions found/)
+      .isVisible({ timeout: 3000 })
+      .catch(() => false);
+    expect(txVisible || emptyVisible).toBeTruthy();
   });
 
   test("Deposit Funds button is visible", async ({ page }) => {

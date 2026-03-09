@@ -22,6 +22,10 @@ test.describe("Deep: Dispatcher Loads", () => {
 
   test("status filter options visible", async ({ page }) => {
     const main = page.getByRole("main");
+    await page
+      .getByPlaceholder(/Search/i)
+      .first()
+      .waitFor({ state: "visible", timeout: 10000 });
     // Status filter should be a select/combobox
     const statusSelect = main.locator("select").first();
     const hasSelect = await statusSelect
@@ -35,15 +39,21 @@ test.describe("Deep: Dispatcher Loads", () => {
       expect(options.some((o) => /In Transit/i.test(o))).toBe(true);
       expect(options.some((o) => /Delivered/i.test(o))).toBe(true);
     } else {
-      // Fallback: check for filter text
-      await expect(main.getByText(/All Statuses/i).first()).toBeVisible({
-        timeout: 5000,
-      });
+      await expect(
+        main
+          .locator("label")
+          .filter({ hasText: /Status/i })
+          .first()
+      ).toBeVisible({ timeout: 5000 });
     }
   });
 
   test("truck type filter dropdown with types", async ({ page }) => {
     const main = page.getByRole("main");
+    await page
+      .getByPlaceholder(/Search/i)
+      .first()
+      .waitFor({ state: "visible", timeout: 10000 });
     const selects = main.locator("select");
     const selectCount = await selects.count();
 
@@ -58,8 +68,13 @@ test.describe("Deep: Dispatcher Loads", () => {
       }
     }
     if (!found) {
-      // May use a custom filter with text
-      await expect(main.getByText(/All Types/i).first()).toBeVisible({
+      // May use a label or custom filter element
+      await expect(
+        main
+          .locator("label")
+          .filter({ hasText: /Truck Type/i })
+          .first()
+      ).toBeVisible({
         timeout: 5000,
       });
     }
@@ -73,6 +88,10 @@ test.describe("Deep: Dispatcher Loads", () => {
 
   test("refresh button present", async ({ page }) => {
     const main = page.getByRole("main");
+    await page
+      .getByPlaceholder(/Search/i)
+      .first()
+      .waitFor({ state: "visible", timeout: 10000 });
     const refreshBtn = main.getByRole("button", { name: /refresh/i }).first();
     const hasRefresh = await refreshBtn
       .isVisible({ timeout: 5000 })
@@ -141,6 +160,10 @@ test.describe("Deep: Dispatcher Loads", () => {
 
   test("results summary text visible", async ({ page }) => {
     const main = page.getByRole("main");
+    await page
+      .getByPlaceholder(/Search/i)
+      .first()
+      .waitFor({ state: "visible", timeout: 10000 });
     const summary = main.getByText(/Showing|Page|of/i).first();
     const hasSummary = await summary
       .isVisible({ timeout: 5000 })

@@ -31,7 +31,10 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 // Test user credentials
-const TEST_PASSWORD = "password";
+// shipper/carrier/admin use "Test123!" to match auth.setup.ts files
+// dispatcher uses "password" (matches dispatcher/auth.setup.ts)
+const TEST_PASSWORD_STANDARD = "Test123!";
+const TEST_PASSWORD_DISPATCHER = "password";
 
 // Helper: Hash password
 async function hashPassword(password: string): Promise<string> {
@@ -43,7 +46,8 @@ async function main() {
   console.log("  E2E Test Data Seed Script");
   console.log("========================================\n");
 
-  const hashedPassword = await hashPassword(TEST_PASSWORD);
+  const hashedPassword = await hashPassword(TEST_PASSWORD_STANDARD);
+  const hashedPasswordDispatcher = await hashPassword(TEST_PASSWORD_DISPATCHER);
 
   // ============================================================================
   // 1. TEST USERS & ORGANIZATIONS
@@ -64,6 +68,7 @@ async function main() {
         contactPhone: "+251911111111",
         isVerified: true,
         verifiedAt: new Date(),
+        verificationStatus: "APPROVED",
       },
     });
     console.log("   [+] Created organization: Test Shipper Co");
@@ -75,6 +80,7 @@ async function main() {
         isVerified: true,
         verifiedAt: new Date(),
         contactPhone: "+251911111111",
+        verificationStatus: "APPROVED",
       },
     });
     console.log("   [=] Organization exists: Test Shipper Co (updated)");
@@ -126,6 +132,7 @@ async function main() {
         contactPhone: "+251922222222",
         isVerified: true,
         verifiedAt: new Date(),
+        verificationStatus: "APPROVED",
       },
     });
     console.log("   [+] Created organization: Test Carrier Co");
@@ -136,6 +143,7 @@ async function main() {
         isVerified: true,
         verifiedAt: new Date(),
         contactPhone: "+251922222222",
+        verificationStatus: "APPROVED",
       },
     });
     console.log("   [=] Organization exists: Test Carrier Co (updated)");
@@ -218,6 +226,7 @@ async function main() {
         contactPhone: "+251944444444",
         isVerified: true,
         verifiedAt: new Date(),
+        verificationStatus: "APPROVED",
       },
     });
     console.log("   [+] Created organization: Dispatch Center");
@@ -227,6 +236,7 @@ async function main() {
       data: {
         isVerified: true,
         verifiedAt: new Date(),
+        verificationStatus: "APPROVED",
       },
     });
     console.log("   [=] Organization exists: Dispatch Center (updated)");
@@ -240,7 +250,7 @@ async function main() {
     dispatcherUser = await prisma.user.create({
       data: {
         email: "dispatcher@test.com",
-        passwordHash: hashedPassword,
+        passwordHash: hashedPasswordDispatcher,
         firstName: "Test",
         lastName: "Dispatcher",
         phone: "+251944444444",
@@ -255,7 +265,7 @@ async function main() {
     await prisma.user.update({
       where: { id: dispatcherUser.id },
       data: {
-        passwordHash: hashedPassword,
+        passwordHash: hashedPasswordDispatcher,
         status: "ACTIVE",
         isActive: true,
         organizationId: dispatchOrg.id,
