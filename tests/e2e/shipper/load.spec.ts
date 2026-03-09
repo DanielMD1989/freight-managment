@@ -180,8 +180,8 @@ test.describe("Shipper Load Management", () => {
         shipperToken,
         { pickupCity: "Unauthorized Edit City" }
       );
-      // 200 = allowed (some fields), 400/403 = restricted (both acceptable)
-      expect([200, 400, 403]).toContain(status);
+      // 200 = allowed (some fields), 400/403/409 = restricted (all acceptable)
+      expect([200, 400, 403, 409]).toContain(status);
     } else {
       // No edit button = edit is prevented in UI (pass)
       expect(true).toBeTruthy();

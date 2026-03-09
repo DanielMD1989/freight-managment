@@ -159,23 +159,41 @@ export async function ensureTrip(
     );
   const loadId = loadData.load?.id ?? loadData.id;
 
-  // Get an available carrier truck
-  const { data: truckData } = await apiCall(
-    "GET",
-    "/api/trucks?isAvailable=true",
-    carrierToken
+  // Create a brand-new truck per call so each ensureTrip is fully isolated
+  const plate = `ET-E2E-${Date.now().toString(36).toUpperCase()}`;
+  const { status: truckStatus, data: truckCreated } = await apiCall(
+    "POST",
+    "/api/trucks",
+    carrierToken,
+    {
+      truckType: "FLATBED",
+      licensePlate: plate,
+      capacity: 15000,
+      volume: 50,
+      currentCity: "Addis Ababa",
+      currentRegion: "Addis Ababa",
+      isAvailable: true,
+    }
   );
-  const trucks = truckData.trucks ?? truckData;
-  if (!Array.isArray(trucks) || trucks.length === 0)
-    throw new Error("ensureTrip: no available carrier trucks");
-  const truckId = trucks[0].id;
+  if (truckStatus !== 201)
+    throw new Error(
+      `ensureTrip: truck creation failed (${truckStatus}): ${JSON.stringify(truckCreated)}`
+    );
+  const truckId = (truckCreated.truck ?? truckCreated).id;
 
-  // Approve truck
-  await apiCall("POST", `/api/trucks/${truckId}/approve`, adminToken, {
-    action: "APPROVE",
-  });
+  // Approve the new truck
+  const { status: approveStatus, data: approveData } = await apiCall(
+    "POST",
+    `/api/trucks/${truckId}/approve`,
+    adminToken,
+    { action: "APPROVE" }
+  );
+  if (approveStatus !== 200)
+    throw new Error(
+      `ensureTrip: truck approval failed (${approveStatus}): ${JSON.stringify(approveData)}`
+    );
 
-  // Create truck posting (may already exist — ignore errors)
+  // Create truck posting
   const locRes = await fetch(`${BASE_URL}/api/ethiopian-locations?limit=1`);
   const locations = await locRes.json();
   const originCityId = (locations[0] ?? locations.locations?.[0])?.id;

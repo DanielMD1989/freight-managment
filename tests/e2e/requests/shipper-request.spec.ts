@@ -30,36 +30,26 @@ test.describe("Shipper → Truck Request flow", () => {
     // Ensure we have a posted load
     loadId = await ensureLoad(shipperToken);
 
-    // Get or create an approved carrier truck
-    const { data: truckData } = await apiCall(
-      "GET",
-      "/api/trucks?myTrucks=true&approvalStatus=APPROVED&limit=1",
-      carrierToken
+    // Always create a fresh truck so it has no active trips from previous runs
+    const plate = `BP-SR-${Date.now().toString(36).toUpperCase()}`;
+    const { data: created } = await apiCall(
+      "POST",
+      "/api/trucks",
+      carrierToken,
+      {
+        truckType: "FLATBED",
+        licensePlate: plate,
+        capacity: 20000,
+        volume: 60,
+        currentCity: "Addis Ababa",
+        currentRegion: "Addis Ababa",
+        isAvailable: true,
+      }
     );
-    const trucks = truckData.trucks ?? truckData;
-    if (Array.isArray(trucks) && trucks.length > 0) {
-      truckId = trucks[0].id;
-    } else {
-      const plate = `BP-SR-${Date.now().toString(36).slice(-5).toUpperCase()}`;
-      const { data: created } = await apiCall(
-        "POST",
-        "/api/trucks",
-        carrierToken,
-        {
-          truckType: "FLATBED",
-          licensePlate: plate,
-          capacity: 20000,
-          volume: 60,
-          currentCity: "Addis Ababa",
-          currentRegion: "Addis Ababa",
-          isAvailable: true,
-        }
-      );
-      truckId = (created.truck ?? created).id;
-      await apiCall("POST", `/api/trucks/${truckId}/approve`, adminToken, {
-        action: "APPROVE",
-      });
-    }
+    truckId = (created.truck ?? created).id;
+    await apiCall("POST", `/api/trucks/${truckId}/approve`, adminToken, {
+      action: "APPROVE",
+    });
 
     // Ensure truck has an active posting
     const locRes = await fetch(`${BASE_URL}/api/ethiopian-locations?limit=1`);
@@ -93,7 +83,7 @@ test.describe("Shipper → Truck Request flow", () => {
         notes: "Blueprint shipper request test",
       }
     );
-    expect([200, 201]).toContain(status);
+    expect(status).toBe(201);
 
     const request = data.truckRequest ?? data.request ?? data;
     expect(request.id).toBeDefined();
@@ -119,6 +109,7 @@ test.describe("Shipper → Truck Request flow", () => {
         deliveryDate: fiveDays.toISOString().split("T")[0],
         truckType: "FLATBED",
         weight: 4000,
+        cargoDescription: "Blueprint truck request accept test cargo",
         description: "Blueprint truck request accept test",
         status: "POSTED",
       }
@@ -164,6 +155,7 @@ test.describe("Shipper → Truck Request flow", () => {
         deliveryDate: fiveDays.toISOString().split("T")[0],
         truckType: "FLATBED",
         weight: 4500,
+        cargoDescription: "Blueprint truck request reject test cargo",
         description: "Blueprint truck request reject test",
         status: "POSTED",
       }

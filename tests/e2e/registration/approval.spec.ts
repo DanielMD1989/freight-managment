@@ -130,11 +130,11 @@ test.describe("Organization approval lifecycle", () => {
   });
 
   test("documents locked after approval — lock banner visible in shipper UI", async ({
-    page,
+    browser,
   }) => {
     test.setTimeout(60000);
 
-    // Ensure the shipper org is approved first
+    // Step 1: admin approves the shipper org via API
     const adminToken = await getAdminToken();
     const shipperToken = await getShipperToken();
     const { data: meData } = await apiCall("GET", "/api/auth/me", shipperToken);
@@ -155,28 +155,34 @@ test.describe("Organization approval lifecycle", () => {
       );
     }
 
-    await page.goto("/shipper/documents");
-    const lockBanner = page
-      .getByText(/locked|documents.*locked|cannot.*upload|approved/i)
-      .first();
-    const uploadDisabled = page
-      .getByRole("button", { name: /upload/i })
-      .first();
+    // Step 2: navigate to /shipper/documents as the shipper (requires shipper auth)
+    const shipperContext = await browser.newContext({
+      storageState: "e2e/.auth/shipper.json",
+    });
+    const page = await shipperContext.newPage();
+    try {
+      await page.goto("/shipper/documents");
+      const lockBanner = page
+        .getByText(/locked|documents.*locked|cannot.*upload|approved/i)
+        .first();
 
-    // Either a lock banner is shown OR the upload button is disabled
-    const bannerVisible = await lockBanner
-      .isVisible({ timeout: 8000 })
-      .catch(() => false);
-    if (!bannerVisible) {
-      // Acceptable alternative: any document/upload text in main content area
-      await expect(
-        page
-          .locator("main")
-          .getByText(/document|upload|approved/i)
-          .first()
-      ).toBeVisible({ timeout: 10000 });
-    } else {
-      expect(bannerVisible).toBeTruthy();
+      // Either a lock banner is shown OR any document/upload content is visible
+      const bannerVisible = await lockBanner
+        .isVisible({ timeout: 8000 })
+        .catch(() => false);
+      if (!bannerVisible) {
+        // Acceptable fallback: main content area shows any document/upload/approved text
+        await expect(
+          page
+            .locator("main")
+            .getByText(/document|upload|approved/i)
+            .first()
+        ).toBeVisible({ timeout: 10000 });
+      } else {
+        expect(bannerVisible).toBeTruthy();
+      }
+    } finally {
+      await shipperContext.close();
     }
   });
 });

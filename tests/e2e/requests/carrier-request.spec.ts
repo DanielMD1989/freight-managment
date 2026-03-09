@@ -10,7 +10,6 @@ import {
   getShipperToken,
   getCarrierToken,
   getAdminToken,
-  BASE_URL,
 } from "../shared/test-utils";
 
 test.describe("Carrier → Load Request flow", () => {
@@ -25,36 +24,26 @@ test.describe("Carrier → Load Request flow", () => {
     carrierToken = await getCarrierToken();
     adminToken = await getAdminToken();
 
-    // Ensure approved carrier truck exists
-    const { data: truckData } = await apiCall(
-      "GET",
-      "/api/trucks?myTrucks=true&approvalStatus=APPROVED&limit=1",
-      carrierToken
+    // Always create a fresh truck to avoid "truck already on trip" 409s from prior runs
+    const plate = `BP-CR-${Date.now().toString(36).toUpperCase()}`;
+    const { data: created } = await apiCall(
+      "POST",
+      "/api/trucks",
+      carrierToken,
+      {
+        truckType: "FLATBED",
+        licensePlate: plate,
+        capacity: 20000,
+        volume: 60,
+        currentCity: "Addis Ababa",
+        currentRegion: "Addis Ababa",
+        isAvailable: true,
+      }
     );
-    const trucks = truckData.trucks ?? truckData;
-    if (Array.isArray(trucks) && trucks.length > 0) {
-      truckId = trucks[0].id;
-    } else {
-      const plate = `BP-CR-${Date.now().toString(36).slice(-5).toUpperCase()}`;
-      const { data: created } = await apiCall(
-        "POST",
-        "/api/trucks",
-        carrierToken,
-        {
-          truckType: "FLATBED",
-          licensePlate: plate,
-          capacity: 20000,
-          volume: 60,
-          currentCity: "Addis Ababa",
-          currentRegion: "Addis Ababa",
-          isAvailable: true,
-        }
-      );
-      truckId = (created.truck ?? created).id;
-      await apiCall("POST", `/api/trucks/${truckId}/approve`, adminToken, {
-        action: "APPROVE",
-      });
-    }
+    truckId = (created.truck ?? created).id;
+    await apiCall("POST", `/api/trucks/${truckId}/approve`, adminToken, {
+      action: "APPROVE",
+    });
   });
 
   /** Helper: create a fresh POSTED load as shipper. */

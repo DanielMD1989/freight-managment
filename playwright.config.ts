@@ -10,9 +10,13 @@ export default defineConfig({
   reporter: [["html", { open: "never" }], ["list"]],
   use: {
     baseURL: "http://localhost:3000",
+    headless: false,
     screenshot: "only-on-failure",
     trace: "on-first-retry",
     video: "off",
+    launchOptions: {
+      slowMo: 500,
+    },
   },
   projects: [
     {

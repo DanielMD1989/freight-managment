@@ -137,6 +137,22 @@ The shared schema validator (`e2e/shared/schema-validate.ts`) is a dev-time guar
 
 All four role test-utils import `readTokenCache`/`writeTokenCache`/`TOKEN_CACHE_TTL` from `e2e/shared/token-cache.ts`. If the cache format changes, update only that file.
 
+### Revoke-then-restore pattern
+
+Any test that calls a destructive admin action (revoke, suspend, reject) on a **shared test user** (`shipper@test.com`, `carrier@test.com`, `dispatcher@test.com`) **must**:
+
+1. Re-activate the user inline immediately after the assertion (belt-and-suspenders)
+2. Call `invalidateTokenCache(email)` to evict the now-invalid JWT from the file cache
+3. Add an `afterAll` block that calls `restoreTestUsers()` from `tests/e2e/shared/test-utils.ts` as a safety net in case the test fails before the inline re-activation runs
+
+Rationale: `POST /admin/users/:id/revoke` calls `revokeAllSessions()` which invalidates all existing JWTs. Even after re-activation, the cached token is a dead credential — subsequent tests that call `getShipperToken()` / `getCarrierToken()` would receive the stale invalid token and fail silently.
+
+```ts
+test.afterAll(async () => {
+  await restoreTestUsers(); // re-activates shipper, carrier, dispatcher + clears cache
+});
+```
+
 ## Testing Notes
 
 - Jest defaults to `node` environment; component tests use `@jest-environment jsdom` docblock
