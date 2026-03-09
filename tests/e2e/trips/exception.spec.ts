@@ -16,11 +16,42 @@ import {
 } from "../shared/test-utils";
 
 test.describe("Trip Exception Path", () => {
+  // Track trips created by each test so afterEach can clean them up.
+  // Cleanup cancels the trip, which frees the truck and reverts the posting to ACTIVE,
+  // allowing ensureTrip to reuse the same truck+posting in the next test.
+  const tripsToCleanup: string[] = [];
+
+  test.afterEach(async () => {
+    if (tripsToCleanup.length === 0) return;
+    const adminToken = await getAdminToken();
+    for (const tripId of tripsToCleanup) {
+      // Get current status — some states require going through EXCEPTION first
+      const { data } = await apiCall("GET", `/api/trips/${tripId}`, adminToken);
+      const trip = data.trip ?? data;
+      if (!trip?.status || ["COMPLETED", "CANCELLED"].includes(trip.status))
+        continue;
+
+      // IN_TRANSIT cannot be cancelled directly; must go through EXCEPTION
+      if (trip.status === "IN_TRANSIT") {
+        await apiCall("PATCH", `/api/trips/${tripId}`, adminToken, {
+          status: "EXCEPTION",
+          exceptionNote: "E2E afterEach cleanup",
+        });
+      }
+      // Cancel the trip (frees the truck + reverts posting to ACTIVE for reuse)
+      await apiCall("POST", `/api/trips/${tripId}/cancel`, adminToken, {
+        reason: "E2E afterEach cleanup",
+      }).catch(() => {});
+    }
+    tripsToCleanup.length = 0;
+  });
+
   async function buildInTransitTrip() {
     const shipperToken = await getShipperToken();
     const carrierToken = await getCarrierToken();
     const adminToken = await getAdminToken();
     const { tripId } = await ensureTrip(shipperToken, carrierToken, adminToken);
+    tripsToCleanup.push(tripId);
 
     await apiCall("PATCH", `/api/trips/${tripId}`, carrierToken, {
       status: "PICKUP_PENDING",

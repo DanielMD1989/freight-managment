@@ -159,51 +159,96 @@ export async function ensureTrip(
     );
   const loadId = loadData.load?.id ?? loadData.id;
 
-  // Create a brand-new truck per call so each ensureTrip is fully isolated
-  const plate = `ET-E2E-${Date.now().toString(36).toUpperCase()}`;
-  const { status: truckStatus, data: truckCreated } = await apiCall(
-    "POST",
-    "/api/trucks",
-    carrierToken,
-    {
-      truckType: "FLATBED",
-      licensePlate: plate,
-      capacity: 15000,
-      volume: 50,
-      currentCity: "Addis Ababa",
-      currentRegion: "Addis Ababa",
-      isAvailable: true,
+  // Reuse-first strategy: look for an existing approved carrier truck that has
+  // an ACTIVE posting (freed by a previous test's cleanup) before creating new ones.
+  // This avoids hitting the 1000/day truck posting rate limit during heavy test runs.
+  const { data: meData } = await apiCall("GET", "/api/auth/me", carrierToken);
+  const carrierId =
+    meData.user?.organizationId ?? meData.organizationId ?? null;
+
+  let truckId: string | null = null;
+
+  if (carrierId) {
+    const { data: pd } = await apiCall(
+      "GET",
+      `/api/truck-postings?organizationId=${carrierId}&status=ACTIVE&limit=10`,
+      carrierToken
+    );
+    const activePostings: Array<{
+      truckId?: string;
+      truck?: { id: string; isAvailable?: boolean };
+    }> = pd.postings ?? pd.truckPostings ?? (Array.isArray(pd) ? pd : []);
+    for (const posting of activePostings) {
+      const candidateId = posting.truckId ?? posting.truck?.id;
+      const candidateAvailable = posting.truck?.isAvailable !== false;
+      if (candidateId && candidateAvailable) {
+        truckId = candidateId;
+        break;
+      }
     }
-  );
-  if (truckStatus !== 201)
-    throw new Error(
-      `ensureTrip: truck creation failed (${truckStatus}): ${JSON.stringify(truckCreated)}`
-    );
-  const truckId = (truckCreated.truck ?? truckCreated).id;
+  }
 
-  // Approve the new truck
-  const { status: approveStatus, data: approveData } = await apiCall(
-    "POST",
-    `/api/trucks/${truckId}/approve`,
-    adminToken,
-    { action: "APPROVE" }
-  );
-  if (approveStatus !== 200)
-    throw new Error(
-      `ensureTrip: truck approval failed (${approveStatus}): ${JSON.stringify(approveData)}`
+  if (!truckId) {
+    // No reusable truck found — create a new truck + posting
+    const plate = `ET-E2E-${Date.now().toString(36).toUpperCase()}`;
+    const { status: truckStatus, data: truckCreated } = await apiCall(
+      "POST",
+      "/api/trucks",
+      carrierToken,
+      {
+        truckType: "FLATBED",
+        licensePlate: plate,
+        capacity: 15000,
+        volume: 50,
+        currentCity: "Addis Ababa",
+        currentRegion: "Addis Ababa",
+        isAvailable: true,
+      }
     );
+    if (truckStatus !== 201)
+      throw new Error(
+        `ensureTrip: truck creation failed (${truckStatus}): ${JSON.stringify(truckCreated)}`
+      );
+    truckId = (truckCreated.truck ?? truckCreated).id;
 
-  // Create truck posting
-  const locRes = await fetch(`${BASE_URL}/api/ethiopian-locations?limit=1`);
-  const locations = await locRes.json();
-  const originCityId = (locations[0] ?? locations.locations?.[0])?.id;
-  await apiCall("POST", "/api/truck-postings", carrierToken, {
-    truckId,
-    originCityId,
-    availableFrom: tomorrow.toISOString(),
-    contactName: "Test Carrier",
-    contactPhone: "+251912345678",
-  });
+    const { status: approveStatus, data: approveData } = await apiCall(
+      "POST",
+      `/api/trucks/${truckId}/approve`,
+      adminToken,
+      { action: "APPROVE" }
+    );
+    if (approveStatus !== 200)
+      throw new Error(
+        `ensureTrip: truck approval failed (${approveStatus}): ${JSON.stringify(approveData)}`
+      );
+
+    // Create truck posting — requires a valid originCityId from the DB
+    const locRes = await fetch(`${BASE_URL}/api/ethiopian-locations`);
+    const locations = await locRes.json();
+    const allLocs: Array<{ id: string; name: string }> =
+      locations.locations ?? locations.cities ?? locations ?? [];
+    const originCityId = allLocs[0]?.id;
+    if (!originCityId)
+      throw new Error(
+        "ensureTrip: no Ethiopian location found — run seed-locations script first"
+      );
+    const { status: postStatus, data: postData } = await apiCall(
+      "POST",
+      "/api/truck-postings",
+      carrierToken,
+      {
+        truckId,
+        originCityId,
+        availableFrom: tomorrow.toISOString(),
+        contactName: "Test Carrier",
+        contactPhone: "+251912345678",
+      }
+    );
+    if (postStatus !== 201)
+      throw new Error(
+        `ensureTrip: truck posting failed (${postStatus}): ${JSON.stringify(postData)}`
+      );
+  }
 
   // Carrier requests the load
   const { status: reqStatus, data: reqData } = await apiCall(

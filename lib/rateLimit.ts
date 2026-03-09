@@ -671,10 +671,10 @@ export const RATE_LIMIT_LOAD_POSTING: RateLimitConfig = {
  */
 export const RATE_LIMIT_TRUCK_POSTING: RateLimitConfig = {
   name: "truck_posting",
-  limit: 100,
+  limit: 1000,
   windowMs: 24 * 60 * 60 * 1000,
   keyGenerator: (req, userId, orgId) => orgId || userId || "anonymous",
-  message: "Truck posting limit exceeded. Maximum 100 postings per day.",
+  message: "Truck posting limit exceeded. Maximum 1000 postings per day.",
 };
 
 /**

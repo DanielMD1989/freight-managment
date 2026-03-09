@@ -10,6 +10,7 @@ import {
   getShipperToken,
   getCarrierToken,
   getAdminToken,
+  BASE_URL,
 } from "../shared/test-utils";
 
 test.describe("Carrier → Load Request flow", () => {
@@ -43,6 +44,22 @@ test.describe("Carrier → Load Request flow", () => {
     truckId = (created.truck ?? created).id;
     await apiCall("POST", `/api/trucks/${truckId}/approve`, adminToken, {
       action: "APPROVE",
+    });
+
+    // Create an active truck posting so POST /api/load-requests doesn't return 400
+    const locRes = await fetch(`${BASE_URL}/api/ethiopian-locations`);
+    const locations = await locRes.json();
+    const allLocs: Array<{ id: string }> =
+      locations.locations ?? locations.cities ?? locations ?? [];
+    const originCityId = allLocs[0]?.id;
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    await apiCall("POST", "/api/truck-postings", carrierToken, {
+      truckId,
+      originCityId,
+      availableFrom: tomorrow.toISOString(),
+      contactName: "BP Carrier Request Carrier",
+      contactPhone: "+251912000021",
     });
   });
 

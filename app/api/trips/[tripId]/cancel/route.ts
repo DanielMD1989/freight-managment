@@ -129,11 +129,8 @@ export async function POST(
     const isCarrier =
       session.role === "CARRIER" && session.organizationId === trip.carrierId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
-    // Dispatcher scoped to trips belonging to their org (carrier or shipper side)
-    const isDispatcher =
-      session.role === "DISPATCHER" &&
-      (session.organizationId === trip.carrierId ||
-        session.organizationId === trip.shipperId);
+    // Dispatchers are platform-level — they have their own org, not the carrier/shipper org
+    const isDispatcher = session.role === "DISPATCHER";
 
     if (!isCarrier && !isAdmin && !isDispatcher) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });

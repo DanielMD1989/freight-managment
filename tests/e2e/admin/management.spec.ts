@@ -10,6 +10,7 @@ import {
   getAdminToken,
   getCarrierToken,
   getShipperToken,
+  getDispatcherToken,
   invalidateTokenCache,
 } from "../shared/test-utils";
 
@@ -195,20 +196,38 @@ test.describe("Admin Management", () => {
   });
 
   test.afterAll(async () => {
-    // Safety net: re-activate any revoked users even if individual tests failed
+    // Safety net: re-activate any revoked users and repopulate token cache so
+    // subsequent spec files can authenticate without triggering fresh logins.
     const adminToken = await getAdminToken();
-    const targets = [
-      { id: revokedDispatcherId, email: "dispatcher@test.com" },
-      { id: revokedShipperId, email: "shipper@test.com" },
-      { id: revokedCarrierId, email: "carrier@test.com" },
-    ];
-    for (const { id, email } of targets) {
-      if (id) {
-        await apiCall("PATCH", `/api/admin/users/${id}`, adminToken, {
-          status: "ACTIVE",
-        });
-        invalidateTokenCache(email);
-      }
+    if (revokedDispatcherId) {
+      await apiCall(
+        "PATCH",
+        `/api/admin/users/${revokedDispatcherId}`,
+        adminToken,
+        { status: "ACTIVE" }
+      );
+      invalidateTokenCache("dispatcher@test.com");
+      await getDispatcherToken();
+    }
+    if (revokedShipperId) {
+      await apiCall(
+        "PATCH",
+        `/api/admin/users/${revokedShipperId}`,
+        adminToken,
+        { status: "ACTIVE" }
+      );
+      invalidateTokenCache("shipper@test.com");
+      await getShipperToken();
+    }
+    if (revokedCarrierId) {
+      await apiCall(
+        "PATCH",
+        `/api/admin/users/${revokedCarrierId}`,
+        adminToken,
+        { status: "ACTIVE" }
+      );
+      invalidateTokenCache("carrier@test.com");
+      await getCarrierToken();
     }
   });
 });

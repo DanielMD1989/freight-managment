@@ -49,7 +49,7 @@ test.describe("Organization approval lifecycle", () => {
       adminToken
     );
 
-    const { status: approveStatus } = await apiCall(
+    const { status: approveStatus, data: approveData } = await apiCall(
       "POST",
       `/api/admin/organizations/${pending.id}/verify`,
       adminToken,
@@ -57,13 +57,8 @@ test.describe("Organization approval lifecycle", () => {
     );
     expect([200, 204]).toContain(approveStatus);
 
-    // Re-fetch to confirm status
-    const { data: updated } = await apiCall(
-      "GET",
-      `/api/admin/organizations/${pending.id}`,
-      adminToken
-    );
-    const org = updated.organization ?? updated;
+    // Use the verify response body directly (no dedicated GET /admin/organizations/:id route)
+    const org = approveData.organization ?? approveData;
     expect(
       org.verificationStatus === "APPROVED" || org.isVerified === true
     ).toBeTruthy();

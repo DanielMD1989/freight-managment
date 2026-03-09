@@ -16,6 +16,31 @@ import {
 } from "../shared/test-utils";
 
 test.describe("Trip Cancellation", () => {
+  // Track trips created in each test. Tests that don't cancel (test 3 "IN_TRANSIT blocked")
+  // leave trips alive; afterEach cleans them up so the truck+posting can be reused.
+  const tripsToCleanup: string[] = [];
+
+  test.afterEach(async () => {
+    if (tripsToCleanup.length === 0) return;
+    const adminToken = await getAdminToken();
+    for (const tripId of tripsToCleanup) {
+      const { data } = await apiCall("GET", `/api/trips/${tripId}`, adminToken);
+      const trip = data.trip ?? data;
+      if (!trip?.status || ["COMPLETED", "CANCELLED"].includes(trip.status))
+        continue;
+      if (trip.status === "IN_TRANSIT") {
+        await apiCall("PATCH", `/api/trips/${tripId}`, adminToken, {
+          status: "EXCEPTION",
+          exceptionNote: "E2E afterEach cleanup",
+        });
+      }
+      await apiCall("POST", `/api/trips/${tripId}/cancel`, adminToken, {
+        reason: "E2E afterEach cleanup",
+      }).catch(() => {});
+    }
+    tripsToCleanup.length = 0;
+  });
+
   test("carrier can cancel ASSIGNED trip via /api/trips/:id/cancel", async () => {
     test.setTimeout(180000);
     const shipperToken = await getShipperToken();
@@ -23,6 +48,7 @@ test.describe("Trip Cancellation", () => {
     const adminToken = await getAdminToken();
 
     const { tripId } = await ensureTrip(shipperToken, carrierToken, adminToken);
+    tripsToCleanup.push(tripId);
 
     const { status, data } = await apiCall(
       "POST",
@@ -43,6 +69,7 @@ test.describe("Trip Cancellation", () => {
     const dispatcherToken = await getDispatcherToken();
 
     const { tripId } = await ensureTrip(shipperToken, carrierToken, adminToken);
+    tripsToCleanup.push(tripId);
 
     const { status, data } = await apiCall(
       "POST",
@@ -62,6 +89,7 @@ test.describe("Trip Cancellation", () => {
     const adminToken = await getAdminToken();
 
     const { tripId } = await ensureTrip(shipperToken, carrierToken, adminToken);
+    tripsToCleanup.push(tripId);
 
     // Advance to IN_TRANSIT
     await apiCall("PATCH", `/api/trips/${tripId}`, carrierToken, {
@@ -88,6 +116,7 @@ test.describe("Trip Cancellation", () => {
     const adminToken = await getAdminToken();
 
     const { tripId } = await ensureTrip(shipperToken, carrierToken, adminToken);
+    tripsToCleanup.push(tripId);
 
     // Advance to IN_TRANSIT
     await apiCall("PATCH", `/api/trips/${tripId}`, carrierToken, {
