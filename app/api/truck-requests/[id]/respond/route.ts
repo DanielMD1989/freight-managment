@@ -588,6 +588,24 @@ export async function POST(
           },
         });
 
+        // Revert load from OFFERED → POSTED if no other pending truck requests remain.
+        // The load was set to OFFERED when the first truck request was created (G-A8-3).
+        // If this rejection leaves zero pending requests, the load is effectively back in
+        // the open market and should appear as POSTED on the loadboard.
+        const remainingPending = await tx.truckRequest.count({
+          where: {
+            loadId: truckRequest.loadId,
+            id: { not: requestId },
+            status: "PENDING",
+          },
+        });
+        if (remainingPending === 0 && truckRequest.load.status === "OFFERED") {
+          await tx.load.update({
+            where: { id: truckRequest.loadId },
+            data: { status: "POSTED" },
+          });
+        }
+
         return updatedRequest;
       });
 

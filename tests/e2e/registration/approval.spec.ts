@@ -67,48 +67,46 @@ test.describe("Organization approval lifecycle", () => {
   test("admin rejects shipper org — rejection reason stored", async () => {
     test.setTimeout(60000);
     const adminToken = await getAdminToken();
+    const shipperToken = await getShipperToken();
 
-    const { data } = await apiCall(
-      "GET",
-      "/api/admin/organizations?limit=10",
-      adminToken
-    );
-    const orgs: Array<{ id: string; verificationStatus?: string }> =
-      data.organizations ?? data;
+    // Use the known shipper org so we always have a target regardless of DB state
+    const { data: meData } = await apiCall("GET", "/api/auth/me", shipperToken);
+    const orgId = meData.user?.organizationId ?? meData.organizationId;
 
-    // Find a pending org or skip
-    const pending = orgs.find((o) => o.verificationStatus === "PENDING");
-    if (!pending) {
-      test.skip(true, "No PENDING org available for rejection test");
+    if (!orgId) {
+      test.skip(true, "Could not determine shipper org ID");
       return;
     }
 
-    // Reset to PENDING to guarantee the reject call succeeds
+    // Reset to PENDING first so the reject call always succeeds
     await apiCall(
       "DELETE",
-      `/api/admin/organizations/${pending.id}/verify`,
+      `/api/admin/organizations/${orgId}/verify`,
       adminToken
     );
 
-    const { status } = await apiCall(
+    const { status, data: rejectData } = await apiCall(
       "POST",
-      `/api/admin/organizations/${pending.id}/reject`,
+      `/api/admin/organizations/${orgId}/reject`,
       adminToken,
       { reason: "Blueprint test rejection" }
     );
     expect([200, 204]).toContain(status);
 
-    // Re-fetch and verify rejection reason
-    const { data: updated } = await apiCall(
-      "GET",
-      `/api/admin/organizations/${pending.id}`,
-      adminToken
-    );
-    const org = updated.organization ?? updated;
+    // Use the reject response directly (no dedicated GET /admin/organizations/:id route)
+    const org = rejectData.organization ?? rejectData;
     expect(
       org.verificationStatus === "REJECTED" ||
         org.rejectionReason?.includes("Blueprint")
     ).toBeTruthy();
+
+    // Re-verify so the shipper org is usable again in subsequent tests
+    await apiCall(
+      "POST",
+      `/api/admin/organizations/${orgId}/verify`,
+      adminToken,
+      {}
+    );
   });
 
   test("shipper can resubmit after rejection — POST /user/resubmit returns 200", async () => {

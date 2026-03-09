@@ -20,6 +20,8 @@ test.describe("Shipper → Truck Request flow", () => {
   let adminToken: string;
   let loadId: string;
   let truckId: string;
+  // Trips created by respond-APPROVE tests must be cancelled so the next test finds a free truck
+  const tripsToCleanup: string[] = [];
 
   test.beforeAll(async () => {
     test.setTimeout(120000);
@@ -128,21 +130,85 @@ test.describe("Shipper → Truck Request flow", () => {
     }
     const requestId = (reqData.truckRequest ?? reqData.request ?? reqData).id;
 
-    const { status } = await apiCall(
+    const { status, data: respondData } = await apiCall(
       "POST",
       `/api/truck-requests/${requestId}/respond`,
       carrierToken,
       { action: "APPROVE" }
     );
     expect(status).toBe(200);
+
+    // If a trip was created by this approval, track it for cleanup so the next test
+    // finds the truck available
+    const tripId =
+      respondData?.trip?.id ??
+      respondData?.loadRequest?.tripId ??
+      respondData?.tripId;
+    if (tripId) tripsToCleanup.push(tripId);
+  });
+
+  test.afterEach(async () => {
+    // Cancel any trips that were created to ensure the shared truckId is free for the next test
+    if (tripsToCleanup.length === 0) return;
+    for (const id of tripsToCleanup.splice(0)) {
+      const { data } = await apiCall("GET", `/api/trips/${id}`, adminToken);
+      const trip = data.trip ?? data;
+      if (!trip?.status || ["COMPLETED", "CANCELLED"].includes(trip.status))
+        continue;
+      await apiCall("POST", `/api/trips/${id}/cancel`, adminToken, {
+        reason: "E2E shipper-request afterEach cleanup",
+      }).catch(() => {});
+    }
   });
 
   test("carrier rejects truck request — load remains available", async () => {
-    test.setTimeout(120000);
+    test.setTimeout(180000);
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const fiveDays = new Date();
     fiveDays.setDate(fiveDays.getDate() + 5);
+
+    // Create a fresh truck for this test so it is completely decoupled from
+    // any trip/request created by the "accepts" test above
+    const rejectPlate = `BP-SR-REJ-${Date.now().toString(36).toUpperCase()}`;
+    const { data: rejTruckData } = await apiCall(
+      "POST",
+      "/api/trucks",
+      carrierToken,
+      {
+        truckType: "FLATBED",
+        licensePlate: rejectPlate,
+        capacity: 20000,
+        volume: 60,
+        currentCity: "Addis Ababa",
+        currentRegion: "Addis Ababa",
+        isAvailable: true,
+      }
+    );
+    const rejTruckId = (rejTruckData.truck ?? rejTruckData).id;
+    if (!rejTruckId) {
+      test.skip(true, "Could not create fresh truck for reject test");
+      return;
+    }
+    await apiCall("POST", `/api/trucks/${rejTruckId}/approve`, adminToken, {
+      action: "APPROVE",
+    });
+
+    // Create a truck posting so the truck-request can be created
+    const locRes = await fetch(`${BASE_URL}/api/ethiopian-locations?limit=1`);
+    const locations = await locRes.json();
+    const originCityId = (
+      locations[0] ??
+      locations.locations?.[0] ??
+      locations.cities?.[0]
+    )?.id;
+    await apiCall("POST", "/api/truck-postings", carrierToken, {
+      truckId: rejTruckId,
+      originCityId,
+      availableFrom: tomorrow.toISOString(),
+      contactName: "BP Reject Test Carrier",
+      contactPhone: "+251912000099",
+    });
 
     const { data: freshLoad } = await apiCall(
       "POST",
@@ -166,7 +232,7 @@ test.describe("Shipper → Truck Request flow", () => {
       "POST",
       "/api/truck-requests",
       shipperToken,
-      { truckId, loadId: rejLoadId, notes: "Reject test" }
+      { truckId: rejTruckId, loadId: rejLoadId, notes: "Reject test" }
     );
     if (![200, 201].includes(reqStatus)) {
       test.skip(true, `Could not create truck request (${reqStatus})`);

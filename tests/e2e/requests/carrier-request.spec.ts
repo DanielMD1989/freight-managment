@@ -18,6 +18,8 @@ test.describe("Carrier → Load Request flow", () => {
   let carrierToken: string;
   let adminToken: string;
   let truckId: string;
+  // Trips created by tests that must be cleaned up so subsequent tests find a free truck
+  const tripsToCleanup: string[] = [];
 
   test.beforeAll(async () => {
     test.setTimeout(120000);
@@ -164,6 +166,23 @@ test.describe("Carrier → Load Request flow", () => {
     const trip = data.trip ?? data;
     expect(trip.id).toBeDefined();
     expect(trip.status).toBe("ASSIGNED");
+
+    // Track this trip so afterEach can cancel it, freeing the truck for the reject test
+    if (trip.id) tripsToCleanup.push(trip.id);
+  });
+
+  test.afterEach(async () => {
+    // Cancel any trips that were created to ensure the shared truckId is free for the next test
+    if (tripsToCleanup.length === 0) return;
+    for (const id of tripsToCleanup.splice(0)) {
+      const { data } = await apiCall("GET", `/api/trips/${id}`, adminToken);
+      const trip = data.trip ?? data;
+      if (!trip?.status || ["COMPLETED", "CANCELLED"].includes(trip.status))
+        continue;
+      await apiCall("POST", `/api/trips/${id}/cancel`, adminToken, {
+        reason: "E2E carrier-request afterEach cleanup",
+      }).catch(() => {});
+    }
   });
 
   test("shipper rejects load request — carrier can request another load", async () => {

@@ -53,29 +53,39 @@ test.describe("Admin Management", () => {
   test("admin can reject carrier org — POST /admin/organizations/:id/reject → 200", async () => {
     test.setTimeout(90000);
     const adminToken = await getAdminToken();
+    const carrierToken = await getCarrierToken();
 
-    // Find or create a PENDING org to reject
-    const { data } = await apiCall(
-      "GET",
-      "/api/admin/organizations?limit=10",
-      adminToken
-    );
-    const orgs: Array<{ id: string; verificationStatus?: string }> =
-      data.organizations ?? data ?? [];
-    const pending = orgs.find((o) => o.verificationStatus === "PENDING");
+    // Use the known carrier org so we always have a target regardless of DB state
+    const { data: meData } = await apiCall("GET", "/api/auth/me", carrierToken);
+    const orgId = meData.user?.organizationId ?? meData.organizationId;
 
-    if (!pending) {
-      test.skip(true, "No PENDING org available to reject");
+    if (!orgId) {
+      test.skip(true, "Could not determine carrier org ID");
       return;
     }
 
+    // Reset org to PENDING so the reject call always succeeds
+    await apiCall(
+      "DELETE",
+      `/api/admin/organizations/${orgId}/verify`,
+      adminToken
+    );
+
     const { status } = await apiCall(
       "POST",
-      `/api/admin/organizations/${pending.id}/reject`,
+      `/api/admin/organizations/${orgId}/reject`,
       adminToken,
       { reason: "Blueprint management test rejection" }
     );
     expect([200, 204]).toContain(status);
+
+    // Re-verify so the carrier org is usable again in subsequent tests
+    await apiCall(
+      "POST",
+      `/api/admin/organizations/${orgId}/verify`,
+      adminToken,
+      {}
+    );
   });
 
   test("admin can approve truck — POST /api/trucks/:id/approve {action:APPROVE} → 200", async () => {
@@ -114,14 +124,18 @@ test.describe("Admin Management", () => {
     test.setTimeout(60000);
     const adminToken = await getAdminToken();
 
-    // Find dispatcher user
+    // Find dispatcher user via admin API (avoids relying on dispatcher token being valid)
     const { data } = await apiCall(
       "GET",
-      "/api/admin/users?limit=20",
+      "/api/admin/users?limit=50",
       adminToken
     );
-    const users: Array<{ id: string; role?: string; email?: string }> =
-      data.users ?? data ?? [];
+    const users: Array<{
+      id: string;
+      role?: string;
+      email?: string;
+      status?: string;
+    }> = data.users ?? data ?? [];
     const dispatcher = users.find(
       (u) => u.role === "DISPATCHER" || u.email?.includes("dispatcher")
     );
@@ -129,6 +143,14 @@ test.describe("Admin Management", () => {
     if (!dispatcher) {
       test.skip(true, "No dispatcher user found");
       return;
+    }
+
+    // Pre-activate if left SUSPENDED from a previous test run (makes test idempotent)
+    if (dispatcher.status === "SUSPENDED") {
+      await apiCall("PATCH", `/api/admin/users/${dispatcher.id}`, adminToken, {
+        status: "ACTIVE",
+      });
+      invalidateTokenCache("dispatcher@test.com");
     }
 
     const { status } = await apiCall(
@@ -150,22 +172,47 @@ test.describe("Admin Management", () => {
   test("admin can revoke shipper access — POST /admin/users/:id/revoke → 200", async () => {
     test.setTimeout(60000);
     const adminToken = await getAdminToken();
-    const shipperToken = await getShipperToken();
 
-    const { data: meData } = await apiCall("GET", "/api/auth/me", shipperToken);
-    const userId = meData.user?.id ?? meData.id;
+    // Find shipper via admin API (robust — does not require shipper to be ACTIVE/logged-in)
+    const { data } = await apiCall(
+      "GET",
+      "/api/admin/users?limit=50",
+      adminToken
+    );
+    const users: Array<{
+      id: string;
+      role?: string;
+      email?: string;
+      status?: string;
+    }> = data.users ?? data ?? [];
+    const shipper = users.find(
+      (u) => u.role === "SHIPPER" || u.email?.includes("shipper")
+    );
+
+    if (!shipper) {
+      test.skip(true, "No shipper user found");
+      return;
+    }
+
+    // Pre-activate if left SUSPENDED from a previous test run
+    if (shipper.status === "SUSPENDED") {
+      await apiCall("PATCH", `/api/admin/users/${shipper.id}`, adminToken, {
+        status: "ACTIVE",
+      });
+      invalidateTokenCache("shipper@test.com");
+    }
 
     const { status } = await apiCall(
       "POST",
-      `/api/admin/users/${userId}/revoke`,
+      `/api/admin/users/${shipper.id}/revoke`,
       adminToken,
       { reason: "Blueprint revoke test" }
     );
     expect([200, 204]).toContain(status);
-    revokedShipperId = userId;
+    revokedShipperId = shipper.id;
 
     // Re-activate immediately so other tests still pass
-    await apiCall("PATCH", `/api/admin/users/${userId}`, adminToken, {
+    await apiCall("PATCH", `/api/admin/users/${shipper.id}`, adminToken, {
       status: "ACTIVE",
     });
     invalidateTokenCache("shipper@test.com");
@@ -174,22 +221,47 @@ test.describe("Admin Management", () => {
   test("admin can revoke carrier access — POST /admin/users/:id/revoke → 200", async () => {
     test.setTimeout(60000);
     const adminToken = await getAdminToken();
-    const carrierToken = await getCarrierToken();
 
-    const { data: meData } = await apiCall("GET", "/api/auth/me", carrierToken);
-    const userId = meData.user?.id ?? meData.id;
+    // Find carrier via admin API (robust — does not require carrier to be ACTIVE/logged-in)
+    const { data } = await apiCall(
+      "GET",
+      "/api/admin/users?limit=50",
+      adminToken
+    );
+    const users: Array<{
+      id: string;
+      role?: string;
+      email?: string;
+      status?: string;
+    }> = data.users ?? data ?? [];
+    const carrier = users.find(
+      (u) => u.role === "CARRIER" || u.email?.includes("carrier")
+    );
+
+    if (!carrier) {
+      test.skip(true, "No carrier user found");
+      return;
+    }
+
+    // Pre-activate if left SUSPENDED from a previous test run (breaks 409 perpetual loop)
+    if (carrier.status === "SUSPENDED") {
+      await apiCall("PATCH", `/api/admin/users/${carrier.id}`, adminToken, {
+        status: "ACTIVE",
+      });
+      invalidateTokenCache("carrier@test.com");
+    }
 
     const { status } = await apiCall(
       "POST",
-      `/api/admin/users/${userId}/revoke`,
+      `/api/admin/users/${carrier.id}/revoke`,
       adminToken,
       { reason: "Blueprint carrier revoke test" }
     );
     expect([200, 204]).toContain(status);
-    revokedCarrierId = userId;
+    revokedCarrierId = carrier.id;
 
     // Re-activate immediately
-    await apiCall("PATCH", `/api/admin/users/${userId}`, adminToken, {
+    await apiCall("PATCH", `/api/admin/users/${carrier.id}`, adminToken, {
       status: "ACTIVE",
     });
     invalidateTokenCache("carrier@test.com");
