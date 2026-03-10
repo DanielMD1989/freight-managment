@@ -140,8 +140,11 @@ export async function GET(
       carrierOrgId: trip.carrierId,
     });
 
-    // Dispatchers are platform-level and can view any trip
-    const isScopedDispatcher = isDispatcher;
+    // Dispatchers are org-scoped: they must belong to the shipper or carrier org
+    const isScopedDispatcher =
+      isDispatcher &&
+      (session.organizationId === trip.shipperId ||
+        session.organizationId === trip.carrierId);
 
     if (!isShipper && !isCarrierView && !isAdminView && !isScopedDispatcher) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
@@ -218,8 +221,11 @@ export async function PATCH(
     const isCarrier =
       session.role === "CARRIER" && trip.carrierId === session.organizationId;
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
-    // Dispatchers are platform-level and can update any trip
-    const isDispatcher = session.role === "DISPATCHER";
+    // Dispatchers are org-scoped: they must belong to the shipper or carrier org
+    const isDispatcher =
+      session.role === "DISPATCHER" &&
+      (session.organizationId === trip.shipperId ||
+        session.organizationId === trip.carrierId);
 
     if (!isCarrier && !isAdmin && !isDispatcher) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });

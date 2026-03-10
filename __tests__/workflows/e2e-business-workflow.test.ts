@@ -233,17 +233,8 @@ describe("E2E Business Workflow (User Stories)", () => {
       valid: true,
     });
 
-    // Fix validateWalletBalancesForTrip to return numbers (route calls .toFixed(2))
-    const sfm = require("@/lib/serviceFeeManagement");
-    sfm.validateWalletBalancesForTrip.mockResolvedValue({
-      valid: true,
-      shipperFee: 100,
-      carrierFee: 50,
-      shipperBalance: 1000,
-      carrierBalance: 1000,
-      errors: [],
-    });
     // Add deductServiceFee (singular) — POD route imports it
+    const sfm = require("@/lib/serviceFeeManagement");
     sfm.deductServiceFee = jest.fn(async () => ({ success: true }));
 
     // Fix handleApiError mock to handle ZodError → 400
@@ -1208,10 +1199,8 @@ describe("E2E Business Workflow (User Stories)", () => {
       expect(mp.status).toBe("PENDING");
     });
 
-    it("US-4.3: carrier accepts match proposal → trip created + wallet validated", async () => {
+    it("US-4.3: carrier accepts match proposal → trip created", async () => {
       asCarrier(seed);
-
-      const sfm = require("@/lib/serviceFeeManagement");
 
       const req = createRequest(
         "POST",
@@ -1227,9 +1216,6 @@ describe("E2E Business Workflow (User Stories)", () => {
       const data = await parseResponse(res);
       expect(data.trip).toBeDefined();
       expect(data.trip.status).toBe("ASSIGNED");
-
-      // Wallet validation should have been called before acceptance
-      expect(sfm.validateWalletBalancesForTrip).toHaveBeenCalled();
 
       // Note: match-proposals respond route does NOT update truck posting
       // to MATCHED or set truck.isAvailable=false (unlike load-requests
@@ -1593,19 +1579,7 @@ describe("E2E Business Workflow (User Stories)", () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe("Phase 7: Financial Settlement", () => {
-    it("US-7.2: wallet validation called during match proposal acceptance", async () => {
-      const sfm = require("@/lib/serviceFeeManagement");
-      sfm.validateWalletBalancesForTrip.mockClear();
-      // Must return numbers — route calls .toFixed(2) on fee values
-      sfm.validateWalletBalancesForTrip.mockResolvedValueOnce({
-        valid: true,
-        shipperFee: 200,
-        carrierFee: 100,
-        shipperBalance: 1000,
-        carrierBalance: 1000,
-        errors: [],
-      });
-
+    it("US-7.2: match proposal acceptance creates trip", async () => {
       const finTruck = await db.truck.create({
         data: {
           id: "truck-fin-7",
@@ -1675,87 +1649,6 @@ describe("E2E Business Workflow (User Stories)", () => {
         id: mp.id,
       });
       expect(res.status).toBe(200);
-      expect(sfm.validateWalletBalancesForTrip).toHaveBeenCalled();
-    });
-
-    it("US-7.2: insufficient wallet balance blocks acceptance", async () => {
-      const sfm = require("@/lib/serviceFeeManagement");
-      sfm.validateWalletBalancesForTrip.mockResolvedValueOnce({
-        valid: false,
-        error: "Insufficient balance",
-        shipperRequired: "500.00",
-        shipperAvailable: "100.00",
-      });
-
-      const blockedTruck = await db.truck.create({
-        data: {
-          id: "truck-blocked-7",
-          truckType: "DRY_VAN",
-          licensePlate: "ET-BLK07",
-          capacity: 10000,
-          isAvailable: true,
-          carrierId: seed.carrierOrg.id,
-          createdById: seed.carrierUser.id,
-          approvalStatus: "APPROVED",
-        },
-      });
-
-      await db.truckPosting.create({
-        data: {
-          id: "posting-blocked-7",
-          truckId: blockedTruck.id,
-          carrierId: seed.carrierOrg.id,
-          originCityId: "city-addis",
-          originCityName: "Addis Ababa",
-          availableFrom: new Date(),
-          status: "ACTIVE",
-          fullPartial: "FULL",
-          contactName: "Carrier",
-          contactPhone: "+251911000002",
-        },
-      });
-
-      const blockedLoad = await db.load.create({
-        data: {
-          id: "load-blocked-7",
-          status: "POSTED",
-          pickupCity: "Addis Ababa",
-          pickupDate: new Date(Date.now() + 7 * 86400000),
-          deliveryCity: "Hawassa",
-          deliveryDate: new Date(Date.now() + 10 * 86400000),
-          truckType: "DRY_VAN",
-          weight: 5000,
-          cargoDescription: "Blocked cargo",
-          shipperId: seed.shipperOrg.id,
-          createdById: seed.shipperUser.id,
-          postedAt: new Date(),
-        },
-      });
-
-      const blockedMp = await db.matchProposal.create({
-        data: {
-          id: "mp-blocked-7",
-          loadId: blockedLoad.id,
-          truckId: blockedTruck.id,
-          carrierId: seed.carrierOrg.id,
-          proposedById: "dispatcher-user-1",
-          status: "PENDING",
-          expiresAt: new Date(Date.now() + 24 * 3600000),
-        },
-      });
-
-      asCarrier(seed);
-
-      const req = createRequest(
-        "POST",
-        `http://localhost:3000/api/match-proposals/${blockedMp.id}/respond`,
-        { body: { action: "ACCEPT" } }
-      );
-
-      const res = await callHandler(respondMatchProposal, req, {
-        id: blockedMp.id,
-      });
-      expect(res.status).toBe(400);
     });
 
     it("US-7.3: deductServiceFees mock is set up for fee deduction on COMPLETED", async () => {
@@ -1774,23 +1667,6 @@ describe("E2E Business Workflow (User Stories)", () => {
       const result = await sfm.deductServiceFees("some-load-id");
       expect(result.success).toBe(false);
       expect(result.error).toContain("already deducted");
-    });
-
-    it("US-7.6: no corridor means fees waived", async () => {
-      const sfm = require("@/lib/serviceFeeManagement");
-      sfm.validateWalletBalancesForTrip.mockResolvedValueOnce({
-        valid: true,
-        shipperFee: "0.00",
-        carrierFee: "0.00",
-        feesWaived: true,
-      });
-
-      const result = await sfm.validateWalletBalancesForTrip(
-        "any-load",
-        "any-carrier"
-      );
-      expect(result.valid).toBe(true);
-      expect(result.feesWaived).toBe(true);
     });
 
     it("US-7.5: refund on cancellation (truck restored)", async () => {

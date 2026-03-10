@@ -12,11 +12,7 @@ jest.mock("@/lib/cache", () => ({
   cache: { get: jest.fn(), set: jest.fn(), del: jest.fn() },
 }));
 
-import {
-  deductServiceFee,
-  refundServiceFee,
-  validateWalletBalancesForTrip,
-} from "@/lib/serviceFeeManagement";
+import { deductServiceFee, refundServiceFee } from "@/lib/serviceFeeManagement";
 import { db } from "@/lib/db";
 import {
   seedFinancialTestData,
@@ -53,7 +49,7 @@ describe("deductServiceFee — Balance Verification", () => {
     const load = await db.load.findUnique({ where: { id: seed.load.id } });
     expect(Number(load!.shipperRatePerKmUsed)).toBe(5); // corridor shipperPricePerKm
     expect(Number(load!.carrierRatePerKmUsed)).toBe(3); // corridor carrierPricePerKm
-    expect(Number(load!.totalKmUsed)).toBe(515); // estimatedTripKm
+    expect(Number(load!.totalKmUsed)).toBe(515); // corridor.distanceKm = 515 (estimatedTripKm removed from billing chain in deductServiceFee)
   });
 
   it("returns correct fee amounts in result", async () => {
@@ -389,106 +385,9 @@ describe("refundServiceFee — Balance Verification", () => {
   });
 });
 
-// ─── 3. validateWalletBalancesForTrip — Pre-trip Checks ─────────────────────
-
-describe("validateWalletBalancesForTrip — Pre-trip Checks", () => {
-  it("returns valid:true when both wallets have sufficient balance", async () => {
-    const seed = await seedFinancialTestData();
-
-    const result = await validateWalletBalancesForTrip(
-      seed.load.id,
-      seed.carrierOrg.id
-    );
-
-    expect(result.valid).toBe(true);
-    expect(result.errors).toHaveLength(0);
-    expect(result.shipperFee).toBe(2575);
-    expect(result.carrierFee).toBe(1545);
-  });
-
-  it("returns error when shipper balance is insufficient", async () => {
-    const seed = await seedFinancialTestData({ shipperBalance: 100 });
-
-    const result = await validateWalletBalancesForTrip(
-      seed.load.id,
-      seed.carrierOrg.id
-    );
-
-    expect(result.valid).toBe(false);
-    expect(
-      result.errors.some(
-        (e: string) => /shipper/i.test(e) && /insufficient/i.test(e)
-      )
-    ).toBe(true);
-  });
-
-  it("returns error when carrier balance is insufficient", async () => {
-    const seed = await seedFinancialTestData({ carrierBalance: 100 });
-
-    const result = await validateWalletBalancesForTrip(
-      seed.load.id,
-      seed.carrierOrg.id
-    );
-
-    expect(result.valid).toBe(false);
-    expect(
-      result.errors.some(
-        (e: string) => /carrier/i.test(e) && /insufficient/i.test(e)
-      )
-    ).toBe(true);
-  });
-
-  it("returns valid:true with fees 0 when no corridor", async () => {
-    const seed = await seedFinancialTestData({
-      loadOverrides: {
-        corridorId: null,
-        pickupCity: "NowhereA",
-        deliveryCity: "NowhereB",
-      },
-    });
-
-    const result = await validateWalletBalancesForTrip(
-      seed.load.id,
-      seed.carrierOrg.id
-    );
-
-    expect(result.valid).toBe(true);
-    expect(result.shipperFee).toBe(0);
-    expect(result.carrierFee).toBe(0);
-  });
-
-  it("does NOT mutate wallet balances (validation only)", async () => {
-    const seed = await seedFinancialTestData();
-
-    await validateWalletBalancesForTrip(seed.load.id, seed.carrierOrg.id);
-
-    expect(getBalance(seed.shipperWallet.id)).toBe(10000);
-    expect(getBalance(seed.carrierWallet.id)).toBe(5000);
-  });
-});
-
 // ─── 4. Full Lifecycle Integration ──────────────────────────────────────────
 
 describe("Full Lifecycle Integration", () => {
-  it("validate → deduct: balances correct after full flow", async () => {
-    const seed = await seedFinancialTestData();
-
-    // Validate (no mutation)
-    const validation = await validateWalletBalancesForTrip(
-      seed.load.id,
-      seed.carrierOrg.id
-    );
-    expect(validation.valid).toBe(true);
-    expect(getBalance(seed.shipperWallet.id)).toBe(10000);
-
-    // Deduct (mutation)
-    const result = await deductServiceFee(seed.load.id);
-    expect(result.success).toBe(true);
-    expect(getBalance(seed.shipperWallet.id)).toBe(10000 - 2575);
-    expect(getBalance(seed.carrierWallet.id)).toBe(5000 - 1545);
-    expect(getBalance(seed.platformAccount.id)).toBe(4120);
-  });
-
   it("deduct → refund: both balances restored, platform returns to zero", async () => {
     const seed = await seedFinancialTestData();
 
@@ -555,8 +454,8 @@ describe("Full Lifecycle Integration", () => {
     expect(result.carrierFee).toBe(1800); // 600 × 3
   });
 
-  it("falls back through distance chain: actualTripKm→estimatedTripKm→tripKm→corridor.distanceKm", async () => {
-    // No actualTripKm, no estimatedTripKm, no tripKm → corridor.distanceKm
+  it("falls back to corridor.distanceKm when no GPS (2-level billing chain: actualTripKm → corridor)", async () => {
+    // No actualTripKm → corridor.distanceKm
     const seed = await seedFinancialTestData({
       loadOverrides: {
         actualTripKm: null,
@@ -670,5 +569,23 @@ describe("Full Lifecycle Integration", () => {
     expect(result.carrierFee).toBe(1117.55);
     expect(getBalance(seed.shipperWallet.id)).toBeCloseTo(10000 - 1714.95, 2);
     expect(getBalance(seed.carrierWallet.id)).toBeCloseTo(5000 - 1117.55, 2);
+  });
+
+  it("BUG-B1-2: refund clears deduction timestamps (no stale state)", async () => {
+    const seed = await seedFinancialTestData();
+
+    // Deduct — sets shipperFeeDeductedAt + carrierFeeDeductedAt
+    await deductServiceFee(seed.load.id);
+    const stores = (db as any).__stores;
+    const afterDeduct = stores.loads.get(seed.load.id);
+    expect(afterDeduct.shipperFeeDeductedAt).not.toBeNull();
+    expect(afterDeduct.carrierFeeDeductedAt).not.toBeNull();
+
+    // Refund — must null-clear all three deduction timestamps
+    await refundServiceFee(seed.load.id);
+    const afterRefund = stores.loads.get(seed.load.id);
+    expect(afterRefund.shipperFeeDeductedAt).toBeNull();
+    expect(afterRefund.carrierFeeDeductedAt).toBeNull();
+    expect(afterRefund.serviceFeeDeductedAt).toBeNull();
   });
 });

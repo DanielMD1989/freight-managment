@@ -618,11 +618,6 @@ export function mockValidation() {
 
 export function mockServiceFee() {
   jest.mock("@/lib/serviceFeeManagement", () => ({
-    validateWalletBalancesForTrip: jest.fn(async () => ({
-      valid: true,
-      shipperFee: "100.00",
-      carrierFee: "50.00",
-    })),
     deductServiceFees: jest.fn(async () => ({ success: true })),
     deductServiceFee: jest.fn(async () => ({
       success: true,

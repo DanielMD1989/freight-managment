@@ -139,7 +139,19 @@ async function createOrFindCorridor(
     const corridors: Array<{ id: string; name: string }> =
       listData.corridors ?? listData.data ?? [];
     const found = corridors.find((c) => c.name === CORRIDOR_NAME);
-    return found?.id ?? corridors[0]?.id ?? null;
+    const existingId = found?.id ?? corridors[0]?.id ?? null;
+
+    // PATCH to enforce correct distance/rates (may have changed from a previous run)
+    if (existingId) {
+      await apiCall("PATCH", `/api/admin/corridors/${existingId}`, adminToken, {
+        distanceKm: ANALYTICS_DISTANCE_KM,
+        shipperPricePerKm: ANALYTICS_SHIPPER_RATE,
+        carrierPricePerKm: ANALYTICS_CARRIER_RATE,
+        isActive: true,
+      });
+    }
+
+    return existingId;
   }
 
   console.warn(`analytics-seed: corridor create returned ${postStatus}`);
@@ -256,22 +268,6 @@ async function seedTrucks(
   return { approvedId, pendingId, rejectedId };
 }
 
-// S4-3: Replaced duplicate ensureTripForAnalytics() with shared ensureTrip()
-// from e2e/shipper/test-utils. This prevents silent divergence if ensureTrip()
-// receives bug fixes, and reduces analytics-seed.ts by ~170 lines.
-async function ensureTripForAnalytics(
-  shipperToken: string,
-  carrierToken: string,
-  adminToken: string
-): Promise<{ tripId: string; loadId: string } | null> {
-  try {
-    return await ensureTrip(shipperToken, carrierToken, adminToken);
-  } catch (e) {
-    console.warn(`analytics-seed: ensureTrip failed: ${e}`);
-    return null;
-  }
-}
-
 async function advanceTripToStatus(
   tripId: string,
   targetStatus: string,
@@ -386,19 +382,25 @@ export async function seedAnalyticsData(
   const seededTrucks = await seedTrucks(adminToken, carrierToken);
 
   // Step 7a: ASSIGNED trip
-  const assignedResult = await ensureTripForAnalytics(
+  const assignedResult = await ensureTrip(
     shipperToken,
     carrierToken,
     adminToken
-  );
+  ).catch((e) => {
+    console.warn(`analytics-seed: ensureTrip failed: ${e}`);
+    return null;
+  });
   const assignedId = assignedResult?.tripId ?? null;
 
   // Step 7b: IN_TRANSIT trip
-  const inTransitResult = await ensureTripForAnalytics(
+  const inTransitResult = await ensureTrip(
     shipperToken,
     carrierToken,
     adminToken
-  );
+  ).catch((e) => {
+    console.warn(`analytics-seed: ensureTrip failed: ${e}`);
+    return null;
+  });
   let inTransitId: string | null = null;
   if (inTransitResult) {
     const ok = await advanceTripToStatus(
@@ -410,11 +412,14 @@ export async function seedAnalyticsData(
   }
 
   // Step 7c: CANCELLED trip (cancel from ASSIGNED)
-  const cancelResult = await ensureTripForAnalytics(
+  const cancelResult = await ensureTrip(
     shipperToken,
     carrierToken,
     adminToken
-  );
+  ).catch((e) => {
+    console.warn(`analytics-seed: ensureTrip failed: ${e}`);
+    return null;
+  });
   let cancelledId: string | null = null;
   if (cancelResult) {
     const ok = await cancelTrip(cancelResult.tripId, adminToken);
@@ -422,15 +427,27 @@ export async function seedAnalyticsData(
   }
 
   // Step 7d: COMPLETED trip — advance to DELIVERED, POD upload, capture wallet, shipper verify
-  const completedResult = await ensureTripForAnalytics(
+  const completedResult = await ensureTrip(
     shipperToken,
     carrierToken,
     adminToken
-  );
+  ).catch((e) => {
+    console.warn(`analytics-seed: ensureTrip failed: ${e}`);
+    return null;
+  });
   let completedId: string | null = null;
   let completedLoadId: string | null = null;
   let shipperBalanceBefore = -1;
   let carrierBalanceBefore = -1;
+
+  if (completedResult && corridorId) {
+    // Explicitly bind the load to the Analytics E2E Corridor so deductServiceFee
+    // uses the 100 km distance (avoids findMatchingCorridor picking a different corridor).
+    // Admin token bypasses the ASSIGNED-state edit guard.
+    await apiCall("PATCH", `/api/loads/${completedResult.loadId}`, adminToken, {
+      corridorId,
+    });
+  }
 
   if (completedResult) {
     const advancedToDelivered = await advanceTripToStatus(

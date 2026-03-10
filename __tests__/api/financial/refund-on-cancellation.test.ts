@@ -73,12 +73,6 @@ mockServiceFeeCalculation();
 
 // Mock service fee module with controllable refundServiceFee spy
 jest.mock("@/lib/serviceFeeManagement", () => ({
-  validateWalletBalancesForTrip: jest.fn(async () => ({
-    valid: true,
-    shipperFee: "100.00",
-    carrierFee: "50.00",
-    errors: [],
-  })),
   deductServiceFees: jest.fn(async () => ({ success: true })),
   deductServiceFee: jest.fn(async () => ({
     success: true,

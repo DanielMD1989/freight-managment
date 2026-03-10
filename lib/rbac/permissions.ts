@@ -280,6 +280,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
     // Dashboard
     Permission.VIEW_DASHBOARD,
+
+    // Analytics (read access for trip coordination per blueprint §5)
+    Permission.VIEW_ANALYTICS,
   ],
 
   /**

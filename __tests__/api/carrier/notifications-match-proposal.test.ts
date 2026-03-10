@@ -58,8 +58,6 @@ const mockValidateWallet = jest.fn(async () => ({
 }));
 
 jest.mock("@/lib/serviceFeeManagement", () => ({
-  validateWalletBalancesForTrip: (...args: any[]) =>
-    mockValidateWallet(...args),
   deductServiceFees: jest.fn(async () => ({ success: true })),
 }));
 

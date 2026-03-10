@@ -23,7 +23,6 @@ import {
 import { UserRole } from "@prisma/client";
 import { notifyTruckRequest } from "@/lib/notifications";
 import { handleApiError } from "@/lib/apiErrors";
-import { validateWalletBalancesForTrip } from "@/lib/serviceFeeManagement";
 import { CacheInvalidation } from "@/lib/cache";
 
 // Validation schema for truck request
@@ -209,25 +208,6 @@ export async function POST(request: NextRequest) {
           error: "A pending request already exists for this load-truck pair",
         },
         { status: 409 }
-      );
-    }
-
-    // Validate wallet balances before creating the request
-    const walletValidation = await validateWalletBalancesForTrip(
-      data.loadId,
-      truck.carrierId
-    );
-    if (!walletValidation.valid) {
-      return NextResponse.json(
-        {
-          error: "Insufficient wallet balance to request this truck",
-          details: walletValidation.errors,
-          fees: {
-            shipperFee: walletValidation.shipperFee,
-            carrierFee: walletValidation.carrierFee,
-          },
-        },
-        { status: 400 }
       );
     }
 

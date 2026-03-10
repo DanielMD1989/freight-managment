@@ -81,11 +81,6 @@ const mockDeductServiceFee = jest.fn(async () => ({
 
 jest.mock("@/lib/serviceFeeManagement", () => ({
   deductServiceFee: (...args: unknown[]) => mockDeductServiceFee(...args),
-  validateWalletBalancesForTrip: jest.fn(async () => ({
-    valid: true,
-    shipperFee: "100.00",
-    carrierFee: "50.00",
-  })),
 }));
 
 // Route handlers — imported AFTER all mocks

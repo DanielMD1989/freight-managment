@@ -28,7 +28,7 @@ import {
 
 export async function GET(request: NextRequest) {
   try {
-    await requirePermission(Permission.VIEW_DASHBOARD);
+    await requirePermission(Permission.VIEW_ANALYTICS);
 
     const searchParams = request.nextUrl.searchParams;
     const period = (searchParams.get("period") || "month") as TimePeriod;
@@ -49,9 +49,9 @@ export async function GET(request: NextRequest) {
       resolvedDisputesInPeriod,
     ] = await Promise.all([
       getCountMetrics(),
-      getLoadMetrics(),
-      getTripMetrics(),
-      getTruckMetrics(),
+      getLoadMetrics(dateRange),
+      getTripMetrics(dateRange),
+      getTruckMetrics(dateRange),
       getRevenueMetrics(dateRange),
       getDisputeMetrics(),
       getPeriodMetrics(dateRange),

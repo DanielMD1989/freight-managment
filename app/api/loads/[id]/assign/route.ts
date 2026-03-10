@@ -8,7 +8,6 @@ import { enableTrackingForLoad } from "@/lib/gpsTracking";
 import { canAssignLoads } from "@/lib/dispatcherPermissions";
 import { validateStateTransition, LoadStatus } from "@/lib/loadStateMachine";
 import { checkAssignmentConflicts } from "@/lib/assignmentConflictDetection"; // Sprint 4
-import { validateWalletBalancesForTrip } from "@/lib/serviceFeeManagement"; // Service Fee Implementation
 // P0-005 FIX: Import CacheInvalidation for post-assignment cache clearing
 import { CacheInvalidation } from "@/lib/cache";
 import crypto from "crypto";
@@ -169,26 +168,6 @@ export async function POST(
       console.warn(
         `Assignment warnings for load ${loadId}:`,
         conflictCheck.warnings
-      );
-    }
-
-    // SERVICE FEE: Validate wallet balances before assignment
-    // This is validation only - fees are deducted on trip completion
-    const walletValidation = await validateWalletBalancesForTrip(
-      loadId,
-      truck.carrierId
-    );
-    if (!walletValidation.valid) {
-      return NextResponse.json(
-        {
-          error: "Insufficient wallet balance for trip service fees",
-          details: walletValidation.errors,
-          fees: {
-            shipperFee: walletValidation.shipperFee,
-            carrierFee: walletValidation.carrierFee,
-          },
-        },
-        { status: 400 }
       );
     }
 
@@ -395,13 +374,6 @@ export async function POST(
       load: result.load,
       trip: result.trip,
       trackingUrl,
-      // Wallet validation passed - fees will be deducted on trip completion
-      walletValidation: {
-        validated: true,
-        shipperFee: walletValidation.shipperFee.toFixed(2),
-        carrierFee: walletValidation.carrierFee.toFixed(2),
-        note: "Fees will be deducted on trip completion",
-      },
       message: trackingUrl
         ? "Load assigned successfully. GPS tracking enabled."
         : "Load assigned successfully. GPS tracking not available for this truck.",

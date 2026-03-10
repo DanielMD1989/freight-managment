@@ -58,6 +58,10 @@ let loadId: string;
 
 let podVerifyData: Record<string, unknown> = {};
 
+// Wallet balances captured immediately BEFORE fee deduction (Step 7 in beforeAll)
+let shipperBalanceBefore: number = -1;
+let carrierBalanceBefore: number = -1;
+
 // ── beforeAll: setup corridor, fund wallets, create + complete trip ──────────
 
 test.beforeAll(async () => {
@@ -209,6 +213,25 @@ test.beforeAll(async () => {
     },
     body,
   });
+
+  // ── Step 6b: Capture wallet balances BEFORE fee deduction ───────────────
+  // These values are used for exact P1 wallet arithmetic assertions.
+  const [shipperWalletSnap, carrierWalletSnap] = await Promise.all([
+    apiCall("GET", "/api/wallet/balance", shipperToken),
+    apiCall("GET", "/api/wallet/balance", carrierToken),
+  ]);
+  shipperBalanceBefore = Number(
+    shipperWalletSnap.data.totalBalance ??
+      shipperWalletSnap.data.balance ??
+      shipperWalletSnap.data.available ??
+      -1
+  );
+  carrierBalanceBefore = Number(
+    carrierWalletSnap.data.totalBalance ??
+      carrierWalletSnap.data.balance ??
+      carrierWalletSnap.data.available ??
+      -1
+  );
 
   // ── Step 7: Shipper verifies POD (triggers COMPLETED + fee deduction) ────
   const verifyRes = await apiCall(
@@ -417,6 +440,119 @@ test.describe("Service Fee Formula Verification (§8)", () => {
     expect(isNaN(totalCollected)).toBeFalsy();
     // At least one fee was DEDUCTED today — totals must be > 0
     expect(totalCollected).toBeGreaterThan(0);
+  });
+
+  // ── 5b. P1: shipper wallet balance decreased by EXACT fee amount ─────────
+
+  test("P1: shipper wallet balance = balanceBefore − shipperFee (exact arithmetic)", async () => {
+    test.setTimeout(60000);
+    if (!loadId || shipperBalanceBefore < 0) {
+      test.skip(
+        true,
+        "No loadId or wallet snapshot — beforeAll setup incomplete"
+      );
+      return;
+    }
+
+    // Verify fee was actually deducted (not waived)
+    const { data: loadData } = await apiCall(
+      "GET",
+      `/api/loads/${loadId}`,
+      adminToken
+    );
+    const load = loadData.load ?? loadData;
+    if (load.shipperFeeStatus !== "DEDUCTED") {
+      test.skip(
+        true,
+        `shipperFeeStatus=${load.shipperFeeStatus} — deduction did not occur, cannot assert wallet change`
+      );
+      return;
+    }
+
+    const actualShipperFee = Number(load.shipperServiceFee);
+
+    // GET wallet balance now (after deduction)
+    const { status, data: walletData } = await apiCall(
+      "GET",
+      "/api/wallet/balance",
+      shipperToken
+    );
+    expect(status).toBe(200);
+    const shipperBalanceAfter = Number(
+      walletData.totalBalance ??
+        walletData.balance ??
+        walletData.available ??
+        -1
+    );
+    expect(shipperBalanceAfter).toBeGreaterThanOrEqual(0);
+
+    // EXACT P1 arithmetic: balanceAfter = balanceBefore − shipperFee  (±1 ETB tolerance)
+    const expectedBalance = shipperBalanceBefore - actualShipperFee;
+    expect(
+      Math.abs(shipperBalanceAfter - expectedBalance),
+      `Expected shipper balance ≈ ${expectedBalance.toFixed(2)} (${shipperBalanceBefore.toFixed(2)} − ${actualShipperFee.toFixed(2)}), got ${shipperBalanceAfter.toFixed(2)}`
+    ).toBeLessThanOrEqual(FEE_TOLERANCE);
+
+    // Blueprint §8: the deducted amount must equal the formula result
+    expect(
+      Math.abs(actualShipperFee - EXPECTED_SHIPPER_FEE),
+      `Expected shipperFee ≈ ${EXPECTED_SHIPPER_FEE} ETB (${DISTANCE_KM}km × ${SHIPPER_RATE} ETB/km), got ${actualShipperFee}`
+    ).toBeLessThanOrEqual(FEE_TOLERANCE);
+  });
+
+  // ── 5c. P1: carrier wallet balance decreased by EXACT fee amount ──────────
+
+  test("P1: carrier wallet balance = balanceBefore − carrierFee (exact arithmetic)", async () => {
+    test.setTimeout(60000);
+    if (!loadId || carrierBalanceBefore < 0) {
+      test.skip(
+        true,
+        "No loadId or wallet snapshot — beforeAll setup incomplete"
+      );
+      return;
+    }
+
+    const { data: loadData } = await apiCall(
+      "GET",
+      `/api/loads/${loadId}`,
+      adminToken
+    );
+    const load = loadData.load ?? loadData;
+    if (load.carrierFeeStatus !== "DEDUCTED") {
+      test.skip(
+        true,
+        `carrierFeeStatus=${load.carrierFeeStatus} — deduction did not occur`
+      );
+      return;
+    }
+
+    const actualCarrierFee = Number(load.carrierServiceFee);
+
+    const { status, data: walletData } = await apiCall(
+      "GET",
+      "/api/wallet/balance",
+      carrierToken
+    );
+    expect(status).toBe(200);
+    const carrierBalanceAfter = Number(
+      walletData.totalBalance ??
+        walletData.balance ??
+        walletData.available ??
+        -1
+    );
+    expect(carrierBalanceAfter).toBeGreaterThanOrEqual(0);
+
+    // EXACT P1 arithmetic: balanceAfter = balanceBefore − carrierFee  (±1 ETB tolerance)
+    const expectedBalance = carrierBalanceBefore - actualCarrierFee;
+    expect(
+      Math.abs(carrierBalanceAfter - expectedBalance),
+      `Expected carrier balance ≈ ${expectedBalance.toFixed(2)} (${carrierBalanceBefore.toFixed(2)} − ${actualCarrierFee.toFixed(2)}), got ${carrierBalanceAfter.toFixed(2)}`
+    ).toBeLessThanOrEqual(FEE_TOLERANCE);
+
+    expect(
+      Math.abs(actualCarrierFee - EXPECTED_CARRIER_FEE),
+      `Expected carrierFee ≈ ${EXPECTED_CARRIER_FEE} ETB (${DISTANCE_KM}km × ${CARRIER_RATE} ETB/km), got ${actualCarrierFee}`
+    ).toBeLessThanOrEqual(FEE_TOLERANCE);
   });
 
   // ── 6. Completed trip appears in revenue/by-organization?period=day ──────

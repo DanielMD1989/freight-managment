@@ -105,10 +105,9 @@ export async function deductServiceFee(
       carrierServiceFee: true,
       shipperFeeStatus: true,
       carrierFeeStatus: true,
-      // Trip distance fields - priority: actualTripKm > estimatedTripKm > corridor.distanceKm
-      actualTripKm: true, // GPS-computed actual distance
-      estimatedTripKm: true, // Estimated distance from map
-      tripKm: true, // Legacy trip distance
+      // Blueprint §8: billing distance = actualTripKm (GPS) → corridor.distanceKm only.
+      // estimatedTripKm and tripKm are UI/planning fields — NOT used in billing.
+      actualTripKm: true,
       // Legacy fields
       serviceFeeEtb: true,
       serviceFeeStatus: true,
@@ -228,25 +227,32 @@ export async function deductServiceFee(
   }
 
   // Calculate fees for both parties
-  // Priority: actualTripKm > estimatedTripKm > tripKm > corridor.distanceKm
-  // Use actual GPS-tracked distance when available, fall back to estimates or corridor default
+  // Blueprint §8: billing distance = actualTripKm (GPS-recorded) if available,
+  // else corridor.distanceKm (authoritative route baseline).
+  // estimatedTripKm and tripKm are NOT used for billing.
   const distanceKm =
     load.actualTripKm && Number(load.actualTripKm) > 0
       ? Number(load.actualTripKm)
-      : load.estimatedTripKm && Number(load.estimatedTripKm) > 0
-        ? Number(load.estimatedTripKm)
-        : load.tripKm && Number(load.tripKm) > 0
-          ? Number(load.tripKm)
-          : Number(corridor.distanceKm);
+      : Number(corridor.distanceKm) > 0
+        ? Number(corridor.distanceKm)
+        : 0;
 
   const distanceSource =
     load.actualTripKm && Number(load.actualTripKm) > 0
       ? "actualTripKm (GPS)"
-      : load.estimatedTripKm && Number(load.estimatedTripKm) > 0
-        ? "estimatedTripKm"
-        : load.tripKm && Number(load.tripKm) > 0
-          ? "tripKm"
-          : "corridor.distanceKm (fallback)";
+      : "corridor.distanceKm";
+
+  if (distanceKm <= 0) {
+    return {
+      success: false,
+      serviceFee: 0,
+      shipperFee: 0,
+      carrierFee: 0,
+      totalPlatformFee: 0,
+      platformRevenue: new Decimal(0),
+      error: `No billing distance: load ${loadId} has no GPS distance and corridor ${corridorId ?? "unknown"} has distanceKm=${corridor.distanceKm}. Service fee cannot be calculated.`,
+    };
+  }
 
   // Shipper fee calculation — org override → corridor.shipperPricePerKm → corridor.pricePerKm
   const shipperPricePerKm = load.shipper.shipperRatePerKm
@@ -413,10 +419,8 @@ export async function deductServiceFee(
   // G-A15-4: Notify all admins when partial fee collection occurs (GPS actual > estimated
   // or insufficient wallet balance). Fire-and-forget — financial state is already written.
   if (partialDeductionOccurred) {
-    const estimatedKm =
-      load.estimatedTripKm && Number(load.estimatedTripKm) > 0
-        ? Number(load.estimatedTripKm)
-        : Number(corridor.distanceKm);
+    // Corridor baseline is the reference distance (estimatedTripKm not in billing select)
+    const estimatedKm = Number(corridor.distanceKm);
     const actualKm = distanceKm;
     const collected =
       (shipperDeducted ? shipperFeeCalc.finalFee : 0) +
@@ -425,7 +429,7 @@ export async function deductServiceFee(
       role: "ADMIN",
       type: NotificationType.PARTIAL_FEE_COLLECTION,
       title: "Partial Service Fee Collection",
-      message: `Load ${loadId}: actual ${actualKm}km vs estimated ${estimatedKm}km. Collected ${collected.toFixed(2)} / ${totalPlatformFee.toFixed(2)} ETB.`,
+      message: `Load ${loadId}: actual ${actualKm}km vs corridor ${estimatedKm}km. Collected ${collected.toFixed(2)} / ${totalPlatformFee.toFixed(2)} ETB.`,
       metadata: {
         loadId,
         actualKm,
@@ -965,6 +969,9 @@ export async function refundServiceFee(
           carrierFeeStatus: "REFUNDED",
           serviceFeeStatus: "REFUNDED",
           serviceFeeRefundedAt: new Date(),
+          shipperFeeDeductedAt: null,
+          carrierFeeDeductedAt: null,
+          serviceFeeDeductedAt: null,
         },
       });
 
@@ -1014,201 +1021,6 @@ export async function refundServiceFee(
     shipperBalance: newShipperBalance,
     carrierFeeRefunded: carrierFeeToRefund.toNumber(),
     transactionId: journalEntryId,
-  };
-}
-
-/**
- * Validate wallet balances before trip acceptance
- *
- * CURRENT FLOW (2026-02-08):
- * - Trip acceptance: VALIDATE both wallet balances (no deduction)
- * - Trip completion: DEDUCT fees from both wallets
- * - Trip cancellation: NO refund needed (nothing was taken)
- *
- * This function checks that both shipper and carrier have sufficient
- * balance to cover their respective service fees. This is validation only,
- * no money is moved.
- *
- * @param loadId - Load ID to validate
- * @param carrierId - Carrier organization ID accepting the load
- * @returns Validation result with fee amounts and any errors
- */
-export async function validateWalletBalancesForTrip(
-  loadId: string,
-  carrierId: string
-): Promise<{
-  valid: boolean;
-  shipperFee: number;
-  carrierFee: number;
-  shipperBalance: number;
-  carrierBalance: number;
-  errors: string[];
-}> {
-  const errors: string[] = [];
-
-  // Get load with corridor info
-  const load = await db.load.findUnique({
-    where: { id: loadId },
-    select: {
-      id: true,
-      shipperId: true,
-      corridorId: true,
-      estimatedTripKm: true,
-      tripKm: true,
-      corridor: {
-        select: {
-          distanceKm: true,
-          shipperPricePerKm: true,
-          carrierPricePerKm: true,
-          pricePerKm: true,
-          shipperPromoFlag: true,
-          shipperPromoPct: true,
-          carrierPromoFlag: true,
-          carrierPromoPct: true,
-          promoFlag: true,
-          promoDiscountPct: true,
-        },
-      },
-      shipper: {
-        select: {
-          shipperRatePerKm: true,
-          shipperPromoFlag: true,
-          shipperPromoPct: true,
-        },
-      },
-    },
-  });
-
-  if (!load) {
-    return {
-      valid: false,
-      shipperFee: 0,
-      carrierFee: 0,
-      shipperBalance: 0,
-      carrierBalance: 0,
-      errors: ["Load not found"],
-    };
-  }
-
-  // Carrier org lookup for per-org rate overrides (Round S8)
-  const carrierOrg = await db.organization.findUnique({
-    where: { id: carrierId },
-    select: {
-      carrierRatePerKm: true,
-      carrierPromoFlag: true,
-      carrierPromoPct: true,
-    },
-  });
-
-  // If no corridor, fees will be waived - validation passes
-  if (!load.corridor) {
-    return {
-      valid: true,
-      shipperFee: 0,
-      carrierFee: 0,
-      shipperBalance: 0,
-      carrierBalance: 0,
-      errors: [],
-    };
-  }
-
-  // Calculate expected fees
-  const distanceKm = load.estimatedTripKm
-    ? Number(load.estimatedTripKm)
-    : load.tripKm
-      ? Number(load.tripKm)
-      : Number(load.corridor.distanceKm);
-
-  // Shipper: org override → corridor.shipperPricePerKm → corridor.pricePerKm
-  const shipperPricePerKm = load.shipper?.shipperRatePerKm
-    ? Number(load.shipper.shipperRatePerKm)
-    : load.corridor.shipperPricePerKm
-      ? Number(load.corridor.shipperPricePerKm)
-      : Number(load.corridor.pricePerKm);
-  const shipperPromoFlag =
-    load.shipper?.shipperPromoFlag ||
-    load.corridor.shipperPromoFlag ||
-    load.corridor.promoFlag ||
-    false;
-  const shipperPromoPct = load.shipper?.shipperPromoPct
-    ? Number(load.shipper.shipperPromoPct)
-    : load.corridor.shipperPromoPct
-      ? Number(load.corridor.shipperPromoPct)
-      : load.corridor.promoDiscountPct
-        ? Number(load.corridor.promoDiscountPct)
-        : null;
-
-  // Carrier: org override → corridor.carrierPricePerKm → 0
-  const carrierPricePerKm = carrierOrg?.carrierRatePerKm
-    ? Number(carrierOrg.carrierRatePerKm)
-    : load.corridor.carrierPricePerKm
-      ? Number(load.corridor.carrierPricePerKm)
-      : 0;
-  const carrierPromoFlag =
-    carrierOrg?.carrierPromoFlag || load.corridor.carrierPromoFlag || false;
-  const carrierPromoPct = carrierOrg?.carrierPromoPct
-    ? Number(carrierOrg.carrierPromoPct)
-    : load.corridor.carrierPromoPct
-      ? Number(load.corridor.carrierPromoPct)
-      : null;
-
-  const shipperFeeCalc = calculatePartyFee(
-    distanceKm,
-    shipperPricePerKm,
-    shipperPromoFlag,
-    shipperPromoPct
-  );
-  const carrierFeeCalc = calculatePartyFee(
-    distanceKm,
-    carrierPricePerKm,
-    carrierPromoFlag,
-    carrierPromoPct
-  );
-
-  // Get wallet balances
-  const [shipperWallet, carrierWallet] = await Promise.all([
-    db.financialAccount.findFirst({
-      where: {
-        organizationId: load.shipperId,
-        accountType: "SHIPPER_WALLET",
-        isActive: true,
-      },
-      select: { balance: true },
-    }),
-    db.financialAccount.findFirst({
-      where: {
-        organizationId: carrierId,
-        accountType: "CARRIER_WALLET",
-        isActive: true,
-      },
-      select: { balance: true },
-    }),
-  ]);
-
-  const shipperBalance = shipperWallet ? Number(shipperWallet.balance) : 0;
-  const carrierBalance = carrierWallet ? Number(carrierWallet.balance) : 0;
-
-  // Validate shipper balance
-  if (shipperFeeCalc.finalFee > 0 && shipperBalance < shipperFeeCalc.finalFee) {
-    errors.push(
-      `Shipper has insufficient wallet balance for this trip. Required: ${shipperFeeCalc.finalFee.toFixed(2)} ETB, Available: ${shipperBalance.toFixed(2)} ETB`
-    );
-  }
-
-  // Validate carrier balance
-  if (carrierFeeCalc.finalFee > 0 && carrierBalance < carrierFeeCalc.finalFee) {
-    errors.push(
-      `Carrier has insufficient wallet balance for this trip. Required: ${carrierFeeCalc.finalFee.toFixed(2)} ETB, Available: ${carrierBalance.toFixed(2)} ETB`
-    );
-  }
-
-  return {
-    valid: errors.length === 0,
-    shipperFee: shipperFeeCalc.finalFee,
-    carrierFee: carrierFeeCalc.finalFee,
-    shipperBalance,
-    carrierBalance,
-    errors,
   };
 }
 

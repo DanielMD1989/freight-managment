@@ -28,7 +28,6 @@ import crypto from "crypto";
 // P0-003 FIX: Import CacheInvalidation for post-approval cache clearing
 import { CacheInvalidation } from "@/lib/cache";
 import { handleApiError } from "@/lib/apiErrors";
-import { validateWalletBalancesForTrip } from "@/lib/serviceFeeManagement";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 
 // Validation schema for request response
@@ -180,22 +179,6 @@ export async function POST(
     }
 
     if (data.action === "APPROVE") {
-      // H15 FIX: Validate wallet balances before assignment
-      const walletValidation = await validateWalletBalancesForTrip(
-        truckRequest.loadId,
-        truckRequest.truck.carrierId
-      );
-      if (!walletValidation.valid) {
-        return NextResponse.json(
-          {
-            error:
-              walletValidation.errors?.[0] ||
-              "Insufficient wallet balance for this trip",
-          },
-          { status: 400 }
-        );
-      }
-
       // P0-002 & P0-003 FIX: All checks and operations now inside atomic transaction
       // This prevents race conditions and ensures trip creation is atomic
       try {

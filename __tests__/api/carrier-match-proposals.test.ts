@@ -208,13 +208,6 @@ describe("Carrier Match Proposal Management", () => {
     jest.clearAllMocks();
     // Re-patch findUnique after clearAllMocks resets mock implementations
     patchMatchProposalFindUnique();
-    // Re-patch serviceFee mock to return numbers (route calls .toFixed())
-    const serviceFee = require("@/lib/serviceFeeManagement");
-    serviceFee.validateWalletBalancesForTrip.mockResolvedValue({
-      valid: true,
-      shipperFee: 100.0,
-      carrierFee: 50.0,
-    });
     // Default: authenticated as carrier
     setAuthSession(
       createMockSession({

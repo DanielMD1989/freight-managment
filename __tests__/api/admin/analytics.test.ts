@@ -239,29 +239,27 @@ describe("Admin Analytics API", () => {
       expect(res.status).toBe(403);
     });
 
-    it("GET analytics returns 200 for SHIPPER (has VIEW_DASHBOARD)", async () => {
+    it("GET analytics returns 403 for SHIPPER (no VIEW_ANALYTICS)", async () => {
       useShipperSession();
-      setupDefaultMetricMocks();
       const req = createRequest(
         "GET",
         "http://localhost:3000/api/admin/analytics"
       );
       const res = await getAnalytics(req);
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(403);
     });
 
-    it("GET analytics returns 200 for CARRIER (has VIEW_DASHBOARD)", async () => {
+    it("GET analytics returns 403 for CARRIER (no VIEW_ANALYTICS)", async () => {
       useCarrierSession();
-      setupDefaultMetricMocks();
       const req = createRequest(
         "GET",
         "http://localhost:3000/api/admin/analytics"
       );
       const res = await getAnalytics(req);
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(403);
     });
 
-    it("GET analytics returns 200 for DISPATCHER (has VIEW_DASHBOARD)", async () => {
+    it("GET analytics returns 200 for DISPATCHER (has VIEW_ANALYTICS)", async () => {
       useDispatcherSession();
       setupDefaultMetricMocks();
       const req = createRequest(

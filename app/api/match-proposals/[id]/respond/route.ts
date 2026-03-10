@@ -18,7 +18,6 @@ import { canApproveRequests } from "@/lib/dispatcherPermissions";
 import { RULE_CARRIER_FINAL_AUTHORITY } from "@/lib/foundation-rules";
 import { UserRole } from "@prisma/client";
 import { enableTrackingForLoad } from "@/lib/gpsTracking";
-import { validateWalletBalancesForTrip } from "@/lib/serviceFeeManagement"; // Service Fee Implementation
 // P0-007 FIX: Import CacheInvalidation for post-acceptance cache clearing
 import { CacheInvalidation } from "@/lib/cache";
 import crypto from "crypto";
@@ -174,24 +173,6 @@ export async function POST(
     }
 
     if (data.action === "ACCEPT") {
-      // SERVICE FEE: Validate wallet balances before acceptance
-      // This is validation only - fees are deducted on trip completion
-      const walletValidation = await validateWalletBalancesForTrip(
-        proposal.loadId,
-        proposal.truck.carrierId
-      );
-      // Fix 1f: Remove financial data leak — don't expose shipper wallet details to carrier
-      if (!walletValidation.valid) {
-        return NextResponse.json(
-          {
-            error:
-              walletValidation.errors?.[0] ||
-              "Insufficient wallet balance for this trip",
-          },
-          { status: 400 }
-        );
-      }
-
       // P0-007 FIX: All checks and operations now inside atomic transaction
       // with fresh re-fetch to prevent race conditions
       // FIX: Use explicit interface for transaction result

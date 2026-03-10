@@ -106,6 +106,7 @@ const updateLoadSchema = z
     isKept: z.boolean().optional(),
     hasAlerts: z.boolean().optional(),
     groupId: z.string().max(50).optional().nullable(),
+    corridorId: z.string().optional().nullable(),
   })
   .refine(
     (data) => {

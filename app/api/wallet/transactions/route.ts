@@ -148,12 +148,20 @@ export async function GET(request: NextRequest) {
       .map((tx) => {
         // BUG-R3-2 FIX: Find the line for this org's wallet; skip if none found
         // (prevents wrong sign when tx.lines[0] belongs to another party)
+        // BUG-B1-3 FIX: Also check creditAccountId so deposits/topups/refunds
+        // (wallet on credit side) are not silently dropped.
         const walletLine = tx.lines.find(
-          (line) => line.accountId && walletAccountIds.includes(line.accountId)
+          (line) =>
+            (line.accountId && walletAccountIds.includes(line.accountId)) ||
+            (line.creditAccountId &&
+              walletAccountIds.includes(line.creditAccountId))
         );
         if (!walletLine) return null; // filtered out below
 
-        const isDebit = walletAccountIds.includes(walletLine.accountId!);
+        const walletOnDebitSide = !!(
+          walletLine.accountId &&
+          walletAccountIds.includes(walletLine.accountId)
+        );
         const amount = Number(walletLine.amount || 0);
 
         return {
@@ -162,7 +170,8 @@ export async function GET(request: NextRequest) {
           description: tx.description,
           reference: tx.reference,
           loadId: tx.loadId,
-          amount: isDebit ? amount : -amount, // Positive = money in, Negative = money out
+          // Debit to wallet = money IN; Credit to wallet = money OUT
+          amount: walletOnDebitSide ? amount : -amount,
           createdAt: tx.createdAt,
         };
       })

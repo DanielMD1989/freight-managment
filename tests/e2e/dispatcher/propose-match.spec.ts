@@ -116,25 +116,25 @@ test.describe("Dispatcher — match proposals and access", () => {
       dispatcherToken,
       { loadId, truckId }
     );
-    expect([200, 201]).toContain(status);
+    expect(status).toBe(201);
 
     const proposal = data.proposal ?? data.matchProposal ?? data;
     expect(proposal.id).toBeDefined();
   });
 
-  test("dispatcher cannot accept load request on behalf of shipper — returns 403", async () => {
+  test("dispatcher cannot accept load request on behalf of shipper — returns 403/404", async () => {
     test.setTimeout(180000);
     const dispatcherToken = await getDispatcherToken();
     const shipperToken = await getShipperToken();
     const carrierToken = await getCarrierToken();
     const adminToken = await getAdminToken();
 
-    // Create a load request as carrier
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const fiveDays = new Date();
     fiveDays.setDate(fiveDays.getDate() + 5);
 
+    // Create a fresh load for this test
     const { data: freshLoad } = await apiCall(
       "POST",
       "/api/loads",
@@ -147,25 +147,67 @@ test.describe("Dispatcher — match proposals and access", () => {
         truckType: "FLATBED",
         weight: 3000,
         cargoDescription: "Blueprint dispatcher-cannot-respond test cargo",
-        description: "Blueprint dispatcher-cannot-respond test",
         status: "POSTED",
       }
     );
     const testLoadId = (freshLoad.load ?? freshLoad).id;
 
-    // Get carrier truck
-    const { data: truckData } = await apiCall(
-      "GET",
-      "/api/trucks?myTrucks=true&approvalStatus=APPROVED&limit=1",
-      carrierToken
+    // Create a fresh dedicated truck so we don't depend on DB state
+    const dispPlate = `BP-D403-${Date.now().toString(36).slice(-5).toUpperCase()}`;
+    const { data: truckCreated } = await apiCall(
+      "POST",
+      "/api/trucks",
+      carrierToken,
+      {
+        truckType: "FLATBED",
+        licensePlate: dispPlate,
+        capacity: 15000,
+        volume: 50,
+        currentCity: "Addis Ababa",
+        currentRegion: "Addis Ababa",
+        isAvailable: true,
+      }
     );
-    const trucks = truckData.trucks ?? truckData;
-    if (!Array.isArray(trucks) || trucks.length === 0) {
-      test.skip(true, "No approved truck available for dispatcher-403 test");
+    const testTruckId = (truckCreated.truck ?? truckCreated).id;
+    if (!testTruckId) {
+      test.skip(true, "Could not create fresh truck for dispatcher-403 test");
       return;
     }
-    const testTruckId = trucks[0].id;
+    await apiCall("POST", `/api/trucks/${testTruckId}/approve`, adminToken, {
+      action: "APPROVE",
+    });
 
+    // Create an active truck posting (required by load-requests endpoint)
+    // Fetch a city ID from ethiopian-locations (required by truck-postings schema)
+    const locRes = await fetch(`${BASE_URL}/api/ethiopian-locations`);
+    const locData = await locRes.json();
+    const allLocs: Array<{ id: string }> =
+      locData.locations ?? locData.cities ?? locData ?? [];
+    const originCityId = allLocs[0]?.id;
+    if (!originCityId) {
+      test.skip(true, "Could not fetch city ID for truck posting");
+      return;
+    }
+    const postingFrom = new Date();
+    postingFrom.setDate(postingFrom.getDate() + 1);
+    const { status: postingStatus } = await apiCall(
+      "POST",
+      "/api/truck-postings",
+      carrierToken,
+      {
+        truckId: testTruckId,
+        originCityId,
+        availableFrom: postingFrom.toISOString(),
+        contactName: "BP Dispatcher 403 Test",
+        contactPhone: "+251912000099",
+      }
+    );
+    if (postingStatus !== 201) {
+      test.skip(true, `Could not create truck posting (${postingStatus})`);
+      return;
+    }
+
+    // Carrier creates a load request
     const { data: reqData, status: reqStatus } = await apiCall(
       "POST",
       "/api/load-requests",
@@ -178,14 +220,16 @@ test.describe("Dispatcher — match proposals and access", () => {
     }
     const requestId = (reqData.loadRequest ?? reqData.request ?? reqData).id;
 
-    // Dispatcher tries to respond on behalf of shipper
+    // Dispatcher tries to respond on behalf of shipper.
+    // API returns 404 (security: Fix 6b — 404 instead of 403 to prevent resource existence leakage).
+    // Accept both 403 and 404 — either correctly signals forbidden access.
     const { status } = await apiCall(
       "POST",
       `/api/load-requests/${requestId}/respond`,
       dispatcherToken,
       { action: "APPROVE" }
     );
-    expect(status).toBe(403);
+    expect([403, 404]).toContain(status);
   });
 
   test("dispatcher can cancel ASSIGNED trip via /api/trips/:id/cancel", async () => {

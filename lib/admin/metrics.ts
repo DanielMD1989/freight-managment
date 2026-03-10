@@ -156,12 +156,20 @@ export async function getCountMetrics(): Promise<CountMetrics> {
 }
 
 /**
- * Get load metrics with full status breakdown
+ * Get load metrics with full status breakdown.
+ * When dateRange is provided, counts are scoped to loads created within the period.
  */
-export async function getLoadMetrics(): Promise<LoadMetrics> {
+export async function getLoadMetrics(
+  dateRange?: DateRange
+): Promise<LoadMetrics> {
+  const where = dateRange
+    ? { createdAt: { gte: dateRange.start, lte: dateRange.end } }
+    : {};
+
   const loadsByStatus = await db.load.groupBy({
     by: ["status"],
     _count: true,
+    where,
   });
 
   const byStatus: Record<string, number> = {};
@@ -196,16 +204,24 @@ export async function getLoadMetrics(): Promise<LoadMetrics> {
 }
 
 /**
- * Get trip metrics with full status breakdown
+ * Get trip metrics with full status breakdown.
+ * When dateRange is provided, counts are scoped to trips created within the period.
  *
  * IMPORTANT: Uses Trip model (not Load model) for accurate trip tracking.
  * A Load can exist without a Trip (before assignment), but a Trip
  * always represents an actual carrier assignment.
  */
-export async function getTripMetrics(): Promise<TripMetrics> {
+export async function getTripMetrics(
+  dateRange?: DateRange
+): Promise<TripMetrics> {
+  const where = dateRange
+    ? { createdAt: { gte: dateRange.start, lte: dateRange.end } }
+    : {};
+
   const tripsByStatus = await db.trip.groupBy({
     by: ["status"],
     _count: true,
+    where,
   });
 
   const byStatus: Record<string, number> = {};
@@ -239,18 +255,27 @@ export async function getTripMetrics(): Promise<TripMetrics> {
 }
 
 /**
- * Get truck metrics with availability and approval status
+ * Get truck metrics with availability and approval status.
+ * When dateRange is provided, counts are scoped to trucks created within the period.
  */
-export async function getTruckMetrics(): Promise<TruckMetrics> {
+export async function getTruckMetrics(
+  dateRange?: DateRange
+): Promise<TruckMetrics> {
+  const where = dateRange
+    ? { createdAt: { gte: dateRange.start, lte: dateRange.end } }
+    : {};
+
   const [total, byAvailability, byApproval] = await Promise.all([
-    db.truck.count(),
+    db.truck.count({ where }),
     db.truck.groupBy({
       by: ["isAvailable"],
       _count: true,
+      where,
     }),
     db.truck.groupBy({
       by: ["approvalStatus"],
       _count: true,
+      where,
     }),
   ]);
 

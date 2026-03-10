@@ -7,7 +7,6 @@
 import {
   deductServiceFee,
   refundServiceFee,
-  validateWalletBalancesForTrip,
   assignCorridorToLoad,
 } from "@/lib/serviceFeeManagement";
 import { db } from "@/lib/db";
@@ -228,7 +227,7 @@ describe("lib/serviceFeeManagement", () => {
       expect(result.totalPlatformFee).toBe(800);
     });
 
-    it("should use actualTripKm over estimatedTripKm", async () => {
+    it("should use actualTripKm over corridor.distanceKm (GPS wins in 2-level chain)", async () => {
       const mockCorridor = {
         id: "corridor-1",
         distanceKm: 100,
@@ -245,7 +244,7 @@ describe("lib/serviceFeeManagement", () => {
         shipperFeeStatus: "PENDING",
         carrierFeeStatus: "PENDING",
         actualTripKm: 120, // GPS distance
-        estimatedTripKm: 100, // Should be ignored
+        estimatedTripKm: 100, // UI planning field — not in billing select, corridor.distanceKm used instead
         tripKm: 90,
         assignedTruck: {
           carrierId: "carrier-1",
@@ -283,7 +282,7 @@ describe("lib/serviceFeeManagement", () => {
 
       const result = await deductServiceFee("load-1");
 
-      // Should use actualTripKm (120), not estimatedTripKm (100)
+      // Should use actualTripKm (120), not corridor.distanceKm (100) — GPS wins
       expect(result.shipperFee).toBe(600); // 120 * 5
       expect(result.carrierFee).toBe(360); // 120 * 3
     });
@@ -493,142 +492,8 @@ describe("lib/serviceFeeManagement", () => {
     });
   });
 
-  // ============================================================================
-  // validateWalletBalancesForTrip - Pre-trip validation
-  // ============================================================================
-  describe("validateWalletBalancesForTrip", () => {
-    it("should return error when load not found", async () => {
-      mockDb.load.findUnique.mockResolvedValue(null);
-
-      const result = await validateWalletBalancesForTrip("load-1", "carrier-1");
-
-      expect(result.valid).toBe(false);
-      expect(result.errors).toContain("Load not found");
-    });
-
-    it("should pass validation when no corridor (fees will be waived)", async () => {
-      mockDb.load.findUnique.mockResolvedValue({
-        id: "load-1",
-        shipperId: "shipper-1",
-        corridorId: null,
-        corridor: null,
-      });
-
-      const result = await validateWalletBalancesForTrip("load-1", "carrier-1");
-
-      expect(result.valid).toBe(true);
-      expect(result.shipperFee).toBe(0);
-      expect(result.carrierFee).toBe(0);
-      expect(result.errors).toHaveLength(0);
-    });
-
-    it("should validate sufficient balances", async () => {
-      mockDb.load.findUnique.mockResolvedValue({
-        id: "load-1",
-        shipperId: "shipper-1",
-        corridorId: "corridor-1",
-        estimatedTripKm: 100,
-        corridor: {
-          distanceKm: 100,
-          shipperPricePerKm: 5,
-          carrierPricePerKm: 3,
-          pricePerKm: 5,
-        },
-      });
-
-      mockDb.financialAccount.findFirst
-        .mockResolvedValueOnce({ balance: 1000 }) // shipper wallet
-        .mockResolvedValueOnce({ balance: 1000 }); // carrier wallet
-
-      const result = await validateWalletBalancesForTrip("load-1", "carrier-1");
-
-      expect(result.valid).toBe(true);
-      expect(result.shipperFee).toBe(500); // 100 * 5
-      expect(result.carrierFee).toBe(300); // 100 * 3
-      expect(result.errors).toHaveLength(0);
-    });
-
-    it("should detect insufficient shipper balance", async () => {
-      mockDb.load.findUnique.mockResolvedValue({
-        id: "load-1",
-        shipperId: "shipper-1",
-        corridorId: "corridor-1",
-        estimatedTripKm: 100,
-        corridor: {
-          distanceKm: 100,
-          shipperPricePerKm: 5,
-          carrierPricePerKm: 3,
-          pricePerKm: 5,
-        },
-      });
-
-      mockDb.financialAccount.findFirst
-        .mockResolvedValueOnce({ balance: 100 }) // shipper: insufficient
-        .mockResolvedValueOnce({ balance: 1000 }); // carrier: sufficient
-
-      const result = await validateWalletBalancesForTrip("load-1", "carrier-1");
-
-      expect(result.valid).toBe(false);
-      expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors[0]).toContain(
-        "Shipper has insufficient wallet balance"
-      );
-    });
-
-    it("should detect insufficient carrier balance", async () => {
-      mockDb.load.findUnique.mockResolvedValue({
-        id: "load-1",
-        shipperId: "shipper-1",
-        corridorId: "corridor-1",
-        estimatedTripKm: 100,
-        corridor: {
-          distanceKm: 100,
-          shipperPricePerKm: 5,
-          carrierPricePerKm: 3,
-          pricePerKm: 5,
-        },
-      });
-
-      mockDb.financialAccount.findFirst
-        .mockResolvedValueOnce({ balance: 1000 }) // shipper: sufficient
-        .mockResolvedValueOnce({ balance: 100 }); // carrier: insufficient
-
-      const result = await validateWalletBalancesForTrip("load-1", "carrier-1");
-
-      expect(result.valid).toBe(false);
-      expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors[0]).toContain(
-        "Carrier has insufficient wallet balance"
-      );
-    });
-
-    it("should handle missing wallets", async () => {
-      mockDb.load.findUnique.mockResolvedValue({
-        id: "load-1",
-        shipperId: "shipper-1",
-        corridorId: "corridor-1",
-        estimatedTripKm: 100,
-        corridor: {
-          distanceKm: 100,
-          shipperPricePerKm: 5,
-          carrierPricePerKm: 3,
-          pricePerKm: 5,
-        },
-      });
-
-      mockDb.financialAccount.findFirst
-        .mockResolvedValueOnce(null) // shipper wallet not found
-        .mockResolvedValueOnce(null); // carrier wallet not found
-
-      const result = await validateWalletBalancesForTrip("load-1", "carrier-1");
-
-      expect(result.valid).toBe(false);
-      expect(result.shipperBalance).toBe(0);
-      expect(result.carrierBalance).toBe(0);
-    });
-  });
-
   // reserveServiceFee removed (A2: dead code, never called in codebase)
+  // validateWalletBalancesForTrip removed (B1: over-engineered, gate already in GET /api/truck-postings)
 
   // ============================================================================
   // assignCorridorToLoad - Assign corridor and pre-calculate fees
@@ -776,32 +641,7 @@ describe("lib/serviceFeeManagement", () => {
   // Integration scenarios
   // ============================================================================
   describe("business scenarios", () => {
-    it("should handle full trip lifecycle: validate → deduct", async () => {
-      // Step 1: Validate wallet balances before trip
-      mockDb.load.findUnique.mockResolvedValue({
-        id: "load-1",
-        shipperId: "shipper-1",
-        corridorId: "corridor-1",
-        estimatedTripKm: 100,
-        corridor: {
-          distanceKm: 100,
-          shipperPricePerKm: 5,
-          carrierPricePerKm: 3,
-          pricePerKm: 5,
-        },
-      });
-
-      mockDb.financialAccount.findFirst
-        .mockResolvedValueOnce({ balance: 1000 })
-        .mockResolvedValueOnce({ balance: 1000 });
-
-      const validateResult = await validateWalletBalancesForTrip(
-        "load-1",
-        "carrier-1"
-      );
-      expect(validateResult.valid).toBe(true);
-
-      // Step 2: Deduct fees on completion
+    it("should handle full trip lifecycle: deduct on completion", async () => {
       jest.clearAllMocks();
       mockDb.load.findUnique.mockResolvedValue({
         id: "load-1",

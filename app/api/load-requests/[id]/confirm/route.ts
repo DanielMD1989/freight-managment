@@ -24,7 +24,6 @@ import { enableTrackingForLoad } from "@/lib/gpsTracking";
 import crypto from "crypto";
 import { CacheInvalidation } from "@/lib/cache";
 import { handleApiError } from "@/lib/apiErrors";
-import { validateWalletBalancesForTrip } from "@/lib/serviceFeeManagement";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 
 const ConfirmSchema = z.object({
@@ -134,22 +133,6 @@ export async function POST(
     }
 
     if (data.action === "CONFIRM") {
-      // Wallet validation — final commitment point
-      const walletValidation = await validateWalletBalancesForTrip(
-        loadRequest.loadId,
-        loadRequest.truck.carrierId
-      );
-      if (!walletValidation.valid) {
-        return NextResponse.json(
-          {
-            error:
-              walletValidation.errors?.[0] ||
-              "Insufficient wallet balance for this trip",
-          },
-          { status: 400 }
-        );
-      }
-
       try {
         const result = await db.$transaction(async (tx) => {
           // Race guard: re-check status

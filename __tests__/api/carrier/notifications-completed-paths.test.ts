@@ -62,7 +62,6 @@ const mockDeductFee = jest.fn(async () => ({
 jest.mock("@/lib/serviceFeeManagement", () => ({
   deductServiceFee: (...args: any[]) => mockDeductFee(...args),
   refundServiceFee: jest.fn(async () => {}),
-  validateWalletBalancesForTrip: jest.fn(async () => ({ valid: true })),
 }));
 
 jest.mock("@/lib/storage", () => ({

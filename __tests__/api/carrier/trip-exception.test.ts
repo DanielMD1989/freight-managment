@@ -138,10 +138,6 @@ jest.mock("@prisma/client", () => ({
 
 // Mock serviceFeeManagement for refund assertions (test E8)
 jest.mock("@/lib/serviceFeeManagement", () => ({
-  validateWalletBalancesForTrip: jest.fn(async () => ({
-    valid: true,
-    errors: [],
-  })),
   deductServiceFees: jest.fn(async () => ({ success: true })),
   deductServiceFee: jest.fn(async () => ({ success: true })),
   refundServiceFee: jest.fn(async () => ({ success: true })),

@@ -56,7 +56,6 @@ jest.mock("@/lib/serviceFeeManagement", () => ({
     totalPlatformFee: 0,
   })),
   refundServiceFee: jest.fn(async () => {}),
-  validateWalletBalancesForTrip: jest.fn(async () => ({ valid: true })),
 }));
 
 jest.mock("@/lib/validation", () => ({

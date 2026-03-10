@@ -154,14 +154,6 @@ describe("Audit Fixes", () => {
     jest.clearAllMocks();
     patchMatchProposalFindUnique();
 
-    // Re-patch serviceFee mock
-    const serviceFee = require("@/lib/serviceFeeManagement");
-    serviceFee.validateWalletBalancesForTrip.mockResolvedValue({
-      valid: true,
-      shipperFee: 100.0,
-      carrierFee: 50.0,
-    });
-
     // Default: authenticated as carrier
     setAuthSession(
       createMockSession({

@@ -12,8 +12,7 @@
  * - limit=200 is clamped to 100
  * - Unrelated carrier (not assigned) cannot view matching trucks (404)
  * - Shipper can directly assign a truck (canAssignLoads returns true for SHIPPER)
- * - Response includes load, trip, trackingUrl, walletValidation
- * - walletValidation.validated === true
+ * - Response includes load, trip, trackingUrl
  * - Carrier can assign their own truck to a load (200)
  * - Carrier cannot assign a truck not owned by their org (404)
  * - Truck already busy → 409
@@ -102,14 +101,7 @@ jest.mock("@/lib/dispatcherPermissions", () => ({
     )
   ),
 }));
-// Override serviceFeeManagement: validateWalletBalancesForTrip must return numeric fees
-// (route calls walletValidation.shipperFee.toFixed(2) which requires a number)
 jest.mock("@/lib/serviceFeeManagement", () => ({
-  validateWalletBalancesForTrip: jest.fn(async () => ({
-    valid: true,
-    shipperFee: 100,
-    carrierFee: 50,
-  })),
   deductServiceFees: jest.fn(async () => ({ success: true })),
   deductServiceFee: jest.fn(async () => ({
     success: true,
@@ -292,7 +284,7 @@ describe("Load Assignment API", () => {
   // ─── POST /api/loads/[id]/assign ─────────────────────────────────────────
 
   describe("POST /loads/[id]/assign (direct assign)", () => {
-    it("shipper assigns truck → 200, response includes load, trip, trackingUrl, walletValidation", async () => {
+    it("shipper assigns truck → 200, response includes load, trip, trackingUrl", async () => {
       // The seeded load "test-load-001" has status "POSTED" (valid for assignment)
       // canAssignLoads mock returns true for SHIPPER
       const req = createRequest(
@@ -308,55 +300,6 @@ describe("Load Assignment API", () => {
       expect(data.load).toBeDefined();
       expect(data.trip).toBeDefined();
       expect("trackingUrl" in data).toBe(true);
-      expect(data.walletValidation).toBeDefined();
-    });
-
-    it("walletValidation.validated is true after successful assignment", async () => {
-      // Create a fresh POSTED load for this test
-      await db.load.create({
-        data: {
-          id: "load-for-wallet-check",
-          status: "POSTED",
-          pickupCity: "Addis Ababa",
-          pickupDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-          deliveryCity: "Mekelle",
-          deliveryDate: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000),
-          truckType: "DRY_VAN",
-          weight: 3000,
-          cargoDescription: "Wallet validation test cargo",
-          shipperId: "shipper-org-1",
-          createdById: "shipper-user-1",
-          postedAt: new Date(),
-        },
-      });
-
-      // Create a fresh available truck
-      await db.truck.create({
-        data: {
-          id: "truck-for-wallet-check",
-          truckType: "DRY_VAN",
-          licensePlate: "BB-99999",
-          capacity: 8000,
-          isAvailable: true,
-          carrierId: "carrier-org-1",
-          createdById: "carrier-user-1",
-          approvalStatus: "APPROVED",
-        },
-      });
-
-      const req = createRequest(
-        "POST",
-        "http://localhost:3000/api/loads/load-for-wallet-check/assign",
-        { body: { truckId: "truck-for-wallet-check" } }
-      );
-
-      const res = await callHandler(assignLoad, req, {
-        id: "load-for-wallet-check",
-      });
-      expect(res.status).toBe(200);
-
-      const data = await parseResponse(res);
-      expect(data.walletValidation.validated).toBe(true);
     });
 
     it("carrier assigns their OWN truck → 200", async () => {

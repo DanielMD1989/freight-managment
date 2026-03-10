@@ -21,7 +21,6 @@ import { RULE_DISPATCHER_COORDINATION_ONLY } from "@/lib/foundation-rules";
 import { createNotification } from "@/lib/notifications";
 import { zodErrorResponse } from "@/lib/validation";
 import { handleApiError } from "@/lib/apiErrors";
-import { validateWalletBalancesForTrip } from "@/lib/serviceFeeManagement";
 import { CacheInvalidation } from "@/lib/cache";
 
 // Validation schema for match proposal
@@ -165,25 +164,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "A pending proposal already exists for this load-truck pair" },
         { status: 409 }
-      );
-    }
-
-    // Validate wallet balances before creating the proposal
-    const walletValidation = await validateWalletBalancesForTrip(
-      data.loadId,
-      truck.carrierId
-    );
-    if (!walletValidation.valid) {
-      return NextResponse.json(
-        {
-          error: "Insufficient wallet balance to propose this match",
-          details: walletValidation.errors,
-          fees: {
-            shipperFee: walletValidation.shipperFee,
-            carrierFee: walletValidation.carrierFee,
-          },
-        },
-        { status: 400 }
       );
     }
 
