@@ -54,6 +54,7 @@ export interface TruckMetrics {
   available: number;
   unavailable: number;
   byApprovalStatus: Record<string, number>;
+  rejected: number;
 }
 
 export interface RevenueMetrics {
@@ -266,6 +267,7 @@ export async function getTruckMetrics(): Promise<TruckMetrics> {
     available,
     unavailable,
     byApprovalStatus,
+    rejected: byApprovalStatus["REJECTED"] || 0,
   };
 }
 

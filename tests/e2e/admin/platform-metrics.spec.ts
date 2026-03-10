@@ -16,6 +16,7 @@ import {
   getDispatcherToken,
   getShipperToken,
   getCarrierToken,
+  getSuperAdminToken,
 } from "../shared/test-utils";
 
 const ENDPOINT = "/api/admin/platform-metrics";
@@ -176,4 +177,34 @@ test("Dispatcher, Shipper, and Carrier all receive 403 on platform-metrics", asy
     carrRes.status,
     `Expected 403 for carrier but got ${carrRes.status}`
   ).toBe(403);
+});
+
+// ── 7. Super Admin gets 200 (Blueprint §10) ────────────────────────────────
+
+test("Super Admin: GET /api/admin/platform-metrics returns 200 (MANAGE_USERS permission — §10)", async () => {
+  test.setTimeout(60000);
+
+  let superAdminToken: string;
+  try {
+    superAdminToken = await getSuperAdminToken();
+  } catch {
+    test.skip(
+      true,
+      "No superadmin@test.com in seed data — run scripts/seed-test-data.ts. Blueprint §10: Super Admin has platform-wide analytics access"
+    );
+    return;
+  }
+
+  const { status, data } = await apiCall("GET", ENDPOINT, superAdminToken);
+  expect(
+    status,
+    `Expected Super Admin 200 on ${ENDPOINT}. Got: ${status} — ${JSON.stringify(data)}. ` +
+      `Blueprint §10: "Super Admin has MANAGE_USERS permission granting platform-wide analytics access"`
+  ).toBe(200);
+
+  if (status === 200) {
+    // Verify shape is consistent with admin-level data
+    expect(typeof data.metrics).toBe("object");
+    expect(typeof data.timestamp).toBe("string");
+  }
 });

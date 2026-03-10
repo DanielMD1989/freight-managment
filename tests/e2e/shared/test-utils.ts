@@ -31,6 +31,10 @@ export function getAdminToken() {
   return getToken("admin@test.com");
 }
 
+export function getSuperAdminToken() {
+  return getToken("superadmin@test.com");
+}
+
 /**
  * Re-activate all four test users via the admin API and clear their token cache.
  *
@@ -64,4 +68,12 @@ export async function restoreTestUsers(): Promise<void> {
     }
     _invalidateTokenCache(email);
   }
+
+  // Warm cache with fresh tokens so subsequent spec files can authenticate
+  // without triggering fresh logins that might hit rate limits.
+  await Promise.allSettled([
+    getToken("shipper@test.com"),
+    getToken("carrier@test.com"),
+    getToken("dispatcher@test.com", DISPATCHER_PASSWORD),
+  ]);
 }

@@ -97,6 +97,7 @@ export async function GET(request: NextRequest) {
           total: trucks.total,
           approved: trucks.byApprovalStatus["APPROVED"] || 0,
           pending: trucks.byApprovalStatus["PENDING"] || 0,
+          rejected: trucks.rejected,
           available: trucks.available,
           unavailable: trucks.unavailable,
           newInPeriod: periodMetrics.newTrucks,

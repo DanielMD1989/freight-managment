@@ -212,6 +212,37 @@ async function main() {
     console.log("   [=] User exists: admin@test.com (updated)");
   }
 
+  // --- Super Admin User ---
+  let superAdminUser = await prisma.user.findUnique({
+    where: { email: "superadmin@test.com" },
+  });
+
+  if (!superAdminUser) {
+    superAdminUser = await prisma.user.create({
+      data: {
+        email: "superadmin@test.com",
+        passwordHash: hashedPassword,
+        firstName: "Test",
+        lastName: "SuperAdmin",
+        phone: "+251955555555",
+        role: "SUPER_ADMIN",
+        status: "ACTIVE",
+        isActive: true,
+      },
+    });
+    console.log("   [+] Created user: superadmin@test.com");
+  } else {
+    await prisma.user.update({
+      where: { id: superAdminUser.id },
+      data: {
+        passwordHash: hashedPassword,
+        status: "ACTIVE",
+        isActive: true,
+      },
+    });
+    console.log("   [=] User exists: superadmin@test.com (updated)");
+  }
+
   // --- Dispatcher User & Organization ---
   let dispatchOrg = await prisma.organization.findFirst({
     where: { name: "Dispatch Center" },
@@ -866,11 +897,22 @@ async function main() {
   console.log("  SEED COMPLETED SUCCESSFULLY");
   console.log("========================================\n");
 
-  console.log("Test Users (password: password):");
-  console.log("  - shipper@test.com    (Shipper role)");
-  console.log("  - carrier@test.com    (Carrier role)");
-  console.log("  - dispatcher@test.com (Dispatcher role)");
-  console.log("  - admin@test.com      (Admin role)");
+  console.log("Test Users:");
+  console.log(
+    "  - shipper@test.com      (Shipper role,     password: Test123!)"
+  );
+  console.log(
+    "  - carrier@test.com      (Carrier role,     password: Test123!)"
+  );
+  console.log(
+    "  - admin@test.com        (Admin role,       password: Test123!)"
+  );
+  console.log(
+    "  - superadmin@test.com   (SuperAdmin role,  password: Test123!)"
+  );
+  console.log(
+    "  - dispatcher@test.com   (Dispatcher role,  password: password)"
+  );
   console.log("");
 
   console.log("Test Organizations:");
