@@ -124,7 +124,7 @@ describe("Admin Withdrawals API", () => {
         "http://localhost:3000/api/admin/withdrawals"
       );
       const res = await listWithdrawals(req);
-      expect(res.status).toBe(500);
+      expect(res.status).toBe(403);
     });
 
     it("GET returns 403 for SHIPPER", async () => {

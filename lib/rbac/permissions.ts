@@ -112,6 +112,7 @@ export enum Permission {
   VIEW_ANALYTICS = "view_analytics", // Admin (limited), SuperAdmin (full)
   VIEW_FULL_ANALYTICS = "view_full_analytics", // SuperAdmin only
   VIEW_AUDIT_LOGS = "view_audit_logs", // SuperAdmin only
+  VIEW_PLATFORM_METRICS = "view_platform_metrics", // SuperAdmin only
 
   // Platform Configuration
   MANAGE_SYSTEM_CONFIG = "manage_system_config", // SuperAdmin only

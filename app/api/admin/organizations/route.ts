@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireActiveUser } from "@/lib/auth";
+import { requirePermission, Permission } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { Prisma, VerificationStatus } from "@prisma/client";
 import { handleApiError } from "@/lib/apiErrors";
@@ -25,15 +25,7 @@ import { handleApiError } from "@/lib/apiErrors";
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireActiveUser();
-
-    // Check admin access
-    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
-      return NextResponse.json(
-        { error: "Admin access required" },
-        { status: 403 }
-      );
-    }
+    await requirePermission(Permission.VIEW_ORGANIZATIONS);
 
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get("page") || "1"));

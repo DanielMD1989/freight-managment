@@ -13,18 +13,14 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission, Permission } from "@/lib/rbac";
 import { roundMoney } from "@/lib/rounding";
 import { handleApiError } from "@/lib/apiErrors";
 import { getDateRangeForPeriod, type TimePeriod } from "@/lib/admin/metrics";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireAuth();
-
-    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+    await requirePermission(Permission.VIEW_SERVICE_FEE_REPORTS);
 
     const { searchParams } = new URL(request.url);
     const period = (searchParams.get("period") || "month") as TimePeriod;

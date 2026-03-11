@@ -40,7 +40,6 @@ import {
   mockSms,
   mockMatchingEngine,
   mockDispatcherPermissions,
-  mockRbac,
   mockApiErrors,
   mockLogger,
   mockLoadStateMachine,
@@ -67,7 +66,6 @@ mockFoundationRules();
 mockSms();
 mockMatchingEngine();
 mockDispatcherPermissions();
-mockRbac();
 mockApiErrors();
 mockLogger();
 mockLoadStateMachine();
@@ -77,6 +75,36 @@ mockBypassDetection();
 mockStorage();
 mockAssignmentConflicts();
 mockServiceFeeCalculation();
+
+// ─── RBAC mock — uses real hasPermission logic ────────────────────────────────
+jest.mock("@/lib/rbac", () => {
+  const actual = jest.requireActual("@/lib/rbac/permissions");
+  return {
+    requirePermission: jest.fn(async (permission: string) => {
+      const { getAuthSession } = require("../../utils/routeTestUtils");
+      const session = getAuthSession();
+      if (!session) {
+        const error = new Error("Unauthorized");
+        (error as any).name = "ForbiddenError";
+        throw error;
+      }
+      if (!actual.hasPermission(session.role, permission)) {
+        const error = new Error("Insufficient permissions");
+        (error as any).name = "ForbiddenError";
+        throw error;
+      }
+      return session;
+    }),
+    Permission: actual.Permission,
+    hasPermission: actual.hasPermission,
+    ForbiddenError: class ForbiddenError extends Error {
+      constructor(msg = "Forbidden") {
+        super(msg);
+        this.name = "ForbiddenError";
+      }
+    },
+  };
+});
 
 // ─── Handler (imported after mocks) ───────────────────────────────────────────
 

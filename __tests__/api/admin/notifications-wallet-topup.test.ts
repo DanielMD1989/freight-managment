@@ -54,9 +54,10 @@ mockLogger();
 jest.mock("@/lib/apiErrors", () => ({
   handleApiError: jest.fn((error: any) => {
     const { NextResponse } = require("next/server");
+    const status = error?.name === "ForbiddenError" ? 403 : 500;
     return NextResponse.json(
       { error: error?.message || "Internal server error" },
-      { status: 500 }
+      { status }
     );
   }),
 }));

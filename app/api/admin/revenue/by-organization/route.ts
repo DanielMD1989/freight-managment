@@ -11,7 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission, Permission } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { handleApiError } from "@/lib/apiErrors";
 import { roundMoney } from "@/lib/rounding";
@@ -19,28 +19,40 @@ import { getDateRangeForPeriod, type TimePeriod } from "@/lib/admin/metrics";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireAuth();
-
-    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+    await requirePermission(Permission.VIEW_SERVICE_FEE_REPORTS);
 
     const { searchParams } = new URL(request.url);
     const period = (searchParams.get("period") || "month") as TimePeriod;
     const { start, end } = getDateRangeForPeriod(period);
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const limit = Math.min(
+      100,
+      Math.max(1, parseInt(searchParams.get("limit") || "50"))
+    );
+    const skip = (page - 1) * limit;
 
     // ── Shipper breakdown (direct FK on Load) ─────────────────────────────
-    const shipperLoads = await db.load.findMany({
-      where: {
-        shipperFeeStatus: "DEDUCTED",
-        shipperFeeDeductedAt: { gte: start, lte: end },
-      },
-      select: {
-        shipperId: true,
-        shipperServiceFee: true,
-        shipper: { select: { id: true, name: true } },
-      },
-    });
+    const [shipperLoads, totalShipperCount] = await Promise.all([
+      db.load.findMany({
+        where: {
+          shipperFeeStatus: "DEDUCTED",
+          shipperFeeDeductedAt: { gte: start, lte: end },
+        },
+        select: {
+          shipperId: true,
+          shipperServiceFee: true,
+          shipper: { select: { id: true, name: true } },
+        },
+        skip,
+        take: limit,
+      }),
+      db.load.count({
+        where: {
+          shipperFeeStatus: "DEDUCTED",
+          shipperFeeDeductedAt: { gte: start, lte: end },
+        },
+      }),
+    ]);
 
     const shipperMap = new Map<
       string,
@@ -71,21 +83,31 @@ export async function GET(request: NextRequest) {
     }));
 
     // ── Carrier breakdown (indirect: Load → Truck → Organization) ─────────
-    const carrierLoads = await db.load.findMany({
-      where: {
-        carrierFeeStatus: "DEDUCTED",
-        carrierFeeDeductedAt: { gte: start, lte: end },
-      },
-      select: {
-        carrierServiceFee: true,
-        assignedTruck: {
-          select: {
-            carrierId: true,
-            carrier: { select: { id: true, name: true } },
+    const [carrierLoads, totalCarrierCount] = await Promise.all([
+      db.load.findMany({
+        where: {
+          carrierFeeStatus: "DEDUCTED",
+          carrierFeeDeductedAt: { gte: start, lte: end },
+        },
+        select: {
+          carrierServiceFee: true,
+          assignedTruck: {
+            select: {
+              carrierId: true,
+              carrier: { select: { id: true, name: true } },
+            },
           },
         },
-      },
-    });
+        skip,
+        take: limit,
+      }),
+      db.load.count({
+        where: {
+          carrierFeeStatus: "DEDUCTED",
+          carrierFeeDeductedAt: { gte: start, lte: end },
+        },
+      }),
+    ]);
 
     const carrierMap = new Map<
       string,
@@ -135,6 +157,11 @@ export async function GET(request: NextRequest) {
         totalShipperFees: roundMoney(totalShipperFees),
         totalCarrierFees: roundMoney(totalCarrierFees),
         totalRevenue: roundMoney(totalShipperFees + totalCarrierFees),
+      },
+      pagination: {
+        page,
+        limit,
+        total: Math.max(totalShipperCount, totalCarrierCount),
       },
     });
   } catch (error) {

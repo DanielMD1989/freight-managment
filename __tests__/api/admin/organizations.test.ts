@@ -142,7 +142,7 @@ describe("Admin Organizations API", () => {
         "http://localhost:3000/api/admin/organizations"
       );
       const res = await listOrganizations(req);
-      expect(res.status).toBe(500);
+      expect(res.status).toBe(403);
     });
 
     it("GET returns 403 for SHIPPER", async () => {

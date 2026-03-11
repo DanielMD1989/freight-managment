@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireActiveUser } from "@/lib/auth";
+import { requirePermission, Permission } from "@/lib/rbac";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { z } from "zod";
 import { Decimal } from "decimal.js";
@@ -107,15 +107,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const session = await requireActiveUser();
-
-    // Only admins can view corridors
-    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
-      return NextResponse.json(
-        { error: "Unauthorized - Admin access required" },
-        { status: 403 }
-      );
-    }
+    await requirePermission(Permission.CONFIGURE_SERVICE_FEES);
 
     const { searchParams } = new URL(request.url);
     const isActive = searchParams.get("isActive");
@@ -297,15 +289,7 @@ export async function POST(request: NextRequest) {
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requireActiveUser();
-
-    // Only admins can create corridors
-    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
-      return NextResponse.json(
-        { error: "Unauthorized - Admin access required" },
-        { status: 403 }
-      );
-    }
+    const session = await requirePermission(Permission.CONFIGURE_SERVICE_FEES);
 
     const body = await request.json();
     const validatedData = createCorridorSchema.parse(body);

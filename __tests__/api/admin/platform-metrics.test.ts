@@ -118,8 +118,8 @@ describe("Admin Platform Metrics API", () => {
     expect(body.metrics.financial).toBeDefined();
   });
 
-  // PLM-2: ADMIN GET → 403 (MANAGE_USERS is SUPER_ADMIN only)
-  it("PLM-2: ADMIN GET → 403 (MANAGE_USERS is SUPER_ADMIN only)", async () => {
+  // PLM-2: ADMIN GET → 403 (VIEW_PLATFORM_METRICS is SUPER_ADMIN only)
+  it("PLM-2: ADMIN GET → 403 (VIEW_PLATFORM_METRICS is SUPER_ADMIN only)", async () => {
     useAdminSession();
     const req = createRequest(
       "GET",
@@ -160,5 +160,38 @@ describe("Admin Platform Metrics API", () => {
     );
     const res = await getPlatformMetrics(req);
     expect(res.status).toBe(403);
+  });
+
+  // PM-1: No session → 403
+  it("PM-1: No session → 403", async () => {
+    // setAuthSession(null) is called in beforeEach
+    const req = createRequest(
+      "GET",
+      "http://localhost:3000/api/admin/platform-metrics"
+    );
+    const res = await getPlatformMetrics(req);
+    expect(res.status).toBe(403);
+  });
+
+  // PM-2: ADMIN → 403 (VIEW_PLATFORM_METRICS is SUPER_ADMIN only)
+  it("PM-2: ADMIN → 403 (VIEW_PLATFORM_METRICS is SUPER_ADMIN only)", async () => {
+    useAdminSession();
+    const req = createRequest(
+      "GET",
+      "http://localhost:3000/api/admin/platform-metrics"
+    );
+    const res = await getPlatformMetrics(req);
+    expect(res.status).toBe(403);
+  });
+
+  // PM-3: SUPER_ADMIN → 200 (has VIEW_PLATFORM_METRICS)
+  it("PM-3: SUPER_ADMIN → 200 (has VIEW_PLATFORM_METRICS)", async () => {
+    useSuperAdminSession();
+    const req = createRequest(
+      "GET",
+      "http://localhost:3000/api/admin/platform-metrics"
+    );
+    const res = await getPlatformMetrics(req);
+    expect(res.status).toBe(200);
   });
 });

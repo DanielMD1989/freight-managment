@@ -6,9 +6,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission, Permission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { checkRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
+import { handleApiError } from "@/lib/apiErrors";
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,11 +30,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const session = await requireAuth();
-
-    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    await requirePermission(Permission.APPROVE_WITHDRAWALS);
 
     const { searchParams } = request.nextUrl;
     const status = searchParams.get("status");
@@ -42,9 +39,14 @@ export async function GET(request: NextRequest) {
       parseInt(searchParams.get("limit") || "20", 10),
       100
     );
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
 
     const where: Prisma.WithdrawalRequestWhereInput = {};
     if (status) where.status = status;
+    if (startDate && endDate) {
+      where.createdAt = { gte: new Date(startDate), lte: new Date(endDate) };
+    }
 
     const [withdrawals, total] = await Promise.all([
       db.withdrawalRequest.findMany({
@@ -61,10 +63,6 @@ export async function GET(request: NextRequest) {
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     });
   } catch (error) {
-    console.error("Admin withdrawals list error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Admin withdrawals list error");
   }
 }

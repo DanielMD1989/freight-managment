@@ -23,7 +23,7 @@ import { ACTIVE_TRIP_STATUSES } from "@/lib/tripStateMachine";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(request: NextRequest) {
   try {
-    await requirePermission(Permission.MANAGE_USERS); // SuperAdmin only
+    await requirePermission(Permission.VIEW_PLATFORM_METRICS); // SuperAdmin only
 
     // Fetch all metrics in parallel for performance
     const [

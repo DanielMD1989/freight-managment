@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission, Permission } from "@/lib/rbac";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { handleApiError } from "@/lib/apiErrors";
 import { z } from "zod";
@@ -29,10 +29,7 @@ export async function PATCH(
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requireAuth();
-    if (!["ADMIN", "SUPER_ADMIN"].includes(session.role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    await requirePermission(Permission.MANAGE_WALLET);
 
     const { id } = await params;
     const body = await request.json();
@@ -84,12 +81,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await requireAuth();
-
-    // Only admins can access this endpoint
-    if (!["ADMIN", "SUPER_ADMIN"].includes(session.role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    await requirePermission(Permission.MANAGE_WALLET);
 
     const { id } = await params;
 

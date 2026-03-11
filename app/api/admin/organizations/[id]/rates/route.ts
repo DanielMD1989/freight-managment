@@ -13,7 +13,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireActiveUser } from "@/lib/auth";
+import { requirePermission, Permission } from "@/lib/rbac";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { handleApiError } from "@/lib/apiErrors";
 import { z } from "zod";
@@ -46,14 +46,7 @@ export async function PATCH(
     if (csrfError) return csrfError;
 
     const { id: orgId } = await params;
-    const session = await requireActiveUser();
-
-    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
-      return NextResponse.json(
-        { error: "Unauthorized - Admin access required" },
-        { status: 403 }
-      );
-    }
+    await requirePermission(Permission.CONFIGURE_SERVICE_FEES);
 
     const body = await request.json();
     const parseResult = orgRatesSchema.safeParse(body);
