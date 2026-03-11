@@ -8,9 +8,11 @@ import { StatusBar } from "expo-status-bar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { Alert } from "react-native";
 import { useAuthStore } from "../src/stores/auth";
 import { useSettingsStore } from "../src/stores/settings";
 import { LoadingSpinner } from "../src/components/LoadingSpinner";
+import { ErrorBoundary } from "../src/components/ErrorBoundary";
 import { pushService } from "../src/services/push";
 import { getNotificationRoute } from "../src/utils/notificationRouting";
 import type { NotificationMetadata } from "../src/utils/notificationRouting";
@@ -81,8 +83,21 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       // Authenticated - check status and role
       const status = user.status;
 
-      if (status !== "ACTIVE" && status !== "REGISTERED") {
-        // Pending verification - redirect to waiting screen
+      if (status !== "ACTIVE") {
+        // REJECTED users get a dedicated screen with rejection reason + resubmit
+        if (status === "REJECTED") {
+          // G-M4-6: Allow REJECTED users to navigate to profile (for document re-upload)
+          // in addition to account-rejected screen
+          const allowedForRejected = ["account-rejected", "profile"];
+          if (
+            segments[0] !== "(shared)" ||
+            !allowedForRejected.includes((segments as string[])[1])
+          ) {
+            router.replace("/(shared)/account-rejected");
+          }
+          return;
+        }
+        // REGISTERED, PENDING_VERIFICATION, SUSPENDED → waiting screen
         if (
           segments[0] !== "(shared)" ||
           (segments as string[])[1] !== "pending-verification"
@@ -109,7 +124,19 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         } else if (role === "SHIPPER") {
           router.replace("/(shipper)/");
         } else {
-          router.replace("/(carrier)/"); // Default
+          // DISPATCHER/ADMIN roles are not supported on mobile — log out
+          Alert.alert(
+            "Unsupported Role",
+            "Admin and Dispatcher accounts must use the web app. You will be logged out.",
+            [
+              {
+                text: "OK",
+                onPress: () => {
+                  useAuthStore.getState().logout();
+                },
+              },
+            ]
+          );
         }
       }
     }
@@ -126,18 +153,20 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <AuthGuard>
-            <StatusBar style="auto" />
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="onboarding" />
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(carrier)" />
-              <Stack.Screen name="(shipper)" />
-              <Stack.Screen name="(shared)" />
-            </Stack>
-          </AuthGuard>
-        </QueryClientProvider>
+        <ErrorBoundary>
+          <QueryClientProvider client={queryClient}>
+            <AuthGuard>
+              <StatusBar style="auto" />
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="onboarding" />
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="(carrier)" />
+                <Stack.Screen name="(shipper)" />
+                <Stack.Screen name="(shared)" />
+              </Stack>
+            </AuthGuard>
+          </QueryClientProvider>
+        </ErrorBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

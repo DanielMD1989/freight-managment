@@ -207,7 +207,7 @@ describe("Load Hooks", () => {
       );
     });
 
-    it('should invalidate BOTH ["load-requests"] AND ["loads"] on success', () => {
+    it("should invalidate load-requests+loads+cross-domain keys on success", () => {
       useRespondToLoadRequest();
       capturedMutationOptions.onSuccess();
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
@@ -216,7 +216,22 @@ describe("Load Hooks", () => {
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
         queryKey: ["loads"],
       });
-      expect(mockInvalidateQueries).toHaveBeenCalledTimes(2);
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["truck-requests"],
+      });
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["trips"],
+      });
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["truck-postings"],
+      });
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["carrier-dashboard"],
+      });
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["shipper-dashboard"],
+      });
+      expect(mockInvalidateQueries).toHaveBeenCalledTimes(7);
     });
   });
 

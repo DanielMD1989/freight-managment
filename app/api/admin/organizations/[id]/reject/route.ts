@@ -11,7 +11,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireActiveUser } from "@/lib/auth";
+import { requireActiveUser, revokeAllSessions } from "@/lib/auth";
+import { CacheInvalidation } from "@/lib/cache";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { writeAuditLog, AuditEventType, AuditSeverity } from "@/lib/auditLog";
 import { createNotification } from "@/lib/notifications";
@@ -97,7 +98,7 @@ export async function POST(
       },
     });
 
-    // Notify all active/pending users in the org
+    // G-M3-2: Update all org members to REJECTED status + revoke sessions
     const orgUsers = await db.user.findMany({
       where: {
         organizationId: orgId,
@@ -106,6 +107,25 @@ export async function POST(
       select: { id: true },
     });
 
+    // Cascade REJECTED status to all org members
+    if (orgUsers.length > 0) {
+      await db.user.updateMany({
+        where: {
+          id: { in: orgUsers.map((u) => u.id) },
+        },
+        data: { status: "REJECTED" },
+      });
+
+      // Revoke sessions + invalidate cache for each member
+      await Promise.all(
+        orgUsers.map(async (u) => {
+          await revokeAllSessions(u.id);
+          await CacheInvalidation.user(u.id);
+        })
+      );
+    }
+
+    // Notify all org members
     await Promise.all(
       orgUsers.map((u) =>
         createNotification({

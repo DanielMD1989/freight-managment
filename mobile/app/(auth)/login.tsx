@@ -2,7 +2,7 @@
  * Login Screen
  * Ported from Flutter's login_screen.dart (409 LOC)
  */
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
-  Alert,
   TouchableOpacity,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -36,9 +35,80 @@ type LoginForm = z.infer<typeof loginSchema>;
 export default function LoginScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { login, verifyMfa, isLoading, error, mfaPending, clearError } =
-    useAuthStore();
+  const {
+    login,
+    verifyMfa,
+    resendMfa,
+    isLoading,
+    error,
+    mfaPending,
+    phoneLastFour,
+    mfaExpiresAt,
+    clearError,
+  } = useAuthStore();
   const [mfaCode, setMfaCode] = useState("");
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(0);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Expiry countdown
+  useEffect(() => {
+    if (!mfaPending || !mfaExpiresAt) {
+      setSecondsLeft(0);
+      return;
+    }
+    const update = () => {
+      const remaining = Math.max(
+        0,
+        Math.ceil((mfaExpiresAt - Date.now()) / 1000)
+      );
+      setSecondsLeft(remaining);
+      if (remaining <= 0 && timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+    update();
+    timerRef.current = setInterval(update, 1000);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [mfaPending, mfaExpiresAt]);
+
+  // Resend cooldown
+  useEffect(() => {
+    if (resendCooldown <= 0) {
+      if (cooldownRef.current) clearInterval(cooldownRef.current);
+      return;
+    }
+    cooldownRef.current = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          if (cooldownRef.current) clearInterval(cooldownRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (cooldownRef.current) clearInterval(cooldownRef.current);
+    };
+  }, [resendCooldown]);
+
+  const handleResend = useCallback(async () => {
+    if (resendCooldown > 0 || isLoading) return;
+    setMfaError(null);
+    clearError();
+    try {
+      await resendMfa();
+      setResendCooldown(30);
+      setMfaCode("");
+    } catch {
+      // Error is set in store
+    }
+  }, [resendCooldown, isLoading, resendMfa, clearError]);
 
   const {
     control,
@@ -59,8 +129,17 @@ export default function LoginScreen() {
   };
 
   const onMfaSubmit = async () => {
+    setMfaError(null);
     if (mfaCode.length < 6) {
-      Alert.alert("Error", "Please enter a valid 6-digit code");
+      setMfaError(
+        t("auth.mfaInvalidCode", "Please enter a valid 6-digit code")
+      );
+      return;
+    }
+    if (secondsLeft <= 0) {
+      setMfaError(
+        t("auth.mfaExpired", "Code expired. Please resend a new code.")
+      );
       return;
     }
     try {
@@ -88,14 +167,24 @@ export default function LoginScreen() {
               color={colors.primary500}
             />
             <Text style={styles.title}>{t("auth.mfaTitle")}</Text>
-            <Text style={styles.subtitle}>{t("auth.mfaSubtitle")}</Text>
+            <Text style={styles.subtitle}>
+              {phoneLastFour
+                ? t("auth.mfaSubtitlePhone", {
+                    phone: phoneLastFour,
+                    defaultValue: `Enter the code sent to ••••${phoneLastFour}`,
+                  })
+                : t("auth.mfaSubtitle")}
+            </Text>
           </View>
 
           <View style={styles.form}>
             <Input
               label={t("auth.mfaCode")}
               value={mfaCode}
-              onChangeText={setMfaCode}
+              onChangeText={(text: string) => {
+                setMfaCode(text);
+                setMfaError(null);
+              }}
               keyboardType="number-pad"
               maxLength={6}
               placeholder="000000"
@@ -108,15 +197,58 @@ export default function LoginScreen() {
               }
             />
 
-            {error && <Text style={styles.error}>{error}</Text>}
+            {secondsLeft > 0 && (
+              <Text style={styles.countdown}>
+                {t("auth.mfaExpiresIn", {
+                  minutes: Math.floor(secondsLeft / 60),
+                  seconds: String(secondsLeft % 60).padStart(2, "0"),
+                  defaultValue: `Code expires in ${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, "0")}`,
+                })}
+              </Text>
+            )}
+
+            {secondsLeft <= 0 && mfaPending && mfaExpiresAt && (
+              <Text style={styles.error}>
+                {t(
+                  "auth.mfaExpired",
+                  "Code expired. Please resend a new code."
+                )}
+              </Text>
+            )}
+
+            {(mfaError || error) && (
+              <Text style={styles.error}>{mfaError || error}</Text>
+            )}
 
             <Button
               title={t("auth.verify")}
               onPress={onMfaSubmit}
               loading={isLoading}
+              disabled={secondsLeft <= 0}
               fullWidth
               size="lg"
             />
+
+            <TouchableOpacity
+              style={styles.resendButton}
+              onPress={handleResend}
+              disabled={resendCooldown > 0 || isLoading}
+            >
+              <Text
+                style={[
+                  styles.resendText,
+                  (resendCooldown > 0 || isLoading) &&
+                    styles.resendTextDisabled,
+                ]}
+              >
+                {resendCooldown > 0
+                  ? t("auth.mfaResendCooldown", {
+                      seconds: resendCooldown,
+                      defaultValue: `Resend code (${resendCooldown}s)`,
+                    })
+                  : t("auth.mfaResend", "Resend Code")}
+              </Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -269,6 +401,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.errorLight,
     borderRadius: 8,
     overflow: "hidden",
+  },
+  countdown: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    textAlign: "center",
+    marginBottom: spacing.sm,
+  },
+  resendButton: {
+    alignItems: "center",
+    marginTop: spacing.lg,
+  },
+  resendText: {
+    ...typography.labelLarge,
+    color: colors.primary600,
+  },
+  resendTextDisabled: {
+    color: colors.slate400,
   },
   forgotPassword: {
     alignItems: "center",

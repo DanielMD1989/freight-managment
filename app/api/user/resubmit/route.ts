@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireRegistrationAccess } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { handleApiError } from "@/lib/apiErrors";
 import {
@@ -25,7 +25,9 @@ export async function POST(request: NextRequest) {
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requireAuth();
+    // G-M4-5: Use requireRegistrationAccess — blocks SUSPENDED at guard level
+    // (allows REGISTERED, PENDING_VERIFICATION, ACTIVE, REJECTED)
+    const session = await requireRegistrationAccess();
 
     const user = await db.user.findUnique({
       where: { id: session.userId },
@@ -45,13 +47,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "No organization associated with your account" },
         { status: 400 }
-      );
-    }
-
-    if (user.status === "SUSPENDED") {
-      return NextResponse.json(
-        { error: "Suspended accounts cannot resubmit" },
-        { status: 403 }
       );
     }
 
@@ -85,8 +80,8 @@ export async function POST(request: NextRequest) {
       console.error("Failed to notify admins of resubmit:", err)
     );
 
-    // Transition REGISTERED user to PENDING_VERIFICATION
-    if (user.status === "REGISTERED") {
+    // G-M3-4: Transition REGISTERED or REJECTED user to PENDING_VERIFICATION
+    if (user.status === "REGISTERED" || user.status === "REJECTED") {
       await db.user.update({
         where: { id: session.userId },
         data: { status: "PENDING_VERIFICATION" },
@@ -101,8 +96,16 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (error instanceof Error) {
+      if (
+        error.message === "Unauthorized" ||
+        error.message === "Unauthorized: User not found"
+      ) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      if (error.message.startsWith("Forbidden")) {
+        return NextResponse.json({ error: error.message }, { status: 403 });
+      }
     }
     return handleApiError(error, "Resubmit error");
   }

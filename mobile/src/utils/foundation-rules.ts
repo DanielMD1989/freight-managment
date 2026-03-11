@@ -172,8 +172,9 @@ export function isLoadInProgress(status: LoadStatus): boolean {
 const VALID_TRIP_TRANSITIONS: Record<string, string[]> = {
   ASSIGNED: ["PICKUP_PENDING", "CANCELLED"],
   PICKUP_PENDING: ["IN_TRANSIT", "CANCELLED"],
-  IN_TRANSIT: ["DELIVERED", "CANCELLED"],
-  DELIVERED: ["COMPLETED", "CANCELLED"],
+  IN_TRANSIT: ["DELIVERED", "EXCEPTION"],
+  DELIVERED: ["COMPLETED"],
+  EXCEPTION: ["ASSIGNED", "IN_TRANSIT", "CANCELLED", "COMPLETED"],
   COMPLETED: [],
   CANCELLED: [],
 };
@@ -194,7 +195,8 @@ export function isTripActive(status: TripStatus): boolean {
   return (
     status === "ASSIGNED" ||
     status === "PICKUP_PENDING" ||
-    status === "IN_TRANSIT"
+    status === "IN_TRANSIT" ||
+    status === "EXCEPTION"
   );
 }
 

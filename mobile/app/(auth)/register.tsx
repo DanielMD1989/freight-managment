@@ -26,17 +26,40 @@ import { colors } from "../../src/theme/colors";
 import { spacing, borderRadius } from "../../src/theme/spacing";
 import { typography } from "../../src/theme/typography";
 
+// G-REG-3: Password regex matching backend validatePasswordPolicy
+const PASSWORD_REGEX =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+
+// G-REG-2: Carrier type enum options matching API z.enum
+const CARRIER_TYPE_OPTIONS = [
+  { value: "CARRIER_COMPANY", label: "Company" },
+  { value: "CARRIER_INDIVIDUAL", label: "Individual" },
+  { value: "FLEET_OWNER", label: "Fleet Owner" },
+] as const;
+
 const registerSchema = z
   .object({
     email: z.string().min(1, "Email is required").email("Invalid email"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
+    // G-REG-3: Full password policy enforcement
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(
+        PASSWORD_REGEX,
+        "Must include uppercase, lowercase, number, and special character"
+      ),
     confirmPassword: z.string().min(1, "Please confirm password"),
     firstName: z.string().min(1, "First name is required"),
     lastName: z.string().min(1, "Last name is required"),
     phone: z.string().min(1, "Phone number is required"),
-    companyName: z.string().min(1, "Company name is required"),
+    // G-REG-1: companyName optional — conditionally required per role in onSubmit
+    companyName: z.string().max(200).optional(),
     carrierType: z.string().optional(),
     associationId: z.string().optional(),
+    // G-REG-4: organizationId for DISPATCHER joining existing org
+    organizationId: z.string().max(50).optional(),
+    // G-REG-5: optional taxId for SHIPPER/CARRIER
+    taxId: z.string().max(50).optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -56,6 +79,8 @@ export default function RegisterScreen() {
     control,
     handleSubmit,
     formState: { errors },
+    setValue,
+    clearErrors,
   } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -68,10 +93,17 @@ export default function RegisterScreen() {
       companyName: "",
       carrierType: "",
       associationId: "",
+      organizationId: "",
+      taxId: "",
     },
   });
 
   const onSubmit = async (data: RegisterForm) => {
+    // G-REG-1: Validate companyName required for SHIPPER
+    if (selectedRole === "SHIPPER" && !data.companyName?.trim()) {
+      return;
+    }
+
     clearError();
     try {
       await register({
@@ -81,13 +113,51 @@ export default function RegisterScreen() {
         lastName: data.lastName,
         phone: data.phone,
         role: selectedRole,
-        companyName: data.companyName,
-        carrierType: selectedRole === "CARRIER" ? data.carrierType : undefined,
+        // G-REG-7: Only send companyName for SHIPPER/CARRIER
+        companyName:
+          selectedRole !== "DISPATCHER"
+            ? data.companyName?.trim() || undefined
+            : undefined,
+        carrierType:
+          selectedRole === "CARRIER"
+            ? data.carrierType || undefined
+            : undefined,
         associationId:
-          selectedRole === "CARRIER" ? data.associationId : undefined,
+          selectedRole === "CARRIER"
+            ? data.associationId || undefined
+            : undefined,
+        // G-REG-4: Only send organizationId for DISPATCHER
+        organizationId:
+          selectedRole === "DISPATCHER"
+            ? data.organizationId || undefined
+            : undefined,
+        // G-REG-5: taxId for SHIPPER/CARRIER
+        taxId:
+          selectedRole !== "DISPATCHER"
+            ? data.taxId?.trim() || undefined
+            : undefined,
       });
     } catch {
       // Error is set in store
+    }
+  };
+
+  const handleRoleChange = (role: RoleTab) => {
+    setSelectedRole(role);
+    clearError();
+    // Reset role-specific fields when switching
+    if (role !== "CARRIER") {
+      setValue("carrierType", "");
+      setValue("associationId", "");
+      clearErrors(["carrierType", "associationId"]);
+    }
+    if (role === "DISPATCHER") {
+      setValue("companyName", "");
+      setValue("taxId", "");
+      clearErrors(["companyName", "taxId"]);
+    } else {
+      setValue("organizationId", "");
+      clearErrors(["organizationId"]);
     }
   };
 
@@ -129,7 +199,7 @@ export default function RegisterScreen() {
                 styles.roleTab,
                 selectedRole === role.key && styles.roleTabActive,
               ]}
-              onPress={() => setSelectedRole(role.key)}
+              onPress={() => handleRoleChange(role.key)}
               testID={`role-${role.key.toLowerCase()}`}
             >
               <Ionicons
@@ -221,37 +291,82 @@ export default function RegisterScreen() {
             )}
           />
 
-          <Controller
-            control={control}
-            name="companyName"
-            render={({ field: { onChange, value } }) => (
-              <Input
-                label={t("auth.companyName")}
-                value={value}
-                onChangeText={onChange}
-                error={errors.companyName?.message}
-                required
-                testID="register-companyName"
-              />
-            )}
-          />
+          {/* G-REG-1: companyName — required for SHIPPER, optional for CARRIER, hidden for DISPATCHER */}
+          {selectedRole !== "DISPATCHER" && (
+            <Controller
+              control={control}
+              name="companyName"
+              render={({ field: { onChange, value } }) => (
+                <Input
+                  label={t("auth.companyName")}
+                  value={value ?? ""}
+                  onChangeText={onChange}
+                  error={errors.companyName?.message}
+                  required={selectedRole === "SHIPPER"}
+                  hint={
+                    selectedRole === "CARRIER"
+                      ? "Optional for individual carriers"
+                      : undefined
+                  }
+                  testID="register-companyName"
+                />
+              )}
+            />
+          )}
+
+          {/* G-REG-5: taxId — optional for SHIPPER/CARRIER */}
+          {selectedRole !== "DISPATCHER" && (
+            <Controller
+              control={control}
+              name="taxId"
+              render={({ field: { onChange, value } }) => (
+                <Input
+                  label="Tax ID"
+                  value={value ?? ""}
+                  onChangeText={onChange}
+                  error={errors.taxId?.message}
+                  hint="Optional"
+                  testID="register-taxId"
+                />
+              )}
+            />
+          )}
 
           {/* Carrier-specific fields */}
           {selectedRole === "CARRIER" && (
             <>
-              <Controller
-                control={control}
-                name="carrierType"
-                render={({ field: { onChange, value } }) => (
-                  <Input
-                    label={t("auth.carrierType")}
-                    value={value ?? ""}
-                    onChangeText={onChange}
-                    hint="e.g., CARRIER_COMPANY, CARRIER_INDIVIDUAL"
-                    testID="register-carrierType"
-                  />
-                )}
-              />
+              {/* G-REG-2: carrierType as segmented picker, not free text */}
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>{t("auth.carrierType")}</Text>
+                <Controller
+                  control={control}
+                  name="carrierType"
+                  render={({ field: { onChange, value } }) => (
+                    <View style={styles.segmentedControl}>
+                      {CARRIER_TYPE_OPTIONS.map((opt) => (
+                        <TouchableOpacity
+                          key={opt.value}
+                          style={[
+                            styles.segment,
+                            value === opt.value && styles.segmentActive,
+                          ]}
+                          onPress={() => onChange(opt.value)}
+                          testID={`carrierType-${opt.value}`}
+                        >
+                          <Text
+                            style={[
+                              styles.segmentText,
+                              value === opt.value && styles.segmentTextActive,
+                            ]}
+                          >
+                            {opt.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                />
+              </View>
               <Controller
                 control={control}
                 name="associationId"
@@ -268,6 +383,24 @@ export default function RegisterScreen() {
             </>
           )}
 
+          {/* G-REG-4: organizationId for DISPATCHER */}
+          {selectedRole === "DISPATCHER" && (
+            <Controller
+              control={control}
+              name="organizationId"
+              render={({ field: { onChange, value } }) => (
+                <Input
+                  label="Organization ID"
+                  value={value ?? ""}
+                  onChangeText={onChange}
+                  error={errors.organizationId?.message}
+                  hint="From your invitation link"
+                  testID="register-organizationId"
+                />
+              )}
+            />
+          )}
+
           <Controller
             control={control}
             name="password"
@@ -279,6 +412,7 @@ export default function RegisterScreen() {
                 error={errors.password?.message}
                 isPassword
                 required
+                hint="Min 8 chars: uppercase, lowercase, number, special character"
                 testID="register-password"
               />
             )}
@@ -382,6 +516,37 @@ const styles = StyleSheet.create({
   },
   halfField: {
     flex: 1,
+  },
+  fieldContainer: {
+    marginBottom: spacing.md,
+  },
+  fieldLabel: {
+    ...typography.labelMedium,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  segmentedControl: {
+    flexDirection: "row",
+    gap: spacing.xs,
+    backgroundColor: colors.slate100,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xs,
+  },
+  segment: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    alignItems: "center",
+    borderRadius: borderRadius.md,
+  },
+  segmentActive: {
+    backgroundColor: colors.primary600,
+  },
+  segmentText: {
+    ...typography.labelSmall,
+    color: colors.slate500,
+  },
+  segmentTextActive: {
+    color: colors.white,
   },
   error: {
     ...typography.bodySmall,

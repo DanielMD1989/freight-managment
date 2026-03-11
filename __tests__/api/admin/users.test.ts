@@ -1046,6 +1046,48 @@ describe("Admin Users API", () => {
       });
       expect(u.status).toBe("REJECTED");
     });
+
+    // ── G-M3-3 — revokeAllSessions called when rejecting a user ─────────────
+
+    it("G-M3-3: REJECTED status triggers revokeAllSessions for the user", async () => {
+      useAdminSession();
+
+      await db.user.create({
+        data: {
+          id: "reject-revoke-user-m3",
+          email: "reject-revoke-m3@test.com",
+          passwordHash: "hash",
+          firstName: "RevokeTest",
+          lastName: "User",
+          phone: "+251911009750",
+          role: "CARRIER",
+          status: "PENDING_VERIFICATION",
+        },
+      });
+
+      const authModule = require("@/lib/auth");
+      const revokeAllSessionsSpy = authModule.revokeAllSessions as jest.Mock;
+      revokeAllSessionsSpy.mockClear();
+
+      const req = createRequest(
+        "POST",
+        "http://localhost:3000/api/admin/users/reject-revoke-user-m3/verify",
+        {
+          body: {
+            status: "REJECTED",
+            reason: "Documents are forged or invalid",
+          },
+        }
+      );
+      const res = await callHandler(verifyUser, req, {
+        id: "reject-revoke-user-m3",
+      });
+      expect(res.status).toBe(200);
+
+      expect(revokeAllSessionsSpy).toHaveBeenCalledWith(
+        "reject-revoke-user-m3"
+      );
+    });
   });
 
   // ─── GET /api/admin/users/[id]/wallet ───────────────────────────────────────

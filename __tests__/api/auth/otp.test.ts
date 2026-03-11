@@ -262,6 +262,44 @@ describe("OTP API (G-A1-1)", () => {
     expect(res.status).toBe(429);
   });
 
+  // G-M4-2: SUSPENDED user → 403 on send-otp
+  it("G-M4-2a: SUSPENDED user cannot send OTP → 403", async () => {
+    setAuthSession(
+      createMockSession({
+        userId: otpUser.id,
+        role: "SHIPPER",
+        status: "SUSPENDED",
+        organizationId: undefined,
+      })
+    );
+    const req = createRequest(
+      "POST",
+      "http://localhost:3000/api/auth/send-otp",
+      { body: { channel: "email" } }
+    );
+    const res = await sendOtp(req);
+    expect(res.status).toBe(403);
+  });
+
+  // G-M4-2: SUSPENDED user → 403 on verify-otp
+  it("G-M4-2b: SUSPENDED user cannot verify OTP → 403", async () => {
+    setAuthSession(
+      createMockSession({
+        userId: otpUser.id,
+        role: "SHIPPER",
+        status: "SUSPENDED",
+        organizationId: undefined,
+      })
+    );
+    const req = createRequest(
+      "POST",
+      "http://localhost:3000/api/auth/verify-otp",
+      { body: { code: "123456" } }
+    );
+    const res = await verifyOtp(req);
+    expect(res.status).toBe(403);
+  });
+
   // T-OTP-7: verify-otp unauthenticated → 401
   it("T-OTP-7: verify-otp unauthenticated → 401", async () => {
     setAuthSession(null);

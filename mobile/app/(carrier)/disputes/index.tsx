@@ -39,6 +39,7 @@ const DISPUTE_TYPES: { label: string; value: DisputeType }[] = [
   { label: "Payment Issue", value: "PAYMENT_ISSUE" },
   { label: "Damage", value: "DAMAGE" },
   { label: "Late Delivery", value: "LATE_DELIVERY" },
+  { label: "Quality Issue", value: "QUALITY_ISSUE" },
   { label: "Other", value: "OTHER" },
 ];
 

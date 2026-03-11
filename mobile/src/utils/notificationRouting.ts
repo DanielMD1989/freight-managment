@@ -134,6 +134,17 @@ export function getNotificationRoute(
     case "SETTLEMENT_COMPLETE":
       return isCarrier ? "/(carrier)/wallet" : "/(shipper)/wallet";
 
+    // ── Delivery confirmed ───────────────────────────────────────────────────
+    case "DELIVERY_CONFIRMED": {
+      const entityId = metadata.tripId ?? metadata.loadId;
+      if (entityId) {
+        return isCarrier
+          ? `/(carrier)/trips/${entityId}`
+          : `/(shipper)/trips/${entityId}`;
+      }
+      return isCarrier ? "/(carrier)/trips" : "/(shipper)/trips";
+    }
+
     // ── POD verified ─────────────────────────────────────────────────────────
     case "POD_VERIFIED":
       if (metadata.loadId) {

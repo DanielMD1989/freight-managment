@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireAuth, verifyPassword } from "@/lib/auth";
+import { requireRegistrationAccess, verifyPassword } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { zodErrorResponse } from "@/lib/validation";
 
@@ -24,7 +24,9 @@ export async function POST(request: NextRequest) {
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requireAuth();
+    // G-M4-2: Use requireRegistrationAccess — blocks SUSPENDED while allowing
+    // REGISTERED, PENDING_VERIFICATION, ACTIVE, and REJECTED users
+    const session = await requireRegistrationAccess();
 
     const body = await request.json().catch(() => ({}));
     const parsed = verifyOtpSchema.safeParse(body);
@@ -87,8 +89,16 @@ export async function POST(request: NextRequest) {
       isPhoneVerified: updatedUser.isPhoneVerified,
     });
   } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (error instanceof Error) {
+      if (
+        error.message === "Unauthorized" ||
+        error.message === "Unauthorized: User not found"
+      ) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      if (error.message.startsWith("Forbidden")) {
+        return NextResponse.json({ error: error.message }, { status: 403 });
+      }
     }
     console.error("Verify OTP error:", error);
     return NextResponse.json(

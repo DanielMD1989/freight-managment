@@ -49,6 +49,7 @@ export type TripStatus =
   | "IN_TRANSIT"
   | "DELIVERED"
   | "COMPLETED"
+  | "EXCEPTION"
   | "CANCELLED";
 
 export type TruckType =
@@ -388,6 +389,9 @@ export interface Trip {
   shipperConfirmed: boolean;
   shipperConfirmedAt?: Date | null;
   shipperConfirmedBy?: string | null;
+
+  // Exception
+  exceptionAt?: Date | null;
 
   // Cancellation
   cancelledAt?: Date | null;

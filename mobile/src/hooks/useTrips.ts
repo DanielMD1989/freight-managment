@@ -46,6 +46,11 @@ export function useUpdateTripStatus() {
     }) => tripService.updateTripStatus(id, status, extra),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TRIPS_KEY });
+      queryClient.invalidateQueries({ queryKey: ["loads"] });
+      queryClient.invalidateQueries({ queryKey: ["truck-postings"] });
+      queryClient.invalidateQueries({ queryKey: ["wallet"] });
+      queryClient.invalidateQueries({ queryKey: ["carrier-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["shipper-dashboard"] });
     },
   });
 }
@@ -58,6 +63,11 @@ export function useCancelTrip() {
       tripService.cancelTrip(id, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TRIPS_KEY });
+      queryClient.invalidateQueries({ queryKey: ["loads"] });
+      queryClient.invalidateQueries({ queryKey: ["truck-postings"] });
+      queryClient.invalidateQueries({ queryKey: ["wallet"] });
+      queryClient.invalidateQueries({ queryKey: ["carrier-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["shipper-dashboard"] });
     },
   });
 }
@@ -75,6 +85,9 @@ export function useUploadPod() {
     }) => tripService.uploadPod(tripId, formData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TRIPS_KEY });
+      queryClient.invalidateQueries({ queryKey: ["loads"] });
+      queryClient.invalidateQueries({ queryKey: ["wallet"] });
+      queryClient.invalidateQueries({ queryKey: ["carrier-dashboard"] });
     },
   });
 }
@@ -96,6 +109,10 @@ export function useConfirmDelivery() {
       tripService.confirmDelivery(tripId, notes),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TRIPS_KEY });
+      queryClient.invalidateQueries({ queryKey: ["loads"] });
+      queryClient.invalidateQueries({ queryKey: ["wallet"] });
+      queryClient.invalidateQueries({ queryKey: ["carrier-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["shipper-dashboard"] });
     },
   });
 }

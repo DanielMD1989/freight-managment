@@ -100,6 +100,24 @@ export function mockAuth() {
       }
       return { ...session, dbStatus: session.status };
     }),
+    requireRegistrationAccess: jest.fn(async () => {
+      const { getAuthSession } = require("../utils/routeTestUtils");
+      const session = getAuthSession();
+      if (!session) throw new Error("Unauthorized");
+      const allowed = [
+        "REGISTERED",
+        "PENDING_VERIFICATION",
+        "ACTIVE",
+        "REJECTED",
+      ];
+      if (!allowed.includes(session.status || "")) {
+        if (session.status === "SUSPENDED") {
+          throw new Error("Forbidden: Account suspended");
+        }
+        throw new Error("Forbidden: Account inactive");
+      }
+      return { ...session, dbStatus: session.status };
+    }),
     getSessionAny: jest.fn(async () => {
       const { getAuthSession } = require("../utils/routeTestUtils");
       return getAuthSession();
@@ -115,11 +133,18 @@ export function mockAuth() {
     })),
     createSessionToken: jest.fn(async () => "mock-session-token"),
     isLoginAllowed: jest.fn((status: string) => ({
-      allowed: status === "ACTIVE" || status === "PENDING_VERIFICATION",
-      limited: status === "PENDING_VERIFICATION",
+      allowed:
+        status === "ACTIVE" ||
+        status === "REGISTERED" ||
+        status === "PENDING_VERIFICATION" ||
+        status === "REJECTED",
+      limited:
+        status === "REGISTERED" ||
+        status === "PENDING_VERIFICATION" ||
+        status === "REJECTED",
       error:
-        status !== "ACTIVE" && status !== "PENDING_VERIFICATION"
-          ? `Account status: ${status}`
+        status === "SUSPENDED"
+          ? "Account suspended. Please contact support."
           : undefined,
     })),
     generateOTP: jest.fn(() => "123456"),

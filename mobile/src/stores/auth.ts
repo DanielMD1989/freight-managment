@@ -29,11 +29,16 @@ interface AuthState {
   // MFA state
   mfaPending: boolean;
   mfaToken: string | null;
+  phoneLastFour: string | null;
+  mfaExpiresAt: number | null;
+  mfaEmail: string | null;
+  mfaPassword: string | null;
 
   // Actions
   initialize: () => Promise<void>;
   login: (email: string, password: string) => Promise<AuthResponse>;
   verifyMfa: (code: string) => Promise<void>;
+  resendMfa: () => Promise<void>;
   register: (payload: {
     email: string;
     password: string;
@@ -41,9 +46,11 @@ interface AuthState {
     lastName: string;
     phone: string;
     role: "SHIPPER" | "CARRIER" | "DISPATCHER";
-    companyName: string;
+    companyName?: string;
     carrierType?: string;
     associationId?: string;
+    organizationId?: string;
+    taxId?: string;
   }) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -53,7 +60,16 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set, get) => {
   // Set up 401 handler to auto-logout
   setOnUnauthorized(() => {
-    set({ user: null, isLoading: false, mfaPending: false, mfaToken: null });
+    set({
+      user: null,
+      isLoading: false,
+      mfaPending: false,
+      mfaToken: null,
+      phoneLastFour: null,
+      mfaExpiresAt: null,
+      mfaEmail: null,
+      mfaPassword: null,
+    });
   });
 
   return {
@@ -63,6 +79,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
     error: null,
     mfaPending: false,
     mfaToken: null,
+    phoneLastFour: null,
+    mfaExpiresAt: null,
+    mfaEmail: null,
+    mfaPassword: null,
 
     initialize: async () => {
       if (get().isInitialized) return;
@@ -82,10 +102,15 @@ export const useAuthStore = create<AuthState>((set, get) => {
         const response = await authService.login({ email, password });
 
         if (response.requiresMfa) {
+          const expiresIn = response.expiresIn ?? 300;
           set({
             isLoading: false,
             mfaPending: true,
             mfaToken: response.mfaToken ?? null,
+            phoneLastFour: response.phoneLastFour ?? null,
+            mfaExpiresAt: Date.now() + expiresIn * 1000,
+            mfaEmail: email,
+            mfaPassword: password,
           });
           return response;
         }
@@ -134,10 +159,39 @@ export const useAuthStore = create<AuthState>((set, get) => {
           isLoading: false,
           mfaPending: false,
           mfaToken: null,
+          phoneLastFour: null,
+          mfaExpiresAt: null,
+          mfaEmail: null,
+          mfaPassword: null,
         });
       } catch (err: unknown) {
         const message =
           err instanceof Error ? err.message : "MFA verification failed.";
+        set({ isLoading: false, error: message });
+        throw err;
+      }
+    },
+
+    resendMfa: async () => {
+      const email = get().mfaEmail;
+      const password = get().mfaPassword;
+      if (!email || !password) throw new Error("No MFA session to resend");
+
+      set({ isLoading: true, error: null });
+      try {
+        const response = await authService.login({ email, password });
+        if (response.requiresMfa) {
+          const expiresIn = response.expiresIn ?? 300;
+          set({
+            isLoading: false,
+            mfaToken: response.mfaToken ?? null,
+            phoneLastFour: response.phoneLastFour ?? null,
+            mfaExpiresAt: Date.now() + expiresIn * 1000,
+          });
+        }
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : "Failed to resend code.";
         set({ isLoading: false, error: message });
         throw err;
       }
@@ -179,6 +233,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
         isLoading: false,
         mfaPending: false,
         mfaToken: null,
+        phoneLastFour: null,
+        mfaExpiresAt: null,
+        mfaEmail: null,
+        mfaPassword: null,
         error: null,
       });
     },

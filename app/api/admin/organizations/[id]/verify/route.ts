@@ -125,6 +125,10 @@ export async function POST(
       )
     );
 
+    // G-M4-4: Invalidate status cache for activated users so requireActiveUser()
+    // sees the new ACTIVE status immediately (parallel with org reject + unverify)
+    await Promise.all(orgUsers.map((u) => CacheInvalidation.user(u.id)));
+
     return NextResponse.json({
       message: "Organization verified successfully",
       organization: {

@@ -10,6 +10,7 @@ import {
   RefreshControl,
   StyleSheet,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -51,6 +52,9 @@ export default function NotificationsScreen() {
     const route = getNotificationRoute(item.type, metadata, user?.role ?? "");
     if (route) {
       router.push(route as `/${string}`);
+    } else {
+      // No navigable route — show the notification message in an alert
+      Alert.alert(item.title ?? "Notification", item.message ?? "");
     }
   };
 

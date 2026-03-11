@@ -59,8 +59,10 @@ describe("Auth Service", () => {
     it("should handle MFA response", async () => {
       mockPost.mockResolvedValue({
         data: {
-          requiresMfa: true,
+          mfaRequired: true,
           mfaToken: "mfa-token",
+          phoneLastFour: "1234",
+          expiresIn: 300,
         },
       });
 
@@ -70,6 +72,8 @@ describe("Auth Service", () => {
       });
       expect(result.requiresMfa).toBe(true);
       expect(result.mfaToken).toBe("mfa-token");
+      expect(result.phoneLastFour).toBe("1234");
+      expect(result.expiresIn).toBe(300);
     });
   });
 

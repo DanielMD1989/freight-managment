@@ -76,6 +76,7 @@ export function useCreateLoadRequest() {
       loadService.createLoadRequest(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: LOAD_REQUESTS_KEY });
+      queryClient.invalidateQueries({ queryKey: LOADS_KEY });
     },
   });
 }
@@ -105,6 +106,11 @@ export function useRespondToLoadRequest() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: LOAD_REQUESTS_KEY });
       queryClient.invalidateQueries({ queryKey: LOADS_KEY });
+      queryClient.invalidateQueries({ queryKey: ["truck-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["trips"] });
+      queryClient.invalidateQueries({ queryKey: ["truck-postings"] });
+      queryClient.invalidateQueries({ queryKey: ["carrier-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["shipper-dashboard"] });
     },
   });
 }
@@ -127,6 +133,7 @@ export function useCancelLoadRequest() {
     mutationFn: (requestId: string) => loadService.cancelLoadRequest(requestId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: LOAD_REQUESTS_KEY });
+      queryClient.invalidateQueries({ queryKey: LOADS_KEY });
     },
   });
 }

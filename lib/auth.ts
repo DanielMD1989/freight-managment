@@ -473,14 +473,17 @@ export async function requireRegistrationAccess(): Promise<
     throw new Error("Unauthorized: User not found");
   }
 
-  // Allow REGISTERED, PENDING_VERIFICATION, and ACTIVE users
-  const allowedStatuses = ["REGISTERED", "PENDING_VERIFICATION", "ACTIVE"];
+  // Allow REGISTERED, PENDING_VERIFICATION, ACTIVE, and REJECTED users
+  // REJECTED users need access to re-upload documents and resubmit
+  const allowedStatuses = [
+    "REGISTERED",
+    "PENDING_VERIFICATION",
+    "ACTIVE",
+    "REJECTED",
+  ];
   if (!allowedStatuses.includes(user.status)) {
     if (user.status === "SUSPENDED") {
       throw new Error("Forbidden: Account suspended");
-    }
-    if (user.status === "REJECTED") {
-      throw new Error("Forbidden: Account rejected");
     }
     throw new Error("Forbidden: Account inactive");
   }
@@ -490,8 +493,8 @@ export async function requireRegistrationAccess(): Promise<
 
 /**
  * Check if user status allows login
- * SUSPENDED and REJECTED users cannot login
- * REGISTERED and PENDING_VERIFICATION get limited access
+ * Only SUSPENDED users cannot login
+ * REGISTERED, PENDING_VERIFICATION, and REJECTED get limited access
  */
 export function isLoginAllowed(status: string): {
   allowed: boolean;
@@ -511,11 +514,7 @@ export function isLoginAllowed(status: string): {
         error: "Account suspended. Please contact support.",
       };
     case "REJECTED":
-      return {
-        allowed: false,
-        limited: false,
-        error: "Registration rejected. Please contact support.",
-      };
+      return { allowed: true, limited: true };
     default:
       return { allowed: false, limited: false, error: "Account inactive." };
   }

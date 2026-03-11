@@ -84,7 +84,7 @@ describe("Match Hooks", () => {
       expect(matchService.assignTruck).toHaveBeenCalledWith("l1", "t1");
     });
 
-    it('should invalidate 3 keys: ["matching-trucks"], ["loads"], ["trips"]', () => {
+    it("should invalidate matching-trucks+loads+trips+truck-postings+wallet+dashboards", () => {
       useAssignTruck();
       capturedMutationOptions.onSuccess();
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
@@ -96,7 +96,19 @@ describe("Match Hooks", () => {
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
         queryKey: ["trips"],
       });
-      expect(mockInvalidateQueries).toHaveBeenCalledTimes(3);
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["truck-postings"],
+      });
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["wallet"],
+      });
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["carrier-dashboard"],
+      });
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["shipper-dashboard"],
+      });
+      expect(mockInvalidateQueries).toHaveBeenCalledTimes(7);
     });
   });
 });

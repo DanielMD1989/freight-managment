@@ -422,8 +422,11 @@ export async function POST(request: NextRequest) {
           "upload_documents",
           "complete_registration",
         ],
+        // G-M4-7: Distinguish REJECTED from PENDING_VERIFICATION in message
         restrictedMessage:
-          "Your account is pending verification. Some features are restricted.",
+          user.status === "REJECTED"
+            ? "Your registration was rejected. Please review and resubmit your documents."
+            : "Your account is pending verification. Some features are restricted.",
       }),
       // Include session token for mobile clients (for Authorization header)
       ...(isMobileClient && { sessionToken }),

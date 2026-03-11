@@ -194,8 +194,23 @@ export async function getCurrentUserRole(): Promise<string | null> {
 export function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
     const data = error.response?.data;
-    if (data && typeof data === "object" && "error" in data) {
-      return String(data.error);
+    if (data && typeof data === "object") {
+      // G-REG-6: Parse per-field validation errors from API
+      if (
+        "fields" in data &&
+        Array.isArray(data.fields) &&
+        data.fields.length > 0
+      ) {
+        return data.fields
+          .map(
+            (f: { field: string; message: string }) =>
+              `${f.field}: ${f.message}`
+          )
+          .join("\n");
+      }
+      if ("error" in data) {
+        return String(data.error);
+      }
     }
     switch (error.code) {
       case "ECONNABORTED":

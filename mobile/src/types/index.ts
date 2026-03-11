@@ -85,6 +85,8 @@ export interface AuthResponse {
   csrfToken?: string;
   requiresMfa?: boolean;
   mfaToken?: string;
+  phoneLastFour?: string;
+  expiresIn?: number;
 }
 
 /** Login request payload */
@@ -107,7 +109,9 @@ export interface RegisterPayload {
   lastName: string;
   phone: string;
   role: "SHIPPER" | "CARRIER" | "DISPATCHER";
-  companyName: string;
+  companyName?: string;
   carrierType?: string;
   associationId?: string;
+  organizationId?: string;
+  taxId?: string;
 }

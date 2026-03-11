@@ -26,18 +26,23 @@ import { typography } from "../../../src/theme/typography";
 
 const TX_FILTERS = [
   "ALL",
+  "DEPOSIT",
+  "WITHDRAWAL",
   "COMMISSION",
-  "PAYMENT",
+  "SETTLEMENT",
   "REFUND",
-  "ADJUSTMENT",
 ] as const;
 
 function getTxIcon(type: string): keyof typeof Ionicons.glyphMap {
   switch (type) {
-    case "PAYMENT":
+    case "DEPOSIT":
       return "arrow-down-circle";
-    case "COMMISSION":
+    case "WITHDRAWAL":
       return "arrow-up-circle";
+    case "COMMISSION":
+      return "trending-up-outline";
+    case "SETTLEMENT":
+      return "cash-outline";
     case "REFUND":
       return "refresh-circle";
     default:

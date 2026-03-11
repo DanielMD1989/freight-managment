@@ -11,7 +11,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireAuth, hashPassword } from "@/lib/auth";
+import {
+  requireRegistrationAccess,
+  hashPassword,
+  generateOTP,
+} from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { checkRateLimit, RATE_LIMIT_OTP_SEND } from "@/lib/rateLimit";
 import { sendEmail } from "@/lib/email";
@@ -26,7 +30,9 @@ export async function POST(request: NextRequest) {
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requireAuth();
+    // G-M4-2: Use requireRegistrationAccess — blocks SUSPENDED while allowing
+    // REGISTERED, PENDING_VERIFICATION, ACTIVE, and REJECTED users
+    const session = await requireRegistrationAccess();
 
     // Rate limit: 3 OTP sends per hour per user
     const rateLimitResult = await checkRateLimit(
@@ -62,8 +68,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Generate 6-digit OTP
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    // G-M4-1: Use CSPRNG generateOTP() instead of Math.random()
+    const code = generateOTP();
     const hashedCode = await hashPassword(code);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
@@ -90,8 +96,16 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ message: "OTP sent", expiresIn: 600 });
   } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (error instanceof Error) {
+      if (
+        error.message === "Unauthorized" ||
+        error.message === "Unauthorized: User not found"
+      ) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      if (error.message.startsWith("Forbidden")) {
+        return NextResponse.json({ error: error.message }, { status: 403 });
+      }
     }
     console.error("Send OTP error:", error);
     return NextResponse.json({ error: "Failed to send OTP" }, { status: 500 });

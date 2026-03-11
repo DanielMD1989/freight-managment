@@ -31,6 +31,8 @@ export function useCreateDispute() {
       disputeService.createDispute(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: DISPUTES_KEY });
+      queryClient.invalidateQueries({ queryKey: ["loads"] });
+      queryClient.invalidateQueries({ queryKey: ["trips"] });
     },
   });
 }

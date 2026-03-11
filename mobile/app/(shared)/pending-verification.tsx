@@ -1,6 +1,7 @@
 /**
  * Pending Verification Screen
- * Shows when user is registered but not yet approved by admin
+ * Shows when user is registered but not yet approved by admin.
+ * Displays status-specific messaging based on user.status.
  */
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
@@ -12,23 +13,58 @@ import { colors } from "../../src/theme/colors";
 import { spacing } from "../../src/theme/spacing";
 import { typography } from "../../src/theme/typography";
 
+function getStatusContent(status: string | undefined) {
+  switch (status) {
+    case "SUSPENDED":
+      return {
+        icon: "ban-outline" as const,
+        iconColor: colors.error,
+        titleKey: "shared.accountSuspended",
+        titleFallback: "Account Suspended",
+        messageKey: "shared.suspendedMessage",
+        messageFallback:
+          "Your account has been suspended. Please contact support for assistance.",
+      };
+    case "REGISTERED":
+    case "PENDING_VERIFICATION":
+    default:
+      return {
+        icon: "hourglass-outline" as const,
+        iconColor: colors.accent500,
+        titleKey: "shared.pendingVerification",
+        titleFallback: "Pending Verification",
+        messageKey: "shared.pendingMessage",
+        messageFallback:
+          "Your account is awaiting admin approval. This usually takes 1-2 business days.",
+      };
+  }
+}
+
 export default function PendingVerificationScreen() {
   const { t } = useTranslation();
-  const { logout, checkAuth } = useAuthStore();
+  const { user, logout, checkAuth } = useAuthStore();
+  const content = getStatusContent(user?.status);
+
+  const title = t(content.titleKey, { defaultValue: content.titleFallback });
+  const message = t(content.messageKey, {
+    defaultValue: content.messageFallback,
+  });
 
   return (
     <View style={styles.container}>
-      <Ionicons name="hourglass-outline" size={80} color={colors.accent500} />
-      <Text style={styles.title}>{t("shared.pendingVerification")}</Text>
-      <Text style={styles.message}>{t("shared.pendingMessage")}</Text>
+      <Ionicons name={content.icon} size={80} color={content.iconColor} />
+      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.message}>{message}</Text>
       <View style={styles.actions}>
-        <Button
-          title="Check Status"
-          onPress={checkAuth}
-          variant="primary"
-          size="lg"
-          fullWidth
-        />
+        {user?.status !== "SUSPENDED" && (
+          <Button
+            title="Check Status"
+            onPress={checkAuth}
+            variant="primary"
+            size="lg"
+            fullWidth
+          />
+        )}
         <Button
           title={t("auth.logout")}
           onPress={logout}

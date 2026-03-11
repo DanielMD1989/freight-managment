@@ -18,7 +18,7 @@ class AuthService {
       const data = response.data;
 
       // Handle MFA required
-      if (data.requiresMfa) {
+      if (data.mfaRequired) {
         return {
           user: {
             id: "",
@@ -31,6 +31,8 @@ class AuthService {
           },
           requiresMfa: true,
           mfaToken: data.mfaToken,
+          phoneLastFour: data.phoneLastFour,
+          expiresIn: data.expiresIn,
         };
       }
 

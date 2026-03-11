@@ -48,11 +48,21 @@ describe("Foundation Rules", () => {
     it("should return valid next statuses for IN_TRANSIT", () => {
       const next = getValidNextTripStatuses("IN_TRANSIT");
       expect(next).toContain("DELIVERED");
-      expect(next).toContain("CANCELLED");
+      expect(next).toContain("EXCEPTION");
+      expect(next).not.toContain("CANCELLED"); // Must go through EXCEPTION first
     });
 
-    it("should allow DELIVERED -> COMPLETED", () => {
+    it("should allow DELIVERED -> COMPLETED only", () => {
       const next = getValidNextTripStatuses("DELIVERED");
+      expect(next).toContain("COMPLETED");
+      expect(next).not.toContain("CANCELLED"); // No cancellation after delivery
+    });
+
+    it("should return valid next statuses for EXCEPTION", () => {
+      const next = getValidNextTripStatuses("EXCEPTION");
+      expect(next).toContain("ASSIGNED");
+      expect(next).toContain("IN_TRANSIT");
+      expect(next).toContain("CANCELLED");
       expect(next).toContain("COMPLETED");
     });
 
@@ -75,6 +85,9 @@ describe("Foundation Rules", () => {
       expect(canTransitionTrip("ASSIGNED", "PICKUP_PENDING")).toBe(true);
       expect(canTransitionTrip("ASSIGNED", "DELIVERED")).toBe(false);
       expect(canTransitionTrip("IN_TRANSIT", "DELIVERED")).toBe(true);
+      expect(canTransitionTrip("IN_TRANSIT", "EXCEPTION")).toBe(true);
+      expect(canTransitionTrip("EXCEPTION", "CANCELLED")).toBe(true);
+      expect(canTransitionTrip("EXCEPTION", "ASSIGNED")).toBe(true);
       expect(canTransitionTrip("COMPLETED", "ASSIGNED")).toBe(false);
     });
   });
@@ -88,12 +101,16 @@ describe("Foundation Rules", () => {
       expect(canCancelTrip("PICKUP_PENDING")).toBe(true);
     });
 
-    it("should allow cancellation for IN_TRANSIT", () => {
-      expect(canCancelTrip("IN_TRANSIT")).toBe(true);
+    it("should NOT allow direct cancellation for IN_TRANSIT (must go through EXCEPTION)", () => {
+      expect(canCancelTrip("IN_TRANSIT")).toBe(false);
     });
 
-    it("should allow cancellation for DELIVERED", () => {
-      expect(canCancelTrip("DELIVERED")).toBe(true);
+    it("should NOT allow cancellation for DELIVERED", () => {
+      expect(canCancelTrip("DELIVERED")).toBe(false);
+    });
+
+    it("should allow cancellation for EXCEPTION", () => {
+      expect(canCancelTrip("EXCEPTION")).toBe(true);
     });
 
     it("should not allow cancellation for COMPLETED", () => {
@@ -117,6 +134,7 @@ describe("Foundation Rules", () => {
       expect(isTripActive("ASSIGNED")).toBe(true);
       expect(isTripActive("PICKUP_PENDING")).toBe(true);
       expect(isTripActive("IN_TRANSIT")).toBe(true);
+      expect(isTripActive("EXCEPTION")).toBe(true);
       expect(isTripActive("DELIVERED")).toBe(false);
       expect(isTripActive("COMPLETED")).toBe(false);
     });

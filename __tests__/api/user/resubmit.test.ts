@@ -275,6 +275,37 @@ describe("POST /api/user/resubmit", () => {
     expect(updatedUser.status).toBe("PENDING_VERIFICATION");
   });
 
+  // G-M3-4: REJECTED user resubmits → user status transitions to PENDING_VERIFICATION
+  it("G-M3-4: REJECTED user with REJECTED org resubmits → user promoted to PENDING_VERIFICATION", async () => {
+    const org = await createRejectedOrg("m34");
+    const user = await createUser("m34", org.id, "REJECTED");
+
+    setAuthSession(
+      createMockSession({
+        userId: user.id,
+        role: "SHIPPER",
+        status: "REJECTED",
+        organizationId: org.id,
+      })
+    );
+
+    const req = createRequest(
+      "POST",
+      "http://localhost:3000/api/user/resubmit"
+    );
+    const res = await resubmit(req);
+
+    expect(res.status).toBe(200);
+
+    const updatedUser = await db.user.findUnique({ where: { id: user.id } });
+    expect(updatedUser.status).toBe("PENDING_VERIFICATION");
+
+    const updatedOrg = await db.organization.findUnique({
+      where: { id: org.id },
+    });
+    expect(updatedOrg.verificationStatus).toBe("PENDING");
+  });
+
   // T-RS-7: SUSPENDED user → 403
   it("T-RS-7: SUSPENDED user → 403", async () => {
     const org = await createRejectedOrg("7");

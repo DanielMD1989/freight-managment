@@ -29,6 +29,10 @@ export function useAssignTruck() {
       queryClient.invalidateQueries({ queryKey: MATCHES_KEY });
       queryClient.invalidateQueries({ queryKey: ["loads"] });
       queryClient.invalidateQueries({ queryKey: ["trips"] });
+      queryClient.invalidateQueries({ queryKey: ["truck-postings"] });
+      queryClient.invalidateQueries({ queryKey: ["wallet"] });
+      queryClient.invalidateQueries({ queryKey: ["carrier-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["shipper-dashboard"] });
     },
   });
 }
@@ -61,6 +65,9 @@ export function useRespondToProposal() {
       queryClient.invalidateQueries({ queryKey: PROPOSALS_KEY });
       queryClient.invalidateQueries({ queryKey: ["loads"] });
       queryClient.invalidateQueries({ queryKey: ["trips"] });
+      queryClient.invalidateQueries({ queryKey: ["truck-postings"] });
+      queryClient.invalidateQueries({ queryKey: ["carrier-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["shipper-dashboard"] });
     },
   });
 }

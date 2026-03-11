@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { revokeAllSessions } from "@/lib/auth";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
 import { notifyUserVerification } from "@/lib/notifications";
@@ -88,6 +89,11 @@ export async function POST(
 
     // G-A17-4: Invalidate status cache so change takes effect immediately
     await CacheInvalidation.user(userId);
+
+    // G-M3-3: Revoke all sessions when rejecting a user so existing JWTs are invalidated
+    if (status === "REJECTED") {
+      await revokeAllSessions(userId);
+    }
 
     // G-A2-4: When rejecting a user, sync org to REJECTED if not already APPROVED
     if (status === "REJECTED") {

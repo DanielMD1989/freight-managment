@@ -60,6 +60,8 @@ export function useDeleteTruck() {
     mutationFn: (id: string) => truckService.deleteTruck(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TRUCKS_KEY });
+      queryClient.invalidateQueries({ queryKey: TRUCK_POSTINGS_KEY });
+      queryClient.invalidateQueries({ queryKey: ["trips"] });
     },
   });
 }
@@ -111,6 +113,7 @@ export function useCreateTruckRequest() {
       truckService.createTruckRequest(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["truck-requests"] });
+      queryClient.invalidateQueries({ queryKey: TRUCK_POSTINGS_KEY });
     },
   });
 }
@@ -143,6 +146,7 @@ export function useCancelTruckRequest() {
     mutationFn: (id: string) => truckService.cancelTruckRequest(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["truck-requests"] });
+      queryClient.invalidateQueries({ queryKey: TRUCK_POSTINGS_KEY });
     },
   });
 }
@@ -173,6 +177,11 @@ export function useRespondToTruckRequest() {
     }) => truckService.respondToTruckRequest(id, action, notes),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["truck-requests"] });
+      queryClient.invalidateQueries({ queryKey: TRUCK_POSTINGS_KEY });
+      queryClient.invalidateQueries({ queryKey: ["trips"] });
+      queryClient.invalidateQueries({ queryKey: ["loads"] });
+      queryClient.invalidateQueries({ queryKey: ["carrier-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["shipper-dashboard"] });
     },
   });
 }
@@ -210,6 +219,8 @@ export function useCancelTruckPosting() {
     mutationFn: (id: string) => truckService.cancelTruckPosting(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TRUCK_POSTINGS_KEY });
+      queryClient.invalidateQueries({ queryKey: ["truck-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["trips"] });
     },
   });
 }

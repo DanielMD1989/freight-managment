@@ -66,6 +66,7 @@ export default function CarrierTripDetailsScreen() {
   const validNextStatuses = getValidNextTripStatuses(trip.status as TripStatus);
   const canCancel = canCancelTrip(trip.status as TripStatus);
   const isDelivered = trip.status === "DELIVERED";
+  const isException = trip.status === "EXCEPTION";
   const podSubmitted = trip.load?.podSubmitted;
   const podVerified = trip.load?.podVerified;
 
@@ -226,6 +227,9 @@ export default function CarrierTripDetailsScreen() {
     PICKUP_PENDING: { label: "Start Trip", icon: "play-circle" },
     IN_TRANSIT: { label: "Mark Picked Up", icon: "checkmark-circle" },
     DELIVERED: { label: "Mark Delivered", icon: "flag" },
+    EXCEPTION: { label: "Report Exception", icon: "warning" },
+    ASSIGNED: { label: "Re-assign", icon: "refresh-circle" },
+    COMPLETED: { label: "Mark Completed", icon: "checkmark-done-circle" },
   };
 
   return (
@@ -267,6 +271,25 @@ export default function CarrierTripDetailsScreen() {
             <DetailRow label="Receiver Phone" value={trip.receiverPhone} />
           )}
         </Card>
+
+        {/* Exception Banner */}
+        {isException && (
+          <Card style={[styles.card, styles.exceptionCard]}>
+            <View style={styles.exceptionHeader}>
+              <Ionicons name="warning" size={24} color="#D97706" />
+              <Text style={styles.exceptionTitle}>Exception Reported</Text>
+            </View>
+            <Text style={styles.exceptionMessage}>
+              This trip has an active exception. An admin will review and
+              resolve it. You will be notified once the exception is resolved.
+            </Text>
+            {trip.exceptionAt && (
+              <Text style={styles.exceptionMeta}>
+                Reported: {formatDate(trip.exceptionAt)}
+              </Text>
+            )}
+          </Card>
+        )}
 
         {/* POD Status */}
         {(isDelivered || podSubmitted) && (
@@ -526,6 +549,32 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   actions: { padding: spacing.lg, gap: spacing.md },
+
+  // Exception styles
+  exceptionCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: "#D97706",
+    backgroundColor: "#FFFBEB",
+  },
+  exceptionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  exceptionTitle: {
+    ...typography.titleMedium,
+    color: "#92400E",
+  },
+  exceptionMessage: {
+    ...typography.bodyMedium,
+    color: "#78350F",
+    marginBottom: spacing.sm,
+  },
+  exceptionMeta: {
+    ...typography.bodySmall,
+    color: "#92400E",
+  },
 
   // POD styles
   podStatusRow: {

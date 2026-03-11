@@ -641,6 +641,50 @@ describe("Admin Organizations API", () => {
     expect(call.metadata.orgId).toBe(notifOrg.id);
   });
 
+  // G-M4-4: Org approve invalidates user status cache for activated users
+  it("G-M4-4: org verify → CacheInvalidation.user() called for activated users", async () => {
+    useAdminSession();
+
+    const cacheOrg = await db.organization.create({
+      data: {
+        id: "cache-inv-org-1",
+        name: "Cache Inv Test Org",
+        type: "SHIPPER",
+        contactEmail: "cache-inv@test.com",
+        contactPhone: "+251911009830",
+        isVerified: false,
+        verificationStatus: "PENDING",
+      },
+    });
+
+    await db.user.create({
+      data: {
+        id: "cache-inv-user-1",
+        email: "cache-inv-u1@test.com",
+        passwordHash: "hash",
+        firstName: "Cache",
+        lastName: "Test",
+        phone: "+251911009831",
+        role: "SHIPPER",
+        status: "PENDING_VERIFICATION",
+        organizationId: cacheOrg.id,
+      },
+    });
+
+    const cacheModule = require("@/lib/cache");
+    const cacheInvUser = cacheModule.CacheInvalidation.user as jest.Mock;
+    cacheInvUser.mockClear();
+
+    const req = createRequest(
+      "POST",
+      `http://localhost:3000/api/admin/organizations/${cacheOrg.id}/verify`
+    );
+    const res = await callHandler(verifyOrg, req, { id: cacheOrg.id });
+    expect(res.status).toBe(200);
+
+    expect(cacheInvUser).toHaveBeenCalledWith("cache-inv-user-1");
+  });
+
   // ─── DELETE /api/admin/organizations/[id]/verify ───────────────────────────
 
   describe("DELETE /api/admin/organizations/[id]/verify", () => {
@@ -911,6 +955,70 @@ describe("Admin Organizations API", () => {
           eventType: "ORG_VERIFIED",
           action: "REJECT",
         })
+      );
+    });
+
+    // ── G-M3-2 — Org rejection cascades REJECTED to members + revokes sessions ─
+
+    it("G-M3-2: org rejection cascades REJECTED status to all org members", async () => {
+      useAdminSession();
+
+      // Create two users in the org
+      await db.user.create({
+        data: {
+          id: `reject-cascade-u1-${rejectOrgId}`,
+          email: `reject-cascade-u1-${rejectOrgId}@test.com`,
+          passwordHash: "hash",
+          firstName: "Cascade",
+          lastName: "One",
+          phone: "+251911009960",
+          role: "SHIPPER",
+          status: "ACTIVE",
+          organizationId: rejectOrgId,
+        },
+      });
+      await db.user.create({
+        data: {
+          id: `reject-cascade-u2-${rejectOrgId}`,
+          email: `reject-cascade-u2-${rejectOrgId}@test.com`,
+          passwordHash: "hash",
+          firstName: "Cascade",
+          lastName: "Two",
+          phone: "+251911009961",
+          role: "SHIPPER",
+          status: "PENDING_VERIFICATION",
+          organizationId: rejectOrgId,
+        },
+      });
+
+      const authModule = require("@/lib/auth");
+      const revokeAllSessionsSpy = authModule.revokeAllSessions as jest.Mock;
+      revokeAllSessionsSpy.mockClear();
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/admin/organizations/${rejectOrgId}/reject`,
+        { body: { reason: "Fraudulent documentation submitted by org" } }
+      );
+      const res = await callHandler(rejectOrg, req, { id: rejectOrgId });
+      expect(res.status).toBe(200);
+
+      // Both users should now be REJECTED
+      const u1 = await db.user.findUnique({
+        where: { id: `reject-cascade-u1-${rejectOrgId}` },
+      });
+      const u2 = await db.user.findUnique({
+        where: { id: `reject-cascade-u2-${rejectOrgId}` },
+      });
+      expect(u1.status).toBe("REJECTED");
+      expect(u2.status).toBe("REJECTED");
+
+      // revokeAllSessions called for each member
+      expect(revokeAllSessionsSpy).toHaveBeenCalledWith(
+        `reject-cascade-u1-${rejectOrgId}`
+      );
+      expect(revokeAllSessionsSpy).toHaveBeenCalledWith(
+        `reject-cascade-u2-${rejectOrgId}`
       );
     });
   });

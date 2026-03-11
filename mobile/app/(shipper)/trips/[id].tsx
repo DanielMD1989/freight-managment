@@ -100,6 +100,25 @@ export default function ShipperTripDetailsScreen() {
         </View>
       )}
 
+      {/* Exception Banner */}
+      {trip.status === "EXCEPTION" && (
+        <View style={styles.exceptionCard}>
+          <View style={styles.bannerRow}>
+            <Ionicons name="warning" size={24} color="#D97706" />
+            <Text style={styles.exceptionTitle}>Exception Reported</Text>
+          </View>
+          <Text style={styles.exceptionMessage}>
+            An exception has been reported for this trip. Please wait for
+            resolution.
+          </Text>
+          {trip.exceptionAt && (
+            <Text style={styles.exceptionDate}>
+              Reported: {formatDate(trip.exceptionAt)}
+            </Text>
+          )}
+        </View>
+      )}
+
       {/* Delivery Confirmation Alert */}
       {needsConfirmation && (
         <View style={styles.confirmCard}>
@@ -307,51 +326,58 @@ export default function ShipperTripDetailsScreen() {
       </Card>
 
       {/* Receiver Info */}
-      {isTerminal && (trip.receiverName || trip.receiverPhone) && (
-        <Card style={styles.card}>
-          <Text style={styles.sectionTitle}>Receiver Info</Text>
-          {trip.receiverName && (
-            <DetailRow label="Name" value={trip.receiverName} />
-          )}
-          {trip.receiverPhone && (
-            <DetailRow label="Phone" value={trip.receiverPhone} />
-          )}
-          {trip.deliveryNotes && (
-            <DetailRow label="Notes" value={trip.deliveryNotes} />
-          )}
-        </Card>
-      )}
+      {(isTerminal || trip.status === "EXCEPTION") &&
+        (trip.receiverName || trip.receiverPhone) && (
+          <Card style={styles.card}>
+            <Text style={styles.sectionTitle}>Receiver Info</Text>
+            {trip.receiverName && (
+              <DetailRow label="Name" value={trip.receiverName} />
+            )}
+            {trip.receiverPhone && (
+              <DetailRow label="Phone" value={trip.receiverPhone} />
+            )}
+            {trip.deliveryNotes && (
+              <DetailRow label="Notes" value={trip.deliveryNotes} />
+            )}
+          </Card>
+        )}
 
       {/* POD Documents */}
-      {isTerminal && pods && pods.length > 0 && (
-        <Card style={styles.card}>
-          <Text style={styles.sectionTitle}>
-            Proof of Delivery ({pods.length})
-          </Text>
-          {pods.map((pod) => (
-            <TouchableOpacity
-              key={pod.id}
-              style={styles.podItem}
-              onPress={() => {
-                if (pod.fileUrl) Linking.openURL(pod.fileUrl);
-              }}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={styles.podFileName}>
-                  {pod.fileName || "Document"}
-                </Text>
-                {pod.notes && <Text style={styles.podNotes}>{pod.notes}</Text>}
-                <Text style={styles.podDate}>{formatDate(pod.uploadedAt)}</Text>
-              </View>
-              <Ionicons
-                name="open-outline"
-                size={20}
-                color={colors.primary500}
-              />
-            </TouchableOpacity>
-          ))}
-        </Card>
-      )}
+      {(isTerminal || trip.status === "EXCEPTION") &&
+        pods &&
+        pods.length > 0 && (
+          <Card style={styles.card}>
+            <Text style={styles.sectionTitle}>
+              Proof of Delivery ({pods.length})
+            </Text>
+            {pods.map((pod) => (
+              <TouchableOpacity
+                key={pod.id}
+                style={styles.podItem}
+                onPress={() => {
+                  if (pod.fileUrl) Linking.openURL(pod.fileUrl);
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.podFileName}>
+                    {pod.fileName || "Document"}
+                  </Text>
+                  {pod.notes && (
+                    <Text style={styles.podNotes}>{pod.notes}</Text>
+                  )}
+                  <Text style={styles.podDate}>
+                    {formatDate(pod.uploadedAt)}
+                  </Text>
+                </View>
+                <Ionicons
+                  name="open-outline"
+                  size={20}
+                  color={colors.primary500}
+                />
+              </TouchableOpacity>
+            ))}
+          </Card>
+        )}
 
       {/* Confirm Delivery Button (fallback when no POD yet) */}
       {trip.status === "DELIVERED" &&
@@ -430,6 +456,7 @@ function buildTimelineEvents(trip: {
   deliveredAt?: Date | null;
   completedAt?: Date | null;
   cancelledAt?: Date | null;
+  exceptionAt?: Date | null;
 }) {
   const events = [
     {
@@ -449,6 +476,12 @@ function buildTimelineEvents(trip: {
       icon: "car-outline",
       date: trip.pickedUpAt,
       active: !!trip.pickedUpAt,
+    },
+    {
+      label: "Exception",
+      icon: "warning-outline",
+      date: trip.exceptionAt,
+      active: !!trip.exceptionAt,
     },
     {
       label: "Delivered",
@@ -550,6 +583,32 @@ const styles = StyleSheet.create({
   completedDate: {
     ...typography.bodySmall,
     color: colors.successDark,
+    marginTop: spacing.xs,
+    marginLeft: 32,
+  },
+
+  // Exception banner
+  exceptionCard: {
+    margin: spacing.lg,
+    marginBottom: 0,
+    backgroundColor: "#FFFBEB",
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    borderLeftWidth: 4,
+    borderLeftColor: "#D97706",
+  },
+  exceptionTitle: {
+    ...typography.titleMedium,
+    color: "#92400E",
+  },
+  exceptionMessage: {
+    ...typography.bodySmall,
+    color: "#78350F",
+    marginTop: spacing.sm,
+  },
+  exceptionDate: {
+    ...typography.bodySmall,
+    color: "#92400E",
     marginTop: spacing.xs,
     marginLeft: 32,
   },
