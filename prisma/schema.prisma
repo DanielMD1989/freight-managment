@@ -511,8 +511,8 @@ model Organization {
   city             String?
   isVerified       Boolean          @default(false)
   verifiedAt       DateTime?
-  licenseNumber    String?
-  taxId            String?
+  licenseNumber    String?  @unique
+  taxId            String?  @unique
   allowNameDisplay Boolean          @default(true) // SPRINT 14: Company masking preference
 
   // Association Support - For CARRIER_INDIVIDUAL belonging to an association
@@ -741,7 +741,7 @@ model Load {
   createdById String
   createdBy   User   @relation("LoadCreator", fields: [createdById], references: [id])
 
-  assignedTruck Truck? @relation(fields: [assignedTruckId], references: [id])
+  assignedTruck Truck? @relation(fields: [assignedTruckId], references: [id], onDelete: SetNull)
 
   // SPRINT 8: Location relations
   pickupLocation   EthiopianLocation? @relation("PickupLocation", fields: [pickupCityId], references: [id])
@@ -843,6 +843,7 @@ model LoadEscalation {
   @@index([priority])
   @@index([escalationType])
   @@index([assignedTo])
+  @@index([createdAt, status])
   @@map("load_escalations")
 }
 
@@ -893,6 +894,7 @@ model Document {
   load   Load   @relation(fields: [loadId], references: [id], onDelete: Cascade)
 
   @@index([loadId])
+  @@index([uploadedAt])
   @@map("documents")
 }
 
@@ -1301,7 +1303,7 @@ model Dispute {
 
   // Relations
   loadId String
-  load   Load   @relation(fields: [loadId], references: [id])
+  load   Load   @relation(fields: [loadId], references: [id], onDelete: Cascade)
 
   createdById String
   createdBy   User   @relation(fields: [createdById], references: [id])
@@ -1311,6 +1313,7 @@ model Dispute {
 
   @@index([status])
   @@index([loadId])
+  @@index([disputedOrgId])
   @@map("disputes")
 }
 
