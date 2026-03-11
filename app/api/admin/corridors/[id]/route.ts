@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
 import { Decimal } from "decimal.js";
 import { CorridorDirection } from "@prisma/client";
@@ -84,15 +84,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await requireAuth();
-
-    // Only admins can view corridors
-    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
-      return NextResponse.json(
-        { error: "Unauthorized - Admin access required" },
-        { status: 403 }
-      );
-    }
+    await requirePermission(Permission.CONFIGURE_SERVICE_FEES);
 
     const { id } = await params;
 
@@ -231,15 +223,7 @@ export async function PATCH(
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requireAuth();
-
-    // Only admins can update corridors
-    if (session.role !== "ADMIN" && session.role !== "SUPER_ADMIN") {
-      return NextResponse.json(
-        { error: "Unauthorized - Admin access required" },
-        { status: 403 }
-      );
-    }
+    await requirePermission(Permission.CONFIGURE_SERVICE_FEES);
 
     const { id } = await params;
 
@@ -418,9 +402,8 @@ export async function DELETE(
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requireAuth();
-
-    // Only super admins can delete corridors
+    // DELETE is a destructive operation — SUPER_ADMIN only
+    const session = await requirePermission(Permission.CONFIGURE_SERVICE_FEES);
     if (session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
         { error: "Unauthorized - Super Admin access required" },
