@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireActiveUser } from "@/lib/auth";
+import { hasPermission, Permission, type Role } from "@/lib/rbac/permissions";
 import { z } from "zod";
 import { broadcastGpsPosition } from "@/lib/websocket-server";
 import { withRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
@@ -42,8 +43,8 @@ async function postHandler(request: NextRequest) {
     // Fix 9: requireActiveUser for ACTIVE status check
     const session = await requireActiveUser();
 
-    // Only carriers can update GPS positions
-    if (session.role !== "CARRIER") {
+    // Only carriers can update GPS positions (VIEW_GPS permission)
+    if (!hasPermission(session.role as Role, Permission.VIEW_GPS)) {
       return NextResponse.json(
         { error: "Only carriers can update GPS positions" },
         { status: 403 }

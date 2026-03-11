@@ -14,15 +14,20 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireActiveUser } from "@/lib/auth";
+import { requireAnyPermission } from "@/lib/rbac";
+import { Permission } from "@/lib/rbac/permissions";
 import { withRpsLimit, RPS_CONFIGS } from "@/lib/rateLimit";
 import { handleApiError } from "@/lib/apiErrors";
 import { Prisma } from "@prisma/client";
 
 async function getHandler(request: NextRequest) {
   try {
-    // Fix 17: requireActiveUser for ACTIVE status check
-    const session = await requireActiveUser();
+    // Require at least one GPS-related permission (CARRIER, SHIPPER, DISPATCHER, ADMIN all qualify)
+    const session = await requireAnyPermission([
+      Permission.VIEW_GPS,
+      Permission.VIEW_ALL_GPS,
+      Permission.VIEW_LIVE_TRACKING,
+    ]);
     const { searchParams } = request.nextUrl;
 
     const loadId = searchParams.get("loadId");

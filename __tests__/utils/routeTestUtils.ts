@@ -510,7 +510,11 @@ export function mockRbac() {
       VIEW_DOCUMENTS: "view_documents",
       VERIFY_DOCUMENTS: "verify_documents",
       VIEW_GPS: "view_gps",
+      VIEW_ALL_GPS: "view_all_gps",
+      VIEW_LIVE_TRACKING: "view_live_tracking",
       MANAGE_GPS_DEVICES: "manage_gps_devices",
+      VIEW_AUDIT_LOGS: "view_audit_logs",
+      CONFIGURE_SERVICE_FEES: "configure_service_fees",
     },
     UnauthorizedError: class UnauthorizedError extends Error {
       constructor(msg = "Unauthorized") {

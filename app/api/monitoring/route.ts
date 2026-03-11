@@ -12,7 +12,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
+import { hasPermission, Permission, type Role } from "@/lib/rbac/permissions";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import {
   getMonitoringData,
@@ -38,10 +39,10 @@ async function verifyAccess(
     return { authorized: true };
   }
 
-  // Check for admin session
+  // Check for session with VIEW_AUDIT_LOGS permission (ADMIN + SUPER_ADMIN)
   try {
-    const session = await requireAuth();
-    if (session.role === "ADMIN" || session.role === "SUPER_ADMIN") {
+    const session = await requireActiveUser();
+    if (hasPermission(session.role as Role, Permission.VIEW_AUDIT_LOGS)) {
       return { authorized: true, userId: session.userId };
     }
     return { authorized: false };
