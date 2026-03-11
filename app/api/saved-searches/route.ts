@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { zodErrorResponse } from "@/lib/validation";
 import { z } from "zod";
@@ -27,7 +27,7 @@ const createSavedSearchSchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireAuth();
+    const user = await requireActiveUser();
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type"); // LOADS or TRUCKS
 
@@ -48,10 +48,11 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ searches });
-    // FIX: Use unknown type
   } catch (error: unknown) {
     console.error("Get saved searches error:", error);
-    // M4 FIX: Don't leak error details
+    if (error instanceof Error && error.name === "ForbiddenError") {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
     return NextResponse.json(
       { error: "Failed to fetch saved searches" },
       { status: 500 }
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const user = await requireAuth();
+    const user = await requireActiveUser();
     const body = await request.json();
     const result = createSavedSearchSchema.safeParse(body);
     if (!result.success) {
@@ -89,9 +90,11 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ search }, { status: 201 });
-    // FIX: Use unknown type
   } catch (error: unknown) {
     console.error("Create saved search error:", error);
+    if (error instanceof Error && error.name === "ForbiddenError") {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

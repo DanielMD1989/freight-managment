@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { requirePermission, Permission } from "@/lib/rbac";
 import { z } from "zod";
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     const csrfError = await validateCSRFWithMobile(request);
     if (csrfError) return csrfError;
 
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // Check if user already has an organization
     const existingUser = await db.user.findUnique({
@@ -112,6 +112,10 @@ export async function POST(request: NextRequest) {
 
     if (error instanceof z.ZodError) {
       return zodErrorResponse(error);
+    }
+
+    if (error instanceof Error && error.name === "ForbiddenError") {
+      return NextResponse.json({ error: error.message }, { status: 403 });
     }
 
     return NextResponse.json(

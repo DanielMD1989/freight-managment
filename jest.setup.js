@@ -48,6 +48,7 @@ jest.mock("@/lib/db", () => {
     documents: new Map(),
     invitations: new Map(),
     walletDeposits: new Map(),
+    savedSearches: new Map(),
   };
 
   let userIdCounter = 1;
@@ -80,6 +81,7 @@ jest.mock("@/lib/db", () => {
   let documentIdCounter = 1;
   let invitationIdCounter = 1;
   let walletDepositIdCounter = 1;
+  let savedSearchIdCounter = 1;
 
   // Default values for different model types
   const modelDefaults = {
@@ -197,6 +199,9 @@ jest.mock("@/lib/db", () => {
       rejectedAt: null,
       approvedById: null,
       journalEntryId: null,
+    },
+    savedSearch: {
+      criteria: {},
     },
   };
 
@@ -859,6 +864,7 @@ jest.mock("@/lib/db", () => {
     document: { value: documentIdCounter },
     invitation: { value: invitationIdCounter },
     walletDeposit: { value: walletDepositIdCounter },
+    savedSearch: { value: savedSearchIdCounter },
   };
 
   const result = {
@@ -1108,6 +1114,11 @@ jest.mock("@/lib/db", () => {
         stores.invitations,
         "invitation",
         counters.invitation
+      ),
+      savedSearch: createModelMethods(
+        stores.savedSearches,
+        "savedSearch",
+        counters.savedSearch
       ),
       $transaction: jest.fn(),
       // Expose stores for test access
