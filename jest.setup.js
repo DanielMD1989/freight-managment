@@ -89,7 +89,7 @@ jest.mock("@/lib/db", () => {
       currentCommissionRatePercent: 2, // Default 2% commission
       totalCommissionPaidEtb: 0,
       isActive: true,
-      verificationStatus: "PENDING",
+      verificationStatus: "APPROVED",
       isFlagged: false,
       flagReason: null,
       // Round S8: per-account rate/km overrides

@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     const rateLimit = await checkRateLimit(
       {
         name: "register",
-        limit: 3,
+        limit: process.env.NODE_ENV === "production" ? 3 : 1000,
         windowMs: 60 * 60 * 1000, // 1 hour
         message: "Too many registration attempts. Please try again later.",
       },

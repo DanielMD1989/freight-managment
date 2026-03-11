@@ -450,6 +450,47 @@ describe("Carrier Truck Management", () => {
       const res = await createTruck(req);
       expect(res.status).toBe(429);
     });
+
+    it("T-ORG-1: blocks truck creation when carrier org is PENDING (403)", async () => {
+      setAuthSession(carrierSession);
+
+      // Override org to return PENDING status
+      db.organization.findUnique.mockResolvedValueOnce({
+        ...seed.carrierOrg,
+        verificationStatus: "PENDING",
+      });
+
+      const req = createRequest("POST", "http://localhost:3000/api/trucks", {
+        body: {
+          truckType: "FLATBED",
+          licensePlate: "ORG-GATE-01",
+          capacity: 10000,
+          volume: 40,
+          isAvailable: true,
+        },
+      });
+      const res = await createTruck(req);
+      expect(res.status).toBe(403);
+      const data = await parseResponse(res);
+      expect(data.error).toContain("approved by an admin");
+    });
+
+    it("T-ORG-2: allows truck creation when carrier org is APPROVED (201)", async () => {
+      setAuthSession(carrierSession);
+      // seed.carrierOrg already has verificationStatus: "APPROVED" — no override needed
+      const plate = `ORG-GATE-${Date.now().toString(36).slice(-5).toUpperCase()}`;
+      const req = createRequest("POST", "http://localhost:3000/api/trucks", {
+        body: {
+          truckType: "FLATBED",
+          licensePlate: plate,
+          capacity: 10000,
+          volume: 40,
+          isAvailable: true,
+        },
+      });
+      const res = await createTruck(req);
+      expect(res.status).toBe(201);
+    });
   });
 
   // ─── GET /api/trucks ──────────────────────────────────────────────────────

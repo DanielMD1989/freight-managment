@@ -456,7 +456,7 @@ export async function requireActiveRole(
 export async function requireRegistrationAccess(): Promise<
   SessionPayload & { dbStatus: string }
 > {
-  const session = await getSession();
+  const session = await getSessionAny();
 
   if (!session) {
     throw new Error("Unauthorized");

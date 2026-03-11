@@ -88,6 +88,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Business rule: carrier org must be admin-approved before registering trucks
+    const carrierOrg = await db.organization.findUnique({
+      where: { id: user.organizationId },
+      select: { verificationStatus: true },
+    });
+    if (carrierOrg?.verificationStatus !== "APPROVED") {
+      return NextResponse.json(
+        {
+          error:
+            "Your organization must be approved by an admin before registering trucks.",
+          currentStatus: carrierOrg?.verificationStatus ?? "UNKNOWN",
+        },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     // Fix 4a: Use safeParse to avoid leaking schema details
     const parseResult = createTruckSchema.safeParse(body);

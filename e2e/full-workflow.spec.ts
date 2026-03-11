@@ -230,6 +230,16 @@ test.describe.serial("Full Business Workflow", () => {
       expect(status).toBe(200);
       expect(data.user.status).toBe("ACTIVE");
 
+      // Also approve the organization (required before truck creation)
+      const orgId = data.user?.organizationId;
+      if (orgId) {
+        await apiCall(
+          "POST",
+          `/api/admin/organizations/${orgId}/verify`,
+          adminToken
+        );
+      }
+
       if (label === "shipper") shipperUserId = id;
       else carrierUserId = id;
     }

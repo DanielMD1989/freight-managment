@@ -101,5 +101,12 @@ export default defineConfig({
       dependencies: ["dispatcher-setup"],
       testMatch: /dispatcher\/deep-.*\.spec\.ts/,
     },
+    {
+      name: "platform-lifecycle",
+      use: {
+        browserName: "chromium",
+      },
+      testMatch: /platform-lifecycle.*\.spec\.ts/,
+    },
   ],
 });

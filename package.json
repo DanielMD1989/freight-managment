@@ -17,6 +17,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
+    "db:wipe": "psql \"$DATABASE_URL\" -f scripts/wipe-db.sql",
     "loadtest:db": "npx tsx scripts/load-test-db.ts",
     "loadtest:api": "npx tsx scripts/load-test-api.ts",
     "health:check": "curl -s http://localhost:3000/api/health?detailed=true | npx json",

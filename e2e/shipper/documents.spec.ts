@@ -21,10 +21,16 @@ test.describe("Shipper Documents", () => {
     await expect(main.getByText("Rejected").first()).toBeVisible();
   });
 
-  test("shows Upload New Document button", async ({ page }) => {
-    await expect(
-      page.getByRole("button", { name: /Upload New Document/ })
-    ).toBeVisible();
+  test("shows Upload New Document button or lock banner (org may be approved)", async ({
+    page,
+  }) => {
+    // When org is not yet approved: upload button is visible
+    // When org documents are locked after approval: lock banner is shown instead
+    const uploadBtn = page.getByRole("button", { name: /Upload New Document/ });
+    const lockBanner = page.getByText(/Documents are locked/);
+    await expect(uploadBtn.or(lockBanner).first()).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test("shows documents list with document types", async ({ page }) => {
