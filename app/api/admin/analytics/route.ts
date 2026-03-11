@@ -28,7 +28,8 @@ import {
 
 export async function GET(request: NextRequest) {
   try {
-    await requirePermission(Permission.VIEW_ANALYTICS);
+    const session = await requirePermission(Permission.VIEW_ANALYTICS);
+    const isDispatcher = session.role === "DISPATCHER";
 
     const searchParams = request.nextUrl.searchParams;
     const period = (searchParams.get("period") || "month") as TimePeriod;
@@ -84,15 +85,18 @@ export async function GET(request: NextRequest) {
 
       // Summary stats - using centralized metrics
       summary: {
-        revenue: {
-          platformBalance: revenue.platformBalance,
-          serviceFeeCollected: revenue.serviceFeeCollected,
-          shipperFeeCollected: revenue.shipperFeeCollected,
-          carrierFeeCollected: revenue.carrierFeeCollected,
-          pendingWithdrawals: revenue.pendingWithdrawals,
-          transactionsInPeriod: transactionsInPeriod._count || 0,
-          transactionVolume: revenue.transactionVolume,
-        },
+        // Gap 3: Revenue data is ADMIN-only; DISPATCHER sees null
+        revenue: isDispatcher
+          ? null
+          : {
+              platformBalance: revenue.platformBalance,
+              serviceFeeCollected: revenue.serviceFeeCollected,
+              shipperFeeCollected: revenue.shipperFeeCollected,
+              carrierFeeCollected: revenue.carrierFeeCollected,
+              pendingWithdrawals: revenue.pendingWithdrawals,
+              transactionsInPeriod: transactionsInPeriod._count || 0,
+              transactionVolume: revenue.transactionVolume,
+            },
         trucks: {
           total: trucks.total,
           approved: trucks.byApprovalStatus["APPROVED"] || 0,

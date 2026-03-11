@@ -32,6 +32,7 @@ import {
   useSuperAdminSession,
   useShipperSession,
   useCarrierSession,
+  useDispatcherSession,
   seedAdminTestData,
 } from "./helpers";
 
@@ -183,5 +184,36 @@ describe("Admin Dashboard API", () => {
     );
     const res = await getDashboard(req);
     expect(res.status).toBe(403);
+  });
+
+  // DAD-6: DISPATCHER → 200 but totalRevenue/pendingWithdrawals are null
+  it("DAD-6: DISPATCHER → 200 with revenue fields nulled (Gap 3b — RBAC)", async () => {
+    useDispatcherSession();
+    const req = createRequest(
+      "GET",
+      "http://localhost:3000/api/admin/dashboard"
+    );
+    const res = await getDashboard(req);
+    const body = await parseResponse(res);
+    expect(res.status).toBe(200);
+    expect(body.totalRevenue).toBeNull();
+    expect(body.pendingWithdrawals).toBeNull();
+    // Non-financial fields still present
+    expect(body.totalUsers).toBeDefined();
+    expect(body.totalLoads).toBeDefined();
+  });
+
+  // DAD-7: ADMIN → 200 with revenue fields populated
+  it("DAD-7: ADMIN → 200 with revenue fields populated (Gap 3b — RBAC)", async () => {
+    useAdminSession();
+    const req = createRequest(
+      "GET",
+      "http://localhost:3000/api/admin/dashboard"
+    );
+    const res = await getDashboard(req);
+    const body = await parseResponse(res);
+    expect(res.status).toBe(200);
+    expect(body.totalRevenue).not.toBeNull();
+    expect(typeof body.pendingWithdrawals).toBe("number");
   });
 });

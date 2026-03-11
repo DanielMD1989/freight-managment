@@ -269,6 +269,33 @@ describe("Admin Analytics API", () => {
       const res = await getAnalytics(req);
       expect(res.status).toBe(200);
     });
+
+    it("GET analytics: DISPATCHER sees summary.revenue = null (Gap 3 — RBAC)", async () => {
+      useDispatcherSession();
+      setupDefaultMetricMocks();
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/admin/analytics"
+      );
+      const res = await getAnalytics(req);
+      const body = await parseResponse(res);
+      expect(res.status).toBe(200);
+      expect(body.summary.revenue).toBeNull();
+    });
+
+    it("GET analytics: ADMIN sees summary.revenue populated (Gap 3 — RBAC)", async () => {
+      useAdminSession();
+      setupDefaultMetricMocks();
+      const req = createRequest(
+        "GET",
+        "http://localhost:3000/api/admin/analytics"
+      );
+      const res = await getAnalytics(req);
+      const body = await parseResponse(res);
+      expect(res.status).toBe(200);
+      expect(body.summary.revenue).not.toBeNull();
+      expect(body.summary.revenue.platformBalance).toBeDefined();
+    });
   });
 
   // ─── GET /api/admin/analytics ───────────────────────────────────────────────

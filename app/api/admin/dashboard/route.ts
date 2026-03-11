@@ -14,7 +14,8 @@ import { getAdminDashboardMetrics } from "@/lib/admin/metrics";
  */
 export async function GET() {
   try {
-    await requirePermission(Permission.VIEW_DASHBOARD);
+    const session = await requirePermission(Permission.VIEW_DASHBOARD);
+    const isDispatcher = session.role === "DISPATCHER";
 
     const metrics = await getAdminDashboardMetrics();
 
@@ -31,8 +32,13 @@ export async function GET() {
       activeTrips: metrics.trips.active, // Uses Trip model, not Load model
 
       // Revenue from PLATFORM_REVENUE account
-      totalRevenue: { balance: metrics.revenue.platformBalance },
-      pendingWithdrawals: metrics.revenue.pendingWithdrawals,
+      // Gap 3b: Revenue data is ADMIN-only; DISPATCHER sees null
+      totalRevenue: isDispatcher
+        ? null
+        : { balance: metrics.revenue.platformBalance },
+      pendingWithdrawals: isDispatcher
+        ? null
+        : metrics.revenue.pendingWithdrawals,
 
       // Disputes
       openDisputes: metrics.disputes.open + metrics.disputes.underReview,

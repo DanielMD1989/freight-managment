@@ -190,6 +190,100 @@ test("T4: Shipper GET /api/truck-postings returns 402 when shipper balance < min
   ).catch(() => {});
 });
 
+// ── T6: Carrier POST /api/load-requests → 402 when balance < minimumBalance ──
+
+test("T6: Carrier POST /api/load-requests → 402 when balance < minimumBalance", async () => {
+  test.setTimeout(30000);
+
+  if (!carrierUserId) {
+    test.skip(true, "carrierUserId not resolved — skipping T6");
+    return;
+  }
+
+  const adminTok = await getAdminToken();
+  const carrierTok = await getCarrierToken();
+
+  // Set minimumBalance above current balance
+  const patchRes = await apiCall(
+    "PATCH",
+    `/api/admin/users/${carrierUserId}/wallet`,
+    adminTok,
+    { minimumBalance: 9_999_999 }
+  );
+  expect(
+    patchRes.status,
+    `Expected 200 from PATCH admin wallet. Got: ${patchRes.status}`
+  ).toBe(200);
+
+  // 402 fires BEFORE body parse — stub payload is sufficient
+  const { status, data } = await apiCall(
+    "POST",
+    "/api/load-requests",
+    carrierTok,
+    { loadId: "stub-load-id", truckId: "stub-truck-id" }
+  );
+  expect(
+    status,
+    `Expected 402 from POST /api/load-requests when carrier balance < minimumBalance. ` +
+      `Got: ${status} — ${JSON.stringify(data)}. Blueprint §8: all marketplace booking blocked`
+  ).toBe(402);
+  expect((data as Record<string, unknown>).error as string).toMatch(
+    /wallet|balance|marketplace/i
+  );
+
+  // Inline reset (afterAll is safety net)
+  await apiCall("PATCH", `/api/admin/users/${carrierUserId}/wallet`, adminTok, {
+    minimumBalance: 0,
+  }).catch(() => {});
+});
+
+// ── T7: Shipper POST /api/truck-requests → 402 when balance < minimumBalance ─
+
+test("T7: Shipper POST /api/truck-requests → 402 when balance < minimumBalance", async () => {
+  test.setTimeout(30000);
+
+  if (!shipperUserId) {
+    test.skip(true, "shipperUserId not resolved — skipping T7");
+    return;
+  }
+
+  const adminTok = await getAdminToken();
+  const shipperTok = await getShipperToken();
+
+  // Set minimumBalance above current balance
+  const patchRes = await apiCall(
+    "PATCH",
+    `/api/admin/users/${shipperUserId}/wallet`,
+    adminTok,
+    { minimumBalance: 9_999_999 }
+  );
+  expect(
+    patchRes.status,
+    `Expected 200 from PATCH admin wallet. Got: ${patchRes.status}`
+  ).toBe(200);
+
+  // 402 fires BEFORE body parse — stub payload is sufficient
+  const { status, data } = await apiCall(
+    "POST",
+    "/api/truck-requests",
+    shipperTok,
+    { loadId: "stub-load-id", truckId: "stub-truck-id" }
+  );
+  expect(
+    status,
+    `Expected 402 from POST /api/truck-requests when shipper balance < minimumBalance. ` +
+      `Got: ${status} — ${JSON.stringify(data)}. Blueprint §8: all marketplace booking blocked`
+  ).toBe(402);
+  expect((data as Record<string, unknown>).error as string).toMatch(
+    /wallet|balance|marketplace/i
+  );
+
+  // Inline reset (afterAll is safety net)
+  await apiCall("PATCH", `/api/admin/users/${shipperUserId}/wallet`, adminTok, {
+    minimumBalance: 0,
+  }).catch(() => {});
+});
+
 // ── T5: Unauth/admin requests are not gated ──────────────────────────────────
 
 test("T5: Admin GET /api/truck-postings is not blocked by minimumBalance (no org wallet)", async () => {
