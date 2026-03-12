@@ -116,7 +116,7 @@ export async function POST(
     // Fetch target user
     const targetUser = await db.user.findUnique({
       where: { id: targetUserId },
-      select: { id: true, role: true, status: true },
+      select: { id: true, role: true, status: true, organizationId: true },
     });
 
     if (!targetUser) {
@@ -157,6 +157,37 @@ export async function POST(
 
     // 3. Clear requireActiveUser() cache
     await CacheInvalidation.user(targetUserId);
+
+    // G-M13-5: Unpost active loads and cancel pending requests for revoked user's org
+    if (targetUser.organizationId) {
+      const activeLoads = await db.load.findMany({
+        where: {
+          shipperId: targetUser.organizationId,
+          status: { in: ["POSTED", "SEARCHING", "OFFERED"] },
+        },
+        select: { id: true },
+      });
+      const loadIds = activeLoads.map((l: { id: string }) => l.id);
+
+      if (loadIds.length > 0) {
+        await db.load.updateMany({
+          where: { id: { in: loadIds } },
+          data: { status: "UNPOSTED" },
+        });
+        await db.truckRequest.updateMany({
+          where: { loadId: { in: loadIds }, status: "PENDING" },
+          data: { status: "CANCELLED" },
+        });
+        await db.loadRequest.updateMany({
+          where: { loadId: { in: loadIds }, status: "PENDING" },
+          data: { status: "CANCELLED" },
+        });
+        await db.matchProposal.updateMany({
+          where: { loadId: { in: loadIds }, status: "PENDING" },
+          data: { status: "CANCELLED" },
+        });
+      }
+    }
 
     // 4. Notify the revoked user
     await createNotification({

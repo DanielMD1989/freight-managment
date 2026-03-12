@@ -226,6 +226,7 @@ export async function PATCH(
         lastName: true,
         role: true,
         status: true,
+        organizationId: true, // G-M13-5: needed for load cleanup on suspension
       },
     });
 
@@ -333,6 +334,38 @@ export async function PATCH(
     // G-A17-2: Revoke all sessions when suspending so requireAuth() endpoints are also blocked
     if (validatedData.status === "SUSPENDED") {
       await revokeAllSessions(userId);
+
+      // G-M13-5: Unpost active loads and cancel pending requests for suspended user's org
+      if (targetUser.organizationId) {
+        // Get active load IDs for this org
+        const activeLoads = await db.load.findMany({
+          where: {
+            shipperId: targetUser.organizationId,
+            status: { in: ["POSTED", "SEARCHING", "OFFERED"] },
+          },
+          select: { id: true },
+        });
+        const loadIds = activeLoads.map((l: { id: string }) => l.id);
+
+        if (loadIds.length > 0) {
+          await db.load.updateMany({
+            where: { id: { in: loadIds } },
+            data: { status: "UNPOSTED" },
+          });
+          await db.truckRequest.updateMany({
+            where: { loadId: { in: loadIds }, status: "PENDING" },
+            data: { status: "CANCELLED" },
+          });
+          await db.loadRequest.updateMany({
+            where: { loadId: { in: loadIds }, status: "PENDING" },
+            data: { status: "CANCELLED" },
+          });
+          await db.matchProposal.updateMany({
+            where: { loadId: { in: loadIds }, status: "PENDING" },
+            data: { status: "CANCELLED" },
+          });
+        }
+      }
     }
 
     return NextResponse.json({

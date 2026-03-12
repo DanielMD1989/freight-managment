@@ -13,7 +13,7 @@
  * Business rules verified:
  * - Carrier cannot see DRAFT loads (resource cloaking → 404)
  * - Another shipper org cannot PATCH the load → 403
- * - DELETE blocked for ASSIGNED/PICKUP_PENDING/IN_TRANSIT/DELIVERED statuses → 400
+ * - DELETE blocked for ASSIGNED/PICKUP_PENDING/IN_TRANSIT/DELIVERED/COMPLETED/EXCEPTION statuses → 400
  * - POSTED loads allowed to be deleted (not in blocked list)
  * - POST with status:"POSTED" sets load.status="POSTED" and load.postedAt
  * - Duplicate resets: status=DRAFT, assignedTruckId=null, postedAt=null, isKept=false
@@ -122,6 +122,11 @@ jest.mock("@/lib/trustMetrics", () => ({
 
 jest.mock("@/lib/bypassDetection", () => ({
   checkSuspiciousCancellation: jest.fn(async () => ({ suspicious: false })),
+}));
+
+// G-M13-1: Mock geo for server-side tripKm calculation
+jest.mock("@/lib/geo", () => ({
+  calculateDistanceKm: jest.fn(() => 475.3),
 }));
 
 // Route handlers AFTER mocks
@@ -277,6 +282,39 @@ describe("Shipper Load Management", () => {
         createdById: "shipper-user-1",
       },
     });
+
+    // G-M13-6: COMPLETED and EXCEPTION loads for delete-guard tests
+    await db.load.create({
+      data: {
+        id: "completed-load-nodelete",
+        status: "COMPLETED",
+        pickupCity: "Addis Ababa",
+        pickupDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+        deliveryCity: "Hawassa",
+        deliveryDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        truckType: "DRY_VAN",
+        weight: 4000,
+        cargoDescription: "Completed cargo — cannot delete",
+        shipperId: "shipper-org-1",
+        createdById: "shipper-user-1",
+      },
+    });
+
+    await db.load.create({
+      data: {
+        id: "exception-load-nodelete",
+        status: "EXCEPTION",
+        pickupCity: "Addis Ababa",
+        pickupDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+        deliveryCity: "Mekelle",
+        deliveryDate: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000),
+        truckType: "FLATBED",
+        weight: 8000,
+        cargoDescription: "Exception cargo — cannot delete",
+        shipperId: "shipper-org-1",
+        createdById: "shipper-user-1",
+      },
+    });
   });
 
   afterAll(() => {
@@ -310,7 +348,7 @@ describe("Shipper Load Management", () => {
     setAuthSession(shipperSession);
 
     const req = createRequest("POST", "http://localhost/api/loads", {
-      body: { ...baseLoadPayload, status: "POSTED" },
+      body: { ...baseLoadPayload, status: "POSTED", tripKm: 475 },
     });
 
     const response = await callHandler(createLoad, req);
@@ -522,6 +560,39 @@ describe("Shipper Load Management", () => {
     expect(body.error).toMatch(/assigned/i);
   });
 
+  // G-M13-6: COMPLETED and EXCEPTION loads cannot be deleted
+  it("returns 400 when trying to delete a COMPLETED load", async () => {
+    setAuthSession(shipperSession);
+
+    const req = createRequest(
+      "DELETE",
+      "http://localhost/api/loads/completed-load-nodelete"
+    );
+    const response = await callHandler(deleteLoad, req, {
+      id: "completed-load-nodelete",
+    });
+    const body = await parseResponse(response);
+
+    expect(response.status).toBe(400);
+    expect(body.error).toMatch(/completed/i);
+  });
+
+  it("returns 400 when trying to delete an EXCEPTION load", async () => {
+    setAuthSession(shipperSession);
+
+    const req = createRequest(
+      "DELETE",
+      "http://localhost/api/loads/exception-load-nodelete"
+    );
+    const response = await callHandler(deleteLoad, req, {
+      id: "exception-load-nodelete",
+    });
+    const body = await parseResponse(response);
+
+    expect(response.status).toBe(400);
+    expect(body.error).toMatch(/exception/i);
+  });
+
   // ── POST /api/loads/[id]/duplicate ───────────────────────────────────────
 
   it("duplicates a load and returns { message, load: { status: DRAFT, assignedTruckId: null } }", async () => {
@@ -616,5 +687,88 @@ describe("Shipper Load Management", () => {
     // Dispatcher org does not match shipperId (and not ADMIN/SUPER_ADMIN) → 403
     expect(response.status).toBe(403);
     expect(body.error).toMatch(/permission/i);
+  });
+
+  // ── G-M13-1 + G-M13-4: tripKm server-side calculation and enforcement ──
+
+  it("G-M13-1: POST with coordinates but no tripKm → server calculates tripKm", async () => {
+    setAuthSession(shipperSession);
+
+    const req = createRequest("POST", "http://localhost/api/loads", {
+      body: {
+        ...baseLoadPayload,
+        status: "POSTED",
+        originLat: 9.02,
+        originLon: 38.75,
+        destinationLat: 9.6,
+        destinationLon: 41.85,
+      },
+    });
+
+    const response = await callHandler(createLoad, req);
+    const body = await parseResponse(response);
+
+    expect(response.status).toBe(201);
+    expect(body.load.status).toBe("POSTED");
+    // Server should have calculated tripKm from coordinates
+    expect(body.load.tripKm).toBeDefined();
+    expect(body.load.tripKm).toBeGreaterThan(0);
+  });
+
+  it("G-M13-4: POST status=POSTED with no tripKm and no coordinates → 400", async () => {
+    setAuthSession(shipperSession);
+
+    const req = createRequest("POST", "http://localhost/api/loads", {
+      body: { ...baseLoadPayload, status: "POSTED" },
+    });
+
+    const response = await callHandler(createLoad, req);
+    const body = await parseResponse(response);
+
+    expect(response.status).toBe(400);
+    // Zod refine error comes through zodErrorResponse mock as { error: "Validation error" }
+    expect(body.error).toBe("Validation error");
+  });
+
+  it("G-M13-3: POST with past pickupDate → 400", async () => {
+    setAuthSession(shipperSession);
+
+    const req = createRequest("POST", "http://localhost/api/loads", {
+      body: {
+        ...baseLoadPayload,
+        pickupDate: "2020-01-01T00:00:00.000Z",
+        deliveryDate: "2020-01-05T00:00:00.000Z",
+      },
+    });
+
+    const response = await callHandler(createLoad, req);
+
+    expect(response.status).toBe(400);
+  });
+
+  it("G-M13-2: POST with invalid coordinates (originLat=999) → 400", async () => {
+    setAuthSession(shipperSession);
+
+    const req = createRequest("POST", "http://localhost/api/loads", {
+      body: { ...baseLoadPayload, status: "DRAFT", originLat: 999 },
+    });
+
+    const response = await callHandler(createLoad, req);
+
+    expect(response.status).toBe(400);
+  });
+
+  it("G-M13-4: POST status=DRAFT with no tripKm → succeeds (201)", async () => {
+    setAuthSession(shipperSession);
+
+    const req = createRequest("POST", "http://localhost/api/loads", {
+      body: { ...baseLoadPayload, status: "DRAFT" },
+    });
+
+    const response = await callHandler(createLoad, req);
+    const body = await parseResponse(response);
+
+    expect(response.status).toBe(201);
+    expect(body.load.status).toBe("DRAFT");
   });
 });

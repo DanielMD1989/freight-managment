@@ -176,4 +176,65 @@ describe("Admin Org Rejection → ACCOUNT_FLAGGED Notification (G-N1-9)", () => 
     expect(res.status).toBe(403);
     expect(createNotification).not.toHaveBeenCalled();
   });
+
+  // G-M13-5: Org rejection unposts active loads
+  it("G-M13-5: rejecting org → POSTED loads become UNPOSTED", async () => {
+    const org = await db.organization.create({
+      data: {
+        id: "nor-org-m13",
+        name: "NOR Org M13",
+        type: "SHIPPER",
+        contactEmail: "norm13@test.com",
+        contactPhone: "+251911500013",
+        verificationStatus: "PENDING",
+      },
+    });
+
+    // Create a user for the org
+    await db.user.create({
+      data: {
+        id: "nor-user-m13",
+        email: "norm13user@test.com",
+        firstName: "M13",
+        lastName: "User",
+        role: "SHIPPER",
+        status: "ACTIVE",
+        organizationId: org.id,
+      },
+    });
+
+    // Create a POSTED load for this org
+    await db.load.create({
+      data: {
+        id: "load-m13-reject-test",
+        status: "POSTED",
+        pickupCity: "Addis Ababa",
+        pickupDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        deliveryCity: "Hawassa",
+        deliveryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        truckType: "DRY_VAN",
+        weight: 3000,
+        cargoDescription: "Load for org reject cleanup test",
+        shipperId: org.id,
+        createdById: "nor-user-m13",
+      },
+    });
+
+    setAuthSession(
+      createMockSession({
+        userId: "admin-nor-m13",
+        role: "ADMIN",
+        status: "ACTIVE",
+      })
+    );
+
+    const res = await callReject(org.id, "Failed compliance check");
+    expect(res.status).toBe(200);
+
+    // Verify load was unposted
+    const load = await db.load.findUnique({
+      where: { id: "load-m13-reject-test" },
+    });
+    expect(load?.status).toBe("UNPOSTED");
+  });
 });

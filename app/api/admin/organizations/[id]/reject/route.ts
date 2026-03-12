@@ -125,6 +125,35 @@ export async function POST(
       );
     }
 
+    // G-M13-5: Unpost active loads and cancel pending requests for rejected org
+    const activeLoads = await db.load.findMany({
+      where: {
+        shipperId: orgId,
+        status: { in: ["POSTED", "SEARCHING", "OFFERED"] },
+      },
+      select: { id: true },
+    });
+    const loadIds = activeLoads.map((l: { id: string }) => l.id);
+
+    if (loadIds.length > 0) {
+      await db.load.updateMany({
+        where: { id: { in: loadIds } },
+        data: { status: "UNPOSTED" },
+      });
+      await db.truckRequest.updateMany({
+        where: { loadId: { in: loadIds }, status: "PENDING" },
+        data: { status: "CANCELLED" },
+      });
+      await db.loadRequest.updateMany({
+        where: { loadId: { in: loadIds }, status: "PENDING" },
+        data: { status: "CANCELLED" },
+      });
+      await db.matchProposal.updateMany({
+        where: { loadId: { in: loadIds }, status: "PENDING" },
+        data: { status: "CANCELLED" },
+      });
+    }
+
     // Notify all org members
     await Promise.all(
       orgUsers.map((u) =>

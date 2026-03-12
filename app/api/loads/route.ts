@@ -28,10 +28,10 @@ const createLoadSchema = z
     tripKm: z.number().positive().optional(), // Required for POSTED status
     dhToOriginKm: z.number().positive().optional(),
     dhAfterDeliveryKm: z.number().positive().optional(),
-    originLat: z.number().optional(),
-    originLon: z.number().optional(),
-    destinationLat: z.number().optional(),
-    destinationLon: z.number().optional(),
+    originLat: z.number().min(-90).max(90).optional(),
+    originLon: z.number().min(-180).max(180).optional(),
+    destinationLat: z.number().min(-90).max(90).optional(),
+    destinationLon: z.number().min(-180).max(180).optional(),
 
     // Load Details
     truckType: z.enum([
@@ -86,6 +86,38 @@ const createLoadSchema = z
     {
       message: "Pickup date must be on or before delivery date",
       path: ["deliveryDate"],
+    }
+  )
+  .refine(
+    (data) => {
+      // G-M13-3: Pickup date cannot be in the past
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return new Date(data.pickupDate) >= today;
+    },
+    {
+      message: "Pickup date cannot be in the past",
+      path: ["pickupDate"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.status !== "POSTED") return true;
+      // G-M13-4: tripKm required for POSTED — allowed if coordinates provided (server calculates)
+      if (data.tripKm != null) return true;
+      if (
+        data.originLat != null &&
+        data.originLon != null &&
+        data.destinationLat != null &&
+        data.destinationLon != null
+      )
+        return true;
+      return false;
+    },
+    {
+      message:
+        "Trip distance (tripKm) or origin/destination coordinates are required for posted loads",
+      path: ["tripKm"],
     }
   );
 
@@ -159,10 +191,30 @@ export async function POST(request: NextRequest) {
         : undefined,
     };
 
+    // G-M13-1: Server-side tripKm calculation when coordinates provided but tripKm missing
+    let computedTripKm = sanitized.tripKm;
+    if (
+      computedTripKm == null &&
+      sanitized.originLat != null &&
+      sanitized.originLon != null &&
+      sanitized.destinationLat != null &&
+      sanitized.destinationLon != null
+    ) {
+      computedTripKm = Math.round(
+        calculateDistanceKm(
+          sanitized.originLat,
+          sanitized.originLon,
+          sanitized.destinationLat,
+          sanitized.destinationLon
+        )
+      );
+    }
+
     // Pricing is negotiated off-platform - platform only charges service fees
     const load = await db.load.create({
       data: {
         ...sanitized,
+        tripKm: computedTripKm, // G-M13-1: use server-calculated tripKm if computed
         pickupDate: new Date(sanitized.pickupDate),
         deliveryDate: new Date(sanitized.deliveryDate),
         postedAt: sanitized.status === "POSTED" ? new Date() : null,

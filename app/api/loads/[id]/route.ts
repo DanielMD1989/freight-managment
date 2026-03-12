@@ -418,6 +418,18 @@ export async function PATCH(
     // Update postedAt when status changes to POSTED
     if (validatedData.status === "POSTED" && existingLoad.status !== "POSTED") {
       additionalData.postedAt = new Date();
+
+      // G-M13-4: Enforce tripKm for DRAFT→POSTED transition
+      const effectiveTripKm = validatedData.tripKm ?? existingLoad.tripKm;
+      if (effectiveTripKm == null) {
+        return NextResponse.json(
+          {
+            error:
+              "Trip distance (tripKm) is required before posting. Update the load with tripKm first.",
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Sync tripKm and estimatedTripKm for backward compatibility
@@ -674,17 +686,19 @@ export async function DELETE(
       );
     }
 
-    // Can only delete draft, unposted, or posted loads (not assigned/pickup-pending/in-transit/delivered)
+    // Can only delete draft, unposted, posted, or cancelled loads
     if (
       load.status === "ASSIGNED" ||
       load.status === "PICKUP_PENDING" ||
       load.status === "IN_TRANSIT" ||
-      load.status === "DELIVERED"
+      load.status === "DELIVERED" ||
+      load.status === "COMPLETED" || // G-M13-6: financial records depend on this load
+      load.status === "EXCEPTION" // G-M13-6: active resolution workflow
     ) {
       return NextResponse.json(
         {
           error:
-            "Cannot delete loads that are assigned, awaiting pickup, in transit, or delivered",
+            "Cannot delete loads that are assigned, awaiting pickup, in transit, delivered, completed, or in exception",
         },
         { status: 400 }
       );

@@ -1283,4 +1283,50 @@ describe("Admin Users API", () => {
       expect(res.status).toBe(403);
     });
   });
+
+  // ── G-M13-5: Load cleanup on suspension ─────────────────────────────────
+  describe("G-M13-5: Load cleanup on user suspension", () => {
+    it("suspending a shipper user unposts their org's active loads", async () => {
+      useAdminSession();
+
+      // Create a POSTED load for the shipper org
+      await db.load.create({
+        data: {
+          id: "load-m13-suspend-test",
+          status: "POSTED",
+          pickupCity: "Addis Ababa",
+          pickupDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          deliveryCity: "Dire Dawa",
+          deliveryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+          truckType: "DRY_VAN",
+          weight: 5000,
+          cargoDescription: "Test load for suspension cleanup",
+          shipperId: "shipper-org-1",
+          createdById: "shipper-user-1",
+        },
+      });
+
+      const req = createRequest(
+        "PATCH",
+        `http://localhost:3000/api/admin/users/${seed.shipperUser.id}`,
+        { body: { status: "SUSPENDED" } }
+      );
+      const res = await callHandler(updateUser, req, {
+        id: seed.shipperUser.id,
+      });
+      expect(res.status).toBe(200);
+
+      // Verify load was unposted
+      const load = await db.load.findUnique({
+        where: { id: "load-m13-suspend-test" },
+      });
+      expect(load?.status).toBe("UNPOSTED");
+
+      // Restore user
+      await db.user.update({
+        where: { id: seed.shipperUser.id },
+        data: { status: "ACTIVE" },
+      });
+    });
+  });
 });
