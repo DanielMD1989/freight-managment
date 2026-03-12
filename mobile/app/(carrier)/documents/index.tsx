@@ -21,6 +21,7 @@ import {
   useUploadDocument,
   useDeleteDocument,
 } from "../../../src/hooks/useDocuments";
+import { useVerificationStatus } from "../../../src/hooks/useVerificationStatus";
 import { Card } from "../../../src/components/Card";
 import { StatusBadge } from "../../../src/components/StatusBadge";
 import { LoadingSpinner } from "../../../src/components/LoadingSpinner";
@@ -30,6 +31,19 @@ import { formatDate } from "../../../src/utils/format";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+function inferMimeType(fileName: string): string | null {
+  const ext = fileName.split(".").pop()?.toLowerCase();
+  const map: Record<string, string> = {
+    pdf: "application/pdf",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+  };
+  return ext ? (map[ext] ?? null) : null;
+}
 
 const DOC_TYPES = [
   "COMPANY_LICENSE",
@@ -51,6 +65,8 @@ export default function CarrierDocumentsScreen() {
   } = useDocuments({ entityType: "company", entityId: orgId });
   const uploadMutation = useUploadDocument();
   const deleteMutation = useDeleteDocument();
+  const { data: verificationData } = useVerificationStatus();
+  const isLocked = !!verificationData?.organization?.documentsLockedAt;
 
   const [selectedDocType, setSelectedDocType] = useState<string>(DOC_TYPES[0]);
   const [showTypeSelector, setShowTypeSelector] = useState(false);
@@ -60,13 +76,21 @@ export default function CarrierDocumentsScreen() {
     (d) => d.verificationStatus === "PENDING"
   ).length;
   const approvedCount = documents.filter(
-    (d) => d.verificationStatus === "VERIFIED"
+    (d) => d.verificationStatus === "APPROVED"
   ).length;
   const rejectedCount = documents.filter(
     (d) => d.verificationStatus === "REJECTED"
   ).length;
 
   const handlePickDocument = async () => {
+    if (isLocked) {
+      Alert.alert(
+        "Documents Locked",
+        "Documents are locked after account approval. Contact support to update."
+      );
+      return;
+    }
+
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ["application/pdf", "image/jpeg", "image/png"],
@@ -76,11 +100,22 @@ export default function CarrierDocumentsScreen() {
       if (result.canceled || !result.assets?.[0]) return;
 
       const file = result.assets[0];
+
+      // G-M5-4: Client-side file size validation
+      if (file.size && file.size > MAX_FILE_SIZE) {
+        Alert.alert("File Too Large", "Maximum file size is 10MB.");
+        return;
+      }
+
+      // G-M5-5: Infer MIME type from extension if mimeType is null
+      const mimeType =
+        file.mimeType ?? inferMimeType(file.name) ?? "application/octet-stream";
+
       const formData = new FormData();
       formData.append("file", {
         uri: file.uri,
         name: file.name,
-        type: file.mimeType ?? "application/octet-stream",
+        type: mimeType,
       } as unknown as Blob);
       formData.append("type", selectedDocType);
       formData.append("entityType", "company");
@@ -145,6 +180,17 @@ export default function CarrierDocumentsScreen() {
         </Card>
       </View>
 
+      {/* Lock Banner — G-M5-2 */}
+      {isLocked && (
+        <View style={styles.lockBanner}>
+          <Ionicons name="lock-closed" size={18} color={colors.warning} />
+          <Text style={styles.lockBannerText}>
+            Documents are locked following account verification. Contact support
+            to update a document.
+          </Text>
+        </View>
+      )}
+
       {/* Upload Section */}
       <Card style={styles.uploadCard} padding="lg">
         <Text style={styles.sectionTitle}>Upload Document</Text>
@@ -192,15 +238,16 @@ export default function CarrierDocumentsScreen() {
         )}
 
         <Button
-          title="Choose File & Upload"
+          title={isLocked ? "Documents Locked" : "Choose File & Upload"}
           variant="primary"
           size="md"
           fullWidth
           onPress={handlePickDocument}
           loading={uploadMutation.isPending}
+          disabled={isLocked}
           icon={
             <Ionicons
-              name="cloud-upload-outline"
+              name={isLocked ? "lock-closed" : "cloud-upload-outline"}
               size={18}
               color={colors.white}
             />
@@ -294,6 +341,24 @@ const styles = StyleSheet.create({
     ...typography.labelSmall,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+  lockBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginHorizontal: spacing["2xl"],
+    marginTop: spacing.lg,
+    backgroundColor: "#FEF3C7",
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    borderRadius: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  lockBannerText: {
+    ...typography.bodySmall,
+    color: "#92400E",
+    flex: 1,
   },
   uploadCard: {
     marginHorizontal: spacing["2xl"],

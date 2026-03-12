@@ -26,11 +26,12 @@ interface Document {
 }
 
 const DOCUMENT_TYPES = [
-  { value: "BUSINESS_LICENSE", label: "Business License" },
-  { value: "TAX_CERTIFICATE", label: "Tax Certificate" },
-  { value: "TRADE_PERMIT", label: "Trade Permit" },
+  { value: "COMPANY_LICENSE", label: "Company License" },
+  { value: "TIN_CERTIFICATE", label: "TIN Certificate" },
+  { value: "BUSINESS_REGISTRATION", label: "Business Registration" },
+  { value: "TRADE_LICENSE", label: "Trade License" },
+  { value: "VAT_CERTIFICATE", label: "VAT Certificate" },
   { value: "INSURANCE_CERTIFICATE", label: "Insurance Certificate" },
-  { value: "BANK_STATEMENT", label: "Bank Statement" },
   { value: "OTHER", label: "Other Document" },
 ];
 
@@ -77,7 +78,7 @@ export default function DocumentManagementClient({
 
   // Upload form state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [documentType, setDocumentType] = useState("BUSINESS_LICENSE");
+  const [documentType, setDocumentType] = useState("COMPANY_LICENSE");
 
   // Insurance fields (shown when document type is INSURANCE_CERTIFICATE)
   const [policyNumber, setPolicyNumber] = useState("");

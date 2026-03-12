@@ -447,6 +447,7 @@ export async function DELETE(
           id: true,
           verificationStatus: true,
           uploadedById: true,
+          organizationId: true,
         },
       });
 
@@ -462,6 +463,21 @@ export async function DELETE(
         return NextResponse.json(
           { error: "You can only delete documents you uploaded" },
           { status: 403 }
+        );
+      }
+
+      // G-M5-6: Check documentsLockedAt — permanently locked after approval
+      const org = await db.organization.findUnique({
+        where: { id: document.organizationId },
+        select: { documentsLockedAt: true },
+      });
+      if (org?.documentsLockedAt) {
+        return NextResponse.json(
+          {
+            error:
+              "Documents are locked after approval. Contact support to update documents.",
+          },
+          { status: 423 }
         );
       }
 
@@ -489,6 +505,7 @@ export async function DELETE(
           id: true,
           verificationStatus: true,
           uploadedById: true,
+          truckId: true,
         },
       });
 
@@ -504,6 +521,21 @@ export async function DELETE(
         return NextResponse.json(
           { error: "You can only delete documents you uploaded" },
           { status: 403 }
+        );
+      }
+
+      // G-M5-6: Check documentsLockedAt — permanently locked after approval
+      const truck = await db.truck.findUnique({
+        where: { id: document.truckId },
+        select: { documentsLockedAt: true },
+      });
+      if (truck?.documentsLockedAt) {
+        return NextResponse.json(
+          {
+            error:
+              "Truck documents are locked after approval. Contact support to update documents.",
+          },
+          { status: 423 }
         );
       }
 
