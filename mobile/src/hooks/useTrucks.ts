@@ -13,6 +13,7 @@ export function useTrucks(params?: {
   page?: number;
   limit?: number;
   status?: string;
+  approvalStatus?: string;
 }) {
   return useQuery({
     queryKey: [...TRUCKS_KEY, params],

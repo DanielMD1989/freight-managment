@@ -80,13 +80,16 @@ export async function POST(request: NextRequest) {
       console.error("Failed to notify admins of resubmit:", err)
     );
 
-    // G-M3-4: Transition REGISTERED or REJECTED user to PENDING_VERIFICATION
-    if (user.status === "REGISTERED" || user.status === "REJECTED") {
-      await db.user.update({
-        where: { id: session.userId },
-        data: { status: "PENDING_VERIFICATION" },
-      });
-    }
+    // G-M6-5: Cascade PENDING_VERIFICATION to ALL org members with REJECTED status
+    // Mirrors the cascade pattern in admin/organizations/[id]/reject which sets
+    // all org members to REJECTED. Resubmit must reverse this for all members.
+    await db.user.updateMany({
+      where: {
+        organizationId: user.organization.id,
+        status: { in: ["REJECTED", "REGISTERED"] },
+      },
+      data: { status: "PENDING_VERIFICATION" },
+    });
 
     return NextResponse.json({
       message: "Resubmitted for review",

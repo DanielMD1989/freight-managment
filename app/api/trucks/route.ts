@@ -38,6 +38,11 @@ const createTruckSchema = z.object({
   // Sprint 16: GPS fields
   imei: z.string().max(15).optional(),
   gpsProvider: z.string().max(100).optional(),
+  // G-M9-1: Sprint 8 fields (previously missing from schema)
+  lengthM: z.number().positive().optional(),
+  ownerName: z.string().max(200).optional(),
+  contactName: z.string().max(200).optional(),
+  contactPhone: z.string().max(50).optional(),
 });
 
 // POST /api/trucks - Create truck

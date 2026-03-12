@@ -853,6 +853,102 @@ describe("Carrier Truck Management", () => {
     });
   });
 
+  // ─── G-M10-1: PATCH must NOT allow approvalStatus changes ────────────────
+
+  describe("G-M10-1: PATCH /api/trucks/[id] — approvalStatus stripped", () => {
+    it("G-M10-1a: PATCH with approvalStatus in body → field stripped, truck status unchanged", async () => {
+      // Create an APPROVED truck
+      const approvedTruck = await db.truck.create({
+        data: {
+          id: "truck-m10-approved-patch",
+          truckType: "FLATBED",
+          licensePlate: "M10-PATCH-01",
+          capacity: 10000,
+          carrierId: seed.carrierOrg.id,
+          createdById: seed.carrierUser.id,
+          approvalStatus: "APPROVED",
+          approvedAt: new Date(),
+        },
+      });
+
+      const req = createRequest(
+        "PATCH",
+        `http://localhost:3000/api/trucks/${approvedTruck.id}`,
+        {
+          body: {
+            approvalStatus: "PENDING",
+            rejectionReason: null,
+            capacity: 12000,
+          },
+        }
+      );
+
+      const res = await callHandler(updateTruck, req, { id: approvedTruck.id });
+      expect(res.status).toBe(200);
+
+      // Capacity updated, but approvalStatus must remain APPROVED
+      const after = await db.truck.findUnique({
+        where: { id: approvedTruck.id },
+      });
+      expect(after.approvalStatus).toBe("APPROVED");
+      expect(after.capacity).toBe(12000);
+    });
+
+    it("G-M10-1b: resubmit flow — PATCH saves fields then POST /resubmit transitions to PENDING", async () => {
+      const rejectedTruck = await db.truck.create({
+        data: {
+          id: "truck-m10-resubmit-flow",
+          truckType: "DRY_VAN",
+          licensePlate: "M10-RESUB-01",
+          capacity: 8000,
+          carrierId: seed.carrierOrg.id,
+          createdById: seed.carrierUser.id,
+          approvalStatus: "REJECTED",
+          rejectionReason: "Expired documents",
+          rejectedAt: new Date(),
+        },
+      });
+
+      // Step 1: PATCH updates physical fields only
+      const patchReq = createRequest(
+        "PATCH",
+        `http://localhost:3000/api/trucks/${rejectedTruck.id}`,
+        { body: { capacity: 9500 } }
+      );
+      const patchRes = await callHandler(updateTruck, patchReq, {
+        id: rejectedTruck.id,
+      });
+      expect(patchRes.status).toBe(200);
+
+      // Verify: capacity changed but still REJECTED
+      const afterPatch = await db.truck.findUnique({
+        where: { id: rejectedTruck.id },
+      });
+      expect(afterPatch.capacity).toBe(9500);
+      expect(afterPatch.approvalStatus).toBe("REJECTED");
+
+      // Step 2: POST /resubmit transitions to PENDING
+      const {
+        POST: resubmitHandler,
+      } = require("@/app/api/trucks/[id]/resubmit/route");
+      const resubmitReq = createRequest(
+        "POST",
+        `http://localhost:3000/api/trucks/${rejectedTruck.id}/resubmit`
+      );
+      const resubmitRes = await callHandler(resubmitHandler, resubmitReq, {
+        id: rejectedTruck.id,
+      });
+      expect(resubmitRes.status).toBe(200);
+
+      const afterResubmit = await db.truck.findUnique({
+        where: { id: rejectedTruck.id },
+      });
+      expect(afterResubmit.approvalStatus).toBe("PENDING");
+      expect(afterResubmit.rejectionReason).toBeNull();
+      expect(afterResubmit.capacity).toBe(9500); // Physical field preserved
+    });
+  });
+
   // ─── DELETE /api/trucks/[id] ──────────────────────────────────────────────
 
   describe("DELETE /api/trucks/[id] - Delete Truck", () => {

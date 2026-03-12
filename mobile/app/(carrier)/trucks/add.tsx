@@ -4,11 +4,13 @@
 import React from "react";
 import {
   View,
+  Text,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
   Alert,
+  TouchableOpacity,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useForm, Controller } from "react-hook-form";
@@ -20,6 +22,17 @@ import { Input } from "../../../src/components/Input";
 import { Button } from "../../../src/components/Button";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
+
+const TRUCK_TYPES = [
+  { value: "FLATBED", label: "Flatbed" },
+  { value: "REFRIGERATED", label: "Refrigerated" },
+  { value: "TANKER", label: "Tanker" },
+  { value: "CONTAINER", label: "Container" },
+  { value: "DRY_VAN", label: "Dry Van" },
+  { value: "LOWBOY", label: "Lowboy" },
+  { value: "DUMP_TRUCK", label: "Dump Truck" },
+  { value: "BOX_TRUCK", label: "Box Truck" },
+] as const;
 
 const truckSchema = z.object({
   licensePlate: z.string().min(1, "License plate is required"),
@@ -71,7 +84,7 @@ export default function AddTruckScreen() {
       },
       {
         onSuccess: () => {
-          Alert.alert("Success", "Truck added successfully!");
+          Alert.alert("Success", "Truck submitted for admin approval!");
           router.back();
         },
         onError: (err) => {
@@ -110,15 +123,35 @@ export default function AddTruckScreen() {
           control={control}
           name="truckType"
           render={({ field: { onChange, value } }) => (
-            <Input
-              label={t("truck.truckType")}
-              value={value}
-              onChangeText={onChange}
-              error={errors.truckType?.message}
-              required
-              hint="FLATBED, REFRIGERATED, TANKER, CONTAINER, DRY_VAN, LOWBOY, DUMP_TRUCK, BOX_TRUCK"
-              testID="truck-truckType"
-            />
+            <View testID="truck-truckType">
+              <Text style={styles.pickerLabel}>
+                {t("truck.truckType")} <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={styles.pickerGrid}>
+                {TRUCK_TYPES.map((type) => (
+                  <TouchableOpacity
+                    key={type.value}
+                    style={[
+                      styles.pickerOption,
+                      value === type.value && styles.pickerOptionSelected,
+                    ]}
+                    onPress={() => onChange(type.value)}
+                  >
+                    <Text
+                      style={[
+                        styles.pickerOptionText,
+                        value === type.value && styles.pickerOptionTextSelected,
+                      ]}
+                    >
+                      {type.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {errors.truckType?.message && (
+                <Text style={styles.errorText}>{errors.truckType.message}</Text>
+              )}
+            </View>
           )}
         />
 
@@ -183,6 +216,18 @@ export default function AddTruckScreen() {
 
         <Controller
           control={control}
+          name="contactName"
+          render={({ field: { onChange, value } }) => (
+            <Input
+              label={t("truck.contactName")}
+              value={value ?? ""}
+              onChangeText={onChange}
+            />
+          )}
+        />
+
+        <Controller
+          control={control}
           name="contactPhone"
           render={({ field: { onChange, value } }) => (
             <Input
@@ -221,5 +266,45 @@ const styles = StyleSheet.create({
   },
   halfField: {
     flex: 1,
+  },
+  pickerLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  required: {
+    color: colors.error,
+  },
+  pickerGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  pickerOption: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  pickerOptionSelected: {
+    borderColor: colors.primary500,
+    backgroundColor: colors.primary500 + "15",
+  },
+  pickerOptionText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  pickerOptionTextSelected: {
+    color: colors.primary500,
+    fontWeight: "600",
+  },
+  errorText: {
+    fontSize: 12,
+    color: colors.error,
+    marginTop: 2,
   },
 });

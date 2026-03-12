@@ -115,8 +115,39 @@ export default function TruckDetailsScreen() {
 
   if (isLoading || !truck) return <LoadingSpinner fullScreen />;
 
+  const isDocLocked = !!truck.documentsLockedAt;
+
   return (
     <ScrollView style={styles.container}>
+      {/* G-M10-2: Rejection reason banner */}
+      {truck.approvalStatus === "REJECTED" && truck.rejectionReason && (
+        <View style={styles.rejectionBanner}>
+          <Ionicons name="alert-circle" size={20} color={colors.errorDark} />
+          <View style={styles.rejectionContent}>
+            <Text style={styles.rejectionTitle}>Truck Rejected</Text>
+            <Text style={styles.rejectionReasonText}>
+              {truck.rejectionReason}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {truck.approvalStatus === "REJECTED" && (
+        <Button
+          title="Go to Edit & Resubmit"
+          variant="primary"
+          size="lg"
+          fullWidth
+          style={styles.resubmitButton}
+          onPress={() =>
+            router.push({
+              pathname: "/(carrier)/trucks/edit",
+              params: { id },
+            })
+          }
+        />
+      )}
+
       <Card style={styles.card}>
         <View style={styles.header}>
           <Text style={styles.licensePlate}>{truck.licensePlate}</Text>
@@ -157,18 +188,30 @@ export default function TruckDetailsScreen() {
       <View style={styles.docSection}>
         <View style={styles.docHeader}>
           <Text style={styles.docTitle}>Documents</Text>
-          <TouchableOpacity
-            style={styles.addDocButton}
-            onPress={handleAddDocument}
-          >
-            <Ionicons
-              name="add-circle-outline"
-              size={20}
-              color={colors.primary600}
-            />
-            <Text style={styles.addDocText}>Add</Text>
-          </TouchableOpacity>
+          {!isDocLocked && (
+            <TouchableOpacity
+              style={styles.addDocButton}
+              onPress={handleAddDocument}
+            >
+              <Ionicons
+                name="add-circle-outline"
+                size={20}
+                color={colors.primary600}
+              />
+              <Text style={styles.addDocText}>Add</Text>
+            </TouchableOpacity>
+          )}
         </View>
+
+        {/* G-M10-3: Document lock info */}
+        {isDocLocked && (
+          <View style={styles.lockBanner}>
+            <Ionicons name="lock-closed" size={16} color={colors.slate500} />
+            <Text style={styles.lockBannerText}>
+              Documents locked after approval
+            </Text>
+          </View>
+        )}
 
         {docsLoading ? (
           <LoadingSpinner size="small" />
@@ -181,13 +224,15 @@ export default function TruckDetailsScreen() {
                 color={colors.slate300}
               />
               <Text style={styles.emptyDocText}>No documents uploaded yet</Text>
-              <Button
-                title="Upload Document"
-                onPress={handleAddDocument}
-                variant="outline"
-                size="sm"
-                style={{ marginTop: spacing.sm }}
-              />
+              {!isDocLocked && (
+                <Button
+                  title="Upload Document"
+                  onPress={handleAddDocument}
+                  variant="outline"
+                  size="sm"
+                  style={{ marginTop: spacing.sm }}
+                />
+              )}
             </View>
           </Card>
         ) : (
@@ -209,16 +254,18 @@ export default function TruckDetailsScreen() {
                     size="sm"
                   />
                 </View>
-                <TouchableOpacity
-                  onPress={() => handleDeleteDocument(doc.id, doc.fileName)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons
-                    name="trash-outline"
-                    size={18}
-                    color={colors.error}
-                  />
-                </TouchableOpacity>
+                {!isDocLocked && (
+                  <TouchableOpacity
+                    onPress={() => handleDeleteDocument(doc.id, doc.fileName)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons
+                      name="trash-outline"
+                      size={18}
+                      color={colors.error}
+                    />
+                  </TouchableOpacity>
+                )}
               </View>
               {doc.verificationStatus && (
                 <View style={styles.docStatus}>
@@ -353,5 +400,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing["2xl"],
     marginTop: spacing.lg,
+  },
+  rejectionBanner: {
+    flexDirection: "row",
+    backgroundColor: colors.errorLight,
+    borderRadius: 8,
+    padding: spacing.md,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.error,
+  },
+  rejectionContent: {
+    flex: 1,
+    marginLeft: spacing.sm,
+  },
+  rejectionTitle: {
+    ...typography.labelMedium,
+    color: colors.errorDark,
+    marginBottom: 2,
+  },
+  rejectionReasonText: {
+    ...typography.bodySmall,
+    color: colors.errorDark,
+  },
+  resubmitButton: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+  },
+  lockBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.slate100,
+    borderRadius: 8,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  lockBannerText: {
+    ...typography.bodySmall,
+    color: colors.slate500,
   },
 });

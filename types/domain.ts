@@ -330,6 +330,8 @@ export interface Truck {
   approvedAt?: Date | null;
   approvedById?: string | null;
   rejectionReason?: string | null;
+  rejectedAt?: Date | null;
+  documentsLockedAt?: Date | null;
 
   // Relations
   carrierId: string;

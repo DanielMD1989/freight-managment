@@ -18,6 +18,7 @@ class TruckService {
     page?: number;
     limit?: number;
     status?: string;
+    approvalStatus?: string;
   }): Promise<TrucksResponse> {
     try {
       const response = await apiClient.get("/api/trucks", { params });

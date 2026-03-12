@@ -28,6 +28,7 @@ interface Truck {
   isAvailable: boolean;
   status: string;
   approvalStatus: string;
+  rejectionReason?: string | null;
   documentsLockedAt: string | null;
   createdAt: string;
   carrier: {
@@ -310,6 +311,20 @@ export default function TruckDetailsPage({
             </p>
           </div>
         </div>
+
+        {/* G-M10-6: Rejection reason banner */}
+        {truck.approvalStatus === "REJECTED" && truck.rejectionReason && (
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4">
+            <p className="font-medium text-red-800">Rejection Reason:</p>
+            <p className="mt-1 text-red-700">{truck.rejectionReason}</p>
+            <a
+              href={`/carrier/trucks/${truck.id}/edit?resubmit=true`}
+              className="mt-3 inline-block rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+            >
+              Edit &amp; Resubmit
+            </a>
+          </div>
+        )}
 
         {/* GPS Device Info */}
         <div className="mt-6 border-t pt-4">

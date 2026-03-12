@@ -1,7 +1,8 @@
 /**
  * My Trucks list screen (Carrier)
+ * G-M10-4: Approval status tabs (Approved / Pending / Rejected)
  */
-import React from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -13,6 +14,8 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTrucks } from "../../../src/hooks/useTrucks";
+import { useOrganization } from "../../../src/hooks/useOrganization";
+import { useAuthStore } from "../../../src/stores/auth";
 import { Card } from "../../../src/components/Card";
 import { StatusBadge } from "../../../src/components/StatusBadge";
 import { Button } from "../../../src/components/Button";
@@ -24,11 +27,48 @@ import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
 import type { Truck } from "../../../src/types";
 
+type ApprovalTab = "APPROVED" | "PENDING" | "REJECTED";
+
+const TABS: { key: ApprovalTab; label: string }[] = [
+  { key: "APPROVED", label: "Approved" },
+  { key: "PENDING", label: "Pending" },
+  { key: "REJECTED", label: "Rejected" },
+];
+
 export default function TrucksListScreen() {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<ApprovalTab>("APPROVED");
   const { data, isLoading, refetch, isRefetching } = useTrucks();
+  const organizationId = useAuthStore((s) => s.user?.organizationId);
+  const { data: org } = useOrganization(organizationId);
+  const isOrgApproved =
+    (org as unknown as { verificationStatus?: string })?.verificationStatus ===
+    "APPROVED";
 
-  const trucks = data?.trucks ?? [];
+  const allTrucks = data?.trucks ?? [];
+
+  // Client-side filter by approval status tab
+  const trucks = useMemo(
+    () => allTrucks.filter((t) => t.approvalStatus === activeTab),
+    [allTrucks, activeTab]
+  );
+
+  // Count per tab for badge display
+  const counts = useMemo(() => {
+    const c = { APPROVED: 0, PENDING: 0, REJECTED: 0 };
+    for (const t of allTrucks) {
+      if (t.approvalStatus in c) c[t.approvalStatus as ApprovalTab]++;
+    }
+    return c;
+  }, [allTrucks]);
+
+  const emptyMessages: Record<ApprovalTab, string> = {
+    APPROVED: isOrgApproved
+      ? "No approved trucks yet. Add a truck and wait for admin approval."
+      : "Your organization must be approved before you can add trucks",
+    PENDING: "No trucks pending review",
+    REJECTED: "No rejected trucks",
+  };
 
   const renderTruck = ({ item }: { item: Truck }) => (
     <TouchableOpacity
@@ -53,6 +93,11 @@ export default function TrucksListScreen() {
             }
           />
         </View>
+        {item.approvalStatus === "REJECTED" && item.rejectionReason && (
+          <Text style={styles.rejectionReason} numberOfLines={2}>
+            {item.rejectionReason}
+          </Text>
+        )}
         <View style={styles.truckDetails}>
           <View style={styles.detailItem}>
             <Ionicons name="scale-outline" size={14} color={colors.slate400} />
@@ -75,6 +120,48 @@ export default function TrucksListScreen() {
 
   return (
     <View style={styles.container}>
+      {/* G-M10-4: Approval status tabs */}
+      <View style={styles.tabBar}>
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.key;
+          const count = counts[tab.key];
+          return (
+            <TouchableOpacity
+              key={tab.key}
+              style={[styles.tab, isActive && styles.tabActive]}
+              onPress={() => setActiveTab(tab.key)}
+            >
+              <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
+                {tab.label}
+              </Text>
+              {count > 0 && (
+                <View
+                  style={[
+                    styles.tabBadge,
+                    isActive && styles.tabBadgeActive,
+                    tab.key === "REJECTED" &&
+                      count > 0 &&
+                      styles.tabBadgeRejected,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.tabBadgeText,
+                      isActive && styles.tabBadgeTextActive,
+                      tab.key === "REJECTED" &&
+                        count > 0 &&
+                        styles.tabBadgeTextRejected,
+                    ]}
+                  >
+                    {count}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
       {isLoading && !data ? (
         <LoadingSpinner fullScreen />
       ) : (
@@ -89,14 +176,26 @@ export default function TrucksListScreen() {
           ListEmptyComponent={
             <EmptyState
               icon="bus-outline"
-              title="No trucks yet"
-              message="Add your first truck to get started"
-              actionLabel="Add Truck"
-              onAction={() => router.push("/(carrier)/trucks/add")}
+              title={
+                activeTab === "APPROVED"
+                  ? "No trucks yet"
+                  : `No ${activeTab.toLowerCase()} trucks`
+              }
+              message={emptyMessages[activeTab]}
+              actionLabel={
+                activeTab === "APPROVED" && isOrgApproved
+                  ? "Add Truck"
+                  : undefined
+              }
+              onAction={
+                activeTab === "APPROVED" && isOrgApproved
+                  ? () => router.push("/(carrier)/trucks/add")
+                  : undefined
+              }
             />
           }
           ListHeaderComponent={
-            trucks.length > 0 ? (
+            allTrucks.length > 0 && isOrgApproved ? (
               <Button
                 title="Add Truck"
                 onPress={() => router.push("/(carrier)/trucks/add")}
@@ -117,6 +216,57 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  tabBar: {
+    flexDirection: "row",
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.slate100,
+    paddingHorizontal: spacing.md,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+  },
+  tabActive: {
+    borderBottomColor: colors.primary600,
+  },
+  tabText: {
+    ...typography.labelMedium,
+    color: colors.textSecondary,
+  },
+  tabTextActive: {
+    color: colors.primary600,
+  },
+  tabBadge: {
+    backgroundColor: colors.slate100,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    minWidth: 20,
+    alignItems: "center",
+  },
+  tabBadgeActive: {
+    backgroundColor: colors.primary100,
+  },
+  tabBadgeRejected: {
+    backgroundColor: colors.errorLight,
+  },
+  tabBadgeText: {
+    ...typography.labelSmall,
+    color: colors.textSecondary,
+  },
+  tabBadgeTextActive: {
+    color: colors.primary600,
+  },
+  tabBadgeTextRejected: {
+    color: colors.error,
   },
   list: {
     padding: spacing.lg,
@@ -146,6 +296,11 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+  rejectionReason: {
+    ...typography.bodySmall,
+    color: colors.error,
+    marginBottom: spacing.sm,
   },
   truckDetails: {
     flexDirection: "row",

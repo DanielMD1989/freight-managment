@@ -12,6 +12,7 @@ import { db } from "@/lib/db";
 import { requireActiveUser } from "@/lib/auth";
 import { validateCSRFWithMobile } from "@/lib/csrf";
 import { handleApiError } from "@/lib/apiErrors";
+import { CacheInvalidation } from "@/lib/cache";
 import {
   createNotificationForRole,
   NotificationType,
@@ -70,6 +71,9 @@ export async function POST(
         documentsLockedAt: null, // G-M7-2: Belt-and-suspenders lock clear
       },
     });
+
+    // G-M10-5: Invalidate cache after resubmit to update listings
+    await CacheInvalidation.truck(truck.id, truck.carrierId, truck.carrierId);
 
     createNotificationForRole({
       role: "ADMIN",

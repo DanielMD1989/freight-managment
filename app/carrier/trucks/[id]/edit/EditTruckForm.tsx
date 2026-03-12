@@ -158,12 +158,6 @@ export default function EditTruckForm({
         isAvailable: formData.isAvailable,
       };
 
-      // If resubmitting, reset approval status to PENDING
-      if (isResubmit) {
-        updateData.approvalStatus = "PENDING";
-        updateData.rejectionReason = null;
-      }
-
       const response = await fetch(`/api/trucks/${truck.id}`, {
         method: "PATCH",
         headers: {
@@ -174,21 +168,46 @@ export default function EditTruckForm({
         credentials: "include",
       });
 
-      if (response.ok) {
-        if (isResubmit) {
-          toast.success("Truck resubmitted for approval!");
-          router.push("/carrier/trucks?tab=pending&success=truck-resubmitted");
-        } else {
-          toast.success("Truck updated successfully!");
-          router.push("/carrier/trucks?success=truck-updated");
-        }
-        router.refresh();
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
         const errorMessage = errorData.error || "Failed to update truck";
         setError(errorMessage);
         toast.error(errorMessage);
         setIsSubmitting(false);
+        return;
+      }
+
+      // G-M10-1: After successful PATCH, call dedicated resubmit endpoint
+      if (isResubmit) {
+        const resubmitResponse = await fetch(
+          `/api/trucks/${truck.id}/resubmit`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+            },
+            credentials: "include",
+          }
+        );
+
+        if (!resubmitResponse.ok) {
+          const resubmitError = await resubmitResponse.json();
+          const errorMessage =
+            resubmitError.error || "Failed to resubmit truck";
+          setError(errorMessage);
+          toast.error(errorMessage);
+          setIsSubmitting(false);
+          return;
+        }
+
+        toast.success("Truck resubmitted for approval!");
+        router.push("/carrier/trucks?tab=pending&success=truck-resubmitted");
+        router.refresh();
+      } else {
+        toast.success("Truck updated successfully!");
+        router.push("/carrier/trucks?success=truck-updated");
+        router.refresh();
       }
     } catch (error) {
       console.error("Error updating truck:", error);

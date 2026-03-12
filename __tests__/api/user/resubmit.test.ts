@@ -306,6 +306,35 @@ describe("POST /api/user/resubmit", () => {
     expect(updatedOrg.verificationStatus).toBe("PENDING");
   });
 
+  // G-M6-5: Resubmit cascades PENDING_VERIFICATION to ALL REJECTED org members
+  it("G-M6-5: resubmit cascades PENDING_VERIFICATION to all REJECTED org members", async () => {
+    const org = await createRejectedOrg("m65");
+    const user1 = await createUser("m65-a", org.id, "REJECTED");
+    const user2 = await createUser("m65-b", org.id, "REJECTED");
+
+    setAuthSession(
+      createMockSession({
+        userId: user1.id,
+        role: "SHIPPER",
+        status: "REJECTED",
+        organizationId: org.id,
+      })
+    );
+
+    const req = createRequest(
+      "POST",
+      "http://localhost:3000/api/user/resubmit"
+    );
+    const res = await resubmit(req);
+    expect(res.status).toBe(200);
+
+    // Both users should now be PENDING_VERIFICATION
+    const updated1 = await db.user.findUnique({ where: { id: user1.id } });
+    const updated2 = await db.user.findUnique({ where: { id: user2.id } });
+    expect(updated1.status).toBe("PENDING_VERIFICATION");
+    expect(updated2.status).toBe("PENDING_VERIFICATION");
+  });
+
   // T-RS-7: SUSPENDED user → 403
   it("T-RS-7: SUSPENDED user → 403", async () => {
     const org = await createRejectedOrg("7");

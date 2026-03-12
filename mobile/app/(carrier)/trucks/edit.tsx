@@ -2,7 +2,7 @@
  * Edit Truck Screen
  * Pre-populates form from existing truck data, supports update & delete
  */
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Platform,
   StyleSheet,
   Alert,
+  TouchableOpacity,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useForm, Controller } from "react-hook-form";
@@ -18,6 +19,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
+import apiClient from "../../../src/api/client";
 import {
   useTruck,
   useUpdateTruck,
@@ -30,6 +32,17 @@ import { LoadingSpinner } from "../../../src/components/LoadingSpinner";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
+
+const TRUCK_TYPES = [
+  { value: "FLATBED", label: "Flatbed" },
+  { value: "REFRIGERATED", label: "Refrigerated" },
+  { value: "TANKER", label: "Tanker" },
+  { value: "CONTAINER", label: "Container" },
+  { value: "DRY_VAN", label: "Dry Van" },
+  { value: "LOWBOY", label: "Lowboy" },
+  { value: "DUMP_TRUCK", label: "Dump Truck" },
+  { value: "BOX_TRUCK", label: "Box Truck" },
+] as const;
 
 const truckSchema = z.object({
   licensePlate: z.string().min(1, "License plate is required"),
@@ -51,6 +64,7 @@ export default function EditTruckScreen() {
   const { data: truck, isLoading } = useTruck(id);
   const updateTruck = useUpdateTruck();
   const deleteTruck = useDeleteTruck();
+  const [resubmitting, setResubmitting] = useState(false);
 
   // Guard: if no id param, navigate back
   useEffect(() => {
@@ -150,6 +164,22 @@ export default function EditTruckScreen() {
     );
   };
 
+  // G-M6-4: Resubmit truck for admin approval
+  const handleResubmit = async () => {
+    if (!id) return;
+    setResubmitting(true);
+    try {
+      await apiClient.post(`/api/trucks/${id}/resubmit`);
+      Alert.alert("Submitted", "Truck resubmitted for admin approval.", [
+        { text: "OK", onPress: () => router.dismissAll() },
+      ]);
+    } catch (error: any) {
+      Alert.alert("Error", error?.message ?? "Failed to resubmit truck.");
+    } finally {
+      setResubmitting(false);
+    }
+  };
+
   if (!id || isLoading || !truck) return <LoadingSpinner fullScreen />;
 
   return (
@@ -174,6 +204,23 @@ export default function EditTruckScreen() {
           </View>
         )}
 
+        {/* G-M6-4: Resubmit for Approval */}
+        {truck.approvalStatus === "REJECTED" && (
+          <View style={styles.resubmitSection}>
+            <Text style={styles.resubmitHint}>
+              Update truck details above, then resubmit for approval.
+            </Text>
+            <Button
+              title="Resubmit for Approval"
+              variant="primary"
+              size="lg"
+              fullWidth
+              onPress={handleResubmit}
+              loading={resubmitting}
+            />
+          </View>
+        )}
+
         <Controller
           control={control}
           name="licensePlate"
@@ -194,15 +241,35 @@ export default function EditTruckScreen() {
           control={control}
           name="truckType"
           render={({ field: { onChange, value } }) => (
-            <Input
-              label={t("truck.truckType")}
-              value={value}
-              onChangeText={onChange}
-              error={errors.truckType?.message}
-              required
-              hint="FLATBED, REFRIGERATED, TANKER, CONTAINER, DRY_VAN, LOWBOY, DUMP_TRUCK, BOX_TRUCK"
-              testID="truck-truckType"
-            />
+            <View testID="truck-truckType">
+              <Text style={styles.pickerLabel}>
+                {t("truck.truckType")} <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={styles.pickerGrid}>
+                {TRUCK_TYPES.map((type) => (
+                  <TouchableOpacity
+                    key={type.value}
+                    style={[
+                      styles.pickerOption,
+                      value === type.value && styles.pickerOptionSelected,
+                    ]}
+                    onPress={() => onChange(type.value)}
+                  >
+                    <Text
+                      style={[
+                        styles.pickerOptionText,
+                        value === type.value && styles.pickerOptionTextSelected,
+                      ]}
+                    >
+                      {type.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {errors.truckType?.message && (
+                <Text style={styles.errorText}>{errors.truckType.message}</Text>
+              )}
+            </View>
           )}
         />
 
@@ -357,5 +424,53 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+  },
+  resubmitSection: {
+    marginBottom: spacing.lg,
+  },
+  resubmitHint: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
+  pickerLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  required: {
+    color: colors.error,
+  },
+  pickerGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  pickerOption: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  pickerOptionSelected: {
+    borderColor: colors.primary500,
+    backgroundColor: colors.primary500 + "15",
+  },
+  pickerOptionText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  pickerOptionTextSelected: {
+    color: colors.primary500,
+    fontWeight: "600",
+  },
+  errorText: {
+    fontSize: 12,
+    color: colors.error,
+    marginTop: 2,
   },
 });

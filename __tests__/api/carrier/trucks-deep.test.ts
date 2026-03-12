@@ -119,6 +119,7 @@ const {
   DELETE: deleteTruck,
 } = require("@/app/api/trucks/[id]/route");
 const { POST: approveTruck } = require("@/app/api/trucks/[id]/approve/route");
+const { POST: resubmitTruck } = require("@/app/api/trucks/[id]/resubmit/route");
 
 describe("Truck Management — Deep Tests", () => {
   let seed: SeedData;
@@ -483,7 +484,7 @@ describe("Truck Management — Deep Tests", () => {
   // ─── PATCH /api/trucks/[id] — Update depth ──────────────────────────────
 
   describe("PATCH /api/trucks/[id] — Update depth", () => {
-    it("resubmit after rejection: set approvalStatus PENDING → 200", async () => {
+    it("G-M10-1: PATCH strips approvalStatus — use POST /resubmit instead", async () => {
       const rejectedTruck = await db.truck.create({
         data: {
           id: "rejected-truck-resubmit",
@@ -498,38 +499,64 @@ describe("Truck Management — Deep Tests", () => {
         },
       });
 
-      const req = createRequest(
+      // PATCH strips approvalStatus — truck remains REJECTED
+      const patchReq = createRequest(
         "PATCH",
         `http://localhost:3000/api/trucks/${rejectedTruck.id}`,
-        {
-          body: {
-            approvalStatus: "PENDING",
-            rejectionReason: null,
-          },
-        }
+        { body: { approvalStatus: "PENDING", capacity: 12000 } }
       );
-
-      const res = await callHandler(updateTruck, req, {
+      const patchRes = await callHandler(updateTruck, patchReq, {
         id: rejectedTruck.id,
       });
-      expect(res.status).toBe(200);
+      expect(patchRes.status).toBe(200);
+      const patchData = await parseResponse(patchRes);
+      expect(patchData.approvalStatus).toBe("REJECTED"); // stripped
+      expect(patchData.capacity).toBe(12000); // physical field updated
 
-      const data = await parseResponse(res);
-      expect(data.approvalStatus).toBe("PENDING");
-      expect(data.rejectionReason).toBeNull();
+      // Use dedicated resubmit endpoint
+      const resubmitReq = createRequest(
+        "POST",
+        `http://localhost:3000/api/trucks/${rejectedTruck.id}/resubmit`
+      );
+      const resubmitRes = await callHandler(resubmitTruck, resubmitReq, {
+        id: rejectedTruck.id,
+      });
+      expect(resubmitRes.status).toBe(200);
+
+      const after = await db.truck.findUnique({
+        where: { id: rejectedTruck.id },
+      });
+      expect(after.approvalStatus).toBe("PENDING");
+      expect(after.rejectionReason).toBeNull();
     });
 
-    it("cannot set approvalStatus to APPROVED from carrier → 400", async () => {
+    it("G-M10-1: PATCH strips approvalStatus — cannot change status via PATCH", async () => {
+      // Create a PENDING truck, try to set APPROVED via PATCH
+      const pendingTruck = await db.truck.create({
+        data: {
+          id: "truck-patch-no-approve",
+          truckType: "FLATBED",
+          licensePlate: "NO-APPROVE-01",
+          capacity: 10000,
+          carrierId: seed.carrierOrg.id,
+          createdById: seed.carrierUser.id,
+          approvalStatus: "PENDING",
+        },
+      });
+
       const req = createRequest(
         "PATCH",
-        `http://localhost:3000/api/trucks/${seed.truck.id}`,
-        {
-          body: { approvalStatus: "APPROVED" },
-        }
+        `http://localhost:3000/api/trucks/${pendingTruck.id}`,
+        { body: { approvalStatus: "APPROVED" } }
       );
 
-      const res = await callHandler(updateTruck, req, { id: seed.truck.id });
-      expect(res.status).toBe(400);
+      const res = await callHandler(updateTruck, req, { id: pendingTruck.id });
+      // Returns 200 (field stripped by Zod safeParse), status remains PENDING
+      expect(res.status).toBe(200);
+      const after = await db.truck.findUnique({
+        where: { id: pendingTruck.id },
+      });
+      expect(after.approvalStatus).toBe("PENDING");
     });
 
     it("ADMIN can update any carrier's truck → 200", async () => {
@@ -1153,27 +1180,21 @@ describe("Truck Management — Deep Tests", () => {
       expect(rejected.truck.approvalStatus).toBe("REJECTED");
       expect(rejected.truck.rejectionReason).toBe("Missing documents");
 
-      // Step 3: Carrier resubmits (sets approvalStatus back to PENDING)
+      // Step 3: Carrier resubmits via dedicated endpoint (G-M10-1)
       setAuthSession(carrierSession);
 
       const resubmitReq = createRequest(
-        "PATCH",
-        `http://localhost:3000/api/trucks/${truckId}`,
-        {
-          body: {
-            approvalStatus: "PENDING",
-            rejectionReason: null,
-          },
-        }
+        "POST",
+        `http://localhost:3000/api/trucks/${truckId}/resubmit`
       );
 
-      const resubmitRes = await callHandler(updateTruck, resubmitReq, {
+      const resubmitRes = await callHandler(resubmitTruck, resubmitReq, {
         id: truckId,
       });
       expect(resubmitRes.status).toBe(200);
 
       const resubmitted = await parseResponse(resubmitRes);
-      expect(resubmitted.approvalStatus).toBe("PENDING");
+      expect(resubmitted.truck.approvalStatus).toBe("PENDING");
 
       // Step 4: Admin re-approves
       setAuthSession(adminSession);

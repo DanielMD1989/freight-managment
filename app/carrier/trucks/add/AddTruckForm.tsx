@@ -111,6 +111,11 @@ export default function AddTruckForm() {
     currentLng: undefined as number | undefined,
     isAvailable: true,
     gpsDeviceId: "",
+    // G-M9-1: Sprint 8 fields
+    lengthM: "",
+    ownerName: "",
+    contactName: "",
+    contactPhone: "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -340,6 +345,11 @@ export default function AddTruckForm() {
         currentRegion: formData.currentRegion || undefined,
         isAvailable: formData.isAvailable,
         gpsDeviceId: formData.gpsDeviceId || undefined,
+        // G-M9-1: Sprint 8 fields
+        lengthM: formData.lengthM ? parseFloat(formData.lengthM) : undefined,
+        ownerName: formData.ownerName || undefined,
+        contactName: formData.contactName || undefined,
+        contactPhone: formData.contactPhone || undefined,
       };
 
       const response = await fetch("/api/trucks", {
@@ -507,6 +517,53 @@ export default function AddTruckForm() {
                 className={inputClass}
               />
             </div>
+          </div>
+          <div>
+            <label className={labelClass}>Length (m)</label>
+            <input
+              type="number"
+              name="lengthM"
+              value={formData.lengthM}
+              onChange={handleChange}
+              min="0.01"
+              placeholder="12"
+              className={inputClass}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelClass}>Owner Name</label>
+              <input
+                type="text"
+                name="ownerName"
+                value={formData.ownerName}
+                onChange={handleChange}
+                placeholder="Vehicle owner"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Contact Name</label>
+              <input
+                type="text"
+                name="contactName"
+                value={formData.contactName}
+                onChange={handleChange}
+                placeholder="Driver or contact"
+                className={inputClass}
+              />
+            </div>
+          </div>
+          <div>
+            <label className={labelClass}>Contact Phone</label>
+            <input
+              type="tel"
+              name="contactPhone"
+              value={formData.contactPhone}
+              onChange={handleChange}
+              placeholder="+251..."
+              className={inputClass}
+            />
           </div>
         </div>
       </div>

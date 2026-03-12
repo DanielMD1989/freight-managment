@@ -66,9 +66,12 @@ const updateTruckSchema = z.object({
   status: z
     .enum(["ACTIVE", "IN_TRANSIT", "MAINTENANCE", "INACTIVE"])
     .optional(),
-  // Support resubmission of rejected trucks
-  approvalStatus: z.enum(["PENDING"]).optional(), // Only allow setting to PENDING (resubmit)
-  rejectionReason: z.null().optional(), // Clear rejection reason on resubmit
+  // G-M9-1: Sprint 8 fields
+  lengthM: z.number().positive().optional().nullable(),
+  ownerName: z.string().max(200).optional().nullable(),
+  contactName: z.string().max(200).optional().nullable(),
+  contactPhone: z.string().max(50).optional().nullable(),
+  // G-M10-1: approvalStatus and rejectionReason removed — use /approve and /resubmit endpoints
 });
 
 /**
