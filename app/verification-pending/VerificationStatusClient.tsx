@@ -471,7 +471,11 @@ export function VerificationStatusClient({
             </p>
             {data.nextAction.type === "upload_documents" && (
               <Link
-                href="/settings/documents"
+                href={
+                  userRole === "CARRIER"
+                    ? "/carrier/documents"
+                    : "/shipper/documents"
+                }
                 className="mt-3 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
               >
                 <svg
