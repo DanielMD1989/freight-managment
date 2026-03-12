@@ -7,7 +7,16 @@ export default async function Home() {
   const session = await getSession();
 
   if (session) {
-    // Redirect to role-appropriate portal
+    // Status-based routing (before role routing)
+    if (session.status === "REJECTED") redirect("/account-rejected");
+    if (session.status === "SUSPENDED") redirect("/account-suspended");
+    if (
+      session.status === "REGISTERED" ||
+      session.status === "PENDING_VERIFICATION"
+    )
+      redirect("/verification-pending");
+
+    // Role-based routing (only for ACTIVE users)
     if (session.role === "CARRIER") {
       redirect("/carrier/dashboard");
     } else if (session.role === "DISPATCHER") {
