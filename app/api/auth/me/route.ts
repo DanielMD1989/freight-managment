@@ -15,6 +15,21 @@ export async function GET() {
       );
     }
 
+    // G-TOKEN-4: Check session revocation in DB if sessionId present
+    if (session.sessionId) {
+      const dbSession = await db.session.findUnique({
+        where: { id: session.sessionId },
+        select: { revokedAt: true, expiresAt: true },
+      });
+      if (
+        !dbSession ||
+        dbSession.revokedAt ||
+        new Date() > dbSession.expiresAt
+      ) {
+        return NextResponse.json({ error: "Session revoked" }, { status: 401 });
+      }
+    }
+
     const user = await db.user.findUnique({
       where: { id: session.userId },
       select: {

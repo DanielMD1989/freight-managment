@@ -297,6 +297,18 @@ export async function requireAuth(): Promise<SessionPayload> {
     throw new Error("Unauthorized");
   }
 
+  // G-TOKEN-5: Check session revocation if sessionId present
+  if (session.sessionId) {
+    const { db } = await import("./db");
+    const dbSession = await db.session.findUnique({
+      where: { id: session.sessionId },
+      select: { revokedAt: true, expiresAt: true },
+    });
+    if (!dbSession || dbSession.revokedAt || new Date() > dbSession.expiresAt) {
+      throw new Error("Unauthorized");
+    }
+  }
+
   return session;
 }
 

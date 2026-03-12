@@ -70,6 +70,16 @@ describe("Auth Session", () => {
 
   beforeAll(async () => {
     await seedTestData();
+    // G-TOKEN-4: Seed a valid session record so /me revocation check passes
+    const { db } = require("@/lib/db");
+    await db.session.create({
+      data: {
+        id: "session-1",
+        userId: "carrier-user-1",
+        tokenHash: "mock-hash-1",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
   });
 
   afterAll(() => clearAllStores());

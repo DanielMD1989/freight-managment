@@ -8,7 +8,7 @@ import { StatusBar } from "expo-status-bar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { Alert } from "react-native";
+import { Alert, AppState } from "react-native";
 import { useAuthStore } from "../src/stores/auth";
 import { useSettingsStore } from "../src/stores/settings";
 import { LoadingSpinner } from "../src/components/LoadingSpinner";
@@ -38,6 +38,10 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     initialize,
     walletGateMessage,
     clearWalletGate,
+    sessionExpiredMessage,
+    clearSessionExpired,
+    mfaPending,
+    mfaExpiresAt,
   } = useAuthStore();
   const { isLoaded, loadSettings, onboardingCompleted } = useSettingsStore();
 
@@ -87,6 +91,42 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       ]);
     }
   }, [walletGateMessage, clearWalletGate, router]);
+
+  // G-TOKEN-2: Show Alert when session expires or is revoked
+  useEffect(() => {
+    if (sessionExpiredMessage) {
+      Alert.alert("Session Expired", sessionExpiredMessage, [
+        { text: "OK", onPress: clearSessionExpired },
+      ]);
+    }
+  }, [sessionExpiredMessage, clearSessionExpired]);
+
+  // G-TOKEN-6: Clear MFA password on timeout
+  useEffect(() => {
+    if (!mfaPending || !mfaExpiresAt) return;
+    const timeoutMs = mfaExpiresAt - Date.now();
+    if (timeoutMs <= 0) {
+      useAuthStore.getState().clearMfaState();
+      return;
+    }
+    const timer = setTimeout(() => {
+      useAuthStore.getState().clearMfaState();
+    }, timeoutMs);
+    return () => clearTimeout(timer);
+  }, [mfaPending, mfaExpiresAt]);
+
+  // G-TOKEN-6: Clear MFA password when app goes to background
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "background" || nextState === "inactive") {
+        const { mfaPassword } = useAuthStore.getState();
+        if (mfaPassword) {
+          useAuthStore.getState().clearMfaState();
+        }
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   // Redirect based on auth state
   useEffect(() => {

@@ -44,6 +44,13 @@ interface AuthState {
   walletGateMessage: string | null;
   clearWalletGate: () => void;
 
+  // Session expired (G-TOKEN-2)
+  sessionExpiredMessage: string | null;
+  clearSessionExpired: () => void;
+
+  // MFA cleanup (G-TOKEN-6)
+  clearMfaState: () => void;
+
   // Actions
   initialize: () => Promise<void>;
   login: (email: string, password: string) => Promise<AuthResponse>;
@@ -79,6 +86,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
       mfaExpiresAt: null,
       mfaEmail: null,
       mfaPassword: null,
+      walletGateMessage: null, // G-TOKEN-7: clear stale wallet gate
+      sessionExpiredMessage: "Your session has expired. Please log in again.", // G-TOKEN-2
     });
   });
 
@@ -98,6 +107,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
     isInitialized: false,
     error: null,
     walletGateMessage: null,
+    sessionExpiredMessage: null,
     mfaPending: false,
     mfaToken: null,
     phoneLastFour: null,
@@ -274,5 +284,15 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
     clearError: () => set({ error: null }),
     clearWalletGate: () => set({ walletGateMessage: null }),
+    clearSessionExpired: () => set({ sessionExpiredMessage: null }),
+    clearMfaState: () =>
+      set({
+        mfaPending: false,
+        mfaToken: null,
+        phoneLastFour: null,
+        mfaExpiresAt: null,
+        mfaEmail: null,
+        mfaPassword: null,
+      }),
   };
 });

@@ -60,9 +60,9 @@ const apiClient = axios.create({
 
 async function readSecure(key: string): Promise<string | null> {
   if (Platform.OS === "web") {
-    // On web, use localStorage (not encrypted but acceptable - see Flutter notes)
+    // G-TOKEN-1: Use sessionStorage (clears on tab close, limits XSS theft window)
     try {
-      return localStorage.getItem(key);
+      return sessionStorage.getItem(key);
     } catch {
       return null;
     }
@@ -73,9 +73,9 @@ async function readSecure(key: string): Promise<string | null> {
 async function writeSecure(key: string, value: string): Promise<void> {
   if (Platform.OS === "web") {
     try {
-      localStorage.setItem(key, value);
+      sessionStorage.setItem(key, value);
     } catch {
-      // localStorage may be unavailable in some contexts
+      // sessionStorage may be unavailable in some contexts
     }
     return;
   }
@@ -85,7 +85,7 @@ async function writeSecure(key: string, value: string): Promise<void> {
 async function deleteSecure(key: string): Promise<void> {
   if (Platform.OS === "web") {
     try {
-      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
     } catch {
       // ignore
     }
@@ -149,11 +149,18 @@ apiClient.interceptors.response.use(
     const isAuthEndpoint =
       path.includes("/auth/login") ||
       path.includes("/auth/register") ||
-      path.includes("/auth/verify-mfa");
+      path.includes("/auth/verify-mfa") ||
+      path.includes("/auth/logout"); // G-TOKEN-3: prevent infinite 401 loop
 
     // Handle 401 - clear tokens and notify auth state
     if (status === 401) {
       if (!isAuthEndpoint) {
+        // G-TOKEN-3: Attempt server-side session revocation before clearing local state
+        try {
+          await apiClient.post("/api/auth/logout");
+        } catch {
+          // Ignore — we're already handling a 401, server may reject this too
+        }
         await clearAuth();
         onUnauthorizedCallback?.();
       }
