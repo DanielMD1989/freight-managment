@@ -25,7 +25,11 @@ const createLoadSchema = z
     deliveryDockHours: z.string().max(100).optional(), // Changed to single field (string)
     deliveryDate: z.string(),
 
-    tripKm: z.number().positive().optional(), // Required for POSTED status
+    // Estimated route distance (display only).
+    // Calculated server-side from city coordinates.
+    // Actual GPS distance is used for fee calculation
+    // at trip completion — not this field.
+    tripKm: z.number().positive().optional(),
     dhToOriginKm: z.number().positive().optional(),
     dhAfterDeliveryKm: z.number().positive().optional(),
     originLat: z.number().min(-90).max(90).optional(),
@@ -98,26 +102,6 @@ const createLoadSchema = z
     {
       message: "Pickup date cannot be in the past",
       path: ["pickupDate"],
-    }
-  )
-  .refine(
-    (data) => {
-      if (data.status !== "POSTED") return true;
-      // G-M13-4: tripKm required for POSTED — allowed if coordinates provided (server calculates)
-      if (data.tripKm != null) return true;
-      if (
-        data.originLat != null &&
-        data.originLon != null &&
-        data.destinationLat != null &&
-        data.destinationLon != null
-      )
-        return true;
-      return false;
-    },
-    {
-      message:
-        "Trip distance (tripKm) or origin/destination coordinates are required for posted loads",
-      path: ["tripKm"],
     }
   );
 

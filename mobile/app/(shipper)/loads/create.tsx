@@ -101,7 +101,7 @@ export default function CreateLoadScreen() {
       shipperContactName: "",
       shipperContactPhone: "",
       specialInstructions: "",
-      status: "DRAFT", // G-M13-4: mobile lacks tripKm — create as DRAFT, post after distance is set
+      status: "POSTED",
     },
   });
 
@@ -153,7 +153,7 @@ export default function CreateLoadScreen() {
         pickupAddress: data.pickupAddress || undefined,
         deliveryAddress: data.deliveryAddress || undefined,
         specialInstructions: data.specialInstructions || undefined,
-        status: data.status || "DRAFT", // G-M13-4: default DRAFT until tripKm is set
+        status: data.status || "POSTED",
       },
       {
         onSuccess: () => {

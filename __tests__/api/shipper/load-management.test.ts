@@ -348,7 +348,7 @@ describe("Shipper Load Management", () => {
     setAuthSession(shipperSession);
 
     const req = createRequest("POST", "http://localhost/api/loads", {
-      body: { ...baseLoadPayload, status: "POSTED", tripKm: 475 },
+      body: { ...baseLoadPayload, status: "POSTED" },
     });
 
     const response = await callHandler(createLoad, req);
@@ -713,21 +713,6 @@ describe("Shipper Load Management", () => {
     // Server should have calculated tripKm from coordinates
     expect(body.load.tripKm).toBeDefined();
     expect(body.load.tripKm).toBeGreaterThan(0);
-  });
-
-  it("G-M13-4: POST status=POSTED with no tripKm and no coordinates → 400", async () => {
-    setAuthSession(shipperSession);
-
-    const req = createRequest("POST", "http://localhost/api/loads", {
-      body: { ...baseLoadPayload, status: "POSTED" },
-    });
-
-    const response = await callHandler(createLoad, req);
-    const body = await parseResponse(response);
-
-    expect(response.status).toBe(400);
-    // Zod refine error comes through zodErrorResponse mock as { error: "Validation error" }
-    expect(body.error).toBe("Validation error");
   });
 
   it("G-M13-3: POST with past pickupDate → 400", async () => {

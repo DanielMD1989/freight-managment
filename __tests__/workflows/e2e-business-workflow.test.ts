@@ -759,7 +759,6 @@ describe("E2E Business Workflow (User Stories)", () => {
           truckType: "DRY_VAN",
           weight: 6000,
           cargoDescription: "Agricultural products for Jimma distribution",
-          tripKm: 450, // G-M13-4: tripKm required for POSTED loads
           status: "POSTED",
         },
       });
