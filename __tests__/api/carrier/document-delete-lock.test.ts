@@ -208,6 +208,89 @@ describe("Document Delete Lock Enforcement (G-M5-6)", () => {
       expect(res.status).toBe(200);
       expect(body.message).toMatch(/deleted/i);
     });
+    it("DL-5: DELETE APPROVED doc + REJECTED unlocked org → 200", async () => {
+      const rejectedOrg = await db.organization.create({
+        data: {
+          id: "del-rejected-org-1",
+          name: "Rejected Org",
+          type: "SHIPPER",
+          contactEmail: "del-rejected@test.com",
+          isVerified: false,
+          verificationStatus: "REJECTED",
+          documentsLockedAt: null,
+        },
+      });
+
+      const doc = await db.companyDocument.create({
+        data: {
+          id: "del-approved-doc-1",
+          type: "COMPANY_LICENSE",
+          fileName: "license.pdf",
+          fileUrl: "https://test.com/license.pdf",
+          fileSize: 1024,
+          mimeType: "application/pdf",
+          verificationStatus: "APPROVED",
+          organizationId: rejectedOrg.id,
+          uploadedById: "del-rejected-user-1",
+        },
+      });
+
+      const session = createMockSession({
+        userId: "del-rejected-user-1",
+        role: "SHIPPER",
+        organizationId: rejectedOrg.id,
+      });
+      setAuthSession(session);
+
+      const req = createDeleteRequest(doc.id, "company");
+      const res = await callHandler(deleteDocument, req, { id: doc.id });
+      const body = await parseResponse(res);
+
+      expect(res.status).toBe(200);
+      expect(body.message).toMatch(/deleted/i);
+    });
+
+    it("DL-6: DELETE APPROVED doc + APPROVED locked org → 423", async () => {
+      const lockedApprovedOrg = await db.organization.create({
+        data: {
+          id: "del-locked-approved-org-1",
+          name: "Locked Approved Org",
+          type: "SHIPPER",
+          contactEmail: "del-locked-approved@test.com",
+          isVerified: true,
+          verificationStatus: "APPROVED",
+          documentsLockedAt: new Date("2026-01-01T00:00:00Z"),
+        },
+      });
+
+      const doc = await db.companyDocument.create({
+        data: {
+          id: "del-approved-locked-doc-1",
+          type: "COMPANY_LICENSE",
+          fileName: "license.pdf",
+          fileUrl: "https://test.com/license.pdf",
+          fileSize: 1024,
+          mimeType: "application/pdf",
+          verificationStatus: "APPROVED",
+          organizationId: lockedApprovedOrg.id,
+          uploadedById: "del-locked-approved-user-1",
+        },
+      });
+
+      const session = createMockSession({
+        userId: "del-locked-approved-user-1",
+        role: "SHIPPER",
+        organizationId: lockedApprovedOrg.id,
+      });
+      setAuthSession(session);
+
+      const req = createDeleteRequest(doc.id, "company");
+      const res = await callHandler(deleteDocument, req, { id: doc.id });
+      const body = await parseResponse(res);
+
+      expect(res.status).toBe(423);
+      expect(body.error).toMatch(/locked/i);
+    });
   });
 
   // ── Truck documents ───────────────────────────────────────────────────────

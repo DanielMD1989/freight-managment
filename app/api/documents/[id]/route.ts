@@ -469,7 +469,7 @@ export async function DELETE(
       // G-M5-6: Check documentsLockedAt — permanently locked after approval
       const org = await db.organization.findUnique({
         where: { id: document.organizationId },
-        select: { documentsLockedAt: true },
+        select: { documentsLockedAt: true, verificationStatus: true },
       });
       if (org?.documentsLockedAt) {
         return NextResponse.json(
@@ -481,7 +481,13 @@ export async function DELETE(
         );
       }
 
-      if (document.verificationStatus !== "PENDING") {
+      // G-M6-8: Allow APPROVED doc deletion when org is REJECTED and unlocked
+      const canDeleteApproved =
+        document.verificationStatus === "APPROVED" &&
+        !org?.documentsLockedAt &&
+        org?.verificationStatus === "REJECTED";
+
+      if (document.verificationStatus !== "PENDING" && !canDeleteApproved) {
         return NextResponse.json(
           {
             error: "Cannot delete document that has been verified or rejected",
