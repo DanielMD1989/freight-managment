@@ -27,9 +27,10 @@ export async function POST(
 
     const { id } = await params;
 
-    // Fetch original truck posting
+    // Fetch original truck posting with truck relation for approval check
     const originalPosting = await db.truckPosting.findUnique({
       where: { id },
+      include: { truck: { select: { approvalStatus: true } } },
     });
 
     if (!originalPosting) {
@@ -58,6 +59,40 @@ export async function POST(
       );
     }
 
+    // G-M11-2: Validate truck approval status (matches POST handler)
+    if (originalPosting.truck.approvalStatus !== "APPROVED") {
+      return NextResponse.json(
+        {
+          error: "Only approved trucks can be posted to the loadboard",
+          currentStatus: originalPosting.truck.approvalStatus,
+        },
+        { status: 403 }
+      );
+    }
+
+    // G-M11-2: Block duplicate when truck has an active trip
+    const activeTrip = await db.trip.findFirst({
+      where: {
+        truckId: originalPosting.truckId,
+        status: {
+          in: [
+            "ASSIGNED",
+            "PICKUP_PENDING",
+            "IN_TRANSIT",
+            "DELIVERED",
+            "EXCEPTION",
+          ],
+        },
+      },
+      select: { id: true },
+    });
+    if (activeTrip) {
+      return NextResponse.json(
+        { error: "Cannot create posting while truck has an active trip" },
+        { status: 409 }
+      );
+    }
+
     // Create duplicate truck posting
     /* eslint-disable @typescript-eslint/no-unused-vars */
     const {
@@ -66,6 +101,7 @@ export async function POST(
       updatedAt,
       postedAt,
       expiresAt,
+      truck: _truck,
       ...postingData
     } = originalPosting;
     /* eslint-enable @typescript-eslint/no-unused-vars */

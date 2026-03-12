@@ -296,6 +296,76 @@ describe("Truck Posting Duplicate", () => {
       expect(body.error).toContain("active posting");
     });
 
+    // G-M11-2: Duplicate with non-APPROVED truck returns 403
+    it("should return 403 when truck is not APPROVED", async () => {
+      // Set truck to REJECTED
+      await db.truck.update({
+        where: { id: seed.truck.id },
+        data: { approvalStatus: "REJECTED" },
+      });
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/truck-postings/${seed.truckPosting.id}/duplicate`
+      );
+      const res = await callHandler(duplicatePosting, req, {
+        id: seed.truckPosting.id,
+      });
+      const body = await parseResponse(res);
+
+      expect(res.status).toBe(403);
+      expect(body.error).toContain("approved");
+
+      // Restore truck
+      await db.truck.update({
+        where: { id: seed.truck.id },
+        data: { approvalStatus: "APPROVED" },
+      });
+    });
+
+    // G-M11-2: Duplicate with active trip returns 409
+    it("should return 409 when truck has an active trip", async () => {
+      // Create an active trip for the truck
+      const tripId = `trip-dup-block-${Date.now()}`;
+      await db.trip.create({
+        data: {
+          id: tripId,
+          truckId: seed.truck.id,
+          loadId: seed.load.id,
+          carrierId: seed.carrierOrg.id,
+          shipperId: seed.shipperOrg.id,
+          status: "IN_TRANSIT",
+          trackingEnabled: false,
+          shipperConfirmed: false,
+        },
+      });
+
+      // Deactivate seed posting so ONE_ACTIVE check doesn't trigger first
+      await db.truckPosting.update({
+        where: { id: seed.truckPosting.id },
+        data: { status: "EXPIRED" },
+      });
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/truck-postings/${seed.truckPosting.id}/duplicate`
+      );
+      const res = await callHandler(duplicatePosting, req, {
+        id: seed.truckPosting.id,
+      });
+      const body = await parseResponse(res);
+
+      expect(res.status).toBe(409);
+      expect(body.error).toContain("active trip");
+
+      // Clean up
+      await db.trip.delete({ where: { id: tripId } });
+      await db.truckPosting.update({
+        where: { id: seed.truckPosting.id },
+        data: { status: "ACTIVE" },
+      });
+    });
+
     it("should return 404 for non-existent posting", async () => {
       const req = createRequest(
         "POST",

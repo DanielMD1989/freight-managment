@@ -71,8 +71,10 @@ export default function PostTrucksScreen() {
         truckId: data.truckId,
         originCityId: data.originCityId,
         destinationCityId: data.destinationCityId || undefined,
-        availableFrom: data.availableFrom,
-        availableTo: data.availableTo || undefined,
+        availableFrom: new Date(data.availableFrom + "T00:00:00").toISOString(),
+        availableTo: data.availableTo
+          ? new Date(data.availableTo + "T00:00:00").toISOString()
+          : undefined,
         contactName: data.contactName,
         contactPhone: data.contactPhone,
         notes: data.notes || undefined,

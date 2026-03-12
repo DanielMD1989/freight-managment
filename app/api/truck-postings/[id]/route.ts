@@ -29,8 +29,8 @@ import { handleApiError } from "@/lib/apiErrors";
 
 // Update schema (partial)
 const UpdateTruckPostingSchema = z.object({
-  availableFrom: z.string().optional(),
-  availableTo: z.string().optional().nullable(),
+  availableFrom: z.string().datetime().optional(),
+  availableTo: z.string().datetime().optional().nullable(),
   availableLength: z.number().positive().optional().nullable(),
   availableWeight: z.number().positive().optional().nullable(),
   preferredDhToOriginKm: z.number().nonnegative().optional().nullable(),

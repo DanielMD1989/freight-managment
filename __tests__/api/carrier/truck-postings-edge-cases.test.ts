@@ -116,6 +116,7 @@ const {
   PATCH: updatePosting,
   DELETE: deletePosting,
 } = require("@/app/api/truck-postings/[id]/route");
+const { GET: listTrucks } = require("@/app/api/trucks/route");
 
 describe("Carrier Truck Postings Edge Cases", () => {
   let seed: SeedData;
@@ -313,6 +314,19 @@ describe("Carrier Truck Postings Edge Cases", () => {
       expect(data.error).toContain("cancelled");
     });
 
+    // G-M11-5: PATCH with plain date string (not ISO datetime) returns 400
+    it("PATCH with plain date string rejects (requires ISO datetime)", async () => {
+      const req = createRequest(
+        "PATCH",
+        `http://localhost:3000/api/truck-postings/${seed.truckPosting.id}`,
+        { body: { availableFrom: "2026-04-01" } }
+      );
+      const res = await callHandler(updatePosting, req, {
+        id: seed.truckPosting.id,
+      });
+      expect(res.status).toBe(400);
+    });
+
     it("empty PATCH body returns 200", async () => {
       // Create a fresh active posting for this test
       const postingId = `active-patch-posting-${Date.now()}`;
@@ -403,6 +417,44 @@ describe("Carrier Truck Postings Edge Cases", () => {
         id: "nonexistent-posting-id-12345",
       });
       expect(res.status).toBe(404);
+    });
+  });
+
+  // ─── G-M11-3: Trucks API approvalStatus filter ─────────────────────────
+
+  describe("Trucks approvalStatus filter (G-M11-3)", () => {
+    it("GET /api/trucks?approvalStatus=APPROVED excludes non-APPROVED trucks", async () => {
+      // Create a REJECTED truck for the same org
+      const rejectedTruckId = `rejected-truck-m11-${Date.now()}`;
+      await db.truck.create({
+        data: {
+          id: rejectedTruckId,
+          truckType: "FLATBED",
+          licensePlate: "REJ-9999",
+          capacity: 10000,
+          carrierId: seed.carrierOrg.id,
+          approvalStatus: "REJECTED",
+          isAvailable: true,
+        },
+      });
+
+      // Fetch with APPROVED filter
+      const req = createRequest(
+        "GET",
+        `http://localhost:3000/api/trucks?approvalStatus=APPROVED`
+      );
+      const res = await listTrucks(req);
+      const data = await parseResponse(res);
+
+      expect(res.status).toBe(200);
+      // All returned trucks must be APPROVED
+      const allApproved = data.trucks.every(
+        (t: { approvalStatus: string }) => t.approvalStatus === "APPROVED"
+      );
+      expect(allApproved).toBe(true);
+      // REJECTED truck must not appear
+      const rejectedIds = data.trucks.map((t: { id: string }) => t.id);
+      expect(rejectedIds).not.toContain(rejectedTruckId);
     });
   });
 });

@@ -6,7 +6,7 @@
  * Sprint 14 - DAT-Style UI Transformation
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PlacesAutocomplete from "@/components/PlacesAutocomplete";
 import { getCSRFToken } from "@/lib/csrfFetch";
 
@@ -45,6 +45,10 @@ export default function TruckPostingModal({
 }: TruckPostingModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTruckId, setSelectedTruckId] = useState("");
+  const [approvedTrucks, setApprovedTrucks] = useState<
+    { id: string; licensePlate: string; truckType: string }[]
+  >([]);
   const [formData, setFormData] = useState({
     availableFrom: "",
     availableTo: "",
@@ -62,6 +66,21 @@ export default function TruckPostingModal({
     dhO: "",
     dhD: "",
   });
+
+  // G-M11-3: Fetch approved trucks when modal opens
+  useEffect(() => {
+    if (!isOpen || !user.organizationId) return;
+    fetch(
+      `/api/trucks?organizationId=${user.organizationId}&approvalStatus=APPROVED`
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        const trucks = data.trucks ?? [];
+        setApprovedTrucks(trucks);
+        if (trucks.length === 1) setSelectedTruckId(trucks[0].id);
+      })
+      .catch(() => setApprovedTrucks([]));
+  }, [isOpen, user.organizationId]);
 
   const handleChange = (
     field: string,
@@ -103,17 +122,28 @@ export default function TruckPostingModal({
         return;
       }
 
-      // Find first truck from user's organization
+      // G-M11-3: Fetch only APPROVED trucks for posting
       const trucksResponse = await fetch(
-        `/api/trucks?organizationId=${user.organizationId}&limit=1`
+        `/api/trucks?organizationId=${user.organizationId}&approvalStatus=APPROVED`
       );
       const trucksData = await trucksResponse.json();
-      const userTruck = trucksData.trucks?.[0];
+      const approvedTrucks = trucksData.trucks ?? [];
+
+      if (approvedTrucks.length === 0) {
+        setError(
+          "No approved truck found for your organization. Please add a truck and wait for admin approval first."
+        );
+        setLoading(false);
+        return;
+      }
+
+      // Use selected truck or first approved truck
+      const userTruck = selectedTruckId
+        ? approvedTrucks.find((t: { id: string }) => t.id === selectedTruckId)
+        : approvedTrucks[0];
 
       if (!userTruck) {
-        setError(
-          "No truck found for your organization. Please add a truck first."
-        );
+        setError("Selected truck not found. Please try again.");
         setLoading(false);
         return;
       }
@@ -215,6 +245,28 @@ export default function TruckPostingModal({
           {error && (
             <div className="mx-4 mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
               {error}
+            </div>
+          )}
+
+          {/* G-M11-3: Truck selector (only shown when multiple approved trucks) */}
+          {approvedTrucks.length > 1 && (
+            <div className="mx-4 mt-4">
+              <label className="mb-1 block text-xs font-medium text-[#064d51]">
+                Select Truck *
+              </label>
+              <select
+                value={selectedTruckId}
+                onChange={(e) => setSelectedTruckId(e.target.value)}
+                className="w-full rounded border border-[#064d51]/30 bg-white px-3 py-2 text-sm text-[#064d51]"
+                required
+              >
+                <option value="">-- Select a truck --</option>
+                {approvedTrucks.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.licensePlate} ({t.truckType})
+                  </option>
+                ))}
+              </select>
             </div>
           )}
           <div
