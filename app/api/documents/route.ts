@@ -27,7 +27,7 @@ import {
   TruckDocumentType,
   Prisma,
 } from "@prisma/client";
-import { requireActiveUser } from "@/lib/auth";
+import { requireRegistrationAccess } from "@/lib/auth";
 import { handleApiError } from "@/lib/apiErrors";
 
 /**
@@ -55,7 +55,7 @@ import { handleApiError } from "@/lib/apiErrors";
 export async function GET(request: NextRequest) {
   try {
     // Require authentication
-    const session = await requireActiveUser();
+    const session = await requireRegistrationAccess();
 
     const { searchParams } = new URL(request.url);
     const entityType = searchParams.get("entityType");

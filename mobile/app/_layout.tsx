@@ -31,7 +31,14 @@ const queryClient = new QueryClient({
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const segments = useSegments();
-  const { user, isInitialized, isLoading, initialize } = useAuthStore();
+  const {
+    user,
+    isInitialized,
+    isLoading,
+    initialize,
+    walletGateMessage,
+    clearWalletGate,
+  } = useAuthStore();
   const { isLoaded, loadSettings, onboardingCompleted } = useSettingsStore();
 
   // Initialize auth and settings on mount
@@ -65,6 +72,22 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     return () => subscription.remove();
   }, [user?.role, router]);
 
+  // G-AUDIT-8: Show Alert when a 402 wallet gate is triggered
+  useEffect(() => {
+    if (walletGateMessage) {
+      Alert.alert("Insufficient Balance", walletGateMessage, [
+        {
+          text: "Go to Wallet",
+          onPress: () => {
+            clearWalletGate();
+            router.push("/(shared)/wallet" as `/${string}`);
+          },
+        },
+        { text: "OK", onPress: clearWalletGate },
+      ]);
+    }
+  }, [walletGateMessage, clearWalletGate, router]);
+
   // Redirect based on auth state
   useEffect(() => {
     if (!isInitialized || !isLoaded) return;
@@ -86,13 +109,23 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       if (status !== "ACTIVE") {
         // REJECTED users get a dedicated screen with rejection reason + resubmit
         if (status === "REJECTED") {
-          // G-M4-6: Allow REJECTED users to navigate to profile (for document re-upload)
-          // in addition to account-rejected screen
-          const allowedForRejected = ["account-rejected", "profile"];
-          if (
-            segments[0] !== "(shared)" ||
-            !allowedForRejected.includes((segments as string[])[1])
-          ) {
+          // G-M4-6: Allow REJECTED users to navigate to profile or role-specific documents
+          const allowedSharedScreens = ["account-rejected", "profile"];
+          const inShared =
+            segments[0] === "(shared)" &&
+            allowedSharedScreens.includes((segments as string[])[1]);
+          // G-AUDIT-9: Allow REJECTED users to access their role's document screen for re-upload
+          const roleGroup =
+            user.role === "CARRIER"
+              ? "(carrier)"
+              : user.role === "SHIPPER"
+                ? "(shipper)"
+                : null;
+          const inRoleDocs =
+            roleGroup &&
+            segments[0] === roleGroup &&
+            (segments as string[])[1] === "documents";
+          if (!inShared && !inRoleDocs) {
             router.replace("/(shared)/account-rejected");
           }
           return;

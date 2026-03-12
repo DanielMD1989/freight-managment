@@ -8,7 +8,13 @@
 import { create } from "zustand";
 import type { AuthResponse } from "../types";
 import { authService } from "../services/auth";
-import { saveAuth, clearAuth, setOnUnauthorized } from "../api/client";
+import {
+  saveAuth,
+  clearAuth,
+  setOnUnauthorized,
+  setOnForbidden,
+  setOnPaymentRequired,
+} from "../api/client";
 
 interface AuthUser {
   id: string;
@@ -33,6 +39,10 @@ interface AuthState {
   mfaExpiresAt: number | null;
   mfaEmail: string | null;
   mfaPassword: string | null;
+
+  // Wallet gate (402)
+  walletGateMessage: string | null;
+  clearWalletGate: () => void;
 
   // Actions
   initialize: () => Promise<void>;
@@ -72,11 +82,22 @@ export const useAuthStore = create<AuthState>((set, get) => {
     });
   });
 
+  // Set up 403 handler — refresh user status (AuthGuard routes REJECTED/SUSPENDED)
+  setOnForbidden(() => {
+    get().checkAuth();
+  });
+
+  // Set up 402 handler — store wallet gate message for Alert display
+  setOnPaymentRequired((message: string) => {
+    set({ walletGateMessage: message });
+  });
+
   return {
     user: null,
     isLoading: false,
     isInitialized: false,
     error: null,
+    walletGateMessage: null,
     mfaPending: false,
     mfaToken: null,
     phoneLastFour: null,
@@ -252,5 +273,6 @@ export const useAuthStore = create<AuthState>((set, get) => {
     },
 
     clearError: () => set({ error: null }),
+    clearWalletGate: () => set({ walletGateMessage: null }),
   };
 });

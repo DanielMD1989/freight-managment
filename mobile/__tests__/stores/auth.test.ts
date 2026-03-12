@@ -23,6 +23,8 @@ jest.mock("../../src/api/client", () => ({
   clearAuth: jest.fn().mockResolvedValue(undefined),
   isAuthenticated: jest.fn().mockResolvedValue(false),
   setOnUnauthorized: jest.fn(),
+  setOnForbidden: jest.fn(),
+  setOnPaymentRequired: jest.fn(),
 }));
 
 // Mock auth service

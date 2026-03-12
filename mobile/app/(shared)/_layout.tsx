@@ -12,6 +12,10 @@ export default function SharedLayout() {
         name="pending-verification"
         options={{ title: "Account Pending", headerShown: false }}
       />
+      <Stack.Screen
+        name="account-rejected"
+        options={{ title: "Account Rejected", headerShown: false }}
+      />
     </Stack>
   );
 }

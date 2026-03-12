@@ -29,9 +29,21 @@ const API_BASE_URL =
 
 /** Callback invoked on 401 to notify auth state */
 let onUnauthorizedCallback: (() => void) | null = null;
+/** Callback invoked on 403 with reason string */
+let onForbiddenCallback: ((reason: string) => void) | null = null;
+/** Callback invoked on 402 with message string */
+let onPaymentRequiredCallback: ((message: string) => void) | null = null;
 
 export function setOnUnauthorized(cb: () => void) {
   onUnauthorizedCallback = cb;
+}
+
+export function setOnForbidden(cb: (reason: string) => void) {
+  onForbiddenCallback = cb;
+}
+
+export function setOnPaymentRequired(cb: (message: string) => void) {
+  onPaymentRequiredCallback = cb;
 }
 
 // Create Axios instance
@@ -132,19 +144,39 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error: AxiosError) => {
-    // Handle 401 - clear tokens and notify auth state
-    if (error.response?.status === 401) {
-      const path = error.config?.url ?? "";
-      const isAuthEndpoint =
-        path.includes("/auth/login") ||
-        path.includes("/auth/register") ||
-        path.includes("/auth/verify-mfa");
+    const status = error.response?.status;
+    const path = error.config?.url ?? "";
+    const isAuthEndpoint =
+      path.includes("/auth/login") ||
+      path.includes("/auth/register") ||
+      path.includes("/auth/verify-mfa");
 
+    // Handle 401 - clear tokens and notify auth state
+    if (status === 401) {
       if (!isAuthEndpoint) {
         await clearAuth();
         onUnauthorizedCallback?.();
       }
     }
+
+    // Handle 403 - forbidden (REJECTED/SUSPENDED user hitting protected endpoint)
+    if (status === 403 && !isAuthEndpoint) {
+      const data = error.response?.data as Record<string, unknown> | undefined;
+      const reason =
+        typeof data?.error === "string" ? data.error : "Access denied";
+      onForbiddenCallback?.(reason);
+    }
+
+    // Handle 402 - payment required (wallet below threshold)
+    if (status === 402) {
+      const data = error.response?.data as Record<string, unknown> | undefined;
+      const message =
+        typeof data?.error === "string"
+          ? data.error
+          : "Insufficient balance for this action";
+      onPaymentRequiredCallback?.(message);
+    }
+
     return Promise.reject(error);
   }
 );

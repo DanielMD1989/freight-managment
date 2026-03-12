@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { csrfFetch } from "@/lib/csrfFetch";
 
 interface VerificationStep {
   id: string;
@@ -53,6 +54,87 @@ export function VerificationStatusClient({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+
+  // OTP verification state
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpExpiresAt, setOtpExpiresAt] = useState<number | null>(null);
+  const [otpCountdown, setOtpCountdown] = useState<number>(0);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // OTP countdown timer
+  useEffect(() => {
+    if (otpExpiresAt) {
+      const tick = () => {
+        const remaining = Math.max(
+          0,
+          Math.floor((otpExpiresAt - Date.now()) / 1000)
+        );
+        setOtpCountdown(remaining);
+        if (remaining <= 0 && countdownRef.current) {
+          clearInterval(countdownRef.current);
+          countdownRef.current = null;
+        }
+      };
+      tick();
+      countdownRef.current = setInterval(tick, 1000);
+      return () => {
+        if (countdownRef.current) clearInterval(countdownRef.current);
+      };
+    }
+  }, [otpExpiresAt]);
+
+  const sendOtp = async () => {
+    setOtpLoading(true);
+    setOtpError(null);
+    try {
+      const res = await csrfFetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ channel: "email" }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Failed to send OTP");
+      }
+      const body = await res.json();
+      setOtpSent(true);
+      setOtpExpiresAt(Date.now() + (body.expiresIn ?? 600) * 1000);
+    } catch (err) {
+      setOtpError(err instanceof Error ? err.message : "Failed to send OTP");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const verifyOtp = async () => {
+    if (otpCode.length !== 6) return;
+    setOtpLoading(true);
+    setOtpError(null);
+    try {
+      const res = await csrfFetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ code: otpCode }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Invalid code");
+      }
+      setOtpVerified(true);
+      // Refresh status checklist to show email verified
+      fetchStatus();
+    } catch (err) {
+      setOtpError(err instanceof Error ? err.message : "Verification failed");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -229,6 +311,101 @@ export function VerificationStatusClient({
           />
         </div>
       </div>
+
+      {/* OTP Verification — G-AUDIT-5 */}
+      {data && data.verification.isEmailVerified === false && !otpVerified && (
+        <div className="border-b border-slate-100 px-8 py-6">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
+            <h3 className="mb-2 text-base font-semibold text-amber-900">
+              Email Verification Required
+            </h3>
+            {!otpSent ? (
+              <>
+                <p className="mb-4 text-sm text-amber-700">
+                  We need to verify your email address ({userEmail}) before
+                  proceeding.
+                </p>
+                <button
+                  onClick={sendOtp}
+                  disabled={otpLoading}
+                  className="rounded-lg bg-amber-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-amber-700 disabled:opacity-50"
+                >
+                  {otpLoading ? "Sending..." : "Send Verification Code"}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="mb-3 text-sm text-amber-700">
+                  Enter the 6-digit code sent to {userEmail}
+                </p>
+                <div className="mb-3 flex gap-2">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={otpCode}
+                    onChange={(e) =>
+                      setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                    }
+                    placeholder="000000"
+                    className="w-32 rounded-lg border border-amber-300 bg-white px-3 py-2 text-center font-mono text-lg tracking-widest focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none"
+                  />
+                  <button
+                    onClick={verifyOtp}
+                    disabled={otpLoading || otpCode.length !== 6}
+                    className="rounded-lg bg-amber-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-amber-700 disabled:opacity-50"
+                  >
+                    {otpLoading ? "Verifying..." : "Verify"}
+                  </button>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  {otpCountdown > 0 ? (
+                    <span className="text-amber-600">
+                      Code expires in {Math.floor(otpCountdown / 60)}:
+                      {String(otpCountdown % 60).padStart(2, "0")}
+                    </span>
+                  ) : (
+                    <button
+                      onClick={sendOtp}
+                      disabled={otpLoading}
+                      className="text-amber-700 underline hover:text-amber-900 disabled:opacity-50"
+                    >
+                      Resend Code
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+            {otpError && (
+              <p className="mt-2 text-sm text-red-600">{otpError}</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* OTP Verified success */}
+      {otpVerified && (
+        <div className="border-b border-slate-100 px-8 py-4">
+          <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-3">
+            <svg
+              className="h-5 w-5 text-green-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+            <span className="text-sm font-medium text-green-700">
+              Email verified successfully
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Status Badge */}
       <div className="px-8 pt-6 pb-2">

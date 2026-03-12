@@ -57,6 +57,8 @@ import {
   getCurrentUserId,
   getCurrentUserRole,
   getErrorMessage,
+  setOnForbidden,
+  setOnPaymentRequired,
 } from "../../src/api/client";
 
 describe("API Client", () => {
@@ -193,6 +195,22 @@ describe("API Client", () => {
 
       const result = await getCurrentUserRole();
       expect(result).toBeNull();
+    });
+  });
+
+  // ---- setOnForbidden / setOnPaymentRequired ----
+
+  describe("setOnForbidden", () => {
+    it("should accept a callback function", () => {
+      const cb = jest.fn();
+      expect(() => setOnForbidden(cb)).not.toThrow();
+    });
+  });
+
+  describe("setOnPaymentRequired", () => {
+    it("should accept a callback function", () => {
+      const cb = jest.fn();
+      expect(() => setOnPaymentRequired(cb)).not.toThrow();
     });
   });
 

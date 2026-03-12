@@ -54,8 +54,13 @@ export default function AccountRejectedScreen() {
   }, []);
 
   const handleResubmit = () => {
-    // Navigate to the documents section where user can re-upload
-    router.push("/(shared)/profile");
+    // G-AUDIT-9: Navigate to role-specific documents screen for re-upload
+    const { user } = useAuthStore.getState();
+    if (user?.role === "CARRIER") {
+      router.push("/(carrier)/documents");
+    } else {
+      router.push("/(shipper)/documents");
+    }
   };
 
   const handleCheckStatus = async () => {
