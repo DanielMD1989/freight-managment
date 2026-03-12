@@ -265,47 +265,62 @@ export async function POST(request: NextRequest) {
     expiresAt.setHours(expiresAt.getHours() + data.expiresInHours);
 
     // Create the load request
-    const loadRequest = await db.loadRequest.create({
-      data: {
-        loadId: data.loadId,
-        truckId: data.truckId,
-        carrierId: effectiveCarrierId,
-        requestedById: session.userId,
-        shipperId: load.shipperId!,
-        notes: data.notes,
-        // No proposedRate - price negotiation happens outside platform
-        expiresAt,
-      },
-      include: {
-        load: {
-          select: {
-            id: true,
-            pickupCity: true,
-            deliveryCity: true,
-            truckType: true,
+    // G-M14-3: Partial unique index enforces one PENDING per (loadId, truckId)
+    let loadRequest;
+    try {
+      loadRequest = await db.loadRequest.create({
+        data: {
+          loadId: data.loadId,
+          truckId: data.truckId,
+          carrierId: effectiveCarrierId,
+          requestedById: session.userId,
+          shipperId: load.shipperId!,
+          notes: data.notes,
+          // No proposedRate - price negotiation happens outside platform
+          expiresAt,
+        },
+        include: {
+          load: {
+            select: {
+              id: true,
+              pickupCity: true,
+              deliveryCity: true,
+              truckType: true,
+            },
+          },
+          truck: {
+            select: {
+              id: true,
+              licensePlate: true,
+              truckType: true,
+            },
+          },
+          carrier: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          shipper: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
         },
-        truck: {
-          select: {
-            id: true,
-            licensePlate: true,
-            truckType: true,
-          },
-        },
-        carrier: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        shipper: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        return NextResponse.json(
+          { error: "A pending request already exists for this load and truck" },
+          { status: 409 }
+        );
+      }
+      throw error;
+    }
 
     // Create load event
     await db.loadEvent.create({

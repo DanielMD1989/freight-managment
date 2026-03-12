@@ -172,41 +172,56 @@ export async function POST(request: NextRequest) {
     expiresAt.setHours(expiresAt.getHours() + data.expiresInHours);
 
     // Create the proposal
-    const proposal = await db.matchProposal.create({
-      data: {
-        loadId: data.loadId,
-        truckId: data.truckId,
-        carrierId: truck.carrierId,
-        proposedById: session.userId,
-        notes: data.notes,
-        proposedRate: data.proposedRate,
-        expiresAt,
-        status: "PENDING",
-      },
-      include: {
-        load: {
-          select: {
-            pickupCity: true,
-            deliveryCity: true,
-            pickupDate: true,
-            weight: true,
-            truckType: true,
+    // G-M14-3: Partial unique index enforces one PENDING per (loadId, truckId)
+    let proposal;
+    try {
+      proposal = await db.matchProposal.create({
+        data: {
+          loadId: data.loadId,
+          truckId: data.truckId,
+          carrierId: truck.carrierId,
+          proposedById: session.userId,
+          notes: data.notes,
+          proposedRate: data.proposedRate,
+          expiresAt,
+          status: "PENDING",
+        },
+        include: {
+          load: {
+            select: {
+              pickupCity: true,
+              deliveryCity: true,
+              pickupDate: true,
+              weight: true,
+              truckType: true,
+            },
+          },
+          truck: {
+            select: {
+              licensePlate: true,
+              truckType: true,
+              capacity: true,
+            },
+          },
+          carrier: {
+            select: {
+              name: true,
+            },
           },
         },
-        truck: {
-          select: {
-            licensePlate: true,
-            truckType: true,
-            capacity: true,
-          },
-        },
-        carrier: {
-          select: {
-            name: true,
-          },
-        },
-      },
-    });
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        return NextResponse.json(
+          { error: "A pending request already exists for this load and truck" },
+          { status: 409 }
+        );
+      }
+      throw error;
+    }
 
     // Notify carrier users about the proposal
     const carrierUsers = await db.user.findMany({

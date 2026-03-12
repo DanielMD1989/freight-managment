@@ -20,7 +20,7 @@ import {
   RULE_CARRIER_FINAL_AUTHORITY,
   RULE_SHIPPER_DEMAND_FOCUS,
 } from "@/lib/foundation-rules";
-import { UserRole } from "@prisma/client";
+import { Prisma, UserRole } from "@prisma/client";
 import {
   notifyTruckRequest,
   createNotification,
@@ -261,42 +261,57 @@ export async function POST(request: NextRequest) {
     expiresAt.setHours(expiresAt.getHours() + data.expiresInHours);
 
     // Create the request
-    const truckRequest = await db.truckRequest.create({
-      data: {
-        loadId: data.loadId,
-        truckId: data.truckId,
-        shipperId: load.shipperId,
-        requestedById: session.userId,
-        carrierId: truck.carrierId,
-        notes: data.notes,
-        // No offeredRate - price negotiation happens outside platform
-        expiresAt,
-        status: "PENDING",
-      },
-      include: {
-        load: {
-          select: {
-            pickupCity: true,
-            deliveryCity: true,
-            pickupDate: true,
-            weight: true,
-            truckType: true,
+    // G-M14-3: Partial unique index enforces one PENDING per (loadId, truckId)
+    let truckRequest;
+    try {
+      truckRequest = await db.truckRequest.create({
+        data: {
+          loadId: data.loadId,
+          truckId: data.truckId,
+          shipperId: load.shipperId,
+          requestedById: session.userId,
+          carrierId: truck.carrierId,
+          notes: data.notes,
+          // No offeredRate - price negotiation happens outside platform
+          expiresAt,
+          status: "PENDING",
+        },
+        include: {
+          load: {
+            select: {
+              pickupCity: true,
+              deliveryCity: true,
+              pickupDate: true,
+              weight: true,
+              truckType: true,
+            },
+          },
+          truck: {
+            select: {
+              licensePlate: true,
+              truckType: true,
+              capacity: true,
+            },
+          },
+          carrier: {
+            select: {
+              name: true,
+            },
           },
         },
-        truck: {
-          select: {
-            licensePlate: true,
-            truckType: true,
-            capacity: true,
-          },
-        },
-        carrier: {
-          select: {
-            name: true,
-          },
-        },
-      },
-    });
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        return NextResponse.json(
+          { error: "A pending request already exists for this load and truck" },
+          { status: 409 }
+        );
+      }
+      throw error;
+    }
 
     // Create load event
     await db.loadEvent.create({
