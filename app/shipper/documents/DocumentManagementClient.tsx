@@ -64,10 +64,14 @@ export default function DocumentManagementClient({
   initialDocuments,
   organizationId,
   isLocked,
+  orgVerificationStatus,
+  orgRejectionReason,
 }: {
   initialDocuments: Document[];
   organizationId: string;
   isLocked?: boolean;
+  orgVerificationStatus?: string;
+  orgRejectionReason?: string | null;
 }) {
   const router = useRouter();
 
@@ -75,6 +79,8 @@ export default function DocumentManagementClient({
   const [isUploading, setIsUploading] = useState(false);
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [resubmitting, setResubmitting] = useState(false);
+  const [resubmitError, setResubmitError] = useState("");
 
   // Upload form state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -220,6 +226,33 @@ export default function DocumentManagementClient({
     }
   };
 
+  // G-M6-2: Resubmit for review
+  const handleResubmit = async () => {
+    setResubmitting(true);
+    setResubmitError("");
+    try {
+      const csrfToken = await getCSRFToken();
+      const response = await fetch("/api/user/resubmit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+        },
+        credentials: "include",
+      });
+      if (response.ok) {
+        window.location.href = "/";
+      } else {
+        const data = await response.json();
+        setResubmitError(data.error || "Failed to submit for review");
+      }
+    } catch {
+      setResubmitError("Failed to submit for review. Please try again.");
+    } finally {
+      setResubmitting(false);
+    }
+  };
+
   // Group documents by status
   const pendingDocs = documents.filter(
     (d) => d.verificationStatus === "PENDING"
@@ -233,6 +266,52 @@ export default function DocumentManagementClient({
 
   return (
     <div className="space-y-6">
+      {/* G-M6-2: Rejection banner + resubmit */}
+      {orgVerificationStatus === "REJECTED" && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6">
+          <div className="flex items-start gap-3">
+            <svg
+              className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+              />
+            </svg>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-red-800">
+                Your registration was rejected
+              </h3>
+              {orgRejectionReason && (
+                <p className="mt-1 text-sm text-red-700">
+                  {orgRejectionReason}
+                </p>
+              )}
+              <p className="mt-2 text-sm text-red-600">
+                Update your documents below and submit for review.
+              </p>
+              {resubmitError && (
+                <p className="mt-2 text-sm font-medium text-red-800">
+                  {resubmitError}
+                </p>
+              )}
+              <button
+                onClick={handleResubmit}
+                disabled={resubmitting || documents.length === 0}
+                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {resubmitting ? "Submitting..." : "Submit for Review"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Upload Section */}
       <div className="rounded-lg bg-white p-6 shadow">
         <div className="mb-4 flex items-center justify-between">

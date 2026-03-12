@@ -87,10 +87,14 @@ export default async function CarrierDocumentsPage() {
   // Fetch documents
   const documents = await getDocuments(session.organizationId);
 
-  // Fetch lock state directly (G-U6-3)
+  // Fetch lock state + verification status (G-U6-3, G-M6-2)
   const org = await db.organization.findUnique({
     where: { id: session.organizationId },
-    select: { documentsLockedAt: true },
+    select: {
+      documentsLockedAt: true,
+      verificationStatus: true,
+      rejectionReason: true,
+    },
   });
 
   // Import the client component dynamically to avoid duplication
@@ -112,6 +116,8 @@ export default async function CarrierDocumentsPage() {
         initialDocuments={documents || []}
         organizationId={session.organizationId}
         isLocked={!!org?.documentsLockedAt}
+        orgVerificationStatus={org?.verificationStatus ?? undefined}
+        orgRejectionReason={org?.rejectionReason ?? null}
       />
     </div>
   );

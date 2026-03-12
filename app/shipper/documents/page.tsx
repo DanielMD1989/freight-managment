@@ -89,10 +89,14 @@ export default async function DocumentsPage() {
   // Fetch documents
   const documents = await getDocuments(session.organizationId);
 
-  // Fetch lock state directly (G-U6-2)
+  // Fetch lock state + verification status (G-U6-2, G-M6-2)
   const org = await db.organization.findUnique({
     where: { id: session.organizationId },
-    select: { documentsLockedAt: true },
+    select: {
+      documentsLockedAt: true,
+      verificationStatus: true,
+      rejectionReason: true,
+    },
   });
 
   return (
@@ -116,6 +120,8 @@ export default async function DocumentsPage() {
           initialDocuments={documents || []}
           organizationId={session.organizationId}
           isLocked={!!org?.documentsLockedAt}
+          orgVerificationStatus={org?.verificationStatus ?? undefined}
+          orgRejectionReason={org?.rejectionReason ?? null}
         />
       </Suspense>
     </div>

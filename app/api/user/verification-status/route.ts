@@ -134,7 +134,14 @@ export async function GET() {
               description:
                 "Your documents have been uploaded. Submit them for admin review.",
             }
-          : null;
+          : user.status === "REJECTED"
+            ? {
+                type: "resubmit",
+                label: "Resubmit for Review",
+                description:
+                  "Update your documents and resubmit for admin review.",
+              }
+            : null;
 
     return NextResponse.json({
       status: user.status,

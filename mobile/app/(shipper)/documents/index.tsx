@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import * as DocumentPicker from "expo-document-picker";
 import { useAuthStore } from "../../../src/stores/auth";
+import apiClient from "../../../src/api/client";
 import {
   useDocuments,
   useUploadDocument,
@@ -57,6 +58,7 @@ const DOC_TYPES = [
 export default function DocumentsScreen() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
+  const checkAuth = useAuthStore((s) => s.checkAuth);
   const orgId = user?.organizationId;
 
   const {
@@ -72,6 +74,7 @@ export default function DocumentsScreen() {
 
   const [selectedDocType, setSelectedDocType] = useState<string>(DOC_TYPES[0]);
   const [showTypeSelector, setShowTypeSelector] = useState(false);
+  const [resubmitting, setResubmitting] = useState(false);
 
   const documents = docsData?.documents ?? [];
   const pendingCount = documents.filter(
@@ -151,6 +154,37 @@ export default function DocumentsScreen() {
     ]);
   };
 
+  // G-M6-1 + G-M6-7: Resubmit for review with status-specific error handling
+  const handleResubmit = async () => {
+    setResubmitting(true);
+    try {
+      await apiClient.post("/api/user/resubmit");
+      Alert.alert(
+        "Submitted",
+        "Your documents have been submitted for review.",
+        [{ text: "OK", onPress: () => checkAuth() }]
+      );
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 400) {
+        Alert.alert(
+          "Status Changed",
+          "Your account status has changed. Please check status.",
+          [{ text: "OK", onPress: () => checkAuth() }]
+        );
+      } else if (status === 403) {
+        Alert.alert(
+          "Account Suspended",
+          "Your account has been suspended. Contact support."
+        );
+      } else if (status !== 401) {
+        Alert.alert("Error", error?.message ?? "Failed to submit for review.");
+      }
+    } finally {
+      setResubmitting(false);
+    }
+  };
+
   if (isLoading) return <LoadingSpinner fullScreen />;
 
   return (
@@ -181,6 +215,26 @@ export default function DocumentsScreen() {
           <Text style={styles.summaryLabel}>Rejected</Text>
         </Card>
       </View>
+
+      {/* G-M6-3: Org rejection context banner */}
+      {verificationData?.organization?.verificationStatus === "REJECTED" && (
+        <View style={styles.rejectionBanner}>
+          <Ionicons name="alert-circle" size={18} color={colors.error} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rejectionBannerTitle}>
+              Your registration was rejected
+            </Text>
+            {verificationData.organization.rejectionReason && (
+              <Text style={styles.rejectionBannerReason}>
+                {verificationData.organization.rejectionReason}
+              </Text>
+            )}
+            <Text style={styles.rejectionBannerHint}>
+              Update your documents and submit for review.
+            </Text>
+          </View>
+        </View>
+      )}
 
       {/* Lock Banner — G-M5-2 */}
       {isLocked && (
@@ -322,6 +376,24 @@ export default function DocumentsScreen() {
         ))
       )}
 
+      {/* G-M6-1: Submit for Review when org is REJECTED */}
+      {verificationData?.organization?.verificationStatus === "REJECTED" && (
+        <View style={styles.resubmitSection}>
+          <Button
+            title="Submit for Review"
+            variant="primary"
+            size="lg"
+            fullWidth
+            onPress={handleResubmit}
+            loading={resubmitting}
+            disabled={documents.length === 0}
+            icon={
+              <Ionicons name="send-outline" size={18} color={colors.white} />
+            }
+          />
+        </View>
+      )}
+
       <View style={{ height: spacing["3xl"] }} />
     </ScrollView>
   );
@@ -450,6 +522,37 @@ const styles = StyleSheet.create({
   rejectionReason: {
     ...typography.bodySmall,
     color: colors.error,
+    marginTop: spacing.xs,
+  },
+  resubmitSection: {
+    paddingHorizontal: spacing["2xl"],
+    marginTop: spacing.lg,
+  },
+  rejectionBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+    marginHorizontal: spacing["2xl"],
+    marginTop: spacing.lg,
+    backgroundColor: colors.errorLight,
+    borderWidth: 1,
+    borderColor: colors.error,
+    borderRadius: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  rejectionBannerTitle: {
+    ...typography.labelMedium,
+    color: colors.errorDark,
+  },
+  rejectionBannerReason: {
+    ...typography.bodySmall,
+    color: colors.textPrimary,
+    marginTop: 2,
+  },
+  rejectionBannerHint: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
     marginTop: spacing.xs,
   },
 });

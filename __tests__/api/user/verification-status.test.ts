@@ -306,6 +306,71 @@ describe("GET /api/user/verification-status", () => {
     expect(body.nextAction).toBeNull();
   });
 
+  // G-M6-6: REJECTED user → nextAction.type === "resubmit"
+  it("G-M6-6: REJECTED user gets nextAction type=resubmit", async () => {
+    const org = await db.organization.create({
+      data: {
+        id: "vs-org-rejected",
+        name: "Rejected Org",
+        type: "SHIPPER",
+        contactEmail: "rejected-vs@test.com",
+        contactPhone: "+251911000199",
+        verificationStatus: "REJECTED",
+        rejectionReason: "Missing documents",
+      },
+    });
+
+    const user = await db.user.create({
+      data: {
+        id: "vs-user-rejected",
+        email: "rejected-vs@test.com",
+        passwordHash: "hash",
+        firstName: "Rejected",
+        lastName: "User",
+        phone: "+251911000199",
+        role: "SHIPPER",
+        status: "REJECTED",
+        organizationId: org.id,
+      },
+    });
+
+    // Need at least one document so hasDocuments is true
+    await db.companyDocument.create({
+      data: {
+        id: "vs-doc-rejected",
+        type: "COMPANY_LICENSE",
+        fileName: "license.pdf",
+        fileUrl: "https://example.com/license.pdf",
+        fileSize: 1024,
+        mimeType: "application/pdf",
+        verificationStatus: "REJECTED",
+        organizationId: org.id,
+        uploadedById: user.id,
+      },
+    });
+
+    setAuthSession(
+      createMockSession({
+        userId: user.id,
+        role: "SHIPPER",
+        status: "REJECTED",
+        organizationId: org.id,
+      })
+    );
+
+    const req = createRequest(
+      "GET",
+      "http://localhost:3000/api/user/verification-status"
+    );
+    const res = await getVerificationStatus(req);
+    const body = await parseResponse(res);
+
+    expect(res.status).toBe(200);
+    expect(body.nextAction).not.toBeNull();
+    expect(body.nextAction.type).toBe("resubmit");
+    expect(body.nextAction.label).toBe("Resubmit for Review");
+  });
+
   // T5: Unauthenticated → 401
   it("T5: unauthenticated request returns 401", async () => {
     setAuthSession(null);
