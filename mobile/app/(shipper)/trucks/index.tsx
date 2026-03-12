@@ -14,6 +14,7 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
+import { useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import {
@@ -46,7 +47,13 @@ const TRUCK_TYPES = [
 
 export default function ShipperTruckboard() {
   useTranslation();
-  const [search, setSearch] = useState("");
+  // G-M15-2: Read origin + destination from route params (navigated from load detail)
+  const params = useLocalSearchParams<{
+    origin?: string;
+    destination?: string;
+  }>();
+  const [search, setSearch] = useState(params.origin ?? "");
+  const [destinationParam] = useState(params.destination ?? "");
   const [showFilters, setShowFilters] = useState(false);
   const [truckType, setTruckType] = useState("");
   const [fullPartial, setFullPartial] = useState("");
@@ -67,6 +74,7 @@ export default function ShipperTruckboard() {
   const { data, isLoading, refetch, isRefetching } = useTruckPostings({
     truckType: truckType || undefined,
     origin: search || undefined,
+    destination: destinationParam || undefined,
     fullPartial: fullPartial || undefined,
     companyVerified: verifiedOnly || undefined,
     availableFrom: availableFrom || undefined,
@@ -188,6 +196,19 @@ export default function ShipperTruckboard() {
             />
           </TouchableOpacity>
         </View>
+        {/* G-M15-2: Show destination when navigated from load detail */}
+        {destinationParam !== "" && (
+          <View style={styles.destinationLabel}>
+            <Ionicons
+              name="navigate-outline"
+              size={16}
+              color={colors.primary600}
+            />
+            <Text style={styles.destinationLabelText}>
+              Destination: {destinationParam}
+            </Text>
+          </View>
+        )}
         {hasActiveFilters && (
           <View style={styles.activeFilters}>
             {truckType !== "" && (
@@ -652,6 +673,20 @@ const styles = StyleSheet.create({
   },
   filterBtnActive: {
     backgroundColor: colors.primary500,
+  },
+  destinationLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    backgroundColor: colors.primary50,
+    borderRadius: 8,
+  },
+  destinationLabelText: {
+    ...typography.labelSmall,
+    color: colors.primary600,
   },
   activeFilters: {
     flexDirection: "row",

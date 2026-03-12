@@ -222,6 +222,28 @@ export default function ShipperLoadDetailsScreen() {
             style={styles.actionBtn}
           />
         )}
+        {/* G-M15-2: Navigate to truck search with load's cities for DH filter */}
+        {["POSTED", "SEARCHING", "OFFERED"].includes(load.status) &&
+          load.pickupCity &&
+          load.deliveryCity && (
+            <Button
+              title="Find Trucks"
+              onPress={() =>
+                router.push(
+                  `/(shipper)/trucks?origin=${encodeURIComponent(load.pickupCity!)}&destination=${encodeURIComponent(load.deliveryCity!)}`
+                )
+              }
+              variant="primary"
+              icon={
+                <Ionicons
+                  name="search-outline"
+                  size={18}
+                  color={colors.white}
+                />
+              }
+              style={styles.actionBtn}
+            />
+          )}
         <Button
           title="Edit"
           onPress={() => router.push(`/(shipper)/loads/edit?id=${load.id}`)}

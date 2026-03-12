@@ -649,6 +649,15 @@ export async function GET(request: NextRequest) {
       },
     };
 
+    // G-M15-1: When DH filter will be active (both origin+destination resolved),
+    // fetch a larger batch without skip/take so the DH filter operates on the full
+    // result set. Post-filter pagination is applied after DH filtering below.
+    const dhFilterWillBeActive = !!(
+      resolvedOriginCityId && resolvedDestinationCityId
+    );
+    const fetchLimit = dhFilterWillBeActive ? 500 : limit;
+    const fetchOffset = dhFilterWillBeActive ? 0 : offset;
+
     // Fetch postings, count, and load city coordinates (for DH filter) in parallel
     const [postings, total, loadOriginCityData, loadDestCityData] =
       await Promise.all([
@@ -705,8 +714,8 @@ export async function GET(request: NextRequest) {
             },
           },
           orderBy: [{ postedAt: "desc" }, { availableFrom: "asc" }],
-          skip: offset,
-          take: limit,
+          skip: fetchOffset,
+          take: fetchLimit,
         }),
         db.truckPosting.count({ where }),
         // DH-O/DH-D filter: fetch load's origin city coordinates
@@ -811,8 +820,15 @@ export async function GET(request: NextRequest) {
           }, [])
         : postings.map((posting) => ({ posting, dhO: null, dhD: null }));
 
+    // G-M15-1: When DH filter is active, paginate the filtered results.
+    // filteredWithDistances contains ALL matching records (up to 500);
+    // slice to the requested page so pages return exactly `limit` items.
+    const paginatedResults = dhFilterWillBeActive
+      ? filteredWithDistances.slice(offset, offset + limit)
+      : filteredWithDistances;
+
     // Transform postings to flatten nested fields for UI consumption
-    const transformedPostings = filteredWithDistances.map(
+    const transformedPostings = paginatedResults.map(
       ({ posting, dhO, dhD }) => ({
         ...posting,
         // Flatten city names
@@ -899,9 +915,10 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // G-A18-1: pagination total reflects filtered count, not pre-filter DB count
-    const dhFilterActive = !!(loadOriginCoords && loadDestCoords);
-    const filteredTotal = dhFilterActive ? filteredWithDistances.length : total;
+    // G-A18-1 + G-M15-1: pagination total reflects true filtered count across all records
+    const filteredTotal = dhFilterWillBeActive
+      ? filteredWithDistances.length
+      : total;
 
     return NextResponse.json({
       truckPostings: postingsWithMatchCount,
@@ -910,7 +927,7 @@ export async function GET(request: NextRequest) {
         total: filteredTotal,
         limit,
         offset,
-        ...(dhFilterActive && { dbTotal: total }),
+        ...(dhFilterWillBeActive && { dbTotal: total }),
       },
       total: filteredTotal,
       limit,
