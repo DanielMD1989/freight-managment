@@ -339,6 +339,94 @@ describe("Document Delete Lock Enforcement (G-M5-6)", () => {
       expect(body.error).toMatch(/locked/i);
     });
 
+    // G-M7-3: APPROVED truck doc + REJECTED unlocked truck → 200
+    it("DL-7: DELETE APPROVED truck doc + REJECTED unlocked truck → 200", async () => {
+      const rejectedTruck = await db.truck.create({
+        data: {
+          id: "del-rejected-truck-1",
+          truckType: "DRY_VAN",
+          licensePlate: "DL-TRK-REJ-01",
+          capacity: 10000,
+          carrierId: seed.carrierOrg.id,
+          createdById: seed.carrierUser.id,
+          approvalStatus: "REJECTED",
+          documentsLockedAt: null,
+        },
+      });
+
+      const doc = await db.truckDocument.create({
+        data: {
+          id: "del-approved-tdoc-1",
+          type: "REGISTRATION",
+          fileName: "registration.pdf",
+          fileUrl: "https://test.com/registration.pdf",
+          fileSize: 1024,
+          mimeType: "application/pdf",
+          verificationStatus: "APPROVED",
+          truckId: rejectedTruck.id,
+          uploadedById: seed.carrierUser.id,
+        },
+      });
+
+      const session = createMockSession({
+        userId: seed.carrierUser.id,
+        role: "CARRIER",
+        organizationId: seed.carrierOrg.id,
+      });
+      setAuthSession(session);
+
+      const req = createDeleteRequest(doc.id, "truck");
+      const res = await callHandler(deleteDocument, req, { id: doc.id });
+      const body = await parseResponse(res);
+
+      expect(res.status).toBe(200);
+      expect(body.message).toMatch(/deleted/i);
+    });
+
+    // G-M7-3: APPROVED truck doc + APPROVED locked truck → 423
+    it("DL-8: DELETE APPROVED truck doc + APPROVED locked truck → 423", async () => {
+      const lockedApprovedTruck = await db.truck.create({
+        data: {
+          id: "del-locked-approved-truck-1",
+          truckType: "FLATBED",
+          licensePlate: "DL-TRK-LOCK-01",
+          capacity: 15000,
+          carrierId: seed.carrierOrg.id,
+          createdById: seed.carrierUser.id,
+          approvalStatus: "APPROVED",
+          documentsLockedAt: new Date("2026-01-01T00:00:00Z"),
+        },
+      });
+
+      const doc = await db.truckDocument.create({
+        data: {
+          id: "del-approved-locked-tdoc-1",
+          type: "REGISTRATION",
+          fileName: "registration.pdf",
+          fileUrl: "https://test.com/registration.pdf",
+          fileSize: 1024,
+          mimeType: "application/pdf",
+          verificationStatus: "APPROVED",
+          truckId: lockedApprovedTruck.id,
+          uploadedById: seed.carrierUser.id,
+        },
+      });
+
+      const session = createMockSession({
+        userId: seed.carrierUser.id,
+        role: "CARRIER",
+        organizationId: seed.carrierOrg.id,
+      });
+      setAuthSession(session);
+
+      const req = createDeleteRequest(doc.id, "truck");
+      const res = await callHandler(deleteDocument, req, { id: doc.id });
+      const body = await parseResponse(res);
+
+      expect(res.status).toBe(423);
+      expect(body.error).toMatch(/locked/i);
+    });
+
     it("DL-4: DELETE unlocked truck doc (PENDING) → 200", async () => {
       const unlockedTruck = await db.truck.create({
         data: {

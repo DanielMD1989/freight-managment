@@ -225,6 +225,7 @@ export async function POST(
           approvalStatus: "REJECTED",
           rejectionReason: data.reason,
           rejectedAt: new Date(),
+          documentsLockedAt: null, // G-M7-1: Unlock docs for re-upload
         },
         include: {
           carrier: {

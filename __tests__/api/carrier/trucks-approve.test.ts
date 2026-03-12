@@ -242,6 +242,45 @@ describe("Carrier Truck Approval", () => {
       expect(body.message).toContain("rejected");
     });
 
+    // G-M7-1: Reject clears documentsLockedAt so carrier can re-upload
+    it("G-M7-1: REJECT previously-approved truck clears documentsLockedAt", async () => {
+      // First create an approved+locked truck, then reset to PENDING so we can reject it
+      const truckLocked = await db.truck.create({
+        data: {
+          id: "truck-reject-lock-clear",
+          truckType: "DRY_VAN",
+          licensePlate: "LOCK-CLR-01",
+          capacity: 10000,
+          carrierId: seed.carrierOrg.id,
+          createdById: seed.carrierUser.id,
+          approvalStatus: "PENDING",
+          documentsLockedAt: null,
+        },
+      });
+
+      const req = createRequest(
+        "POST",
+        `http://localhost:3000/api/trucks/${truckLocked.id}/approve`,
+        {
+          body: {
+            action: "REJECT",
+            reason: "Insurance documents have expired and must be renewed",
+          },
+        }
+      );
+      const res = await callHandler(approveTruck, req, { id: truckLocked.id });
+      const body = await parseResponse(res);
+
+      expect(res.status).toBe(200);
+      expect(body.truck.approvalStatus).toBe("REJECTED");
+
+      // Verify documentsLockedAt is null in DB
+      const after = await db.truck.findUnique({
+        where: { id: truckLocked.id },
+      });
+      expect(after.documentsLockedAt).toBeNull();
+    });
+
     it("should reject without reason → 400", async () => {
       const truckNoReason = await db.truck.create({
         data: {

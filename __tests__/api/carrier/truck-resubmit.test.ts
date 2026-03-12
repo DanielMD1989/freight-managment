@@ -145,6 +145,42 @@ describe("Carrier Truck Resubmit (G-A2-2)", () => {
     expect(updated.rejectedAt).toBeNull();
   });
 
+  // G-M7-2: Resubmit clears documentsLockedAt (belt-and-suspenders)
+  it("G-M7-2: resubmit clears documentsLockedAt", async () => {
+    const lockedRejected = await db.truck.create({
+      data: {
+        id: "truck-resubmit-lock-clear",
+        truckType: "DRY_VAN",
+        licensePlate: "RESUB-LOCK-01",
+        capacity: 10000,
+        carrierId: seed.carrierOrg.id,
+        createdById: seed.carrierUser.id,
+        approvalStatus: "REJECTED",
+        rejectionReason: "Docs expired",
+        rejectedAt: new Date(),
+        documentsLockedAt: new Date("2026-01-01T00:00:00Z"), // leftover lock
+      },
+    });
+
+    const req = createRequest(
+      "POST",
+      `http://localhost:3000/api/trucks/${lockedRejected.id}/resubmit`
+    );
+    const res = await callHandler(resubmitTruck, req, {
+      id: lockedRejected.id,
+    });
+    const body = await parseResponse(res);
+
+    expect(res.status).toBe(200);
+    expect(body.truck.approvalStatus).toBe("PENDING");
+
+    // Verify documentsLockedAt cleared in DB
+    const after = await db.truck.findUnique({
+      where: { id: lockedRejected.id },
+    });
+    expect(after.documentsLockedAt).toBeNull();
+  });
+
   // T-TR-2: Carrier owns PENDING truck → 400 (not in rejected state)
   it("T-TR-2: carrier owns PENDING truck → 400 (not in rejected state)", async () => {
     const pendingTruck = await db.truck.create({

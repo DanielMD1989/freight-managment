@@ -67,6 +67,7 @@ export async function POST(
         approvalStatus: "PENDING",
         rejectionReason: null,
         rejectedAt: null,
+        documentsLockedAt: null, // G-M7-2: Belt-and-suspenders lock clear
       },
     });
 

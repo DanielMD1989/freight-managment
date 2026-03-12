@@ -533,7 +533,7 @@ export async function DELETE(
       // G-M5-6: Check documentsLockedAt — permanently locked after approval
       const truck = await db.truck.findUnique({
         where: { id: document.truckId },
-        select: { documentsLockedAt: true },
+        select: { documentsLockedAt: true, approvalStatus: true },
       });
       if (truck?.documentsLockedAt) {
         return NextResponse.json(
@@ -545,7 +545,13 @@ export async function DELETE(
         );
       }
 
-      if (document.verificationStatus !== "PENDING") {
+      // G-M7-3: Allow APPROVED truck doc deletion when truck is REJECTED and unlocked
+      const canDeleteApproved =
+        document.verificationStatus === "APPROVED" &&
+        !truck?.documentsLockedAt &&
+        truck?.approvalStatus === "REJECTED";
+
+      if (document.verificationStatus !== "PENDING" && !canDeleteApproved) {
         return NextResponse.json(
           {
             error: "Cannot delete document that has been verified or rejected",
