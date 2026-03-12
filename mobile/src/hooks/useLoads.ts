@@ -16,6 +16,9 @@ export function useLoads(params?: {
   truckType?: string;
   origin?: string;
   destination?: string;
+  pickupCity?: string;
+  deliveryCity?: string;
+  truckPostingId?: string;
   myLoads?: boolean;
 }) {
   return useQuery({

@@ -291,7 +291,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const session = await requireAuth();
+    const session = await requireActiveUser();
 
     // A4: Block carrier marketplace browsing if below minimum balance
     if (session.organizationId && session.role === "CARRIER") {
@@ -357,15 +357,89 @@ export async function GET(request: NextRequest) {
     const rateMin = searchParams.get("rateMin");
     const rateMax = searchParams.get("rateMax");
 
-    // G-A6-1: DH-O filter — carrier position → load pickup
-    const carrierLatRaw = searchParams.get("carrierLat");
-    const carrierLonRaw = searchParams.get("carrierLon");
-    const dhOMaxKmRaw = searchParams.get("dhOMaxKm");
-    const carrierLat = carrierLatRaw ? parseFloat(carrierLatRaw) : undefined;
-    const carrierLon = carrierLonRaw ? parseFloat(carrierLonRaw) : undefined;
-    const dhOMaxKm = dhOMaxKmRaw
-      ? Math.min(Math.max(parseFloat(dhOMaxKmRaw), 1), 2000)
-      : undefined;
+    // G-M16-4: Server-side DH from TruckPosting — overrides raw DH params for CARRIER
+    const truckPostingId = searchParams.get("truckPostingId");
+    let carrierLat: number | undefined;
+    let carrierLon: number | undefined;
+    let dhOMaxKm: number | undefined;
+    let destLat: number | undefined;
+    let destLon: number | undefined;
+    let dhDMaxKm: number | undefined;
+
+    if (truckPostingId && session.role === "CARRIER") {
+      // Fetch posting with ownership check
+      const posting = await db.truckPosting.findUnique({
+        where: { id: truckPostingId },
+        select: {
+          truck: { select: { carrierId: true } },
+          preferredDhToOriginKm: true,
+          preferredDhAfterDeliveryKm: true,
+          originCityId: true,
+          destinationCityId: true,
+        },
+      });
+
+      if (posting && posting.truck.carrierId === session.organizationId) {
+        // Fetch coordinates for posting's origin/destination cities
+        const [originCity, destCity] = await Promise.all([
+          posting.originCityId
+            ? db.ethiopianLocation.findUnique({
+                where: { id: posting.originCityId },
+                select: { latitude: true, longitude: true },
+              })
+            : null,
+          posting.destinationCityId
+            ? db.ethiopianLocation.findUnique({
+                where: { id: posting.destinationCityId },
+                select: { latitude: true, longitude: true },
+              })
+            : null,
+        ]);
+
+        // DH-O: posting origin → load pickup
+        if (
+          originCity?.latitude != null &&
+          originCity?.longitude != null &&
+          posting.preferredDhToOriginKm != null
+        ) {
+          carrierLat = Number(originCity.latitude);
+          carrierLon = Number(originCity.longitude);
+          dhOMaxKm = Number(posting.preferredDhToOriginKm);
+        }
+
+        // DH-D: load delivery → posting destination
+        if (
+          destCity?.latitude != null &&
+          destCity?.longitude != null &&
+          posting.preferredDhAfterDeliveryKm != null
+        ) {
+          destLat = Number(destCity.latitude);
+          destLon = Number(destCity.longitude);
+          dhDMaxKm = Number(posting.preferredDhAfterDeliveryKm);
+        }
+      }
+      // If posting not found or not owned, DH params stay undefined → no DH filter
+    } else {
+      // Legacy: raw DH params (non-CARRIER callers or no truckPostingId)
+      const carrierLatRaw = searchParams.get("carrierLat");
+      const carrierLonRaw = searchParams.get("carrierLon");
+      const dhOMaxKmRaw = searchParams.get("dhOMaxKm");
+      carrierLat = carrierLatRaw ? parseFloat(carrierLatRaw) : undefined;
+      carrierLon = carrierLonRaw ? parseFloat(carrierLonRaw) : undefined;
+      dhOMaxKm = dhOMaxKmRaw
+        ? Math.min(Math.max(parseFloat(dhOMaxKmRaw), 1), 2000)
+        : undefined;
+
+      const destLatRaw = searchParams.get("destLat");
+      const destLonRaw = searchParams.get("destLon");
+      const dhDMaxKmRaw = searchParams.get("dhDMaxKm");
+      destLat = destLatRaw ? parseFloat(destLatRaw) : undefined;
+      destLon = destLonRaw ? parseFloat(destLonRaw) : undefined;
+      dhDMaxKm = dhDMaxKmRaw
+        ? Math.min(Math.max(parseFloat(dhDMaxKmRaw), 1), 2000)
+        : undefined;
+    }
+
     const hasDHOFilter =
       carrierLat !== undefined &&
       carrierLon !== undefined &&
@@ -378,15 +452,6 @@ export async function GET(request: NextRequest) {
       carrierLon >= -180 &&
       carrierLon <= 180;
 
-    // G-A6-2: DH-D filter — load delivery → carrier home base
-    const destLatRaw = searchParams.get("destLat");
-    const destLonRaw = searchParams.get("destLon");
-    const dhDMaxKmRaw = searchParams.get("dhDMaxKm");
-    const destLat = destLatRaw ? parseFloat(destLatRaw) : undefined;
-    const destLon = destLonRaw ? parseFloat(destLonRaw) : undefined;
-    const dhDMaxKm = dhDMaxKmRaw
-      ? Math.min(Math.max(parseFloat(dhDMaxKmRaw), 1), 2000)
-      : undefined;
     const hasDHDFilter =
       destLat !== undefined &&
       destLon !== undefined &&
@@ -424,6 +489,7 @@ export async function GET(request: NextRequest) {
       destLat,
       destLon,
       dhDMaxKm, // G-A6-2
+      truckPostingId, // G-M16-4
       role: session.role,
       orgId: session.organizationId,
       sortBy: searchParams.get("sortBy"),

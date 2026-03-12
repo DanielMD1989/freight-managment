@@ -19,6 +19,9 @@ class LoadService {
     truckType?: string;
     origin?: string;
     destination?: string;
+    pickupCity?: string;
+    deliveryCity?: string;
+    truckPostingId?: string;
     myLoads?: boolean;
   }): Promise<LoadsResponse> {
     try {

@@ -16,6 +16,8 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useLoads } from "../../../src/hooks/useLoads";
+import { useMyTruckPostings } from "../../../src/hooks/useTrucks";
+import { useAuthStore } from "../../../src/stores/auth";
 import { Card } from "../../../src/components/Card";
 import { StatusBadge } from "../../../src/components/StatusBadge";
 import { LoadingSpinner } from "../../../src/components/LoadingSpinner";
@@ -31,7 +33,7 @@ import {
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
-import type { Load } from "../../../src/types";
+import type { Load, TruckPosting } from "../../../src/types";
 
 const TRUCK_TYPES = [
   "FLATBED",
@@ -46,8 +48,8 @@ const TRUCK_TYPES = [
 
 interface Filters {
   truckType?: string;
-  origin?: string;
-  destination?: string;
+  pickupCity?: string;
+  deliveryCity?: string;
   minWeight?: string;
   maxWeight?: string;
 }
@@ -58,6 +60,17 @@ export default function CarrierLoadboard() {
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<Filters>({});
   const [appliedFilters, setAppliedFilters] = useState<Filters>({});
+  const [selectedPostingId, setSelectedPostingId] = useState<string | null>(
+    null
+  );
+
+  // G-M16-2: Fetch carrier's active truck postings for DH filter
+  const organizationId = useAuthStore((s) => s.user?.organizationId);
+  const { data: postingsData } = useMyTruckPostings({
+    status: "ACTIVE",
+    organizationId: organizationId ?? undefined,
+  });
+  const activePostings: TruckPosting[] = postingsData?.postings ?? [];
 
   // Build query params from applied filters
   const queryParams: Record<string, string | number | undefined> = {
@@ -65,9 +78,13 @@ export default function CarrierLoadboard() {
   };
   if (appliedFilters.truckType)
     queryParams.truckType = appliedFilters.truckType;
-  if (appliedFilters.origin) queryParams.origin = appliedFilters.origin;
-  if (appliedFilters.destination)
-    queryParams.destination = appliedFilters.destination;
+  // G-M16-1: Use correct API param names (pickupCity/deliveryCity, not origin/destination)
+  if (appliedFilters.pickupCity)
+    queryParams.pickupCity = appliedFilters.pickupCity;
+  if (appliedFilters.deliveryCity)
+    queryParams.deliveryCity = appliedFilters.deliveryCity;
+  // G-M16-4: Pass truckPostingId for server-side DH filtering
+  if (selectedPostingId) queryParams.truckPostingId = selectedPostingId;
 
   const { data, isLoading, refetch, isRefetching } = useLoads(queryParams);
 
@@ -210,6 +227,65 @@ export default function CarrierLoadboard() {
         </View>
       </View>
 
+      {/* G-M16-2: TruckPosting selector for server-side DH filtering */}
+      {activePostings.length > 0 && (
+        <View style={styles.postingSelector}>
+          <Text style={styles.postingSelectorLabel}>Filter by Posting</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.chipScroll}
+          >
+            <View style={styles.chipRow}>
+              <TouchableOpacity
+                style={[
+                  styles.chip,
+                  selectedPostingId === null && styles.chipActive,
+                ]}
+                onPress={() => {
+                  setSelectedPostingId(null);
+                  refetch();
+                }}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    selectedPostingId === null && styles.chipTextActive,
+                  ]}
+                >
+                  All Loads
+                </Text>
+              </TouchableOpacity>
+              {activePostings.map((p) => (
+                <TouchableOpacity
+                  key={p.id}
+                  style={[
+                    styles.chip,
+                    selectedPostingId === p.id && styles.chipActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedPostingId(
+                      selectedPostingId === p.id ? null : p.id
+                    );
+                    refetch();
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      selectedPostingId === p.id && styles.chipTextActive,
+                    ]}
+                  >
+                    {p.truck?.licensePlate ?? "Truck"} (
+                    {p.originCityName ?? "?"} → {p.destinationCityName ?? "?"})
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+        </View>
+      )}
+
       {/* Collapsible Filter Panel */}
       {showFilters && (
         <View style={styles.filterPanel}>
@@ -268,20 +344,20 @@ export default function CarrierLoadboard() {
             />
           </View>
 
-          {/* Origin / Destination */}
-          <Text style={styles.filterLabel}>Origin</Text>
+          {/* Pickup / Delivery City */}
+          <Text style={styles.filterLabel}>Pickup City</Text>
           <Input
-            value={filters.origin ?? ""}
-            onChangeText={(v) => setFilters((f) => ({ ...f, origin: v }))}
-            placeholder="Origin city"
+            value={filters.pickupCity ?? ""}
+            onChangeText={(v) => setFilters((f) => ({ ...f, pickupCity: v }))}
+            placeholder="Pickup city"
             containerStyle={{ marginBottom: spacing.sm }}
           />
 
-          <Text style={styles.filterLabel}>Destination</Text>
+          <Text style={styles.filterLabel}>Delivery City</Text>
           <Input
-            value={filters.destination ?? ""}
-            onChangeText={(v) => setFilters((f) => ({ ...f, destination: v }))}
-            placeholder="Destination city"
+            value={filters.deliveryCity ?? ""}
+            onChangeText={(v) => setFilters((f) => ({ ...f, deliveryCity: v }))}
+            placeholder="Delivery city"
             containerStyle={{ marginBottom: spacing.md }}
           />
 
@@ -376,6 +452,18 @@ const styles = StyleSheet.create({
     ...typography.labelSmall,
     color: colors.white,
     fontSize: 9,
+  },
+  postingSelector: {
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  postingSelectorLabel: {
+    ...typography.labelSmall,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
   },
   filterPanel: {
     backgroundColor: colors.white,

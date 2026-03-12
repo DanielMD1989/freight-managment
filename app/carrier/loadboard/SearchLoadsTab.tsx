@@ -24,13 +24,13 @@ import {
 } from "@/types/loadboard-ui";
 import LoadRequestModal from "./LoadRequestModal";
 import { getCSRFToken } from "@/lib/csrfFetch";
-import { calculateDistanceKm } from "@/lib/geo";
 import {
   CarrierUser,
   EthiopianCity,
   Load,
   LoadRequest,
   LoadFilterValues,
+  TruckPosting,
 } from "@/types/carrier-loadboard";
 
 interface SearchLoadsTabProps {
@@ -38,24 +38,6 @@ interface SearchLoadsTabProps {
 }
 
 type ResultsFilter = "all" | "PREFERRED" | "BLOCKED";
-
-/**
- * COLLAPSED TO SINGLE SOURCE OF TRUTH (2026-02-06)
- * Now delegates to lib/geo.ts:calculateDistanceKm with Math.round wrapper.
- * Preserves original INTEGER return behavior for backward compatibility.
- *
- * Calculate distance between two coordinates using Haversine formula
- * Returns distance in kilometers (rounded to integer)
- */
-function haversineDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  // Delegates to single source of truth, preserves integer rounding behavior
-  return Math.round(calculateDistanceKm(lat1, lon1, lat2, lon2));
-}
 
 export default function SearchLoadsTab({}: SearchLoadsTabProps) {
   const [loads, setLoads] = useState<Load[]>([]);
@@ -80,6 +62,9 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
     Set<string>
   >(new Set());
 
+  // G-M16-2: Carrier's active truck postings for DH filter
+  const [carrierPostings, setCarrierPostings] = useState<TruckPosting[]>([]);
+
   // Search form state
   const [filterValues, setFilterValues] = useState<LoadFilterValues>({
     truckType: "",
@@ -87,12 +72,11 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
     origin: "",
     destination: "",
     availDate: "",
-    dhOrigin: "",
-    dhDestination: "",
     fullPartial: "",
     length: "",
     weight: "",
     searchBack: "",
+    truckPostingId: "",
   });
 
   /**
@@ -138,7 +122,26 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
     fetchEthiopianCities();
     fetchSavedSearches();
     fetchPendingLoadRequests();
+    // G-M16-2: Fetch carrier's active postings for DH selector
+    fetchCarrierPostings();
   }, []);
+
+  /**
+   * Fetch carrier's active truck postings for DH filter selector
+   */
+  const fetchCarrierPostings = async () => {
+    try {
+      const response = await fetch(
+        "/api/truck-postings?myPostings=true&status=ACTIVE&limit=50"
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setCarrierPostings(data.postings || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch carrier postings:", error);
+    }
+  };
 
   /**
    * Fetch saved searches for LOADS
@@ -315,12 +318,11 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
       origin: "",
       destination: "",
       availDate: "",
-      dhOrigin: "",
-      dhDestination: "",
       fullPartial: "",
       length: "",
       weight: "",
       searchBack: "",
+      truckPostingId: "",
     });
   };
 
@@ -335,38 +337,7 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
   };
 
   /**
-   * Helper to get city coordinates by name
-   */
-  const getCityCoords = (
-    cityName: string | null
-  ): { lat: number; lon: number } | null => {
-    if (!cityName || ethiopianCities.length === 0) return null;
-    const searchName = cityName.toLowerCase().trim();
-
-    // Try exact match first
-    let city = ethiopianCities.find(
-      (c: EthiopianCity) => c.name?.toLowerCase().trim() === searchName
-    );
-
-    // Fuzzy match for spelling variations
-    if (!city) {
-      city = ethiopianCities.find((c: EthiopianCity) => {
-        const name = c.name?.toLowerCase().trim() || "";
-        if (name.includes(searchName) || searchName.includes(name)) return true;
-        // Handle double letters (Mekelle/Mekele, Jimma/Jima)
-        const simplify = (s: string) => s.replace(/(.)\1+/g, "$1");
-        return simplify(name) === simplify(searchName);
-      });
-    }
-
-    if (city?.latitude && city?.longitude) {
-      return { lat: Number(city.latitude), lon: Number(city.longitude) };
-    }
-    return null;
-  };
-
-  /**
-   * Fetch loads based on filters and calculate DH-O/DH-D dynamically
+   * Fetch loads based on filters — DH filtering is now server-side via truckPostingId
    */
   const fetchLoads = async () => {
     setLoading(true);
@@ -377,7 +348,12 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
       if (filterValues.truckType) {
         params.append("truckType", filterValues.truckType);
       }
-      // Don't filter by exact city match - we want to calculate distances
+      if (filterValues.origin) {
+        params.append("pickupCity", filterValues.origin);
+      }
+      if (filterValues.destination) {
+        params.append("deliveryCity", filterValues.destination);
+      }
       if (filterValues.availDate) {
         params.append("pickupFrom", filterValues.availDate);
       }
@@ -390,9 +366,12 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
       if (filterValues.weight) {
         params.append("minWeight", filterValues.weight);
       }
+      // G-M16-4: Pass truckPostingId for server-side DH filtering
+      if (filterValues.truckPostingId) {
+        params.append("truckPostingId", filterValues.truckPostingId);
+      }
 
       const response = await fetch(`/api/loads?${params.toString()}`);
-      // L41 FIX: Check response.ok before parsing
       if (!response.ok) {
         throw new Error("Failed to fetch loads");
       }
@@ -400,136 +379,7 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
       // Deduplicate loads by ID to prevent duplicates
       const loadMap = new Map<string, Load>();
       (data.loads || []).forEach((l: Load) => loadMap.set(l.id, l));
-      const fetchedLoads: Load[] = Array.from(loadMap.values());
-
-      // Get carrier's origin and destination coordinates
-      const carrierOriginCoords = getCityCoords(filterValues.origin);
-      const carrierDestCoords = getCityCoords(filterValues.destination);
-
-      // Calculate DH-O and DH-D for each load
-      const loadsWithDH = fetchedLoads.map((load: Load) => {
-        const pickupCoords = getCityCoords(load.pickupCity);
-        const deliveryCoords = getCityCoords(load.deliveryCity);
-
-        // Calculate DH-O: distance from carrier's origin to load's pickup
-        let calculatedDhO: number | null = null;
-        if (carrierOriginCoords && pickupCoords) {
-          calculatedDhO = haversineDistance(
-            carrierOriginCoords.lat,
-            carrierOriginCoords.lon,
-            pickupCoords.lat,
-            pickupCoords.lon
-          );
-        }
-
-        // Calculate DH-D: distance from load's delivery to carrier's destination
-        let calculatedDhD: number | null = null;
-        if (carrierDestCoords && deliveryCoords) {
-          calculatedDhD = haversineDistance(
-            deliveryCoords.lat,
-            deliveryCoords.lon,
-            carrierDestCoords.lat,
-            carrierDestCoords.lon
-          );
-        }
-
-        return {
-          ...load,
-          // Use calculated values, fall back to stored values if no carrier origin/dest entered
-          dhToOriginKm:
-            calculatedDhO !== null ? calculatedDhO : load.dhToOriginKm,
-          dhAfterDeliveryKm:
-            calculatedDhD !== null ? calculatedDhD : load.dhAfterDeliveryKm,
-          // Store whether these are calculated (for UI indicator)
-          dhCalculated: calculatedDhO !== null || calculatedDhD !== null,
-        };
-      });
-
-      // Filter by DH limits if specified
-      const dhOriginLimit = filterValues.dhOrigin
-        ? parseInt(filterValues.dhOrigin)
-        : null;
-      const dhDestLimit = filterValues.dhDestination
-        ? parseInt(filterValues.dhDestination)
-        : null;
-
-      let filteredLoads = loadsWithDH;
-
-      if (dhOriginLimit !== null) {
-        filteredLoads = filteredLoads.filter(
-          (
-            load: Load & { dhToOriginKm?: number; dhAfterDeliveryKm?: number }
-          ) => {
-            // If no DH-O calculated (carrier didn't enter origin), skip filtering
-            if (load.dhToOriginKm === null || load.dhToOriginKm === undefined)
-              return true;
-            return load.dhToOriginKm <= dhOriginLimit;
-          }
-        );
-      }
-
-      if (dhDestLimit !== null) {
-        filteredLoads = filteredLoads.filter(
-          (
-            load: Load & { dhToOriginKm?: number; dhAfterDeliveryKm?: number }
-          ) => {
-            // If no DH-D calculated (carrier didn't enter destination), skip filtering
-            if (
-              load.dhAfterDeliveryKm === null ||
-              load.dhAfterDeliveryKm === undefined
-            )
-              return true;
-            return load.dhAfterDeliveryKm <= dhDestLimit;
-          }
-        );
-      }
-
-      // Sort by DH-O (smaller is better), then DH-D, then by date
-      filteredLoads.sort(
-        (
-          a: Load & {
-            dhToOriginKm?: number;
-            dhAfterDeliveryKm?: number;
-            createdAt?: string;
-          },
-          b: Load & {
-            dhToOriginKm?: number;
-            dhAfterDeliveryKm?: number;
-            createdAt?: string;
-          }
-        ) => {
-          // Loads with calculated DH first
-          const aDhO = a.dhToOriginKm ?? null;
-          const bDhO = b.dhToOriginKm ?? null;
-          const aHasDH = aDhO !== null;
-          const bHasDH = bDhO !== null;
-
-          if (aHasDH && !bHasDH) return -1;
-          if (!aHasDH && bHasDH) return 1;
-
-          // Sort by DH-O (smaller is better)
-          if (aHasDH && bHasDH && aDhO !== bDhO) {
-            return aDhO - bDhO;
-          }
-
-          // Then by DH-D (smaller is better)
-          const aDhD = a.dhAfterDeliveryKm ?? null;
-          const bDhD = b.dhAfterDeliveryKm ?? null;
-          const aHasDhD = aDhD !== null;
-          const bHasDhD = bDhD !== null;
-
-          if (aHasDhD && bHasDhD && aDhD !== bDhD) {
-            return aDhD - bDhD;
-          }
-
-          // Finally by creation date (newest first)
-          const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-          return bDate - aDate;
-        }
-      );
-
-      setLoads(filteredLoads);
+      setLoads(Array.from(loadMap.values()));
     } catch (error) {
       console.error("Failed to fetch loads:", error);
     } finally {
@@ -858,8 +708,7 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
             <div>Origin</div>
             <div>Destination</div>
             <div>Avail</div>
-            <div>DH-O</div>
-            <div>DH-D</div>
+            <div className="col-span-2">Posting (DH Filter)</div>
             <div>F/P</div>
             <div>Length</div>
             <div>Weight</div>
@@ -963,28 +812,24 @@ export default function SearchLoadsTab({}: SearchLoadsTabProps) {
               />
             </div>
 
-            {/* DH-O */}
-            <div>
-              <input
-                type="number"
-                value={filterValues.dhOrigin || ""}
-                onChange={(e) => handleFilterChange("dhOrigin", e.target.value)}
-                placeholder="km"
-                className="w-full rounded border border-[#064d51]/20 bg-white px-2 py-1 text-xs"
-              />
-            </div>
-
-            {/* DH-D */}
-            <div>
-              <input
-                type="number"
-                value={filterValues.dhDestination || ""}
+            {/* G-M16-3: TruckPosting selector for server-side DH filtering */}
+            <div className="col-span-2">
+              <select
+                value={filterValues.truckPostingId || ""}
                 onChange={(e) =>
-                  handleFilterChange("dhDestination", e.target.value)
+                  handleFilterChange("truckPostingId", e.target.value)
                 }
-                placeholder="km"
-                className="w-full rounded border border-[#064d51]/20 bg-white px-2 py-1 text-xs"
-              />
+                className="w-full rounded border border-[#064d51]/20 bg-white px-2 py-1.5 text-xs"
+                style={{ minHeight: "32px" }}
+              >
+                <option value="">No DH Filter</option>
+                {carrierPostings.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.truck?.licensePlate ?? "Truck"} ({p.origin ?? "?"} →{" "}
+                    {p.destination ?? "?"})
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* F/P */}

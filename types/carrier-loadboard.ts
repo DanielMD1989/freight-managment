@@ -151,12 +151,11 @@ export interface LoadFilterValues {
   origin: string;
   destination: string;
   availDate: string;
-  dhOrigin: string;
-  dhDestination: string;
   fullPartial: string;
   length: string;
   weight: string;
   searchBack: string;
+  truckPostingId: string;
   [key: string]: string | number | boolean | undefined;
 }
 
