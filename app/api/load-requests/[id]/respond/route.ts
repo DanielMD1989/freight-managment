@@ -86,6 +86,7 @@ export async function POST(
             id: true,
             licensePlate: true,
             carrierId: true,
+            approvalStatus: true, // G-M12-2b: needed for approval re-check
             imei: true,
             gpsVerifiedAt: true,
           },
@@ -115,6 +116,14 @@ export async function POST(
     // Fix 6b: Return 404 instead of 403 to prevent resource existence leakage
     if (!isShipperOwner && !isAdmin) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    // G-M12-2b: Re-check truck approval status (TOCTOU — truck may have been rejected after request was created)
+    if (loadRequest.truck.approvalStatus !== "APPROVED") {
+      return NextResponse.json(
+        { error: "Cannot proceed — truck is no longer approved" },
+        { status: 400 }
+      );
     }
 
     // Validate request body first (needed for idempotency check)

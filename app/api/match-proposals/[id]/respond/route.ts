@@ -88,6 +88,7 @@ export async function POST(
             id: true,
             carrierId: true,
             licensePlate: true,
+            approvalStatus: true, // G-M12-2d: needed for approval re-check
             imei: true,
             gpsVerifiedAt: true,
           },
@@ -169,6 +170,14 @@ export async function POST(
       return NextResponse.json(
         { error: "Proposal not found" },
         { status: 404 }
+      );
+    }
+
+    // G-M12-2d: Re-check truck approval status (TOCTOU — truck may have been rejected after request was created)
+    if (proposal.truck.approvalStatus !== "APPROVED") {
+      return NextResponse.json(
+        { error: "Cannot proceed — truck is no longer approved" },
+        { status: 400 }
       );
     }
 

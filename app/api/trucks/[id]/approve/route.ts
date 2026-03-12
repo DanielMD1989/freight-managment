@@ -237,6 +237,24 @@ export async function POST(
         },
       });
 
+      // G-M12-1: Cancel active postings and pending requests for rejected truck
+      await db.truckPosting.updateMany({
+        where: { truckId, status: "ACTIVE" },
+        data: { status: "CANCELLED" },
+      });
+      await db.truckRequest.updateMany({
+        where: { truckId, status: "PENDING" },
+        data: { status: "CANCELLED" },
+      });
+      await db.loadRequest.updateMany({
+        where: { truckId, status: "PENDING" },
+        data: { status: "CANCELLED" },
+      });
+      await db.matchProposal.updateMany({
+        where: { truckId, status: "PENDING" },
+        data: { status: "CANCELLED" },
+      });
+
       // Find carrier users to notify
       const carrierUsers = await db.user.findMany({
         where: {

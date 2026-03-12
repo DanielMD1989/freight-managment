@@ -633,6 +633,7 @@ export async function GET(request: NextRequest) {
     // Merged with truckType filter to avoid silently overwriting where.truck.
     where.truck = {
       ...(truckType ? { truckType } : {}),
+      approvalStatus: "APPROVED", // G-M12-1b: Only show approved trucks in marketplace
       trips: {
         none: {
           status: {
