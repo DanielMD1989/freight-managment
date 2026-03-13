@@ -20,6 +20,7 @@ import {
 import {
   useMyLoadRequests,
   useCancelLoadRequest,
+  useConfirmLoadRequest,
 } from "../../../src/hooks/useLoads";
 import {
   useMatchProposals,
@@ -37,7 +38,13 @@ import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
 
 type Tab = "shipper" | "myload" | "matches";
-const STATUS_FILTERS = ["ALL", "PENDING", "APPROVED", "REJECTED"] as const;
+const STATUS_FILTERS = [
+  "ALL",
+  "PENDING",
+  "SHIPPER_APPROVED",
+  "APPROVED",
+  "REJECTED",
+] as const;
 const PROPOSAL_STATUS_FILTERS = [
   "ALL",
   "PENDING",
@@ -83,6 +90,7 @@ export default function CarrierRequestsScreen() {
 
   const respondMutation = useRespondToTruckRequest();
   const cancelLoadReqMutation = useCancelLoadRequest();
+  const confirmLoadReqMutation = useConfirmLoadRequest();
   const proposalRespondMutation = useRespondToProposal();
 
   const isLoading =
@@ -158,6 +166,49 @@ export default function CarrierRequestsScreen() {
         onPress: () => cancelLoadReqMutation.mutate(requestId),
       },
     ]);
+  };
+
+  const handleConfirmLoadRequest = (requestId: string) => {
+    Alert.alert(
+      "Confirm Booking",
+      "Confirm this booking? A trip will be created and the load assigned to your truck.",
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: "Confirm",
+          onPress: () =>
+            confirmLoadReqMutation.mutate(
+              { requestId, action: "CONFIRM" },
+              {
+                onSuccess: () =>
+                  Alert.alert("Success", "Booking confirmed. Trip created."),
+                onError: (err) => Alert.alert("Error", err.message),
+              }
+            ),
+        },
+      ]
+    );
+  };
+
+  const handleDeclineLoadRequest = (requestId: string) => {
+    Alert.alert(
+      "Decline Booking",
+      "Decline this booking? The load will return to the marketplace.",
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: "Decline",
+          style: "destructive",
+          onPress: () =>
+            confirmLoadReqMutation.mutate(
+              { requestId, action: "DECLINE" },
+              {
+                onError: (err) => Alert.alert("Error", err.message),
+              }
+            ),
+        },
+      ]
+    );
   };
 
   const handleAcceptProposal = (proposalId: string) => {
@@ -274,7 +325,11 @@ export default function CarrierRequestsScreen() {
                   statusFilter === s && styles.chipTextActive,
                 ]}
               >
-                {s === "ALL" ? "All" : s.charAt(0) + s.slice(1).toLowerCase()}
+                {s === "ALL"
+                  ? "All"
+                  : s === "SHIPPER_APPROVED"
+                    ? "Awaiting Confirm"
+                    : s.charAt(0) + s.slice(1).toLowerCase()}
               </Text>
             </TouchableOpacity>
           )
@@ -382,6 +437,31 @@ export default function CarrierRequestsScreen() {
                       fullWidth
                     />
                   </View>
+                )}
+                {req.status === "SHIPPER_APPROVED" && (
+                  <>
+                    <Text style={styles.awaitingLabel}>
+                      Shipper accepted — confirm to start trip
+                    </Text>
+                    <View style={styles.actionRow}>
+                      <Button
+                        title="Confirm Booking"
+                        variant="primary"
+                        size="sm"
+                        onPress={() => handleConfirmLoadRequest(req.id)}
+                        loading={confirmLoadReqMutation.isPending}
+                        style={{ flex: 1, marginRight: spacing.sm }}
+                      />
+                      <Button
+                        title="Decline"
+                        variant="destructive"
+                        size="sm"
+                        onPress={() => handleDeclineLoadRequest(req.id)}
+                        loading={confirmLoadReqMutation.isPending}
+                        style={{ flex: 1 }}
+                      />
+                    </View>
+                  </>
                 )}
               </Card>
             </View>
@@ -538,5 +618,10 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: "row",
     marginTop: spacing.md,
+  },
+  awaitingLabel: {
+    ...typography.labelSmall,
+    color: colors.primary600,
+    marginTop: spacing.sm,
   },
 });

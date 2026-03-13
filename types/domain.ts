@@ -70,6 +70,7 @@ export type PostingStatus = "ACTIVE" | "EXPIRED" | "CANCELLED" | "MATCHED";
 
 export type RequestStatus =
   | "PENDING"
+  | "SHIPPER_APPROVED"
   | "APPROVED"
   | "REJECTED"
   | "EXPIRED"

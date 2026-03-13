@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 interface LoadRequest {
@@ -53,11 +53,18 @@ interface Props {
   requests: LoadRequest[];
 }
 
-type StatusFilter = "all" | "PENDING" | "APPROVED" | "REJECTED";
+type StatusFilter =
+  | "all"
+  | "PENDING"
+  | "SHIPPER_APPROVED"
+  | "APPROVED"
+  | "REJECTED";
 
 export default function MyLoadRequestsClient({ requests }: Props) {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [confirmLoading, setConfirmLoading] = useState<string | null>(null);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
 
   const filteredRequests =
     statusFilter === "all"
@@ -67,6 +74,7 @@ export default function MyLoadRequestsClient({ requests }: Props) {
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       PENDING: "bg-amber-50 text-amber-700 border border-amber-200",
+      SHIPPER_APPROVED: "bg-blue-50 text-blue-700 border border-blue-200",
       APPROVED: "bg-emerald-50 text-emerald-700 border border-emerald-200",
       REJECTED: "bg-rose-50 text-rose-700 border border-rose-200",
       EXPIRED: "bg-slate-50 text-slate-600 border border-slate-200",
@@ -108,9 +116,40 @@ export default function MyLoadRequestsClient({ requests }: Props) {
     router.push(`/carrier/trips/${loadId}`);
   };
 
+  const handleConfirm = useCallback(
+    async (requestId: string, action: "CONFIRM" | "DECLINE") => {
+      setConfirmLoading(requestId);
+      setConfirmError(null);
+      try {
+        const { csrfFetch } = await import("@/lib/csrfFetch");
+        const res = await csrfFetch(`/api/load-requests/${requestId}/confirm`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(
+            data.error || `Failed to ${action.toLowerCase()} request`
+          );
+        }
+        router.refresh();
+      } catch (err) {
+        setConfirmError(
+          err instanceof Error ? err.message : "An error occurred"
+        );
+      } finally {
+        setConfirmLoading(null);
+      }
+    },
+    [router]
+  );
+
   const statusCounts = {
     all: requests.length,
     PENDING: requests.filter((r) => r.status === "PENDING").length,
+    SHIPPER_APPROVED: requests.filter((r) => r.status === "SHIPPER_APPROVED")
+      .length,
     APPROVED: requests.filter((r) => r.status === "APPROVED").length,
     REJECTED: requests.filter((r) => r.status === "REJECTED").length,
   };
@@ -120,6 +159,19 @@ export default function MyLoadRequestsClient({ requests }: Props) {
 
   return (
     <div className="space-y-6">
+      {/* Confirm Error */}
+      {confirmError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-800">{confirmError}</p>
+          <button
+            onClick={() => setConfirmError(null)}
+            className="mt-1 text-sm text-red-600 underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-sm">
@@ -201,21 +253,32 @@ export default function MyLoadRequestsClient({ requests }: Props) {
 
       {/* Status Filter Tabs */}
       <div className="flex flex-wrap gap-2">
-        {(["PENDING", "APPROVED", "REJECTED", "all"] as StatusFilter[]).map(
-          (status) => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`rounded-xl px-4 py-2 text-sm font-medium transition-all ${
-                statusFilter === status
-                  ? "bg-gradient-to-r from-teal-600 to-teal-500 text-white shadow-md shadow-teal-500/25"
-                  : "border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
-              }`}
-            >
-              {status === "all" ? "All" : status} ({statusCounts[status]})
-            </button>
-          )
-        )}
+        {(
+          [
+            "PENDING",
+            "SHIPPER_APPROVED",
+            "APPROVED",
+            "REJECTED",
+            "all",
+          ] as StatusFilter[]
+        ).map((status) => (
+          <button
+            key={status}
+            onClick={() => setStatusFilter(status)}
+            className={`rounded-xl px-4 py-2 text-sm font-medium transition-all ${
+              statusFilter === status
+                ? "bg-gradient-to-r from-teal-600 to-teal-500 text-white shadow-md shadow-teal-500/25"
+                : "border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            {status === "all"
+              ? "All"
+              : status === "SHIPPER_APPROVED"
+                ? "Awaiting Confirm"
+                : status}{" "}
+            ({statusCounts[status]})
+          </button>
+        ))}
       </div>
 
       {/* Requests List */}
@@ -253,9 +316,11 @@ export default function MyLoadRequestsClient({ requests }: Props) {
               className={`rounded-2xl border bg-white p-6 shadow-sm ${
                 request.status === "PENDING"
                   ? "border-amber-300 ring-1 ring-amber-100"
-                  : request.status === "APPROVED"
-                    ? "border-emerald-300 ring-1 ring-emerald-100"
-                    : "border-slate-200/60"
+                  : request.status === "SHIPPER_APPROVED"
+                    ? "border-blue-300 ring-1 ring-blue-100"
+                    : request.status === "APPROVED"
+                      ? "border-emerald-300 ring-1 ring-emerald-100"
+                      : "border-slate-200/60"
               }`}
             >
               <div className="mb-4 flex items-start justify-between">
@@ -266,11 +331,18 @@ export default function MyLoadRequestsClient({ requests }: Props) {
                         request.status
                       )}`}
                     >
-                      {request.status}
+                      {request.status === "SHIPPER_APPROVED"
+                        ? "Awaiting Confirm"
+                        : request.status}
                     </span>
                     {request.status === "PENDING" && (
                       <span className="text-sm font-medium text-orange-600 dark:text-orange-400">
                         Expires in {getTimeRemaining(request.expiresAt)}
+                      </span>
+                    )}
+                    {request.status === "SHIPPER_APPROVED" && (
+                      <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                        Shipper accepted — confirm to start trip
                       </span>
                     )}
                     {request.status === "APPROVED" && (
@@ -292,6 +364,26 @@ export default function MyLoadRequestsClient({ requests }: Props) {
 
                 {/* Action Buttons */}
                 <div className="flex gap-2">
+                  {request.status === "SHIPPER_APPROVED" && (
+                    <>
+                      <button
+                        onClick={() => handleConfirm(request.id, "CONFIRM")}
+                        disabled={confirmLoading === request.id}
+                        className="rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 px-4 py-2 text-sm font-medium text-white shadow-md shadow-teal-500/25 transition-all hover:from-teal-700 hover:to-teal-600 disabled:opacity-50"
+                      >
+                        {confirmLoading === request.id
+                          ? "..."
+                          : "Confirm Booking"}
+                      </button>
+                      <button
+                        onClick={() => handleConfirm(request.id, "DECLINE")}
+                        disabled={confirmLoading === request.id}
+                        className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition-all hover:bg-rose-100 disabled:opacity-50"
+                      >
+                        Decline
+                      </button>
+                    </>
+                  )}
                   {request.status === "APPROVED" && (
                     <button
                       onClick={() => handleViewTrip(request.load.id)}

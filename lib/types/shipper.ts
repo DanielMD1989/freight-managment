@@ -196,7 +196,13 @@ export interface MatchProposal {
 
 export interface LoadRequest {
   id: string;
-  status: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED" | "CANCELLED";
+  status:
+    | "PENDING"
+    | "SHIPPER_APPROVED"
+    | "APPROVED"
+    | "REJECTED"
+    | "EXPIRED"
+    | "CANCELLED";
   notes: string | null;
   proposedRate: number | null;
   expiresAt: string;

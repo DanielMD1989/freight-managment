@@ -32,7 +32,13 @@ import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
 
 type Tab = "carrier" | "truck";
-const STATUS_FILTERS = ["ALL", "PENDING", "APPROVED", "REJECTED"] as const;
+const STATUS_FILTERS = [
+  "ALL",
+  "PENDING",
+  "SHIPPER_APPROVED",
+  "APPROVED",
+  "REJECTED",
+] as const;
 
 export default function RequestsScreen() {
   const { t } = useTranslation();
@@ -160,7 +166,11 @@ export default function RequestsScreen() {
                 statusFilter === s && styles.chipTextActive,
               ]}
             >
-              {s === "ALL" ? "All" : s.charAt(0) + s.slice(1).toLowerCase()}
+              {s === "ALL"
+                ? "All"
+                : s === "SHIPPER_APPROVED"
+                  ? "Awaiting Carrier"
+                  : s.charAt(0) + s.slice(1).toLowerCase()}
             </Text>
           </TouchableOpacity>
         ))}
@@ -240,6 +250,11 @@ export default function RequestsScreen() {
                       style={{ flex: 1 }}
                     />
                   </View>
+                )}
+                {req.status === "SHIPPER_APPROVED" && (
+                  <Text style={styles.awaitingLabel}>
+                    Awaiting carrier confirmation
+                  </Text>
                 )}
               </Card>
             </TouchableOpacity>
@@ -379,5 +394,10 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: "row",
     marginTop: spacing.md,
+  },
+  awaitingLabel: {
+    ...typography.labelSmall,
+    color: colors.primary600,
+    marginTop: spacing.sm,
   },
 });

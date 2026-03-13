@@ -162,6 +162,23 @@ class LoadService {
     }
   }
 
+  /** Confirm or decline a SHIPPER_APPROVED load request (carrier step 3) */
+  async confirmLoadRequest(
+    requestId: string,
+    action: "CONFIRM" | "DECLINE",
+    notes?: string
+  ): Promise<LoadRequest> {
+    try {
+      const response = await apiClient.post(
+        `/api/load-requests/${requestId}/confirm`,
+        { action, responseNotes: notes }
+      );
+      return response.data.request ?? response.data;
+    } catch (error) {
+      throw new Error(getErrorMessage(error));
+    }
+  }
+
   /** Cancel load request */
   async cancelLoadRequest(requestId: string): Promise<void> {
     try {

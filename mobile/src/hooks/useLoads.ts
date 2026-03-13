@@ -118,6 +118,30 @@ export function useRespondToLoadRequest() {
   });
 }
 
+/** Confirm or decline a SHIPPER_APPROVED load request (carrier step 3) */
+export function useConfirmLoadRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      requestId,
+      action,
+      notes,
+    }: {
+      requestId: string;
+      action: "CONFIRM" | "DECLINE";
+      notes?: string;
+    }) => loadService.confirmLoadRequest(requestId, action, notes),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: LOAD_REQUESTS_KEY });
+      queryClient.invalidateQueries({ queryKey: LOADS_KEY });
+      queryClient.invalidateQueries({ queryKey: ["trips"] });
+      queryClient.invalidateQueries({ queryKey: ["truck-postings"] });
+      queryClient.invalidateQueries({ queryKey: ["carrier-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["shipper-dashboard"] });
+    },
+  });
+}
+
 /** Received load requests (shipper — carriers requesting your loads) */
 export function useReceivedLoadRequests(params?: {
   status?: string;

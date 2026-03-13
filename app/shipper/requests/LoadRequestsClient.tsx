@@ -54,7 +54,12 @@ interface Props {
   requests: LoadRequest[];
 }
 
-type StatusFilter = "all" | "PENDING" | "APPROVED" | "REJECTED";
+type StatusFilter =
+  | "all"
+  | "PENDING"
+  | "SHIPPER_APPROVED"
+  | "APPROVED"
+  | "REJECTED";
 
 export default function LoadRequestsClient({
   requests: initialRequests,
@@ -124,6 +129,7 @@ export default function LoadRequestsClient({
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       PENDING: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+      SHIPPER_APPROVED: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
       APPROVED: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
       REJECTED: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
       EXPIRED: "bg-gray-500/10 text-gray-600 dark:text-gray-400",
@@ -164,6 +170,8 @@ export default function LoadRequestsClient({
   const statusCounts = {
     all: requests.length,
     PENDING: pendingCount,
+    SHIPPER_APPROVED: requests.filter((r) => r.status === "SHIPPER_APPROVED")
+      .length,
     APPROVED: requests.filter((r) => r.status === "APPROVED").length,
     REJECTED: requests.filter((r) => r.status === "REJECTED").length,
   };
@@ -208,21 +216,32 @@ export default function LoadRequestsClient({
 
       {/* Status Filter Tabs */}
       <div className="flex flex-wrap gap-2">
-        {(["PENDING", "APPROVED", "REJECTED", "all"] as StatusFilter[]).map(
-          (status) => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                statusFilter === status
-                  ? "bg-teal-600 text-white"
-                  : "bg-teal-700/10 text-slate-700 hover:bg-teal-700/20 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
-              }`}
-            >
-              {status === "all" ? "All" : status} ({statusCounts[status]})
-            </button>
-          )
-        )}
+        {(
+          [
+            "PENDING",
+            "SHIPPER_APPROVED",
+            "APPROVED",
+            "REJECTED",
+            "all",
+          ] as StatusFilter[]
+        ).map((status) => (
+          <button
+            key={status}
+            onClick={() => setStatusFilter(status)}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              statusFilter === status
+                ? "bg-teal-600 text-white"
+                : "bg-teal-700/10 text-slate-700 hover:bg-teal-700/20 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+            }`}
+          >
+            {status === "all"
+              ? "All"
+              : status === "SHIPPER_APPROVED"
+                ? "Awaiting Carrier"
+                : status}{" "}
+            ({statusCounts[status]})
+          </button>
+        ))}
       </div>
 
       {/* Requests List */}

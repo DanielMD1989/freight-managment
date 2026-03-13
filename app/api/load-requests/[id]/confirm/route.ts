@@ -104,6 +104,7 @@ export async function POST(
     }
 
     // Auth: CARRIER who owns the truck, or ADMIN
+    // G-M19-4: DISPATCHER intentionally excluded — blueprint §5: dispatchers have NO accept/reject authority
     const isAdmin = session.role === "ADMIN" || session.role === "SUPER_ADMIN";
     const isCarrierOwner =
       session.role === "CARRIER" &&
@@ -142,6 +143,46 @@ export async function POST(
     }
 
     if (data.action === "CONFIRM") {
+      // G-M19-3: Wallet gate — carrier must meet minimum balance (blueprint §8)
+      if (!isAdmin) {
+        const carrierAccount = await db.financialAccount.findFirst({
+          where: { organizationId: loadRequest.carrierId, isActive: true },
+          select: { balance: true, minimumBalance: true },
+        });
+        if (
+          carrierAccount &&
+          carrierAccount.balance < carrierAccount.minimumBalance
+        ) {
+          // Fire-and-forget low-balance notification
+          db.user
+            .findMany({
+              where: {
+                organizationId: loadRequest.carrierId,
+                status: "ACTIVE",
+              },
+              select: { id: true },
+            })
+            .then(async (users) => {
+              for (const u of users) {
+                await createNotification({
+                  userId: u.id,
+                  type: NotificationType.LOW_BALANCE_WARNING,
+                  title: "Low Wallet Balance",
+                  message:
+                    "Your wallet balance is below the required minimum for marketplace activity. Please top up to continue.",
+                  metadata: { organizationId: loadRequest.carrierId },
+                });
+              }
+            })
+            .catch(() => {});
+
+          return NextResponse.json(
+            { error: "Insufficient wallet balance for marketplace access" },
+            { status: 402 }
+          );
+        }
+      }
+
       try {
         const result = await db.$transaction(async (tx) => {
           // Race guard: re-check status
@@ -492,41 +533,46 @@ export async function POST(
       }
     } else {
       // DECLINE: carrier declines to confirm
-      const updatedRequest = await db.loadRequest.update({
-        where: { id: requestId },
-        data: { status: "CANCELLED" },
-      });
-
-      await db.loadEvent.create({
-        data: {
-          loadId: loadRequest.loadId,
-          eventType: "LOAD_REQUEST_CANCELLED",
-          description: `Carrier declined to confirm booking for load request`,
-          userId: session.userId,
-          metadata: {
-            loadRequestId: requestId,
-            carrierId: loadRequest.carrierId,
-          },
-        },
-      });
-
-      // G-A9-3: Revert load SEARCHING → POSTED if no other active requests remain
-      const remaining = await db.loadRequest.count({
-        where: {
-          loadId: loadRequest.loadId,
-          status: { in: ["PENDING", "SHIPPER_APPROVED"] },
-          id: { not: requestId },
-        },
-      });
-      if (remaining === 0) {
-        await db.load.update({
-          where: {
-            id: loadRequest.loadId,
-            status: { in: ["SEARCHING", "OFFERED"] },
-          },
-          data: { status: "POSTED" },
+      // G-M19-1: Wrap in transaction for atomicity (consistent with CONFIRM path and respond REJECT)
+      const updatedRequest = await db.$transaction(async (tx) => {
+        const updated = await tx.loadRequest.update({
+          where: { id: requestId },
+          data: { status: "CANCELLED" },
         });
-      }
+
+        await tx.loadEvent.create({
+          data: {
+            loadId: loadRequest.loadId,
+            eventType: "LOAD_REQUEST_CANCELLED",
+            description: `Carrier declined to confirm booking for load request`,
+            userId: session.userId,
+            metadata: {
+              loadRequestId: requestId,
+              carrierId: loadRequest.carrierId,
+            },
+          },
+        });
+
+        // G-A9-3: Revert load SEARCHING → POSTED if no other active requests remain
+        const remaining = await tx.loadRequest.count({
+          where: {
+            loadId: loadRequest.loadId,
+            status: { in: ["PENDING", "SHIPPER_APPROVED"] },
+            id: { not: requestId },
+          },
+        });
+        if (remaining === 0) {
+          await tx.load.update({
+            where: {
+              id: loadRequest.loadId,
+              status: { in: ["SEARCHING", "OFFERED"] },
+            },
+            data: { status: "POSTED" },
+          });
+        }
+
+        return updated;
+      });
 
       await CacheInvalidation.load(
         loadRequest.loadId,
@@ -534,6 +580,7 @@ export async function POST(
       );
 
       // Non-critical: Notify Shipper users (fire-and-forget)
+      // G-M19-2: Use NotificationType enum instead of raw string
       db.user
         .findMany({
           where: {
@@ -546,7 +593,7 @@ export async function POST(
           for (const u of users) {
             await createNotification({
               userId: u.id,
-              type: "LOAD_REQUEST_REJECTED",
+              type: NotificationType.LOAD_REQUEST_REJECTED,
               title: "Carrier Declined Booking",
               message: `Carrier declined to confirm the booking for the load from ${loadRequest.load.pickupCity} to ${loadRequest.load.deliveryCity}.`,
               metadata: {
